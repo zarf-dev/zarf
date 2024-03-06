@@ -21,11 +21,9 @@ import (
 func TestGit(t *testing.T) {
 	t.Log("E2E: Git")
 	e2e.SetupWithCluster(t)
-	tmpdir := t.TempDir()
-	cachePath := filepath.Join(tmpdir, ".cache-location")
 
 	buildPath := filepath.Join("src", "test", "packages", "22-git-data")
-	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "--zarf-cache", cachePath, "-o=build", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "-o=build", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-git-data-test-%s-1.0.0.tar.zst", e2e.Arch)

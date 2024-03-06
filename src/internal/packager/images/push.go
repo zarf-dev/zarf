@@ -7,6 +7,7 @@ package images
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
@@ -14,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -50,9 +52,11 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 	httpTransport.TLSClientConfig.InsecureSkipVerify = i.Insecure
+	// TODO (@WSTARR) This is set to match the TLSHandshakeTimeout to potentially mitigate effects of https://github.com/defenseunicorns/zarf/issues/1444
+	httpTransport.ResponseHeaderTimeout = 10 * time.Second
 	progressBar := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images to the zarf registry", len(i.ImageList)))
 	defer progressBar.Stop()
-	craneTransport := utils.NewTransport(httpTransport, progressBar)
+	craneTransport := helpers.NewTransport(httpTransport, progressBar)
 
 	pushOptions := config.GetCraneOptions(i.Insecure, i.Architectures...)
 	pushOptions = append(pushOptions, config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword))

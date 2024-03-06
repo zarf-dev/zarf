@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -27,6 +28,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/mholt/archiver/v3"
@@ -245,16 +247,17 @@ func (p *Packager) output() error {
 	// Create a remote ref + client for the package (if output is OCI)
 	// then publish the package to the remote.
 	if helpers.IsOCIURL(p.cfg.CreateOpts.Output) {
-		ref, err := oci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, &p.cfg.Pkg.Build)
+		ref, err := zoci.ReferenceFromMetadata(p.cfg.CreateOpts.Output, &p.cfg.Pkg.Metadata, &p.cfg.Pkg.Build)
 		if err != nil {
 			return err
 		}
-		remote, err := oci.NewOrasRemote(ref, oci.PlatformForArch(config.GetArch()))
+		remote, err := zoci.NewRemote(ref, oci.PlatformForArch(config.GetArch()))
 		if err != nil {
 			return err
 		}
 
-		err = remote.PublishPackage(&p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency)
+		ctx := context.TODO()
+		err = remote.PublishPackage(ctx, &p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
@@ -510,9 +513,9 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 		}
 
 		if file.Executable || utils.IsDir(dst) {
-			_ = os.Chmod(dst, 0700)
+			_ = os.Chmod(dst, helpers.ReadWriteExecuteUser)
 		} else {
-			_ = os.Chmod(dst, 0600)
+			_ = os.Chmod(dst, helpers.ReadWriteUser)
 		}
 	}
 
@@ -650,7 +653,7 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 
 	// Create the checksums file
 	checksumsFilePath := p.layout.Checksums
-	if err := utils.WriteFile(checksumsFilePath, []byte(strings.Join(checksumsData, "\n")+"\n")); err != nil {
+	if err := os.WriteFile(checksumsFilePath, []byte(strings.Join(checksumsData, "\n")+"\n"), helpers.ReadWriteUser); err != nil {
 		return "", err
 	}
 
@@ -668,15 +671,15 @@ func (p *Packager) loadDifferentialData() error {
 
 	// Load the package spec of the package we're using as a 'reference' for the differential build
 	if helpers.IsOCIURL(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath) {
-		remote, err := oci.NewOrasRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, oci.PlatformForArch(config.GetArch()))
+		remote, err := zoci.NewRemote(p.cfg.CreateOpts.DifferentialData.DifferentialPackagePath, oci.PlatformForArch(config.GetArch()))
 		if err != nil {
 			return err
 		}
-		pkg, err := remote.FetchZarfYAML()
+		pkg, err := remote.FetchZarfYAML(context.TODO())
 		if err != nil {
 			return err
 		}
-		err = utils.WriteYaml(filepath.Join(tmpDir, layout.ZarfYAML), pkg, 0600)
+		err = utils.WriteYaml(filepath.Join(tmpDir, layout.ZarfYAML), pkg, helpers.ReadWriteUser)
 		if err != nil {
 			return err
 		}

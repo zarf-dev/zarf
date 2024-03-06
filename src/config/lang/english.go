@@ -384,6 +384,7 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdDevFlagGitAccount    = "User or organization name for the git account that the repos are created under."
 	CmdDevFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
+	CmdDevFlagFindImagesWhy = "Find the location of the image given as an argument and print it to the console."
 
 	CmdDevLintShort = "Lints the given package for valid schema and recommended practices"
 	CmdDevLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
@@ -592,6 +593,9 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 	// zarf version
 	CmdVersionShort = "Shows the version of the running Zarf binary"
 	CmdVersionLong  = "Displays the version of the Zarf release that the current binary was built from."
+
+	// tools version
+	CmdToolsVersionShort = "Print the version"
 
 	// cmd viper setup
 	CmdViperErrLoadingConfigFile = "failed to load config file: %s"
