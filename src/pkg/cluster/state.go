@@ -101,7 +101,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 
 		// Try to create the zarf namespace.
 		spinner.Updatef("Creating the Zarf namespace")
-		zarfNamespace := c.NewZarfManagedNamespace(ZarfNamespaceName)
+		zarfNamespace := c.NewZarfManagedNamespace(ZarfNamespaceName, nil)
 		if _, err := c.CreateNamespace(zarfNamespace); err != nil {
 			return fmt.Errorf("unable to create the zarf namespace: %w", err)
 		}

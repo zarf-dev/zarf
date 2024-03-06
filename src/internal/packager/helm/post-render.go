@@ -47,7 +47,7 @@ func (h *Helm) newRenderer() (*renderer, error) {
 		connectStrings: make(types.ConnectStrings),
 		namespaces: map[string]*corev1.Namespace{
 			// Add the passed-in namespace to the list
-			h.chart.Namespace: h.cluster.NewZarfManagedNamespace(h.chart.Namespace),
+			h.chart.Namespace: h.cluster.NewZarfManagedNamespace(h.chart.Namespace, h.chart.NamespaceLabels),
 		},
 		values:       *valueTemplate,
 		actionConfig: h.actionConfig,
@@ -140,7 +140,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 		namespace := rawData.GetNamespace()
 		if _, exists := r.namespaces[namespace]; !exists && namespace != "" {
 			// if this is the first time seeing this ns, we need to track that to create it as well
-			r.namespaces[namespace] = r.cluster.NewZarfManagedNamespace(namespace)
+			r.namespaces[namespace] = r.cluster.NewZarfManagedNamespace(namespace, nil)
 		}
 
 		// If we have been asked to adopt existing resources, process those now as well

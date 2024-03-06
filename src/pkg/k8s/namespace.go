@@ -63,7 +63,7 @@ func (k *K8s) DeleteNamespace(ctx context.Context, name string) error {
 }
 
 // NewZarfManagedNamespace returns a corev1.Namespace with Zarf-managed labels
-func (k *K8s) NewZarfManagedNamespace(name string) *corev1.Namespace {
+func (k *K8s) NewZarfManagedNamespace(name string, labels map[string]string) *corev1.Namespace {
 	namespace := &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -76,6 +76,9 @@ func (k *K8s) NewZarfManagedNamespace(name string) *corev1.Namespace {
 
 	// Merge in common labels so that later modifications to the namespace can't mutate them
 	namespace.ObjectMeta.Labels = helpers.MergeMap[string](k.Labels, namespace.ObjectMeta.Labels)
+	if labels != nil && len(labels) > 0 {
+		namespace.ObjectMeta.Labels = helpers.MergeMap[string](labels, namespace.ObjectMeta.Labels)
+	}
 
 	return namespace
 }
