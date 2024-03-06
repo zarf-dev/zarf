@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestDataInjection(t *testing.T) {
@@ -31,15 +32,25 @@ func TestDataInjection(t *testing.T) {
 		runDataInjection(t, path)
 	}
 
+	c, err := cluster.NewCluster()
+	require.NoError(t, err)
+
+	// Find a running kiwix pod
+	pods, err := c.GetPods("kiwix", &metav1.ListOptions{FieldSelector: "status.phase=Running"})
+	require.NoError(t, err)
+	var runningKiwixPod string
+	for _, pod := range pods.Items {
+		runningKiwixPod = pod.Name
+		break
+	}
+
 	// Verify the file and injection marker were created
-	stdOut, stdErr, err := e2e.Kubectl("--namespace=kiwix", "logs", "--tail=5", "--selector=app=kiwix-serve", "-c=kiwix-serve")
+	stdOut, stdErr, err := e2e.Kubectl("--namespace=kiwix", "logs", runningKiwixPod, "--tail=5", "-c=kiwix-serve")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdOut, "devops.stackexchange.com_en_all_2023-05.zim")
 	require.Contains(t, stdOut, ".zarf-injection-")
 
 	// need target to equal svc that we are trying to connect to call checkForZarfConnectLabel
-	c, err := cluster.NewCluster()
-	require.NoError(t, err)
 	tunnel, err := c.Connect("kiwix")
 	require.NoError(t, err)
 	defer tunnel.Close()
