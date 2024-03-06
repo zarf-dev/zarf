@@ -1,4 +1,6 @@
-# Package Sources
+---
+title: Package Sources
+---
 
 Zarf currently supports consuming packages from the following sources:
 

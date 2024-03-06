@@ -12,10 +12,11 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/check": "^0.5.4",
     "@astrojs/starlight": "^0.19.0",
     "astro": "^4.3.5",
+    "mermaid": "^10.9.0",
     "sharp": "^0.32.5",
-    "@astrojs/check": "^0.5.4",
     "typescript": "^5.3.3"
   }
 }

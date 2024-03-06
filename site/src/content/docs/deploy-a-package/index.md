@@ -1,4 +1,6 @@
-# Deploy a Zarf Package
+---
+title: Deploy a Package
+---
 
 Zarf Packages are designed to be easily deployable on a variety of systems, including air-gapped systems. All of the necessary dependencies are included within the package, eliminating the need for outbound internet connectivity. When deploying the package onto a cluster, the dependencies contained in each component are automatically pushed into a Docker registry and/or Git server created by or known to Zarf on the air-gapped system.
 

@@ -20,7 +20,7 @@ For following along locally, please ensure the following prerequisites are met:
 
 ## Youtube Tutorial
 
-[![Tutorial: Create Differential Packages with Zarf](../.images/tutorials/differential_package_thumbnail.png)](https://youtu.be/6yQEo4Vhz9o "Create Differential Packages with Zarf")
+[![Tutorial: Create Differential Packages with Zarf](../../../assets/tutorials/differential_package_thumbnail.png)](https://youtu.be/6yQEo4Vhz9o "Create Differential Packages with Zarf")
 
 ## Create a Differential Package
 

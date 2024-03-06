@@ -1,4 +1,6 @@
-# Package Deploy Lifecycle
+---
+title: Deploy Lifecycle
+---
 
 The following diagram shows the order of operations for the `zarf package deploy` command and the hook locations for [actions](../../examples/component-actions/README.md).
 

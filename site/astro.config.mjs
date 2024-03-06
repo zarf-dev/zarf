@@ -1,5 +1,6 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import mermaid from "mermaid";
 
 // https://astro.build/config
 export default defineConfig({
@@ -9,7 +10,7 @@ export default defineConfig({
         "@examples": "../examples",
         "@packages": "../packages",
       },
-    }
+    },
   },
   integrations: [
     starlight({
@@ -44,6 +45,11 @@ export default defineConfig({
           collapsed: true,
         },
         {
+          label: "Deploy a Package",
+          autogenerate: { directory: "deploy-a-package" },
+          collapsed: true,
+        },
+        {
           label: "Tutorials",
           autogenerate: { directory: "tutorials" },
           collapsed: true,
@@ -70,6 +76,28 @@ export default defineConfig({
           collapsed: true,
         },
       ],
+      // plugins: [
+      //   {
+      //     name: "plugin-mermaid",
+      //     hooks: {
+      //       setup: ({ addIntegration }) => {
+      //         addIntegration({
+      //           name: "mermaid starlight integration",
+      //           hooks: {
+      //             "astro:build:done": () => {
+      //               mermaid.initialize({
+      //                 startOnLoad: true,
+      //                 theme: "forest",
+      //               });
+      //               mermaid.init();
+      //               console.log("mermaid initialized");
+      //             },
+      //           },
+      //         });
+      //       },
+      //     },
+      //   },
+      // ],
     }),
   ],
 });

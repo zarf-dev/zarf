@@ -1,4 +1,11 @@
-# Deployment Web UI
+---
+title: Deployment Web UI
+
+sidebar:
+  badge:
+    text: DEPRECATED
+    variant: caution
+---
 
 Zarf is also available in a version that exposes a Deployment Web UI that supports a number of Zarf features used during the package deployment process. For users who prefer not to use the command line tool, the Web UI creates a simple experience to deploy and manage Zarf clusters and packages. The Web UI can be used to connect to existing clusters (via a Kubeconfig), initialize a cluster, deploy packages into a cluster, update packages in the cluster, and remove packages from the cluster.
 
@@ -14,7 +21,7 @@ Follow these steps to get started using the Web UI
 2. Step two: (if applicable) Mark the file as executable with `chmod +x zarf-ui_v0.1.0-Darwin_arm64`
 3. Step three: Run the binary with `./zarf-ui_v0.1.0-Darwin_arm64` or by double clicking the file in your file browser
 
-![GIF showing the Web UI launched from the CLI terminal](../.images/dashboard/Web%20UI%20-%20Launch.gif)
+![GIF showing the Web UI launched from the CLI terminal](../../../assets/dashboard/Web%20UI%20-%20Launch.gif)
 
 ## Using the Zarf Deployment Web UI
 
@@ -90,8 +97,7 @@ Once a package is deployed into the cluster, the Web UI offers additional comman
 - Update: Use when you wish to update a package with a new version of the same package.
 - Remove: Use when you wish to remove a package and all of its resources from the cluster. This cannot be undone.
 
-![Web UI deployed packages table with a context menu showing additional package commands](../.images/dashboard/Web%20UI%20-%20package%20commands.png)
-
+![Web UI deployed packages table with a context menu showing additional package commands](../../../assets/dashboard/Web%20UI%20-%20package%20commands.png)
 
 ## Technical Details
 
