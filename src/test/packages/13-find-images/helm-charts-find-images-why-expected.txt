@@ -61,24 +61,24 @@ spec:
               key: mariadb-password
               name: wordpress-mariadb
         - name: WORDPRESS_USERNAME
-          value: null
+          value: zarf
         - name: WORDPRESS_PASSWORD
           valueFrom:
             secretKeyRef:
               key: wordpress-password
               name: wordpress
         - name: WORDPRESS_EMAIL
-          value: null
+          value: hello@defenseunicorns.com
         - name: WORDPRESS_FIRST_NAME
-          value: null
+          value: Zarf
         - name: WORDPRESS_LAST_NAME
-          value: null
+          value: The Axolotl
         - name: WORDPRESS_HTACCESS_OVERRIDE_NONE
           value: "no"
         - name: WORDPRESS_ENABLE_HTACCESS_PERSISTENCE
           value: "no"
         - name: WORDPRESS_BLOG_NAME
-          value: null
+          value: The Zarf Blog
         - name: WORDPRESS_SKIP_BOOTSTRAP
           value: "no"
         - name: WORDPRESS_TABLE_PREFIX
@@ -184,4 +184,3 @@ spec:
       - name: wordpress-data
         persistentVolumeClaim:
           claimName: wordpress
-
