@@ -1,5 +1,6 @@
 ---
 title: zarf tools helm repo remove
+description: Zarf CLI command reference for <code>zarf tools helm repo remove</code>.
 ---
 
 ## zarf tools helm repo remove

@@ -1,5 +1,6 @@
 ---
 title: zarf dev sha256sum
+description: Zarf CLI command reference for <code>zarf dev sha256sum</code>.
 ---
 
 ## zarf dev sha256sum

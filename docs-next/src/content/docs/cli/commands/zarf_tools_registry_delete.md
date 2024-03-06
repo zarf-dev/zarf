@@ -1,5 +1,6 @@
 ---
 title: zarf tools registry delete
+description: Zarf CLI command reference for <code>zarf tools registry delete</code>.
 ---
 
 ## zarf tools registry delete

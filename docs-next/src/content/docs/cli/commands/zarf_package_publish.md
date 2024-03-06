@@ -1,5 +1,6 @@
 ---
 title: zarf package publish
+description: Zarf CLI command reference for <code>zarf package publish</code>.
 ---
 
 ## zarf package publish

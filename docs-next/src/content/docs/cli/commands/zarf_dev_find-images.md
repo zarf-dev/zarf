@@ -1,5 +1,6 @@
 ---
 title: zarf dev find-images
+description: Zarf CLI command reference for <code>zarf dev find-images</code>.
 ---
 
 ## zarf dev find-images

@@ -1,5 +1,6 @@
 ---
 title: zarf
+description: Zarf CLI command reference for <code>zarf</code>.
 ---
 
 ## zarf

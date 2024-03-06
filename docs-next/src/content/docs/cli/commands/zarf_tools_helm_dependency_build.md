@@ -1,5 +1,6 @@
 ---
 title: zarf tools helm dependency build
+description: Zarf CLI command reference for <code>zarf tools helm dependency build</code>.
 ---
 
 ## zarf tools helm dependency build

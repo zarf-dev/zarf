@@ -1,5 +1,6 @@
 ---
 title: zarf tools registry login
+description: Zarf CLI command reference for <code>zarf tools registry login</code>.
 ---
 
 ## zarf tools registry login

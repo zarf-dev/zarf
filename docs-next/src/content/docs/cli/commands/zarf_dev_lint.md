@@ -1,5 +1,6 @@
 ---
 title: zarf dev lint
+description: Zarf CLI command reference for <code>zarf dev lint</code>.
 ---
 
 ## zarf dev lint

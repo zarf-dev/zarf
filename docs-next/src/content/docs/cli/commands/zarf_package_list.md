@@ -1,5 +1,6 @@
 ---
 title: zarf package list
+description: Zarf CLI command reference for <code>zarf package list</code>.
 ---
 
 ## zarf package list

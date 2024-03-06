@@ -1,5 +1,6 @@
 ---
 title: zarf tools monitor
+description: Zarf CLI command reference for <code>zarf tools monitor</code>.
 ---
 
 ## zarf tools monitor

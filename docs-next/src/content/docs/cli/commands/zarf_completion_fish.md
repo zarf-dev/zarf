@@ -1,5 +1,6 @@
 ---
 title: zarf completion fish
+description: Zarf CLI command reference for <code>zarf completion fish</code>.
 ---
 
 ## zarf completion fish

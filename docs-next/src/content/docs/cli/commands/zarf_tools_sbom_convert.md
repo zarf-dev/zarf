@@ -1,5 +1,6 @@
 ---
 title: zarf tools sbom convert
+description: Zarf CLI command reference for <code>zarf tools sbom convert</code>.
 ---
 
 ## zarf tools sbom convert

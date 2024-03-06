@@ -1,5 +1,6 @@
 ---
 title: zarf tools get-creds
+description: Zarf CLI command reference for <code>zarf tools get-creds</code>.
 ---
 
 ## zarf tools get-creds

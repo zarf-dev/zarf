@@ -1,5 +1,6 @@
 ---
 title: zarf tools helm repo add
+description: Zarf CLI command reference for <code>zarf tools helm repo add</code>.
 ---
 
 ## zarf tools helm repo add

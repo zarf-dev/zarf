@@ -1,5 +1,6 @@
 ---
 title: zarf tools kubectl
+description: Zarf CLI command reference for <code>zarf tools kubectl</code>.
 ---
 
 ## zarf tools kubectl

@@ -1,5 +1,6 @@
 ---
 title: zarf tools helm dependency
+description: Zarf CLI command reference for <code>zarf tools helm dependency</code>.
 ---
 
 ## zarf tools helm dependency

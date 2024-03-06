@@ -1,5 +1,6 @@
 ---
 title: zarf version
+description: Zarf CLI command reference for <code>zarf version</code>.
 ---
 
 ## zarf version

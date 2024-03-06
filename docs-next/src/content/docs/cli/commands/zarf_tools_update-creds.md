@@ -1,5 +1,6 @@
 ---
 title: zarf tools update-creds
+description: Zarf CLI command reference for <code>zarf tools update-creds</code>.
 ---
 
 ## zarf tools update-creds

@@ -1,5 +1,6 @@
 ---
 title: zarf package inspect
+description: Zarf CLI command reference for <code>zarf package inspect</code>.
 ---
 
 ## zarf package inspect

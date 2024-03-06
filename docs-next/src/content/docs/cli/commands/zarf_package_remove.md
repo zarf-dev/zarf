@@ -1,5 +1,6 @@
 ---
 title: zarf package remove
+description: Zarf CLI command reference for <code>zarf package remove</code>.
 ---
 
 ## zarf package remove

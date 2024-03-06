@@ -1,5 +1,6 @@
 ---
 title: zarf tools wait-for
+description: Zarf CLI command reference for <code>zarf tools wait-for</code>.
 ---
 
 ## zarf tools wait-for

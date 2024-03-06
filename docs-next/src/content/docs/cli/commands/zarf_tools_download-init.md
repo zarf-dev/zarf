@@ -1,5 +1,6 @@
 ---
 title: zarf tools download-init
+description: Zarf CLI command reference for <code>zarf tools download-init</code>.
 ---
 
 ## zarf tools download-init

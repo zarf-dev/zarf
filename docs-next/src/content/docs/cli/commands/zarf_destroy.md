@@ -1,5 +1,6 @@
 ---
 title: zarf destroy
+description: Zarf CLI command reference for <code>zarf destroy</code>.
 ---
 
 ## zarf destroy

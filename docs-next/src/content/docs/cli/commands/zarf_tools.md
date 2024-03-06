@@ -1,5 +1,6 @@
 ---
 title: zarf tools
+description: Zarf CLI command reference for <code>zarf tools</code>.
 ---
 
 ## zarf tools

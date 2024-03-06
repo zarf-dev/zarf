@@ -1,5 +1,6 @@
 ---
 title: zarf tools sbom attest
+description: Zarf CLI command reference for <code>zarf tools sbom attest</code>.
 ---
 
 ## zarf tools sbom attest

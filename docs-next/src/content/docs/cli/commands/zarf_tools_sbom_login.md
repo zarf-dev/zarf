@@ -1,5 +1,6 @@
 ---
 title: zarf tools sbom login
+description: Zarf CLI command reference for <code>zarf tools sbom login</code>.
 ---
 
 ## zarf tools sbom login

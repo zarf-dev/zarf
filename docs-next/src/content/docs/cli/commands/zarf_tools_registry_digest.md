@@ -1,5 +1,6 @@
 ---
 title: zarf tools registry digest
+description: Zarf CLI command reference for <code>zarf tools registry digest</code>.
 ---
 
 ## zarf tools registry digest

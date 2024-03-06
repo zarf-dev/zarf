@@ -1,5 +1,6 @@
 ---
 title: zarf tools registry copy
+description: Zarf CLI command reference for <code>zarf tools registry copy</code>.
 ---
 
 ## zarf tools registry copy

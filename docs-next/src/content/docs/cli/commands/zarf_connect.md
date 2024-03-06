@@ -1,5 +1,6 @@
 ---
 title: zarf connect
+description: Zarf CLI command reference for <code>zarf connect</code>.
 ---
 
 ## zarf connect

@@ -1,5 +1,6 @@
 ---
 title: zarf init
+description: Zarf CLI command reference for <code>zarf init</code>.
 ---
 
 ## zarf init

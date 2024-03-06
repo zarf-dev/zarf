@@ -1,5 +1,6 @@
 ---
 title: zarf dev patch-git
+description: Zarf CLI command reference for <code>zarf dev patch-git</code>.
 ---
 
 ## zarf dev patch-git

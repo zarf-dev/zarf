@@ -1,5 +1,6 @@
 ---
 title: zarf tools registry catalog
+description: Zarf CLI command reference for <code>zarf tools registry catalog</code>.
 ---
 
 ## zarf tools registry catalog

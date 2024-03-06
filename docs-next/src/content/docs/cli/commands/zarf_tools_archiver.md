@@ -1,5 +1,6 @@
 ---
 title: zarf tools archiver
+description: Zarf CLI command reference for <code>zarf tools archiver</code>.
 ---
 
 ## zarf tools archiver

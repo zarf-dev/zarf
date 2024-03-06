@@ -1,5 +1,6 @@
 ---
 title: zarf tools sbom version
+description: Zarf CLI command reference for <code>zarf tools sbom version</code>.
 ---
 
 ## zarf tools sbom version

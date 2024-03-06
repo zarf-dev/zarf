@@ -1,5 +1,6 @@
 ---
 title: zarf tools registry prune
+description: Zarf CLI command reference for <code>zarf tools registry prune</code>.
 ---
 
 ## zarf tools registry prune

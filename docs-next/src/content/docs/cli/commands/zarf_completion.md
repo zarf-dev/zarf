@@ -1,5 +1,6 @@
 ---
 title: zarf completion
+description: Zarf CLI command reference for <code>zarf completion</code>.
 ---
 
 ## zarf completion

@@ -1,5 +1,6 @@
 ---
 title: zarf tools sbom scan
+description: Zarf CLI command reference for <code>zarf tools sbom scan</code>.
 ---
 
 ## zarf tools sbom scan

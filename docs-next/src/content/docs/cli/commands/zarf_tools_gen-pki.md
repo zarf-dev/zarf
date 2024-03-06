@@ -1,5 +1,6 @@
 ---
 title: zarf tools gen-pki
+description: Zarf CLI command reference for <code>zarf tools gen-pki</code>.
 ---
 
 ## zarf tools gen-pki

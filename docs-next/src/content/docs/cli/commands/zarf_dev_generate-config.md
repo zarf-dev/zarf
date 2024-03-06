@@ -1,5 +1,6 @@
 ---
 title: zarf dev generate-config
+description: Zarf CLI command reference for <code>zarf dev generate-config</code>.
 ---
 
 ## zarf dev generate-config

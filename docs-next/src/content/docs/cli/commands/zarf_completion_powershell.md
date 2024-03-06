@@ -1,5 +1,6 @@
 ---
 title: zarf completion powershell
+description: Zarf CLI command reference for <code>zarf completion powershell</code>.
 ---
 
 ## zarf completion powershell

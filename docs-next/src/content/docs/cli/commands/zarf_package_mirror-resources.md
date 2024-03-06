@@ -1,5 +1,6 @@
 ---
 title: zarf package mirror-resources
+description: Zarf CLI command reference for <code>zarf package mirror-resources</code>.
 ---
 
 ## zarf package mirror-resources

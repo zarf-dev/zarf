@@ -1,5 +1,6 @@
 ---
 title: zarf tools gen-key
+description: Zarf CLI command reference for <code>zarf tools gen-key</code>.
 ---
 
 ## zarf tools gen-key

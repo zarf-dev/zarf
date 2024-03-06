@@ -1,5 +1,6 @@
 ---
 title: zarf package create
+description: Zarf CLI command reference for <code>zarf package create</code>.
 ---
 
 ## zarf package create

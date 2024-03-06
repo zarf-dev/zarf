@@ -1,5 +1,6 @@
 ---
 title: zarf tools clear-cache
+description: Zarf CLI command reference for <code>zarf tools clear-cache</code>.
 ---
 
 ## zarf tools clear-cache

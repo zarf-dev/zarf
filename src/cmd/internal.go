@@ -129,9 +129,10 @@ var genCLIDocs = &cobra.Command{
 
 			return fmt.Sprintf(`---
 title: %s
+description: Zarf CLI command reference for <code>%s</code>.
 ---
 
-`, title)
+`, title, title)
 		}
 
 		var linkHandler = func(link string) string {
