@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"net"
 	"time"
@@ -95,6 +96,10 @@ func newPrivateKey() (*rsa.PrivateKey, error) {
 // private key should never be saved to disk, but rather used to
 // immediately generate further certificates.
 func generateCA(validFor time.Duration) (*x509.Certificate, *rsa.PrivateKey, error) {
+	if validFor <= 0 {
+		return nil, nil, fmt.Errorf("validFor must be greater than 0")
+	}
+
 	template := newCertificate(validFor)
 	template.IsCA = true
 	template.KeyUsage = x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature
@@ -124,6 +129,12 @@ func generateCA(validFor time.Duration) (*x509.Certificate, *rsa.PrivateKey, err
 // provided certificate authority. The cert and key files are stored in
 // the provided files.
 func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, validFor time.Duration, dnsNames ...string) (*x509.Certificate, *rsa.PrivateKey, error) {
+	if host == "" {
+		return nil, nil, fmt.Errorf("host cannot be empty")
+	}
+	if validFor <= 0 {
+		return nil, nil, fmt.Errorf("validFor must be greater than 0")
+	}
 	template := newCertificate(validFor)
 
 	template.IPAddresses = append(template.IPAddresses, net.ParseIP(helpers.IPV4Localhost))
