@@ -6,12 +6,13 @@ package packager
 
 import (
 	"fmt"
-	"github.com/goccy/go-yaml"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/goccy/go-yaml"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -134,22 +135,22 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			return nil, fmt.Errorf("unable to generate template values")
 		}
 		// Adding these so the default builtin values exist in case any helm charts rely on them
-		registryInfo := &types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}
+		registryInfo := types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}
 		err = registryInfo.FillInEmptyValues()
 		if err != nil {
 			return nil, err
 		}
-		gitServer := &types.GitServerInfo{}
+		gitServer := types.GitServerInfo{}
 		err = gitServer.FillInEmptyValues()
 		if err != nil {
 			return nil, err
 		}
-		artifactServer := &types.ArtifactServerInfo{}
+		artifactServer := types.ArtifactServerInfo{}
 		artifactServer.FillInEmptyValues()
 		values.SetState(&types.ZarfState{
-			RegistryInfo:   *registryInfo,
-			GitServer:      *gitServer,
-			ArtifactServer: *artifactServer})
+			RegistryInfo:   registryInfo,
+			GitServer:      gitServer,
+			ArtifactServer: artifactServer})
 		for _, chart := range component.Charts {
 
 			helmCfg := helm.New(

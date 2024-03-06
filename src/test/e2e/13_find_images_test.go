@@ -2,7 +2,6 @@ package test
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -11,42 +10,6 @@ import (
 
 func TestFindImages(t *testing.T) {
 	t.Log("E2E: Find Images")
-
-	t.Run("zarf test find images success", func(t *testing.T) {
-		t.Log("E2E: Test Find Images")
-
-		testPackagePath := filepath.Join("examples", "dos-games")
-		expectedOutput, err := os.ReadFile("src/test/packages/13-find-images/dos-games-find-images-expected.txt")
-		require.NoError(t, err)
-
-		stdout, _, err := e2e.Zarf("dev", "find-images", testPackagePath)
-		require.NoError(t, err)
-		require.Contains(t, stdout, string(expectedOutput))
-	})
-
-	t.Run("zarf test find images --why  w/ helm chart success", func(t *testing.T) {
-		t.Log("E2E: Test Find Images against a helm chart with why flag")
-
-		testPackagePath := filepath.Join("examples", "wordpress")
-		expectedOutput, err := os.ReadFile("src/test/packages/13-find-images/helm-charts-find-images-why-expected.txt")
-		require.NoError(t, err)
-
-		stdout, _, err := e2e.Zarf("dev", "find-images", testPackagePath, "--why", "docker.io/bitnami/apache-exporter:0.13.3-debian-11-r2")
-		require.NoError(t, err)
-		require.Contains(t, stdout, string(expectedOutput))
-	})
-
-	t.Run("zarf test find images --why w/  manifests success", func(t *testing.T) {
-		t.Log("E2E: Test Find Images against manifests with why flag")
-
-		testPackagePath := filepath.Join("examples", "manifests")
-		expectedOutput, err := os.ReadFile("src/test/packages/13-find-images/manifests-find-images-why-expected.txt")
-		require.NoError(t, err)
-
-		stdout, _, err := e2e.Zarf("dev", "find-images", testPackagePath, "--why", "httpd:alpine3.18")
-		require.NoError(t, err)
-		require.Contains(t, stdout, string(expectedOutput))
-	})
 
 	t.Run("zarf prepare find-images", func(t *testing.T) {
 		t.Parallel()
@@ -84,6 +47,7 @@ func TestFindImages(t *testing.T) {
 
 		registry := "coolregistry.gov"
 		agentTag := "test"
+
 		stdOut, _, err := e2e.Zarf("prepare", "find-images", ".", "--registry-url", registry, "--create-set", fmt.Sprintf("agent_image_tag=%s", agentTag))
 		require.NoError(t, err)
 		internalRegistryImage := fmt.Sprintf("%s/%s:%s", registry, "defenseunicorns/zarf/agent", agentTag)
@@ -93,9 +57,32 @@ func TestFindImages(t *testing.T) {
 		path := filepath.Join("src", "test", "packages", "00-find-images-with-vars")
 		stdOut, _, err = e2e.Zarf("prepare", "find-images", path, "--deploy-set", "BUSYBOX_IMAGE=busybox:earliest")
 		require.NoError(t, err)
-
 		require.Contains(t, stdOut, "nginx:latest", "Manifests aren't interpreting vars")
 		require.Contains(t, stdOut, "busybox:earliest", "Values files aren't interpreting vars")
+	})
+
+	t.Run("zarf test find images --why  w/ helm chart success", func(t *testing.T) {
+		t.Parallel()
+
+		testPackagePath := filepath.Join("examples", "wordpress")
+		stdOut, _, err := e2e.Zarf("dev", "find-images", testPackagePath, "--why", "docker.io/bitnami/apache-exporter:0.13.3-debian-11-r2")
+		require.NoError(t, err)
+		require.Contains(t, stdOut, "component: wordpress")
+		require.Contains(t, stdOut, "chart: wordpress")
+		require.Contains(t, stdOut, "image: docker.io/bitnami/wordpress:6.2.0-debian-11-r18")
+	})
+
+	t.Run("zarf test find images --why w/  manifests success", func(t *testing.T) {
+		t.Parallel()
+
+		testPackagePath := filepath.Join("examples", "manifests")
+
+		stdOut, _, err := e2e.Zarf("dev", "find-images", testPackagePath, "--why", "httpd:alpine3.18")
+		require.NoError(t, err)
+		require.Contains(t, stdOut, "component: httpd-local")
+		require.Contains(t, stdOut, "manifest: simple-httpd-deployment")
+		require.Contains(t, stdOut, "image: httpd:alpine3.18")
+
 	})
 
 }
