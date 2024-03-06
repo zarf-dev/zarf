@@ -235,6 +235,14 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 					validImages = append(validImages, image)
 				}
 			}
+			
+			if len(validImages) > 0 {
+				componentDefinition += fmt.Sprintf("      # Possible images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
+				for _, image := range validImages {
+					imagesMap[component.Name] = append(imagesMap[component.Name], image)
+					componentDefinition += fmt.Sprintf("      - %s\n", image)
+				}
+			}
 		}
 
 		spinner.Success()
