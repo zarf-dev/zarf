@@ -19,9 +19,11 @@ For following along locally, please ensure the following prerequisites are met:
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 
 ## Youtube Tutorial
+
 [![Tutorial: Create Differential Packages with Zarf](../.images/tutorials/differential_package_thumbnail.png)](https://youtu.be/6yQEo4Vhz9o "Create Differential Packages with Zarf")
 
 ## Create a Differential Package
+
 In this example we're going to use the [Longhorn Example](../../examples/longhorn/) to create a differential package.
 
 :::note

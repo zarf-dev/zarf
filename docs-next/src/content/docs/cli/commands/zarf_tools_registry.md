@@ -29,3 +29,4 @@ Tools for working with container registries using go-containertools
 * [zarf tools registry prune](/cli/commands/zarf_tools_registry_prune/)	 - Prunes images from the registry that are not currently being used by any Zarf packages.
 * [zarf tools registry pull](/cli/commands/zarf_tools_registry_pull/)	 - Pull remote images by reference and store their contents locally
 * [zarf tools registry push](/cli/commands/zarf_tools_registry_push/)	 - Push local image contents to a remote registry
+* [zarf tools registry version](/cli/commands/zarf_tools_registry_version/)	 - Print the version

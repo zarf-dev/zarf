@@ -48,7 +48,7 @@ The Zarf binary and built packages are required to be stored in the ./build dire
 
 When adding new tests, there are several requirements that must be followed, including:
 
-1. Tests cannont be run in parallel as they utilize the same K8s cluster.
+1. Tests cannot be run in parallel as they utilize the same K8s cluster.
 2. Each test should begin with the entries below for standardization and test setup/teardown:
 
 ```go

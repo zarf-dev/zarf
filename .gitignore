@@ -14,6 +14,7 @@
 *.bak
 *.key
 *.crt
+*.dat
 *.run.zstd
 *.tar
 *.tar.gz

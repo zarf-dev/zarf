@@ -2,11 +2,40 @@
 title: Roadmap
 ---
 
-The project roadmap for Zarf is hosted on a [GitHub Project Board](https://github.com/orgs/defenseunicorns/projects/1) that tracks the issues the Zarf team is working along with future work we are prioritizing.
+## Issue Tracking
+
+The issue board for Zarf is hosted on a [GitHub Project Board](https://github.com/orgs/defenseunicorns/projects/1) that tracks the issues the Zarf team is working along with future work we are prioritizing.
 
 If you would like to add bug reports or feature requests, please [add an issue](https://github.com/defenseunicorns/zarf/issues) to the GitHub repository under the appropriate template. If you have a more general question about a feature, feel free to ask the team in the [Zarf Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03B6BJAUJ3).
 
-We also accept contributions from the community (regardless of where a particular bug or feature is on the roadmap), so feel free to read our [contributing guidelines](./12-contribute-to-zarf/1-contributor-guide.md) and [submit a PR](https://github.com/defenseunicorns/zarf/pulls)! You can also ask any development related questions in the [Zarf Dev Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03BP9Z3CMA).
+We also accept contributions from the community (regardless of where a particular bug or feature is in the queue), so feel free to read our [contributing guidelines](./12-contribute-to-zarf/1-contributor-guide.md) and [submit a PR](https://github.com/defenseunicorns/zarf/pulls)!  You can also ask any development related questions in the [Zarf Dev Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03BP9Z3CMA).
+
+## 2024 General Roadmap
+
+### Q1: Community Building and Refactoring
+
+- [X] - Establish a [monthly community meetup](https://github.com/defenseunicorns/zarf/issues/2202) to engage members of the community and answer questions.
+- [ ] - Refactor and add tests to library code shared with [UDS-CLI](https://github.com/defenseunicorns/uds-cli) and split into a new GitHub repository.
+- [ ] - Gather OpenSSF donation requirements and clear off pre-reqs (additional maintainers and sponsor working group).
+
+### Q2 Consistency, Docs and Donation to OpenSSF
+
+- [ ] - Consolidate and improve consistency around features such as Zarf `variables` and component `required` schema.
+- [ ] - Move [docs website](https://docs.zarf.dev) from Docusaurus to a different framework to improve maintainability going forward.
+- [ ] - Finalize and submit Zarf's `sandbox` application to officially join the OpenSSF.
+
+### Q3: Transfer Project, Stabilize and Extend
+
+- [ ] - Transfer project and additional repos (`zarf-ui`, `zarf-init-aws`, `setup-zarf`, etc.) to a new GitHub organization.
+- [ ] - Stabilize features after the consolidation of Q2 - clean up GA milestone in preparation for Q4.
+- [ ] - Flesh out the extension system for new features / experiments to be more smoothly integrated with Zarf.
+- [ ] - Make `zarf init` custom logic definable in-schema and across all packages.
+
+### Q4: Post Donation and General Availability
+
+- [ ] - Continue stabilizing features and interfaces in preparation for GA release.
+- [ ] - Gather and prepare to meet OpenSSF's `incubation` requirements.
+- [ ] - Officially cut a GA v1.0.0 release of Zarf.
 
 ## Feature Stability
 
@@ -46,4 +75,4 @@ While Zarf is pre-General Availability (see below) the above feature stability g
 
 Right now, Zarf itself is still in its 'beta' phase. We are working on some final things before we release the official 1.0 General Availability (GA) release. The work still needed for the GA release can be found in our issues with [this filter](https://github.com/defenseunicorns/zarf/issues?q=is%3Aopen+is%3Aissue+label%3Aga).
 
-We are currently targeting Q4 2023 to have Zarf be generally available and will be pushing weekly releases until then to add necessary features and fix bugs as well as improve docs, architecture and test coverage behind the scenes.
+We are currently targeting Q4 2024 to have Zarf be generally available and will be pushing weekly releases until then to add necessary features and fix bugs as well as improve docs, architecture and test coverage behind the scenes.

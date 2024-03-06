@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	// veryify that SplitTarballSource implements PackageSource
+	// verify that SplitTarballSource implements PackageSource
 	_ PackageSource = (*SplitTarballSource)(nil)
 )
 
@@ -84,6 +84,11 @@ func (s *SplitTarballSource) Collect(dir string) (string, error) {
 		// Add the file contents to the package
 		if _, err = io.Copy(pkgFile, f); err != nil {
 			return "", fmt.Errorf("unable to copy file %s: %w", file, err)
+		}
+
+		// Close the file when done copying
+		if err := f.Close(); err != nil {
+			return "", fmt.Errorf("unable to close file %s: %w", file, err)
 		}
 	}
 

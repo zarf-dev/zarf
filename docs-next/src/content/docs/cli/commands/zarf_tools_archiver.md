@@ -31,3 +31,4 @@ Compresses/Decompresses generic archives, including Zarf packages
 * [zarf tools](/cli/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
 * [zarf tools archiver compress](/cli/commands/zarf_tools_archiver_compress/)	 - Compresses a collection of sources based off of the destination file extension.
 * [zarf tools archiver decompress](/cli/commands/zarf_tools_archiver_decompress/)	 - Decompresses an archive or Zarf package based off of the source file extension.
+* [zarf tools archiver version](/cli/commands/zarf_tools_archiver_version/)	 - Print the version

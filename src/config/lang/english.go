@@ -455,6 +455,10 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	CmdToolsRegistryPruneFlagConfirm = "Confirm the image prune action to prevent accidental deletions"
 	CmdToolsRegistryPruneImageList   = "The following image digests will be pruned from the registry:"
 	CmdToolsRegistryPruneNoImages    = "There are no images to prune"
+	CmdToolsRegistryPruneLookup      = "Looking up images within package definitions"
+	CmdToolsRegistryPruneCatalog     = "Cataloging images in the registry"
+	CmdToolsRegistryPruneCalculate   = "Calculating images to prune"
+	CmdToolsRegistryPruneDelete      = "Deleting unused images"
 
 	CmdToolsRegistryInvalidPlatformErr = "Invalid platform '%s': %s"
 	CmdToolsRegistryFlagVerbose        = "Enable debug logs"
@@ -588,6 +592,9 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 	// zarf version
 	CmdVersionShort = "Shows the version of the running Zarf binary"
 	CmdVersionLong  = "Displays the version of the Zarf release that the current binary was built from."
+
+	// tools version
+	CmdToolsVersionShort = "Print the version"
 
 	// cmd viper setup
 	CmdViperErrLoadingConfigFile = "failed to load config file: %s"

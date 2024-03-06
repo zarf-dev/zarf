@@ -39,7 +39,7 @@ var agentCmd = &cobra.Command{
 	Use:   "agent",
 	Short: lang.CmdInternalAgentShort,
 	Long:  lang.CmdInternalAgentLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		agent.StartWebhook()
 	},
 }
@@ -48,7 +48,7 @@ var httpProxyCmd = &cobra.Command{
 	Use:   "http-proxy",
 	Short: lang.CmdInternalProxyShort,
 	Long:  lang.CmdInternalProxyLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		agent.StartHTTPProxy()
 	},
 }
@@ -56,7 +56,7 @@ var httpProxyCmd = &cobra.Command{
 var genCLIDocs = &cobra.Command{
 	Use:   "gen-cli-docs",
 	Short: lang.CmdInternalGenerateCliDocsShort,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// Don't include the datestamp in the output
 		rootCmd.DisableAutoGenTag = true
 
@@ -151,7 +151,7 @@ var genConfigSchemaCmd = &cobra.Command{
 	Use:     "gen-config-schema",
 	Aliases: []string{"gc"},
 	Short:   lang.CmdInternalConfigSchemaShort,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		schema := jsonschema.Reflect(&types.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
@@ -171,7 +171,7 @@ var genTypesSchemaCmd = &cobra.Command{
 	Use:     "gen-types-schema",
 	Aliases: []string{"gt"},
 	Short:   lang.CmdInternalTypesSchemaShort,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		schema := jsonschema.Reflect(&zarfTypes{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
@@ -185,7 +185,7 @@ var createReadOnlyGiteaUser = &cobra.Command{
 	Use:   "create-read-only-gitea-user",
 	Short: lang.CmdInternalCreateReadOnlyGiteaUserShort,
 	Long:  lang.CmdInternalCreateReadOnlyGiteaUserLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// Load the state so we can get the credentials for the admin git user
 		state, err := cluster.NewClusterOrDie().LoadZarfState()
 		if err != nil {
@@ -203,7 +203,7 @@ var createPackageRegistryToken = &cobra.Command{
 	Use:   "create-artifact-registry-token",
 	Short: lang.CmdInternalArtifactRegistryGiteaTokenShort,
 	Long:  lang.CmdInternalArtifactRegistryGiteaTokenLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// Load the state so we can get the credentials for the admin git user
 		c := cluster.NewClusterOrDie()
 		state, err := c.LoadZarfState()
@@ -229,7 +229,7 @@ var updateGiteaPVC = &cobra.Command{
 	Use:   "update-gitea-pvc",
 	Short: lang.CmdInternalUpdateGiteaPVCShort,
 	Long:  lang.CmdInternalUpdateGiteaPVCLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 
 		// There is a possibility that the pvc does not yet exist and Gitea helm chart should create it
 		helmShouldCreate, err := git.UpdateGiteaPVC(rollback)
@@ -244,7 +244,7 @@ var updateGiteaPVC = &cobra.Command{
 var isValidHostname = &cobra.Command{
 	Use:   "is-valid-hostname",
 	Short: lang.CmdInternalIsValidHostnameShort,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		if valid := helpers.IsValidHostName(); !valid {
 			hostname, _ := os.Hostname()
 			message.Fatalf(nil, lang.CmdInternalIsValidHostnameErr, hostname)
@@ -257,7 +257,7 @@ var computeCrc32 = &cobra.Command{
 	Aliases: []string{"c"},
 	Short:   lang.CmdInternalCrc32Short,
 	Args:    cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		text := args[0]
 		hash := helpers.GetCRCHash(text)
 		fmt.Printf("%d\n", hash)

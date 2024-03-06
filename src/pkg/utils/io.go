@@ -43,7 +43,7 @@ type TextTemplate struct {
 // MakeTempDir creates a temp directory with the zarf- prefix.
 func MakeTempDir(basePath string) (string, error) {
 	if basePath != "" {
-		if err := CreateDirectory(basePath, 0700); err != nil {
+		if err := CreateDirectory(basePath, helpers.ReadWriteExecuteUser); err != nil {
 			return "", err
 		}
 	}
@@ -99,27 +99,6 @@ func ListDirectories(directory string) ([]string, error) {
 	}
 
 	return directories, nil
-}
-
-// WriteFile writes the given data to the given path.
-func WriteFile(path string, data []byte) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("unable to create the file at %s to write the contents: %w", path, err)
-	}
-
-	_, err = f.Write(data)
-	if err != nil {
-		_ = f.Close()
-		return fmt.Errorf("unable to write the file at %s contents:%w", path, err)
-	}
-
-	err = f.Close()
-	if err != nil {
-		return fmt.Errorf("error saving file %s: %w", path, err)
-	}
-
-	return nil
 }
 
 // ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place.
@@ -205,7 +184,7 @@ func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, depreca
 
 	textFile.Close()
 
-	return os.WriteFile(path, []byte(text), 0600)
+	return os.WriteFile(path, []byte(text), helpers.ReadWriteUser)
 
 }
 
@@ -246,7 +225,7 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp, skipHidden bool) (fil
 // CreateParentDirectory creates the parent directory for the given file path.
 func CreateParentDirectory(destination string) error {
 	parentDest := filepath.Dir(destination)
-	return CreateDirectory(parentDest, 0700)
+	return CreateDirectory(parentDest, helpers.ReadWriteExecuteUser)
 }
 
 // CreatePathAndCopy creates the parent directory for the given file path and copies the source file to the destination.
@@ -339,7 +318,7 @@ func ReadFileByChunks(path string, chunkSizeBytes int) (chunks [][]byte, sha256s
 // - fileNames: list of file paths srcFile was split across
 // - sha256sum: sha256sum of the srcFile before splitting
 // - err: any errors encountered
-func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
+func SplitFile(srcPath string, chunkSizeBytes int) (err error) {
 	var fileNames []string
 	var sha256sum string
 	hash := sha256.New()
@@ -353,7 +332,7 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 	buf := make([]byte, bufferSize)
 
 	// get file size
-	fi, err := os.Stat(srcFile)
+	fi, err := os.Stat(srcPath)
 	if err != nil {
 		return err
 	}
@@ -364,16 +343,16 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 	progressBar := message.NewProgressBar(fileSize, title)
 	defer progressBar.Stop()
 
-	// open file
-	file, err := os.Open(srcFile)
-	defer file.Close()
+	// open srcFile
+	srcFile, err := os.Open(srcPath)
 	if err != nil {
 		return err
 	}
+	defer srcFile.Close()
 
 	// create file path starting from part 001
-	path := fmt.Sprintf("%s.part001", srcFile)
-	chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+	path := fmt.Sprintf("%s.part001", srcPath)
+	chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, helpers.ReadAllWriteUser)
 	if err != nil {
 		return err
 	}
@@ -384,7 +363,7 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 	chunkBytesRemaining := chunkSizeBytes
 	// Loop over the tarball hashing as we go and breaking it into chunks based on the chunkSizeBytes
 	for {
-		bytesRead, err := file.Read(buf)
+		bytesRead, err := srcFile.Read(buf)
 
 		if err != nil {
 			if err == io.EOF {
@@ -404,10 +383,14 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 			if err != nil {
 				return err
 			}
+			err = chunkFile.Close()
+			if err != nil {
+				return err
+			}
 
 			// create new file
-			path = fmt.Sprintf("%s.part%03d", srcFile, len(fileNames)+1)
-			chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+			path = fmt.Sprintf("%s.part%03d", srcPath, len(fileNames)+1)
+			chunkFile, err = os.OpenFile(path, os.O_CREATE|os.O_WRONLY, helpers.ReadAllWriteUser)
 			if err != nil {
 				return err
 			}
@@ -435,8 +418,8 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 		title := fmt.Sprintf("[%d/%d] MB bytes written", progressBar.GetCurrent()/1000/1000, fileSize/1000/1000)
 		progressBar.UpdateTitle(title)
 	}
-	file.Close()
-	_ = os.RemoveAll(srcFile)
+	srcFile.Close()
+	_ = os.RemoveAll(srcPath)
 
 	// calculate sha256 sum
 	sha256sum = fmt.Sprintf("%x", hash.Sum(nil))
@@ -452,8 +435,8 @@ func SplitFile(srcFile string, chunkSizeBytes int) (err error) {
 	}
 
 	// write header file
-	path = fmt.Sprintf("%s.part000", srcFile)
-	if err := os.WriteFile(path, jsonData, 0644); err != nil {
+	path = fmt.Sprintf("%s.part000", srcPath)
+	if err := os.WriteFile(path, jsonData, helpers.ReadAllWriteUser); err != nil {
 		return fmt.Errorf("unable to write the file %s: %w", path, err)
 	}
 	fileNames = append(fileNames, path)
@@ -471,22 +454,41 @@ func IsTextFile(path string) (bool, error) {
 	}
 	defer f.Close() // Make sure to close the file when we're done
 
-	// Read the first 512 bytes of the file
-	data := make([]byte, 512)
-	n, err := f.Read(data)
-	if err != nil && err != io.EOF {
+	// Get file stat
+	stat, err := f.Stat()
+	if err != nil {
 		return false, err
 	}
 
-	// Use http.DetectContentType to determine the MIME type of the file
-	mimeType := http.DetectContentType(data[:n])
+	// Clip offset to minimum of 0
+	lastOffset := max(0, stat.Size()-512)
 
-	// Check if the MIME type indicates that the file is text
-	hasText := strings.HasPrefix(mimeType, "text/")
-	hasJSON := strings.Contains(mimeType, "json")
-	hasXML := strings.Contains(mimeType, "xml")
+	// Take two passes checking front and back of the file
+	offsetPasses := []int64{0, lastOffset}
+	isTextCheck := []bool{false, false}
+	for idx, offset := range offsetPasses {
+		// Create 512 byte buffer
+		data := make([]byte, 512)
 
-	return hasText || hasJSON || hasXML, nil
+		n, err := f.ReadAt(data, offset)
+		if err != nil && err != io.EOF {
+			return false, err
+		}
+
+		// Use http.DetectContentType to determine the MIME type of the file
+		mimeType := http.DetectContentType(data[:n])
+
+		// Check if the MIME type indicates that the file is text
+		hasText := strings.HasPrefix(mimeType, "text/")
+		hasJSON := strings.Contains(mimeType, "json")
+		hasXML := strings.Contains(mimeType, "xml")
+
+		// Save result
+		isTextCheck[idx] = hasText || hasJSON || hasXML
+	}
+
+	// Returns true if both front and back show they are text
+	return isTextCheck[0] && isTextCheck[1], nil
 }
 
 // IsTrashBin checks if the given directory path corresponds to an operating system's trash bin.
