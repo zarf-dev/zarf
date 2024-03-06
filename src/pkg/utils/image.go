@@ -27,7 +27,7 @@ func GetImageWithSha(imgSrc string) (string, error) {
 
 	imgDescriptor, err := crane.Head(imgSrc)
 	if err != nil {
-		return "", fmt.Errorf("unable to pull image (%s) to get the sha256 digest: %w", imgSrc, err)
+		return "", err
 	}
 
 	return fmt.Sprintf("%s@%s", imgSrc, imgDescriptor.Digest), nil
