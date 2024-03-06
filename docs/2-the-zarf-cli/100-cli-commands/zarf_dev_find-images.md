@@ -23,7 +23,7 @@ zarf dev find-images [ PACKAGE ] [flags]
       --kube-version string         Override the default helm template KubeVersion when performing a package chart template
       --registry-url string         Override the ###ZARF_REGISTRY### value (default "127.0.0.1:31999")
   -p, --repo-chart-path string      If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"
-      --why string                  Find the location of the image given as an argument and print it to the console.
+      --why string                  Prints the source manifest for the specified image
 ```
 
 ## Options inherited from parent commands
