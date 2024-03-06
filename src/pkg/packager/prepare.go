@@ -6,6 +6,7 @@ package packager
 
 import (
 	"fmt"
+	"github.com/goccy/go-yaml"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -38,10 +39,12 @@ type imageMap map[string]bool
 func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	repoHelmChartPath := p.cfg.FindImagesOpts.RepoHelmChartPath
 	kubeVersionOverride := p.cfg.FindImagesOpts.KubeVersionOverride
+	whyImage := p.cfg.FindImagesOpts.Why
 
 	imagesMap := make(map[string][]string)
 	erroredCharts := []string{}
 	erroredCosignLookups := []string{}
+	whyResources := []string{}
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -191,6 +194,15 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			for _, image := range annotatedImages {
 				matchedImages[image] = true
 			}
+
+			// Check if the --why flag is set
+			if whyImage != "" {
+				whyResourcesChart, err := findWhyResources(yamls, whyImage, component.Name, chart.Name, true)
+				if err != nil {
+					message.WarnErrf(err, "Error finding why resources for chart %s: %s", chart.Name, err.Error())
+				}
+				whyResources = append(whyResources, whyResourcesChart...)
+			}
 		}
 
 		for _, manifest := range component.Manifests {
@@ -236,6 +248,15 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				message.Debugf("%s", contentString)
 				yamls, _ := utils.SplitYAML(contents)
 				resources = append(resources, yamls...)
+
+				// Check if the --why flag is set and if it is process the manifests
+				if whyImage != "" {
+					whyResourcesManifest, err := findWhyResources(yamls, whyImage, component.Name, manifest.Name, false)
+					if err != nil {
+						message.WarnErrf(err, "Error finding why resources for manifest %s: %s", manifest.Name, err.Error())
+					}
+					whyResources = append(whyResources, whyResourcesManifest...)
+				}
 			}
 		}
 
@@ -309,6 +330,13 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				}
 			}
 		}
+	}
+
+	if whyImage != "" {
+		if len(whyResources) == 0 {
+			message.Warnf("image %q not found in any charts or manifests", whyImage)
+		}
+		return nil, nil
 	}
 
 	fmt.Println(componentDefinition)
@@ -397,6 +425,27 @@ func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured
 	}
 
 	return matchedImages, maybeImages, nil
+}
+
+func findWhyResources(resources []*unstructured.Unstructured, whyImage, componentName, resourceName string, isChart bool) ([]string, error) {
+	foundWhyResources := []string{}
+	for _, resource := range resources {
+		bytes, err := yaml.Marshal(resource.Object)
+		if err != nil {
+			return nil, err
+		}
+		yaml := string(bytes)
+		resourceTypeKey := "manifest"
+		if isChart {
+			resourceTypeKey = "chart"
+		}
+
+		if strings.Contains(yaml, whyImage) {
+			fmt.Printf("component: %s\n%s: %s\nresource:\n\n%s\n", componentName, resourceTypeKey, resourceName, yaml)
+			foundWhyResources = append(foundWhyResources, resourceName)
+		}
+	}
+	return foundWhyResources, nil
 }
 
 // BuildImageMap looks for init container, ephemeral and regular container images.
