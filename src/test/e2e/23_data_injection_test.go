@@ -36,7 +36,10 @@ func TestDataInjection(t *testing.T) {
 	require.NoError(t, err)
 
 	// Find a running kiwix pod
-	pods, err := c.GetPods("kiwix", &metav1.ListOptions{FieldSelector: "status.phase=Running"})
+	pods, err := c.GetPods("kiwix", &metav1.ListOptions{
+		FieldSelector: "status.phase=Running",
+		LabelSelector: "app=kiwix-serve",
+	})
 	require.NoError(t, err)
 	var runningKiwixPod string
 	for _, pod := range pods.Items {
