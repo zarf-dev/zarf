@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -58,17 +59,19 @@ func TestFindImages(t *testing.T) {
 		require.Contains(t, stdOut, "busybox:earliest", "Values files aren't interpreting vars")
 	})
 
-	t.Run("zarf test find images --why  w/ helm chart success", func(t *testing.T) {
+	t.Run("zarf test find images --why w/ helm chart success", func(t *testing.T) {
 
 		testPackagePath := filepath.Join("examples", "wordpress")
-		stdOut, _, err := e2e.Zarf("dev", "find-images", testPackagePath, "--why", "docker.io/bitnami/apache-exporter:0.13.3-debian-11-r2")
+		sets := []string{"WORDPRESS_USERNAME=zarf", "WORDPRESS_PASSWORD=fake", "WORDPRESS_EMAIL=hello@defenseunicorns.com", "WORDPRESS_FIRST_NAME=zarf", "WORDPRESS_LAST_NAME=zarf", "WORDPRESS_BLOG_NAME=blog"}
+		deploysSet := strings.Join(sets, ",")
+		stdOut, _, err := e2e.Zarf("dev", "find-images", testPackagePath, "--why", "docker.io/bitnami/apache-exporter:0.13.3-debian-11-r2", "--deploy-set", deploysSet)
 		require.NoError(t, err)
 		require.Contains(t, stdOut, "component: wordpress")
 		require.Contains(t, stdOut, "chart: wordpress")
 		require.Contains(t, stdOut, "image: docker.io/bitnami/wordpress:6.2.0-debian-11-r18")
 	})
 
-	t.Run("zarf test find images --why w/  manifests success", func(t *testing.T) {
+	t.Run("zarf test find images --why w/ manifests success", func(t *testing.T) {
 
 		testPackagePath := filepath.Join("examples", "manifests")
 
