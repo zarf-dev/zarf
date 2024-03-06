@@ -58,6 +58,16 @@ variables:
     default: ""
     autoIndent: true
 
+  - name: REGISTRY_TOLERATIONS
+    description: Array of tolerations for the registry pod
+    default: ""
+    autoIndent: true
+
+  - name: REGISTRY_NODE_SELECTOR
+    description: Key value pairs of node selectors for the registry pod
+    default: ""
+    autoIndent: true
+
 constants:
   - name: REGISTRY_IMAGE
     value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE###"

@@ -44,3 +44,9 @@ caBundle: ###ZARF_VAR_REGISTRY_CA_BUNDLE###
 
 extraEnvVars:
   ###ZARF_VAR_REGISTRY_EXTRA_ENVS###
+
+nodeSelector:
+  ###ZARF_VAR_REGISTRY_NODE_SELECTOR###
+
+tolerations:
+  ###ZARF_VAR_REGISTRY_TOLERATIONS###

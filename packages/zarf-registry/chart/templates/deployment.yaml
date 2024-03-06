@@ -34,6 +34,14 @@ spec:
       securityContext:
         fsGroup: 1000
         runAsUser: 1000
+      {{ - with .Values.nodeSelector }}
+      nodeSelector:
+        {{ - toYaml . | nindent 12 }}
+      {{ - end }}
+      {{ - with .Values.tolerations }}
+      tolerations:
+        {{ - toYaml . | nindent 12 }}
+      {{ - end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
