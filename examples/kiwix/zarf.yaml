@@ -39,7 +39,7 @@ components:
           # NOTE: If `zarf package create`ing regularly you should mirror content to a web host you control to be a friendly neighbor
       onDeploy:
         after:
-          - description: Kiwix deployment to be ready via wait action
+          - description: Kiwix deployment to be available via wait action
             wait:
               cluster:
                 kind: Deployment
