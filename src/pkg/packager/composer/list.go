@@ -5,16 +5,17 @@
 package composer
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -80,7 +81,7 @@ type ImportChain struct {
 	head *Node
 	tail *Node
 
-	remote *oci.OrasRemote
+	remote *zoci.Remote
 }
 
 // Head returns the first node in the import chain
@@ -181,7 +182,7 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 			if err != nil {
 				return ic, err
 			}
-			pkg, err = remote.FetchZarfYAML()
+			pkg, err = remote.FetchZarfYAML(context.TODO())
 			if err != nil {
 				return ic, err
 			}

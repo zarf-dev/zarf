@@ -17,9 +17,11 @@ For following along locally, please ensure the following prerequisites are met:
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 
 ## Youtube Tutorial
+
 [![Tutorial: Create Differential Packages with Zarf](../.images/tutorials/differential_package_thumbnail.png)](https://youtu.be/6yQEo4Vhz9o "Create Differential Packages with Zarf")
 
 ## Create a Differential Package
+
 In this example we're going to use the [Longhorn Example](../../examples/longhorn/) to create a differential package.
 
 :::note
@@ -36,7 +38,7 @@ You'll notice we're not using a cluster in this example.  That's because differe
 
 3. Update the version of the package as well in the [metadata.version](/docs/create-a-zarf-package/zarf-schema#metadata) field.
 
-:::caution 
+:::caution
 
 Creating differential packages without updating the package version will result in an error.
 
@@ -55,4 +57,3 @@ Creating differential packages without updating the package version will result 
 You have now learned to create differential packages with Zarf.  If you would like to see the size you saved, you can use the `zarf package create` command without the `--differential` flag.  You'll notice a size difference between the two packages since the differential package omits duplicate contents.
 
 <iframe src="/docs/tutorials/differential_package_create_conclusion.html" width="100%" height="600px"></iframe>
-

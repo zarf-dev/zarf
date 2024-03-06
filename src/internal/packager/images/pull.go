@@ -12,13 +12,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -67,7 +67,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
-	metadataImageConcurrency := utils.NewConcurrencyTools[ImgInfo, error](len(i.ImageList))
+	metadataImageConcurrency := helpers.NewConcurrencyTools[ImgInfo, error](len(i.ImageList))
 
 	defer metadataImageConcurrency.Cancel()
 
@@ -123,7 +123,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	}
 
 	// Create the ImagePath directory
-	if err := utils.CreateDirectory(i.ImagesPath, 0755); err != nil {
+	if err := utils.CreateDirectory(i.ImagesPath, helpers.ReadExecuteAllWriteUser); err != nil {
 		return nil, fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
 	}
 
@@ -178,16 +178,13 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	spinner.Success()
 
 	// Create a thread to update a progress bar as we save the image files to disk
-	doneSaving := make(chan int)
-	errorSaving := make(chan int)
-	var progressBarWaitGroup sync.WaitGroup
-	progressBarWaitGroup.Add(1)
+	doneSaving := make(chan error)
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
-	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &progressBarWaitGroup, doneSaving, errorSaving, updateText, updateText)
+	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, doneSaving, updateText, updateText)
 
 	// Spawn a goroutine for each layer to write it to disk using crane
 
-	layerWritingConcurrency := utils.NewConcurrencyTools[bool, error](len(processedLayers))
+	layerWritingConcurrency := helpers.NewConcurrencyTools[bool, error](len(processedLayers))
 
 	defer layerWritingConcurrency.Cancel()
 
@@ -318,8 +315,8 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 
 	onLayerWritingError := func(err error) error {
 		// Send a signal to the progress bar that we're done and wait for the thread to finish
-		errorSaving <- 1
-		progressBarWaitGroup.Wait()
+		doneSaving <- err
+		<-doneSaving
 		message.WarnErr(err, "Failed to write image layers, trying again up to 3 times...")
 		if strings.HasPrefix(err.Error(), "expected blob size") {
 			message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
@@ -331,7 +328,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 		return nil, err
 	}
 
-	imageSavingConcurrency := utils.NewConcurrencyTools[digestInfo, error](len(refInfoToImage))
+	imageSavingConcurrency := helpers.NewConcurrencyTools[digestInfo, error](len(refInfoToImage))
 
 	defer imageSavingConcurrency.Cancel()
 
@@ -382,8 +379,8 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 
 	onImageSavingError := func(err error) error {
 		// Send a signal to the progress bar that we're done and wait for the thread to finish
-		errorSaving <- 1
-		progressBarWaitGroup.Wait()
+		doneSaving <- err
+		<-doneSaving
 		message.WarnErr(err, "Failed to write image config or manifest, trying again up to 3 times...")
 		return err
 	}
@@ -418,8 +415,8 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	}
 
 	// Send a signal to the progress bar that we're done and wait for the thread to finish
-	doneSaving <- 1
-	progressBarWaitGroup.Wait()
+	doneSaving <- nil
+	<-doneSaving
 
 	return imgInfoList, nil
 }

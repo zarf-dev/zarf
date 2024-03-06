@@ -17,10 +17,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ldflags github.com/defenseunicorns/zarf/src/cmd/tools.archiverVersion=x.x.x
+var archiverVersion string
+
 var archiverCmd = &cobra.Command{
 	Use:     "archiver",
 	Aliases: []string{"a"},
 	Short:   lang.CmdToolsArchiverShort,
+	Version: archiverVersion,
 }
 
 var archiverCompressCmd = &cobra.Command{
@@ -85,6 +89,7 @@ func init() {
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
+	archiverCmd.AddCommand(newVersionCmd("mholt/archiver", archiverVersion))
 	archiverDecompressCmd.Flags().BoolVar(&unarchiveAll, "decompress-all", false, "Decompress all tarballs in the archive")
 	archiverDecompressCmd.Flags().BoolVar(&unarchiveAll, "unarchive-all", false, "Unarchive all tarballs in the archive")
 	archiverDecompressCmd.MarkFlagsMutuallyExclusive("decompress-all", "unarchive-all")
