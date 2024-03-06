@@ -1,5 +1,5 @@
 [build]
-  base = "docs-next/"
+  base = "site/"
   command = "npm run build"
   publish = "dist/"
   ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF . ../docs/ ../examples/"
