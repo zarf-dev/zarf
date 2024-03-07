@@ -28,7 +28,7 @@ const (
 type OrasRemote struct {
 	repo           *remote.Repository
 	root           *Manifest
-	Transport      *helpers.Transport
+	progTransport  *helpers.Transport
 	targetPlatform *ocispec.Platform
 	log            *slog.Logger
 }
@@ -46,7 +46,7 @@ func WithPlainHTTP(plainHTTP bool) Modifier {
 // WithInsecureSkipVerify sets the insecure TLS flag for the remote
 func WithInsecureSkipVerify(insecure bool) Modifier {
 	return func(o *OrasRemote) {
-		o.Transport.Base.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
+		o.progTransport.Base.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
 	}
 }
 
@@ -85,7 +85,7 @@ func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*Or
 	client.Client.Transport = transport
 	o := &OrasRemote{
 		repo:           &remote.Repository{Client: client},
-		Transport:      helpers.NewTransport(transport, nil),
+		progTransport:  helpers.NewTransport(transport, nil),
 		targetPlatform: &platform,
 		log:            slog.Default(),
 	}
@@ -103,14 +103,14 @@ func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*Or
 
 // SetProgressWriter sets the progress writer for the remote
 func (o *OrasRemote) SetProgressWriter(bar helpers.ProgressWriter) {
-	o.Transport.ProgressBar = bar
-	o.repo.Client.(*auth.Client).Client.Transport = o.Transport
+	o.progTransport.ProgressBar = bar
+	o.repo.Client.(*auth.Client).Client.Transport = o.progTransport
 }
 
 // ClearProgressWriter clears the progress writer for the remote
 func (o *OrasRemote) ClearProgressWriter() {
-	o.Transport.ProgressBar = nil
-	o.repo.Client.(*auth.Client).Client.Transport = o.Transport
+	o.progTransport.ProgressBar = nil
+	o.repo.Client.(*auth.Client).Client.Transport = o.progTransport
 }
 
 // Repo gives you access to the underlying remote repository
