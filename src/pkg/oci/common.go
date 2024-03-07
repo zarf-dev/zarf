@@ -101,6 +101,18 @@ func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*Or
 	return o, nil
 }
 
+// SetProgressWriter sets the progress writer for the remote
+func (o *OrasRemote) SetProgressWriter(bar helpers.ProgressWriter) {
+	o.Transport.ProgressBar = bar
+	o.repo.Client.(*auth.Client).Client.Transport = o.Transport
+}
+
+// ClearProgressWriter clears the progress writer for the remote
+func (o *OrasRemote) ClearProgressWriter() {
+	o.Transport.ProgressBar = nil
+	o.repo.Client.(*auth.Client).Client.Transport = o.Transport
+}
+
 // Repo gives you access to the underlying remote repository
 func (o *OrasRemote) Repo() *remote.Repository {
 	return o.repo
