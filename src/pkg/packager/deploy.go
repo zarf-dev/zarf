@@ -63,7 +63,7 @@ func (p *Packager) Deploy() (err error) {
 
 	// Set variables and prompt if --confirm is not set
 	if err := p.setVariableMapInConfig(); err != nil {
-		return fmt.Errorf("unable to set the active variables: %w", err)
+		return err
 	}
 
 	p.hpaModified = false
@@ -526,7 +526,7 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
-			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPaths.Values, chart), idx)
+			chartValueName := helm.StandardValuesName(componentPaths.Values, chart, idx)
 			if err := p.valueTemplate.Apply(component, chartValueName, false); err != nil {
 				return installedCharts, err
 			}
