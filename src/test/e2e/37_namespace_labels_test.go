@@ -13,13 +13,28 @@ import (
 )
 
 func TestNamespaceLabels(t *testing.T) {
-	namespace := "ns-labels-dos-games"
+	chartsNamespace := "namespace-labels-charts"
+	manifestsNamespace := "namespace-labels-manifests"
+
+	testNamespaceLabelsForNamespace(t, chartsNamespace, "0.0.1")
+	testNamespaceLabelsForNamespace(t, manifestsNamespace, "")
+}
+
+func testNamespaceLabelsForNamespace(t *testing.T, namespace, packageSuffix string) {
 	defer e2e.Kubectl("delete", "namespace", namespace)
+	testLabelKey := "testlabelkey"
+	testLabelValue := "testlabelvalue"
+	packageName := ""
 
 	t.Log("E2E: Namespace Labels")
 	e2e.SetupWithCluster(t)
-	buildPath := filepath.Join("src", "test", "packages", "37-namespace-labels")
-	packageName := fmt.Sprintf("zarf-package-namespace-labels-%s.tar.zst", e2e.Arch)
+	buildPath := filepath.Join("src", "test", "packages", fmt.Sprintf("37-%s", namespace))
+
+	if packageSuffix != "" {
+		packageName = fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", namespace, e2e.Arch, packageSuffix)
+	} else {
+		packageName = fmt.Sprintf("zarf-package-%s-%s.tar.zst", namespace, e2e.Arch)
+	}
 
 	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
@@ -30,6 +45,5 @@ func TestNamespaceLabels(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.Kubectl("get", "namespace", namespace, "--show-labels")
 	t.Log(stdOut)
-	require.Contains(t, stdOut, "app.kubernetes.io/managed-by=zarf")
-	require.Contains(t, stdOut, "gamerNamespace=dos")
+	require.Contains(t, stdOut, fmt.Sprintf("%s=%s", testLabelKey, testLabelValue))
 }

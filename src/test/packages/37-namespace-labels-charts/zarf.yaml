@@ -1,0 +1,33 @@
+kind: ZarfPackageConfig
+metadata:
+  name: namespace-labels-charts
+  description: Example showcasing multiple ways to deploy helm charts
+  version: 0.0.1
+
+components:
+  - name: demo-helm-charts
+    required: true
+    charts:
+      # Charts are organized in a list with unique chart names per component - note that a Zarf chart name does not need to match the chart name in a Chart.yaml
+      - name: podinfo-local
+        version: 6.4.0
+        namespace: namespace-labels-charts
+        namespaceLabels:
+          testlabelkey: testlabelvalue
+        # In this case `localPath` will load the podinfo chart that is located in the `chart` directory
+        localPath: ../../../../examples/helm-charts/chart
+        valuesFiles:
+          - ../../../../examples/helm-charts/values.yaml
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+      # This is the cosign signature for the podinfo image for image signature verification
+      - ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: podinfo-local
+                namespace: namespace-labels-charts
+                condition: available
