@@ -1101,6 +1101,25 @@ Must be one of:
 </blockquote>
 </details>
 
+<details open>
+<summary>
+<strong> <a name="components_items_charts_items_namespaceLabels"></a>namespaceLabels</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+  ## components > charts > namespaceLabels
+
+**Description:** List of labels to apply to the namespace
+
+|                           |                                                                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
+| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
+
+</blockquote>
+</details>
+
 <details>
 <summary>
 <strong> <a name="components_items_charts_items_releaseName"></a>releaseName</strong>
@@ -1221,6 +1240,25 @@ Must be one of:
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details open>
+<summary>
+<strong> <a name="components_items_manifests_items_namespaceLabels"></a>namespaceLabels</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+  ## components > manifests > namespaceLabels
+
+**Description:** List of labels to apply to the namespace
+
+|                           |                                                                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
+| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 
 </blockquote>
 </details>

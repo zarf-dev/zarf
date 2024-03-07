@@ -195,6 +195,15 @@
           "type": "string",
           "description": "The namespace to deploy the chart to"
         },
+        "namespaceLabels": {
+          "patternProperties": {
+            ".*": {
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "description": "List of labels to apply to the namespace"
+        },
         "releaseName": {
           "type": "string",
           "description": "The name of the Helm release to create (defaults to the Zarf name of the chart)"
@@ -866,6 +875,15 @@
         "namespace": {
           "type": "string",
           "description": "The namespace to deploy the manifests to"
+        },
+        "namespaceLabels": {
+          "patternProperties": {
+            ".*": {
+              "type": "string"
+            }
+          },
+          "type": "object",
+          "description": "List of labels to apply to the namespace"
         },
         "files": {
           "items": {
