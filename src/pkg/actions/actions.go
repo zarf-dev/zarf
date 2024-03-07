@@ -69,7 +69,7 @@ func (ac *ActionRunner) RunAction(defaultCfg ActionDefaults, action Action, vari
 			return err
 		}
 
-		// Mute the output becuase it will be noisy.
+		// Mute the output because it will be noisy.
 		t := true
 		action.Mute = &t
 

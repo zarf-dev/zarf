@@ -64,27 +64,6 @@ func ListDirectories(directory string) ([]string, error) {
 	return directories, nil
 }
 
-// WriteFile writes the given data to the given path.
-func WriteFile(path string, data []byte) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("unable to create the file at %s to write the contents: %w", path, err)
-	}
-
-	_, err = f.Write(data)
-	if err != nil {
-		_ = f.Close()
-		return fmt.Errorf("unable to write the file at %s contents:%w", path, err)
-	}
-
-	err = f.Close()
-	if err != nil {
-		return fmt.Errorf("error saving file %s: %w", path, err)
-	}
-
-	return nil
-}
-
 // RecursiveFileList walks a path with an optional regex pattern and returns a slice of file paths.
 // If skipHidden is true, hidden directories will be skipped.
 func RecursiveFileList(dir string, pattern *regexp.Regexp, skipHidden bool) (files []string, err error) {
@@ -122,7 +101,7 @@ func RecursiveFileList(dir string, pattern *regexp.Regexp, skipHidden bool) (fil
 // CreateParentDirectory creates the parent directory for the given file path.
 func CreateParentDirectory(destination string) error {
 	parentDest := filepath.Dir(destination)
-	return CreateDirectory(parentDest, 0700)
+	return CreateDirectory(parentDest, ReadWriteExecuteUser)
 }
 
 // CreatePathAndCopy creates the parent directory for the given file path and copies the source file to the destination.

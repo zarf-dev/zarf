@@ -28,7 +28,7 @@ var destroyCmd = &cobra.Command{
 	Aliases: []string{"d"},
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		c, err := cluster.NewClusterWithWait(cluster.DefaultTimeout)
 		if err != nil {
 			message.Fatalf(err, lang.ErrNoClusterConnection)

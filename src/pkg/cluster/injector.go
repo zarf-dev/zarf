@@ -52,7 +52,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 		InjectorPayloadTarGz: filepath.Join(tmpDir, "payload.tar.gz"),
 	}
 
-	if err := helpers.CreateDirectory(tmp.SeedImagesDir, 0700); err != nil {
+	if err := helpers.CreateDirectory(tmp.SeedImagesDir, helpers.ReadWriteExecuteUser); err != nil {
 		spinner.Fatalf(err, "Unable to create the seed images directory")
 	}
 

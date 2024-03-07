@@ -117,7 +117,7 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 					return fmt.Errorf("unable to validate partial checksums - missing file: %s", rel)
 				}
 			}
-			// it's okay if we're doing a partial check and the file isn't there as long as the path wasnt loaded
+			// it's okay if we're doing a partial check and the file isn't there as long as the path wasn't loaded
 			return nil
 		}
 
@@ -158,7 +158,7 @@ func pathCheckMap(dir string) (map[string]bool, error) {
 			return nil
 		}
 		filepathMap[path] = false
-		return nil
+		return err
 	})
 	return filepathMap, err
 }

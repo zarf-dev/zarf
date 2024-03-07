@@ -49,7 +49,7 @@ func OutputSBOMFiles(sourceDir, outputDir, packageName string) (string, error) {
 		return "", err
 	}
 
-	if err := helpers.CreateDirectory(packagePath, 0700); err != nil {
+	if err := helpers.CreateDirectory(packagePath, helpers.ReadWriteExecuteUser); err != nil {
 		return "", err
 	}
 

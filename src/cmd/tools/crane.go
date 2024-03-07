@@ -37,7 +37,7 @@ func init() {
 		Use:     "registry",
 		Aliases: []string{"r", "crane"},
 		Short:   lang.CmdToolsRegistryShort,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 
 			common.ExitOnInterrupt()
 
@@ -92,6 +92,7 @@ func init() {
 	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
 	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, &craneOptions, lang.CmdToolsRegistryDigestExample, 0))
 	registryCmd.AddCommand(pruneCmd)
+	registryCmd.AddCommand(craneCmd.NewCmdVersion())
 
 	registryCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
 	registryCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
@@ -246,6 +247,9 @@ func pruneImages(_ *cobra.Command, _ []string) error {
 func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.DeployedPackage, registryEndpoint string) error {
 	authOption := config.GetCraneAuthOption(zarfState.RegistryInfo.PushUsername, zarfState.RegistryInfo.PushPassword)
 
+	spinner := message.NewProgressSpinner(lang.CmdToolsRegistryPruneLookup)
+	defer spinner.Stop()
+
 	// Determine which image digests are currently used by Zarf packages
 	pkgImages := map[string]bool{}
 	for _, pkg := range zarfPackages {
@@ -273,6 +277,8 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 		}
 	}
 
+	spinner.Updatef(lang.CmdToolsRegistryPruneCatalog)
+
 	// Find which images and tags are in the registry currently
 	imageCatalog, err := crane.Catalog(registryEndpoint, authOption)
 	if err != nil {
@@ -295,6 +301,8 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 		}
 	}
 
+	spinner.Updatef(lang.CmdToolsRegistryPruneCalculate)
+
 	// Figure out which images are in the registry but not needed by packages
 	imageDigestsToPrune := map[string]bool{}
 	for digestRef, digest := range referenceToDigest {
@@ -307,6 +315,8 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 			imageDigestsToPrune[digestRef] = true
 		}
 	}
+
+	spinner.Success()
 
 	if len(imageDigestsToPrune) > 0 {
 		message.Note(lang.CmdToolsRegistryPruneImageList)
@@ -328,6 +338,9 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 			}
 		}
 		if confirm {
+			spinner := message.NewProgressSpinner(lang.CmdToolsRegistryPruneDelete)
+			defer spinner.Stop()
+
 			// Delete the digest references that are to be pruned
 			for digestRef := range imageDigestsToPrune {
 				err = crane.Delete(digestRef, authOption)
@@ -335,6 +348,8 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 					return err
 				}
 			}
+
+			spinner.Success()
 		}
 	} else {
 		message.Note(lang.CmdToolsRegistryPruneNoImages)

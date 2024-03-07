@@ -6,6 +6,7 @@ package kustomize
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"sigs.k8s.io/kustomize/api/krusty"
@@ -39,5 +40,5 @@ func Build(path string, destination string, kustomizeAllowAnyDirectory bool) err
 		return fmt.Errorf("problem converting kustomization to yaml: %w", err)
 	}
 
-	return helpers.WriteFile(destination, yaml)
+	return os.WriteFile(destination, yaml, helpers.ReadWriteUser)
 }

@@ -60,7 +60,7 @@ func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imageList []transf
 	defer builder.spinner.Stop()
 
 	// Ensure the sbom directory exists
-	_ = helpers.CreateDirectory(builder.outputDir, 0700)
+	_ = helpers.CreateDirectory(builder.outputDir, helpers.ReadWriteExecuteUser)
 
 	// Generate a list of images and files for the sbom viewer
 	json, err := builder.generateJSONList(componentSBOMs, imageList)
@@ -152,7 +152,7 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 	imageCachePath := filepath.Join(b.cachePath, layout.ImagesDir)
 
 	// Ensure the image cache directory exists.
-	if err := helpers.CreateDirectory(imageCachePath, 0700); err != nil {
+	if err := helpers.CreateDirectory(imageCachePath, helpers.ReadWriteExecuteUser); err != nil {
 		return nil, err
 	}
 

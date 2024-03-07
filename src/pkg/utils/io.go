@@ -26,7 +26,7 @@ const (
 // MakeTempDir creates a temp directory with the zarf- prefix.
 func MakeTempDir(basePath string) (string, error) {
 	if basePath != "" {
-		if err := helpers.CreateDirectory(basePath, 0700); err != nil {
+		if err := helpers.CreateDirectory(basePath, helpers.ReadWriteExecuteUser); err != nil {
 			return "", err
 		}
 	}
@@ -120,7 +120,7 @@ func SplitFile(srcPath string, chunkSizeBytes int) (err error) {
 
 	// create file path starting from part 001
 	path := fmt.Sprintf("%s.part001", srcPath)
-	chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+	chunkFile, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, helpers.ReadAllWriteUser)
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func SplitFile(srcPath string, chunkSizeBytes int) (err error) {
 
 			// create new file
 			path = fmt.Sprintf("%s.part%03d", srcPath, len(fileNames)+1)
-			chunkFile, err = os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+			chunkFile, err = os.OpenFile(path, os.O_CREATE|os.O_WRONLY, helpers.ReadAllWriteUser)
 			if err != nil {
 				return err
 			}
@@ -204,7 +204,7 @@ func SplitFile(srcPath string, chunkSizeBytes int) (err error) {
 
 	// write header file
 	path = fmt.Sprintf("%s.part000", srcPath)
-	if err := os.WriteFile(path, jsonData, 0644); err != nil {
+	if err := os.WriteFile(path, jsonData, helpers.ReadAllWriteUser); err != nil {
 		return fmt.Errorf("unable to write the file %s: %w", path, err)
 	}
 	fileNames = append(fileNames, path)

@@ -22,6 +22,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 
 	"github.com/spf13/cobra"
 )
@@ -33,7 +34,7 @@ var initCmd = &cobra.Command{
 	Short:   lang.CmdInitShort,
 	Long:    lang.CmdInitLong,
 	Example: lang.CmdInitExample,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		zarfLogo := message.GetLogo()
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 
@@ -91,7 +92,7 @@ func findInitPackage(initPackageName string) (string, error) {
 
 	// Create the cache directory if it doesn't exist
 	if helpers.InvalidPath(config.GetAbsCachePath()) {
-		if err := helpers.CreateDirectory(config.GetAbsCachePath(), 0755); err != nil {
+		if err := helpers.CreateDirectory(config.GetAbsCachePath(), helpers.ReadExecuteAllWriteUser); err != nil {
 			message.Fatalf(err, lang.CmdInitErrUnableCreateCache, config.GetAbsCachePath())
 		}
 	}
@@ -119,7 +120,7 @@ func downloadInitPackage(cacheDirectory string) (string, error) {
 	}
 
 	var confirmDownload bool
-	url := oci.GetInitPackageURL(config.CLIVersion)
+	url := zoci.GetInitPackageURL(config.CLIVersion)
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
 	message.Question(fmt.Sprintf(lang.CmdInitPullAsk, url))
@@ -138,11 +139,11 @@ func downloadInitPackage(cacheDirectory string) (string, error) {
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		remote, err := oci.NewOrasRemote(url, oci.PlatformForArch(config.GetArch()))
+		remote, err := zoci.NewRemote(url, oci.PlatformForArch(config.GetArch()))
 		if err != nil {
 			return "", err
 		}
-		source := sources.OCISource{OrasRemote: remote}
+		source := &sources.OCISource{Remote: remote}
 		return source.Collect(cacheDirectory)
 	}
 	// Otherwise, exit and tell the user to manually download the init-package

@@ -133,7 +133,7 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) error {
 
 	textFile.Close()
 
-	return os.WriteFile(path, []byte(text), 0600)
+	return os.WriteFile(path, []byte(text), helpers.ReadWriteUser)
 }
 
 // ProcessYamlFilesInPath iterates over all yaml files in a given path and performs Zarf templating + image swapping.

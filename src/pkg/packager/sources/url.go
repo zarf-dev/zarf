@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	// veryify that URLSource implements PackageSource
+	// verify that URLSource implements PackageSource
 	_ PackageSource = (*URLSource)(nil)
 )
 

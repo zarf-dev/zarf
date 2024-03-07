@@ -48,7 +48,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 		return err
 	}
 
-	err = helpers.CreateDirectory(filepath.Dir(dst), 0700)
+	err = helpers.CreateDirectory(filepath.Dir(dst), helpers.ReadWriteExecuteUser)
 	if err != nil {
 		return fmt.Errorf(lang.ErrCreatingDir, filepath.Dir(dst), err.Error())
 	}
