@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func cfq(t *testing.T, q string) types.ZarfComponent {
+func componentFromQuery(t *testing.T, q string) types.ZarfComponent {
 	c := types.ZarfComponent{
 		Name: q,
 	}
@@ -38,7 +38,7 @@ func cfq(t *testing.T, q string) types.ZarfComponent {
 			if strings.HasPrefix(cond, "idx=") {
 				continue
 			}
-			require.Fail(t, "unknown condition", "unknown condition %q", cond)
+			require.FailNow(t, "unknown condition", "unknown condition %q", cond)
 		}
 	}
 
@@ -125,12 +125,12 @@ func TestDeployFilter_Apply(t *testing.T) {
 			},
 			optionalComponents: "",
 			want: []types.ZarfComponent{
-				cfq(t, "required=<nil> && default=true"),
-				cfq(t, "required=true && default=true"),
-				cfq(t, "required=false && default=true"),
-				cfq(t, "required=true"),
-				cfq(t, "required=<nil> && group=foo && idx=1 && default=true"),
-				cfq(t, "required=<nil> && group=bar && idx=4 && default=true"),
+				componentFromQuery(t, "required=<nil> && default=true"),
+				componentFromQuery(t, "required=true && default=true"),
+				componentFromQuery(t, "required=false && default=true"),
+				componentFromQuery(t, "required=true"),
+				componentFromQuery(t, "required=<nil> && group=foo && idx=1 && default=true"),
+				componentFromQuery(t, "required=<nil> && group=bar && idx=4 && default=true"),
 			},
 		},
 		"Test when version is less than v0.33.0 w/ some optional components selected": {
@@ -142,13 +142,13 @@ func TestDeployFilter_Apply(t *testing.T) {
 			},
 			optionalComponents: strings.Join([]string{"required=false", "required=<nil> && group=bar && idx=5 && default=false", "-required=true"}, ","),
 			want: []types.ZarfComponent{
-				cfq(t, "required=<nil> && default=true"),
-				cfq(t, "required=true && default=true"),
-				cfq(t, "required=false && default=true"),
-				cfq(t, "required=true"),
-				cfq(t, "required=false"),
-				cfq(t, "required=<nil> && group=foo && idx=1 && default=true"),
-				cfq(t, "required=<nil> && group=bar && idx=5 && default=false"),
+				componentFromQuery(t, "required=<nil> && default=true"),
+				componentFromQuery(t, "required=true && default=true"),
+				componentFromQuery(t, "required=false && default=true"),
+				componentFromQuery(t, "required=true"),
+				componentFromQuery(t, "required=false"),
+				componentFromQuery(t, "required=<nil> && group=foo && idx=1 && default=true"),
+				componentFromQuery(t, "required=<nil> && group=bar && idx=5 && default=false"),
 			},
 		},
 	}
