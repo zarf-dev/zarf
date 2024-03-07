@@ -19,12 +19,17 @@ func (p *Packager) Mirror() (err error) {
 	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
-	filter := filters.BySelectState(p.cfg.PkgOpts.OptionalComponents)
+	filter := filters.Combine(
+		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
+		p.archAndOSFilter(),
+	)
 
 	if err = p.source.LoadPackage(p.layout, filter, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
+
+	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML()
+	if err != nil {
 		return err
 	}
 
@@ -37,11 +42,7 @@ func (p *Packager) Mirror() (err error) {
 		return fmt.Errorf("mirror cancelled")
 	}
 
-	if err := p.filterComponentsByArchAndOS(); err != nil {
-		return err
-	}
-
-	included, err := filter.Apply(p.cfg.Pkg)
+	p.cfg.Pkg.Components, err = filter.Apply(p.cfg.Pkg)
 	if err != nil {
 		return err
 	}
@@ -51,7 +52,7 @@ func (p *Packager) Mirror() (err error) {
 		GitServer:    p.cfg.InitOpts.GitServer,
 	}
 
-	for _, component := range included {
+	for _, component := range p.cfg.Pkg.Components {
 		if err := p.mirrorComponent(component); err != nil {
 			return err
 		}

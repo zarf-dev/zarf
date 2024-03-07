@@ -41,13 +41,18 @@ func (p *Packager) resetRegistryHPA() {
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
-	filter := filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm)
+
+	filter := filters.Combine(
+		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm),
+		p.archAndOSFilter(),
+	)
 
 	if err = p.source.LoadPackage(p.layout, filter, true); err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
+	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML()
+	if err != nil {
 		return err
 	}
 
@@ -64,6 +69,11 @@ func (p *Packager) Deploy() (err error) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
+	p.cfg.Pkg.Components, err = filter.Apply(p.cfg.Pkg)
+	if err != nil {
+		return err
+	}
+
 	// Set variables and prompt if --confirm is not set
 	if err := p.setVariableMapInConfig(); err != nil {
 		return fmt.Errorf("unable to set the active variables: %w", err)
@@ -73,11 +83,6 @@ func (p *Packager) Deploy() (err error) {
 	p.connectStrings = make(types.ConnectStrings)
 	// Reset registry HPA scale down whether an error occurs or not
 	defer p.resetRegistryHPA()
-
-	// Filter out components that are not compatible with this system
-	if err := p.filterComponentsByArchAndOS(); err != nil {
-		return err
-	}
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
@@ -98,12 +103,6 @@ func (p *Packager) Deploy() (err error) {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	filter := filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm)
-	componentsToDeploy, err := filter.Apply(p.cfg.Pkg)
-	if err != nil {
-		return deployedComponents, fmt.Errorf("unable to get selected components: %w", err)
-	}
-
 	// Generate a value template
 	if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
 		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
@@ -115,7 +114,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 	}
 
 	// Process all the components we are deploying
-	for _, component := range componentsToDeploy {
+	for _, component := range p.cfg.Pkg.Components {
 
 		deployedComponent := types.DeployedComponent{
 			Name:               component.Name,

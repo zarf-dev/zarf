@@ -39,10 +39,8 @@ func (p *Packager) Remove() (err error) {
 	if err = p.source.LoadPackageMetadata(p.layout, false, false); err != nil {
 		return err
 	}
-	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
-		return err
-	}
-	if err := p.filterComponentsByArchAndOS(); err != nil {
+	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML()
+	if err != nil {
 		return err
 	}
 	packageName = p.cfg.Pkg.Metadata.Name
@@ -52,7 +50,10 @@ func (p *Packager) Remove() (err error) {
 	packageRequiresCluster := false
 
 	// If components were provided; just remove the things we were asked to remove
-	filter := filters.BySelectState(p.cfg.PkgOpts.OptionalComponents)
+	filter := filters.Combine(
+		p.archAndOSFilter(),
+		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
+	)
 	included, err := filter.Apply(p.cfg.Pkg)
 	if err != nil {
 		return err

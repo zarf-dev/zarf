@@ -36,17 +36,10 @@ func (p *Packager) DevDeploy() error {
 	// Set the package version to the CLI version
 	p.cfg.Pkg.Build.Version = config.CLIVersion
 
-	// Filter out components that are not compatible with this system
-	if err := p.filterComponentsByArchAndOS(); err != nil {
-		return err
-	}
-
-	// Also filter out components that are not required, nor requested via --components
-	// This is different from the above filter, as it is not based on the system, but rather
-	// the user's selection and the component's fields
-	// This is also different from regular package creation, where we still assemble and package up
-	// all components and their dependencies, regardless of whether they are required or not
-	filter := filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, false)
+	filter := filters.Combine(
+		p.archAndOSFilter(),
+		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, false),
+	)
 	p.cfg.Pkg.Components, err = filter.Apply(p.cfg.Pkg)
 	if err != nil {
 		return err

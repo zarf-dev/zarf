@@ -48,8 +48,15 @@ func (p *Packager) cdToBaseDir(base string, cwd string) error {
 }
 
 func (p *Packager) load() error {
-	if err := p.readZarfYAML(layout.ZarfYAML); err != nil {
-		return fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
+	// copy the cwd's zarf.yaml to the temp directory
+	if err := utils.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+		return fmt.Errorf("unable to copy zarf.yaml: %w", err)
+	}
+
+	var err error
+	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML()
+	if err != nil {
+		return err
 	}
 	if p.isInitConfig() {
 		p.cfg.Pkg.Metadata.Version = config.CLIVersion
@@ -272,14 +279,19 @@ func (p *Packager) output() error {
 		message.ZarfCommand("package deploy %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
 		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
 	} else {
-		// Use the output path if the user specified it.
-		packageName := filepath.Join(p.cfg.CreateOpts.Output, p.GetPackageName())
+		var packageName string
+		if p.isInitConfig() {
+			packageName = GetInitPackageName(p.cfg.Pkg.Build.Architecture)
+		} else {
+			packageName = p.GetPackageName()
+		}
+		packagePath := filepath.Join(p.cfg.CreateOpts.Output, packageName)
 
 		// Try to remove the package if it already exists.
-		_ = os.Remove(packageName)
+		_ = os.Remove(packagePath)
 
 		// Create the package tarball.
-		if err := p.archivePackage(packageName); err != nil {
+		if err := p.archivePackage(packagePath); err != nil {
 			return fmt.Errorf("unable to archive package: %w", err)
 		}
 	}

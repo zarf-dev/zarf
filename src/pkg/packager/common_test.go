@@ -85,7 +85,6 @@ func TestValidatePackageArchitecture(t *testing.T) {
 
 			// Create a Packager instance with package architecture set and a mock Kubernetes client.
 			p := &Packager{
-				arch: testCase.pkgArch,
 				cluster: &cluster.Cluster{
 					K8s: &k8s.K8s{
 						Clientset: mockClient,
@@ -94,6 +93,9 @@ func TestValidatePackageArchitecture(t *testing.T) {
 				},
 				cfg: &types.PackagerConfig{
 					Pkg: types.ZarfPackage{
+						Build: types.ZarfBuildData{
+							Architecture: testCase.pkgArch,
+						},
 						Components: []types.ZarfComponent{
 							{
 								Images: testCase.images,

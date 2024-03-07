@@ -15,36 +15,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
-// readZarfYAML reads a Zarf YAML file.
-func (p *Packager) readZarfYAML(path string) error {
-	var warnings []string
-
-	if err := utils.ReadYaml(path, &p.cfg.Pkg); err != nil {
-		return err
-	}
-
-	if p.layout.IsLegacyLayout() {
-		warning := "Detected deprecated package layout, migrating to new layout - support for this package will be dropped in v1.0.0"
-		p.warnings = append(p.warnings, warning)
-	}
-
-	if len(p.cfg.Pkg.Build.Migrations) > 0 {
-		for idx, component := range p.cfg.Pkg.Components {
-			// Handle component configuration deprecations
-			p.cfg.Pkg.Components[idx], warnings = deprecated.MigrateComponent(p.cfg.Pkg.Build, component)
-			p.warnings = append(p.warnings, warnings...)
-		}
-	}
-
-	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
-
-	return nil
-}
-
-// filterComponentsByArchAndOS removes components not matching the current OS and architecture.
-func (p *Packager) filterComponentsByArchAndOS() (err error) {
-	p.cfg.Pkg.Components, err = filters.ByArchAndOS(p.arch, runtime.GOOS).Apply(p.cfg.Pkg)
-	return err
+func (p *Packager) archAndOSFilter() filters.ComponentFilterStrategy {
+	return filters.ByArchAndOS(p.pkgArch(), runtime.GOOS)
 }
 
 // writeYaml adds build information and writes the config to the temp directory.
@@ -61,8 +33,9 @@ func (p *Packager) writeYaml() error {
 	hostname, hostErr := os.Hostname()
 
 	// Normalize these for the package confirmation.
-	p.cfg.Pkg.Metadata.Architecture = p.arch
-	p.cfg.Pkg.Build.Architecture = p.arch
+	arch := p.pkgArch()
+	p.cfg.Pkg.Metadata.Architecture = arch
+	p.cfg.Pkg.Build.Architecture = arch
 
 	if p.cfg.CreateOpts.IsSkeleton {
 		p.cfg.Pkg.Build.Architecture = "skeleton"

@@ -30,14 +30,17 @@ var allowedOs = []string{"linux", "darwin", "windows", ""}
 // same as enums on ZarfComponentOnlyCluster
 var allowedArch = []string{"amd64", "arm64", ""}
 
+var ErrInvalidOS = fmt.Errorf("invalid OS")
+var ErrInvalidArch = fmt.Errorf("invalid architecture")
+
 // Apply applies the filter.
 func (f *archAndOSFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
 	if !slices.Contains(allowedOs, f.os) {
-		return nil, fmt.Errorf("invalid OS: %s", f.os)
+		return nil, fmt.Errorf("%w: %s", ErrInvalidOS, f.os)
 	}
 
 	if !slices.Contains(allowedArch, f.arch) {
-		return nil, fmt.Errorf("invalid architecture: %s", f.arch)
+		return nil, fmt.Errorf("%w: %s", ErrInvalidArch, f.arch)
 	}
 
 	filtered := []types.ZarfComponent{}

@@ -18,7 +18,7 @@ func (p *Packager) composeComponents() error {
 	pkgConsts := p.cfg.Pkg.Constants
 
 	for i, component := range p.cfg.Pkg.Components {
-		arch := p.arch
+		arch := p.pkgArch()
 		// filter by architecture
 		if !composer.CompatibleComponent(component, arch, p.cfg.CreateOpts.Flavor) {
 			continue

@@ -6,12 +6,13 @@ package packager
 
 import (
 	"fmt"
-	"github.com/goccy/go-yaml"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/goccy/go-yaml"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -55,8 +56,12 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	}
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
-	if err = p.readZarfYAML(layout.ZarfYAML); err != nil {
-		return nil, fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
+	if err := utils.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+		return nil, fmt.Errorf("unable to copy zarf.yaml: %w", err)
+	}
+	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML()
+	if err != nil {
+		return nil, err
 	}
 
 	if err := p.composeComponents(); err != nil {

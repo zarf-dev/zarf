@@ -37,7 +37,6 @@ type Packager struct {
 	cfg            *types.PackagerConfig
 	cluster        *cluster.Cluster
 	layout         *layout.PackagePaths
-	arch           string
 	warnings       []string
 	valueTemplate  *template.Values
 	hpaModified    bool
@@ -161,6 +160,10 @@ func (p *Packager) setTempDirectory(path string) error {
 	return nil
 }
 
+func (p *Packager) pkgArch() string {
+	return config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
+}
+
 // GetInitPackageName returns the formatted name of the init package.
 func GetInitPackageName(arch string) string {
 	if arch == "" {
@@ -172,17 +175,13 @@ func GetInitPackageName(arch string) string {
 
 // GetPackageName returns the formatted name of the package.
 func (p *Packager) GetPackageName() string {
-	if p.isInitConfig() {
-		return GetInitPackageName(p.arch)
-	}
-
 	packageName := p.cfg.Pkg.Metadata.Name
 	suffix := "tar.zst"
 	if p.cfg.Pkg.Metadata.Uncompressed {
 		suffix = "tar"
 	}
 
-	packageFileName := fmt.Sprintf("%s%s-%s", config.ZarfPackagePrefix, packageName, p.arch)
+	packageFileName := fmt.Sprintf("%s%s-%s", config.ZarfPackagePrefix, packageName, p.cfg.Pkg.Build.Architecture)
 	if p.cfg.Pkg.Build.Differential {
 		packageFileName = fmt.Sprintf("%s-%s-differential-%s", packageFileName, p.cfg.CreateOpts.DifferentialData.DifferentialPackageVersion, p.cfg.Pkg.Metadata.Version)
 	} else if p.cfg.Pkg.Metadata.Version != "" {
@@ -268,8 +267,8 @@ func (p *Packager) attemptClusterChecks() (err error) {
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture() error {
-	// Ignore this check if the architecture is explicitly "multi", we don't have a cluster connection, or the package contains no images
-	if p.arch == "multi" || !p.isConnectedToCluster() || !p.hasImages() {
+	// Ignore this check if we don't have a cluster connection, or the package contains no images
+	if !p.isConnectedToCluster() || !p.hasImages() {
 		return nil
 	}
 
@@ -279,8 +278,8 @@ func (p *Packager) validatePackageArchitecture() error {
 	}
 
 	// Check if the package architecture and the cluster architecture are the same.
-	if !slices.Contains(clusterArchitectures, p.arch) {
-		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.arch, strings.Join(clusterArchitectures, ", "))
+	if !slices.Contains(clusterArchitectures, p.pkgArch()) {
+		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.pkgArch(), strings.Join(clusterArchitectures, ", "))
 	}
 
 	return nil
