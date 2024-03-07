@@ -151,13 +151,6 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 			} else {
 				component := groupedComponents[groupKey][0]
 
-				// default takes precedence over required
-				if component.Default {
-					selectedComponents = append(selectedComponents, component)
-					continue
-				}
-
-				// otherwise interactively prompt the user
 				if f.isInteractive {
 					selected, err := interactive.SelectOptionalComponent(component)
 					if err != nil {
@@ -169,8 +162,7 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 					}
 				}
 
-				// finally go off the required status
-				if isRequired(component) {
+				if component.Default || isRequired(component) {
 					selectedComponents = append(selectedComponents, component)
 					continue
 				}
