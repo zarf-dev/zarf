@@ -21,6 +21,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -79,6 +80,10 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	}
 
 	componentDefinition := "\ncomponents:\n"
+
+	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
+		return nil, err
+	}
 
 	for _, component := range p.cfg.Pkg.Components {
 
