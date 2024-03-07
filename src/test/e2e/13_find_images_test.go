@@ -13,6 +13,7 @@ func TestFindImages(t *testing.T) {
 	t.Log("E2E: Find Images")
 
 	t.Run("zarf prepare find-images", func(t *testing.T) {
+		t.Parallel()
 		// Test `zarf prepare find-images` for a remote asset
 		stdOut, stdErr, err := e2e.Zarf("prepare", "find-images", "examples/helm-charts")
 		require.NoError(t, err, stdOut, stdErr)
@@ -24,6 +25,7 @@ func TestFindImages(t *testing.T) {
 	})
 
 	t.Run("zarf prepare find-images --kube-version", func(t *testing.T) {
+		t.Parallel()
 		controllerImageWithTag := "quay.io/jetstack/cert-manager-controller:v1.11.1"
 		controlImageWithSignature := "quay.io/jetstack/cert-manager-controller:sha256-4f1782c8316f34aae6b9ab823c3e6b7e6e4d92ec5dac21de6a17c3da44c364f1.sig"
 
@@ -42,7 +44,7 @@ func TestFindImages(t *testing.T) {
 	})
 
 	t.Run("zarf dev find-images with helm or manifest vars", func(t *testing.T) {
-
+		t.Parallel()
 		registry := "coolregistry.gov"
 		agentTag := "test"
 
@@ -60,7 +62,7 @@ func TestFindImages(t *testing.T) {
 	})
 
 	t.Run("zarf test find images --why w/ helm chart success", func(t *testing.T) {
-
+		t.Parallel()
 		testPackagePath := filepath.Join("examples", "wordpress")
 		sets := []string{"WORDPRESS_USERNAME=zarf", "WORDPRESS_PASSWORD=fake", "WORDPRESS_EMAIL=hello@defenseunicorns.com", "WORDPRESS_FIRST_NAME=zarf", "WORDPRESS_LAST_NAME=zarf", "WORDPRESS_BLOG_NAME=blog"}
 		deploysSet := strings.Join(sets, ",")
@@ -72,7 +74,7 @@ func TestFindImages(t *testing.T) {
 	})
 
 	t.Run("zarf test find images --why w/ manifests success", func(t *testing.T) {
-
+		t.Parallel()
 		testPackagePath := filepath.Join("examples", "manifests")
 
 		stdOut, _, err := e2e.Zarf("dev", "find-images", testPackagePath, "--why", "httpd:alpine3.18")
