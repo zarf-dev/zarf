@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package oci contains functions for interacting with Zarf packages stored in OCI registries.
+// Package oci contains functions for interacting with artifacts stored in OCI registries.
 package oci
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -27,10 +27,10 @@ func (o *OrasRemote) printLayer(desc ocispec.Descriptor, suffix string) error {
 	title := desc.Annotations[ocispec.AnnotationTitle]
 	var layerInfo string
 	if title != "" {
-		layerInfo = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], message.First30last30(title))
+		layerInfo = fmt.Sprintf("%s %s", desc.Digest.Encoded()[:12], helpers.First30last30(title))
 	} else {
 		layerInfo = fmt.Sprintf("%s [%s]", desc.Digest.Encoded()[:12], desc.MediaType)
 	}
-	message.Debugf("%s (%s)", layerInfo, suffix)
+	o.log.Debug(fmt.Sprintf("%s (%s)", layerInfo, suffix))
 	return nil
 }

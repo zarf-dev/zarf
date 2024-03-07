@@ -20,6 +20,7 @@ zarf dev find-images [ PACKAGE ] [flags]
       --kube-version string      Override the default helm template KubeVersion when performing a package chart template
   -p, --repo-chart-path string   If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"
       --set stringToString       Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]. (default [])
+      --why string               Find the location of the image given as an argument and print it to the console.
 ```
 
 ## Options inherited from parent commands
