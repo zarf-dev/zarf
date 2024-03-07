@@ -262,7 +262,7 @@ func (h *Helm) finalizeChartPackage(saved, cosignKeyPath string) error {
 
 func (h *Helm) packageValues(cosignKeyPath string) error {
 	for valuesIdx, path := range h.chart.ValuesFiles {
-		dst := fmt.Sprintf("%s-%d", StandardName(h.valuesPath, h.chart), valuesIdx)
+		dst := StandardValuesName(h.valuesPath, h.chart, valuesIdx)
 
 		if helpers.IsURL(path) {
 			if err := utils.DownloadToFile(path, dst, cosignKeyPath); err != nil {

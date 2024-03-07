@@ -423,7 +423,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 					continue
 				}
 
-				rel := fmt.Sprintf("%s-%d", helm.StandardName(layout.ValuesDir, chart), valuesIdx)
+				rel := helm.StandardValuesName(layout.ValuesDir, chart, valuesIdx)
 				p.cfg.Pkg.Components[index].Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 
 				if err := utils.CreatePathAndCopy(path, filepath.Join(componentPaths.Base, rel)); err != nil {

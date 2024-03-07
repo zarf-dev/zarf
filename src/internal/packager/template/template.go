@@ -20,7 +20,6 @@ import (
 // Values contains the values to be used in the template.
 type Values struct {
 	config   *types.PackagerConfig
-	registry string
 	htpasswd string
 }
 
@@ -56,8 +55,6 @@ func Generate(cfg *types.PackagerConfig) (*Values, error) {
 		generated.htpasswd = fmt.Sprintf("%s\\n%s", pushUser, pullUser)
 	}
 
-	generated.registry = regInfo.Address
-
 	return &generated, nil
 }
 
@@ -66,9 +63,9 @@ func (values *Values) Ready() bool {
 	return values.config.State != nil
 }
 
-// GetRegistry returns the registry address.
-func (values *Values) GetRegistry() string {
-	return values.registry
+// SetState sets the state
+func (values *Values) SetState(state *types.ZarfState) {
+	values.config.State = state
 }
 
 // GetVariables returns the variables to be used in the template.
@@ -89,7 +86,7 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 			"STORAGE_CLASS": values.config.State.StorageClass,
 
 			// Registry info
-			"REGISTRY":           values.registry,
+			"REGISTRY":           regInfo.Address,
 			"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
 			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
 			"REGISTRY_AUTH_PULL": regInfo.PullPassword,
