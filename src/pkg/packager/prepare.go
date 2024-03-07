@@ -41,7 +41,6 @@ type imageMap map[string]bool
 func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	repoHelmChartPath := p.cfg.FindImagesOpts.RepoHelmChartPath
 	kubeVersionOverride := p.cfg.FindImagesOpts.KubeVersionOverride
-	pkg := p.cfg.Pkg
 	whyImage := p.cfg.FindImagesOpts.Why
 
 	imagesMap := make(map[string][]string)
@@ -61,7 +60,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 	c := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
 
-	pkg, p.warnings, err = c.LoadPackageDefinition(p.layout)
+	p.cfg.Pkg, p.warnings, err = c.LoadPackageDefinition(p.layout)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +69,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		message.Warn(warning)
 	}
 
-	for _, component := range pkg.Components {
+	for _, component := range p.cfg.Pkg.Components {
 		if len(component.Repos) > 0 && repoHelmChartPath == "" {
 			message.Note("This Zarf package contains git repositories, " +
 				"if any repos contain helm charts you want to template and " +
@@ -85,7 +84,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		return nil, err
 	}
 
-	for _, component := range pkg.Components {
+	for _, component := range p.cfg.Pkg.Components {
 
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
@@ -291,7 +290,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			}
 
 			if len(validImages) > 0 {
-				componentDefinition += fmt.Sprintf("      # Possible images - %s - %s\n", pkg.Metadata.Name, component.Name)
+				componentDefinition += fmt.Sprintf("      # Possible images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
 				for _, image := range validImages {
 					imagesMap[component.Name] = append(imagesMap[component.Name], image)
 					componentDefinition += fmt.Sprintf("      - %s\n", image)
@@ -321,7 +320,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 			if len(cosignArtifactList) > 0 {
 				imagesMap[component.Name] = append(imagesMap[component.Name], cosignArtifactList...)
-				componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s - %s\n", pkg.Metadata.Name, component.Name)
+				componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
 				for _, cosignArtifact := range cosignArtifactList {
 					componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
 				}

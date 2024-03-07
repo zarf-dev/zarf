@@ -40,7 +40,6 @@ func FillActiveTemplate(pkg types.ZarfPackage, setVariables map[string]string) (
 				}
 				setVariables[key] = setVal
 			} else if !present {
-				// erroring out here
 				return fmt.Errorf("template %q must be '--set' when using the '--confirm' flag", key)
 			}
 		}
