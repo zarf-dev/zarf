@@ -85,7 +85,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		return nil, err
 	}
 
-	for _, component := range p.cfg.Pkg.Components {
+	for _, component := range pkg.Components {
 
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
