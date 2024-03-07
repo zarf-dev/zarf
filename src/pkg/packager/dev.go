@@ -67,7 +67,7 @@ func (p *Packager) DevDeploy() error {
 
 	// Set variables and prompt if --confirm is not set
 	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
-		return fmt.Errorf("unable to set the active variables: %w", err)
+		return err
 	}
 
 	p.connectStrings = make(types.ConnectStrings)

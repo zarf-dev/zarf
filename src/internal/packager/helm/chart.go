@@ -139,12 +139,12 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 }
 
 // TemplateChart generates a helm template from a given chart.
-func (h *Helm) TemplateChart() (string, chartutil.Values, error) {
+func (h *Helm) TemplateChart() (manifest string, chartValues chartutil.Values, err error) {
 	message.Debugf("helm.TemplateChart()")
 	spinner := message.NewProgressSpinner("Templating helm chart %s", h.chart.Name)
 	defer spinner.Stop()
 
-	err := h.createActionConfig(h.chart.Namespace, spinner)
+	err = h.createActionConfig(h.chart.Namespace, spinner)
 
 	// Setup K8s connection.
 	if err != nil {
@@ -183,13 +183,18 @@ func (h *Helm) TemplateChart() (string, chartutil.Values, error) {
 		return "", nil, fmt.Errorf("unable to load chart data: %w", err)
 	}
 
+	client.PostRenderer, err = h.newRenderer()
+	if err != nil {
+		return "", nil, fmt.Errorf("unable to create helm renderer: %w", err)
+	}
+
 	// Perform the loadedChart installation.
 	templatedChart, err := client.Run(loadedChart, chartValues)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating helm chart template: %w", err)
 	}
 
-	manifest := templatedChart.Manifest
+	manifest = templatedChart.Manifest
 
 	for _, hook := range templatedChart.Hooks {
 		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest)
@@ -243,7 +248,7 @@ func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
 		// Namespace must be specified.
 		client.Namespace = h.chart.Namespace
 
-		// Post-processing our manifests for reasons....
+		// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 		client.PostRenderer = postRender
 
 		// Set reuse values to only override the values we are explicitly given
@@ -285,7 +290,7 @@ func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 	// Namespace must be specified.
 	client.Namespace = h.chart.Namespace
 
-	// Post-processing our manifests for reasons....
+	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 	client.PostRenderer = postRender
 
 	loadedChart, chartValues, err := h.loadChartData()
@@ -298,10 +303,6 @@ func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 }
 
 func (h *Helm) upgradeChart(lastRelease *release.Release, postRender *renderer) (*release.Release, error) {
-	// Print the postRender object piece by piece to not print the htpasswd
-	message.Debugf("helm.upgradeChart(%#v, %#v, %#v, %#v, %s)", postRender.actionConfig, postRender.connectStrings,
-		postRender.namespaces, postRender.Helm, fmt.Sprintf("values:template.Values{ registry: \"%s\" }", postRender.values.GetRegistry()))
-
 	// Migrate any deprecated APIs (if applicable)
 	err := h.migrateDeprecatedAPIs(lastRelease)
 	if err != nil {
@@ -322,7 +323,7 @@ func (h *Helm) upgradeChart(lastRelease *release.Release, postRender *renderer) 
 	// Namespace must be specified.
 	client.Namespace = h.chart.Namespace
 
-	// Post-processing our manifests for reasons....
+	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 	client.PostRenderer = postRender
 
 	loadedChart, chartValues, err := h.loadChartData()
