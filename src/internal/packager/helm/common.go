@@ -33,6 +33,7 @@ type Helm struct {
 	cfg     *types.PackagerConfig
 	cluster *cluster.Cluster
 	timeout time.Duration
+	retries int
 
 	kubeVersion string
 
@@ -54,7 +55,7 @@ func New(chart types.ZarfChart, chartPath string, valuesPath string, mods ...Mod
 		chart:      chart,
 		chartPath:  chartPath,
 		valuesPath: valuesPath,
-		timeout:    config.ZarfDefaultHelmTimeout,
+		timeout:    config.ZarfDefaultTimeout,
 	}
 
 	for _, mod := range mods {
@@ -71,7 +72,8 @@ func NewClusterOnly(cfg *types.PackagerConfig, variableConfig *variables.Variabl
 		variableConfig: variableConfig,
 		state:          state,
 		cluster:        cluster,
-		timeout:        config.ZarfDefaultHelmTimeout,
+		timeout:        config.ZarfDefaultTimeout,
+		retries:        config.ZarfDefaultRetries,
 	}
 }
 
@@ -122,7 +124,7 @@ func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName,
 			NoWait:      manifest.NoWait,
 		},
 		chartOverride: tmpChart,
-		timeout:       config.ZarfDefaultHelmTimeout,
+		timeout:       config.ZarfDefaultTimeout,
 	}
 
 	for _, mod := range mods {
@@ -135,7 +137,7 @@ func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName,
 }
 
 // WithDeployInfo adds the necessary information to deploy a given chart
-func WithDeployInfo(cfg *types.PackagerConfig, variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration) Modifier {
+func WithDeployInfo(cfg *types.PackagerConfig, variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration, retries int) Modifier {
 	return func(h *Helm) {
 		h.cfg = cfg
 		h.variableConfig = variableConfig
@@ -143,6 +145,7 @@ func WithDeployInfo(cfg *types.PackagerConfig, variableConfig *variables.Variabl
 		h.cluster = cluster
 		h.valuesOverrides = valuesOverrides
 		h.timeout = timeout
+		h.retries = retries
 	}
 }
 
@@ -153,7 +156,19 @@ func WithKubeVersion(kubeVersion string) Modifier {
 	}
 }
 
+// WithPackageConfig sets the packager config for the chart
+func WithPackageConfig(cfg *types.PackagerConfig) Modifier {
+	return func(h *Helm) {
+		h.cfg = cfg
+	}
+}
+
 // StandardName generates a predictable full path for a helm chart for Zarf.
 func StandardName(destination string, chart types.ZarfChart) string {
 	return filepath.Join(destination, chart.Name+"-"+chart.Version)
+}
+
+// StandardValuesName generates a predictable full path for the values file for a helm chart for zarf
+func StandardValuesName(destination string, chart types.ZarfChart, idx int) string {
+	return fmt.Sprintf("%s-%d", StandardName(destination, chart), idx)
 }

@@ -95,6 +95,7 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 		},
 		path.Join(tmpPaths.Temp, bb),
 		path.Join(tmpPaths.Temp, bb, "values"),
+		helm.WithPackageConfig(&types.PackagerConfig{}),
 	)
 
 	// Download the chart from Git and save it to a temporary directory.

@@ -19,6 +19,7 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
       --components string          Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
       --confirm                    Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
   -h, --help                       help for deploy
+      --retries int                Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
       --set stringToString         Specify deployment variables to set on the command line (KEY=value) (default [])
       --shasum string              Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
       --skip-webhooks              [alpha] Skip waiting for external webhooks to execute as each package component is deployed
