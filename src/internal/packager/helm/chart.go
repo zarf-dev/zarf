@@ -5,8 +5,11 @@
 package helm
 
 import (
+	"errors"
 	"fmt"
 	"time"
+
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -24,9 +27,6 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
-// Set the default number of Helm install/upgrade attempts to 3
-const defaultHelmAttempts = 3
-
 // InstallOrUpgradeChart performs a helm install of the given chart.
 func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 	fromMessage := h.chart.URL
@@ -38,8 +38,6 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		h.chart.Version,
 		fromMessage)
 	defer spinner.Stop()
-
-	var output *release.Release
 
 	// If no release name is specified, use the chart name.
 	if h.chart.ReleaseName == "" {
@@ -63,49 +61,16 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		return nil, "", fmt.Errorf("unable to create helm renderer: %w", err)
 	}
 
-	attempt := 0
-	for {
-		attempt++
+	histClient := action.NewHistory(h.actionConfig)
+	tryHelm := func() error {
+		var err error
+		var output *release.Release
 
-		histClient := action.NewHistory(h.actionConfig)
 		releases, histErr := histClient.Run(h.chart.ReleaseName)
-
-		if attempt > 3 {
-			previouslyDeployedVersion := 0
-
-			// Check for previous releases that successfully deployed
-			for _, release := range releases {
-				if release.Info.Status == "deployed" {
-					previouslyDeployedVersion = release.Version
-				}
-			}
-
-			// On total failure try to rollback (if there was a previously deployed version) or uninstall.
-			if previouslyDeployedVersion > 0 {
-				spinner.Updatef("Performing chart rollback")
-
-				err = h.rollbackChart(h.chart.ReleaseName, previouslyDeployedVersion)
-				if err != nil {
-					return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts and unable to rollback: %w", defaultHelmAttempts, err)
-				}
-
-				return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts", defaultHelmAttempts)
-			}
-
-			spinner.Updatef("Performing chart uninstall")
-			_, err = h.uninstallChart(h.chart.ReleaseName)
-			if err != nil {
-				return nil, "", fmt.Errorf("unable to install chart after %d attempts and unable to uninstall: %w", defaultHelmAttempts, err)
-			}
-
-			return nil, "", fmt.Errorf("unable to install chart after %d attempts", defaultHelmAttempts)
-		}
-
-		spinner.Updatef("Attempt %d of %d to install chart", attempt, defaultHelmAttempts)
 
 		spinner.Updatef("Checking for existing helm deployment")
 
-		if histErr == driver.ErrReleaseNotFound {
+		if errors.Is(histErr, driver.ErrReleaseNotFound) {
 			// No prior release, try to install it.
 			spinner.Updatef("Attempting chart installation")
 
@@ -119,19 +84,50 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 			output, err = h.upgradeChart(lastRelease, postRender)
 		} else {
 			// 😭 things aren't working
-			return nil, "", fmt.Errorf("unable to verify the chart installation status: %w", histErr)
+			return fmt.Errorf("unable to verify the chart installation status: %w", histErr)
 		}
 
 		if err != nil {
-			message.Warnf("Unable to complete helm chart install/upgrade, waiting 10 seconds and trying again: %s", err.Error())
-
-			// Simply wait for dust to settle and try again.
-			time.Sleep(10 * time.Second)
-		} else {
-			message.Debug(output.Info.Description)
-			spinner.Success()
-			break
+			return fmt.Errorf("unable to complete the helm chart install/upgrade: %w", err)
 		}
+
+		message.Debug(output.Info.Description)
+		spinner.Success()
+		return nil
+	}
+
+	err = helpers.Retry(tryHelm, h.retries, 5*time.Second, message.Warnf)
+	if err != nil {
+		// Try to rollback any deployed releases
+		releases, _ := histClient.Run(h.chart.ReleaseName)
+		previouslyDeployedVersion := 0
+
+		// Check for previous releases that successfully deployed
+		for _, release := range releases {
+			if release.Info.Status == "deployed" {
+				previouslyDeployedVersion = release.Version
+			}
+		}
+
+		// On total failure try to rollback (if there was a previously deployed version) or uninstall.
+		if previouslyDeployedVersion > 0 {
+			spinner.Updatef("Performing chart rollback")
+
+			err = h.rollbackChart(h.chart.ReleaseName, previouslyDeployedVersion)
+			if err != nil {
+				return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts and unable to rollback: %w", h.retries, err)
+			}
+
+			return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts", h.retries)
+		}
+
+		spinner.Updatef("Performing chart uninstall")
+		_, err = h.uninstallChart(h.chart.ReleaseName)
+		if err != nil {
+			return nil, "", fmt.Errorf("unable to install chart after %d attempts and unable to uninstall: %w", h.retries, err)
+		}
+
+		return nil, "", fmt.Errorf("unable to install chart after %d attempts", h.retries)
 	}
 
 	// return any collected connect strings for zarf connect.
