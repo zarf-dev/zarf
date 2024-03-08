@@ -63,7 +63,7 @@ func (p *Packager) Deploy() (err error) {
 
 	// Set variables and prompt if --confirm is not set
 	if err := p.setVariableMapInConfig(); err != nil {
-		return fmt.Errorf("unable to set the active variables: %w", err)
+		return err
 	}
 
 	p.hpaModified = false
@@ -470,7 +470,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 
 	return helpers.Retry(func() error {
 		return imgConfig.PushToZarfRegistry()
-	}, 3, 5*time.Second, message.Warnf)
+	}, p.cfg.PkgOpts.Retries, 5*time.Second, message.Warnf)
 }
 
 // Push all of the components git repos to the configured git server.
@@ -511,8 +511,8 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 			return gitClient.PushRepo(repoURL, reposPath)
 		}
 
-		// Try repo push up to 3 times
-		if err := helpers.Retry(tryPush, 3, 5*time.Second, message.Warnf); err != nil {
+		// Try repo push up to retry limit
+		if err := helpers.Retry(tryPush, p.cfg.PkgOpts.Retries, 5*time.Second, message.Warnf); err != nil {
 			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}
 	}
@@ -526,7 +526,7 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
-			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPaths.Values, chart), idx)
+			chartValueName := helm.StandardValuesName(componentPaths.Values, chart, idx)
 			if err := p.valueTemplate.Apply(component, chartValueName, false); err != nil {
 				return installedCharts, err
 			}
@@ -549,7 +549,8 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 				p.cfg,
 				p.cluster,
 				valuesOverrides,
-				p.cfg.DeployOpts.Timeout),
+				p.cfg.DeployOpts.Timeout,
+				p.cfg.PkgOpts.Retries),
 		)
 
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
@@ -596,7 +597,8 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 				p.cfg,
 				p.cluster,
 				nil,
-				p.cfg.DeployOpts.Timeout),
+				p.cfg.DeployOpts.Timeout,
+				p.cfg.PkgOpts.Retries),
 		)
 		if err != nil {
 			return installedCharts, err

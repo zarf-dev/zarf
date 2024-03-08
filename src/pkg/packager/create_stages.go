@@ -163,8 +163,8 @@ func (p *Packager) assemble() error {
 			return err
 		}
 
-		if err := helpers.Retry(doPull, 3, 5*time.Second, message.Warnf); err != nil {
-			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
+		if err := helpers.Retry(doPull, p.cfg.PkgOpts.Retries, 5*time.Second, message.Warnf); err != nil {
+			return fmt.Errorf("unable to pull images after %d attempts: %w", p.cfg.PkgOpts.Retries, err)
 		}
 
 		for _, imgInfo := range pulled {
@@ -423,7 +423,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 					continue
 				}
 
-				rel := fmt.Sprintf("%s-%d", helm.StandardName(layout.ValuesDir, chart), valuesIdx)
+				rel := helm.StandardValuesName(layout.ValuesDir, chart, valuesIdx)
 				p.cfg.Pkg.Components[index].Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 
 				if err := utils.CreatePathAndCopy(path, filepath.Join(componentPaths.Base, rel)); err != nil {

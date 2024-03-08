@@ -126,7 +126,7 @@ func (p *Packager) setVariableMapInConfig() error {
 			val, err := interactive.PromptVariable(variable)
 
 			if err != nil {
-				return err
+				return fmt.Errorf("unable to get value from prompt: %w", err)
 			}
 
 			p.setVariableInConfig(variable.Name, val, variable.Sensitive, variable.AutoIndent, variable.Type)

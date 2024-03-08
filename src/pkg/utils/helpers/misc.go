@@ -6,22 +6,27 @@ package helpers
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"regexp"
 	"time"
 )
 
-// Retry will retry a function until it succeeds or the timeout is reached, timeout == retries * delay.
-func Retry(fn func() error, retries int, delay time.Duration, logger func(format string, args ...any)) (err error) {
+// Retry will retry a function until it succeeds or the timeout is reached. timeout == 2^attempt * delay.
+func Retry(fn func() error, retries int, delay time.Duration, logger func(format string, args ...any)) error {
+	var err error
 	for r := 0; r < retries; r++ {
 		err = fn()
 		if err == nil {
 			break
 		}
 
-		logger("Retrying (%d/%d): %s", r+1, retries, err.Error())
+		pow := math.Pow(2, float64(r))
+		backoff := delay * time.Duration(pow)
 
-		time.Sleep(delay)
+		logger("Retrying (%d/%d) in %s: %s", r+1, retries, backoff, err.Error())
+
+		time.Sleep(backoff)
 	}
 
 	return err

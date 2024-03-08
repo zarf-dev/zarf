@@ -43,6 +43,7 @@ type ZarfPackageOptions struct {
 	SGetKeyPath        string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
 	SetVariables       map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package"`
 	PublicKeyPath      string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
+	Retries            int               `json:"retries" jsonschema:"description=The number of retries to perform for Zarf deploy operations like image pushes or Helm installs"`
 }
 
 // ZarfInspectOptions tracks the user-defined preferences during a package inspection.
@@ -55,6 +56,8 @@ type ZarfInspectOptions struct {
 type ZarfFindImagesOptions struct {
 	RepoHelmChartPath   string `json:"repoHelmChartPath" jsonschema:"description=Path to the helm chart directory"`
 	KubeVersionOverride string `json:"kubeVersionOverride" jsonschema:"description=Kubernetes version to use for the helm chart"`
+	RegistryURL         string `json:"registryURL" jsonschema:"description=Manual override for ###ZARF_REGISTRY###"`
+	Why                 string `json:"why" jsonschema:"description=Find the location of the image given as an argument and print it to the console."`
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.
