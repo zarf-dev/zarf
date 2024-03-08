@@ -63,7 +63,7 @@ type ZarfComponent struct {
 	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
 
 	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
-	Actions actions.Actions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
+	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
@@ -121,6 +121,13 @@ type DeprecatedZarfComponentScripts struct {
 	Prepare        []string `json:"prepare,omitempty" jsonschema:"description=Scripts to run before the component is added during package create"`
 	Before         []string `json:"before,omitempty" jsonschema:"description=Scripts to run before the component is deployed"`
 	After          []string `json:"after,omitempty" jsonschema:"description=Scripts to run after the component successfully deploys"`
+}
+
+// ZarfComponentActions are ActionSets that map to different operations
+type ZarfComponentActions struct {
+	OnCreate actions.ActionSet `json:"onCreate,omitempty" jsonschema:"description=Actions to run during package creation"`
+	OnDeploy actions.ActionSet `json:"onDeploy,omitempty" jsonschema:"description=Actions to run during package deployment"`
+	OnRemove actions.ActionSet `json:"onRemove,omitempty" jsonschema:"description=Actions to run during package removal"`
 }
 
 // ZarfContainerTarget defines the destination info for a ZarfData target

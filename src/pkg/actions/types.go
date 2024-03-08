@@ -9,13 +9,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/variables"
 )
 
-// Actions are ActionSets that map to different operations
-type Actions struct {
-	OnCreate ActionSet `json:"onCreate,omitempty" jsonschema:"description=Actions to run during package creation"`
-	OnDeploy ActionSet `json:"onDeploy,omitempty" jsonschema:"description=Actions to run during package deployment"`
-	OnRemove ActionSet `json:"onRemove,omitempty" jsonschema:"description=Actions to run during package removal"`
-}
-
 // ActionSet is a set of actions to run during an operation
 type ActionSet struct {
 	Defaults  ActionDefaults `json:"defaults,omitempty" jsonschema:"description=Default configuration for all actions in this set"`

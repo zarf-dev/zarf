@@ -146,7 +146,7 @@ func TestCompose(t *testing.T) {
 					{Source: fmt.Sprintf("%s%sworld", firstDirectory, string(os.PathSeparator))},
 					{Source: "hello"},
 				},
-				Actions: actions.Actions{
+				Actions: types.ZarfComponentActions{
 					// OnCreate actions should be appended with corrected directories that properly handle default directories
 					OnCreate: actions.ActionSet{
 						Defaults: actions.ActionDefaults{
@@ -493,7 +493,7 @@ func createDummyComponent(name, importDir, subName string) types.ZarfComponent {
 				Source: name,
 			},
 		},
-		Actions: actions.Actions{
+		Actions: types.ZarfComponentActions{
 			OnCreate: actions.ActionSet{
 				Defaults: actions.ActionDefaults{
 					Dir: name + "-dc",
