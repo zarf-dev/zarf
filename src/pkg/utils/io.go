@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -33,12 +32,6 @@ func MakeTempDir(basePath string) (string, error) {
 	tmp, err := os.MkdirTemp(basePath, tmpPathPrefix)
 	message.Debug("Using temporary directory:", tmp)
 	return tmp, err
-}
-
-// VerifyBinary returns true if binary is available.
-func VerifyBinary(binary string) bool {
-	_, err := exec.LookPath(binary)
-	return err == nil
 }
 
 // GetFinalExecutablePath returns the absolute path to the current executable, following any symlinks along the way.
