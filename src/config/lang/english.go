@@ -644,8 +644,6 @@ const (
 	PkgValidateMustBeUppercase            = "variable name %q must be all uppercase and contain no special characters except _"
 	PkgValidateErrAction                  = "invalid action: %w"
 	PkgValidateErrActionVariables         = "component %q cannot contain setVariables outside of onDeploy in actions"
-	PkgValidateErrActionCmdWait           = "action %q cannot be both a command and wait action"
-	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
 	PkgValidateErrChart                   = "invalid chart definition: %w"
 	PkgValidateErrChartName               = "chart %q exceed the maximum length of %d characters"
 	PkgValidateErrChartNameMissing        = "chart %q must include a name"

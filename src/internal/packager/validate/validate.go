@@ -196,9 +196,11 @@ func validateActionset(actionSet actions.ActionSet) (bool, error) {
 
 	validate := func(actionList []actions.Action) error {
 		for _, action := range actionList {
-			if cv, err := validateAction(action); err != nil {
+			if err := action.Validate(); err != nil {
 				return err
-			} else if cv {
+			}
+
+			if len(action.SetVariables) > 0 {
 				containsVariables = true
 			}
 		}
@@ -217,37 +219,6 @@ func validateActionset(actionSet actions.ActionSet) (bool, error) {
 	}
 	if err := validate(actionSet.OnFailure); err != nil {
 		return containsVariables, err
-	}
-
-	return containsVariables, nil
-}
-
-func validateAction(action actions.Action) (bool, error) {
-	containsVariables := false
-
-	// Validate SetVariable
-	for _, variable := range action.SetVariables {
-		if !IsUppercaseNumberUnderscore(variable.Name) {
-			return containsVariables, fmt.Errorf(lang.PkgValidateMustBeUppercase, variable.Name)
-		}
-		containsVariables = true
-	}
-
-	if action.Wait != nil {
-		// Validate only cmd or wait, not both
-		if action.Cmd != "" {
-			return containsVariables, fmt.Errorf(lang.PkgValidateErrActionCmdWait, action.Cmd)
-		}
-
-		// Validate only cluster or network, not both
-		if action.Wait.Cluster != nil && action.Wait.Network != nil {
-			return containsVariables, fmt.Errorf(lang.PkgValidateErrActionClusterNetwork)
-		}
-
-		// Validate at least one of cluster or network
-		if action.Wait.Cluster == nil && action.Wait.Network == nil {
-			return containsVariables, fmt.Errorf(lang.PkgValidateErrActionClusterNetwork)
-		}
 	}
 
 	return containsVariables, nil

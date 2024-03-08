@@ -5,6 +5,9 @@
 package actions
 
 import (
+	"fmt"
+	"regexp"
+
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/pkg/variables"
 )
@@ -71,4 +74,34 @@ type ActionWaitNetwork struct {
 	Protocol string `json:"protocol" jsonschema:"description=The protocol to wait for,enum=tcp,enum=http,enum=https"`
 	Address  string `json:"address" jsonschema:"description=The address to wait for,example=localhost:8080,example=1.1.1.1"`
 	Code     int    `json:"code,omitempty" jsonschema:"description=The HTTP status code to wait for if using http or https,example=200,example=404"`
+}
+
+func (action Action) Validate() error {
+	// Validate SetVariable
+	for _, variable := range action.SetVariables {
+		// Variable names must match only uppercase letters, numbers and underscores.
+		// https://regex101.com/r/tfsEuZ/1
+		if !regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString(variable.Name) {
+			return fmt.Errorf("setVariable name %q must be all uppercase and contain no special characters except _", variable.Name)
+		}
+	}
+
+	if action.Wait != nil {
+		// Validate only cmd or wait, not both
+		if action.Cmd != "" {
+			return fmt.Errorf("action %q cannot be both a command and wait action", action.Cmd)
+		}
+
+		// Validate only cluster or network, not both
+		if action.Wait.Cluster != nil && action.Wait.Network != nil {
+			return fmt.Errorf("a single wait action must contain only one of cluster or network")
+		}
+
+		// Validate at least one of cluster or network
+		if action.Wait.Cluster == nil && action.Wait.Network == nil {
+			return fmt.Errorf("a single wait action must contain only one of cluster or network")
+		}
+	}
+
+	return nil
 }
