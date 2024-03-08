@@ -47,7 +47,7 @@ func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInj
 	}
 
 	// Get the OS shell to execute commands in
-	shell, shellArgs := exec.GetOSShell(exec.ExecShell{Windows: "cmd"})
+	shell, shellArgs := exec.GetOSShell(exec.Shell{Windows: "cmd"})
 
 	if _, _, err := exec.Cmd(shell, append(shellArgs, "tar --version")...); err != nil {
 		message.WarnErr(err, "Unable to execute tar on this system.  Please ensure it is installed and on your $PATH.")

@@ -23,6 +23,7 @@ const (
 	depMarkerNew = "DATA_INJECTION_MARKER"
 )
 
+// GetZarfVariableConfig gets a variable configuration specific to Zarf
 func GetZarfVariableConfig() *variables.VariableConfig {
 	return variables.New(
 		"zarf",

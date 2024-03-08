@@ -212,7 +212,7 @@ func (ac *ActionRunner) ConvertWaitToCmd(wait ActionWait, timeout *int) (string,
 }
 
 // actionCmdMutation performs some basic string mutations to make commands more useful.
-func (ac *ActionRunner) actionCmdMutation(cmd string, shellPref exec.ExecShell) (string, error) {
+func (ac *ActionRunner) actionCmdMutation(cmd string, shellPref exec.Shell) (string, error) {
 	// Try to patch the zarf binary path in case the name isn't exactly "./zarf".
 	cmd = strings.ReplaceAll(cmd, fmt.Sprintf("./%s ", ac.commandName), ac.commandPath+" ")
 
@@ -278,7 +278,7 @@ func (ac *ActionRunner) actionMergeDefaults(def ActionDefaults, a Action, vars m
 }
 
 // execAction executes the built command in a shell
-func (ac *ActionRunner) execAction(ctx context.Context, cfg ActionDefaults, cmd string, shellPref exec.ExecShell, spinner Spinner) (string, error) {
+func (ac *ActionRunner) execAction(ctx context.Context, cfg ActionDefaults, cmd string, shellPref exec.Shell, spinner Spinner) (string, error) {
 	shell, shellArgs := exec.GetOSShell(shellPref)
 
 	ac.logger(fmt.Sprintf("Running command in %s: %s", shell, cmd))

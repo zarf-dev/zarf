@@ -78,7 +78,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 	spinner := message.NewProgressSpinner(existMsg)
 
 	// Get the OS shell to execute commands in
-	shell, shellArgs := exec.GetOSShell(exec.ExecShell{Windows: "cmd"})
+	shell, shellArgs := exec.GetOSShell(exec.Shell{Windows: "cmd"})
 
 	defer spinner.Stop()
 
