@@ -33,7 +33,7 @@ func PromptSigPassword() ([]byte, error) {
 }
 
 // PromptVariable prompts the user for a value for a variable
-func PromptVariable(variable variables.Variable) (value string, err error) {
+func PromptVariable(variable variables.InteractiveVariable) (value string, err error) {
 
 	if variable.Description != "" {
 		message.Question(variable.Description)

@@ -252,7 +252,7 @@ func validatePackageName(subject string) error {
 	return nil
 }
 
-func validatePackageVariable(subject variables.Variable) error {
+func validatePackageVariable(subject variables.InteractiveVariable) error {
 	// ensure the variable name is only capitals and underscores
 	if !IsUppercaseNumberUnderscore(subject.Name) {
 		return fmt.Errorf(lang.PkgValidateMustBeUppercase, subject.Name)

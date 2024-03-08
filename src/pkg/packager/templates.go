@@ -56,8 +56,8 @@ func (p *Packager) fillActiveTemplate() error {
 
 			_, present := p.cfg.CreateOpts.SetVariables[key]
 			if !present && !config.CommonOptions.Confirm {
-				setVal, err := interactive.PromptVariable(variables.Variable{
-					Name: key,
+				setVal, err := interactive.PromptVariable(variables.InteractiveVariable{
+					Variable: variables.Variable{Name: key},
 				})
 
 				if err == nil {

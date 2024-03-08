@@ -448,7 +448,7 @@ func (p *Packager) populateComponentAndStateTemplates(componentName string) erro
 func (p *Packager) populatePackageVariables() error {
 	promptFunc := interactive.PromptVariable
 	if config.CommonOptions.Confirm {
-		promptFunc = func(variable variables.Variable) (value string, err error) { return variable.Default, nil }
+		promptFunc = func(variable variables.InteractiveVariable) (value string, err error) { return variable.Default, nil }
 	}
 
 	p.variableConfig.Constants = p.cfg.Pkg.Constants

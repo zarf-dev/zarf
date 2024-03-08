@@ -26,7 +26,7 @@ type Node struct {
 
 	index int
 
-	vars   []variables.Variable
+	vars   []variables.InteractiveVariable
 	consts []variables.Constant
 
 	relativeToHead      string
@@ -96,7 +96,7 @@ func (ic *ImportChain) Tail() *Node {
 }
 
 func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageName string,
-	relativeToHead string, vars []variables.Variable, consts []variables.Constant) {
+	relativeToHead string, vars []variables.InteractiveVariable, consts []variables.Constant) {
 	node := &Node{
 		ZarfComponent:       c,
 		index:               index,
@@ -313,8 +313,8 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 }
 
 // MergeVariables merges variables from the import chain
-func (ic *ImportChain) MergeVariables(existing []variables.Variable) (merged []variables.Variable) {
-	exists := func(v1 variables.Variable, v2 variables.Variable) bool {
+func (ic *ImportChain) MergeVariables(existing []variables.InteractiveVariable) (merged []variables.InteractiveVariable) {
+	exists := func(v1 variables.InteractiveVariable, v2 variables.InteractiveVariable) bool {
 		return v1.Name == v2.Name
 	}
 

@@ -33,26 +33,17 @@ type ActionDefaults struct {
 
 // Action represents a single action to run
 type Action struct {
-	Mute                  *bool               `json:"mute,omitempty" jsonschema:"description=Hide the output of the command during package deployment (default false)"`
-	MaxTotalSeconds       *int                `json:"maxTotalSeconds,omitempty" jsonschema:"description=Timeout in seconds for the command (default to 0, no timeout for cmd actions and 300, 5 minutes for wait actions)"`
-	MaxRetries            *int                `json:"maxRetries,omitempty" jsonschema:"description=Retry the command if it fails up to given number of times (default 0)"`
-	Dir                   *string             `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
-	Env                   []string            `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
-	Cmd                   string              `json:"cmd,omitempty" jsonschema:"description=The command to run. Must specify either cmd or wait for the action to do anything."`
-	Shell                 *exec.ExecShell     `json:"shell,omitempty" jsonschema:"description=(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"`
-	DeprecatedSetVariable string              `json:"setVariable,omitempty" jsonschema:"description=[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0,pattern=^[A-Z0-9_]+$"`
-	SetVariables          []ActionSetVariable `json:"setVariables,omitempty" jsonschema:"description=(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."`
-	Description           string              `json:"description,omitempty" jsonschema:"description=Description of the action to be displayed during package execution instead of the command"`
-	Wait                  *ActionWait         `json:"wait,omitempty" jsonschema:"description=Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."`
-}
-
-// ActionSetVariable represents a variable that is to be set via an action
-type ActionSetVariable struct {
-	Name       string                 `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
-	Sensitive  bool                   `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the log"`
-	AutoIndent bool                   `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
-	Pattern    string                 `json:"pattern,omitempty" jsonschema:"description=An optional regex pattern that a variable value must match before a package deployment can continue."`
-	Type       variables.VariableType `json:"type,omitempty" jsonschema:"description=Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB),enum=raw,enum=file"`
+	Mute                  *bool                `json:"mute,omitempty" jsonschema:"description=Hide the output of the command during package deployment (default false)"`
+	MaxTotalSeconds       *int                 `json:"maxTotalSeconds,omitempty" jsonschema:"description=Timeout in seconds for the command (default to 0, no timeout for cmd actions and 300, 5 minutes for wait actions)"`
+	MaxRetries            *int                 `json:"maxRetries,omitempty" jsonschema:"description=Retry the command if it fails up to given number of times (default 0)"`
+	Dir                   *string              `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
+	Env                   []string             `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
+	Cmd                   string               `json:"cmd,omitempty" jsonschema:"description=The command to run. Must specify either cmd or wait for the action to do anything."`
+	Shell                 *exec.ExecShell      `json:"shell,omitempty" jsonschema:"description=(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"`
+	DeprecatedSetVariable string               `json:"setVariable,omitempty" jsonschema:"description=[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0,pattern=^[A-Z0-9_]+$"`
+	SetVariables          []variables.Variable `json:"setVariables,omitempty" jsonschema:"description=(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."`
+	Description           string               `json:"description,omitempty" jsonschema:"description=Description of the action to be displayed during package execution instead of the command"`
+	Wait                  *ActionWait          `json:"wait,omitempty" jsonschema:"description=Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."`
 }
 
 // ActionWait specifies a condition to wait for before continuing

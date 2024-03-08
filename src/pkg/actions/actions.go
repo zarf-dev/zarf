@@ -81,7 +81,7 @@ func (ac *ActionRunner) RunAction(defaultCfg ActionDefaults, action Action, vari
 		d := ""
 		action.Dir = &d
 		action.Env = []string{}
-		action.SetVariables = []ActionSetVariable{}
+		action.SetVariables = []variables.Variable{}
 	}
 
 	if action.Description != "" {

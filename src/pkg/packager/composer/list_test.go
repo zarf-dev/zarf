@@ -267,20 +267,24 @@ func TestMerging(t *testing.T) {
 	type testCase struct {
 		name           string
 		ic             *ImportChain
-		existingVars   []variables.Variable
+		existingVars   []variables.InteractiveVariable
 		existingConsts []variables.Constant
-		expectedVars   []variables.Variable
+		expectedVars   []variables.InteractiveVariable
 		expectedConsts []variables.Constant
 	}
 
 	head := Node{
-		vars: []variables.Variable{
+		vars: []variables.InteractiveVariable{
 			{
-				Name:    "TEST",
+				Variable: variables.Variable{
+					Name: "TEST",
+				},
 				Default: "head",
 			},
 			{
-				Name: "HEAD",
+				Variable: variables.Variable{
+					Name: "HEAD",
+				},
 			},
 		},
 		consts: []variables.Constant{
@@ -294,13 +298,17 @@ func TestMerging(t *testing.T) {
 		},
 	}
 	tail := Node{
-		vars: []variables.Variable{
+		vars: []variables.InteractiveVariable{
 			{
-				Name:    "TEST",
+				Variable: variables.Variable{
+					Name: "TEST",
+				},
 				Default: "tail",
 			},
 			{
-				Name: "TAIL",
+				Variable: variables.Variable{
+					Name: "TAIL",
+				},
 			},
 		},
 		consts: []variables.Constant{
@@ -321,9 +329,11 @@ func TestMerging(t *testing.T) {
 		{
 			name: "empty-ic",
 			ic:   &ImportChain{},
-			existingVars: []variables.Variable{
+			existingVars: []variables.InteractiveVariable{
 				{
-					Name: "TEST",
+					Variable: variables.Variable{
+						Name: "TEST",
+					},
 				},
 			},
 			existingConsts: []variables.Constant{
@@ -331,9 +341,11 @@ func TestMerging(t *testing.T) {
 					Name: "TEST",
 				},
 			},
-			expectedVars: []variables.Variable{
+			expectedVars: []variables.InteractiveVariable{
 				{
-					Name: "TEST",
+					Variable: variables.Variable{
+						Name: "TEST",
+					},
 				},
 			},
 			expectedConsts: []variables.Constant{
@@ -345,18 +357,24 @@ func TestMerging(t *testing.T) {
 		{
 			name:           "no-existing",
 			ic:             testIC,
-			existingVars:   []variables.Variable{},
+			existingVars:   []variables.InteractiveVariable{},
 			existingConsts: []variables.Constant{},
-			expectedVars: []variables.Variable{
+			expectedVars: []variables.InteractiveVariable{
 				{
-					Name:    "TEST",
+					Variable: variables.Variable{
+						Name: "TEST",
+					},
 					Default: "head",
 				},
 				{
-					Name: "HEAD",
+					Variable: variables.Variable{
+						Name: "HEAD",
+					},
 				},
 				{
-					Name: "TAIL",
+					Variable: variables.Variable{
+						Name: "TAIL",
+					},
 				},
 			},
 			expectedConsts: []variables.Constant{
@@ -375,13 +393,17 @@ func TestMerging(t *testing.T) {
 		{
 			name: "with-existing",
 			ic:   testIC,
-			existingVars: []variables.Variable{
+			existingVars: []variables.InteractiveVariable{
 				{
-					Name:    "TEST",
+					Variable: variables.Variable{
+						Name: "TEST",
+					},
 					Default: "existing",
 				},
 				{
-					Name: "EXISTING",
+					Variable: variables.Variable{
+						Name: "EXISTING",
+					},
 				},
 			},
 			existingConsts: []variables.Constant{
@@ -393,19 +415,27 @@ func TestMerging(t *testing.T) {
 					Name: "EXISTING",
 				},
 			},
-			expectedVars: []variables.Variable{
+			expectedVars: []variables.InteractiveVariable{
 				{
-					Name:    "TEST",
+					Variable: variables.Variable{
+						Name: "TEST",
+					},
 					Default: "existing",
 				},
 				{
-					Name: "EXISTING",
+					Variable: variables.Variable{
+						Name: "EXISTING",
+					},
 				},
 				{
-					Name: "HEAD",
+					Variable: variables.Variable{
+						Name: "HEAD",
+					},
 				},
 				{
-					Name: "TAIL",
+					Variable: variables.Variable{
+						Name: "TAIL",
+					},
 				},
 			},
 			expectedConsts: []variables.Constant{

@@ -13,7 +13,7 @@ import (
 type SetVariableMap map[string]*SetVariable
 
 // PopulateSetVariableMap handles setting the active variables within a SetVariableMap
-func (sv SetVariableMap) PopulateSetVariableMap(variables []Variable, presetVariables map[string]string, prompt func(variable Variable) (value string, err error)) error {
+func (sv SetVariableMap) PopulateSetVariableMap(variables []InteractiveVariable, presetVariables map[string]string, prompt func(variable InteractiveVariable) (value string, err error)) error {
 	for name, value := range presetVariables {
 		sv.SetVariableInMap(name, value, false, false, "")
 	}
@@ -58,11 +58,13 @@ func (sv SetVariableMap) PopulateSetVariableMap(variables []Variable, presetVari
 // SetVariableInMap sets a variable in the SetVariableMap
 func (sv SetVariableMap) SetVariableInMap(name, value string, sensitive bool, autoIndent bool, varType VariableType) {
 	sv[name] = &SetVariable{
-		Name:       name,
-		Value:      value,
-		Sensitive:  sensitive,
-		AutoIndent: autoIndent,
-		Type:       varType,
+		Variable: Variable{
+			Name:       name,
+			Sensitive:  sensitive,
+			AutoIndent: autoIndent,
+			Type:       varType,
+		},
+		Value: value,
 	}
 }
 
