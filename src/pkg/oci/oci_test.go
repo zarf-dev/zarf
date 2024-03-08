@@ -82,18 +82,6 @@ func (suite *OCISuite) TestPublishFailNoTitle() {
 	suite.Error(err)
 }
 
-func (suite *OCISuite) TestPublishSuccess() {
-	ctx := context.TODO()
-	annotations := map[string]string{
-		ocispec.AnnotationTitle:       "name",
-		ocispec.AnnotationDescription: "description",
-	}
-
-	_, err := suite.remote.CreateAndPushManifestConfig(ctx, annotations, ocispec.MediaTypeImageConfig)
-	suite.NoError(err)
-
-}
-
 func (suite *OCISuite) publishPackage(src *file.Store, descs []ocispec.Descriptor) {
 	ctx := context.TODO()
 	annotations := map[string]string{
@@ -116,10 +104,6 @@ func (suite *OCISuite) publishPackage(src *file.Store, descs []ocispec.Descripto
 func (suite *OCISuite) TestCopyToTarget() {
 	suite.T().Log("")
 	ctx := context.TODO()
-
-	// So what are the options.
-	// completely tear down the registry and bring it back up before we do anything
-	// have a long running ordered registry and do things as I go. For example in the index case
 
 	srcTempDir := suite.T().TempDir()
 	regularFileName := "this-file-is-in-a-regular-directory"
@@ -144,7 +128,6 @@ func (suite *OCISuite) TestCopyToTarget() {
 
 	suite.NoError(err)
 
-	// Testing copy to target
 	suite.NoError(err)
 	err = suite.remote.CopyToTarget(ctx, descs, dst, suite.remote.GetDefaultCopyOpts())
 	suite.NoError(err)
@@ -175,7 +158,6 @@ func (suite *OCISuite) TestPulledPaths() {
 	suite.publishPackage(src, descs)
 	dstTempDir := suite.T().TempDir()
 
-	// Testing pulled paths
 	suite.remote.PullPaths(ctx, dstTempDir, files)
 	suite.NoError(err)
 	for _, file := range files {
@@ -187,7 +169,7 @@ func (suite *OCISuite) TestPulledPaths() {
 }
 
 func (suite *OCISuite) TestResolveRoot() {
-	suite.T().Log("")
+	suite.T().Log("Testing resolve root")
 	ctx := context.TODO()
 	srcTempDir := suite.T().TempDir()
 	files := []string{"firstFile", "secondFile", "thirdFile"}
@@ -212,25 +194,21 @@ func (suite *OCISuite) TestResolveRoot() {
 	suite.Equal("thirdFile", desc.Annotations[ocispec.AnnotationTitle])
 }
 
-// Write doesn't do anything but satisfy implementation
 func (tpw *TestProgressWriter) Write(b []byte) (int, error) {
 	tpw.bytesSent += len(b)
 	return len(b), nil
 }
 
-// UpdateTitle doesn't do anything but satisfy implementation
 func (TestProgressWriter) UpdateTitle(s string) {
 	fmt.Printf("this is the title %s", s)
 }
 
-// TestProgressWriter is a ProgressWriter in which all calls succeed without doing anything
-// Use this or nil or if you don't care about writing progress
 type TestProgressWriter struct {
 	bytesSent int
 }
 
 func (suite *OCISuite) TestCopy() {
-	suite.T().Log("")
+	suite.T().Log("Testing copying between OCI remotes")
 	ctx := context.TODO()
 	srcTempDir := suite.T().TempDir()
 	files := []string{"firstFile", "secondFile"}
