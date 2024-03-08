@@ -90,7 +90,7 @@ var devGenerateCmd = &cobra.Command{
 		// Write the generated zarf.yaml
 		packager.WriteGeneratedZarfPackage(&pkgConfig)
 
-		spinner.Successf(lang.CmdDevGenerateSuccess)
+		spinner.Success()
 	},
 }
 
@@ -347,5 +347,4 @@ func bindDevGenerateFlags(_ *viper.Viper) {
 
 	devGenerateCmd.MarkFlagRequired("url")
 	devGenerateCmd.MarkFlagRequired("version")
-	devGenerateCmd.MarkFlagRequired("gitPath")
 }

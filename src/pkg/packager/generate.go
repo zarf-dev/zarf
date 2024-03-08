@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -34,6 +35,7 @@ func UpdatePackageConfigForGenerate(pkgConfig *types.PackagerConfig) types.Packa
 
 	pkgConfig.Pkg.Kind = types.ZarfPackageConfig
 	pkgConfig.Pkg.Metadata.Name = pkgConfig.GenerateOpts.Name
+	pkgConfig.Pkg.Metadata.Version = pkgConfig.GenerateOpts.Version
 	pkgConfig.Pkg.Components = append(newComponent, pkgConfig.Pkg.Components...)
 
 	// Set config for FindImages and helm
@@ -48,13 +50,14 @@ func WriteGeneratedZarfPackage(pkgConfig *types.PackagerConfig) {
 	outputDirectory := pkgConfig.GenerateOpts.Output
 	if _, err := os.Stat(outputDirectory); os.IsNotExist(err) {
 		outputDirectory = "."
-		message.Warn("Directory does not exist: \"" + outputDirectory + "\". Using current directory instead.")
+		message.Warnf("Directory does not exist: %q. Using current directory instead.", outputDirectory)
 	}
 
 	packageLocation := filepath.Join(outputDirectory, layout.ZarfYAML)
 	if _, err := os.Stat(packageLocation); err == nil {
-		message.Warn("A " + layout.ZarfYAML + " already exists in the directory: \"" + outputDirectory + "\".")
-		packageLocation = filepath.Join(outputDirectory, "zarf-"+pkgConfig.GenerateOpts.Name+".yaml")
+		packageFilename := fmt.Sprintf("zarf-%s.yaml", pkgConfig.GenerateOpts.Name)
+		message.Warnf("A %q already exists in the directory %q. Using %q instead.", layout.ZarfYAML, outputDirectory, packageFilename)
+		packageLocation = filepath.Join(outputDirectory, packageFilename)
 	}
 
 	err := utils.WriteYaml(packageLocation, pkgConfig.Pkg, 0644)
@@ -62,5 +65,5 @@ func WriteGeneratedZarfPackage(pkgConfig *types.PackagerConfig) {
 		message.Fatalf(err, err.Error())
 	}
 
-	message.Success(packageLocation + " has been created.")
+	message.Successf("%s has been created.\n", packageLocation)
 }
