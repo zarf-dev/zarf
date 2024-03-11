@@ -142,7 +142,7 @@ func (suite *OCISuite) TestCopyToTarget() {
 func (suite *OCISuite) TestPulledPaths() {
 	ctx := context.TODO()
 	srcTempDir := suite.T().TempDir()
-	files := []string{"firstFile", "secondFile"}
+	files := []string{"firstFilePulled", "secondFilePulled"}
 
 	var descs []ocispec.Descriptor
 	src, err := file.New(srcTempDir)
@@ -172,7 +172,7 @@ func (suite *OCISuite) TestResolveRoot() {
 	suite.T().Log("Testing resolve root")
 	ctx := context.TODO()
 	srcTempDir := suite.T().TempDir()
-	files := []string{"firstFile", "secondFile", "thirdFile"}
+	files := []string{"ResolveRootFile1", "ResolveRootFile2", "ResolveRootFile3"}
 
 	var descs []ocispec.Descriptor
 	src, err := file.New(srcTempDir)
@@ -190,8 +190,8 @@ func (suite *OCISuite) TestResolveRoot() {
 	root, err := suite.remote.FetchRoot(ctx)
 	suite.NoError(err)
 	suite.Equal(3, len(root.Layers))
-	desc := root.Locate("thirdFile")
-	suite.Equal("thirdFile", desc.Annotations[ocispec.AnnotationTitle])
+	desc := root.Locate("ResolveRootFile3")
+	suite.Equal("ResolveRootFile3", desc.Annotations[ocispec.AnnotationTitle])
 }
 
 func (tpw *TestProgressWriter) Write(b []byte) (int, error) {
@@ -211,7 +211,7 @@ func (suite *OCISuite) TestCopy() {
 	suite.T().Log("Testing copying between OCI remotes")
 	ctx := context.TODO()
 	srcTempDir := suite.T().TempDir()
-	files := []string{"firstFile", "secondFile"}
+	files := []string{"firstFileCopied", "secondFileCopied"}
 
 	fileContents := "here's what I'm putting in each file"
 
