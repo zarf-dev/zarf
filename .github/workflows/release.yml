@@ -1,4 +1,4 @@
-name: Publish Zarf Packages on Tag
+name: Release CLI and Packages on Tag
 
 permissions:
   contents: read
