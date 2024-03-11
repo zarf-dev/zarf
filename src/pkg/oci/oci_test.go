@@ -149,7 +149,9 @@ func (suite *OCISuite) TestPulledPaths() {
 	suite.NoError(err)
 	for _, file := range files {
 		path := filepath.Join(srcTempDir, file)
-		os.Create(path)
+		f, err := os.Create(path)
+		suite.NoError(err)
+		defer f.Close()
 		desc, err := src.Add(ctx, file, ocispec.MediaTypeEmptyJSON, path)
 		suite.NoError(err)
 		descs = append(descs, desc)
