@@ -238,8 +238,8 @@ func (suite *OCISuite) TestCopy() {
 		descs = append(descs, desc)
 	}
 
-	dstRegistryUrl := suite.setupInMemoryRegistry(ctx)
-	dstRemote, err := NewOrasRemote(dstRegistryUrl, PlatformForArch(testArch), WithPlainHTTP(true))
+	dstRegistryURL := suite.setupInMemoryRegistry(ctx)
+	dstRemote, err := NewOrasRemote(dstRegistryURL, PlatformForArch(testArch), WithPlainHTTP(true))
 	suite.NoError(err)
 	testWriter := &TestProgressWriter{}
 	err = Copy(ctx, suite.remote, dstRemote, nil, 1, testWriter)
