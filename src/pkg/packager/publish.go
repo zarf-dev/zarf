@@ -92,7 +92,7 @@ func (p *Packager) Publish() (err error) {
 	if p.cfg.CreateOpts.IsSkeleton {
 		platform = zoci.PlatformForSkeleton()
 	} else {
-		platform = oci.PlatformForArch(p.arch)
+		platform = oci.PlatformForArch(p.cfg.Pkg.Build.Architecture)
 	}
 	remote, err := zoci.NewRemote(ref, platform)
 	if err != nil {
