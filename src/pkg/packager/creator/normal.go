@@ -249,7 +249,7 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackag
 		return err
 	}
 
-	if err := utils.WriteYaml(dst.ZarfYAML, pkg, 0400); err != nil {
+	if err := utils.WriteYaml(dst.ZarfYAML, pkg, helpers.ReadUser); err != nil {
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
 	}
 
@@ -427,9 +427,9 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 		}
 
 		if file.Executable || utils.IsDir(dst) {
-			_ = os.Chmod(dst, 0700)
+			_ = os.Chmod(dst, helpers.ReadWriteExecuteUser)
 		} else {
-			_ = os.Chmod(dst, 0600)
+			_ = os.Chmod(dst, helpers.ReadWriteUser)
 		}
 	}
 

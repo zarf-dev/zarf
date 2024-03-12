@@ -95,7 +95,7 @@ var devTransformGitLinksCmd = &cobra.Command{
 
 		if confirm {
 			// Overwrite the file
-			err = os.WriteFile(fileName, []byte(processedText), 0640)
+			err = os.WriteFile(fileName, []byte(processedText), helpers.ReadAllWriteUser)
 			if err != nil {
 				message.Fatal(err, lang.CmdDevPatchGitFileWriteErr)
 			}
