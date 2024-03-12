@@ -471,7 +471,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 		NoChecksum:    noImgChecksum,
 		RegInfo:       p.cfg.State.RegistryInfo,
 		Insecure:      config.CommonOptions.Insecure,
-		Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
+		Architectures: []string{p.cfg.Pkg.Metadata.Architecture},
 	}
 
 	return helpers.Retry(func() error {
