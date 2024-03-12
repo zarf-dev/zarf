@@ -47,7 +47,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg 
 		return types.ZarfPackage{}, nil, err
 	}
 
-	pkg.Build.Architecture = zoci.PlatformForSkeleton().Architecture
+	pkg.Build.Architecture = zoci.SkeletonArch
 
 	// Compose components into a single zarf.yaml file
 	pkg, composeWarnings, err := ComposeComponents(pkg, sc.createOpts.Flavor)

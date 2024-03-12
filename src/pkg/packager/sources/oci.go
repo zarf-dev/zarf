@@ -201,7 +201,7 @@ func (s *OCISource) Collect(dir string) (string, error) {
 	spinner.Success()
 
 	// TODO (@Noxsios) remove the suffix check at v1.0.0
-	isSkeleton := pkg.Build.Architecture == zoci.PlatformForSkeleton().Architecture || strings.HasSuffix(s.Repo().Reference.Reference, zoci.SkeletonArch)
+	isSkeleton := pkg.Build.Architecture == zoci.SkeletonArch || strings.HasSuffix(s.Repo().Reference.Reference, zoci.SkeletonArch)
 	name := fmt.Sprintf("%s%s", NameFromMetadata(&pkg, isSkeleton), PkgSuffix(pkg.Metadata.Uncompressed))
 
 	dstTarball := filepath.Join(dir, name)

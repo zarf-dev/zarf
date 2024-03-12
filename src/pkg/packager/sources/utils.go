@@ -113,7 +113,7 @@ func NameFromMetadata(pkg *types.ZarfPackage, isSkeleton bool) string {
 	arch := config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
 
 	if isSkeleton {
-		arch = zoci.PlatformForSkeleton().Architecture
+		arch = zoci.SkeletonArch
 	}
 
 	switch pkg.Kind {
