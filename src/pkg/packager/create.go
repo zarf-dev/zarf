@@ -24,6 +24,11 @@ func (p *Packager) Create() (err error) {
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
+	defer func() {
+		if err != nil {
+			os.Chdir(cwd)
+		}
+	}()
 
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
@@ -43,7 +48,7 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("package creation canceled")
 	}
 
-	if err := pc.Assemble(p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
+	if err := pc.Assemble(p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Build.Architecture); err != nil {
 		return err
 	}
 

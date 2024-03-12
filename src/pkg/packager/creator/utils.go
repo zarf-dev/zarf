@@ -41,8 +41,6 @@ func recordPackageMetadata(pkg *types.ZarfPackage, createOpts types.ZarfCreateOp
 	// Record the Zarf Version the CLI was built with.
 	pkg.Build.Version = config.CLIVersion
 
-	pkg.Build.Architecture = pkg.Metadata.Architecture
-
 	// Record the time of package creation.
 	pkg.Build.Timestamp = now.Format(time.RFC1123Z)
 

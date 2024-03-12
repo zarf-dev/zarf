@@ -65,9 +65,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg t
 		return types.ZarfPackage{}, nil, err
 	}
 
-	if pkg.Metadata.Architecture == "" {
-		pkg.Metadata.Architecture = config.GetArch()
-	}
+	pkg.Build.Architecture = config.GetArch(pkg.Metadata.Architecture)
 
 	// Compose components into a single zarf.yaml file
 	pkg, composeWarnings, err := ComposeComponents(pkg, pc.createOpts.Flavor)

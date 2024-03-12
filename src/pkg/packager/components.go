@@ -34,10 +34,10 @@ func (p *Packager) filterComponents() {
 		var validArch, validOS bool
 
 		// Test for valid architecture
-		if component.Only.Cluster.Architecture == "" || component.Only.Cluster.Architecture == p.cfg.Pkg.Metadata.Architecture {
+		if component.Only.Cluster.Architecture == "" || component.Only.Cluster.Architecture == p.cfg.Pkg.Build.Architecture {
 			validArch = true
 		} else {
-			message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.Cluster.Architecture, p.cfg.Pkg.Metadata.Architecture)
+			message.Debugf("Skipping component %s, %s is not compatible with %s", component.Name, component.Only.Cluster.Architecture, p.cfg.Pkg.Build.Architecture)
 		}
 
 		// Test for a valid OS

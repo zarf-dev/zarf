@@ -93,7 +93,7 @@ func TestValidatePackageArchitecture(t *testing.T) {
 				},
 				cfg: &types.PackagerConfig{
 					Pkg: types.ZarfPackage{
-						Metadata: types.ZarfMetadata{Architecture: testCase.pkgArch},
+						Build: types.ZarfBuildData{Architecture: testCase.pkgArch},
 						Components: []types.ZarfComponent{
 							{
 								Images: testCase.images,

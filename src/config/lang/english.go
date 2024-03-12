@@ -630,8 +630,8 @@ const (
 
 // Package create
 const (
-	PkgCreateErrDifferentialSameVersion = "unable to create differential package. Please ensure the differential package version and reference package version are not the same. The package version must be incremented."
-	PkgCreateErrDifferentialNoVersion   = "unable to create differential package. Please ensure both package versions are set."
+	PkgCreateErrDifferentialSameVersion = "unable to create differential package. Please ensure the differential package version and reference package version are not the same. The package version must be incremented"
+	PkgCreateErrDifferentialNoVersion   = "unable to create differential package. Please ensure both package versions are set"
 )
 
 // Package deploy

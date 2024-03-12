@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 )
@@ -46,7 +47,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg 
 		return types.ZarfPackage{}, nil, err
 	}
 
-	pkg.Metadata.Architecture = "skeleton"
+	pkg.Build.Architecture = zoci.PlatformForSkeleton().Architecture
 
 	// Compose components into a single zarf.yaml file
 	pkg, composeWarnings, err := ComposeComponents(pkg, sc.createOpts.Flavor)
