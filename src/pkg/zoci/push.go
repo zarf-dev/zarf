@@ -69,7 +69,8 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 
 	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", r.Repo().Reference.Repository, r.Repo().Reference.Reference))
 	defer progressBar.Stop()
-	r.Transport.ProgressBar = progressBar
+	r.SetProgressWriter(progressBar)
+	defer r.ClearProgressWriter()
 
 	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), r.Repo(), "", copyOpts)
 	if err != nil {

@@ -87,8 +87,11 @@ var (
 	operationStartTime  = time.Now().Unix()
 	dataInjectionMarker = ".zarf-injection-%d"
 
-	ZarfDefaultCachePath   = filepath.Join("~", ".zarf-cache")
-	ZarfDefaultHelmTimeout = 15 * time.Minute
+	ZarfDefaultCachePath = filepath.Join("~", ".zarf-cache")
+
+	// Default Time Vars
+	ZarfDefaultTimeout = 15 * time.Minute
+	ZarfDefaultRetries = 3
 )
 
 // GetArch returns the arch based on a priority list with options for overriding.
