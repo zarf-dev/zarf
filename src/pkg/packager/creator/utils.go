@@ -26,17 +26,16 @@ func recordPackageMetadata(pkg *types.ZarfPackage, createOpts types.ZarfCreateOp
 		pkg.Build.User = os.Getenv("USER")
 	}
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		return err
-	}
-
 	// Record the hostname of the package creation terminal.
+	// The error here is ignored because the hostname is not critical to the package creation.
+	hostname, _ := os.Hostname()
 	pkg.Build.Terminal = hostname
 
 	if pkg.IsInitConfig() {
 		pkg.Metadata.Version = config.CLIVersion
 	}
+
+	pkg.Build.Architecture = pkg.Metadata.Architecture
 
 	// Record the Zarf Version the CLI was built with.
 	pkg.Build.Version = config.CLIVersion

@@ -5,8 +5,6 @@
 package creator
 
 import (
-	"fmt"
-
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -20,11 +18,7 @@ func ComposeComponents(pkg types.ZarfPackage, flavor string) (types.ZarfPackage,
 	pkgVars := pkg.Variables
 	pkgConsts := pkg.Constants
 
-	arch := pkg.Build.Architecture
-
-	if arch == "" {
-		return types.ZarfPackage{}, nil, fmt.Errorf("build.architecture is required to compose components")
-	}
+	arch := pkg.Metadata.Architecture
 
 	for i, component := range pkg.Components {
 		// filter by architecture and flavor
