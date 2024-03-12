@@ -24,6 +24,7 @@ func TestDeprecatedComponentScripts(t *testing.T) {
 		"test-deprecated-deploy-after-hook.txt",
 	}
 	allArtifacts := append(deployArtifacts, prepareArtifact)
+	e2e.CleanFiles(allArtifacts...)
 	defer e2e.CleanFiles(allArtifacts...)
 
 	// 1. Try creating the package to test the create scripts
