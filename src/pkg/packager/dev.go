@@ -29,7 +29,6 @@ func (p *Packager) DevDeploy() error {
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
-	defer os.Chdir(cwd)
 
 	pc := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
 
@@ -99,5 +98,5 @@ func (p *Packager) DevDeploy() error {
 	message.ZarfCommand("package inspect %s", p.cfg.Pkg.Metadata.Name)
 
 	// cd back
-	return nil
+	return os.Chdir(cwd)
 }
