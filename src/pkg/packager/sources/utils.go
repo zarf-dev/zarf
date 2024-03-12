@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/mholt/archiver/v3"
@@ -112,7 +113,7 @@ func NameFromMetadata(pkg *types.ZarfPackage, isSkeleton bool) string {
 	arch := config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
 
 	if isSkeleton {
-		arch = "skeleton"
+		arch = zoci.PlatformForSkeleton().Architecture
 	}
 
 	switch pkg.Kind {
