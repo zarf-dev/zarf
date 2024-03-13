@@ -87,6 +87,15 @@ type ZarfPullOptions struct {
 	OutputDirectory string `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
 }
 
+// ZarfGenerateOptions tracks the user-defined options during package generation.
+type ZarfGenerateOptions struct {
+	Name    string `json:"name" jsonschema:"description=Name of the package being generated"`
+	URL     string `json:"url" jsonschema:"description=URL to the source git repository"`
+	Version string `json:"version" jsonschema:"description=Version of the chart to use"`
+	GitPath string `json:"gitPath" jsonschema:"description=Relative path to the chart in the git repository"`
+	Output  string `json:"output" jsonschema:"description=Location where the finalized zarf.yaml will be placed"`
+}
+
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
 type ZarfInitOptions struct {
 	// Zarf init is installing the k3s component

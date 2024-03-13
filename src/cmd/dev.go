@@ -61,6 +61,27 @@ var devDeployCmd = &cobra.Command{
 	},
 }
 
+var devGenerateCmd = &cobra.Command{
+	Use:     "generate NAME",
+	Aliases: []string{"g"},
+	Args:    cobra.ExactArgs(1),
+	Short:   lang.CmdDevGenerateShort,
+	Example: lang.CmdDevGenerateExample,
+	Run: func(_ *cobra.Command, args []string) {
+		pkgConfig.GenerateOpts.Name = args[0]
+
+		pkgConfig.CreateOpts.BaseDir = "."
+		pkgConfig.FindImagesOpts.RepoHelmChartPath = pkgConfig.GenerateOpts.GitPath
+
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		if err := pkgClient.Generate(); err != nil {
+			message.Fatalf(err, err.Error())
+		}
+	},
+}
+
 var devTransformGitLinksCmd = &cobra.Command{
 	Use:     "patch-git HOST FILE",
 	Aliases: []string{"p"},
@@ -186,7 +207,6 @@ var devFindImagesCmd = &cobra.Command{
 	Short:   lang.CmdDevFindImagesShort,
 	Long:    lang.CmdDevFindImagesLong,
 	Run: func(_ *cobra.Command, args []string) {
-		// If a directory was provided, use that as the base directory
 		common.SetBaseDirectory(args, &pkgConfig)
 
 		// Ensure uppercase keys from viper
@@ -256,6 +276,7 @@ func init() {
 	rootCmd.AddCommand(devCmd)
 
 	devCmd.AddCommand(devDeployCmd)
+	devCmd.AddCommand(devGenerateCmd)
 	devCmd.AddCommand(devTransformGitLinksCmd)
 	devCmd.AddCommand(devSha256SumCmd)
 	devCmd.AddCommand(devFindImagesCmd)
@@ -263,6 +284,7 @@ func init() {
 	devCmd.AddCommand(devLintCmd)
 
 	bindDevDeployFlags(v)
+	bindDevGenerateFlags(v)
 
 	devSha256SumCmd.Flags().StringVarP(&extractPath, "extract-path", "e", "", lang.CmdDevFlagExtractPath)
 
@@ -306,4 +328,18 @@ func bindDevDeployFlags(v *viper.Viper) {
 	devDeployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 
 	devDeployFlags.BoolVar(&pkgConfig.CreateOpts.NoYOLO, "no-yolo", v.GetBool(common.VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
+}
+
+func bindDevGenerateFlags(_ *viper.Viper) {
+	generateFlags := devGenerateCmd.Flags()
+
+	generateFlags.StringVar(&pkgConfig.GenerateOpts.URL, "url", "", "URL to the source git repository")
+	generateFlags.StringVar(&pkgConfig.GenerateOpts.Version, "version", "", "The Version of the chart to use")
+	generateFlags.StringVar(&pkgConfig.GenerateOpts.GitPath, "gitPath", "", "Relative path to the chart in the git repository")
+	generateFlags.StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "", "Output directory for the generated zarf.yaml")
+	generateFlags.StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
+
+	devGenerateCmd.MarkFlagRequired("url")
+	devGenerateCmd.MarkFlagRequired("version")
+	devGenerateCmd.MarkFlagRequired("output-directory")
 }
