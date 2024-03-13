@@ -14,7 +14,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
@@ -25,14 +24,14 @@ func (p *Packager) Generate() (err error) {
 	generatedZarfYAMLPath := filepath.Join(p.cfg.GenerateOpts.Output, layout.ZarfYAML)
 	spinner := message.NewProgressSpinner("Generating package for %q at %s", p.cfg.GenerateOpts.Name, generatedZarfYAMLPath)
 
-	if !utils.InvalidPath(generatedZarfYAMLPath) {
+	if !helpers.InvalidPath(generatedZarfYAMLPath) {
 		prefixed := filepath.Join(p.cfg.GenerateOpts.Output, fmt.Sprintf("%s-%s", p.cfg.GenerateOpts.Name, layout.ZarfYAML))
 
 		message.Warnf("%s already exists, writing to %s", generatedZarfYAMLPath, prefixed)
 
 		generatedZarfYAMLPath = prefixed
 
-		if !utils.InvalidPath(generatedZarfYAMLPath) {
+		if !helpers.InvalidPath(generatedZarfYAMLPath) {
 			return fmt.Errorf("unable to generate package, %s already exists", generatedZarfYAMLPath)
 		}
 	}
@@ -79,7 +78,7 @@ func (p *Packager) Generate() (err error) {
 		return err
 	}
 
-	if err := utils.CreateDirectory(p.cfg.GenerateOpts.Output, helpers.ReadExecuteAllWriteUser); err != nil {
+	if err := helpers.CreateDirectory(p.cfg.GenerateOpts.Output, helpers.ReadExecuteAllWriteUser); err != nil {
 		return err
 	}
 
