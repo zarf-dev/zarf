@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -132,12 +133,12 @@ func (p *Packager) removeComponent(deployedPackage *types.DeployedPackage, deplo
 
 	onRemove := c.Actions.OnRemove
 	onFailure := func() {
-		if err := p.runActions(onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
+		if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
 			message.Debugf("Unable to run the failure action: %s", err)
 		}
 	}
 
-	if err := p.runActions(onRemove.Defaults, onRemove.Before, nil); err != nil {
+	if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.Before, nil); err != nil {
 		onFailure()
 		return nil, fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
 	}
@@ -166,12 +167,12 @@ func (p *Packager) removeComponent(deployedPackage *types.DeployedPackage, deplo
 		p.updatePackageSecret(*deployedPackage)
 	}
 
-	if err := p.runActions(onRemove.Defaults, onRemove.After, nil); err != nil {
+	if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.After, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the after action: %w", err)
 	}
 
-	if err := p.runActions(onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
+	if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the success action: %w", err)
 	}

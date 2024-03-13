@@ -14,6 +14,7 @@ zarf dev deploy [flags]
 ## Options
 
 ```
+      --adopt-existing-resources           Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --components string                  Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
       --create-set stringToString          Specify package variables to set on the command line (KEY=value) (default [])
       --deploy-set stringToString          Specify deployment variables to set on the command line (KEY=value) (default [])
@@ -21,6 +22,9 @@ zarf dev deploy [flags]
   -h, --help                               help for deploy
       --no-yolo                            Disable the YOLO mode default override and create / deploy the package as-defined
       --registry-override stringToString   Specify a map of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet) (default [])
+      --retries int                        Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
+      --skip-webhooks                      [alpha] Skip waiting for external webhooks to execute as each package component is deployed
+      --timeout duration                   Timeout for Helm operations such as installs and rollbacks (default 15m0s)
 ```
 
 ## Options inherited from parent commands

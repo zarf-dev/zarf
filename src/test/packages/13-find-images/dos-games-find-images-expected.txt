@@ -1,7 +1,0 @@
-components:
-
-  - name: baseline
-    images:
-      - defenseunicorns/zarf-game:multi-tile-dark
-      # Cosign artifacts for images - dos-games - baseline
-      - index.docker.io/defenseunicorns/zarf-game:sha256-0b694ca1c33afae97b7471488e07968599f1d2470c629f76af67145ca64428af.sig

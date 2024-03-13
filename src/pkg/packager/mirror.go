@@ -33,9 +33,12 @@ func (p *Packager) Mirror() (err error) {
 		return err
 	}
 
-	if err := p.stageSBOMViewFiles(); err != nil {
+	sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
+	if err != nil {
 		return err
 	}
+
+	p.warnings = append(p.warnings, sbomWarnings...)
 
 	// Confirm the overall package mirror
 	if !p.confirmAction(config.ZarfMirrorStage) {

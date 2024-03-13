@@ -118,10 +118,6 @@
           "type": "array",
           "description": "Any migrations that have been run on this package"
         },
-        "differential": {
-          "type": "boolean",
-          "description": "Whether this package was created with differential components"
-        },
         "registryOverrides": {
           "patternProperties": {
             ".*": {
@@ -130,6 +126,14 @@
           },
           "type": "object",
           "description": "Any registry domains that were overridden on package create when pulling images"
+        },
+        "differential": {
+          "type": "boolean",
+          "description": "Whether this package was created with differential components"
+        },
+        "differentialPackageVersion": {
+          "type": "string",
+          "description": "Version of a previously built package used as the basis for creating this differential package"
         },
         "differentialMissing": {
           "items": {

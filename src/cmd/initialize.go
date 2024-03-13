@@ -23,6 +23,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
+	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/spf13/cobra"
 )
@@ -43,7 +44,7 @@ var initCmd = &cobra.Command{
 		}
 
 		// Continue running package deploy for all components like any other package
-		initPackageName := packager.GetInitPackageName("")
+		initPackageName := sources.GetInitPackageName()
 		pkgConfig.PkgOpts.PackageSource = initPackageName
 
 		// Try to use an init-package in the executable directory if none exist in current working directory
@@ -181,8 +182,8 @@ func init() {
 
 	// Init package variable defaults that are non-zero values
 	// NOTE: these are not in common.setDefaults so that zarf tools update-creds does not erroneously update values back to the default
-	v.SetDefault(common.VInitGitPushUser, config.ZarfGitPushUser)
-	v.SetDefault(common.VInitRegistryPushUser, config.ZarfRegistryPushUser)
+	v.SetDefault(common.VInitGitPushUser, types.ZarfGitPushUser)
+	v.SetDefault(common.VInitRegistryPushUser, types.ZarfRegistryPushUser)
 
 	// Init package set variable flags
 	initCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdInitFlagSet)
@@ -216,11 +217,10 @@ func init() {
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
 	initCmd.Flags().BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-
 	initCmd.Flags().BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
-
 	initCmd.Flags().DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
+	initCmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)
 	initCmd.Flags().StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 
 	initCmd.Flags().SortFlags = true
