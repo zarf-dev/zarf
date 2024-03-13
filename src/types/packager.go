@@ -33,6 +33,9 @@ type PackagerConfig struct {
 	// FindImagesOpts tracks user-defined options used to find images
 	FindImagesOpts ZarfFindImagesOptions
 
+	// GenerateOpts tracks user-defined values for package generation.
+	GenerateOpts ZarfGenerateOptions
+
 	// The package data
 	Pkg ZarfPackage
 
