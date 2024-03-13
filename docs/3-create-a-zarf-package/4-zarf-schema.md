@@ -605,6 +605,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="components_items_required"></a>required</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Do not prompt user to install this component
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
+
+</blockquote>
+</details>
+
 <details open>
 <summary>
 <strong> <a name="components_items_only"></a>only</strong>
