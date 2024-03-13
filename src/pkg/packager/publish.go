@@ -73,13 +73,9 @@ func (p *Packager) Publish() (err error) {
 		}
 	} else {
 		filter := filters.Empty()
-		if err = p.source.LoadPackage(p.layout, filter, false); err != nil {
-			return fmt.Errorf("unable to load the package: %w", err)
-		}
-		var err error
-		p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML()
+		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, false)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to load the package: %w", err)
 		}
 
 		// Sign the package if a key has been provided

@@ -37,10 +37,7 @@ func (p *Packager) Remove() (err error) {
 
 	// we do not want to allow removal of signed packages without a signature if there are remove actions
 	// as this is arbitrary code execution from an untrusted source
-	if err = p.source.LoadPackageMetadata(p.layout, false, false); err != nil {
-		return err
-	}
-	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML()
+	p.cfg.Pkg, p.warnings, err = p.source.LoadPackageMetadata(p.layout, false, false)
 	if err != nil {
 		return err
 	}

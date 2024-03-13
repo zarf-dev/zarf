@@ -50,16 +50,16 @@ func (s *URLSource) Collect(dir string) (string, error) {
 }
 
 // LoadPackage loads a package from an http, https or sget URL.
-func (s *URLSource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (err error) {
+func (s *URLSource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return err
+		return pkg, nil, err
 	}
 	defer os.Remove(tmp)
 
 	dstTarball, err := s.Collect(tmp)
 	if err != nil {
-		return err
+		return pkg, nil, err
 	}
 
 	s.PackageSource = dstTarball
@@ -74,16 +74,16 @@ func (s *URLSource) LoadPackage(dst *layout.PackagePaths, filter filters.Compone
 }
 
 // LoadPackageMetadata loads a package's metadata from an http, https or sget URL.
-func (s *URLSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (err error) {
+func (s *URLSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return err
+		return pkg, nil, err
 	}
 	defer os.Remove(tmp)
 
 	dstTarball, err := s.Collect(tmp)
 	if err != nil {
-		return err
+		return pkg, nil, err
 	}
 
 	s.PackageSource = dstTarball

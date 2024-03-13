@@ -6,7 +6,6 @@ package sources
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
@@ -43,8 +42,8 @@ type ClusterSource struct {
 // LoadPackage loads a package from a cluster.
 //
 // This is not implemented.
-func (s *ClusterSource) LoadPackage(_ *layout.PackagePaths, _ filters.ComponentFilterStrategy, _ bool) error {
-	return fmt.Errorf("not implemented")
+func (s *ClusterSource) LoadPackage(_ *layout.PackagePaths, _ filters.ComponentFilterStrategy, _ bool) (types.ZarfPackage, []string, error) {
+	return types.ZarfPackage{}, nil, fmt.Errorf("not implemented")
 }
 
 // Collect collects a package from a cluster.
@@ -55,13 +54,15 @@ func (s *ClusterSource) Collect(_ string) (string, error) {
 }
 
 // LoadPackageMetadata loads package metadata from a cluster.
-func (s *ClusterSource) LoadPackageMetadata(dst *layout.PackagePaths, _ bool, _ bool) (err error) {
+func (s *ClusterSource) LoadPackageMetadata(dst *layout.PackagePaths, _ bool, _ bool) (types.ZarfPackage, []string, error) {
 	dpkg, err := s.GetDeployedPackage(s.PackageSource)
 	if err != nil {
-		return err
+		return types.ZarfPackage{}, nil, err
 	}
 
-	dst.ZarfYAML = filepath.Join(dst.Base, layout.ZarfYAML)
+	if err := utils.WriteYaml(dst.ZarfYAML, dpkg.Data, helpers.ReadUser); err != nil {
+		return types.ZarfPackage{}, nil, err
+	}
 
-	return utils.WriteYaml(dst.ZarfYAML, dpkg.Data, helpers.ReadExecuteAllWriteUser)
+	return dpkg.Data, nil, nil
 }

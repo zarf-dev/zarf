@@ -49,13 +49,9 @@ func (p *Packager) Deploy() (err error) {
 		filters.ByLocalOS(),
 	)
 
-	if err = p.source.LoadPackage(p.layout, filter, true); err != nil {
-		return fmt.Errorf("unable to load the package: %w", err)
-	}
-
-	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML()
+	p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, true)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
 	if err := p.validateLastNonBreakingVersion(); err != nil {

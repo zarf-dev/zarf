@@ -35,9 +35,8 @@ type OCISource struct {
 }
 
 // LoadPackage loads a package from an OCI registry.
-func (s *OCISource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (err error) {
+func (s *OCISource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	ctx := context.TODO()
-	var pkg types.ZarfPackage
 	layersToPull := []ocispec.Descriptor{}
 
 	message.Debugf("Loading package from %q", s.PackageSource)
@@ -46,27 +45,24 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, filter filters.Compone
 	if config.CommonOptions.Confirm {
 		pkg, err = s.FetchZarfYAML(ctx)
 		if err != nil {
-			return err
+			return pkg, nil, err
 		}
-		var requested []types.ZarfComponent
 		if filter != nil {
-			requested, err = filter.Apply(pkg)
+			pkg.Components, err = filter.Apply(pkg)
 			if err != nil {
-				return err
+				return pkg, nil, err
 			}
-		} else {
-			requested = pkg.Components
 		}
-		layersToPull, err = s.LayersFromRequestedComponents(ctx, requested)
+		layersToPull, err = s.LayersFromRequestedComponents(ctx, pkg.Components)
 		if err != nil {
-			return fmt.Errorf("unable to get published component image layers: %s", err.Error())
+			return pkg, nil, fmt.Errorf("unable to get published component image layers: %s", err.Error())
 		}
 	}
 
 	isPartial := true
 	root, err := s.FetchRoot(ctx)
 	if err != nil {
-		return err
+		return pkg, nil, err
 	}
 	if len(root.Layers) == len(layersToPull) {
 		isPartial = false
@@ -74,16 +70,20 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, filter filters.Compone
 
 	layersFetched, err := s.PullPackage(ctx, dst.Base, config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
-		return fmt.Errorf("unable to pull the package: %w", err)
+		return pkg, nil, fmt.Errorf("unable to pull the package: %w", err)
 	}
 	dst.SetFromLayers(layersFetched)
 
-	if err := utils.ReadYaml(dst.ZarfYAML, &pkg); err != nil {
-		return err
+	// if --confirm is not set, read the zarf.yaml that was pulled
+	if !config.CommonOptions.Confirm {
+		pkg, warnings, err = dst.ReadZarfYAML()
+		if err != nil {
+			return pkg, nil, err
+		}
 	}
 
 	if err := dst.MigrateLegacy(); err != nil {
-		return err
+		return pkg, nil, err
 	}
 
 	if !dst.IsLegacyLayout() {
@@ -91,13 +91,13 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, filter filters.Compone
 		defer spinner.Stop()
 
 		if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, isPartial); err != nil {
-			return err
+			return pkg, nil, err
 		}
 
 		spinner.Success()
 
 		if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
-			return err
+			return pkg, nil, err
 		}
 	}
 
@@ -107,28 +107,26 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, filter filters.Compone
 				if layout.IsNotLoaded(err) {
 					_, err := dst.Components.Create(component)
 					if err != nil {
-						return err
+						return pkg, nil, err
 					}
 				} else {
-					return err
+					return pkg, nil, err
 				}
 			}
 		}
 
 		if dst.SBOMs.Path != "" {
 			if err := dst.SBOMs.Unarchive(); err != nil {
-				return err
+				return pkg, nil, err
 			}
 		}
 	}
 
-	return nil
+	return pkg, warnings, nil
 }
 
 // LoadPackageMetadata loads a package's metadata from an OCI registry.
-func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (err error) {
-	var pkg types.ZarfPackage
-
+func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	toPull := zoci.PackageAlwaysPull
 	if wantSBOM {
 		toPull = append(toPull, layout.SBOMTar)
@@ -136,16 +134,17 @@ func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 	ctx := context.TODO()
 	layersFetched, err := s.PullPaths(ctx, dst.Base, toPull)
 	if err != nil {
-		return err
+		return pkg, nil, err
 	}
 	dst.SetFromLayers(layersFetched)
 
-	if err := utils.ReadYaml(dst.ZarfYAML, &pkg); err != nil {
-		return err
+	pkg, warnings, err = dst.ReadZarfYAML()
+	if err != nil {
+		return pkg, nil, err
 	}
 
 	if err := dst.MigrateLegacy(); err != nil {
-		return err
+		return pkg, nil, err
 	}
 
 	if !dst.IsLegacyLayout() {
@@ -154,7 +153,7 @@ func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 			defer spinner.Stop()
 
 			if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, true); err != nil {
-				return err
+				return pkg, nil, err
 			}
 
 			spinner.Success()
@@ -164,7 +163,7 @@ func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 			if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
 				message.Warn("The package was signed but no public key was provided, skipping signature validation")
 			} else {
-				return err
+				return pkg, nil, err
 			}
 		}
 	}
@@ -172,11 +171,11 @@ func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 	// unpack sboms.tar
 	if wantSBOM {
 		if err := dst.SBOMs.Unarchive(); err != nil {
-			return err
+			return pkg, nil, err
 		}
 	}
 
-	return nil
+	return pkg, warnings, nil
 }
 
 // Collect pulls a package from an OCI registry and writes it to a tarball.
