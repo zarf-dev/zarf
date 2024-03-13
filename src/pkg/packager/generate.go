@@ -88,7 +88,7 @@ func (p *Packager) Generate() (err error) {
 		return err
 	}
 
-	schemaComment := fmt.Sprintf("# yaml-language-server: $schema=https://raw.githubusercontent.com/defenseunicorns/zarf/%s/zarf.schema.json", config.CLIVersion)
+	schemaComment := fmt.Sprintf("# yaml-language-server: $schema=https://raw.githubusercontent.com/%s/%s/zarf.schema.json", config.GithubProject, config.CLIVersion)
 	content := schemaComment + "\n" + string(b)
 
 	// lets space things out a bit
