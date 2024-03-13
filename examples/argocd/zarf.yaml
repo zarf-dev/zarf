@@ -15,11 +15,11 @@ components:
         valuesFiles:
           - baseline/values.yaml
     images:
-      - docker.io/library/redis:7.0.15-alpine
-      - quay.io/argoproj/argocd:v2.9.6
+      - docker.io/library/redis:7.2.4-alpine
+      - quay.io/argoproj/argocd:v2.10.2
       # Cosign artifacts for images - argocd - argocd-helm-chart
-      - quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.sig
-      - quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.att
+      - quay.io/argoproj/argocd:sha256-5f200a0efcf08abfd61d28165893edc9dce48261970d3280b7faef93617a43aa.sig
+      - quay.io/argoproj/argocd:sha256-5f200a0efcf08abfd61d28165893edc9dce48261970d3280b7faef93617a43aa.att
   - name: argocd-apps
     required: true
     charts:
