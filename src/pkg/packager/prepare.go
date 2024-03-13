@@ -19,8 +19,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -53,8 +54,15 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	}
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
-	if err = p.readZarfYAML(layout.ZarfYAML); err != nil {
-		return nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
+	c := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
+
+	p.cfg.Pkg, p.warnings, err = c.LoadPackageDefinition(p.layout)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, warning := range p.warnings {
+		message.Warn(warning)
 	}
 
 	return p.findImages()
@@ -70,19 +78,6 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 	erroredCosignLookups := []string{}
 	whyResources := []string{}
 
-	if err := p.composeComponents(); err != nil {
-		return nil, err
-	}
-
-	for _, warning := range p.warnings {
-		message.Warn(warning)
-	}
-
-	// After components are composed, template the active package
-	if err := p.fillActiveTemplate(); err != nil {
-		return nil, fmt.Errorf("unable to fill values in template: %w", err)
-	}
-
 	for _, component := range p.cfg.Pkg.Components {
 		if len(component.Repos) > 0 && repoHelmChartPath == "" {
 			message.Note("This Zarf package contains git repositories, " +
@@ -94,7 +89,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 
 	componentDefinition := "\ncomponents:\n"
 
-	if err := p.setVariableMapInConfig(); err != nil {
+	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
 		return nil, err
 	}
 
