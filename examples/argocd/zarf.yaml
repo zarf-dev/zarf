@@ -8,7 +8,7 @@ components:
     required: true
     charts:
       - name: argo-cd
-        version: 5.54.0
+        version: 6.7.1
         namespace: argocd
         url: https://argoproj.github.io/argo-helm
         releaseName: argocd-baseline
