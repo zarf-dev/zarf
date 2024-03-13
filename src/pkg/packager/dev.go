@@ -44,9 +44,6 @@ func (p *Packager) DevDeploy() error {
 		return err
 	}
 
-	// Set the package version to the CLI version
-	p.cfg.Pkg.Build.Version = config.CLIVersion
-
 	filter := filters.Combine(
 		filters.ByLocalOS(),
 		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, false),
