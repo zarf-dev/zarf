@@ -7,6 +7,7 @@ package packager
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
@@ -45,7 +46,7 @@ func (p *Packager) DevDeploy() error {
 	}
 
 	filter := filters.Combine(
-		filters.ByLocalOS(),
+		filters.ByLocalOS(runtime.GOOS),
 		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, false),
 	)
 	p.cfg.Pkg.Components, err = filter.Apply(p.cfg.Pkg)

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,7 +47,7 @@ func (p *Packager) Deploy() (err error) {
 
 	filter := filters.Combine(
 		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm),
-		filters.ByLocalOS(),
+		filters.ByLocalOS(runtime.GOOS),
 	)
 
 	p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, true)

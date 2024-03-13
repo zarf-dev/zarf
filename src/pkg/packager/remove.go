@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime"
 
 	"slices"
 
@@ -49,7 +50,7 @@ func (p *Packager) Remove() (err error) {
 
 	// If components were provided; just remove the things we were asked to remove
 	filter := filters.Combine(
-		filters.ByLocalOS(),
+		filters.ByLocalOS(runtime.GOOS),
 		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
 	)
 	included, err := filter.Apply(p.cfg.Pkg)

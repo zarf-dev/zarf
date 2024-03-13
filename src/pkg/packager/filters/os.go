@@ -5,25 +5,31 @@
 package filters
 
 import (
-	"runtime"
+	"errors"
 
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func ByLocalOS() ComponentFilterStrategy {
-	return &localOSFilter{}
+func ByLocalOS(localOS string) ComponentFilterStrategy {
+	return &localOSFilter{localOS}
 }
 
 // localOSFilter filters components based on local (runtime) OS.
-type localOSFilter struct{}
+type localOSFilter struct {
+	localOS string
+}
+
+var ErrLocalOSRequired = errors.New("localOS is required")
 
 // Apply applies the filter.
 func (f *localOSFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
-	localOS := runtime.GOOS
+	if f.localOS == "" {
+		return nil, ErrLocalOSRequired
+	}
 
 	filtered := []types.ZarfComponent{}
 	for _, component := range pkg.Components {
-		if component.Only.LocalOS == "" || component.Only.LocalOS == localOS {
+		if component.Only.LocalOS == "" || component.Only.LocalOS == f.localOS {
 			filtered = append(filtered, component)
 		}
 	}

@@ -6,6 +6,7 @@ package packager
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -21,7 +22,7 @@ func (p *Packager) Mirror() (err error) {
 
 	filter := filters.Combine(
 		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
-		filters.ByLocalOS(),
+		filters.ByLocalOS(runtime.GOOS),
 	)
 
 	p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, true)

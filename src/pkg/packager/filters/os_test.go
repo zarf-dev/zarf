@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestArchAndOSFilter(t *testing.T) {
+func TestLocalOSFilter(t *testing.T) {
 
 	pkg := types.ZarfPackage{}
 	for _, os := range validate.SupportedOS() {
@@ -23,10 +23,13 @@ func TestArchAndOSFilter(t *testing.T) {
 	}
 
 	for _, os := range validate.SupportedOS() {
-		filter := ByLocalOS()
+		filter := ByLocalOS(os)
 		result, err := filter.Apply(pkg)
-		require.NoError(t, err)
-		require.Len(t, result, 2)
+		if os == "" {
+			require.ErrorIs(t, err, ErrLocalOSRequired)
+		} else {
+			require.NoError(t, err)
+		}
 		for _, component := range result {
 			if component.Only.LocalOS != "" {
 				require.Equal(t, os, component.Only.LocalOS)
