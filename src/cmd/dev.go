@@ -15,7 +15,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
@@ -68,29 +67,18 @@ var devGenerateCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdDevGenerateShort,
 	Example: lang.CmdDevGenerateExample,
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.GenerateOpts.Name = args[0]
-		spinner := message.NewProgressSpinner(lang.CmdDevGenerateNewMessage, pkgConfig.GenerateOpts.Name)
 
-		// Configure and Instantiate the packager
-		pkgConfig = packager.UpdatePackageConfigForGenerate(&pkgConfig)
+		pkgConfig.CreateOpts.BaseDir = "."
+		pkgConfig.FindImagesOpts.RepoHelmChartPath = pkgConfig.GenerateOpts.GitPath
+
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		// Update the Package with Images
-		if err := pkgClient.FindImagesWithPackage(); err != nil {
-			message.WarnErr(err, lang.CmdDevGenerateFoundNoImagesErr)
-		}
-
-		// Validate the package
-		if err := validate.Run(pkgConfig.Pkg); err != nil {
+		if err := pkgClient.Generate(); err != nil {
 			message.Fatalf(err, err.Error())
 		}
-
-		// Write the generated zarf.yaml
-		packager.WriteGeneratedZarfPackage(&pkgConfig)
-
-		spinner.Success()
 	},
 }
 
@@ -342,7 +330,7 @@ func bindDevGenerateFlags(_ *viper.Viper) {
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.URL, "url", "", "URL to the source git repository")
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.Version, "version", "", "The Version of the chart to use")
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.GitPath, "gitPath", "", "Relative path to the chart in the git repository")
-	generateFlags.StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "./", "Output directory for the generated zarf.yaml")
+	generateFlags.StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "", "Output directory for the generated zarf.yaml")
 	generateFlags.StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	devGenerateCmd.MarkFlagRequired("url")

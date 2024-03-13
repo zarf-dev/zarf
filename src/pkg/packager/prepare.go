@@ -36,23 +36,6 @@ import (
 // imageMap is a map of image/boolean pairs.
 type imageMap map[string]bool
 
-// FindImagesWithPackage iterates over a ZarfPackage object and attempts to parse images.
-func (p *Packager) FindImagesWithPackage() error {
-	message.Debug("Finding images for ZarfPackage")
-	p.arch = config.GetArch(p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture)
-
-	images, err := p.findImages()
-	if err != nil {
-		return err
-	}
-
-	for i := range p.cfg.Pkg.Components {
-		p.cfg.Pkg.Components[i].Images = images[p.cfg.Pkg.Components[i].Name]
-	}
-
-	return nil
-}
-
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
 func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	cwd, err := os.Getwd()
@@ -66,7 +49,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		}
 	}()
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return nil, fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
+		return nil, fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 

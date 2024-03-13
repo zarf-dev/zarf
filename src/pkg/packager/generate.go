@@ -8,62 +8,95 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
+	goyaml "github.com/goccy/go-yaml"
 )
 
-// UpdatePackageConfigForGenerate updates the package configuration with the new ZarfPackageConfig from pkgConfig.GenerateOpts
-func UpdatePackageConfigForGenerate(pkgConfig *types.PackagerConfig) types.PackagerConfig {
+// Generate generates a Zarf package definition.
+func (p *Packager) Generate() (err error) {
+	generatedZarfYAMLPath := filepath.Join(p.cfg.GenerateOpts.Output, layout.ZarfYAML)
+	spinner := message.NewProgressSpinner("Generating package for %q at %s", p.cfg.GenerateOpts.Name, generatedZarfYAMLPath)
 
-	// Add new ZarfPackageConfig
-	newComponent := []types.ZarfComponent{{
-		Name:     pkgConfig.GenerateOpts.Name,
+	if !utils.InvalidPath(generatedZarfYAMLPath) {
+		prefixed := filepath.Join(p.cfg.GenerateOpts.Output, fmt.Sprintf("%s-%s", p.cfg.GenerateOpts.Name, layout.ZarfYAML))
+
+		message.Warnf("%s already exists, writing to %s", generatedZarfYAMLPath, prefixed)
+
+		generatedZarfYAMLPath = prefixed
+
+		if !utils.InvalidPath(generatedZarfYAMLPath) {
+			return fmt.Errorf("unable to generate package, %s already exists", generatedZarfYAMLPath)
+		}
+	}
+
+	generatedComponent := types.ZarfComponent{
+		Name:     p.cfg.GenerateOpts.Name,
 		Required: true,
 		Charts: []types.ZarfChart{
 			{
-				Name:      pkgConfig.GenerateOpts.Name,
-				Version:   pkgConfig.GenerateOpts.Version,
-				Namespace: pkgConfig.GenerateOpts.Name,
-				URL:       pkgConfig.GenerateOpts.URL,
-				GitPath:   pkgConfig.GenerateOpts.GitPath,
+				Name:      p.cfg.GenerateOpts.Name,
+				Version:   p.cfg.GenerateOpts.Version,
+				Namespace: p.cfg.GenerateOpts.Name,
+				URL:       p.cfg.GenerateOpts.URL,
+				GitPath:   p.cfg.GenerateOpts.GitPath,
 			},
 		},
-	}}
-
-	pkgConfig.Pkg.Kind = types.ZarfPackageConfig
-	pkgConfig.Pkg.Metadata.Name = pkgConfig.GenerateOpts.Name
-	pkgConfig.Pkg.Metadata.Version = pkgConfig.GenerateOpts.Version
-	pkgConfig.Pkg.Components = append(newComponent, pkgConfig.Pkg.Components...)
-
-	// Set config for FindImages and helm
-	pkgConfig.CreateOpts.BaseDir = "."
-	pkgConfig.FindImagesOpts.RepoHelmChartPath = pkgConfig.GenerateOpts.GitPath
-
-	return *pkgConfig
-}
-
-// WriteGeneratedZarfPackage writes the generated ZarfPackageConfig to the output directory and filename avoiding overwriting existing files
-func WriteGeneratedZarfPackage(pkgConfig *types.PackagerConfig) {
-	outputDirectory := pkgConfig.GenerateOpts.Output
-	if _, err := os.Stat(outputDirectory); os.IsNotExist(err) {
-		outputDirectory = "."
-		message.Warnf("Directory does not exist: %q. Using current directory instead.", outputDirectory)
 	}
 
-	packageLocation := filepath.Join(outputDirectory, layout.ZarfYAML)
-	if _, err := os.Stat(packageLocation); err == nil {
-		packageFilename := fmt.Sprintf("zarf-%s.yaml", pkgConfig.GenerateOpts.Name)
-		message.Warnf("A %q already exists in the directory %q. Using %q instead.", layout.ZarfYAML, outputDirectory, packageFilename)
-		packageLocation = filepath.Join(outputDirectory, packageFilename)
+	p.cfg.Pkg = types.ZarfPackage{
+		Kind: types.ZarfPackageConfig,
+		Metadata: types.ZarfMetadata{
+			Name:        p.cfg.GenerateOpts.Name,
+			Version:     p.cfg.GenerateOpts.Version,
+			Description: "auto-generated using `zarf dev generate`",
+		},
+		Components: []types.ZarfComponent{
+			generatedComponent,
+		},
 	}
+	p.arch = config.GetArch()
 
-	err := utils.WriteYaml(packageLocation, pkgConfig.Pkg, 0644)
+	images, err := p.findImages()
 	if err != nil {
-		message.Fatalf(err, err.Error())
+		// purposefully not returning error here, as we can still generate the package without images
+		message.Warnf("Unable to find images: %s", err.Error())
 	}
 
-	message.Successf("%s has been created.\n", packageLocation)
+	for i := range p.cfg.Pkg.Components {
+		name := p.cfg.Pkg.Components[i].Name
+		p.cfg.Pkg.Components[i].Images = images[name]
+	}
+
+	if err := validate.Run(p.cfg.Pkg); err != nil {
+		return err
+	}
+
+	if err := utils.CreateDirectory(p.cfg.GenerateOpts.Output, helpers.ReadExecuteAllWriteUser); err != nil {
+		return err
+	}
+
+	b, err := goyaml.MarshalWithOptions(p.cfg.Pkg, goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
+	if err != nil {
+		return err
+	}
+
+	schemaComment := fmt.Sprintf("# yaml-language-server: $schema=https://raw.githubusercontent.com/defenseunicorns/zarf/%s/zarf.schema.json", config.CLIVersion)
+	content := schemaComment + "\n" + string(b)
+
+	// lets space things out a bit
+	content = strings.Replace(content, "kind:\n", "\nkind:\n", 1)
+	content = strings.Replace(content, "metadata:\n", "\nmetadata:\n", 1)
+	content = strings.Replace(content, "components:\n", "\ncomponents:\n", 1)
+
+	spinner.Successf("Generated package for %q at %s", p.cfg.GenerateOpts.Name, generatedZarfYAMLPath)
+
+	return os.WriteFile(generatedZarfYAMLPath, []byte(content), helpers.ReadAllWriteUser)
 }
