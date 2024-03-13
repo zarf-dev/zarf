@@ -67,7 +67,7 @@ var devGenerateCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdDevGenerateShort,
 	Example: lang.CmdDevGenerateExample,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.GenerateOpts.Name = args[0]
 
 		pkgConfig.CreateOpts.BaseDir = "."
