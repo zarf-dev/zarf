@@ -61,6 +61,10 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		return nil, err
 	}
 
+	for _, warning := range p.warnings {
+		message.Warn(warning)
+	}
+
 	return p.findImages()
 }
 
@@ -73,10 +77,6 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 	erroredCharts := []string{}
 	erroredCosignLookups := []string{}
 	whyResources := []string{}
-
-	for _, warning := range p.warnings {
-		message.Warn(warning)
-	}
 
 	for _, component := range p.cfg.Pkg.Components {
 		if len(component.Repos) > 0 && repoHelmChartPath == "" {
