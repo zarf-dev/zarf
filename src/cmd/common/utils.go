@@ -16,7 +16,7 @@ import (
 // SuppressGlobalInterrupt suppresses the global error on an interrupt
 var SuppressGlobalInterrupt = false
 
-// SetBaseDirectory sets base directory on package config when given in args
+// SetBaseDirectory sets the base directory. This is a directory with a zarf.yaml.
 func SetBaseDirectory(args []string) string {
 	if len(args) > 0 {
 		return args[0]
