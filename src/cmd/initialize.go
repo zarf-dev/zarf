@@ -44,7 +44,7 @@ var initCmd = &cobra.Command{
 		}
 
 		// Continue running package deploy for all components like any other package
-		initPackageName := packager.GetInitPackageName("")
+		initPackageName := sources.GetInitPackageName()
 		pkgConfig.PkgOpts.PackageSource = initPackageName
 
 		// Try to use an init-package in the executable directory if none exist in current working directory
@@ -217,11 +217,10 @@ func init() {
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
 	initCmd.Flags().BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-
 	initCmd.Flags().BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
-
 	initCmd.Flags().DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
+	initCmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)
 	initCmd.Flags().StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 
 	initCmd.Flags().SortFlags = true

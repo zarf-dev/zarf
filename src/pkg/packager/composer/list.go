@@ -347,6 +347,9 @@ func (ic *ImportChain) MergeConstants(existing []types.ZarfPackageConstant) (mer
 
 // CompatibleComponent determines if this component is compatible with the given create options
 func CompatibleComponent(c types.ZarfComponent, arch, flavor string) bool {
+	if arch == zoci.SkeletonArch {
+		return true
+	}
 	satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
 	satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor
 	return satisfiesArch && satisfiesFlavor

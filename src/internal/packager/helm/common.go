@@ -33,6 +33,7 @@ type Helm struct {
 	component types.ZarfComponent
 	cluster   *cluster.Cluster
 	timeout   time.Duration
+	retries   int
 
 	kubeVersion string
 
@@ -52,7 +53,7 @@ func New(chart types.ZarfChart, chartPath string, valuesPath string, mods ...Mod
 		chart:      chart,
 		chartPath:  chartPath,
 		valuesPath: valuesPath,
-		timeout:    config.ZarfDefaultHelmTimeout,
+		timeout:    config.ZarfDefaultTimeout,
 	}
 
 	for _, mod := range mods {
@@ -67,7 +68,8 @@ func NewClusterOnly(cfg *types.PackagerConfig, cluster *cluster.Cluster) *Helm {
 	return &Helm{
 		cfg:     cfg,
 		cluster: cluster,
-		timeout: config.ZarfDefaultHelmTimeout,
+		timeout: config.ZarfDefaultTimeout,
+		retries: config.ZarfDefaultRetries,
 	}
 }
 
@@ -118,7 +120,7 @@ func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName,
 			NoWait:      manifest.NoWait,
 		},
 		chartOverride: tmpChart,
-		timeout:       config.ZarfDefaultHelmTimeout,
+		timeout:       config.ZarfDefaultTimeout,
 	}
 
 	for _, mod := range mods {
@@ -131,13 +133,14 @@ func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName,
 }
 
 // WithDeployInfo adds the necessary information to deploy a given chart
-func WithDeployInfo(component types.ZarfComponent, cfg *types.PackagerConfig, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration) Modifier {
+func WithDeployInfo(component types.ZarfComponent, cfg *types.PackagerConfig, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration, retries int) Modifier {
 	return func(h *Helm) {
 		h.component = component
 		h.cfg = cfg
 		h.cluster = cluster
 		h.valuesOverrides = valuesOverrides
 		h.timeout = timeout
+		h.retries = retries
 	}
 }
 

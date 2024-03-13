@@ -4,15 +4,10 @@
 // Package common handles command configuration across all commands
 package common
 
-import (
-	"github.com/defenseunicorns/zarf/src/types"
-)
-
-// SetBaseDirectory sets base directory on package config when given in args
-func SetBaseDirectory(args []string, pkgConfig *types.PackagerConfig) {
+// SetBaseDirectory sets the base directory. This is a directory with a zarf.yaml.
+func SetBaseDirectory(args []string) string {
 	if len(args) > 0 {
-		pkgConfig.CreateOpts.BaseDir = args[0]
-	} else {
-		pkgConfig.CreateOpts.BaseDir = "."
+		return args[0]
 	}
+	return "."
 }
