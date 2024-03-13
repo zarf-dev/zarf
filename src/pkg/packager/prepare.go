@@ -80,7 +80,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 
 	// After components are composed, template the active package
 	if err := p.fillActiveTemplate(); err != nil {
-		return nil, fmt.Errorf("unable to fill values in template: %s", err.Error())
+		return nil, fmt.Errorf("unable to fill values in template: %w", err)
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
