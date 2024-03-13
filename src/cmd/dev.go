@@ -341,4 +341,5 @@ func bindDevGenerateFlags(_ *viper.Viper) {
 
 	devGenerateCmd.MarkFlagRequired("url")
 	devGenerateCmd.MarkFlagRequired("version")
+	devGenerateCmd.MarkFlagRequired("output-directory")
 }
