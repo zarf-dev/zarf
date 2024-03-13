@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -26,14 +26,14 @@ type SBOMs struct {
 
 // Unarchive unarchives the package's SBOMs.
 func (s *SBOMs) Unarchive() (err error) {
-	if s.Path == "" || utils.InvalidPath(s.Path) {
+	if s.Path == "" || helpers.InvalidPath(s.Path) {
 		return &fs.PathError{
 			Op:   "stat",
 			Path: s.Path,
 			Err:  fs.ErrNotExist,
 		}
 	}
-	if utils.IsDir(s.Path) {
+	if helpers.IsDir(s.Path) {
 		return nil
 	}
 	tb := s.Path
@@ -47,20 +47,20 @@ func (s *SBOMs) Unarchive() (err error) {
 
 // Archive archives the package's SBOMs.
 func (s *SBOMs) Archive() (err error) {
-	if s.Path == "" || utils.InvalidPath(s.Path) {
+	if s.Path == "" || helpers.InvalidPath(s.Path) {
 		return &fs.PathError{
 			Op:   "stat",
 			Path: s.Path,
 			Err:  fs.ErrNotExist,
 		}
 	}
-	if !utils.IsDir(s.Path) {
+	if !helpers.IsDir(s.Path) {
 		return nil
 	}
 	dir := s.Path
 	tb := filepath.Join(filepath.Dir(dir), SBOMTar)
 
-	if err := utils.CreateReproducibleTarballFromDir(dir, "", tb); err != nil {
+	if err := helpers.CreateReproducibleTarballFromDir(dir, "", tb); err != nil {
 		return err
 	}
 	s.Path = tb
@@ -69,7 +69,7 @@ func (s *SBOMs) Archive() (err error) {
 
 // IsDir returns true if the SBOMs are a directory.
 func (s SBOMs) IsDir() bool {
-	return utils.IsDir(s.Path)
+	return helpers.IsDir(s.Path)
 }
 
 // IsTarball returns true if the SBOMs are a tarball.

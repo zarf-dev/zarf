@@ -165,7 +165,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				return nil, fmt.Errorf("unable to package the chart %s: %w", chart.Name, err)
 			}
 
-			valuesFilePaths, _ := utils.RecursiveFileList(componentPaths.Values, nil, false)
+			valuesFilePaths, _ := helpers.RecursiveFileList(componentPaths.Values, nil, false)
 			for _, path := range valuesFilePaths {
 				if err := values.Apply(component, path, false); err != nil {
 					return nil, err
@@ -228,7 +228,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				} else {
 					filename := filepath.Base(f)
 					newDestination := filepath.Join(componentPaths.Manifests, filename)
-					if err := utils.CreatePathAndCopy(f, newDestination); err != nil {
+					if err := helpers.CreatePathAndCopy(f, newDestination); err != nil {
 						return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
 					}
 					f = newDestination

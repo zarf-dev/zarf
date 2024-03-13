@@ -20,6 +20,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 
@@ -375,7 +376,7 @@ func (p *Packager) stageSBOMViewFiles() error {
 	}
 	// If SBOMs were loaded, temporarily place them in the deploy directory
 	sbomDir := p.layout.SBOMs.Path
-	if !utils.InvalidPath(sbomDir) {
+	if !helpers.InvalidPath(sbomDir) {
 		p.sbomViewFiles, _ = filepath.Glob(filepath.Join(sbomDir, "sbom-viewer-*"))
 		_, err := sbom.OutputSBOMFiles(sbomDir, layout.SBOMDir, "")
 		if err != nil {

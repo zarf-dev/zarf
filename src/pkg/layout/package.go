@@ -12,6 +12,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -57,7 +58,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 	base := pp.Base
 
 	// legacy layout does not contain a checksums file, nor a signature
-	if utils.InvalidPath(pp.Checksums) && pp.Signature == "" {
+	if helpers.InvalidPath(pp.Checksums) && pp.Signature == "" {
 		if err := utils.ReadYaml(pp.ZarfYAML, &pkg); err != nil {
 			return err
 		}
@@ -75,7 +76,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 
 	// Migrate legacy sboms
 	legacySBOMs := filepath.Join(base, "sboms")
-	if !utils.InvalidPath(legacySBOMs) {
+	if !helpers.InvalidPath(legacySBOMs) {
 		pp = pp.AddSBOMs()
 		message.Debugf("Migrating %q to %q", legacySBOMs, pp.SBOMs.Path)
 		if err := os.Rename(legacySBOMs, pp.SBOMs.Path); err != nil {
@@ -85,7 +86,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 
 	// Migrate legacy images
 	legacyImagesTar := filepath.Join(base, "images.tar")
-	if !utils.InvalidPath(legacyImagesTar) {
+	if !helpers.InvalidPath(legacyImagesTar) {
 		pp = pp.AddImages()
 		message.Debugf("Migrating %q to %q", legacyImagesTar, pp.Images.Base)
 		defer os.Remove(legacyImagesTar)

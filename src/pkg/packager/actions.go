@@ -37,7 +37,7 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		cmdEscaped string
 		out        string
 		err        error
-		vars       map[string]*utils.TextTemplate
+		vars       map[string]*template.TextTemplate
 
 		cmd = action.Cmd
 	)
@@ -209,7 +209,7 @@ func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string,
 }
 
 // Perform some basic string mutations to make commands more useful.
-func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (string, error) {
+func actionCmdMutation(cmd string, shellPref exec.Shell) (string, error) {
 	zarfCommand, err := utils.GetFinalExecutableCommand()
 	if err != nil {
 		return cmd, err
@@ -240,7 +240,7 @@ func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (st
 }
 
 // Merge the ActionSet defaults with the action config.
-func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]*utils.TextTemplate) types.ZarfComponentActionDefaults {
+func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]*template.TextTemplate) types.ZarfComponentActionDefaults {
 	if a.Mute != nil {
 		cfg.Mute = *a.Mute
 	}
@@ -279,7 +279,7 @@ func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAc
 	return cfg
 }
 
-func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, shellPref types.ZarfComponentActionShell, spinner *message.Spinner) (string, error) {
+func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, shellPref exec.Shell, spinner *message.Spinner) (string, error) {
 	shell, shellArgs := exec.GetOSShell(shellPref)
 
 	message.Debugf("Running command in %s: %s", shell, cmd)

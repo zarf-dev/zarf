@@ -320,8 +320,8 @@ func (p *Packager) getFilesToSBOM(component types.ZarfComponent) (*layout.Compon
 	}
 
 	appendSBOMFiles := func(path string) error {
-		if utils.IsDir(path) {
-			files, err := utils.RecursiveFileList(path, nil, false)
+		if helpers.IsDir(path) {
+			files, err := helpers.RecursiveFileList(path, nil, false)
 			if err != nil {
 				return err
 			}
@@ -371,7 +371,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 
 	if isSkeleton && component.DeprecatedCosignKeyPath != "" {
 		dst := filepath.Join(componentPaths.Base, "cosign.pub")
-		err := utils.CreatePathAndCopy(component.DeprecatedCosignKeyPath, dst)
+		err := helpers.CreatePathAndCopy(component.DeprecatedCosignKeyPath, dst)
 		if err != nil {
 			return err
 		}
@@ -410,7 +410,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 				rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 				dst := filepath.Join(componentPaths.Base, rel)
 
-				err := utils.CreatePathAndCopy(chart.LocalPath, dst)
+				err := helpers.CreatePathAndCopy(chart.LocalPath, dst)
 				if err != nil {
 					return err
 				}
@@ -426,7 +426,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 				rel := helm.StandardValuesName(layout.ValuesDir, chart, valuesIdx)
 				p.cfg.Pkg.Components[index].Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 
-				if err := utils.CreatePathAndCopy(path, filepath.Join(componentPaths.Base, rel)); err != nil {
+				if err := helpers.CreatePathAndCopy(path, filepath.Join(componentPaths.Base, rel)); err != nil {
 					return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 				}
 			}
@@ -482,7 +482,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
 				}
 			} else {
-				if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
+				if err := helpers.CreatePathAndCopy(file.Source, dst); err != nil {
 					return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
 				}
 			}
@@ -508,12 +508,12 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
-			if err := utils.SHAsMatch(dst, file.Shasum); err != nil {
+			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
 				return err
 			}
 		}
 
-		if file.Executable || utils.IsDir(dst) {
+		if file.Executable || helpers.IsDir(dst) {
 			_ = os.Chmod(dst, helpers.ReadWriteExecuteUser)
 		} else {
 			_ = os.Chmod(dst, helpers.ReadWriteUser)
@@ -538,7 +538,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 					return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 				}
 			} else {
-				if err := utils.CreatePathAndCopy(data.Source, dst); err != nil {
+				if err := helpers.CreatePathAndCopy(data.Source, dst); err != nil {
 					return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
 				}
 				if isSkeleton {
@@ -577,7 +577,7 @@ func (p *Packager) addComponent(index int, component types.ZarfComponent) error 
 						return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 					}
 				} else {
-					if err := utils.CreatePathAndCopy(path, dst); err != nil {
+					if err := helpers.CreatePathAndCopy(path, dst); err != nil {
 						return fmt.Errorf("unable to copy manifest %s: %w", path, err)
 					}
 					if isSkeleton {
@@ -644,7 +644,7 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 			continue
 		}
 
-		sum, err := utils.GetSHA256OfFile(abs)
+		sum, err := helpers.GetSHA256OfFile(abs)
 		if err != nil {
 			return "", err
 		}
@@ -659,7 +659,7 @@ func (p *Packager) generatePackageChecksums() (string, error) {
 	}
 
 	// Calculate the checksum of the checksum file
-	return utils.GetSHA256OfFile(checksumsFilePath)
+	return helpers.GetSHA256OfFile(checksumsFilePath)
 }
 
 // loadDifferentialData extracts the zarf config of a designated 'reference' package that we are building a differential over and creates a list of all images and repos that are in the reference package
