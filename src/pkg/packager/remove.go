@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -38,9 +39,12 @@ func (p *Packager) Remove() (err error) {
 	if err = p.source.LoadPackageMetadata(p.layout, false, false); err != nil {
 		return err
 	}
-	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
+
+	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML)
+	if err != nil {
 		return err
 	}
+
 	p.filterComponents()
 	packageName = p.cfg.Pkg.Metadata.Name
 
@@ -124,12 +128,12 @@ func (p *Packager) removeComponent(deployedPackage *types.DeployedPackage, deplo
 
 	onRemove := c.Actions.OnRemove
 	onFailure := func() {
-		if err := p.runActions(onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
+		if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
 			message.Debugf("Unable to run the failure action: %s", err)
 		}
 	}
 
-	if err := p.runActions(onRemove.Defaults, onRemove.Before, nil); err != nil {
+	if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.Before, nil); err != nil {
 		onFailure()
 		return nil, fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
 	}
@@ -158,12 +162,12 @@ func (p *Packager) removeComponent(deployedPackage *types.DeployedPackage, deplo
 		p.updatePackageSecret(*deployedPackage)
 	}
 
-	if err := p.runActions(onRemove.Defaults, onRemove.After, nil); err != nil {
+	if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.After, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the after action: %w", err)
 	}
 
-	if err := p.runActions(onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
+	if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the success action: %w", err)
 	}

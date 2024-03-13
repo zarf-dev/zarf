@@ -29,9 +29,15 @@ func MakeTempDir(basePath string) (string, error) {
 			return "", err
 		}
 	}
+
 	tmp, err := os.MkdirTemp(basePath, tmpPathPrefix)
+	if err != nil {
+		return "", err
+	}
+
 	message.Debug("Using temporary directory:", tmp)
-	return tmp, err
+
+	return tmp, nil
 }
 
 // GetFinalExecutablePath returns the absolute path to the current executable, following any symlinks along the way.

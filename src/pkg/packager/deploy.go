@@ -23,6 +23,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -43,7 +45,8 @@ func (p *Packager) Deploy() (err error) {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
+	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML)
+	if err != nil {
 		return err
 	}
 
@@ -51,9 +54,12 @@ func (p *Packager) Deploy() (err error) {
 		return err
 	}
 
-	if err := p.stageSBOMViewFiles(); err != nil {
+	sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
+	if err != nil {
 		return err
 	}
+
+	p.warnings = append(p.warnings, sbomWarnings...)
 
 	// Confirm the overall package deployment
 	if !p.confirmAction(config.ZarfDeployStage) {
@@ -61,7 +67,7 @@ func (p *Packager) Deploy() (err error) {
 	}
 
 	// Set variables and prompt if --confirm is not set
-	if err := p.setVariableMapInConfig(); err != nil {
+	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
 		return err
 	}
 
@@ -116,7 +122,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// If this component requires a cluster, connect to one
 		if requiresCluster(component) {
 			timeout := cluster.DefaultTimeout
-			if p.isInitConfig() {
+			if p.cfg.Pkg.IsInitConfig() {
 				timeout = 5 * time.Minute
 			}
 
@@ -146,7 +152,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Deploy the component
 		var charts []types.InstalledChart
 		var deployErr error
-		if p.isInitConfig() {
+		if p.cfg.Pkg.IsInitConfig() {
 			charts, deployErr = p.deployInitComponent(component)
 		} else {
 			charts, deployErr = p.deployComponent(component, false /* keep img checksum */, false /* always push images */)
@@ -155,7 +161,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := p.runActions(onDeploy.Defaults, onDeploy.OnFailure, p.valueTemplate); err != nil {
+			if err := actions.Run(p.cfg, onDeploy.Defaults, onDeploy.OnFailure, p.valueTemplate); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -183,7 +189,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			}
 		}
 
-		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, p.valueTemplate); err != nil {
+		if err := actions.Run(p.cfg, onDeploy.Defaults, onDeploy.OnSuccess, p.valueTemplate); err != nil {
 			onFailure()
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -276,7 +282,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
+	if err = actions.Run(p.cfg, onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -314,7 +320,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.After, p.valueTemplate); err != nil {
+	if err = actions.Run(p.cfg, onDeploy.Defaults, onDeploy.After, p.valueTemplate); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -464,7 +470,7 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 		NoChecksum:    noImgChecksum,
 		RegInfo:       p.cfg.State.RegistryInfo,
 		Insecure:      config.CommonOptions.Insecure,
-		Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
+		Architectures: []string{p.cfg.Pkg.Build.Architecture},
 	}
 
 	return helpers.Retry(func() error {
@@ -623,7 +629,7 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedComponent) {
 
 	// If not init config, print the application connection table
-	if !p.isInitConfig() {
+	if !p.cfg.Pkg.IsInitConfig() {
 		message.PrintConnectStringTable(p.connectStrings)
 	} else {
 		if p.cluster != nil {

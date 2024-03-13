@@ -111,20 +111,20 @@ type ZarfInitOptions struct {
 
 // ZarfCreateOptions tracks the user-defined options used to create the package.
 type ZarfCreateOptions struct {
-	SkipSBOM           bool              `json:"skipSBOM" jsonschema:"description=Disable the generation of SBOM materials during package creation"`
-	BaseDir            string            `json:"baseDir" jsonschema:"description=Location where the Zarf package will be created from"`
-	Output             string            `json:"output" jsonschema:"description=Location where the finalized Zarf package will be placed"`
-	ViewSBOM           bool              `json:"sbom" jsonschema:"description=Whether to pause to allow for viewing the SBOM post-creation"`
-	SBOMOutputDir      string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
-	SetVariables       map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
-	MaxPackageSizeMB   int               `json:"maxPackageSizeMB" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files in megabytes"`
-	SigningKeyPath     string            `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
-	SigningKeyPassword string            `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sigh the created package"`
-	DifferentialData   DifferentialData  `json:"differential" jsonschema:"description=A package's differential images and git repositories from a referenced previously built package"`
-	RegistryOverrides  map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
-	Flavor             string            `json:"flavor" jsonschema:"description=An optional variant that controls which components will be included in a package"`
-	IsSkeleton         bool              `json:"isSkeleton" jsonschema:"description=Whether to create a skeleton package"`
-	NoYOLO             bool              `json:"noYOLO" jsonschema:"description=Whether to create a YOLO package"`
+	SkipSBOM                bool              `json:"skipSBOM" jsonschema:"description=Disable the generation of SBOM materials during package creation"`
+	BaseDir                 string            `json:"baseDir" jsonschema:"description=Location where the Zarf package will be created from"`
+	Output                  string            `json:"output" jsonschema:"description=Location where the finalized Zarf package will be placed"`
+	ViewSBOM                bool              `json:"sbom" jsonschema:"description=Whether to pause to allow for viewing the SBOM post-creation"`
+	SBOMOutputDir           string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
+	SetVariables            map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
+	MaxPackageSizeMB        int               `json:"maxPackageSizeMB" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files in megabytes"`
+	SigningKeyPath          string            `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
+	SigningKeyPassword      string            `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sigh the created package"`
+	DifferentialPackagePath string            `json:"differentialPackagePath" jsonschema:"description=Path to a previously built package used as the basis for creating a differential package"`
+	RegistryOverrides       map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
+	Flavor                  string            `json:"flavor" jsonschema:"description=An optional variant that controls which components will be included in a package"`
+	IsSkeleton              bool              `json:"isSkeleton" jsonschema:"description=Whether to create a skeleton package"`
+	NoYOLO                  bool              `json:"noYOLO" jsonschema:"description=Whether to create a YOLO package"`
 }
 
 // ZarfSplitPackageData contains info about a split package.
@@ -154,8 +154,7 @@ type ConnectStrings map[string]ConnectString
 
 // DifferentialData contains image and repository information about the package a Differential Package is Based on.
 type DifferentialData struct {
-	DifferentialPackagePath    string
-	DifferentialPackageVersion string
 	DifferentialImages         map[string]bool
 	DifferentialRepos          map[string]bool
+	DifferentialPackageVersion string
 }

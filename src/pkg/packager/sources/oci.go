@@ -201,17 +201,10 @@ func (s *OCISource) Collect(dir string) (string, error) {
 	spinner.Success()
 
 	// TODO (@Noxsios) remove the suffix check at v1.0.0
-	isSkeleton := pkg.Build.Architecture == "skeleton" || strings.HasSuffix(s.Repo().Reference.Reference, zoci.SkeletonArch)
-	name := NameFromMetadata(&pkg, isSkeleton)
+	isSkeleton := pkg.Build.Architecture == zoci.SkeletonArch || strings.HasSuffix(s.Repo().Reference.Reference, zoci.SkeletonArch)
+	name := fmt.Sprintf("%s%s", NameFromMetadata(&pkg, isSkeleton), PkgSuffix(pkg.Metadata.Uncompressed))
 
 	dstTarball := filepath.Join(dir, name)
-
-	// honor uncompressed flag
-	if pkg.Metadata.Uncompressed {
-		dstTarball = dstTarball + ".tar"
-	} else {
-		dstTarball = dstTarball + ".tar.zst"
-	}
 
 	allTheLayers, err := filepath.Glob(filepath.Join(tmp, "*"))
 	if err != nil {

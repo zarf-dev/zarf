@@ -11,19 +11,17 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // SuppressGlobalInterrupt suppresses the global error on an interrupt
 var SuppressGlobalInterrupt = false
 
 // SetBaseDirectory sets base directory on package config when given in args
-func SetBaseDirectory(args []string, pkgConfig *types.PackagerConfig) {
+func SetBaseDirectory(args []string) string {
 	if len(args) > 0 {
-		pkgConfig.CreateOpts.BaseDir = args[0]
-	} else {
-		pkgConfig.CreateOpts.BaseDir = "."
+		return args[0]
 	}
+	return "."
 }
 
 // ExitOnInterrupt catches an interrupt and exits with fatal error

@@ -41,7 +41,7 @@ var devDeployCmd = &cobra.Command{
 	Short: lang.CmdDevDeployShort,
 	Long:  lang.CmdDevDeployLong,
 	Run: func(_ *cobra.Command, args []string) {
-		common.SetBaseDirectory(args, &pkgConfig)
+		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
@@ -116,7 +116,7 @@ var devTransformGitLinksCmd = &cobra.Command{
 
 		if confirm {
 			// Overwrite the file
-			err = os.WriteFile(fileName, []byte(processedText), 0640)
+			err = os.WriteFile(fileName, []byte(processedText), helpers.ReadAllWriteUser)
 			if err != nil {
 				message.Fatal(err, lang.CmdDevPatchGitFileWriteErr)
 			}
@@ -207,7 +207,7 @@ var devFindImagesCmd = &cobra.Command{
 	Short:   lang.CmdDevFindImagesShort,
 	Long:    lang.CmdDevFindImagesLong,
 	Run: func(_ *cobra.Command, args []string) {
-		common.SetBaseDirectory(args, &pkgConfig)
+		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 
 		// Ensure uppercase keys from viper
 		v := common.GetViper()
@@ -256,7 +256,7 @@ var devLintCmd = &cobra.Command{
 	Short:   lang.CmdDevLintShort,
 	Long:    lang.CmdDevLintLong,
 	Run: func(_ *cobra.Command, args []string) {
-		common.SetBaseDirectory(args, &pkgConfig)
+		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)

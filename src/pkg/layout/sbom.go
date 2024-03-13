@@ -5,6 +5,7 @@
 package layout
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -67,12 +68,44 @@ func (s *SBOMs) Archive() (err error) {
 	return os.RemoveAll(dir)
 }
 
-// IsDir returns true if the SBOMs are a directory.
-func (s SBOMs) IsDir() bool {
-	return helpers.IsDir(s.Path)
+// StageSBOMViewFiles copies SBOM viewer HTML files to the Zarf SBOM directory.
+func (s *SBOMs) StageSBOMViewFiles() (warnings []string, err error) {
+	if s.IsTarball() {
+		return nil, fmt.Errorf("unable to process the SBOM files for this package: %s is a tarball", s.Path)
+	}
+
+	// If SBOMs were loaded, temporarily place them in the deploy directory
+	if !helpers.InvalidPath(s.Path) {
+		if _, err := filepath.Glob(filepath.Join(s.Path, "sbom-viewer-*")); err != nil {
+			return nil, err
+		}
+
+		if _, err := s.OutputSBOMFiles(SBOMDir, ""); err != nil {
+			// Don't stop the deployment, let the user decide if they want to continue the deployment
+			warning := fmt.Sprintf("Unable to process the SBOM files for this package: %s", err.Error())
+			warnings = append(warnings, warning)
+		}
+	}
+
+	return warnings, nil
+}
+
+// OutputSBOMFiles outputs SBOM files into outputDir.
+func (s *SBOMs) OutputSBOMFiles(outputDir, packageName string) (string, error) {
+	packagePath := filepath.Join(outputDir, packageName)
+
+	if err := os.RemoveAll(packagePath); err != nil {
+		return "", err
+	}
+
+	if err := helpers.CreateDirectory(packagePath, 0700); err != nil {
+		return "", err
+	}
+
+	return packagePath, helpers.CreatePathAndCopy(s.Path, packagePath)
 }
 
 // IsTarball returns true if the SBOMs are a tarball.
 func (s SBOMs) IsTarball() bool {
-	return !s.IsDir() && filepath.Ext(s.Path) == ".tar"
+	return !helpers.IsDir(s.Path) && filepath.Ext(s.Path) == ".tar"
 }

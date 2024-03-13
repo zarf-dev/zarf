@@ -61,7 +61,6 @@ func (p *Packager) Generate() (err error) {
 			generatedComponent,
 		},
 	}
-	p.arch = config.GetArch()
 
 	images, err := p.findImages()
 	if err != nil {
