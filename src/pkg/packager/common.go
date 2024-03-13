@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 
@@ -24,7 +23,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
@@ -269,8 +267,4 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 	}
 
 	return nil
-}
-
-func (p *Packager) archAndOSFilter() filters.ComponentFilterStrategy {
-	return filters.ByArchAndOS(config.GetArch(), runtime.GOOS)
 }

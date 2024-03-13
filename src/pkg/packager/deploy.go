@@ -46,7 +46,7 @@ func (p *Packager) Deploy() (err error) {
 
 	filter := filters.Combine(
 		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm),
-		p.archAndOSFilter(),
+		filters.ByLocalOS(),
 	)
 
 	if err = p.source.LoadPackage(p.layout, filter, true); err != nil {

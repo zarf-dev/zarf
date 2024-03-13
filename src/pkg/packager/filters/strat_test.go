@@ -49,7 +49,11 @@ func TestCombine(t *testing.T) {
 	require.Equal(t, expected, result)
 
 	// Test error propagation
-	combo = Combine(f1, f2, ByArchAndOS("", "bados"))
+	combo = Combine(f1, f2, ForDeploy("group with no default", false))
+	pkg.Components = append(pkg.Components, types.ZarfComponent{
+		Name:            "group with no default",
+		DeprecatedGroup: "g1",
+	})
 	_, err = combo.Apply(pkg)
-	require.ErrorIs(t, err, ErrInvalidOS)
+	require.Error(t, err)
 }

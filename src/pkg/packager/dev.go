@@ -48,7 +48,7 @@ func (p *Packager) DevDeploy() error {
 	p.cfg.Pkg.Build.Version = config.CLIVersion
 
 	filter := filters.Combine(
-		p.archAndOSFilter(),
+		filters.ByLocalOS(),
 		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, false),
 	)
 	p.cfg.Pkg.Components, err = filter.Apply(p.cfg.Pkg)

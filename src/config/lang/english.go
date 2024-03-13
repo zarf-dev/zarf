@@ -666,6 +666,7 @@ const (
 	PkgValidateErrChartURLOrPath          = "chart %q must have either a url or localPath"
 	PkgValidateErrChartVersion            = "chart %q must include a chart version"
 	PkgValidateErrComponentName           = "component name %q must be all lowercase and contain no special characters except '-' and cannot start with a '-'"
+	PkgValidateErrComponentLocalOS        = "component %q contains a localOS value that is not supported: %s (supported: %s)"
 	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
 	PkgValidateErrComponent               = "invalid component %q: %w"
 	PkgValidateErrComponentReqDefault     = "component %q cannot be both required and default"

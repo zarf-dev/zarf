@@ -21,7 +21,7 @@ func (p *Packager) Mirror() (err error) {
 
 	filter := filters.Combine(
 		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
-		p.archAndOSFilter(),
+		filters.ByLocalOS(),
 	)
 
 	if err = p.source.LoadPackage(p.layout, filter, true); err != nil {
