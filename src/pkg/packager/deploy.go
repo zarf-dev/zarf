@@ -71,11 +71,6 @@ func (p *Packager) Deploy() (err error) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
-	p.cfg.Pkg.Components, err = filter.Apply(p.cfg.Pkg)
-	if err != nil {
-		return err
-	}
-
 	// Set variables and prompt if --confirm is not set
 	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
 		return err

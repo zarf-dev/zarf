@@ -79,10 +79,8 @@ func (p *Packager) Publish() (err error) {
 		}
 
 		// Sign the package if a key has been provided
-		if p.cfg.PublishOpts.SigningKeyPath != "" {
-			if err := p.layout.SignPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword); err != nil {
-				return err
-			}
+		if err := p.layout.SignPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword, !config.CommonOptions.Confirm); err != nil {
+			return err
 		}
 	}
 

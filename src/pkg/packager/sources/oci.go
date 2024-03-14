@@ -75,8 +75,13 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, filter filters.Compone
 	dst.SetFromLayers(layersFetched)
 
 	// if --confirm is not set, read the zarf.yaml that was pulled
+	// and apply the filter to the components
 	if !config.CommonOptions.Confirm {
 		pkg, warnings, err = dst.ReadZarfYAML()
+		if err != nil {
+			return pkg, nil, err
+		}
+		pkg.Components, err = filter.Apply(pkg)
 		if err != nil {
 			return pkg, nil, err
 		}
