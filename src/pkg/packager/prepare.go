@@ -57,7 +57,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 	c := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
 
-	if err := utils.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
 		return nil, err
 	}
 

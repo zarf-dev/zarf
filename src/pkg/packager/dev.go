@@ -16,7 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -36,7 +36,7 @@ func (p *Packager) DevDeploy() error {
 
 	pc := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
 
-	if err := utils.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
 		return err
 	}
 

@@ -55,7 +55,7 @@ func (p *Packager) Publish() (err error) {
 
 		sc := creator.NewSkeletonCreator(p.cfg.CreateOpts, p.cfg.PublishOpts)
 
-		if err := utils.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+		if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
 			return err
 		}
 
