@@ -40,5 +40,8 @@ autoscaling:
   maxReplicas: "###ZARF_VAR_REGISTRY_HPA_MAX###"
   targetCPUUtilizationPercentage: 80
 
+caBundle: |
+  ###ZARF_VAR_REGISTRY_CA_BUNDLE###
+
 extraEnvVars:
   ###ZARF_VAR_REGISTRY_EXTRA_ENVS###

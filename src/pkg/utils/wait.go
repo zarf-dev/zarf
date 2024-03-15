@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -29,12 +29,12 @@ func isJSONPathWaitType(condition string) bool {
 }
 
 // ExecuteWait executes the wait-for command.
-func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string, timeout time.Duration) {
+func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string, timeout time.Duration) error {
 	// Handle network endpoints.
 	switch kind {
 	case "http", "https", "tcp":
 		waitForNetworkEndpoint(kind, identifier, condition, timeout)
-		return
+		return nil
 	}
 
 	// Type of wait, condition or JSONPath
@@ -53,8 +53,9 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 		message.Fatal(err, lang.CmdToolsWaitForErrZarfPath)
 	}
 
+	identifierMsg := identifier
+
 	// If the identifier contains an equals sign, convert to a label selector.
-	identifierMsg := fmt.Sprintf("/%s", identifier)
 	if strings.ContainsRune(identifier, '=') {
 		identifierMsg = fmt.Sprintf(" with label `%s`", identifier)
 		identifier = fmt.Sprintf("-l %s", identifier)
@@ -73,11 +74,11 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 
 	// Setup the spinner messages.
 	conditionMsg := fmt.Sprintf("Waiting for %s%s%s to be %s.", kind, identifierMsg, namespaceMsg, condition)
-	existMsg := fmt.Sprintf("Waiting for %s%s%s to exist.", kind, identifierMsg, namespaceMsg)
+	existMsg := fmt.Sprintf("Waiting for %s%s to exist.", path.Join(kind, identifierMsg), namespaceMsg)
 	spinner := message.NewProgressSpinner(existMsg)
 
 	// Get the OS shell to execute commands in
-	shell, shellArgs := exec.GetOSShell(types.ZarfComponentActionShell{Windows: "cmd"})
+	shell, shellArgs := exec.GetOSShell(exec.Shell{Windows: "cmd"})
 
 	defer spinner.Stop()
 
@@ -93,7 +94,14 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 			spinner.Updatef(existMsg)
 			// Check if the resource exists.
 			zarfKubectlGet := fmt.Sprintf("%s tools kubectl get %s %s %s", zarfCommand, namespaceFlag, kind, identifier)
-			if stdout, stderr, err := exec.Cmd(shell, shellArgs, zarfKubectlGet); err != nil {
+			stdout, stderr, err := exec.Cmd(shell, append(shellArgs, zarfKubectlGet)...)
+			if err != nil {
+				message.Debug(stdout, stderr, err)
+				continue
+			}
+
+			resourceNotFound := strings.Contains(stderr, "No resources found") && identifier == ""
+			if resourceNotFound {
 				message.Debug(stdout, stderr, err)
 				continue
 			}
@@ -102,7 +110,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 			switch condition {
 			case "", "exist", "exists":
 				spinner.Success()
-				return
+				return nil
 			}
 
 			spinner.Updatef(conditionMsg)
@@ -111,14 +119,14 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 				zarfCommand, namespaceFlag, kind, identifier, waitType, condition, waitTimeout)
 
 			// If there is an error, log it and try again.
-			if stdout, stderr, err := exec.Cmd(shell, shellArgs, zarfKubectlWait); err != nil {
+			if stdout, stderr, err := exec.Cmd(shell, append(shellArgs, zarfKubectlWait)...); err != nil {
 				message.Debug(stdout, stderr, err)
 				continue
 			}
 
 			// And just like that, success!
 			spinner.Successf(conditionMsg)
-			return
+			return nil
 		}
 	}
 }
@@ -165,7 +173,7 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 						continue
 					}
 
-					// Success, break out of the swtich statement.
+					// Success, break out of the switch statement.
 					break
 				}
 

@@ -29,11 +29,16 @@ make test-e2e ARCH="[amd64|arm64]"
 APPLIANCE_MODE=true make test-e2e ARCH="[amd64|arm64]"
 
 # If you already have everything build, you can run this inside this folder. This lets you customize the test run.
-go test ./src/test/... -v -failfast
+go test ./src/test/... -v -failfast -count=1
 
 # Let's say you only want to run one test. You would run:
-go test ./src/test/... -v -failfast -run TestFooBarBaz
+go test ./src/test/... -v -failfast -run TestFooBarBaz -count=1
 ```
+
+:::note
+The `-count=1` flag is the idiomatic way to disable
+test caching explicitly.
+:::
 
 :::note
 The Zarf binary and built packages are required to be stored in the ./build directory. However, if you intend to run tests locally using 'go test ./...', the zarf-init package must also be present in this directory.
@@ -43,7 +48,7 @@ The Zarf binary and built packages are required to be stored in the ./build dire
 
 When adding new tests, there are several requirements that must be followed, including:
 
-1. Tests cannont be run in parallel as they utilize the same K8s cluster.
+1. Tests cannot be run in parallel as they utilize the same K8s cluster.
 2. Each test should begin with the entries below for standardization and test setup/teardown:
 
 ```go

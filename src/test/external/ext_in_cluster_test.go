@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -34,7 +34,7 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 
 	// Install a gitea chart to the k8s cluster to act as the 'remote' git server
-	giteaChartURL := "https://dl.gitea.io/charts/gitea-5.0.8.tgz"
+	giteaChartURL := "https://dl.gitea.io/charts/gitea-8.3.0.tgz"
 	helmInstallArgs := []string{"install", "gitea", giteaChartURL, "-f", "gitea-values.yaml", "-n=git-server", "--create-namespace"}
 	err := exec.CmdWithPrint("helm", helmInstallArgs...)
 	suite.NoError(err, "unable to install gitea chart")

@@ -8,9 +8,9 @@ components:
     required: true
     manifests:
       - name: multi-games
-        namespace: zarf
+        namespace: dos-games
         files:
-          - manifests/deployment.yaml
-          - manifests/evil-service.yaml
+          - manifests/evil-deployment.yaml
+          - manifests/service.yaml
     images:
       - defenseunicorns/zarf-game:multi-tile-dark

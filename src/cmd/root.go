@@ -26,7 +26,7 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use: "zarf COMMAND",
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 		// Skip for vendor-only commands
 		if common.CheckVendorOnlyFromPath(cmd) {
 			return
@@ -73,9 +73,6 @@ func init() {
 	}
 
 	v := common.InitViper()
-
-	v.SetDefault(common.VLogLevel, "info")
-	v.SetDefault(common.VZarfCache, config.ZarfDefaultCachePath)
 
 	rootCmd.PersistentFlags().StringVarP(&common.LogLevelCLI, "log-level", "l", v.GetString(common.VLogLevel), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(common.VArchitecture), lang.RootCmdFlagArch)

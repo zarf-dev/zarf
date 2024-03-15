@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 
+	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
@@ -32,7 +32,7 @@ var (
 		Aliases: []string{"c"},
 		Short:   lang.CmdConnectShort,
 		Long:    lang.CmdConnectLong,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, args []string) {
 			var target string
 			if len(args) > 0 {
 				target = args[0]
@@ -73,17 +73,16 @@ var (
 			// Keep this open until an interrupt signal is received.
 			interruptChan := make(chan os.Signal, 1)
 			signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
-			go func() {
-				<-interruptChan
+			common.SuppressGlobalInterrupt = true
+
+			// Wait for the interrupt signal or an error.
+			select {
+			case err = <-tunnel.ErrChan():
+				spinner.Fatalf(err, lang.CmdConnectErrService, err.Error())
+			case <-interruptChan:
 				spinner.Successf(lang.CmdConnectTunnelClosed, url)
-				os.Exit(0)
-			}()
-
-			exec.SuppressGlobalInterrupt = true
-
-			for {
-				runtime.Gosched()
 			}
+			os.Exit(0)
 		},
 	}
 
@@ -91,7 +90,7 @@ var (
 		Use:     "list",
 		Aliases: []string{"l"},
 		Short:   lang.CmdConnectListShort,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			cluster.NewClusterOrDie().PrintConnectTable()
 		},
 	}

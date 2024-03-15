@@ -64,7 +64,7 @@ func TestVariables(t *testing.T) {
 	// Verify that the sensitive variable 'unicorn-land' was not printed to the screen
 	require.NotContains(t, stdErr, "unicorn-land")
 
-	logText := e2e.GetLogFileContents(t, stdErr)
+	logText := e2e.GetLogFileContents(t, e2e.StripMessageFormatting(stdErr))
 	// Verify that the sensitive variable 'unicorn-land' was not included in the log
 	require.NotContains(t, logText, "unicorn-land")
 
@@ -86,7 +86,7 @@ func TestVariables(t *testing.T) {
 	// AWS_REGION should have been templated and also templated into this config map
 	require.Contains(t, string(kubectlOut), "unicorn-land")
 	// MODIFIED_TERRAFORM_SHASUM should have been templated
-	require.Contains(t, string(kubectlOut), "9dbeee6d45bb5631040fe1401a1f94e791eee26255717dbbba38ddcdd53f378a")
+	require.Contains(t, string(kubectlOut), "63af41aebec53e3679948b254073c3c0d603d47ab01b03ab14abd7d98234e101")
 
 	// Remove the variables example
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", path, "--confirm")

@@ -15,7 +15,19 @@ builds:
       - darwin
       - windows
     ldflags:
-      - -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion={{.Tag}} -X k8s.io/component-base/version.gitVersion=v0.0.0+zarf{{.Tag}} -X k8s.io/component-base/version.gitCommit={{.FullCommit}} -X k8s.io/component-base/version.buildDate={{.Date}}
+      - -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion={{.Tag}}
+      - -X k8s.io/component-base/version.gitVersion=v{{.Env.K8S_MODULES_MAJOR_VER}}.{{.Env.K8S_MODULES_MINOR_VER}}.{{.Env.K8S_MODULES_PATCH_VER}}
+      - -X k8s.io/component-base/version.gitCommit={{.FullCommit}}
+      - -X k8s.io/component-base/version.buildDate={{.Date}}
+      - -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMajor={{.Env.K8S_MODULES_MAJOR_VER}}
+      - -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMinor={{.Env.K8S_MODULES_MINOR_VER}}
+      - -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMajor={{.Env.K8S_MODULES_MAJOR_VER}}
+      - -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor={{.Env.K8S_MODULES_MINOR_VER}}
+      - -X github.com/derailed/k9s/cmd.version={{.Env.K9S_VERSION}}
+      - -X github.com/google/go-containerregistry/cmd/crane/cmd.Version={{.Env.CRANE_VERSION}}
+      - -X github.com/defenseunicorns/zarf/src/cmd/tools.syftVersion={{.Env.SYFT_VERSION}}
+      - -X github.com/defenseunicorns/zarf/src/cmd/tools.archiverVersion={{.Env.ARCHIVER_VERSION}}
+      - -X github.com/defenseunicorns/zarf/src/cmd/tools.helmVersion={{.Env.HELM_VERSION}}
     goarch:
       - amd64
       - arm64
@@ -64,6 +76,9 @@ brews:
       owner: defenseunicorns
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+      pull_request:
+        enabled: true
+
     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     homepage: "https://zarf.dev/"
     description: "DevSecOps for Air Gap"

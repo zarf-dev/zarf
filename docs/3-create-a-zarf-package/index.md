@@ -16,11 +16,14 @@ To learn more about creating a Zarf package, you can check out the following res
 - [The Package Create Lifecycle](./5-package-create-lifecycle.md): An overview of the lifecycle of `zarf package create`.
 - [Creating a Zarf Package Tutorial](../5-zarf-tutorials/0-creating-a-zarf-package.md): A tutorial covering how to take an application and create a package for it.
 
-## Typical Creation Workflow:
+## Typical Creation Workflow
 
 The general flow of a Zarf package deployment on an existing initialized cluster is as follows:
 
 ```shell
+# Before creating your package you can lint your zarf.yaml
+$ zarf dev lint <directory>
+
 # To create a package run the following:
 $ zarf package create <directory>
 # - Enter any package templates that have not yet been defined

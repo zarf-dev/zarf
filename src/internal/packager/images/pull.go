@@ -12,13 +12,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -30,7 +30,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/stream"
 	"github.com/moby/moby/client"
-	"github.com/pterm/pterm"
 )
 
 // ImgInfo wraps references/information about an image
@@ -68,7 +67,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
-	metadataImageConcurrency := utils.NewConcurrencyTools[ImgInfo, error](len(i.ImageList))
+	metadataImageConcurrency := helpers.NewConcurrencyTools[ImgInfo, error](len(i.ImageList))
 
 	defer metadataImageConcurrency.Cancel()
 
@@ -79,20 +78,15 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 		// Create a closure so that we can pass the src into the goroutine
 		refInfo := refInfo
 		go func() {
-			// Make sure to call Done() on the WaitGroup when the goroutine finishes
-			defer metadataImageConcurrency.WaitGroupDone()
 
 			if metadataImageConcurrency.IsDone() {
 				return
 			}
 
 			actualSrc := refInfo.Reference
-			if overrideHost, present := i.RegistryOverrides[refInfo.Host]; present {
-				var err error
-				actualSrc, err = transform.ImageTransformHostWithoutChecksum(overrideHost, refInfo.Reference)
-				if err != nil {
-					metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to swap override host %s for %s: %w", overrideHost, refInfo.Reference, err)
-					return
+			for k, v := range i.RegistryOverrides {
+				if strings.HasPrefix(refInfo.Reference, k) {
+					actualSrc = strings.Replace(refInfo.Reference, k, v, 1)
 				}
 			}
 
@@ -102,7 +96,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 
 			img, hasImageLayers, err := i.PullImage(actualSrc, spinner)
 			if err != nil {
-				metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to pull image %s: %w", actualSrc, err)
+				metadataImageConcurrency.ErrorChan <- fmt.Errorf("failed to pull %s: %w", actualSrc, err)
 				return
 			}
 
@@ -121,7 +115,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	}
 
 	onMetadataError := func(err error) error {
-		return fmt.Errorf("failed to load metadata for all images. This may be due to a network error or an invalid image reference: %w", err)
+		return err
 	}
 
 	if err := metadataImageConcurrency.WaitWithProgress(onMetadataProgress, onMetadataError); err != nil {
@@ -129,7 +123,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	}
 
 	// Create the ImagePath directory
-	if err := utils.CreateDirectory(i.ImagesPath, 0755); err != nil {
+	if err := helpers.CreateDirectory(i.ImagesPath, helpers.ReadExecuteAllWriteUser); err != nil {
 		return nil, fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
 	}
 
@@ -184,15 +178,13 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	spinner.Success()
 
 	// Create a thread to update a progress bar as we save the image files to disk
-	doneSaving := make(chan int)
-	var progressBarWaitGroup sync.WaitGroup
-	progressBarWaitGroup.Add(1)
+	doneSaving := make(chan error)
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
-	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, &progressBarWaitGroup, doneSaving, updateText, updateText)
+	go utils.RenderProgressBarForLocalDirWrite(i.ImagesPath, totalBytes, doneSaving, updateText, updateText)
 
 	// Spawn a goroutine for each layer to write it to disk using crane
 
-	layerWritingConcurrency := utils.NewConcurrencyTools[bool, error](len(processedLayers))
+	layerWritingConcurrency := helpers.NewConcurrencyTools[bool, error](len(processedLayers))
 
 	defer layerWritingConcurrency.Cancel()
 
@@ -202,7 +194,6 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 		// and https://github.com/google/go-containerregistry/blob/v0.15.2/pkg/v1/layout/write.go#L198-L262
 		// with modifications. This allows us to dedupe layers for all images and write them concurrently.
 		go func() {
-			defer layerWritingConcurrency.WaitGroupDone()
 			digest, err := layer.Digest()
 			if errors.Is(err, stream.ErrNotComputed) {
 				// Allow digest errors, since streams may not have calculated the hash
@@ -242,7 +233,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 
 			// Create the directory for the blob if it doesn't exist
 			dir := filepath.Join(string(cranePath), "blobs", digest.Algorithm)
-			if err := utils.CreateDirectory(dir, os.ModePerm); err != nil {
+			if err := helpers.CreateDirectory(dir, os.ModePerm); err != nil {
 				layerWritingConcurrency.ErrorChan <- err
 				return
 			}
@@ -324,8 +315,8 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 
 	onLayerWritingError := func(err error) error {
 		// Send a signal to the progress bar that we're done and wait for the thread to finish
-		doneSaving <- 1
-		progressBarWaitGroup.Wait()
+		doneSaving <- err
+		<-doneSaving
 		message.WarnErr(err, "Failed to write image layers, trying again up to 3 times...")
 		if strings.HasPrefix(err.Error(), "expected blob size") {
 			message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
@@ -337,7 +328,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 		return nil, err
 	}
 
-	imageSavingConcurrency := utils.NewConcurrencyTools[digestInfo, error](len(refInfoToImage))
+	imageSavingConcurrency := helpers.NewConcurrencyTools[digestInfo, error](len(refInfoToImage))
 
 	defer imageSavingConcurrency.Cancel()
 
@@ -347,9 +338,6 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 		// Create a closure so that we can pass the refInfo and img into the goroutine
 		refInfo, img := refInfo, img
 		go func() {
-			// Make sure to call Done() on the WaitGroup when the goroutine finishes
-			defer imageSavingConcurrency.WaitGroupDone()
-
 			// Save the image via crane
 			err := cranePath.WriteImage(img)
 
@@ -385,14 +373,14 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 		}()
 	}
 
-	onImageSavingProgress := func(finishedImage digestInfo, iteration int) {
+	onImageSavingProgress := func(finishedImage digestInfo, _ int) {
 		referenceToDigest[finishedImage.refInfo.Reference] = finishedImage.digest
 	}
 
 	onImageSavingError := func(err error) error {
 		// Send a signal to the progress bar that we're done and wait for the thread to finish
-		doneSaving <- 1
-		progressBarWaitGroup.Wait()
+		doneSaving <- err
+		<-doneSaving
 		message.WarnErr(err, "Failed to write image config or manifest, trying again up to 3 times...")
 		return err
 	}
@@ -427,8 +415,8 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	}
 
 	// Send a signal to the progress bar that we're done and wait for the thread to finish
-	doneSaving <- 1
-	progressBarWaitGroup.Wait()
+	doneSaving <- nil
+	<-doneSaving
 
 	return imgInfoList, nil
 }
@@ -445,13 +433,12 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		}
 	} else if _, err := crane.Manifest(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
 		// If crane is unable to pull the image, try to load it from the local docker daemon.
-		message.Debugf("crane unable to pull image %s: %s", src, err)
-		spinner.Updatef("Falling back to docker for %s. This may take some time.", src)
+		message.Notef("Falling back to local 'docker' images, failed to find the manifest on a remote: %s", err.Error())
 
 		// Parse the image reference to get the image name.
 		reference, err := name.ParseReference(src)
 		if err != nil {
-			return nil, false, fmt.Errorf("failed to parse image reference %s: %w", src, err)
+			return nil, false, fmt.Errorf("failed to parse image reference: %w", err)
 		}
 
 		// Attempt to connect to the local docker daemon.
@@ -465,33 +452,32 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		// Inspect the image to get the size.
 		rawImg, _, err := cli.ImageInspectWithRaw(ctx, src)
 		if err != nil {
-			return nil, false, fmt.Errorf("failed to inspect image %s via docker: %w", src, err)
+			return nil, false, fmt.Errorf("failed to inspect image via docker: %w", err)
 		}
 
 		// Warn the user if the image is large.
 		if rawImg.Size > 750*1000*1000 {
-			warn := pterm.DefaultParagraph.WithMaxWidth(message.TermWidth).Sprintf("%s is %s and may take a very long time to load via docker. "+
+			message.Warnf("%s is %s and may take a very long time to load via docker. "+
 				"See https://docs.zarf.dev/docs/faq for suggestions on how to improve large local image loading operations.",
 				src, utils.ByteFormat(float64(rawImg.Size), 2))
-			spinner.Warnf(warn)
 		}
 
 		// Use unbuffered opener to avoid OOM Kill issues https://github.com/defenseunicorns/zarf/issues/1214.
 		// This will also take for ever to load large images.
 		if img, err = daemon.Image(reference, daemon.WithUnbufferedOpener()); err != nil {
-			return nil, false, fmt.Errorf("failed to load image %s from docker daemon: %w", src, err)
+			return nil, false, fmt.Errorf("failed to load image from docker daemon: %w", err)
 		}
 	} else {
 		// Manifest was found, so use crane to pull the image.
 		if img, err = crane.Pull(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
-			return nil, false, fmt.Errorf("failed to pull image %s: %w", src, err)
+			return nil, false, fmt.Errorf("failed to pull image: %w", err)
 		}
 		cacheImage = true
 	}
 
 	hasImageLayers, err = utils.HasImageLayers(img)
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to check image %s layer mediatype: %w", src, err)
+		return nil, false, fmt.Errorf("failed to check image layer mediatype: %w", err)
 	}
 
 	if hasImageLayers && cacheImage {

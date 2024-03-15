@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,7 +31,7 @@ func TestUseCLI(t *testing.T) {
 			e2e.CleanFiles(shasumTestFilePath)
 		})
 
-		err := os.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), 0600)
+		err := os.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), helpers.ReadWriteUser)
 		require.NoError(t, err)
 
 		stdOut, stdErr, err := e2e.Zarf("prepare", "sha256sum", shasumTestFilePath)
@@ -69,39 +70,29 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, yamlVersion, "Zarf version should be the same in all formats")
 	})
 
-	t.Run("zarf prepare find-images", func(t *testing.T) {
-		t.Parallel()
-		// Test `zarf prepare find-images` for a remote asset
-		stdOut, stdErr, err := e2e.Zarf("prepare", "find-images", "examples/helm-charts", "--kube-version=v1.23.0")
-		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdOut, "ghcr.io/stefanprodan/podinfo:6.4.0", "The chart image should be found by Zarf")
-		// Test `zarf prepare find-images` with a chart that uses helm annotations
-		stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "src/test/packages/00-helm-annotations")
-		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdOut, "registry1.dso.mil/ironbank/opensource/istio/pilot:1.17.2", "The pilot image should be found by Zarf")
-	})
-
-	t.Run("zarf prepare find-images --kube-version", func(t *testing.T) {
-		t.Parallel()
-		// Test `zarf prepare find-images` on a chart that has a `kubeVersion` declaration greater than the default (v1.20.0)
-		stdOut, stdErr, err := e2e.Zarf("prepare", "find-images", "src/test/packages/00-kube-version-override")
-		require.Error(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "Problem rendering the helm template for https://charts.jetstack.io/", "The kubeVersion declaration should prevent this from templating")
-		require.Contains(t, stdErr, "following charts had errors: [https://charts.jetstack.io/]", "Zarf should print an ending error message")
-
-		// Test `zarf prepare find-images` with `--kube-version` specified and greater than the declared minimum (v1.21.0)
-		stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "--kube-version=v1.22.0", "src/test/packages/00-kube-version-override")
-		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdOut, "quay.io/jetstack/cert-manager-controller:v1.11.1", "The chart image should be found by Zarf")
-		require.Contains(t, stdOut, "quay.io/jetstack/cert-manager-controller:sha256-4f1782c8316f34aae6b9ab823c3e6b7e6e4d92ec5dac21de6a17c3da44c364f1.sig", "The image signature should be found by Zarf")
-	})
-
 	t.Run("zarf deploy should fail when given a bad component input", func(t *testing.T) {
 		t.Parallel()
 		// Test for expected failure when given a bad component input
 		path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.Arch)
 		_, _, err := e2e.Zarf("package", "deploy", path, "--components=on-create,foo,logging", "--confirm")
 		require.Error(t, err)
+	})
+
+	t.Run("zarf deploy should return a warning when no components are deployed", func(t *testing.T) {
+		t.Parallel()
+		_, _, err := e2e.Zarf("package", "create", "src/test/packages/00-no-components", "-o=build", "--confirm")
+		require.NoError(t, err)
+		path := fmt.Sprintf("build/zarf-package-no-components-%s.tar.zst", e2e.Arch)
+
+		// Test that excluding all components with a leading dash results in a warning
+		_, stdErr, err := e2e.Zarf("package", "deploy", path, "--components=-deselect-me", "--confirm")
+		require.NoError(t, err)
+		require.Contains(t, stdErr, "No components were selected for deployment")
+
+		// Test that excluding still works even if a wildcard is given
+		_, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=*,-deselect-me", "--confirm")
+		require.NoError(t, err)
+		require.NotContains(t, stdErr, "DESELECT-ME COMPONENT")
 	})
 
 	t.Run("changing log level", func(t *testing.T) {
@@ -119,6 +110,16 @@ func TestUseCLI(t *testing.T) {
 		require.Error(t, err, stdOut, stdErr)
 	})
 
+	t.Run("zarf package to test bad remote images", func(t *testing.T) {
+		_, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/00-remote-pull-fail", "--confirm")
+		// expecting zarf to have an error and output to stderr
+		require.Error(t, err)
+		// Make sure we print the get request error (only look for GET since the actual error changes based on login status)
+		require.Contains(t, stdErr, "failed to find the manifest on a remote: GET")
+		// And the docker error
+		require.Contains(t, stdErr, "response from daemon: No such image")
+	})
+
 	t.Run("zarf package to test archive path", func(t *testing.T) {
 		t.Parallel()
 		stdOut, stdErr, err := e2e.Zarf("package", "create", "packages/distros/eks", "--confirm")
@@ -132,7 +133,7 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, "binaries/eksctl_Darwin_arm64")
 		require.FileExists(t, "binaries/eksctl_Linux_x86_64")
 
-		e2e.CleanFiles("binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", path)
+		e2e.CleanFiles("binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", path, "eks.yaml")
 	})
 
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {
@@ -210,6 +211,6 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, tlsCert)
 
 		require.FileExists(t, tlsKey)
-
 	})
+
 }

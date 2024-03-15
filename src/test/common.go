@@ -5,6 +5,7 @@
 package test
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -34,15 +35,17 @@ var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
 // GetCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run.
 func GetCLIName() string {
 	var binaryName string
-	if runtime.GOOS == "linux" {
+	switch runtime.GOOS {
+	case "linux":
 		binaryName = "zarf"
-	} else if runtime.GOOS == "darwin" {
-		if runtime.GOARCH == "arm64" {
+	case "darwin":
+		switch runtime.GOARCH {
+		case "arm64":
 			binaryName = "zarf-mac-apple"
-		} else {
+		default:
 			binaryName = "zarf-mac-intel"
 		}
-	} else if runtime.GOOS == "windows" {
+	case "windows":
 		if runtime.GOARCH == "amd64" {
 			binaryName = "zarf.exe"
 		}
@@ -67,6 +70,20 @@ func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
 		}
 		defer os.RemoveAll(tmpdir)
 		args = append(args, "--tmpdir", tmpdir)
+	}
+	if !slices.Contains(args, "--zarf-cache") && !slices.Contains(args, "tools") && os.Getenv("CI") == "true" {
+		// We make the cache dir relative to the working directory to make it work on the Windows Runners
+		// - they use two drives which filepath.Rel cannot cope with.
+		cwd, err := os.Getwd()
+		if err != nil {
+			return "", "", err
+		}
+		cacheDir, err := os.MkdirTemp(cwd, "zarf-")
+		if err != nil {
+			return "", "", err
+		}
+		args = append(args, "--zarf-cache", cacheDir)
+		defer os.RemoveAll(cacheDir)
 	}
 	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, args...)
 }
@@ -109,7 +126,7 @@ func (e2e *ZarfE2ETest) GetLogFileContents(t *testing.T, stdErr string) string {
 // SetupDockerRegistry uses the host machine's docker daemon to spin up a local registry for testing purposes.
 func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) {
 	// spin up a local registry
-	registryImage := "registry:2.8.2"
+	registryImage := "registry:2.8.3"
 	err := exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", fmt.Sprintf("%d:5000", port), "--name", fmt.Sprintf("registry-%d", port), registryImage)
 	require.NoError(t, err)
 }
@@ -129,9 +146,36 @@ func (e2e *ZarfE2ETest) GetZarfVersion(t *testing.T) string {
 	return strings.Trim(stdOut, "\n")
 }
 
-// StripANSICodes strips any ANSI color codes from a given string
-func (e2e *ZarfE2ETest) StripANSICodes(input string) string {
+// StripMessageFormatting strips any ANSI color codes and extra spaces from a given string
+func (e2e *ZarfE2ETest) StripMessageFormatting(input string) string {
 	// Regex to strip any color codes from the output - https://regex101.com/r/YFyIwC/2
 	ansiRegex := regexp.MustCompile(`\x1b\[(.*?)m`)
-	return ansiRegex.ReplaceAllString(input, "")
+	unAnsiInput := ansiRegex.ReplaceAllString(input, "")
+	// Regex to strip any more than two spaces or newline - https://regex101.com/r/wqQmys/1
+	multiSpaceRegex := regexp.MustCompile(`\s{2,}|\n`)
+	return multiSpaceRegex.ReplaceAllString(unAnsiInput, " ")
+}
+
+// NormalizeYAMLFilenames normalizes YAML filenames / paths across Operating Systems (i.e Windows vs Linux)
+func (e2e *ZarfE2ETest) NormalizeYAMLFilenames(input string) string {
+	if runtime.GOOS != "windows" {
+		return input
+	}
+
+	// Match YAML lines that have files in them https://regex101.com/r/C78kRD/1
+	fileMatcher := regexp.MustCompile(`^(?P<start>.* )(?P<file>[^:\n]+\/.*)$`)
+	scanner := bufio.NewScanner(strings.NewReader(input))
+
+	output := ""
+	for scanner.Scan() {
+		line := scanner.Text()
+		get, err := helpers.MatchRegex(fileMatcher, line)
+		if err != nil {
+			output += line + "\n"
+			continue
+		}
+		output += fmt.Sprintf("%s\"%s\"\n", get("start"), strings.ReplaceAll(get("file"), "/", "\\\\"))
+	}
+
+	return output
 }

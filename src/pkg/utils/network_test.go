@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -23,14 +24,7 @@ func (suite *TestNetworkSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 }
 
-func (suite *TestNetworkSuite) Test_0_Fetch() {
-	readme := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md"
-	body := Fetch(readme)
-	defer body.Close()
-	suite.NotNil(body)
-}
-
-func (suite *TestNetworkSuite) Test_1_parseChecksum() {
+func (suite *TestNetworkSuite) Test_0_parseChecksum() {
 	// zarf prepare sha256sum .adr-dir
 	adr := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/.adr-dir"
 	sum := "930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3"
@@ -59,7 +53,7 @@ func (suite *TestNetworkSuite) Test_1_parseChecksum() {
 	suite.Equal(sum, checksum)
 }
 
-func (suite *TestNetworkSuite) Test_2_DownloadToFile() {
+func (suite *TestNetworkSuite) Test_1_DownloadToFile() {
 	readme := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md"
 	tmp := suite.T().TempDir()
 	path := filepath.Join(tmp, "README.md")
@@ -82,7 +76,7 @@ func (suite *TestNetworkSuite) Test_2_DownloadToFile() {
 	suite.NoError(err)
 	suite.Contains(string(content), "adr")
 
-	check, err := GetSHA256OfFile(path)
+	check, err := helpers.GetSHA256OfFile(path)
 	suite.NoError(err)
 	suite.Equal(sum, check)
 
@@ -93,6 +87,7 @@ func (suite *TestNetworkSuite) Test_2_DownloadToFile() {
 	url = adr + "?foo=bar@" + sum
 	path = filepath.Join(tmp, ".adr-dir.good")
 	suite.NoError(DownloadToFile(url, path, ""))
+	suite.FileExists(path)
 }
 
 func TestNetwork(t *testing.T) {

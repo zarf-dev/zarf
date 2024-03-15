@@ -13,8 +13,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -23,18 +23,21 @@ import (
 	"github.com/spf13/pflag"
 )
 
+var (
+	rollback bool
+)
+
 var internalCmd = &cobra.Command{
-	Use:     "internal",
-	Aliases: []string{"dev"},
-	Hidden:  true,
-	Short:   lang.CmdInternalShort,
+	Use:    "internal",
+	Hidden: true,
+	Short:  lang.CmdInternalShort,
 }
 
 var agentCmd = &cobra.Command{
 	Use:   "agent",
 	Short: lang.CmdInternalAgentShort,
 	Long:  lang.CmdInternalAgentLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		agent.StartWebhook()
 	},
 }
@@ -43,15 +46,15 @@ var httpProxyCmd = &cobra.Command{
 	Use:   "http-proxy",
 	Short: lang.CmdInternalProxyShort,
 	Long:  lang.CmdInternalProxyLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		agent.StartHTTPProxy()
 	},
 }
 
-var generateCLIDocs = &cobra.Command{
-	Use:   "generate-cli-docs",
+var genCLIDocs = &cobra.Command{
+	Use:   "gen-cli-docs",
 	Short: lang.CmdInternalGenerateCliDocsShort,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// Don't include the datestamp in the output
 		rootCmd.DisableAutoGenTag = true
 
@@ -71,19 +74,19 @@ var generateCLIDocs = &cobra.Command{
 					}
 
 					// Remove the default values from all of the helm commands during the CLI command doc generation
-					if toolCmd.Use == "helm" {
+					if toolCmd.Use == "helm" || toolCmd.Use == "sbom" {
 						toolCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
 							if flag.Value.Type() == "string" {
 								flag.DefValue = ""
 							}
 						})
-						for _, helmCmd := range toolCmd.Commands() {
-							helmCmd.Flags().VisitAll(func(flag *pflag.Flag) {
+						for _, subCmd := range toolCmd.Commands() {
+							subCmd.Flags().VisitAll(func(flag *pflag.Flag) {
 								if flag.Value.Type() == "string" {
 									flag.DefValue = ""
 								}
 							})
-							for _, helmSubCmd := range helmCmd.Commands() {
+							for _, helmSubCmd := range subCmd.Commands() {
 								helmSubCmd.Flags().VisitAll(func(flag *pflag.Flag) {
 									if flag.Value.Type() == "string" {
 										flag.DefValue = ""
@@ -91,6 +94,14 @@ var generateCLIDocs = &cobra.Command{
 								})
 							}
 						}
+					}
+
+					if toolCmd.Use == "monitor" {
+						toolCmd.Flags().VisitAll(func(flag *pflag.Flag) {
+							if flag.Value.Type() == "string" {
+								flag.DefValue = ""
+							}
+						})
 					}
 				}
 			}
@@ -111,11 +122,11 @@ var generateCLIDocs = &cobra.Command{
 	},
 }
 
-var configSchemaCmd = &cobra.Command{
-	Use:     "config-schema",
-	Aliases: []string{"c"},
+var genConfigSchemaCmd = &cobra.Command{
+	Use:     "gen-config-schema",
+	Aliases: []string{"gc"},
 	Short:   lang.CmdInternalConfigSchemaShort,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		schema := jsonschema.Reflect(&types.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
@@ -125,11 +136,31 @@ var configSchemaCmd = &cobra.Command{
 	},
 }
 
+type zarfTypes struct {
+	DeployedPackage types.DeployedPackage
+	ZarfPackage     types.ZarfPackage
+	ZarfState       types.ZarfState
+}
+
+var genTypesSchemaCmd = &cobra.Command{
+	Use:     "gen-types-schema",
+	Aliases: []string{"gt"},
+	Short:   lang.CmdInternalTypesSchemaShort,
+	Run: func(_ *cobra.Command, _ []string) {
+		schema := jsonschema.Reflect(&zarfTypes{})
+		output, err := json.MarshalIndent(schema, "", "  ")
+		if err != nil {
+			message.Fatal(err, lang.CmdInternalTypesSchemaErr)
+		}
+		fmt.Print(string(output) + "\n")
+	},
+}
+
 var createReadOnlyGiteaUser = &cobra.Command{
 	Use:   "create-read-only-gitea-user",
 	Short: lang.CmdInternalCreateReadOnlyGiteaUserShort,
 	Long:  lang.CmdInternalCreateReadOnlyGiteaUserLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// Load the state so we can get the credentials for the admin git user
 		state, err := cluster.NewClusterOrDie().LoadZarfState()
 		if err != nil {
@@ -147,7 +178,7 @@ var createPackageRegistryToken = &cobra.Command{
 	Use:   "create-artifact-registry-token",
 	Short: lang.CmdInternalArtifactRegistryGiteaTokenShort,
 	Long:  lang.CmdInternalArtifactRegistryGiteaTokenLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// Load the state so we can get the credentials for the admin git user
 		c := cluster.NewClusterOrDie()
 		state, err := c.LoadZarfState()
@@ -169,10 +200,26 @@ var createPackageRegistryToken = &cobra.Command{
 	},
 }
 
+var updateGiteaPVC = &cobra.Command{
+	Use:   "update-gitea-pvc",
+	Short: lang.CmdInternalUpdateGiteaPVCShort,
+	Long:  lang.CmdInternalUpdateGiteaPVCLong,
+	Run: func(_ *cobra.Command, _ []string) {
+
+		// There is a possibility that the pvc does not yet exist and Gitea helm chart should create it
+		helmShouldCreate, err := git.UpdateGiteaPVC(rollback)
+		if err != nil {
+			message.WarnErr(err, lang.CmdInternalUpdateGiteaPVCErr)
+		}
+
+		fmt.Print(helmShouldCreate)
+	},
+}
+
 var isValidHostname = &cobra.Command{
 	Use:   "is-valid-hostname",
 	Short: lang.CmdInternalIsValidHostnameShort,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		if valid := helpers.IsValidHostName(); !valid {
 			hostname, _ := os.Hostname()
 			message.Fatalf(nil, lang.CmdInternalIsValidHostnameErr, hostname)
@@ -185,7 +232,7 @@ var computeCrc32 = &cobra.Command{
 	Aliases: []string{"c"},
 	Short:   lang.CmdInternalCrc32Short,
 	Args:    cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		text := args[0]
 		hash := helpers.GetCRCHash(text)
 		fmt.Printf("%d\n", hash)
@@ -197,12 +244,16 @@ func init() {
 
 	internalCmd.AddCommand(agentCmd)
 	internalCmd.AddCommand(httpProxyCmd)
-	internalCmd.AddCommand(generateCLIDocs)
-	internalCmd.AddCommand(configSchemaCmd)
+	internalCmd.AddCommand(genCLIDocs)
+	internalCmd.AddCommand(genConfigSchemaCmd)
+	internalCmd.AddCommand(genTypesSchemaCmd)
 	internalCmd.AddCommand(createReadOnlyGiteaUser)
 	internalCmd.AddCommand(createPackageRegistryToken)
+	internalCmd.AddCommand(updateGiteaPVC)
 	internalCmd.AddCommand(isValidHostname)
 	internalCmd.AddCommand(computeCrc32)
+
+	updateGiteaPVC.Flags().BoolVarP(&rollback, "rollback", "r", false, lang.CmdInternalFlagUpdateGiteaPVCRollback)
 }
 
 func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {

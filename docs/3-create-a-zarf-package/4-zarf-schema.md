@@ -63,9 +63,9 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                                   |
-| --------------------------------- | --------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^[a-z0-9\-]+$``` [Test](https://regex101.com/?regex=%5E%5Ba-z0-9%5C-%5D%2B%24) |
+| Restrictions                      |                                                                                                       |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[a-z0-9\-]*[a-z0-9]$``` [Test](https://regex101.com/?regex=%5E%5Ba-z0-9%5C-%5D%2A%5Ba-z0-9%5D%24) |
 
 </blockquote>
 </details>
@@ -409,22 +409,6 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary>
-<strong> <a name="build_differential"></a>differential</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** Whether this package was created with differential components
-
-|          |           |
-| -------- | --------- |
-| **Type** | `boolean` |
-
-</blockquote>
-</details>
-
 <details open>
 <summary>
 <strong> <a name="build_registryOverrides"></a>registryOverrides</strong>
@@ -441,25 +425,37 @@ Must be one of:
 | **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 
+</blockquote>
+</details>
+
 <details>
 <summary>
-<strong> <a name="build_registryOverrides_pattern1"></a>Pattern Property .*</strong>
+<strong> <a name="build_differential"></a>differential</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-:::note
-All properties whose name matches the regular expression
-```.*``` ([Test](https://regex101.com/?regex=.%2A))
-must respect the following conditions
-:::
+**Description:** Whether this package was created with differential components
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="build_differentialPackageVersion"></a>differentialPackageVersion</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Version of a previously built package used as the basis for creating this differential package
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
-
-</blockquote>
-</details>
 
 </blockquote>
 </details>
@@ -491,45 +487,6 @@ must respect the following conditions
 </blockquote>
 </details>
 
-<details open>
-<summary>
-<strong> <a name="build_OCIImportedComponents"></a>OCIImportedComponents</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-  ## build > OCIImportedComponents
-
-**Description:** Map of components that were imported via OCI. The keys are OCI Package URLs and values are the component names
-
-|                           |                                                                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Type**                  | `object`                                                                                                                          |
-| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
-
-<details>
-<summary>
-<strong> <a name="build_OCIImportedComponents_pattern1"></a>Pattern Property .*</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-:::note
-All properties whose name matches the regular expression
-```.*``` ([Test](https://regex101.com/?regex=.%2A))
-must respect the following conditions
-:::
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-</blockquote>
-</details>
-
-</blockquote>
-</details>
-
 <details>
 <summary>
 <strong> <a name="build_lastNonBreakingVersion"></a>lastNonBreakingVersion</strong>
@@ -538,6 +495,22 @@ must respect the following conditions
 <blockquote>
 
 **Description:** The minimum version of Zarf that does not have breaking package structure changes
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="build_flavor"></a>flavor</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The flavor of Zarf used to build this package
 
 |          |          |
 | -------- | -------- |
@@ -593,9 +566,9 @@ must respect the following conditions
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                                   |
-| --------------------------------- | --------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^[a-z0-9\-]+$``` [Test](https://regex101.com/?regex=%5E%5Ba-z0-9%5C-%5D%2B%24) |
+| Restrictions                      |                                                                                                       |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[a-z0-9\-]*[a-z0-9]$``` [Test](https://regex101.com/?regex=%5E%5Ba-z0-9%5C-%5D%2A%5Ba-z0-9%5D%24) |
 
 </blockquote>
 </details>
@@ -757,6 +730,22 @@ Must be one of:
 </blockquote>
 </details>
 
+<details>
+<summary>
+<strong> <a name="components_items_only_flavor"></a>flavor</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Only include this component when a matching '--flavor' is specified on 'zarf package create'
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
 </blockquote>
 </details>
 
@@ -806,10 +795,6 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                                                                         |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^(?!.*###ZARF_PKG_TMPL_).*$``` [Test](https://regex101.com/?regex=%5E%28%3F%21.%2A%23%23%23ZARF_PKG_TMPL_%29.%2A%24) |
-
 </blockquote>
 </details>
 
@@ -826,9 +811,9 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
-| Restrictions                      |                                                                                                                                           |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Must match regular expression** | ```^oci://(?!.*###ZARF_PKG_TMPL_).*$``` [Test](https://regex101.com/?regex=%5Eoci%3A%2F%2F%28%3F%21.%2A%23%23%23ZARF_PKG_TMPL_%29.%2A%24) |
+| Restrictions                      |                                                                             |
+| --------------------------------- | --------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^oci://.*$``` [Test](https://regex101.com/?regex=%5Eoci%3A%2F%2F.%2A%24) |
 
 </blockquote>
 </details>
@@ -1002,49 +987,9 @@ Must be one of:
 
 |                           |                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
-| **Type**                  | `combining`                                                                                              |
+| **Type**                  | `object`                                                                                                 |
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
 | **Defined in**            | #/definitions/ZarfChart                                                                                  |
-
-<blockquote>
-
-| One of(Option)                                       |
-| ---------------------------------------------------- |
-| [url](#components_items_charts_items_oneOf_i0)       |
-| [localPath](#components_items_charts_items_oneOf_i1) |
-
-<blockquote>
-
-### <a name="components_items_charts_items_oneOf_i0"></a>Property `url`
-
-**Title:** url
-
-|                           |                                                                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Type**                  | `object`                                                                                                                          |
-| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
-
-#### <a name="autogenerated_heading_2"></a>The following properties are required
-* url
-
-</blockquote>
-<blockquote>
-
-### <a name="components_items_charts_items_oneOf_i1"></a>Property `localPath`
-
-**Title:** localPath
-
-|                           |                                                                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Type**                  | `object`                                                                                                                          |
-| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
-
-#### <a name="autogenerated_heading_2"></a>The following properties are required
-* localPath
-
-</blockquote>
-
-</blockquote>
 
 <details>
 <summary>
@@ -1055,7 +1000,7 @@ Must be one of:
 
 ![Required](https://img.shields.io/badge/Required-red)
 
-**Description:** The name of the chart to deploy; this should be the name of the chart as it is installed in the helm repo
+**Description:** The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo
 
 |          |          |
 | -------- | -------- |
@@ -1066,12 +1011,12 @@ Must be one of:
 
 <details>
 <summary>
-<strong> <a name="components_items_charts_items_releaseName"></a>releaseName</strong>
+<strong> <a name="components_items_charts_items_version"></a>version</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** The name of the release to create; defaults to the name of the chart
+**Description:** The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos')
 
 |          |          |
 | -------- | -------- |
@@ -1096,19 +1041,56 @@ Must be one of:
 **Examples:**
 
 <code>
-"OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo", "helm chart repo: https://stefanprodan.github.io/podinfo", "git repo: https://github.com/stefanprodan/podinfo"</code>
+"OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo", "helm chart repo: https://stefanprodan.github.io/podinfo", "git repo: https://github.com/stefanprodan/podinfo (note the '@' syntax for 'repos' is supported here too)"</code>
 
 </blockquote>
 </details>
 
 <details>
 <summary>
-<strong> <a name="components_items_charts_items_version"></a>version</strong>
+<strong> <a name="components_items_charts_items_repoName"></a>repoName</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** The version of the chart to deploy; for git-based charts this is also the tag of the git repo
+**Description:** The name of a chart within a Helm repository (defaults to the Zarf name of the chart)
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_charts_items_gitPath"></a>gitPath</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** (git repo only) The sub directory to the chart within a git repo
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
+
+**Example:**
+
+<code>
+"charts/your-chart"</code>
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_charts_items_localPath"></a>localPath</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** The path to a local chart's folder or .tgz archive
 
 |          |          |
 | -------- | -------- |
@@ -1137,60 +1119,12 @@ Must be one of:
 
 <details>
 <summary>
-<strong> <a name="components_items_charts_items_valuesFiles"></a>valuesFiles</strong>
+<strong> <a name="components_items_charts_items_releaseName"></a>releaseName</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-**Description:** List of local values file paths or remote URLs to include in the package; these will be merged together
-
-|          |                   |
-| -------- | ----------------- |
-| **Type** | `array of string` |
-
-![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
-![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
-![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
-![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
-
- ### <a name="autogenerated_heading_11"></a>valuesFiles items  
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-</blockquote>
-</details>
-
-<details>
-<summary>
-<strong> <a name="components_items_charts_items_gitPath"></a>gitPath</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** The path to the chart in the repo if using a git repo instead of a helm repo
-
-|          |          |
-| -------- | -------- |
-| **Type** | `string` |
-
-**Example:**
-
-<code>
-"charts/your-chart"</code>
-
-</blockquote>
-</details>
-
-<details>
-<summary>
-<strong> <a name="components_items_charts_items_localPath"></a>localPath</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** The path to the chart folder
+**Description:** The name of the Helm release to create (defaults to the Zarf name of the chart)
 
 |          |          |
 | -------- | -------- |
@@ -1211,6 +1145,33 @@ Must be one of:
 |          |           |
 | -------- | --------- |
 | **Type** | `boolean` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="components_items_charts_items_valuesFiles"></a>valuesFiles</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** List of local values file paths or remote URLs to include in the package; these will be merged together when deployed
+
+|          |                   |
+| -------- | ----------------- |
+| **Type** | `array of string` |
+
+![Min Items: N/A](https://img.shields.io/badge/Min%20Items%3A%20N/A-gold)
+![Max Items: N/A](https://img.shields.io/badge/Max%20Items%3A%20N/A-gold)
+![Item unicity: False](https://img.shields.io/badge/Item%20unicity%3A%20False-gold)
+![Additional items: N/A](https://img.shields.io/badge/Additional%20items%3A%20N/A-gold)
+
+ ### <a name="autogenerated_heading_11"></a>valuesFiles items  
+
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1887,7 +1848,7 @@ Must be one of:
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
 | **Type**                  | `object`                                                                                                 |
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
-| **Defined in**            | #/definitions/ZarfComponentActionShell                                                                   |
+| **Defined in**            | #/definitions/Shell                                                                                      |
 
 <details>
 <summary>

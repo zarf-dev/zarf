@@ -93,7 +93,7 @@ html[data-theme="dark"],
     var(--ifm-navbar-search-input-icon) no-repeat 0.75rem center / 1rem 1rem;
 }
 
-/* 
+/*
  * Remove the outline.
  * Highlight on hover and select.
  */
@@ -134,8 +134,8 @@ html[data-theme="dark"],
 
 /* Zarf.dev logo size */
 .navbar__logo {
-  width: 107px;
-  height: 47px;
+  width: 152px;
+  height: 42px;
 }
 
 /* Zarf.dev padding and styling */
@@ -159,8 +159,8 @@ html[data-theme="dark"],
     height: 40px;
   }
 
-  /* 
-   * Restore original functionality from template 
+  /*
+   * Restore original functionality from template
    * that was removed to center text and hover state
   */
   .navbar__item {
@@ -206,9 +206,9 @@ html[data-theme="dark"],
   color: var(--ifm-navbar-link-hover-color);
 }
 
-/* 
+/*
  * Customize Main Menu to look like zarf.dev mobile drawer
- * Without effecting the table of contents. 
+ * Without effecting the table of contents.
  */
 [class="menu__list-item"] .menu__link {
   justify-content: center;

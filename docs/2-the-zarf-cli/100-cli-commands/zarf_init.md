@@ -22,34 +22,35 @@ zarf init [flags]
 
 ```
 
-	# Initializing without any optional components:
-	zarf init
+# Initializing without any optional components:
+$ zarf init
 
-	# Initializing w/ Zarfs internal git server:
-	zarf init --components=git-server
+# Initializing w/ Zarfs internal git server:
+$ zarf init --components=git-server
 
-	# Initializing w/ Zarfs internal git server and PLG stack:
-	zarf init --components=git-server,logging
+# Initializing w/ Zarfs internal git server and PLG stack:
+$ zarf init --components=git-server,logging
 
-	# Initializing w/ an internal registry but with a different nodeport:
-	zarf init --nodeport=30333
+# Initializing w/ an internal registry but with a different nodeport:
+$ zarf init --nodeport=30333
 
-	# Initializing w/ an external registry:
-	zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
+# Initializing w/ an external registry:
+$ zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
 
-	# Initializing w/ an external git server:
-	zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
+# Initializing w/ an external git server:
+$ zarf init --git-push-password={PASSWORD} --git-push-username={USERNAME} --git-url={URL}
 
-	# Initializing w/ an external artifact server:
-	zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNAME} --artifact-url={URL}
+# Initializing w/ an external artifact server:
+$ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNAME} --artifact-url={URL}
 
-	# NOTE: Not specifying a pull username/password will use the push user for pulling as well.
+# NOTE: Not specifying a pull username/password will use the push user for pulling as well.
 
 ```
 
 ## Options
 
 ```
+      --adopt-existing-resources        Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --artifact-push-token string      [alpha] API Token for the push-user to access the artifact registry
       --artifact-push-username string   [alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
       --artifact-url string             [alpha] External artifact registry url to use for this Zarf cluster
@@ -61,6 +62,7 @@ zarf init [flags]
       --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push' (default "zarf-git-user")
       --git-url string                  External git server url to use for this Zarf cluster
   -h, --help                            help for init
+  -k, --key string                      Path to public key file for validating signed packages
       --nodeport int                    Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]
       --registry-pull-password string   Password for the pull-only user to access the registry
       --registry-pull-username string   Username for pull-only access to the registry
@@ -68,8 +70,11 @@ zarf init [flags]
       --registry-push-username string   Username to access to the registry Zarf is configured to use (default "zarf-push")
       --registry-secret string          Registry secret value
       --registry-url string             External registry url address to use for this Zarf cluster
+      --retries int                     Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
       --set stringToString              Specify deployment variables to set on the command line (KEY=value) (default [])
+      --skip-webhooks                   [alpha] Skip waiting for external webhooks to execute as each package component is deployed
       --storage-class string            Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
+      --timeout duration                Timeout for Helm operations such as installs and rollbacks (default 15m0s)
 ```
 
 ## Options inherited from parent commands

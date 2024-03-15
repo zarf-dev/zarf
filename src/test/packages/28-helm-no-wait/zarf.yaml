@@ -4,7 +4,7 @@ metadata:
   description: Deploys a pod which never becomes ready
 
 components:
-  - name: zarf-helm-no-wait
+  - name: helm-no-wait
     required: true
     manifests:
       - name: never-ready

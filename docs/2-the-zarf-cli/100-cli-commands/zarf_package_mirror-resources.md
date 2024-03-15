@@ -5,17 +5,41 @@ Mirrors a Zarf package's internal resources to specified image registries and gi
 
 ## Synopsis
 
-Unpacks resources and dependencies from a Zarf package archive and mirrors them into the specified 
+Unpacks resources and dependencies from a Zarf package archive and mirrors them into the specified
 image registries and git repositories within the target environment
 
 ```
 zarf package mirror-resources [ PACKAGE_SOURCE ] [flags]
 ```
 
+## Examples
+
+```
+
+# Mirror resources to internal Zarf resources
+$ zarf package mirror-resources <your-package.tar.zst> \
+	--registry-url 127.0.0.1:31999 \
+	--registry-push-username zarf-push \
+	--registry-push-password <generated-registry-push-password> \
+	--git-url http://zarf-gitea-http.zarf.svc.cluster.local:3000 \
+	--git-push-username zarf-git-user \
+	--git-push-password <generated-git-push-password>
+
+# Mirror resources to external resources
+$ zarf package mirror-resources <your-package.tar.zst> \
+	--registry-url registry.enterprise.corp \
+	--registry-push-username <registry-push-username> \
+	--registry-push-password <registry-push-password> \
+	--git-url https://git.enterprise.corp \
+	--git-push-username <git-push-username> \
+	--git-push-password <git-push-password>
+
+```
+
 ## Options
 
 ```
-      --components string               Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' status.
+      --components string               Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported.
       --confirm                         Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
       --git-push-password string        Password for the push-user to access the git server
       --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push' (default "zarf-git-user")
@@ -25,6 +49,7 @@ zarf package mirror-resources [ PACKAGE_SOURCE ] [flags]
       --registry-push-password string   Password for the push-user to connect to the registry
       --registry-push-username string   Username to access to the registry Zarf is configured to use (default "zarf-push")
       --registry-url string             External registry url address to use for this Zarf cluster
+      --retries int                     Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
 ```
 
 ## Options inherited from parent commands

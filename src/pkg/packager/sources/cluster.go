@@ -8,21 +8,22 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 var (
-	// veryify that ClusterSource implements PackageSource
+	// verify that ClusterSource implements PackageSource
 	_ PackageSource = (*ClusterSource)(nil)
 )
 
 // NewClusterSource creates a new cluster source.
 func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
-	if !validate.IsLowercaseNumberHyphen(pkgOpts.PackageSource) {
+	if !validate.IsLowercaseNumberHyphenNoStartHyphen(pkgOpts.PackageSource) {
 		return nil, fmt.Errorf("invalid package name %q", pkgOpts.PackageSource)
 	}
 	cluster, err := cluster.NewClusterWithWait(cluster.DefaultTimeout)
@@ -61,5 +62,5 @@ func (s *ClusterSource) LoadPackageMetadata(dst *layout.PackagePaths, _ bool, _ 
 
 	dst.ZarfYAML = filepath.Join(dst.Base, layout.ZarfYAML)
 
-	return utils.WriteYaml(dst.ZarfYAML, dpkg.Data, 0755)
+	return utils.WriteYaml(dst.ZarfYAML, dpkg.Data, helpers.ReadExecuteAllWriteUser)
 }

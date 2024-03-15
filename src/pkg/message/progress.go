@@ -96,3 +96,11 @@ func (p *ProgressBar) Errorf(err error, format string, a ...any) {
 	p.Stop()
 	WarnErrf(err, format, a...)
 }
+
+// GetCurrent returns the current total
+func (p *ProgressBar) GetCurrent() int {
+	if p.progress != nil {
+		return p.progress.Current
+	}
+	return -1
+}

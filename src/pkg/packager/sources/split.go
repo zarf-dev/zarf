@@ -15,12 +15,12 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 var (
-	// veryify that SplitTarballSource implements PackageSource
+	// verify that SplitTarballSource implements PackageSource
 	_ PackageSource = (*SplitTarballSource)(nil)
 )
 
@@ -40,9 +40,9 @@ func (s *SplitTarballSource) Collect(dir string) (string, error) {
 	// Ensure the files are in order so they are appended in the correct order
 	sort.Strings(fileList)
 
-	reassmbled := filepath.Join(dir, filepath.Base(strings.Replace(s.PackageSource, ".part000", "", 1)))
+	reassembled := filepath.Join(dir, filepath.Base(strings.Replace(s.PackageSource, ".part000", "", 1)))
 	// Create the new package
-	pkgFile, err := os.Create(reassmbled)
+	pkgFile, err := os.Create(reassembled)
 	if err != nil {
 		return "", fmt.Errorf("unable to create new package file: %s", err)
 	}
@@ -85,9 +85,14 @@ func (s *SplitTarballSource) Collect(dir string) (string, error) {
 		if _, err = io.Copy(pkgFile, f); err != nil {
 			return "", fmt.Errorf("unable to copy file %s: %w", file, err)
 		}
+
+		// Close the file when done copying
+		if err := f.Close(); err != nil {
+			return "", fmt.Errorf("unable to close file %s: %w", file, err)
+		}
 	}
 
-	if err := utils.SHAsMatch(reassmbled, pkgData.Sha256Sum); err != nil {
+	if err := helpers.SHAsMatch(reassembled, pkgData.Sha256Sum); err != nil {
 		return "", fmt.Errorf("package integrity check failed: %w", err)
 	}
 
@@ -97,9 +102,9 @@ func (s *SplitTarballSource) Collect(dir string) (string, error) {
 	}
 
 	// communicate to the user that the package was reassembled
-	message.Infof("Reassembled package to: %q", reassmbled)
+	message.Infof("Reassembled package to: %q", reassembled)
 
-	return reassmbled, nil
+	return reassembled, nil
 }
 
 // LoadPackage loads a package from a split tarball.

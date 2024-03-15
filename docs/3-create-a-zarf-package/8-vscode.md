@@ -6,7 +6,7 @@ Zarf uses the [Zarf package schema](https://github.com/defenseunicorns/zarf/blob
 
 1. Open VS Code.
 2. Install the [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) by RedHat.
-3. Open the VS Code command pallete by typing `CTRL/CMD + SHIFT + P`.
+3. Open the VS Code command palette by typing `CTRL/CMD + SHIFT + P`.
 4. Type `Preferences: Open User Settings (JSON)`into the search bar to open the `settings.json` file.
 5. Add the below code to the settings.json config, or modify the existing `yaml.schemas` object to include the Zarf schema.
 
@@ -15,6 +15,7 @@ Zarf uses the [Zarf package schema](https://github.com/defenseunicorns/zarf/blob
     "https://raw.githubusercontent.com/defenseunicorns/zarf/main/zarf.schema.json": "zarf.yaml"
   }
 ```
+
 :::note
 
 When successfully installed, the `yaml.schema` line will match the color of the other lines within the settings.

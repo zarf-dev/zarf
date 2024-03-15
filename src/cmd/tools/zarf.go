@@ -14,13 +14,15 @@ import (
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/spf13/cobra"
@@ -35,7 +37,7 @@ var deprecatedGetGitCredsCmd = &cobra.Command{
 	Hidden: true,
 	Short:  lang.CmdToolsGetGitPasswdShort,
 	Long:   lang.CmdToolsGetGitPasswdLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		message.Warn(lang.CmdToolsGetGitPasswdDeprecation)
 		getCredsCmd.Run(getCredsCmd, []string{"git"})
 	},
@@ -48,7 +50,7 @@ var getCredsCmd = &cobra.Command{
 	Example: lang.CmdToolsGetCredsExample,
 	Aliases: []string{"gc"},
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		state, err := cluster.NewClusterOrDie().LoadZarfState()
 		if err != nil || state.Distro == "" {
 			// If no distro the zarf secret did not load properly
@@ -88,8 +90,10 @@ var updateCredsCmd = &cobra.Command{
 			// If no distro the zarf secret did not load properly
 			message.Fatalf(nil, lang.ErrLoadState)
 		}
-
-		newState := c.MergeZarfState(oldState, updateCredsInitOpts, args)
+		var newState *types.ZarfState
+		if newState, err = c.MergeZarfState(oldState, updateCredsInitOpts, args); err != nil {
+			message.Fatal(err, lang.CmdToolsUpdateCredsUnableUpdateCreds)
+		}
 
 		message.PrintCredentialUpdates(oldState, newState, args)
 
@@ -134,12 +138,7 @@ var updateCredsCmd = &cobra.Command{
 			}
 
 			// Update Zarf 'init' component Helm releases if present
-			h := helm.Helm{
-				Cluster: c,
-				Cfg: &types.PackagerConfig{
-					State: newState,
-				},
-			}
+			h := helm.NewClusterOnly(&types.PackagerConfig{State: newState}, c)
 
 			if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
 				err = h.UpdateZarfRegistryValues()
@@ -149,7 +148,8 @@ var updateCredsCmd = &cobra.Command{
 				}
 			}
 			if slices.Contains(args, message.GitKey) && newState.GitServer.InternalServer {
-				err = h.UpdateZarfGiteaValues()
+				g := git.New(newState.GitServer)
+				err = g.UpdateZarfGiteaUsers(oldState)
 				if err != nil {
 					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateGit, err.Error())
@@ -170,7 +170,7 @@ var clearCacheCmd = &cobra.Command{
 	Use:     "clear-cache",
 	Aliases: []string{"c"},
 	Short:   lang.CmdToolsClearCacheShort,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		message.Notef(lang.CmdToolsClearCacheDir, config.GetAbsCachePath())
 		if err := os.RemoveAll(config.GetAbsCachePath()); err != nil {
 			message.Fatalf(err, lang.CmdToolsClearCacheErr, config.GetAbsCachePath())
@@ -182,15 +182,15 @@ var clearCacheCmd = &cobra.Command{
 var downloadInitCmd = &cobra.Command{
 	Use:   "download-init",
 	Short: lang.CmdToolsDownloadInitShort,
-	Run: func(cmd *cobra.Command, args []string) {
-		url := oci.GetInitPackageURL(config.GetArch(), config.CLIVersion)
+	Run: func(_ *cobra.Command, _ []string) {
+		url := zoci.GetInitPackageURL(config.CLIVersion)
 
-		remote, err := oci.NewOrasRemote(url)
+		remote, err := zoci.NewRemote(url, oci.PlatformForArch(config.GetArch()))
 		if err != nil {
 			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
 		}
 
-		source := &sources.OCISource{OrasRemote: remote}
+		source := &sources.OCISource{Remote: remote}
 
 		_, err = source.Collect(outputDirectory)
 		if err != nil {
@@ -204,15 +204,15 @@ var generatePKICmd = &cobra.Command{
 	Aliases: []string{"pki"},
 	Short:   lang.CmdToolsGenPkiShort,
 	Args:    cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		pki := pki.GeneratePKI(args[0], subAltNames...)
-		if err := os.WriteFile("tls.ca", pki.CA, 0644); err != nil {
+		if err := os.WriteFile("tls.ca", pki.CA, helpers.ReadAllWriteUser); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, "tls.ca", err.Error())
 		}
-		if err := os.WriteFile("tls.crt", pki.Cert, 0644); err != nil {
+		if err := os.WriteFile("tls.crt", pki.Cert, helpers.ReadAllWriteUser); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, "tls.crt", err.Error())
 		}
-		if err := os.WriteFile("tls.key", pki.Key, 0600); err != nil {
+		if err := os.WriteFile("tls.key", pki.Key, helpers.ReadWriteUser); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, "tls.key", err.Error())
 		}
 		message.Successf(lang.CmdToolsGenPkiSuccess, args[0])
@@ -223,7 +223,7 @@ var generateKeyCmd = &cobra.Command{
 	Use:     "gen-key",
 	Aliases: []string{"key"},
 	Short:   lang.CmdToolsGenKeyShort,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		// Utility function to prompt the user for the password to the private key
 		passwordFunc := func(bool) ([]byte, error) {
 			// perform the first prompt
@@ -280,10 +280,10 @@ var generateKeyCmd = &cobra.Command{
 		}
 
 		// Write the key file contents to disk
-		if err := os.WriteFile(prvKeyFileName, keyBytes.PrivateBytes, 0600); err != nil {
+		if err := os.WriteFile(prvKeyFileName, keyBytes.PrivateBytes, helpers.ReadWriteUser); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, prvKeyFileName, err.Error())
 		}
-		if err := os.WriteFile(pubKeyFileName, keyBytes.PublicBytes, 0644); err != nil {
+		if err := os.WriteFile(pubKeyFileName, keyBytes.PublicBytes, helpers.ReadAllWriteUser); err != nil {
 			message.Fatalf(err, lang.ErrWritingFile, pubKeyFileName, err.Error())
 		}
 

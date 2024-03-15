@@ -1,0 +1,71 @@
+kind: ZarfPackageConfig
+metadata:
+  name: package-flavors
+  description: Simple example to show how to use the `only.flavor` key to build package variants.
+  version: 1.0.0
+
+components:
+  - name: image
+    required: true
+    description: "Sets the Enterprise Linux flavor to Rocky Linux"
+    only:
+      flavor: rocky-road
+    images:
+      - rockylinux:9-minimal
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "rockylinux:9-minimal"
+            setVariables:
+              - name: IMAGE
+
+  - name: image
+    required: true
+    description: "Sets the Enterprise Linux flavor to Oracle Linux"
+    only:
+      flavor: oracle-cookie-crunch
+    images:
+      - oraclelinux:9-slim
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "oraclelinux:9-slim"
+            setVariables:
+              - name: IMAGE
+
+  - name: image
+    required: true
+    description: "Sets the Enterprise Linux flavor to Alma Linux"
+    only:
+      flavor: vanilla-alma-nd
+    images:
+      - almalinux:9-minimal
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "almalinux:9-minimal"
+            setVariables:
+              - name: IMAGE
+
+  - name: image
+    required: true
+    description: "Sets the Enterprise Linux flavor to OpenSUSE"
+    only:
+      flavor: strawberry-suse
+    images:
+      - opensuse/leap:15
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "opensuse/leap:15"
+            setVariables:
+              - name: IMAGE
+
+  - name: pod
+    description: "The pod that runs the specified flavor of Enterprise Linux"
+    required: true
+    manifests:
+      - name: enterprise-linux
+        namespace: enterprise-linux
+        files:
+          - pod.yaml

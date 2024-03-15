@@ -19,22 +19,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
-// Fetch fetches the response body from a given URL.
-func Fetch(url string) io.ReadCloser {
-	// Get the data
-	resp, err := http.Get(url)
-	if err != nil {
-		message.Fatal(err, "Unable to download the file")
-	}
-
-	// Check server response
-	if resp.StatusCode != http.StatusOK {
-		message.Fatalf(nil, "Bad HTTP status: %s", resp.Status)
-	}
-
-	return resp.Body
-}
-
 func parseChecksum(src string) (string, string, error) {
 	atSymbolCount := strings.Count(src, "@")
 	var checksum string
@@ -64,7 +48,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 		return err
 	}
 
-	err = CreateDirectory(filepath.Dir(dst), 0700)
+	err = helpers.CreateDirectory(filepath.Dir(dst), helpers.ReadWriteExecuteUser)
 	if err != nil {
 		return fmt.Errorf(lang.ErrCreatingDir, filepath.Dir(dst), err.Error())
 	}
@@ -74,6 +58,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 	if err != nil {
 		return fmt.Errorf(lang.ErrWritingFile, dst, err.Error())
 	}
+	defer file.Close()
 
 	parsed, err := url.Parse(src)
 	if err != nil {
@@ -97,7 +82,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 
 	// If the file has a checksum, validate it
 	if len(checksum) > 0 {
-		received, err := GetSHA256OfFile(dst)
+		received, err := helpers.GetSHA256OfFile(dst)
 		if err != nil {
 			return err
 		}
@@ -105,7 +90,8 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 			return fmt.Errorf("shasum mismatch for file %s: expected %s, got %s ", dst, checksum, received)
 		}
 	}
-	return file.Close()
+
+	return nil
 }
 
 func httpGetFile(url string, destinationFile *os.File) error {

@@ -12,27 +12,25 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/cluster"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGit(t *testing.T) {
 	t.Log("E2E: Git")
 	e2e.SetupWithCluster(t)
-	tmpdir := t.TempDir()
-	cachePath := filepath.Join(tmpdir, ".cache-location")
 
 	buildPath := filepath.Join("src", "test", "packages", "22-git-data")
-	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "--zarf-cache", cachePath, "-o=build", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "-o=build", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-git-data-test-%s-1.0.0.tar.zst", e2e.Arch)
 	defer e2e.CleanFiles(path)
 
-	// Deploy the git data example
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
+	// Deploy the git data example (with component globbing to test that as well)
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=full-repo,specific-*", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	c, err := cluster.NewCluster()
@@ -77,12 +75,13 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 	// Get the repo as the readonly user
 	repoName := "zarf-public-test-2469062884"
 	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, state.GitServer.PushUsername, repoName), nil)
-	getRepoResponseBody, err := gitCfg.DoHTTPThings(getRepoRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
+	getRepoResponseBody, _, err := gitCfg.DoHTTPThings(getRepoRequest, types.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
 
 	// Make sure the only permissions are pull (read)
 	var bodyMap map[string]interface{}
-	json.Unmarshal(getRepoResponseBody, &bodyMap)
+	err = json.Unmarshal(getRepoResponseBody, &bodyMap)
+	require.NoError(t, err)
 	permissionsMap := bodyMap["permissions"].(map[string]interface{})
 	require.False(t, permissionsMap["admin"].(bool))
 	require.False(t, permissionsMap["push"].(bool))
@@ -99,19 +98,20 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 
 	// Get the Zarf repo tag
 	repoTag := "v0.0.1"
-	getRepoTagsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/tags/%s", gitURL, config.ZarfGitPushUser, repoName, repoTag), nil)
-	getRepoTagsResponseBody, err := gitCfg.DoHTTPThings(getRepoTagsRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
+	getRepoTagsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/tags/%s", gitURL, types.ZarfGitPushUser, repoName, repoTag), nil)
+	getRepoTagsResponseBody, _, err := gitCfg.DoHTTPThings(getRepoTagsRequest, types.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
 
 	// Make sure the pushed tag exists
 	var tagMap map[string]interface{}
-	json.Unmarshal(getRepoTagsResponseBody, &tagMap)
+	err = json.Unmarshal(getRepoTagsResponseBody, &tagMap)
+	require.NoError(t, err)
 	require.Equal(t, repoTag, tagMap["name"])
 
 	// Get the Zarf repo commit
 	repoHash := "01a23218923f24194133b5eb11268cf8d73ff1bb"
-	getRepoCommitsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/git/commits/%s", gitURL, config.ZarfGitPushUser, repoName, repoHash), nil)
-	getRepoCommitsResponseBody, err := gitCfg.DoHTTPThings(getRepoCommitsRequest, config.ZarfGitReadUser, state.GitServer.PullPassword)
+	getRepoCommitsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/git/commits/%s", gitURL, types.ZarfGitPushUser, repoName, repoHash), nil)
+	getRepoCommitsResponseBody, _, err := gitCfg.DoHTTPThings(getRepoCommitsRequest, types.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
 	require.Contains(t, string(getRepoCommitsResponseBody), repoHash)
 }
@@ -125,7 +125,7 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	// Tests the URL mutation for GitRepository CRD for Flux.
 	stdOut, stdErr, err = e2e.Kubectl("get", "gitrepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
 	require.NoError(t, err, stdOut, stdErr)
-	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", config.ZarfInClusterGitServiceURL, config.ZarfGitPushUser)
+	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", types.ZarfInClusterGitServiceURL, types.ZarfGitPushUser)
 	require.Equal(t, expectedMutatedRepoURL, stdOut)
 
 	// Remove the flux example when deployment completes
@@ -143,7 +143,7 @@ func waitArgoDeployment(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--components=argocd-apps", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", config.ZarfInClusterGitServiceURL, config.ZarfGitPushUser)
+	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", types.ZarfInClusterGitServiceURL, types.ZarfGitPushUser)
 
 	// Tests the mutation of the private repository Secret for ArgoCD.
 	stdOut, stdErr, err = e2e.Kubectl("get", "secret", "argocd-repo-github-podinfo", "-n", "argocd", "-o", "jsonpath={.data.url}")

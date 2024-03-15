@@ -14,14 +14,15 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 )
 
 var (
-	// veryify that TarballSource implements PackageSource
+	// verify that TarballSource implements PackageSource
 	_ PackageSource = (*TarballSource)(nil)
 )
 
@@ -34,17 +35,17 @@ type TarballSource struct {
 func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (err error) {
 	var pkg types.ZarfPackage
 
-	message.Debugf("Loading package from %q", s.PackageSource)
+	spinner := message.NewProgressSpinner("Loading package from %q", s.PackageSource)
+	defer spinner.Stop()
 
 	if s.Shasum != "" {
-		if err := utils.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
+		if err := helpers.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
 			return err
 		}
 	}
 
 	pathsExtracted := []string{}
 
-	// Walk the package so that was can dynamically load a .tar or a .tar.zst without caring about filenames.
 	err = archiver.Walk(s.PackageSource, func(f archiver.File) error {
 		if f.IsDir() {
 			return nil
@@ -57,7 +58,7 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool)
 
 		dir := filepath.Dir(path)
 		if dir != "." {
-			if err := os.MkdirAll(filepath.Join(dst.Base, dir), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Join(dst.Base, dir), helpers.ReadExecuteAllWriteUser); err != nil {
 				return err
 			}
 		}
@@ -92,9 +93,14 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool)
 	}
 
 	if !dst.IsLegacyLayout() {
+		spinner := message.NewProgressSpinner("Validating full package checksums")
+		defer spinner.Stop()
+
 		if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, false); err != nil {
 			return err
 		}
+
+		spinner.Success()
 
 		if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
 			return err
@@ -122,6 +128,8 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool)
 		}
 	}
 
+	spinner.Success()
+
 	return nil
 }
 
@@ -130,12 +138,12 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 	var pkg types.ZarfPackage
 
 	if s.Shasum != "" {
-		if err := utils.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
+		if err := helpers.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
 			return err
 		}
 	}
 
-	toExtract := oci.PackageAlwaysPull
+	toExtract := zoci.PackageAlwaysPull
 	if wantSBOM {
 		toExtract = append(toExtract, layout.SBOMTar)
 	}
@@ -146,7 +154,7 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 			return err
 		}
 		// archiver.Extract will not return an error if the file does not exist, so we must manually check
-		if !utils.InvalidPath(filepath.Join(dst.Base, rel)) {
+		if !helpers.InvalidPath(filepath.Join(dst.Base, rel)) {
 			pathsExtracted = append(pathsExtracted, rel)
 		}
 	}
@@ -162,8 +170,15 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 	}
 
 	if !dst.IsLegacyLayout() {
-		if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, true); err != nil {
-			return err
+		if wantSBOM {
+			spinner := message.NewProgressSpinner("Validating SBOM checksums")
+			defer spinner.Stop()
+
+			if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, true); err != nil {
+				return err
+			}
+
+			spinner.Success()
 		}
 
 		if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {

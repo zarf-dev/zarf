@@ -117,7 +117,7 @@ components:
               - name: SNAKE_SOUND
                 # marks this variable as sensitive to prevent it from being output in the Zarf log
                 sensitive: true
-                # autoIndent tells Zarf to maintain spacing for any newlines when templating into a yaml file 
+                # autoIndent tells Zarf to maintain spacing for any newlines when templating into a yaml file
                 autoIndent: true
         # onSuccess will only run if steps in this component are successful
         onSuccess:
@@ -185,13 +185,13 @@ components:
     actions:
       onCreate:
         after:
-          - description: Cloudflare 1.1.1.1 site to be available
+          - description: Github.com to be available
             maxTotalSeconds: 15
             wait:
               # wait for a network address to return a 200 OK response
               network:
                 protocol: https
-                address: 1.1.1.1
+                address: github.com
                 code: 200
 
   - name: on-deploy-with-wait-action
@@ -211,3 +211,13 @@ components:
                 kind: configmap
                 name: simple-configmap
                 namespace: zarf
+
+  - name: on-deploy-immediate-failure
+    description: This component will fail on the first error instead of continuing execution
+   # the default for multi-line commands is set -e
+    actions:
+      onDeploy:
+        after:
+          - cmd: |
+              bad_cmd
+              echo "this text shouldn't be printed"

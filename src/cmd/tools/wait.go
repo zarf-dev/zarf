@@ -27,16 +27,21 @@ var waitForCmd = &cobra.Command{
 	Short:   lang.CmdToolsWaitForShort,
 	Long:    lang.CmdToolsWaitForLong,
 	Example: lang.CmdToolsWaitForExample,
-	Args:    cobra.MinimumNArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	Args:    cobra.MinimumNArgs(1),
+	Run: func(_ *cobra.Command, args []string) {
 		// Parse the timeout string
 		timeout, err := time.ParseDuration(waitTimeout)
 		if err != nil {
 			message.Fatalf(err, lang.CmdToolsWaitForErrTimeoutString, waitTimeout)
 		}
 
-		// Parse the kind type and identifier.
-		kind, identifier := args[0], args[1]
+		kind := args[0]
+
+		// identifier is optional to allow for commands like `zarf tools wait-for storageclass` without specifying a name.
+		identifier := ""
+		if len(args) > 1 {
+			identifier = args[1]
+		}
 
 		// Condition is optional, default to "exists".
 		condition := ""
@@ -45,7 +50,9 @@ var waitForCmd = &cobra.Command{
 		}
 
 		// Execute the wait command.
-		utils.ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier, timeout)
+		if err := utils.ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier, timeout); err != nil {
+			message.Fatal(err, err.Error())
+		}
 	},
 }
 
@@ -53,4 +60,5 @@ func init() {
 	toolsCmd.AddCommand(waitForCmd)
 	waitForCmd.Flags().StringVar(&waitTimeout, "timeout", "5m", lang.CmdToolsWaitForFlagTimeout)
 	waitForCmd.Flags().StringVarP(&waitNamespace, "namespace", "n", "", lang.CmdToolsWaitForFlagNamespace)
+	waitForCmd.Flags().BoolVar(&message.NoProgress, "no-progress", false, lang.RootCmdFlagNoProgress)
 }

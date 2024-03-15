@@ -22,6 +22,7 @@ var vendorCmds = []string{
 	"s",
 	"k9s",
 	"monitor",
+	"m",
 	"wait-for",
 	"wait",
 	"w",

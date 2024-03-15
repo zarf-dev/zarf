@@ -46,7 +46,7 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) err
 	// Clone the given repo.
 	repo, err := git.PlainClone(g.GitPath, false, cloneOptions)
 	if err != nil {
-		message.Warnf("Falling back to host 'git', failed to clone the repo with Zarf - %s: %s", gitURL, err.Error())
+		message.Notef("Falling back to host 'git', failed to clone the repo %q with Zarf: %s", gitURL, err.Error())
 		return g.gitCloneFallback(gitURL, ref, shallow)
 	}
 

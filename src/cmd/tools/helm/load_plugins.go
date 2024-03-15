@@ -299,16 +299,17 @@ func addPluginCommands(plugin *plugin.Plugin, baseCmd *cobra.Command, cmds *plug
 
 	// Recursively add any sub-commands
 	for _, cmd := range cmds.Commands {
+		cmdCopy := cmd
 		// Create a fake command so that completion can be done for the sub-commands of the plugin
 		subCmd := &cobra.Command{
 			// This prevents Cobra from removing the flags.  We want to keep the flags to pass them
 			// to the dynamic completion script of the plugin.
 			DisableFlagParsing: true,
 			// A Run is required for it to be a valid command without subcommands
-			Run: func(cmd *cobra.Command, args []string) {},
+			Run: func(_ *cobra.Command, _ []string) {},
 		}
 		baseCmd.AddCommand(subCmd)
-		addPluginCommands(plugin, subCmd, &cmd)
+		addPluginCommands(plugin, subCmd, &cmdCopy)
 	}
 }
 
