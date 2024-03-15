@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -35,7 +34,7 @@ func SelectOptionalComponent(component types.ZarfComponent) (confirm bool, err e
 }
 
 // SelectChoiceGroup prompts to select component groups
-func SelectChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
+func SelectChoiceGroup(componentGroup []types.ZarfComponent) (types.ZarfComponent, error) {
 	message.HorizontalRule()
 
 	var chosen int
@@ -53,9 +52,5 @@ func SelectChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent
 
 	pterm.Println()
 
-	if err := survey.AskOne(prompt, &chosen); err != nil {
-		message.Fatalf(nil, lang.PkgDeployErrComponentSelectionCanceled, err.Error())
-	}
-
-	return componentGroup[chosen]
+	return componentGroup[chosen], survey.AskOne(prompt, &chosen)
 }

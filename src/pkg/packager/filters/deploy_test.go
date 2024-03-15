@@ -119,6 +119,7 @@ func TestDeployFilter_Apply(t *testing.T) {
 		pkg                types.ZarfPackage
 		optionalComponents string
 		want               []types.ZarfComponent
+		expectedErr        error
 	}{
 		"Test when version is less than v0.33.0 w/ no optional components selected": {
 			pkg: types.ZarfPackage{
@@ -164,7 +165,11 @@ func TestDeployFilter_Apply(t *testing.T) {
 			filter := ForDeploy(tc.optionalComponents, isInteractive)
 
 			result, err := filter.Apply(tc.pkg)
-			require.NoError(t, err)
+			if tc.expectedErr != nil {
+				require.ErrorIs(t, err, tc.expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
 			equal := reflect.DeepEqual(tc.want, result)
 			if !equal {
 				left := []string{}
