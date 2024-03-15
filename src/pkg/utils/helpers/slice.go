@@ -28,6 +28,9 @@ func Reverse[T any](s []T) (r []T) {
 
 // Filter returns a new slice with only the elements that pass the test.
 func Filter[T any](ss []T, test func(T) bool) (r []T) {
+	if test == nil {
+		return ss
+	}
 	for _, s := range ss {
 		if test(s) {
 			r = append(r, s)

@@ -26,9 +26,7 @@ const (
 	GithubProject = "defenseunicorns/zarf"
 
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
-	ZarfMaxChartNameLength   = 40
-	ZarfGeneratedPasswordLen = 24
-	ZarfGeneratedSecretLen   = 48
+	ZarfMaxChartNameLength = 40
 
 	ZarfAgentHost = "agent-hook.zarf.svc"
 
@@ -52,16 +50,6 @@ const (
 
 	ZarfImagePullSecretName = "private-registry"
 	ZarfGitServerSecretName = "private-git-server"
-
-	ZarfRegistryPushUser                   = "zarf-push"
-	ZarfRegistryPullUser                   = "zarf-pull"
-	ZarfInClusterContainerRegistryNodePort = 31999
-
-	ZarfGitPushUser = "zarf-git-user"
-	ZarfGitReadUser = "zarf-git-read-user"
-
-	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
-	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 
 	ZarfLoggingUser = "zarf-admin"
 )
@@ -99,8 +87,11 @@ var (
 	operationStartTime  = time.Now().Unix()
 	dataInjectionMarker = ".zarf-injection-%d"
 
-	ZarfDefaultCachePath   = filepath.Join("~", ".zarf-cache")
-	ZarfDefaultHelmTimeout = 15 * time.Minute
+	ZarfDefaultCachePath = filepath.Join("~", ".zarf-cache")
+
+	// Default Time Vars
+	ZarfDefaultTimeout = 15 * time.Minute
+	ZarfDefaultRetries = 3
 )
 
 // GetArch returns the arch based on a priority list with options for overriding.

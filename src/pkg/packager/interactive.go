@@ -11,7 +11,6 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -26,7 +25,7 @@ func (p *Packager) confirmAction(stage string) (confirm bool) {
 
 	// Print any potential breaking changes (if this is a Deploy confirm) between this CLI version and the deployed init package
 	if stage == config.ZarfDeployStage {
-		if sbom.IsSBOMAble(p.cfg.Pkg) {
+		if p.cfg.Pkg.IsSBOMAble() {
 			// Print the location that the user can view the package SBOMs from
 			message.HorizontalRule()
 			message.Title("Software Bill of Materials", "an inventory of all software contained in this package")

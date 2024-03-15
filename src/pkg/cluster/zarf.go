@@ -79,7 +79,8 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 			if _, ok := namespace.Labels[agentLabel]; ok {
 				spinner.Updatef("Removing Zarf Agent label for namespace %s", namespace.Name)
 				delete(namespace.Labels, agentLabel)
-				if _, err = c.UpdateNamespace(&namespace); err != nil {
+				namespaceCopy := namespace
+				if _, err = c.UpdateNamespace(&namespaceCopy); err != nil {
 					// This is not a hard failure, but we should log it
 					spinner.Errorf(err, "Unable to update the namespace labels for %s", namespace.Name)
 				}

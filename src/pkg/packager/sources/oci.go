@@ -5,6 +5,7 @@
 package sources
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -14,27 +15,28 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var (
-	// veryify that OCISource implements PackageSource
+	// verify that OCISource implements PackageSource
 	_ PackageSource = (*OCISource)(nil)
 )
 
 // OCISource is a package source for OCI registries.
 type OCISource struct {
 	*types.ZarfPackageOptions
-	*oci.OrasRemote
+	*zoci.Remote
 }
 
 // LoadPackage loads a package from an OCI registry.
 func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (err error) {
+	ctx := context.TODO()
 	var pkg types.ZarfPackage
 	layersToPull := []ocispec.Descriptor{}
 
@@ -44,14 +46,15 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (er
 
 	// pull only needed layers if --confirm is set
 	if config.CommonOptions.Confirm {
-		layersToPull, err = s.LayersFromRequestedComponents(optionalComponents)
+
+		layersToPull, err = s.LayersFromRequestedComponents(ctx, optionalComponents)
 		if err != nil {
 			return fmt.Errorf("unable to get published component image layers: %s", err.Error())
 		}
 	}
 
 	isPartial := true
-	root, err := s.FetchRoot()
+	root, err := s.FetchRoot(ctx)
 	if err != nil {
 		return err
 	}
@@ -59,7 +62,7 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (er
 		isPartial = false
 	}
 
-	layersFetched, err := s.PullPackage(dst.Base, config.CommonOptions.OCIConcurrency, layersToPull...)
+	layersFetched, err := s.PullPackage(ctx, dst.Base, config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
 		return fmt.Errorf("unable to pull the package: %w", err)
 	}
@@ -116,12 +119,12 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (er
 func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (err error) {
 	var pkg types.ZarfPackage
 
-	toPull := oci.PackageAlwaysPull
+	toPull := zoci.PackageAlwaysPull
 	if wantSBOM {
 		toPull = append(toPull, layout.SBOMTar)
 	}
-
-	layersFetched, err := s.PullPackagePaths(toPull, dst.Base)
+	ctx := context.TODO()
+	layersFetched, err := s.PullPaths(ctx, dst.Base, toPull)
 	if err != nil {
 		return err
 	}
@@ -173,8 +176,8 @@ func (s *OCISource) Collect(dir string) (string, error) {
 		return "", err
 	}
 	defer os.RemoveAll(tmp)
-
-	fetched, err := s.PullPackage(tmp, config.CommonOptions.OCIConcurrency)
+	ctx := context.TODO()
+	fetched, err := s.PullPackage(ctx, tmp, config.CommonOptions.OCIConcurrency)
 	if err != nil {
 		return "", err
 	}
@@ -198,17 +201,10 @@ func (s *OCISource) Collect(dir string) (string, error) {
 	spinner.Success()
 
 	// TODO (@Noxsios) remove the suffix check at v1.0.0
-	isSkeleton := pkg.Build.Architecture == "skeleton" || strings.HasSuffix(s.Repo().Reference.Reference, oci.SkeletonArch)
-	name := NameFromMetadata(&pkg, isSkeleton)
+	isSkeleton := pkg.Build.Architecture == zoci.SkeletonArch || strings.HasSuffix(s.Repo().Reference.Reference, zoci.SkeletonArch)
+	name := fmt.Sprintf("%s%s", NameFromMetadata(&pkg, isSkeleton), PkgSuffix(pkg.Metadata.Uncompressed))
 
 	dstTarball := filepath.Join(dir, name)
-
-	// honor uncompressed flag
-	if pkg.Metadata.Uncompressed {
-		dstTarball = dstTarball + ".tar"
-	} else {
-		dstTarball = dstTarball + ".tar.zst"
-	}
 
 	allTheLayers, err := filepath.Glob(filepath.Join(tmp, "*"))
 	if err != nil {
