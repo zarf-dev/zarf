@@ -156,6 +156,42 @@ func TestDeployFilter_Apply(t *testing.T) {
 				componentFromQuery(t, "required=<nil> && group=bar && idx=5 && default=false"),
 			},
 		},
+		"Test failing when group has no default and no selection was made": {
+			pkg: types.ZarfPackage{
+				Build: types.ZarfBuildData{
+					Version: "v0.32.0",
+				},
+				Components: []types.ZarfComponent{
+					componentFromQuery(t, "group=foo && default=false"),
+					componentFromQuery(t, "group=foo && default=false"),
+				},
+			},
+			optionalComponents: "",
+			expectedErr:        ErrNoDefaultOrSelection,
+		},
+		"Test failing when multiple are selected from the same group": {
+			pkg: types.ZarfPackage{
+				Build: types.ZarfBuildData{
+					Version: "v0.32.0",
+				},
+				Components: []types.ZarfComponent{
+					componentFromQuery(t, "group=foo && default=true"),
+					componentFromQuery(t, "group=foo && default=false"),
+				},
+			},
+			optionalComponents: strings.Join([]string{"group=foo && default=false", "group=foo && default=true"}, ","),
+			expectedErr:        ErrMultipleSameGroup,
+		},
+		"Test failing when no components are found that match the query": {
+			pkg: types.ZarfPackage{
+				Build: types.ZarfBuildData{
+					Version: "v0.32.0",
+				},
+				Components: possibilities,
+			},
+			optionalComponents: "nonexistent",
+			expectedErr:        ErrNotFound,
+		},
 	}
 
 	for name, tc := range testCases {
