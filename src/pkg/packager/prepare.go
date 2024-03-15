@@ -19,8 +19,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -38,6 +39,36 @@ type imageMap map[string]bool
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
 func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		// Return to the original working directory
+		if err := os.Chdir(cwd); err != nil {
+			message.Warnf("Unable to return to the original working directory: %s", err.Error())
+		}
+	}()
+	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
+		return nil, fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
+	}
+	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
+
+	c := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
+
+	p.cfg.Pkg, p.warnings, err = c.LoadPackageDefinition(p.layout)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, warning := range p.warnings {
+		message.Warn(warning)
+	}
+
+	return p.findImages()
+}
+
+func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 	repoHelmChartPath := p.cfg.FindImagesOpts.RepoHelmChartPath
 	kubeVersionOverride := p.cfg.FindImagesOpts.KubeVersionOverride
 	whyImage := p.cfg.FindImagesOpts.Why
@@ -46,33 +77,6 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	erroredCharts := []string{}
 	erroredCosignLookups := []string{}
 	whyResources := []string{}
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return nil, fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
-	}
-	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
-
-	if err = p.readZarfYAML(layout.ZarfYAML); err != nil {
-		return nil, fmt.Errorf("unable to read the zarf.yaml file: %w", err)
-	}
-
-	if err := p.composeComponents(); err != nil {
-		return nil, err
-	}
-
-	for _, warning := range p.warnings {
-		message.Warn(warning)
-	}
-
-	// After components are composed, template the active package
-	if err := p.fillActiveTemplate(); err != nil {
-		return nil, fmt.Errorf("unable to fill values in template: %w", err)
-	}
 
 	for _, component := range p.cfg.Pkg.Components {
 		if len(component.Repos) > 0 && repoHelmChartPath == "" {
@@ -85,12 +89,11 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 	componentDefinition := "\ncomponents:\n"
 
-	if err := p.setVariableMapInConfig(); err != nil {
+	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
 		return nil, err
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
-
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
 			continue
@@ -341,11 +344,6 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	}
 
 	fmt.Println(componentDefinition)
-
-	// Return to the original working directory
-	if err := os.Chdir(cwd); err != nil {
-		return nil, err
-	}
 
 	if len(erroredCharts) > 0 || len(erroredCosignLookups) > 0 {
 		errMsg := ""

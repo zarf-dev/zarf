@@ -70,7 +70,7 @@ func TestZarfInit(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, initStdErr, "an inventory of all software contained in this package")
 
-	logText := e2e.GetLogFileContents(t, initStdErr)
+	logText := e2e.GetLogFileContents(t, e2e.StripMessageFormatting(initStdErr))
 
 	// Verify that any state secrets were not included in the log
 	state := types.ZarfState{}
