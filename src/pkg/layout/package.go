@@ -86,7 +86,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 	base := pp.Base
 
 	// legacy layout does not contain a checksums file, nor a signature
-	if utils.InvalidPath(pp.Checksums) && pp.Signature == "" {
+	if helpers.InvalidPath(pp.Checksums) && pp.Signature == "" {
 		if err := utils.ReadYaml(pp.ZarfYAML, &pkg); err != nil {
 			return err
 		}
@@ -104,7 +104,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 
 	// Migrate legacy sboms
 	legacySBOMs := filepath.Join(base, "sboms")
-	if !utils.InvalidPath(legacySBOMs) {
+	if !helpers.InvalidPath(legacySBOMs) {
 		pp = pp.AddSBOMs()
 		message.Debugf("Migrating %q to %q", legacySBOMs, pp.SBOMs.Path)
 		if err := os.Rename(legacySBOMs, pp.SBOMs.Path); err != nil {
@@ -114,7 +114,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 
 	// Migrate legacy images
 	legacyImagesTar := filepath.Join(base, "images.tar")
-	if !utils.InvalidPath(legacyImagesTar) {
+	if !helpers.InvalidPath(legacyImagesTar) {
 		pp = pp.AddImages()
 		message.Debugf("Migrating %q to %q", legacyImagesTar, pp.Images.Base)
 		defer os.Remove(legacyImagesTar)
@@ -206,7 +206,7 @@ func (pp *PackagePaths) GenerateChecksums() (string, error) {
 			continue
 		}
 
-		sum, err := utils.GetSHA256OfFile(abs)
+		sum, err := helpers.GetSHA256OfFile(abs)
 		if err != nil {
 			return "", err
 		}
@@ -220,7 +220,7 @@ func (pp *PackagePaths) GenerateChecksums() (string, error) {
 	}
 
 	// Calculate the checksum of the checksum file
-	return utils.GetSHA256OfFile(pp.Checksums)
+	return helpers.GetSHA256OfFile(pp.Checksums)
 }
 
 // ArchivePackage creates an archive for a Zarf package.

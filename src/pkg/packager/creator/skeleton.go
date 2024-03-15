@@ -151,7 +151,7 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 
 	if component.DeprecatedCosignKeyPath != "" {
 		dst := filepath.Join(componentPaths.Base, "cosign.pub")
-		err := utils.CreatePathAndCopy(component.DeprecatedCosignKeyPath, dst)
+		err := helpers.CreatePathAndCopy(component.DeprecatedCosignKeyPath, dst)
 		if err != nil {
 			return nil, err
 		}
@@ -180,7 +180,7 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 			rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			dst := filepath.Join(componentPaths.Base, rel)
 
-			err := utils.CreatePathAndCopy(chart.LocalPath, dst)
+			err := helpers.CreatePathAndCopy(chart.LocalPath, dst)
 			if err != nil {
 				return nil, err
 			}
@@ -196,7 +196,7 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 			rel := fmt.Sprintf("%s-%d", helm.StandardName(layout.ValuesDir, chart), valuesIdx)
 			updatedComponent.Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 
-			if err := utils.CreatePathAndCopy(path, filepath.Join(componentPaths.Base, rel)); err != nil {
+			if err := helpers.CreatePathAndCopy(path, filepath.Join(componentPaths.Base, rel)); err != nil {
 				return nil, fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 			}
 		}
@@ -226,7 +226,7 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 				}
 			}
 		} else {
-			if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
+			if err := helpers.CreatePathAndCopy(file.Source, dst); err != nil {
 				return nil, fmt.Errorf("unable to copy file %s: %w", file.Source, err)
 			}
 		}
@@ -239,12 +239,12 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
-			if err := utils.SHAsMatch(dst, file.Shasum); err != nil {
+			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
 				return nil, err
 			}
 		}
 
-		if file.Executable || utils.IsDir(dst) {
+		if file.Executable || helpers.IsDir(dst) {
 			_ = os.Chmod(dst, helpers.ReadWriteExecuteUser)
 		} else {
 			_ = os.Chmod(dst, helpers.ReadWriteUser)
@@ -261,7 +261,7 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 			rel := filepath.Join(layout.DataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 			dst := filepath.Join(componentPaths.Base, rel)
 
-			if err := utils.CreatePathAndCopy(data.Source, dst); err != nil {
+			if err := helpers.CreatePathAndCopy(data.Source, dst); err != nil {
 				return nil, fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
 			}
 
@@ -292,7 +292,7 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", path)
 
-				if err := utils.CreatePathAndCopy(path, dst); err != nil {
+				if err := helpers.CreatePathAndCopy(path, dst); err != nil {
 					return nil, fmt.Errorf("unable to copy manifest %s: %w", path, err)
 				}
 

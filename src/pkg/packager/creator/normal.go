@@ -401,7 +401,7 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
 				}
 			} else {
-				if err := utils.CreatePathAndCopy(file.Source, dst); err != nil {
+				if err := helpers.CreatePathAndCopy(file.Source, dst); err != nil {
 					return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
 				}
 			}
@@ -419,12 +419,12 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
-			if err := utils.SHAsMatch(dst, file.Shasum); err != nil {
+			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
 				return err
 			}
 		}
 
-		if file.Executable || utils.IsDir(dst) {
+		if file.Executable || helpers.IsDir(dst) {
 			_ = os.Chmod(dst, helpers.ReadWriteExecuteUser)
 		} else {
 			_ = os.Chmod(dst, helpers.ReadWriteUser)
@@ -446,7 +446,7 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 					return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 				}
 			} else {
-				if err := utils.CreatePathAndCopy(data.Source, dst); err != nil {
+				if err := helpers.CreatePathAndCopy(data.Source, dst); err != nil {
 					return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
 				}
 			}
@@ -479,7 +479,7 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 						return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 					}
 				} else {
-					if err := utils.CreatePathAndCopy(path, dst); err != nil {
+					if err := helpers.CreatePathAndCopy(path, dst); err != nil {
 						return fmt.Errorf("unable to copy manifest %s: %w", path, err)
 					}
 				}
@@ -535,8 +535,8 @@ func (pc *PackageCreator) getFilesToSBOM(component types.ZarfComponent, dst *lay
 	}
 
 	appendSBOMFiles := func(path string) {
-		if utils.IsDir(path) {
-			files, _ := utils.RecursiveFileList(path, nil, false)
+		if helpers.IsDir(path) {
+			files, _ := helpers.RecursiveFileList(path, nil, false)
 			componentSBOM.Files = append(componentSBOM.Files, files...)
 		} else {
 			componentSBOM.Files = append(componentSBOM.Files, path)
