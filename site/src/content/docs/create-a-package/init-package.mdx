@@ -2,6 +2,8 @@
 title: The 'init' Package
 ---
 
+import Mermaid from "@components/Mermaid.astro";
+
 The 'init' package is a special Zarf Package (denoted by `kind: ZarfInitConfig` in its `zarf.yaml`) that initializes a cluster with the requisite air gap services when running `zarf init`.  This allows future Zarf Packages to store any required resources (i.e. container images and git repositories) so that they can be retrieved later.
 
 The default 'init' package that Zarf ships is defined in the `zarf.yaml` that lives at the [root of the Zarf repository](https://github.com/defenseunicorns/zarf/blob/main/zarf.yaml), and is constructed from composed components that provide a foundation for customization.  If you would like to change the behavior of the 'init' package you can do so by modifying this `zarf.yaml` or any of the composed components that it references and running `zarf package create` at the root of the repository.  You can learn more about creating a custom init package in the [Creating a Custom 'init' Package Tutorial](../5-zarf-tutorials/8-custom-init-packages.md).
@@ -104,7 +106,7 @@ The `registry:2` image and the Zarf Agent image can be configured with a custom 
 
 The `zarf init` lifecycle is _very similar_ to the [`zarf package deploy` lifecycle](./5-package-create-lifecycle.md#zarf-package-deploy) except that it sets up resources specific to Zarf such as the `zarf-state` and performs special actions such as the injection procedure.
 
-```mermaid
+<Mermaid diagram={`
 graph TD
     B1(load package archive)-->B2
     B2(handle multipart package)-->B3
@@ -148,7 +150,7 @@ graph TD
     classDef prompt fill:#4adede,color:#000000
     classDef action fill:#bd93f9,color:#000000
     classDef fail fill:#aa0000
-```
+`}/>
 
 :::tip
 
