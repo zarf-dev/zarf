@@ -150,6 +150,8 @@ func TestDeployFilter_Apply(t *testing.T) {
 				componentFromQuery(t, "required=<nil> && default=true"),
 				componentFromQuery(t, "required=true && default=true"),
 				componentFromQuery(t, "required=false && default=true"),
+				// while "required=true" was deselected, it is still required
+				// therefore it should be included
 				componentFromQuery(t, "required=true"),
 				componentFromQuery(t, "required=false"),
 				componentFromQuery(t, "required=<nil> && group=foo && idx=1 && default=true"),
@@ -217,7 +219,7 @@ func TestDeployFilter_Apply(t *testing.T) {
 
 				for _, c := range result {
 					right = append(right, c.Name)
-					fmt.Printf("cfq(t, %q),\n", strings.TrimSpace(c.Name))
+					fmt.Printf("componentFromQuery(t, %q),\n", strings.TrimSpace(c.Name))
 				}
 
 				// cause the test to fail

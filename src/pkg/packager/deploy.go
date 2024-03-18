@@ -45,8 +45,8 @@ func (p *Packager) resetRegistryHPA() {
 func (p *Packager) Deploy() (err error) {
 
 	filter := filters.Combine(
-		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm),
 		filters.ByLocalOS(runtime.GOOS),
+		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm),
 	)
 
 	p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, true)

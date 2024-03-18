@@ -21,8 +21,8 @@ func (p *Packager) Mirror() (err error) {
 	defer spinner.Stop()
 
 	filter := filters.Combine(
-		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
 		filters.ByLocalOS(runtime.GOOS),
+		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
 	)
 
 	p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, true)
