@@ -445,7 +445,7 @@ func (c *Cluster) getImagesAndNodesForInjection(timeoutDuration time.Duration) (
 
 		// After delay, try running
 		default:
-			pods, err := c.GetPods(corev1.NamespaceAll, nil)
+			pods, err := c.GetPods(corev1.NamespaceAll)
 			if err != nil {
 				return nil, fmt.Errorf("unable to get the list of pods in the cluster")
 			}
