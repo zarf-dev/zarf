@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
@@ -31,7 +32,7 @@ var (
 		Aliases: []string{"c"},
 		Short:   lang.CmdConnectShort,
 		Long:    lang.CmdConnectLong,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, args []string) {
 			var target string
 			if len(args) > 0 {
 				target = args[0]
@@ -72,7 +73,7 @@ var (
 			// Keep this open until an interrupt signal is received.
 			interruptChan := make(chan os.Signal, 1)
 			signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
-			exec.SuppressGlobalInterrupt = true
+			common.SuppressGlobalInterrupt = true
 
 			// Wait for the interrupt signal or an error.
 			select {
@@ -89,7 +90,7 @@ var (
 		Use:     "list",
 		Aliases: []string{"l"},
 		Short:   lang.CmdConnectListShort,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			cluster.NewClusterOrDie().PrintConnectTable()
 		},
 	}

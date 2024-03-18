@@ -93,7 +93,7 @@ func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 		saved, err = client.Run(h.chart.LocalPath, nil)
 	} else {
 		saved = filepath.Join(temp, filepath.Base(h.chart.LocalPath))
-		err = utils.CreatePathAndCopy(h.chart.LocalPath, saved)
+		err = helpers.CreatePathAndCopy(h.chart.LocalPath, saved)
 	}
 	defer os.RemoveAll(temp)
 
@@ -143,6 +143,15 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		chartURL  string
 		err       error
 	)
+	repoFile, err := repo.LoadFile(pull.Settings.RepositoryConfig)
+
+	// Not returning the error here since the repo file is only needed if we are pulling from a repo that requires authentication
+	if err != nil {
+		message.Debugf("Unable to load the repo file at %q: %s", pull.Settings.RepositoryConfig, err.Error())
+	}
+
+	var username string
+	var password string
 
 	// Handle OCI registries
 	if registry.IsOCI(h.chart.URL) {
@@ -159,8 +168,18 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 			chartName = h.chart.RepoName
 		}
 
-		// Perform simple chart download
-		chartURL, err = repo.FindChartInRepoURL(h.chart.URL, chartName, h.chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
+		if repoFile != nil {
+			// TODO: @AustinAbro321 Currently this selects the last repo with the same url
+			// We should introduce a new field in zarf to allow users to specify the local repo they want
+			for _, repo := range repoFile.Repositories {
+				if repo.URL == h.chart.URL {
+					username = repo.Username
+					password = repo.Password
+				}
+			}
+		}
+
+		chartURL, err = repo.FindChartInAuthRepoURL(h.chart.URL, username, password, chartName, h.chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
 		if err != nil {
 			if strings.Contains(err.Error(), "not found") {
 				// Intentionally dogsled this error since this is just a nice to have helper
@@ -179,12 +198,13 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 		Getters: getter.All(pull.Settings),
 		Options: []getter.Option{
 			getter.WithInsecureSkipVerifyTLS(config.CommonOptions.Insecure),
+			getter.WithBasicAuth(username, password),
 		},
 	}
 
 	// Download the file into a temp directory since we don't control what name helm creates here
 	temp := filepath.Join(h.chartPath, "temp")
-	if err = utils.CreateDirectory(temp, 0700); err != nil {
+	if err = helpers.CreateDirectory(temp, helpers.ReadWriteExecuteUser); err != nil {
 		return fmt.Errorf("unable to create helm chart temp directory: %w", err)
 	}
 	defer os.RemoveAll(temp)
@@ -242,14 +262,14 @@ func (h *Helm) finalizeChartPackage(saved, cosignKeyPath string) error {
 
 func (h *Helm) packageValues(cosignKeyPath string) error {
 	for valuesIdx, path := range h.chart.ValuesFiles {
-		dst := fmt.Sprintf("%s-%d", StandardName(h.valuesPath, h.chart), valuesIdx)
+		dst := StandardValuesName(h.valuesPath, h.chart, valuesIdx)
 
 		if helpers.IsURL(path) {
 			if err := utils.DownloadToFile(path, dst, cosignKeyPath); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 			}
 		} else {
-			if err := utils.CreatePathAndCopy(path, dst); err != nil {
+			if err := helpers.CreatePathAndCopy(path, dst); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 			}
 		}

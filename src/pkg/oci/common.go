@@ -1,35 +1,25 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package oci contains functions for interacting with Zarf packages stored in OCI registries.
+// Package oci contains functions for interacting with artifacts stored in OCI registries.
 package oci
 
 import (
-	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
-	zarfconfig "github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 const (
-	// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
-	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
-	// ZarfConfigMediaType is the media type for the manifest config
-	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
-	// SkeletonArch is the architecture used for skeleton packages
-	SkeletonArch = "skeleton"
 	// MultiOS is the OS used for multi-platform packages
 	MultiOS = "multi"
 )
@@ -37,29 +27,14 @@ const (
 // OrasRemote is a wrapper around the Oras remote repository that includes a progress bar for interactive feedback.
 type OrasRemote struct {
 	repo           *remote.Repository
-	root           *ZarfOCIManifest
-	ctx            context.Context
-	Transport      *utils.Transport
-	CopyOpts       oras.CopyOptions
+	root           *Manifest
+	progTransport  *helpers.Transport
 	targetPlatform *ocispec.Platform
+	log            *slog.Logger
 }
 
 // Modifier is a function that modifies an OrasRemote
 type Modifier func(*OrasRemote)
-
-// WithContext sets the context for the remote
-func WithContext(ctx context.Context) Modifier {
-	return func(o *OrasRemote) {
-		o.ctx = ctx
-	}
-}
-
-// WithCopyOpts sets the copy options for the remote
-func WithCopyOpts(opts oras.CopyOptions) Modifier {
-	return func(o *OrasRemote) {
-		o.CopyOpts = opts
-	}
-}
 
 // WithPlainHTTP sets the plain HTTP flag for the remote
 func WithPlainHTTP(plainHTTP bool) Modifier {
@@ -71,76 +46,81 @@ func WithPlainHTTP(plainHTTP bool) Modifier {
 // WithInsecureSkipVerify sets the insecure TLS flag for the remote
 func WithInsecureSkipVerify(insecure bool) Modifier {
 	return func(o *OrasRemote) {
-		o.Transport.Base.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
+		o.progTransport.Base.(*http.Transport).TLSClientConfig.InsecureSkipVerify = insecure
 	}
 }
 
-// WithTargetPlatform sets the target platform for the remote
-func WithTargetPlatform(platform *ocispec.Platform) Modifier {
-	return func(o *OrasRemote) {
-		o.targetPlatform = platform
-	}
-}
-
-// WithSkeletonArch sets the target architecture for the remote to skeleton
-func WithSkeletonArch() Modifier {
-	return WithTargetPlatform(&ocispec.Platform{
-		OS:           MultiOS,
-		Architecture: SkeletonArch,
-	})
-}
-
-// WithArch sets the target architecture for the remote
-func WithArch(arch string) Modifier {
-	return WithTargetPlatform(&ocispec.Platform{
+// PlatformForArch sets the target architecture for the remote
+func PlatformForArch(arch string) ocispec.Platform {
+	return ocispec.Platform{
 		OS:           MultiOS,
 		Architecture: arch,
-	})
+	}
+}
+
+// WithUserAgent sets the user agent for the remote
+func WithUserAgent(userAgent string) Modifier {
+	return func(o *OrasRemote) {
+		o.repo.Client.(*auth.Client).SetUserAgent(userAgent)
+	}
+}
+
+// WithLogger sets the logger for the remote
+func WithLogger(logger *slog.Logger) Modifier {
+	return func(o *OrasRemote) {
+		o.log = logger
+	}
 }
 
 // NewOrasRemote returns an oras remote repository client and context for the given url.
 //
 // Registry auth is handled by the Docker CLI's credential store and checked before returning the client
-func NewOrasRemote(url string, mods ...Modifier) (*OrasRemote, error) {
+func NewOrasRemote(url string, platform ocispec.Platform, mods ...Modifier) (*OrasRemote, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(url, helpers.OCIURLPrefix))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse OCI reference %q: %w", url, err)
 	}
-	o := &OrasRemote{}
-
-	if err := o.setRepository(ref); err != nil {
-		return nil, err
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	client := auth.DefaultClient
+	client.Client.Transport = transport
+	o := &OrasRemote{
+		repo:           &remote.Repository{Client: client},
+		progTransport:  helpers.NewTransport(transport, nil),
+		targetPlatform: &platform,
+		log:            slog.Default(),
 	}
-
-	copyOpts := oras.DefaultCopyOptions
-	copyOpts.OnCopySkipped = o.printLayerSkipped
-	copyOpts.PostCopy = o.printLayerCopied
-	o.CopyOpts = copyOpts
-
-	// right now --insecure is overloaded to mean both plain HTTP and insecure TLS
-	// putting this here as the "default" for the remote
-	// but can be overridden by a provided modifier
-	insecureMod := WithInsecureSkipVerify(zarfconfig.CommonOptions.Insecure)
-	insecureMod(o)
-
-	httpMod := WithPlainHTTP(zarfconfig.CommonOptions.Insecure)
-	httpMod(o)
 
 	for _, mod := range mods {
 		mod(o)
 	}
 
-	// if no context is provided, use the default
-	if o.ctx == nil {
-		o.ctx = context.TODO()
+	if err := o.setRepository(ref); err != nil {
+		return nil, err
 	}
 
 	return o, nil
 }
 
+// SetProgressWriter sets the progress writer for the remote
+func (o *OrasRemote) SetProgressWriter(bar helpers.ProgressWriter) {
+	o.progTransport.ProgressBar = bar
+	o.repo.Client.(*auth.Client).Client.Transport = o.progTransport
+}
+
+// ClearProgressWriter clears the progress writer for the remote
+func (o *OrasRemote) ClearProgressWriter() {
+	o.progTransport.ProgressBar = nil
+	o.repo.Client.(*auth.Client).Client.Transport = o.progTransport
+}
+
 // Repo gives you access to the underlying remote repository
 func (o *OrasRemote) Repo() *remote.Repository {
 	return o.repo
+}
+
+// Log gives you access to the OrasRemote logger
+func (o *OrasRemote) Log() *slog.Logger {
+	return o.log
 }
 
 // setRepository sets the repository for the remote as well as the auth client.
@@ -161,12 +141,8 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 		return err
 	}
 
-	repo, err := remote.NewRepository(ref.String())
-	if err != nil {
-		return err
-	}
-	repo.Client = client
-	o.repo = repo
+	o.repo.Reference = ref
+	o.repo.Client = client
 
 	return nil
 }
@@ -177,24 +153,15 @@ func (o *OrasRemote) setRepository(ref registry.Reference) error {
 //
 // TODO: instead of using Docker's cred store, should use the new one from ORAS to remove that dep
 func (o *OrasRemote) createAuthClient(ref registry.Reference) (*auth.Client, error) {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	o.Transport = utils.NewTransport(transport, nil)
 
-	client := &auth.Client{
-		Cache: auth.DefaultCache,
-		Client: &http.Client{
-			Transport: o.Transport,
-		},
-	}
-	client.SetUserAgent("zarf/" + zarfconfig.CLIVersion)
-
-	message.Debugf("Loading docker config file from default config location: %s for %s", config.Dir(), ref)
+	client := o.repo.Client.(*auth.Client)
+	o.log.Debug(fmt.Sprintf("Loading docker config file from default config location: %s for %s", config.Dir(), ref))
 	cfg, err := config.Load(config.Dir())
 	if err != nil {
 		return nil, err
 	}
 	if !cfg.ContainsAuth() {
-		message.Debug("no docker config file found, run 'zarf tools registry login --help'")
+		o.log.Debug("no docker config file found")
 		return client, nil
 	}
 

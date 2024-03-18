@@ -12,7 +12,6 @@ import (
 
 	"encoding/json"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 )
@@ -50,8 +49,6 @@ func TestZarfInit(t *testing.T) {
 		require.Contains(t, stdErr, expectedErrorMessage)
 	}
 
-	initWithoutStorageClass(t)
-
 	if !e2e.ApplianceMode {
 		// throw a pending pod into the cluster to ensure we can properly ignore them when selecting images
 		_, _, err := e2e.Kubectl("apply", "-f", "https://raw.githubusercontent.com/kubernetes/website/main/content/en/examples/pods/pod-with-node-affinity.yaml")
@@ -73,7 +70,7 @@ func TestZarfInit(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, initStdErr, "an inventory of all software contained in this package")
 
-	logText := e2e.GetLogFileContents(t, initStdErr)
+	logText := e2e.GetLogFileContents(t, e2e.StripMessageFormatting(initStdErr))
 
 	// Verify that any state secrets were not included in the log
 	state := types.ZarfState{}
@@ -126,44 +123,4 @@ func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.Zar
 	require.NotContains(t, logText, zarfState.RegistryInfo.PushPassword)
 	require.NotContains(t, logText, zarfState.RegistryInfo.Secret)
 	require.NotContains(t, logText, zarfState.LoggingSecret)
-}
-
-// Verify `zarf init` produces an error when there is no storage class in cluster.
-func initWithoutStorageClass(t *testing.T) {
-	/*
-		Exit early if testing with Zarf-deployed k3s cluster.
-		This is a chicken-egg problem because we can't interact with a cluster that Zarf hasn't created yet.
-		Zarf deploys k3s with the Rancher local-path storage class out of the box,
-		so we don't expect any problems with no storage class in this case.
-	*/
-	if e2e.ApplianceMode {
-		return
-	}
-
-	jsonPathQuery := `{range .items[?(@.metadata.annotations.storageclass\.kubernetes\.io/is-default-class=="true")]}{.metadata.name}{end}`
-	defaultStorageClassName, _, err := e2e.Kubectl("get", "storageclass", "-o=jsonpath="+jsonPathQuery)
-	require.NoError(t, err)
-	require.NotEmpty(t, defaultStorageClassName)
-
-	storageClassYaml, _, err := e2e.Kubectl("get", "storageclass", defaultStorageClassName, "-o=yaml")
-	require.NoError(t, err)
-
-	storageClassFileName := "storage-class.yaml"
-
-	err = utils.WriteFile(storageClassFileName, []byte(storageClassYaml))
-	require.NoError(t, err)
-	defer e2e.CleanFiles(storageClassFileName)
-
-	_, _, err = e2e.Kubectl("delete", "storageclass", defaultStorageClassName)
-	require.NoError(t, err)
-
-	_, stdErr, err := e2e.Zarf("init", "--confirm")
-	require.Error(t, err, stdErr)
-	require.Contains(t, stdErr, "unable to run component before action: command \"Check that the cluster has the specified storage class\"")
-
-	_, _, err = e2e.Zarf("destroy", "--confirm")
-	require.NoError(t, err)
-
-	_, _, err = e2e.Kubectl("apply", "-f", storageClassFileName)
-	require.NoError(t, err)
 }

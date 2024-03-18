@@ -94,6 +94,7 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 		},
 		path.Join(tmpPaths.Temp, bb),
 		path.Join(tmpPaths.Temp, bb, "values"),
+		helm.WithPackageConfig(&types.PackagerConfig{}),
 	)
 
 	// Download the chart from Git and save it to a temporary directory.
@@ -261,7 +262,7 @@ func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.
 		rel := filepath.Join(layout.TempDir, skelName)
 		dst := filepath.Join(tmpPaths.Base, rel)
 
-		if err := utils.CreatePathAndCopy(valuesFile, dst); err != nil {
+		if err := helpers.CreatePathAndCopy(valuesFile, dst); err != nil {
 			return c, err
 		}
 
@@ -281,7 +282,7 @@ func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.
 		rel := filepath.Join(layout.TempDir, skelName)
 		dst := filepath.Join(tmpPaths.Base, rel)
 
-		if err := utils.CreatePathAndCopy(fluxPatchFile, dst); err != nil {
+		if err := helpers.CreatePathAndCopy(fluxPatchFile, dst); err != nil {
 			return c, err
 		}
 
@@ -465,7 +466,7 @@ func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang)
 			return err
 		}
 
-		if err := utils.WriteFile(path, out); err != nil {
+		if err := os.WriteFile(path, out, helpers.ReadWriteUser); err != nil {
 			return err
 		}
 

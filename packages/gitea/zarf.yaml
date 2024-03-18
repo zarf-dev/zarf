@@ -59,19 +59,13 @@ components:
       - name: gitea
         releaseName: zarf-gitea
         url: https://dl.gitea.io/charts
-        version: 10.0.0
+        version: 10.1.1
         namespace: zarf
         valuesFiles:
           - gitea-values.yaml
     actions:
       onDeploy:
         before:
-          - description: Check that the cluster has the specified storage class
-            maxTotalSeconds: 3
-            wait:
-              cluster:
-                kind: storageclass
-                name: "\"${ZARF_STORAGE_CLASS}\""
           - cmd: ./zarf internal update-gitea-pvc --no-progress 
             setVariables:
               - name: GIT_SERVER_CREATE_PVC

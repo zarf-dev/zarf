@@ -62,6 +62,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push' (default "zarf-git-user")
       --git-url string                  External git server url to use for this Zarf cluster
   -h, --help                            help for init
+  -k, --key string                      Path to public key file for validating signed packages
       --nodeport int                    Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]
       --registry-pull-password string   Password for the pull-only user to access the registry
       --registry-pull-username string   Username for pull-only access to the registry
@@ -69,6 +70,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --registry-push-username string   Username to access to the registry Zarf is configured to use (default "zarf-push")
       --registry-secret string          Registry secret value
       --registry-url string             External registry url address to use for this Zarf cluster
+      --retries int                     Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
       --set stringToString              Specify deployment variables to set on the command line (KEY=value) (default [])
       --skip-webhooks                   [alpha] Skip waiting for external webhooks to execute as each package component is deployed
       --storage-class string            Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard

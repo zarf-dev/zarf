@@ -5,16 +5,17 @@
 package composer
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -80,7 +81,7 @@ type ImportChain struct {
 	head *Node
 	tail *Node
 
-	remote *oci.OrasRemote
+	remote *zoci.Remote
 }
 
 // Head returns the first node in the import chain
@@ -181,7 +182,7 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 			if err != nil {
 				return ic, err
 			}
-			pkg, err = remote.FetchZarfYAML()
+			pkg, err = remote.FetchZarfYAML(context.TODO())
 			if err != nil {
 				return ic, err
 			}
@@ -190,7 +191,7 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 		name := node.ImportName()
 
 		// 'found' and 'index' are parallel slices. Each element in found[x] corresponds to pkg[index[x]]
-		// found[0] and pkg[index[0]] would be the same componenet for example
+		// found[0] and pkg[index[0]] would be the same component for example
 		found := []types.ZarfComponent{}
 		index := []int{}
 		for i, component := range pkg.Components {
@@ -346,6 +347,9 @@ func (ic *ImportChain) MergeConstants(existing []types.ZarfPackageConstant) (mer
 
 // CompatibleComponent determines if this component is compatible with the given create options
 func CompatibleComponent(c types.ZarfComponent, arch, flavor string) bool {
+	if arch == zoci.SkeletonArch {
+		return true
+	}
 	satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
 	satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor
 	return satisfiesArch && satisfiesFlavor

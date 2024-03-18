@@ -35,7 +35,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "DeprecatedZarfComponentScripts": {
       "properties": {
@@ -74,7 +77,53 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
+    "Shell": {
+      "properties": {
+        "windows": {
+          "type": "string",
+          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
+          "examples": [
+            "powershell",
+            "cmd",
+            "pwsh",
+            "sh",
+            "bash",
+            "gsh"
+          ]
+        },
+        "linux": {
+          "type": "string",
+          "description": "(default 'sh') Indicates a preference for the shell to use on Linux systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ]
+        },
+        "darwin": {
+          "type": "string",
+          "description": "(default 'sh') Indicates a preference for the shell to use on macOS systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfBuildData": {
       "required": [
@@ -112,10 +161,6 @@
           "type": "array",
           "description": "Any migrations that have been run on this package"
         },
-        "differential": {
-          "type": "boolean",
-          "description": "Whether this package was created with differential components"
-        },
         "registryOverrides": {
           "patternProperties": {
             ".*": {
@@ -124,6 +169,14 @@
           },
           "type": "object",
           "description": "Any registry domains that were overridden on package create when pulling images"
+        },
+        "differential": {
+          "type": "boolean",
+          "description": "Whether this package was created with differential components"
+        },
+        "differentialPackageVersion": {
+          "type": "string",
+          "description": "Version of a previously built package used as the basis for creating this differential package"
         },
         "differentialMissing": {
           "items": {
@@ -142,7 +195,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfChart": {
       "required": [
@@ -203,7 +259,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponent": {
       "required": [
@@ -308,7 +367,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentAction": {
       "properties": {
@@ -340,7 +402,7 @@
           "description": "The command to run. Must specify either cmd or wait for the action to do anything."
         },
         "shell": {
-          "$ref": "#/definitions/ZarfComponentActionShell",
+          "$ref": "#/definitions/Shell",
           "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
         },
         "setVariable": {
@@ -367,7 +429,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActionDefaults": {
       "properties": {
@@ -396,12 +461,15 @@
         },
         "shell": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentActionShell",
+          "$ref": "#/definitions/Shell",
           "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActionSet": {
       "properties": {
@@ -441,7 +509,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActionSetVariable": {
       "required": [
@@ -475,47 +546,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
-    },
-    "ZarfComponentActionShell": {
-      "properties": {
-        "windows": {
-          "type": "string",
-          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
-          "examples": [
-            "powershell",
-            "cmd",
-            "pwsh",
-            "sh",
-            "bash",
-            "gsh"
-          ]
-        },
-        "linux": {
-          "type": "string",
-          "description": "(default 'sh') Indicates a preference for the shell to use on Linux systems",
-          "examples": [
-            "sh",
-            "bash",
-            "fish",
-            "zsh",
-            "pwsh"
-          ]
-        },
-        "darwin": {
-          "type": "string",
-          "description": "(default 'sh') Indicates a preference for the shell to use on macOS systems",
-          "examples": [
-            "sh",
-            "bash",
-            "fish",
-            "zsh",
-            "pwsh"
-          ]
-        }
-      },
-      "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActionWait": {
       "properties": {
@@ -531,7 +565,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActionWaitCluster": {
       "required": [
@@ -552,7 +589,7 @@
           "description": "The name of the resource or selector to wait for",
           "examples": [
             "podinfo",
-            "app\u0026#61;podinfo"
+            "app&#61;podinfo"
           ]
         },
         "namespace": {
@@ -569,7 +606,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActionWaitNetwork": {
       "required": [
@@ -604,7 +644,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentActions": {
       "properties": {
@@ -623,7 +666,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentExtensions": {
       "properties": {
@@ -634,7 +680,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentImport": {
       "properties": {
@@ -653,7 +702,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentOnlyCluster": {
       "properties": {
@@ -674,7 +726,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfComponentOnlyTarget": {
       "properties": {
@@ -698,7 +753,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfContainerTarget": {
       "required": [
@@ -716,7 +774,7 @@
           "type": "string",
           "description": "The K8s selector to target for data injection",
           "examples": [
-            "app\u0026#61;data-injection"
+            "app&#61;data-injection"
           ]
         },
         "container": {
@@ -729,7 +787,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfDataInjection": {
       "required": [
@@ -752,7 +813,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfFile": {
       "required": [
@@ -789,7 +853,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfManifest": {
       "required": [
@@ -828,7 +895,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfMetadata": {
       "required": [
@@ -876,7 +946,7 @@
           "type": "string",
           "description": "Comma-separated list of package authors (including contact info)",
           "examples": [
-            "Doug \u0026#60;hello@defenseunicorns.com\u0026#62;\u0026#44; Pepr \u0026#60;hello@defenseunicorns.com\u0026#62;"
+            "Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"
           ]
         },
         "documentation": {
@@ -897,7 +967,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfPackage": {
       "required": [
@@ -950,7 +1023,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfPackageConstant": {
       "required": [
@@ -981,7 +1057,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     },
     "ZarfPackageVariable": {
       "required": [
@@ -1027,7 +1106,10 @@
         }
       },
       "additionalProperties": false,
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
     }
   }
 }

@@ -45,6 +45,7 @@ var badGitURLs = []string{
 }
 
 func TestMutateGitURLsInText(t *testing.T) {
+	dummyLogger := func(_ string, _ ...any) {}
 	originalText := `
 	# Here we handle git URLs (see below comments)
 	# We transform https://*/*.git URLs
@@ -62,7 +63,7 @@ func TestMutateGitURLsInText(t *testing.T) {
 	# We transform https://*/*.git URLs
 	https://gitlab.com/repo-owner/zarf-1211668992.git
 	# Even URLs with things on either side
-	stuff https://gitlab.com/repo-owner/zarf-1211668992.git andthings
+	stuff https://gitlab.com/repo-owner/zarf-1211668992.git and things
 	# Including ssh://*/*.git URLs
 	https://gitlab.com/repo-owner/zarf-2566185087.git
 	# But not non .git URLs

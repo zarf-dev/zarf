@@ -409,22 +409,6 @@ Must be one of:
 </blockquote>
 </details>
 
-<details>
-<summary>
-<strong> <a name="build_differential"></a>differential</strong>
-</summary>
-&nbsp;
-<blockquote>
-
-**Description:** Whether this package was created with differential components
-
-|          |           |
-| -------- | --------- |
-| **Type** | `boolean` |
-
-</blockquote>
-</details>
-
 <details open>
 <summary>
 <strong> <a name="build_registryOverrides"></a>registryOverrides</strong>
@@ -441,25 +425,37 @@ Must be one of:
 | **Type**                  | `object`                                                                                                                          |
 | **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
 
+</blockquote>
+</details>
+
 <details>
 <summary>
-<strong> <a name="build_registryOverrides_pattern1"></a>Pattern Property .*</strong>
+<strong> <a name="build_differential"></a>differential</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-:::note
-All properties whose name matches the regular expression
-```.*``` ([Test](https://regex101.com/?regex=.%2A))
-must respect the following conditions
-:::
+**Description:** Whether this package was created with differential components
+
+|          |           |
+| -------- | --------- |
+| **Type** | `boolean` |
+
+</blockquote>
+</details>
+
+<details>
+<summary>
+<strong> <a name="build_differentialPackageVersion"></a>differentialPackageVersion</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+**Description:** Version of a previously built package used as the basis for creating this differential package
 
 |          |          |
 | -------- | -------- |
 | **Type** | `string` |
-
-</blockquote>
-</details>
 
 </blockquote>
 </details>
@@ -1852,7 +1848,7 @@ Must be one of:
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
 | **Type**                  | `object`                                                                                                 |
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
-| **Defined in**            | #/definitions/ZarfComponentActionShell                                                                   |
+| **Defined in**            | #/definitions/Shell                                                                                      |
 
 <details>
 <summary>

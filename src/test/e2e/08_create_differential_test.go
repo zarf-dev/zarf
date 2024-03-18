@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -16,29 +17,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestCreateDifferential creates several differential packages and ensures the already built images and repos and not included in the new package
+// TestCreateDifferential creates several differential packages and ensures the reference package images and repos are not included in the new package.
 func TestCreateDifferential(t *testing.T) {
 	t.Log("E2E: Test Differential Package Behavior")
 	tmpdir := t.TempDir()
-	cachePath := filepath.Join(tmpdir, ".cache-location")
 
 	packagePath := "src/test/packages/08-differential-package"
-	packageName := "zarf-package-differential-package-amd64-v0.25.0.tar.zst"
-	differentialPackageName := "zarf-package-differential-package-amd64-v0.25.0-differential-v0.26.0.tar.zst"
+	packageName := fmt.Sprintf("zarf-package-differential-package-%s-v0.25.0.tar.zst", e2e.Arch)
+	differentialPackageName := fmt.Sprintf("zarf-package-differential-package-%s-v0.25.0-differential-v0.26.0.tar.zst", e2e.Arch)
 	differentialFlag := fmt.Sprintf("--differential=%s", packageName)
 
 	// Build the package a first time
-	stdOut, stdErr, err := e2e.Zarf("package", "create", packagePath, "--zarf-cache", cachePath, "--set=PACKAGE_VERSION=v0.25.0", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.25.0", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(packageName)
 
 	// Build the differential package without changing the version
-	_, stdErr, err = e2e.Zarf("package", "create", packagePath, "--zarf-cache", cachePath, "--set=PACKAGE_VERSION=v0.25.0", differentialFlag, "--confirm")
+	_, stdErr, err = e2e.Zarf("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.25.0", differentialFlag, "--confirm")
 	require.Error(t, err, "zarf package create should have errored when a differential package was being created without updating the package version number")
-	require.Contains(t, stdErr, "unable to create a differential package with the same version")
+	require.Contains(t, e2e.StripMessageFormatting(stdErr), lang.PkgCreateErrDifferentialSameVersion)
 
 	// Build the differential package
-	stdOut, stdErr, err = e2e.Zarf("package", "create", packagePath, "--zarf-cache", cachePath, "--set=PACKAGE_VERSION=v0.26.0", differentialFlag, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.26.0", differentialFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(differentialPackageName)
 

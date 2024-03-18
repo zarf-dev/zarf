@@ -14,3 +14,7 @@ configs:
       url: https://github.com/stefanprodan/podinfo.git
       username: ""
       password: ""
+
+redis:
+  image:
+    repository: docker.io/library/redis

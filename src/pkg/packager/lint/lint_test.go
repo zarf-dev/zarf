@@ -34,13 +34,18 @@ components:
 `
 
 const goodZarfPackage = `
+x-name: &name good-zarf-package
+
 kind: ZarfPackageConfig
 metadata:
-  name: good-zarf-package
+  name: *name
+  x-description: Testing good yaml with yaml extension
 
 components:
   - name: baseline
     required: true
+    x-foo: bar
+
 `
 
 func readAndUnmarshalYaml[T interface{}](t *testing.T, yamlString string) T {
@@ -157,14 +162,14 @@ func TestValidateSchema(t *testing.T) {
 	t.Run("Wrap standalone numbers in bracket", func(t *testing.T) {
 		input := "components12.12.import.path"
 		expected := ".components12.[12].import.path"
-		acutal := makeFieldPathYqCompat(input)
-		require.Equal(t, expected, acutal)
+		actual := makeFieldPathYqCompat(input)
+		require.Equal(t, expected, actual)
 	})
 
 	t.Run("root doesn't change", func(t *testing.T) {
 		input := "(root)"
-		acutal := makeFieldPathYqCompat(input)
-		require.Equal(t, input, acutal)
+		actual := makeFieldPathYqCompat(input)
+		require.Equal(t, input, actual)
 	})
 
 	t.Run("Test composable components", func(t *testing.T) {
@@ -222,11 +227,11 @@ func TestValidateSchema(t *testing.T) {
 		}
 		for _, tc := range tests {
 			t.Run(tc.input, func(t *testing.T) {
-				acutal, err := isPinnedImage(tc.input)
+				actual, err := isPinnedImage(tc.input)
 				if err != nil {
 					require.EqualError(t, err, tc.err.Error())
 				}
-				require.Equal(t, tc.expected, acutal)
+				require.Equal(t, tc.expected, actual)
 			})
 		}
 	})
