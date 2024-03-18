@@ -12,27 +12,26 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"os/signal"
 	"runtime"
 	"strings"
 	"sync"
-	"syscall"
-
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
 )
-
-// SuppressGlobalInterrupt suppresses the global error on an interrupt
-var SuppressGlobalInterrupt = false
 
 // Config is a struct for configuring the Cmd function.
 type Config struct {
-	Print  bool
-	Dir    string
-	Env    []string
-	Stdout io.Writer
-	Stderr io.Writer
+	Print          bool
+	Dir            string
+	Env            []string
+	CommandPrinter func(format string, a ...any)
+	Stdout         io.Writer
+	Stderr         io.Writer
+}
+
+// Shell represents the desired shell to use for a given command
+type Shell struct {
+	Windows string `json:"windows,omitempty" jsonschema:"description=(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item),example=powershell,example=cmd,example=pwsh,example=sh,example=bash,example=gsh"`
+	Linux   string `json:"linux,omitempty" jsonschema:"description=(default 'sh') Indicates a preference for the shell to use on Linux systems,example=sh,example=bash,example=fish,example=zsh,example=pwsh"`
+	Darwin  string `json:"darwin,omitempty" jsonschema:"description=(default 'sh') Indicates a preference for the shell to use on macOS systems,example=sh,example=bash,example=fish,example=zsh,example=pwsh"`
 }
 
 // PrintCfg is a helper function for returning a Config struct with Print set to true.
@@ -100,8 +99,8 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 	stderr := io.MultiWriter(stdErrWriters...)
 
 	// If we're printing, print the command.
-	if config.Print {
-		message.Command("%s %s", command, strings.Join(args, " "))
+	if config.Print && config.CommandPrinter != nil {
+		config.CommandPrinter("%s %s", command, strings.Join(args, " "))
 	}
 
 	// Start the command.
@@ -154,7 +153,7 @@ func LaunchURL(url string) error {
 }
 
 // GetOSShell returns the shell and shellArgs based on the current OS
-func GetOSShell(shellPref types.ZarfComponentActionShell) (string, []string) {
+func GetOSShell(shellPref Shell) (string, []string) {
 	var shell string
 	var shellArgs []string
 	powershellShellArgs := []string{"-Command", "$ErrorActionPreference = 'Stop';"}
@@ -208,16 +207,4 @@ func GetOSShell(shellPref types.ZarfComponentActionShell) (string, []string) {
 // IsPowershell returns whether a shell name is powershell
 func IsPowershell(shellName string) bool {
 	return shellName == "powershell" || shellName == "pwsh"
-}
-
-// ExitOnInterrupt catches an interrupt and exits with fatal error
-func ExitOnInterrupt() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		if !SuppressGlobalInterrupt {
-			message.Fatal(lang.ErrInterrupt, lang.ErrInterrupt.Error())
-		}
-	}()
 }

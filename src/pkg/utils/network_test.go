@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -75,7 +76,7 @@ func (suite *TestNetworkSuite) Test_1_DownloadToFile() {
 	suite.NoError(err)
 	suite.Contains(string(content), "adr")
 
-	check, err := GetSHA256OfFile(path)
+	check, err := helpers.GetSHA256OfFile(path)
 	suite.NoError(err)
 	suite.Equal(sum, check)
 

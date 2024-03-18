@@ -13,7 +13,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
@@ -21,7 +21,7 @@ import (
 )
 
 func identifyUnknownTarball(path string) (string, error) {
-	if utils.InvalidPath(path) {
+	if helpers.InvalidPath(path) {
 		return "", &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
 	}
 	if filepath.Ext(path) != "" && config.IsValidFileExtension(path) {
