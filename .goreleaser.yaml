@@ -84,7 +84,7 @@ brews:
           owner: defenseunicorns
           name: homebrew-tap
 
-    commit_msg_template: "chore(release): upgrade {{ .ProjectName }} to {{ .Tag }}"
+    commit_msg_template: "build(release): upgrade {{ .ProjectName }} to {{ .Tag }}"
     homepage: "https://zarf.dev/"
     description: "DevSecOps for Air Gap"
 
@@ -102,7 +102,7 @@ brews:
           branch: main
           owner: defenseunicorns
           name: homebrew-tap
-    commit_msg_template: "chore(release): {{ .ProjectName }}@{{ .Tag }}"
+    commit_msg_template: "build(release): {{ .ProjectName }}@{{ .Tag }}"
     homepage: "https://zarf.dev/"
     description: "DevSecOps for Air Gap"
 
