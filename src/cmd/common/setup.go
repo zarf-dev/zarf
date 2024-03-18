@@ -5,11 +5,13 @@
 package common
 
 import (
+	"io"
 	"os"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/pterm/pterm"
 )
 
 // LogLevelCLI holds the log level as input from a command
@@ -49,6 +51,14 @@ func SetupCLI() {
 	}
 
 	if !config.SkipLogFile {
-		message.UseLogFile()
+		logFile, err := message.UseLogFile("")
+		if err != nil {
+			message.WarnErr(err, "Error saving a log file to a temporary directory")
+			return
+		}
+
+		pterm.SetDefaultOutput(io.MultiWriter(os.Stderr, logFile))
+		location := message.LogFileLocation()
+		message.Notef("Saving log file to %s", location)
 	}
 }
