@@ -82,6 +82,49 @@
         "^x-": {}
       }
     },
+    "Shell": {
+      "properties": {
+        "windows": {
+          "type": "string",
+          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
+          "examples": [
+            "powershell",
+            "cmd",
+            "pwsh",
+            "sh",
+            "bash",
+            "gsh"
+          ]
+        },
+        "linux": {
+          "type": "string",
+          "description": "(default 'sh') Indicates a preference for the shell to use on Linux systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ]
+        },
+        "darwin": {
+          "type": "string",
+          "description": "(default 'sh') Indicates a preference for the shell to use on macOS systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
     "ZarfBuildData": {
       "required": [
         "terminal",
@@ -359,7 +402,7 @@
           "description": "The command to run. Must specify either cmd or wait for the action to do anything."
         },
         "shell": {
-          "$ref": "#/definitions/ZarfComponentActionShell",
+          "$ref": "#/definitions/Shell",
           "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
         },
         "setVariable": {
@@ -418,7 +461,7 @@
         },
         "shell": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentActionShell",
+          "$ref": "#/definitions/Shell",
           "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
         }
       },
@@ -500,49 +543,6 @@
           ],
           "type": "string",
           "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
-    "ZarfComponentActionShell": {
-      "properties": {
-        "windows": {
-          "type": "string",
-          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
-          "examples": [
-            "powershell",
-            "cmd",
-            "pwsh",
-            "sh",
-            "bash",
-            "gsh"
-          ]
-        },
-        "linux": {
-          "type": "string",
-          "description": "(default 'sh') Indicates a preference for the shell to use on Linux systems",
-          "examples": [
-            "sh",
-            "bash",
-            "fish",
-            "zsh",
-            "pwsh"
-          ]
-        },
-        "darwin": {
-          "type": "string",
-          "description": "(default 'sh') Indicates a preference for the shell to use on macOS systems",
-          "examples": [
-            "sh",
-            "bash",
-            "fish",
-            "zsh",
-            "pwsh"
-          ]
         }
       },
       "additionalProperties": false,

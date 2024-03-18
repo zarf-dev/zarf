@@ -123,7 +123,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 	}
 
 	// Create the ImagePath directory
-	if err := utils.CreateDirectory(i.ImagesPath, helpers.ReadExecuteAllWriteUser); err != nil {
+	if err := helpers.CreateDirectory(i.ImagesPath, helpers.ReadExecuteAllWriteUser); err != nil {
 		return nil, fmt.Errorf("failed to create image path %s: %w", i.ImagesPath, err)
 	}
 
@@ -233,7 +233,7 @@ func (i *ImageConfig) PullAll() ([]ImgInfo, error) {
 
 			// Create the directory for the blob if it doesn't exist
 			dir := filepath.Join(string(cranePath), "blobs", digest.Algorithm)
-			if err := utils.CreateDirectory(dir, os.ModePerm); err != nil {
+			if err := helpers.CreateDirectory(dir, os.ModePerm); err != nil {
 				layerWritingConcurrency.ErrorChan <- err
 				return
 			}
