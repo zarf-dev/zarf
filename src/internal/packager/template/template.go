@@ -5,8 +5,11 @@
 package template
 
 import (
+	"bufio"
 	"encoding/base64"
 	"fmt"
+	"os"
+	"regexp"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/types"
@@ -17,10 +20,17 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
+// TextTemplate represents a value to be templated into a text file.
+type TextTemplate struct {
+	Sensitive  bool
+	AutoIndent bool
+	Type       types.VariableType
+	Value      string
+}
+
 // Values contains the values to be used in the template.
 type Values struct {
 	config   *types.PackagerConfig
-	registry string
 	htpasswd string
 }
 
@@ -56,8 +66,6 @@ func Generate(cfg *types.PackagerConfig) (*Values, error) {
 		generated.htpasswd = fmt.Sprintf("%s\\n%s", pushUser, pullUser)
 	}
 
-	generated.registry = regInfo.Address
-
 	return &generated, nil
 }
 
@@ -66,14 +74,14 @@ func (values *Values) Ready() bool {
 	return values.config.State != nil
 }
 
-// GetRegistry returns the registry address.
-func (values *Values) GetRegistry() string {
-	return values.registry
+// SetState sets the state
+func (values *Values) SetState(state *types.ZarfState) {
+	values.config.State = state
 }
 
 // GetVariables returns the variables to be used in the template.
-func (values *Values) GetVariables(component types.ZarfComponent) (templateMap map[string]*utils.TextTemplate, deprecations map[string]string) {
-	templateMap = make(map[string]*utils.TextTemplate)
+func (values *Values) GetVariables(component types.ZarfComponent) (templateMap map[string]*TextTemplate, deprecations map[string]string) {
+	templateMap = make(map[string]*TextTemplate)
 
 	depMarkerOld := "DATA_INJECTON_MARKER"
 	depMarkerNew := "DATA_INJECTION_MARKER"
@@ -90,7 +98,7 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 			"STORAGE_CLASS": values.config.State.StorageClass,
 
 			// Registry info
-			"REGISTRY":           values.registry,
+			"REGISTRY":           regInfo.Address,
 			"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
 			"REGISTRY_PUSH":      regInfo.PushUsername,
 			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
@@ -137,7 +145,7 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 		// Iterate over any custom variables and add them to the mappings for templating
 		for key, value := range builtinMap {
 			// Builtin keys are always uppercase in the format ###ZARF_KEY###
-			templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = &utils.TextTemplate{
+			templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = &TextTemplate{
 				Value: value,
 			}
 
@@ -152,7 +160,7 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 
 	for key, variable := range values.config.SetVariableMap {
 		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = &utils.TextTemplate{
+		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = &TextTemplate{
 			Value:      variable.Value,
 			Sensitive:  variable.Sensitive,
 			AutoIndent: variable.AutoIndent,
@@ -162,7 +170,7 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 
 	for _, constant := range values.config.Pkg.Constants {
 		// Constant keys are always uppercase in the format ###ZARF_CONST_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_CONST_%s###", constant.Name))] = &utils.TextTemplate{
+		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_CONST_%s###", constant.Name))] = &TextTemplate{
 			Value:      constant.Value,
 			AutoIndent: constant.AutoIndent,
 		}
@@ -182,12 +190,99 @@ func (values *Values) Apply(component types.ZarfComponent, path string, ignoreRe
 	}
 
 	templateMap, deprecations := values.GetVariables(component)
-	err := utils.ReplaceTextTemplate(path, templateMap, deprecations, "###ZARF_[A-Z0-9_]+###")
+	err := ReplaceTextTemplate(path, templateMap, deprecations, "###ZARF_[A-Z0-9_]+###")
 
 	return err
 }
 
-func debugPrintTemplateMap(templateMap map[string]*utils.TextTemplate) {
+// ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place.
+func ReplaceTextTemplate(path string, mappings map[string]*TextTemplate, deprecations map[string]string, templateRegex string) error {
+	textFile, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+
+	// This regex takes a line and parses the text before and after a discovered template: https://regex101.com/r/ilUxAz/1
+	regexTemplateLine := regexp.MustCompile(fmt.Sprintf("(?P<preTemplate>.*?)(?P<template>%s)(?P<postTemplate>.*)", templateRegex))
+
+	fileScanner := bufio.NewScanner(textFile)
+
+	// Set the buffer to 1 MiB to handle long lines (i.e. base64 text in a secret)
+	// 1 MiB is around the documented maximum size for secrets and configmaps
+	const maxCapacity = 1024 * 1024
+	buf := make([]byte, maxCapacity)
+	fileScanner.Buffer(buf, maxCapacity)
+
+	// Set the scanner to split on new lines
+	fileScanner.Split(bufio.ScanLines)
+
+	text := ""
+
+	for fileScanner.Scan() {
+		line := fileScanner.Text()
+
+		for {
+			matches := regexTemplateLine.FindStringSubmatch(line)
+
+			// No template left on this line so move on
+			if len(matches) == 0 {
+				text += fmt.Sprintln(line)
+				break
+			}
+
+			preTemplate := matches[regexTemplateLine.SubexpIndex("preTemplate")]
+			templateKey := matches[regexTemplateLine.SubexpIndex("template")]
+
+			_, present := deprecations[templateKey]
+			if present {
+				message.Warnf("This Zarf Package uses a deprecated variable: '%s' changed to '%s'.  Please notify your package creator for an update.", templateKey, deprecations[templateKey])
+			}
+
+			template := mappings[templateKey]
+
+			// Check if the template is nil (present), use the original templateKey if not (so that it is not replaced).
+			value := templateKey
+			if template != nil {
+				value = template.Value
+
+				// Check if the value is a file type and load the value contents from the file
+				if template.Type == types.FileVariableType && value != "" {
+					if isText, err := helpers.IsTextFile(value); err != nil || !isText {
+						message.Warnf("Refusing to load a non-text file for templating %s", templateKey)
+						line = matches[regexTemplateLine.SubexpIndex("postTemplate")]
+						continue
+					}
+
+					contents, err := os.ReadFile(value)
+					if err != nil {
+						message.Warnf("Unable to read file for templating - skipping: %s", err.Error())
+						line = matches[regexTemplateLine.SubexpIndex("postTemplate")]
+						continue
+					}
+
+					value = string(contents)
+				}
+
+				// Check if the value is autoIndented and add the correct spacing
+				if template.AutoIndent {
+					indent := fmt.Sprintf("\n%s", strings.Repeat(" ", len(preTemplate)))
+					value = strings.ReplaceAll(value, "\n", indent)
+				}
+			}
+
+			// Add the processed text and continue processing the line
+			text += fmt.Sprintf("%s%s", preTemplate, value)
+			line = matches[regexTemplateLine.SubexpIndex("postTemplate")]
+		}
+	}
+
+	textFile.Close()
+
+	return os.WriteFile(path, []byte(text), helpers.ReadWriteUser)
+
+}
+
+func debugPrintTemplateMap(templateMap map[string]*TextTemplate) {
 	debugText := "templateMap = { "
 
 	for key, template := range templateMap {

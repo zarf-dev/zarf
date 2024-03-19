@@ -93,7 +93,7 @@ func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 		saved, err = client.Run(h.chart.LocalPath, nil)
 	} else {
 		saved = filepath.Join(temp, filepath.Base(h.chart.LocalPath))
-		err = utils.CreatePathAndCopy(h.chart.LocalPath, saved)
+		err = helpers.CreatePathAndCopy(h.chart.LocalPath, saved)
 	}
 	defer os.RemoveAll(temp)
 
@@ -204,7 +204,7 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 
 	// Download the file into a temp directory since we don't control what name helm creates here
 	temp := filepath.Join(h.chartPath, "temp")
-	if err = utils.CreateDirectory(temp, helpers.ReadWriteExecuteUser); err != nil {
+	if err = helpers.CreateDirectory(temp, helpers.ReadWriteExecuteUser); err != nil {
 		return fmt.Errorf("unable to create helm chart temp directory: %w", err)
 	}
 	defer os.RemoveAll(temp)
@@ -262,14 +262,14 @@ func (h *Helm) finalizeChartPackage(saved, cosignKeyPath string) error {
 
 func (h *Helm) packageValues(cosignKeyPath string) error {
 	for valuesIdx, path := range h.chart.ValuesFiles {
-		dst := fmt.Sprintf("%s-%d", StandardName(h.valuesPath, h.chart), valuesIdx)
+		dst := StandardValuesName(h.valuesPath, h.chart, valuesIdx)
 
 		if helpers.IsURL(path) {
 			if err := utils.DownloadToFile(path, dst, cosignKeyPath); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 			}
 		} else {
-			if err := utils.CreatePathAndCopy(path, dst); err != nil {
+			if err := helpers.CreatePathAndCopy(path, dst); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 			}
 		}

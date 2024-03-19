@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying zarf packages.
-package packager
+// Package actions contains functions for running component actions within Zarf packages.
+package actions
 
 import (
 	"context"
@@ -20,9 +20,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *template.Values) error {
+// Run runs all provided actions.
+func Run(cfg *types.PackagerConfig, defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *template.Values) error {
 	for _, a := range actions {
-		if err := p.runAction(defaultCfg, a, valueTemplate); err != nil {
+		if err := runAction(cfg, defaultCfg, a, valueTemplate); err != nil {
 			return err
 		}
 	}
@@ -30,14 +31,14 @@ func (p *Packager) runActions(defaultCfg types.ZarfComponentActionDefaults, acti
 }
 
 // Run commands that a component has provided.
-func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, valueTemplate *template.Values) error {
+func runAction(cfg *types.PackagerConfig, defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, valueTemplate *template.Values) error {
 	var (
 		ctx        context.Context
 		cancel     context.CancelFunc
 		cmdEscaped string
 		out        string
 		err        error
-		vars       map[string]*utils.TextTemplate
+		vars       map[string]*template.TextTemplate
 
 		cmd = action.Cmd
 	)
@@ -87,23 +88,23 @@ func (p *Packager) runAction(defaultCfg types.ZarfComponentActionDefaults, actio
 		vars, _ = valueTemplate.GetVariables(types.ZarfComponent{})
 	}
 
-	cfg := actionGetCfg(defaultCfg, action, vars)
+	actionDefaults := actionGetCfg(defaultCfg, action, vars)
 
-	if cmd, err = actionCmdMutation(cmd, cfg.Shell); err != nil {
+	if cmd, err = actionCmdMutation(cmd, actionDefaults.Shell); err != nil {
 		spinner.Errorf(err, "Error mutating command: %s", cmdEscaped)
 	}
 
-	duration := time.Duration(cfg.MaxTotalSeconds) * time.Second
+	duration := time.Duration(actionDefaults.MaxTotalSeconds) * time.Second
 	timeout := time.After(duration)
 
 	// Keep trying until the max retries is reached.
 retryCmd:
-	for remaining := cfg.MaxRetries + 1; remaining > 0; remaining-- {
+	for remaining := actionDefaults.MaxRetries + 1; remaining > 0; remaining-- {
 
 		// Perform the action run.
 		tryCmd := func(ctx context.Context) error {
 			// Try running the command and continue the retry loop if it fails.
-			if out, err = actionRun(ctx, cfg, cmd, cfg.Shell, spinner); err != nil {
+			if out, err = actionRun(ctx, actionDefaults, cmd, actionDefaults.Shell, spinner); err != nil {
 				return err
 			}
 
@@ -111,8 +112,8 @@ retryCmd:
 
 			// If an output variable is defined, set it.
 			for _, v := range action.SetVariables {
-				p.setVariableInConfig(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
-				if err := p.checkVariablePattern(v.Name, v.Pattern); err != nil {
+				cfg.SetVariable(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
+				if err := cfg.CheckVariablePattern(v.Name, v.Pattern); err != nil {
 					message.WarnErr(err, err.Error())
 					return err
 				}
@@ -130,7 +131,7 @@ retryCmd:
 		}
 
 		// If no timeout is set, run the command and return or continue retrying.
-		if cfg.MaxTotalSeconds < 1 {
+		if actionDefaults.MaxTotalSeconds < 1 {
 			spinner.Updatef("Waiting for \"%s\" (no timeout)", cmdEscaped)
 			if err := tryCmd(context.TODO()); err != nil {
 				continue retryCmd
@@ -140,7 +141,7 @@ retryCmd:
 		}
 
 		// Run the command on repeat until success or timeout.
-		spinner.Updatef("Waiting for \"%s\" (timeout: %ds)", cmdEscaped, cfg.MaxTotalSeconds)
+		spinner.Updatef("Waiting for \"%s\" (timeout: %ds)", cmdEscaped, actionDefaults.MaxTotalSeconds)
 		select {
 		// On timeout break the loop to abort.
 		case <-timeout:
@@ -161,14 +162,14 @@ retryCmd:
 	select {
 	case <-timeout:
 		// If we reached this point, the timeout was reached or command failed with no retries.
-		if cfg.MaxTotalSeconds < 1 {
-			return fmt.Errorf("command %q failed after %d retries", cmdEscaped, cfg.MaxRetries)
+		if actionDefaults.MaxTotalSeconds < 1 {
+			return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.MaxRetries)
 		} else {
-			return fmt.Errorf("command %q timed out after %d seconds", cmdEscaped, cfg.MaxTotalSeconds)
+			return fmt.Errorf("command %q timed out after %d seconds", cmdEscaped, actionDefaults.MaxTotalSeconds)
 		}
 	default:
 		// If we reached this point, the retry limit was reached.
-		return fmt.Errorf("command %q failed after %d retries", cmdEscaped, cfg.MaxRetries)
+		return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.MaxRetries)
 	}
 }
 
@@ -209,7 +210,7 @@ func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string,
 }
 
 // Perform some basic string mutations to make commands more useful.
-func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (string, error) {
+func actionCmdMutation(cmd string, shellPref exec.Shell) (string, error) {
 	zarfCommand, err := utils.GetFinalExecutableCommand()
 	if err != nil {
 		return cmd, err
@@ -240,7 +241,7 @@ func actionCmdMutation(cmd string, shellPref types.ZarfComponentActionShell) (st
 }
 
 // Merge the ActionSet defaults with the action config.
-func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]*utils.TextTemplate) types.ZarfComponentActionDefaults {
+func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]*template.TextTemplate) types.ZarfComponentActionDefaults {
 	if a.Mute != nil {
 		cfg.Mute = *a.Mute
 	}
@@ -279,7 +280,7 @@ func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAc
 	return cfg
 }
 
-func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, shellPref types.ZarfComponentActionShell, spinner *message.Spinner) (string, error) {
+func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, shellPref exec.Shell, spinner *message.Spinner) (string, error) {
 	shell, shellArgs := exec.GetOSShell(shellPref)
 
 	message.Debugf("Running command in %s: %s", shell, cmd)

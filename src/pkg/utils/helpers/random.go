@@ -17,7 +17,6 @@ func RandomString(length int) (string, error) {
 	bytes := make([]byte, length)
 
 	if _, err := rand.Read(bytes); err != nil {
-		//message.Fatal(err, "unable to generate a random secret")
 		return "", err
 	}
 

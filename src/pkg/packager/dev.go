@@ -11,6 +11,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -24,11 +26,14 @@ func (p *Packager) DevDeploy() error {
 		return err
 	}
 
-	if err := p.cdToBaseDir(p.cfg.CreateOpts.BaseDir, cwd); err != nil {
-		return err
+	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
+		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
 
-	if err := p.load(); err != nil {
+	pc := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
+
+	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(p.layout)
+	if err != nil {
 		return err
 	}
 
@@ -54,15 +59,15 @@ func (p *Packager) DevDeploy() error {
 		}
 	}
 
-	if err := p.assemble(); err != nil {
+	if err := pc.Assemble(p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
 		return err
 	}
 
 	message.HeaderInfof("📦 PACKAGE DEPLOY %s", p.cfg.Pkg.Metadata.Name)
 
 	// Set variables and prompt if --confirm is not set
-	if err := p.setVariableMapInConfig(); err != nil {
-		return fmt.Errorf("unable to set the active variables: %w", err)
+	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
+		return err
 	}
 
 	p.connectStrings = make(types.ConnectStrings)
