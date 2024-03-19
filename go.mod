@@ -15,7 +15,7 @@ require (
 	github.com/anchore/syft v0.100.0
 	github.com/derailed/k9s v0.31.7
 	github.com/distribution/reference v0.5.0
-	github.com/docker/cli v24.0.9+incompatible
+	github.com/docker/cli v25.0.5+incompatible
 	github.com/fairwindsops/pluto/v5 v5.18.4
 	github.com/fatih/color v1.16.0
 	github.com/fluxcd/helm-controller/api v0.37.4
