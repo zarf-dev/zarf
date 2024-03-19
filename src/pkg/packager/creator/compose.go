@@ -11,9 +11,9 @@ import (
 )
 
 // ComposeComponents composes components and their dependencies into a single Zarf package using an import chain.
-func ComposeComponents(pkg types.ZarfPackage, flavor string) (types.ZarfPackage, []string, error) {
+func ComposeComponents(pkg types.ZarfPackage, flavor string) (types.ZarfPackage, *message.Warnings, error) {
 	components := []types.ZarfComponent{}
-	warnings := []string{}
+	warnings := message.NewWarnings()
 
 	pkgVars := pkg.Variables
 	pkgConsts := pkg.Constants
@@ -39,7 +39,7 @@ func ComposeComponents(pkg types.ZarfPackage, flavor string) (types.ZarfPackage,
 
 		// migrate any deprecated component configurations now
 		warning := chain.Migrate(pkg.Build)
-		warnings = append(warnings, warning...)
+		warnings.Add(warning.GetMessages()...)
 
 		// get the composed component
 		composed, err := chain.Compose()

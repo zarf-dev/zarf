@@ -10,14 +10,15 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // FillActiveTemplate merges user-specified variables into the configuration templates of a zarf.yaml.
-func FillActiveTemplate(pkg types.ZarfPackage, setVariables map[string]string) (types.ZarfPackage, []string, error) {
+func FillActiveTemplate(pkg types.ZarfPackage, setVariables map[string]string) (types.ZarfPackage, *message.Warnings, error) {
 	templateMap := map[string]string{}
-	warnings := []string{}
+	warnings := message.NewWarnings()
 
 	promptAndSetTemplate := func(templatePrefix string, deprecated bool) error {
 		yamlTemplates, err := utils.FindYamlTemplates(&pkg, templatePrefix, "###")
@@ -27,7 +28,7 @@ func FillActiveTemplate(pkg types.ZarfPackage, setVariables map[string]string) (
 
 		for key := range yamlTemplates {
 			if deprecated {
-				warnings = append(warnings, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
+				warnings.Add(fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
 			}
 
 			_, present := setVariables[key]

@@ -32,7 +32,7 @@ type Packager struct {
 	cfg            *types.PackagerConfig
 	cluster        *cluster.Cluster
 	layout         *layout.PackagePaths
-	warnings       []string
+	warnings       *message.Warnings
 	valueTemplate  *template.Values
 	hpaModified    bool
 	connectStrings types.ConnectStrings
@@ -112,6 +112,10 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 		if err = pkgr.setTempDirectory(config.CommonOptions.TempDirectory); err != nil {
 			return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 		}
+	}
+
+	if pkgr.warnings == nil {
+		pkgr.warnings = message.NewWarnings()
 	}
 
 	return pkgr, nil
@@ -251,20 +255,26 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 
 	cliSemVer, err := semver.NewVersion(cliVersion)
 	if err != nil {
-		warning := fmt.Sprintf(lang.CmdPackageDeployInvalidCLIVersionWarn, config.CLIVersion)
-		p.warnings = append(p.warnings, warning)
+		p.warnings.Add(fmt.Sprintf(lang.CmdPackageDeployInvalidCLIVersionWarn, config.CLIVersion))
 		return nil
 	}
 
 	if cliSemVer.LessThan(lastNonBreakingSemVer) {
-		warning := fmt.Sprintf(
-			lang.CmdPackageDeployValidateLastNonBreakingVersionWarn,
-			cliVersion,
-			lastNonBreakingVersion,
-			lastNonBreakingVersion,
+		p.warnings.Add(
+			fmt.Sprintf(
+				lang.CmdPackageDeployValidateLastNonBreakingVersionWarn,
+				cliVersion,
+				lastNonBreakingVersion,
+				lastNonBreakingVersion,
+			),
 		)
-		p.warnings = append(p.warnings, warning)
 	}
 
 	return nil
+}
+
+func (p *Packager) AddWarnings(warnings *message.Warnings) {
+	if warnings != nil {
+		p.warnings.Add(warnings.GetMessages()...)
+	}
 }

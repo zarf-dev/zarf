@@ -43,8 +43,9 @@ var breakingChanges = []BreakingChange{
 
 // MigrateComponent runs all migrations on a component.
 // Build should be empty on package create, but include just in case someone copied a zarf.yaml from a zarf package.
-func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) (migratedComponent types.ZarfComponent, warnings []string) {
+func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) (migratedComponent types.ZarfComponent, warnings *message.Warnings) {
 	migratedComponent = component
+	warnings = message.NewWarnings()
 
 	// If the component has already been migrated, clear the deprecated scripts.
 	if slices.Contains(build.Migrations, ScriptsToActionsMigrated) {
@@ -53,7 +54,7 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 		// Otherwise, run the migration.
 		var warning string
 		if migratedComponent, warning = migrateScriptsToActions(migratedComponent); warning != "" {
-			warnings = append(warnings, warning)
+			warnings.Add(warning)
 		}
 	}
 
@@ -64,13 +65,13 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 		// Otherwise, run the migration.
 		var warning string
 		if migratedComponent, warning = migrateSetVariableToSetVariables(migratedComponent); warning != "" {
-			warnings = append(warnings, warning)
+			warnings.Add(warning)
 		}
 	}
 
 	// Show a warning if the component contains a group as that has been deprecated and will be removed.
 	if component.Group != "" {
-		warnings = append(warnings, fmt.Sprintf("Component %s is using group which has been deprecated and will be removed in v1.0.0.  Please migrate to another solution.", component.Name))
+		warnings.Add(fmt.Sprintf("Component %s is using group which has been deprecated and will be removed in v1.0.0.  Please migrate to another solution.", component.Name))
 	}
 
 	// Future migrations here.

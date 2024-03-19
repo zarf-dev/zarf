@@ -59,21 +59,23 @@ func New(baseDir string) *PackagePaths {
 
 // ReadZarfYAML reads a zarf.yaml file into memory,
 // checks if it's using the legacy layout, and migrates deprecated component configs.
-func (pp *PackagePaths) ReadZarfYAML(path string) (pkg types.ZarfPackage, warnings []string, err error) {
+func (pp *PackagePaths) ReadZarfYAML(path string) (pkg types.ZarfPackage, warnings *message.Warnings, err error) {
+	warnings = message.NewWarnings()
+
 	if err := utils.ReadYaml(path, &pkg); err != nil {
 		return types.ZarfPackage{}, nil, fmt.Errorf("unable to read zarf.yaml file")
 	}
 
 	if pp.IsLegacyLayout() {
-		warnings = append(warnings, "Detected deprecated package layout, migrating to new layout - support for this package will be dropped in v1.0.0")
+		warnings.Add("Detected deprecated package layout, migrating to new layout - support for this package will be dropped in v1.0.0")
 	}
 
 	if len(pkg.Build.Migrations) > 0 {
-		var componentWarnings []string
+		var migrateWarnings *message.Warnings
 		for idx, component := range pkg.Components {
 			// Handle component configuration deprecations
-			pkg.Components[idx], componentWarnings = deprecated.MigrateComponent(pkg.Build, component)
-			warnings = append(warnings, componentWarnings...)
+			pkg.Components[idx], migrateWarnings = deprecated.MigrateComponent(pkg.Build, component)
+			warnings.Add(migrateWarnings.GetMessages()...)
 		}
 	}
 

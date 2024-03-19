@@ -61,7 +61,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		return nil, err
 	}
 
-	for _, warning := range p.warnings {
+	for _, warning := range p.warnings.GetMessages() {
 		message.Warn(warning)
 	}
 

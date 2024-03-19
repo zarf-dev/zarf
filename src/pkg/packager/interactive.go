@@ -53,10 +53,10 @@ func (p *Packager) confirmAction(stage string) (confirm bool) {
 		}
 	}
 
-	if len(p.warnings) > 0 {
+	if p.warnings.HasWarnings() {
 		message.HorizontalRule()
 		message.Title("Package Warnings", "the following warnings were flagged while reading the package")
-		for _, warning := range p.warnings {
+		for _, warning := range p.warnings.GetMessages() {
 			message.Warn(warning)
 		}
 	}

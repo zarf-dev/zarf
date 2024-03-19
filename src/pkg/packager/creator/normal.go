@@ -59,29 +59,29 @@ func NewPackageCreator(createOpts types.ZarfCreateOptions, cfg *types.PackagerCo
 }
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
-func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
-	pkg, warnings, err = dst.ReadZarfYAML(layout.ZarfYAML)
+func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg types.ZarfPackage, warnings *message.Warnings, err error) {
+	warnings = message.NewWarnings()
+
+	pkg, readWarnings, err := dst.ReadZarfYAML(layout.ZarfYAML)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
-
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+	warnings.Add(readWarnings.GetMessages()...)
 
 	// Compose components into a single zarf.yaml file
 	pkg, composeWarnings, err := ComposeComponents(pkg, pc.createOpts.Flavor)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
-
-	warnings = append(warnings, composeWarnings...)
+	warnings.Add(composeWarnings.GetMessages()...)
 
 	// After components are composed, template the active package.
 	pkg, templateWarnings, err := FillActiveTemplate(pkg, pc.createOpts.SetVariables)
 	if err != nil {
 		return types.ZarfPackage{}, nil, fmt.Errorf("unable to fill values in template: %w", err)
 	}
-
-	warnings = append(warnings, templateWarnings...)
+	warnings.Add(templateWarnings.GetMessages()...)
 
 	// After templates are filled process any create extensions
 	pkg.Components, err = pc.processExtensions(pkg.Components, dst, pkg.Metadata.YOLO)
