@@ -9,6 +9,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -217,6 +218,7 @@ func TestValidateLastNonBreakingVersion(t *testing.T) {
 						},
 					},
 				},
+				warnings: message.NewWarnings(),
 			}
 
 			err := p.validateLastNonBreakingVersion()
@@ -224,13 +226,13 @@ func TestValidateLastNonBreakingVersion(t *testing.T) {
 			switch {
 			case testCase.returnError:
 				require.ErrorContains(t, err, testCase.expectedErrorMessage)
-				require.Empty(t, p.warnings, "Expected no warnings for test case: %s", testCase.name)
+				require.Empty(t, p.warnings.GetMessages(), "Expected no warnings for test case: %s", testCase.name)
 			case testCase.throwWarning:
-				require.Contains(t, p.warnings, testCase.expectedWarningMessage)
+				require.Contains(t, p.warnings.GetMessages(), testCase.expectedWarningMessage)
 				require.NoError(t, err, "Expected no error for test case: %s", testCase.name)
 			default:
 				require.NoError(t, err, "Expected no error for test case: %s", testCase.name)
-				require.Empty(t, p.warnings, "Expected no warnings for test case: %s", testCase.name)
+				require.Empty(t, p.warnings.GetMessages(), "Expected no warnings for test case: %s", testCase.name)
 			}
 		})
 	}
