@@ -58,7 +58,8 @@ func (p *Packager) Deploy() (err error) {
 		return err
 	}
 
-	sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
+	var sbomWarnings []string
+	p.sbomViewFiles, sbomWarnings, err = p.layout.SBOMs.StageSBOMViewFiles()
 	if err != nil {
 		return err
 	}
