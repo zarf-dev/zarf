@@ -17,9 +17,6 @@ import (
 
 // Mirror pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the air gap without deploying them
 func (p *Packager) Mirror() (err error) {
-	spinner := message.NewProgressSpinner("Mirroring Zarf package %s", p.cfg.PkgOpts.PackageSource)
-	defer spinner.Stop()
-
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
@@ -40,11 +37,6 @@ func (p *Packager) Mirror() (err error) {
 	// Confirm the overall package mirror
 	if !p.confirmAction(config.ZarfMirrorStage) {
 		return fmt.Errorf("mirror cancelled")
-	}
-
-	p.cfg.Pkg.Components, err = filter.Apply(p.cfg.Pkg)
-	if err != nil {
-		return err
 	}
 
 	p.cfg.State = &types.ZarfState{

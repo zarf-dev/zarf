@@ -87,6 +87,7 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, filter filters.Com
 		return pkg, nil, err
 	}
 	if filter != nil {
+		spinner.Stop()
 		pkg.Components, err = filter.Apply(pkg)
 		if err != nil {
 			return pkg, nil, err

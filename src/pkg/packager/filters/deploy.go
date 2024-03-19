@@ -161,6 +161,11 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 			} else {
 				component := groupedComponents[groupKey][0]
 
+				if isRequired(component) {
+					selectedComponents = append(selectedComponents, component)
+					continue
+				}
+
 				if f.isInteractive {
 					selected, err := interactive.SelectOptionalComponent(component)
 					if err != nil {
@@ -172,7 +177,7 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 					}
 				}
 
-				if component.Default || isRequired(component) {
+				if component.Default {
 					selectedComponents = append(selectedComponents, component)
 					continue
 				}
