@@ -1,4 +1,3 @@
-# Why do we need this ?
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
