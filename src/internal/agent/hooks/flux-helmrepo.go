@@ -31,7 +31,7 @@ type HelmRepo struct {
 
 // NewHelmRepositoryMutationHook creates a new instance of the helm repo mutation hook.
 func NewHelmRepositoryMutationHook() operations.Hook {
-	message.Debug("hooks.NewGitRepositoryMutationHook()")
+	message.Debug("hooks.NewHelmRepositoryMutationHook()")
 	return operations.Hook{
 		Create: mutateHelmRepo,
 		Update: mutateHelmRepo,
@@ -119,6 +119,7 @@ func populateHelmRepoPatchOperations(repoURL string, secretName string) []operat
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
+	// Will need to do something like this with /spec/insecure but just always set it to true
 	// If a prior secret exists, replace it
 	if secretName != "" {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/secretRef/name", config.ZarfImagePullSecretName))

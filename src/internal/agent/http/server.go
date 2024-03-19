@@ -27,15 +27,15 @@ func NewAdmissionServer(port string) *http.Server {
 	argocdRepositoryMutation := hooks.NewRepositoryMutationHook()
 
 	// Routers
-	admissonHandler := newAdmissionHandler()
+	admissionHandler := newAdmissionHandler()
 	mux := http.NewServeMux()
 	mux.Handle("/healthz", healthz())
-	mux.Handle("/mutate/pod", admissonHandler.Serve(podsMutation))
-	mux.Handle("/mutate/flux-gitrepository", admissonHandler.Serve(fluxGitRepositoryMutation))
-	mux.Handle("/mutate/flux-helmrepository", admissonHandler.Serve(fluxHelmRepositoryMutation))
-	mux.Handle("/mutate/flux-ocirepository", admissonHandler.Serve(fluxOCIRepositoryMutation))
-	mux.Handle("/mutate/argocd-application", admissonHandler.Serve(argocdApplicationMutation))
-	mux.Handle("/mutate/argocd-repository", admissonHandler.Serve(argocdRepositoryMutation))
+	mux.Handle("/mutate/pod", admissionHandler.Serve(podsMutation))
+	mux.Handle("/mutate/flux-gitrepository", admissionHandler.Serve(fluxGitRepositoryMutation))
+	mux.Handle("/mutate/flux-helmrepository", admissionHandler.Serve(fluxHelmRepositoryMutation))
+	mux.Handle("/mutate/flux-ocirepository", admissionHandler.Serve(fluxOCIRepositoryMutation))
+	mux.Handle("/mutate/argocd-application", admissionHandler.Serve(argocdApplicationMutation))
+	mux.Handle("/mutate/argocd-repository", admissionHandler.Serve(argocdRepositoryMutation))
 	mux.Handle("/metrics", promhttp.Handler())
 
 	return &http.Server{

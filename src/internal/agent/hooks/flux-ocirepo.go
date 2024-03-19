@@ -67,6 +67,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	}
 
 	message.Debugf("Using the url of (%s) to mutate the flux OCIRepository", registryAddress)
+	// This can be 10.43.36.151:5000 for example
 
 	// Parse into a simple struct to read the OCIRepo url
 	src := &OCIRepo{}
