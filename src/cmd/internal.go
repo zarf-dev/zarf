@@ -109,10 +109,10 @@ var genCLIDocs = &cobra.Command{
 			}
 		}
 
-		if err := os.RemoveAll("./docs-next/src/content/docs/cli/commands"); err != nil {
+		if err := os.RemoveAll("./site/src/content/docs/cli/commands"); err != nil {
 			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
 		}
-		if err := os.Mkdir("./docs-next/src/content/docs/cli/commands", 0775); err != nil {
+		if err := os.Mkdir("./site/src/content/docs/cli/commands", 0775); err != nil {
 			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
 		}
 
@@ -139,7 +139,7 @@ description: Zarf CLI command reference for <code>%s</code>.
 			return "/cli/commands/" + link[:len(link)-3] + "/"
 		}
 
-		if err := doc.GenMarkdownTreeCustom(rootCmd, "./docs-next/src/content/docs/cli/commands", prependTitle, linkHandler); err != nil {
+		if err := doc.GenMarkdownTreeCustom(rootCmd, "./site/src/content/docs/cli/commands", prependTitle, linkHandler); err != nil {
 			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
 		} else {
 			message.Success(lang.CmdInternalGenerateCliDocsSuccess)
