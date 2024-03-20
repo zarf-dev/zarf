@@ -32,7 +32,9 @@ func TestDataInjection(t *testing.T) {
 	}
 
 	// Verify the file and injection marker were created
-	stdOut, stdErr, err := e2e.Kubectl("--namespace=kiwix", "logs", "--tail=5", "--selector=app=kiwix-serve", "-c=kiwix-serve")
+	runningKiwixPod, _, err := e2e.Kubectl("--namespace=kiwix", "get", "pods", "--selector=app=kiwix-serve", "--field-selector=status.phase=Running", "--output=jsonpath={.items[0].metadata.name}")
+	require.NoError(t, err)
+	stdOut, stdErr, err := e2e.Kubectl("--namespace=kiwix", "logs", runningKiwixPod, "--tail=5", "-c=kiwix-serve")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdOut, "devops.stackexchange.com_en_all_2023-05.zim")
 	require.Contains(t, stdOut, ".zarf-injection-")

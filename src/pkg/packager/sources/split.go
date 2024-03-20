@@ -15,7 +15,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -92,7 +92,7 @@ func (s *SplitTarballSource) Collect(dir string) (string, error) {
 		}
 	}
 
-	if err := utils.SHAsMatch(reassembled, pkgData.Sha256Sum); err != nil {
+	if err := helpers.SHAsMatch(reassembled, pkgData.Sha256Sum); err != nil {
 		return "", fmt.Errorf("package integrity check failed: %w", err)
 	}
 

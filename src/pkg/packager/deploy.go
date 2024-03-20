@@ -26,7 +26,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
@@ -55,7 +54,8 @@ func (p *Packager) Deploy() (err error) {
 		return err
 	}
 
-	sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
+	var sbomWarnings []string
+	p.sbomViewFiles, sbomWarnings, err = p.layout.SBOMs.StageSBOMViewFiles()
 	if err != nil {
 		return err
 	}
@@ -337,14 +337,14 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		spinner.Updatef("Loading %s", file.Target)
 
 		fileLocation := filepath.Join(pkgLocation, strconv.Itoa(fileIdx), filepath.Base(file.Target))
-		if utils.InvalidPath(fileLocation) {
+		if helpers.InvalidPath(fileLocation) {
 			fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx))
 		}
 
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			if err := utils.SHAsMatch(fileLocation, file.Shasum); err != nil {
+			if err := helpers.SHAsMatch(fileLocation, file.Shasum); err != nil {
 				return err
 			}
 		}
@@ -354,8 +354,8 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		file.Target = config.GetAbsHomePath(file.Target)
 
 		fileList := []string{}
-		if utils.IsDir(fileLocation) {
-			files, _ := utils.RecursiveFileList(fileLocation, nil, false)
+		if helpers.IsDir(fileLocation) {
+			files, _ := helpers.RecursiveFileList(fileLocation, nil, false)
 			fileList = append(fileList, files...)
 		} else {
 			fileList = append(fileList, fileLocation)
@@ -363,7 +363,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 
 		for _, subFile := range fileList {
 			// Check if the file looks like a text file
-			isText, err := utils.IsTextFile(subFile)
+			isText, err := helpers.IsTextFile(subFile)
 			if err != nil {
 				message.Debugf("unable to determine if file %s is a text file: %s", subFile, err)
 			}
@@ -379,7 +379,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
-		err := utils.CreatePathAndCopy(fileLocation, file.Target)
+		err := helpers.CreatePathAndCopy(fileLocation, file.Target)
 		if err != nil {
 			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
 		}
@@ -390,7 +390,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 			// Try to remove the filepath if it exists
 			_ = os.RemoveAll(link)
 			// Make sure the parent directory exists
-			_ = utils.CreateParentDirectory(link)
+			_ = helpers.CreateParentDirectory(link)
 			// Create the symlink
 			err := os.Symlink(file.Target, link)
 			if err != nil {
@@ -573,10 +573,10 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
-			if utils.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
+			if helpers.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
 				// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
 				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
-				if utils.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
+				if helpers.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
 					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
 				}
 			}
