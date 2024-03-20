@@ -272,9 +272,3 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 
 	return nil
 }
-
-func (p *Packager) AddWarnings(warnings *message.Warnings) {
-	if warnings != nil {
-		p.warnings.Add(warnings.GetMessages()...)
-	}
-}

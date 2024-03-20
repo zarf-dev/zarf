@@ -16,7 +16,7 @@ func (w *Warnings) Add(messages ...string) {
 	w.messages = append(w.messages, messages...)
 }
 
-func (w *Warnings) HasWarnings() bool {
+func (w *Warnings) HasMessages() bool {
 	return len(w.messages) > 0
 }
 

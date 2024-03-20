@@ -22,19 +22,15 @@ func (p *Packager) Mirror() (err error) {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	pkg, readWarnings, err := p.layout.ReadZarfYAML(p.layout.ZarfYAML)
+	p.cfg.Pkg, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML, p.warnings)
 	if err != nil {
 		return err
 	}
-	p.cfg.Pkg = pkg
-	p.AddWarnings(readWarnings)
 
-	sbomViewFiles, sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
+	p.sbomViewFiles, err = p.layout.SBOMs.StageSBOMViewFiles(p.warnings)
 	if err != nil {
 		return err
 	}
-	p.sbomViewFiles = sbomViewFiles
-	p.AddWarnings(sbomWarnings)
 
 	// Confirm the overall package mirror
 	if !p.confirmAction(config.ZarfMirrorStage) {

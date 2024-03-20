@@ -257,19 +257,16 @@ func (ic *ImportChain) String() string {
 }
 
 // Migrate performs migrations on the import chain
-func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings *message.Warnings) {
+func (ic *ImportChain) Migrate(build types.ZarfBuildData, warnings *message.Warnings) {
 	node := ic.head
-	warnings = message.NewWarnings()
 	for node != nil {
-		migrated, w := deprecated.MigrateComponent(build, node.ZarfComponent)
+		migrated := deprecated.MigrateComponent(build, node.ZarfComponent, warnings)
 		node.ZarfComponent = migrated
-		warnings.Add(w.GetMessages()...)
 		node = node.next
 	}
-	if warnings.HasWarnings() {
+	if warnings.HasMessages() {
 		warnings.Add(fmt.Sprintf("migrations were performed on the import chain of: %q", ic.head.Name))
 	}
-	return warnings
 }
 
 // Compose merges the import chain into a single component

@@ -40,7 +40,7 @@ func (p *Packager) Remove() (err error) {
 		return err
 	}
 
-	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML)
+	p.cfg.Pkg, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML, p.warnings)
 	if err != nil {
 		return err
 	}

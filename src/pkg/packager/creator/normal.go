@@ -59,34 +59,30 @@ func NewPackageCreator(createOpts types.ZarfCreateOptions, cfg *types.PackagerCo
 }
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
-func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg types.ZarfPackage, warnings *message.Warnings, err error) {
-	warnings = message.NewWarnings()
-
-	pkg, readWarnings, err := dst.ReadZarfYAML(layout.ZarfYAML)
+func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths, warnings *message.Warnings) (pkg types.ZarfPackage, err error) {
+	pkg, err = dst.ReadZarfYAML(layout.ZarfYAML, warnings)
 	if err != nil {
-		return types.ZarfPackage{}, nil, err
+		return types.ZarfPackage{}, err
 	}
+
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-	warnings.Add(readWarnings.GetMessages()...)
 
 	// Compose components into a single zarf.yaml file
-	pkg, composeWarnings, err := ComposeComponents(pkg, pc.createOpts.Flavor)
+	pkg, err = ComposeComponents(pkg, pc.createOpts.Flavor, warnings)
 	if err != nil {
-		return types.ZarfPackage{}, nil, err
+		return types.ZarfPackage{}, err
 	}
-	warnings.Add(composeWarnings.GetMessages()...)
 
 	// After components are composed, template the active package.
-	pkg, templateWarnings, err := FillActiveTemplate(pkg, pc.createOpts.SetVariables)
+	pkg, err = FillActiveTemplate(pkg, pc.createOpts.SetVariables, warnings)
 	if err != nil {
-		return types.ZarfPackage{}, nil, fmt.Errorf("unable to fill values in template: %w", err)
+		return types.ZarfPackage{}, fmt.Errorf("unable to fill values in template: %w", err)
 	}
-	warnings.Add(templateWarnings.GetMessages()...)
 
 	// After templates are filled process any create extensions
 	pkg.Components, err = pc.processExtensions(pkg.Components, dst, pkg.Metadata.YOLO)
 	if err != nil {
-		return types.ZarfPackage{}, nil, err
+		return types.ZarfPackage{}, err
 	}
 
 	// If we are creating a differential package, remove duplicate images and repos.
@@ -95,28 +91,28 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg t
 
 		diffData, err := loadDifferentialData(pc.createOpts.DifferentialPackagePath)
 		if err != nil {
-			return types.ZarfPackage{}, nil, err
+			return types.ZarfPackage{}, err
 		}
 
 		pkg.Build.DifferentialPackageVersion = diffData.DifferentialPackageVersion
 
 		versionsMatch := diffData.DifferentialPackageVersion == pkg.Metadata.Version
 		if versionsMatch {
-			return types.ZarfPackage{}, nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
+			return types.ZarfPackage{}, errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
 
 		noVersionSet := diffData.DifferentialPackageVersion == "" || pkg.Metadata.Version == ""
 		if noVersionSet {
-			return types.ZarfPackage{}, nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
+			return types.ZarfPackage{}, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
 
 		pkg.Components, err = removeCopiesFromComponents(pkg.Components, diffData)
 		if err != nil {
-			return types.ZarfPackage{}, nil, err
+			return types.ZarfPackage{}, err
 		}
 	}
 
-	return pkg, warnings, nil
+	return pkg, nil
 }
 
 // Assemble assembles all of the package assets into Zarf's tmp directory layout.

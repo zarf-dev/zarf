@@ -53,7 +53,7 @@ func (p *Packager) Publish() (err error) {
 
 		sc := creator.NewSkeletonCreator(p.cfg.CreateOpts, p.cfg.PublishOpts)
 
-		p.cfg.Pkg, p.warnings, err = sc.LoadPackageDefinition(p.layout)
+		p.cfg.Pkg, err = sc.LoadPackageDefinition(p.layout, p.warnings)
 		if err != nil {
 			return err
 		}
@@ -70,7 +70,7 @@ func (p *Packager) Publish() (err error) {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
 
-		p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML)
+		p.cfg.Pkg, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML, p.warnings)
 		if err != nil {
 			return err
 		}

@@ -56,7 +56,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 	c := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
 
-	p.cfg.Pkg, p.warnings, err = c.LoadPackageDefinition(p.layout)
+	p.cfg.Pkg, err = c.LoadPackageDefinition(p.layout, p.warnings)
 	if err != nil {
 		return nil, err
 	}
