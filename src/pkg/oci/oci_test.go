@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
@@ -57,6 +58,7 @@ func (suite *OCISuite) setupInMemoryRegistry(ctx context.Context) string {
 	return fmt.Sprintf("oci://localhost:%d/package:1.0.1", port)
 }
 
+// This runs before each test, starting each test with a new, empty registry
 func (suite *OCISuite) SetupTest() {
 	ctx := context.TODO()
 	registry := suite.setupInMemoryRegistry(ctx)
@@ -69,7 +71,6 @@ func (suite *OCISuite) SetupTest() {
 	handler := slog.NewJSONHandler(os.Stdout, opts)
 	logger := slog.New(handler)
 	suite.remote, err = NewOrasRemote(registry, platform, WithPlainHTTP(true), WithLogger(logger))
-
 	suite.NoError(err)
 }
 
@@ -102,7 +103,6 @@ func (suite *OCISuite) publishPackage(src *file.Store, descs []ocispec.Descripto
 }
 
 func (suite *OCISuite) TestCopyToTarget() {
-	suite.T().Log("")
 	ctx := context.TODO()
 
 	srcTempDir := suite.T().TempDir()
@@ -111,7 +111,7 @@ func (suite *OCISuite) TestCopyToTarget() {
 	ociFileName := "this-file-is-in-a-oci-file-store"
 
 	regularFilePath := filepath.Join(srcTempDir, regularFileName)
-	os.WriteFile(regularFilePath, []byte(fileContents), 0644)
+	os.WriteFile(regularFilePath, []byte(fileContents), helpers.ReadWriteUser)
 	src, err := file.New(srcTempDir)
 	suite.NoError(err)
 
@@ -126,9 +126,6 @@ func (suite *OCISuite) TestCopyToTarget() {
 	dst, err := file.New(otherTempDir)
 	suite.NoError(err)
 
-	suite.NoError(err)
-
-	suite.NoError(err)
 	err = suite.remote.CopyToTarget(ctx, descs, dst, suite.remote.GetDefaultCopyOpts())
 	suite.NoError(err)
 
@@ -142,7 +139,7 @@ func (suite *OCISuite) TestCopyToTarget() {
 func (suite *OCISuite) TestPulledPaths() {
 	ctx := context.TODO()
 	srcTempDir := suite.T().TempDir()
-	files := []string{"firstFilePulled", "secondFilePulled"}
+	files := []string{"firstFile", "secondFile"}
 
 	var descs []ocispec.Descriptor
 	src, err := file.New(srcTempDir)
@@ -213,7 +210,7 @@ func (suite *OCISuite) TestCopy() {
 	suite.T().Log("Testing copying between OCI remotes")
 	ctx := context.TODO()
 	srcTempDir := suite.T().TempDir()
-	files := []string{"firstFileCopied", "secondFileCopied"}
+	files := []string{"firstFile", "secondFile"}
 
 	fileContents := "here's what I'm putting in each file"
 
@@ -222,23 +219,13 @@ func (suite *OCISuite) TestCopy() {
 	suite.NoError(err)
 	for _, file := range files {
 		path := filepath.Join(srcTempDir, file)
-		os.WriteFile(path, []byte(fileContents), 0600)
+		os.WriteFile(path, []byte(fileContents), helpers.ReadWriteUser)
 		desc, err := src.Add(ctx, file, ocispec.MediaTypeImageLayer, path)
 		suite.NoError(err)
 		descs = append(descs, desc)
 	}
 
 	suite.publishPackage(src, descs)
-
-	otherSrc, err := file.New(srcTempDir)
-	suite.NoError(err)
-	for _, file := range files {
-		path := filepath.Join(srcTempDir, file)
-		os.Create(path)
-		desc, err := otherSrc.Add(ctx, file, ocispec.MediaTypeEmptyJSON, path)
-		suite.NoError(err)
-		descs = append(descs, desc)
-	}
 
 	dstRegistryURL := suite.setupInMemoryRegistry(ctx)
 	dstRemote, err := NewOrasRemote(dstRegistryURL, PlatformForArch(testArch), WithPlainHTTP(true))
