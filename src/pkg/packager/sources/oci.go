@@ -20,7 +20,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var (
@@ -37,26 +36,21 @@ type OCISource struct {
 // LoadPackage loads a package from an OCI registry.
 func (s *OCISource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	ctx := context.TODO()
-	layersToPull := []ocispec.Descriptor{}
 
 	message.Debugf("Loading package from %q", s.PackageSource)
 
-	// pull only needed layers if --confirm is set
-	if config.CommonOptions.Confirm {
-		pkg, err = s.FetchZarfYAML(ctx)
-		if err != nil {
-			return pkg, nil, err
-		}
-		if filter != nil {
-			pkg.Components, err = filter.Apply(pkg)
-			if err != nil {
-				return pkg, nil, err
-			}
-		}
-		layersToPull, err = s.LayersFromRequestedComponents(ctx, pkg.Components)
-		if err != nil {
-			return pkg, nil, fmt.Errorf("unable to get published component image layers: %s", err.Error())
-		}
+	pkg, err = s.FetchZarfYAML(ctx)
+	if err != nil {
+		return pkg, nil, err
+	}
+	pkg.Components, err = filter.Apply(pkg)
+	if err != nil {
+		return pkg, nil, err
+	}
+
+	layersToPull, err := s.LayersFromRequestedComponents(ctx, pkg.Components)
+	if err != nil {
+		return pkg, nil, fmt.Errorf("unable to get published component image layers: %s", err.Error())
 	}
 
 	isPartial := true
@@ -73,19 +67,6 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, filter filters.Compone
 		return pkg, nil, fmt.Errorf("unable to pull the package: %w", err)
 	}
 	dst.SetFromLayers(layersFetched)
-
-	// if --confirm is not set, read the zarf.yaml that was pulled
-	// and apply the filter to the components
-	if !config.CommonOptions.Confirm {
-		pkg, warnings, err = dst.ReadZarfYAML()
-		if err != nil {
-			return pkg, nil, err
-		}
-		pkg.Components, err = filter.Apply(pkg)
-		if err != nil {
-			return pkg, nil, err
-		}
-	}
 
 	if err := dst.MigrateLegacy(); err != nil {
 		return pkg, nil, err

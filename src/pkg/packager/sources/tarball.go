@@ -86,12 +86,9 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, filter filters.Com
 	if err != nil {
 		return pkg, nil, err
 	}
-	if filter != nil {
-		spinner.Stop()
-		pkg.Components, err = filter.Apply(pkg)
-		if err != nil {
-			return pkg, nil, err
-		}
+	pkg.Components, err = filter.Apply(pkg)
+	if err != nil {
+		return pkg, nil, err
 	}
 
 	if err := dst.MigrateLegacy(); err != nil {

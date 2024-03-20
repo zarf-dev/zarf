@@ -44,14 +44,29 @@ func (p *Packager) resetRegistryHPA() {
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
 
-	filter := filters.Combine(
+	isInteractive := !config.CommonOptions.Confirm
+
+	deployFilter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm),
+		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, isInteractive),
 	)
 
-	p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, true)
-	if err != nil {
-		return fmt.Errorf("unable to load the package: %w", err)
+	if isInteractive {
+		filter := filters.Empty()
+
+		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, true)
+		if err != nil {
+			return fmt.Errorf("unable to load the package: %w", err)
+		}
+	} else {
+		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, deployFilter, true)
+		if err != nil {
+			return fmt.Errorf("unable to load the package: %w", err)
+		}
+
+		if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
+			return err
+		}
 	}
 
 	if err := p.validateLastNonBreakingVersion(); err != nil {
@@ -71,9 +86,16 @@ func (p *Packager) Deploy() (err error) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
-	// Set variables and prompt if --confirm is not set
-	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
-		return err
+	if isInteractive {
+		p.cfg.Pkg.Components, err = deployFilter.Apply(p.cfg.Pkg)
+		if err != nil {
+			return err
+		}
+
+		// Set variables and prompt if --confirm is not set
+		if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
+			return err
+		}
 	}
 
 	p.hpaModified = false

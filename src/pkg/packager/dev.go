@@ -58,6 +58,10 @@ func (p *Packager) DevDeploy() error {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 
+	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
+		return err
+	}
+
 	// If building in yolo mode, strip out all images and repos
 	if !p.cfg.CreateOpts.NoYOLO {
 		for idx := range p.cfg.Pkg.Components {
@@ -71,11 +75,6 @@ func (p *Packager) DevDeploy() error {
 	}
 
 	message.HeaderInfof("📦 PACKAGE DEPLOY %s", p.cfg.Pkg.Metadata.Name)
-
-	// Set variables and prompt if --confirm is not set
-	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
-		return err
-	}
 
 	p.connectStrings = make(types.ConnectStrings)
 
