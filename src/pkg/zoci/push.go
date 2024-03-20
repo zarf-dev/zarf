@@ -65,6 +65,7 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 		return err
 	}
 
+	// The manifest config desc is pushed to the remote before copy while the root is not so we add root to the total
 	total += root.Size
 
 	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", r.Repo().Reference.Repository, r.Repo().Reference.Reference))
