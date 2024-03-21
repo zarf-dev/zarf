@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -40,6 +41,21 @@ const (
 	testArch = "fake-test-arch"
 )
 
+func checkHealth(url string, maxRetries int, retryInterval time.Duration) error {
+	endpoint := fmt.Sprintf("http://%s/v2", url)
+	for i := 0; i < maxRetries; i++ {
+		resp, err := http.Get(endpoint)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			return nil
+		}
+		if resp != nil {
+			resp.Body.Close()
+		}
+		time.Sleep(retryInterval)
+	}
+	return fmt.Errorf("service did not become ready at %s", endpoint)
+}
+
 func (suite *OCISuite) setupInMemoryRegistry(ctx context.Context) string {
 	port, err := freeport.GetFreePort()
 	suite.NoError(err)
@@ -54,8 +70,14 @@ func (suite *OCISuite) setupInMemoryRegistry(ctx context.Context) string {
 	suite.NoError(err)
 
 	go ref.ListenAndServe()
+	url := fmt.Sprintf("localhost:%d", port)
+	err = checkHealth(url, 3, 100*time.Millisecond)
+	if err != nil {
+		// Occasionally the registry doesn't stand up properly which causes a test flake, if that happens we just start another registry
+		suite.setupInMemoryRegistry(ctx)
+	}
 
-	return fmt.Sprintf("oci://localhost:%d/package:1.0.1", port)
+	return fmt.Sprintf("oci://%s/package:1.0.1", url)
 }
 
 // This runs before each test, starting each test with a new, empty registry
