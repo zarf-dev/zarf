@@ -3,11 +3,13 @@
 This folder contains packages maintained by the [Zarf team](https://github.com/defenseunicorns/zarf/graphs/contributors).  Some of these packages are used by `zarf init` for new cluster initialization.
 
 **Packages**
-- [distros](#distros)
-- [gitea](#gitea)
-- [logging-pgl](#logging-pgl)
-- [zarf-agent](#zarf-agent)
-- [zarf-registry](#zarf-registry)
+- [Zarf Packages](#zarf-packages)
+    - [Distros](#distros)
+      - [Usage Examples](#usage-examples)
+    - [Gitea](#gitea)
+    - [Logging PGL](#logging-pgl)
+    - [Zarf Agent](#zarf-agent)
+    - [Zarf Registry](#zarf-registry)
 
 ### Distros
 
@@ -27,7 +29,7 @@ The distros package adds optional capabilities for spinning up and tearing down 
 ```bash
 zarf package create packages/distros/eks -o build --confirm
 
-zarf package deploy build/zarf-package-distro-eks-multi-x.x.x.tar.zst --components=deploy-eks-cluster --set=CLUSTER_NAME='zarf-nightly-eks-e2e-test',INSTANCE_TYPE='t3.medium' --confirm
+zarf package deploy build/zarf-package-distro-eks-amd64-x.x.x.tar.zst --components=deploy-eks-cluster --set=CLUSTER_NAME='zarf-nightly-eks-e2e-test',INSTANCE_TYPE='t3.medium' --confirm
 ```
 
 See the [nightly-eks test](../.github/workflows/nightly-eks.yml) for another example.

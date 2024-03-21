@@ -12,6 +12,11 @@ import (
 	"time"
 )
 
+// BoolPtr returns a pointer to a bool.
+func BoolPtr(b bool) *bool {
+	return &b
+}
+
 // Retry will retry a function until it succeeds or the timeout is reached. timeout == 2^attempt * delay.
 func Retry(fn func() error, retries int, delay time.Duration, logger func(format string, args ...any)) error {
 	var err error

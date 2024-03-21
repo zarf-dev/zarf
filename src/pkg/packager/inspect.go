@@ -13,11 +13,7 @@ import (
 func (p *Packager) Inspect() (err error) {
 	wantSBOM := p.cfg.InspectOpts.ViewSBOM || p.cfg.InspectOpts.SBOMOutputDir != ""
 
-	if err = p.source.LoadPackageMetadata(p.layout, wantSBOM, true); err != nil {
-		return err
-	}
-
-	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML)
+	p.cfg.Pkg, p.warnings, err = p.source.LoadPackageMetadata(p.layout, wantSBOM, true)
 	if err != nil {
 		return err
 	}

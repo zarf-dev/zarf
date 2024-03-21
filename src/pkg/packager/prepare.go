@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
@@ -55,6 +56,10 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
 	c := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
+
+	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+		return nil, err
+	}
 
 	p.cfg.Pkg, p.warnings, err = c.LoadPackageDefinition(p.layout)
 	if err != nil {

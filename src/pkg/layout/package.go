@@ -59,9 +59,9 @@ func New(baseDir string) *PackagePaths {
 
 // ReadZarfYAML reads a zarf.yaml file into memory,
 // checks if it's using the legacy layout, and migrates deprecated component configs.
-func (pp *PackagePaths) ReadZarfYAML(path string) (pkg types.ZarfPackage, warnings []string, err error) {
-	if err := utils.ReadYaml(path, &pkg); err != nil {
-		return types.ZarfPackage{}, nil, fmt.Errorf("unable to read zarf.yaml file")
+func (pp *PackagePaths) ReadZarfYAML() (pkg types.ZarfPackage, warnings []string, err error) {
+	if err := utils.ReadYaml(pp.ZarfYAML, &pkg); err != nil {
+		return types.ZarfPackage{}, nil, fmt.Errorf("unable to read zarf.yaml: %w", err)
 	}
 
 	if pp.IsLegacyLayout() {
@@ -169,12 +169,19 @@ func (pp *PackagePaths) IsLegacyLayout() bool {
 }
 
 // SignPackage signs the zarf.yaml in a Zarf package.
-func (pp *PackagePaths) SignPackage(signingKeyPath, signingKeyPassword string) error {
+func (pp *PackagePaths) SignPackage(signingKeyPath, signingKeyPassword string, isInteractive bool) error {
+	if signingKeyPath == "" {
+		return nil
+	}
+
 	pp.Signature = filepath.Join(pp.Base, Signature)
 
 	passwordFunc := func(_ bool) ([]byte, error) {
 		if signingKeyPassword != "" {
 			return []byte(signingKeyPassword), nil
+		}
+		if !isInteractive {
+			return nil, nil
 		}
 		return interactive.PromptSigPassword()
 	}
