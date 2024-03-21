@@ -12,6 +12,8 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -49,16 +51,16 @@ func (s *URLSource) Collect(dir string) (string, error) {
 }
 
 // LoadPackage loads a package from an http, https or sget URL.
-func (s *URLSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (err error) {
+func (s *URLSource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool, warnings *message.Warnings) (pkg types.ZarfPackage, err error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return err
+		return pkg, err
 	}
 	defer os.Remove(tmp)
 
 	dstTarball, err := s.Collect(tmp)
 	if err != nil {
-		return err
+		return pkg, err
 	}
 
 	s.PackageSource = dstTarball
@@ -69,20 +71,20 @@ func (s *URLSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (er
 		s.ZarfPackageOptions,
 	}
 
-	return ts.LoadPackage(dst, unarchiveAll)
+	return ts.LoadPackage(dst, filter, unarchiveAll, warnings)
 }
 
 // LoadPackageMetadata loads a package's metadata from an http, https or sget URL.
-func (s *URLSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (err error) {
+func (s *URLSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool, warnings *message.Warnings) (pkg types.ZarfPackage, err error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return err
+		return pkg, err
 	}
 	defer os.Remove(tmp)
 
 	dstTarball, err := s.Collect(tmp)
 	if err != nil {
-		return err
+		return pkg, err
 	}
 
 	s.PackageSource = dstTarball
@@ -91,5 +93,5 @@ func (s *URLSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 		s.ZarfPackageOptions,
 	}
 
-	return ts.LoadPackageMetadata(dst, wantSBOM, skipValidation)
+	return ts.LoadPackageMetadata(dst, wantSBOM, skipValidation, warnings)
 }

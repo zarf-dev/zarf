@@ -60,7 +60,7 @@ func NewPackageCreator(createOpts types.ZarfCreateOptions, cfg *types.PackagerCo
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
 func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths, warnings *message.Warnings) (pkg types.ZarfPackage, err error) {
-	pkg, err = dst.ReadZarfYAML(layout.ZarfYAML, warnings)
+	pkg, err = dst.ReadZarfYAML(warnings)
 	if err != nil {
 		return types.ZarfPackage{}, err
 	}
@@ -89,7 +89,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths, warnin
 	if pc.createOpts.DifferentialPackagePath != "" {
 		pkg.Build.Differential = true
 
-		diffData, err := loadDifferentialData(pc.createOpts.DifferentialPackagePath)
+		diffData, err := loadDifferentialData(pc.createOpts.DifferentialPackagePath, warnings)
 		if err != nil {
 			return types.ZarfPackage{}, err
 		}
@@ -250,10 +250,8 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackag
 	}
 
 	// Sign the package if a key has been provided
-	if pc.createOpts.SigningKeyPath != "" {
-		if err := dst.SignPackage(pc.createOpts.SigningKeyPath, pc.createOpts.SigningKeyPassword); err != nil {
-			return err
-		}
+	if err := dst.SignPackage(pc.createOpts.SigningKeyPath, pc.createOpts.SigningKeyPassword, !config.CommonOptions.Confirm); err != nil {
+		return err
 	}
 
 	// Create a remote ref + client for the package (if output is OCI)

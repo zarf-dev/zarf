@@ -105,7 +105,7 @@ func (p *Packager) getPackageYAMLHints(stage string) map[string]string {
 
 	hints = utils.AddRootHint(hints, "metadata", "information about this package\n")
 	hints = utils.AddRootHint(hints, "build", "info about the machine, zarf version, and user that created this package\n")
-	hints = utils.AddRootHint(hints, "components", "definition of capabilities this package deploys")
+	hints = utils.AddRootHint(hints, "components", "components selected for this operation")
 	hints = utils.AddRootHint(hints, "constants", "static values set by the package author")
 	hints = utils.AddRootHint(hints, "variables", "deployment-specific values that are set on each package deployment")
 

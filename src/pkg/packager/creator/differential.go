@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -19,7 +20,7 @@ import (
 )
 
 // loadDifferentialData sets any images and repos from the existing reference package in the DifferentialData and returns it.
-func loadDifferentialData(diffPkgPath string) (diffData *types.DifferentialData, err error) {
+func loadDifferentialData(diffPkgPath string, warnings *message.Warnings) (diffData *types.DifferentialData, err error) {
 	tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -35,13 +36,9 @@ func loadDifferentialData(diffPkgPath string) (diffData *types.DifferentialData,
 		return nil, err
 	}
 
-	if err := src.LoadPackageMetadata(diffLayout, false, false); err != nil {
+	diffPkg, err := src.LoadPackageMetadata(diffLayout, false, false, warnings)
+	if err != nil {
 		return nil, err
-	}
-
-	var diffPkg types.ZarfPackage
-	if err := utils.ReadYaml(diffLayout.ZarfYAML, &diffPkg); err != nil {
-		return nil, fmt.Errorf("error reading the differential Zarf package: %w", err)
 	}
 
 	allIncludedImagesMap := map[string]bool{}

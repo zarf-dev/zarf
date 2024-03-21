@@ -221,8 +221,8 @@ func (p *Packager) attemptClusterChecks() (err error) {
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture() error {
-	// Ignore this check if the architecture is explicitly "multi", we don't have a cluster connection, or the package contains no images
-	if p.cfg.Pkg.Metadata.Architecture == "multi" || !p.isConnectedToCluster() || !p.hasImages() {
+	// Ignore this check if we don't have a cluster connection, or the package contains no images
+	if !p.isConnectedToCluster() || !p.hasImages() {
 		return nil
 	}
 

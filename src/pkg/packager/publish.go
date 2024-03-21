@@ -11,9 +11,11 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -53,6 +55,10 @@ func (p *Packager) Publish() (err error) {
 
 		sc := creator.NewSkeletonCreator(p.cfg.CreateOpts, p.cfg.PublishOpts)
 
+		if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+			return err
+		}
+
 		p.cfg.Pkg, err = sc.LoadPackageDefinition(p.layout, p.warnings)
 		if err != nil {
 			return err
@@ -66,20 +72,15 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 	} else {
-		if err := p.source.LoadPackage(p.layout, false); err != nil {
+		filter := filters.Empty()
+		p.cfg.Pkg, err = p.source.LoadPackage(p.layout, filter, false, p.warnings)
+		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
 
-		p.cfg.Pkg, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML, p.warnings)
-		if err != nil {
-			return err
-		}
-
 		// Sign the package if a key has been provided
-		if p.cfg.PublishOpts.SigningKeyPath != "" {
-			if err := p.layout.SignPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword); err != nil {
-				return err
-			}
+		if err := p.layout.SignPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword, !config.CommonOptions.Confirm); err != nil {
+			return err
 		}
 	}
 

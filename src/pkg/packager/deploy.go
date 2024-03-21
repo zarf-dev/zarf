@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,6 +25,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -41,13 +43,30 @@ func (p *Packager) resetRegistryHPA() {
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
-	if err = p.source.LoadPackage(p.layout, true); err != nil {
-		return fmt.Errorf("unable to load the package: %w", err)
-	}
 
-	p.cfg.Pkg, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML, p.warnings)
-	if err != nil {
-		return err
+	isInteractive := !config.CommonOptions.Confirm
+
+	deployFilter := filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, isInteractive),
+	)
+
+	if isInteractive {
+		filter := filters.Empty()
+
+		p.cfg.Pkg, err = p.source.LoadPackage(p.layout, filter, true, p.warnings)
+		if err != nil {
+			return fmt.Errorf("unable to load the package: %w", err)
+		}
+	} else {
+		p.cfg.Pkg, err = p.source.LoadPackage(p.layout, deployFilter, true, p.warnings)
+		if err != nil {
+			return fmt.Errorf("unable to load the package: %w", err)
+		}
+
+		if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
+			return err
+		}
 	}
 
 	if err := p.validateLastNonBreakingVersion(); err != nil {
@@ -64,18 +83,22 @@ func (p *Packager) Deploy() (err error) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
-	// Set variables and prompt if --confirm is not set
-	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
-		return err
+	if isInteractive {
+		p.cfg.Pkg.Components, err = deployFilter.Apply(p.cfg.Pkg)
+		if err != nil {
+			return err
+		}
+
+		// Set variables and prompt if --confirm is not set
+		if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
+			return err
+		}
 	}
 
 	p.hpaModified = false
 	p.connectStrings = make(types.ConnectStrings)
 	// Reset registry HPA scale down whether an error occurs or not
 	defer p.resetRegistryHPA()
-
-	// Filter out components that are not compatible with this system
-	p.filterComponents()
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
@@ -96,8 +119,6 @@ func (p *Packager) Deploy() (err error) {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	componentsToDeploy := p.getSelectedComponents()
-
 	// Generate a value template
 	if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
 		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
@@ -109,7 +130,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 	}
 
 	// Process all the components we are deploying
-	for _, component := range componentsToDeploy {
+	for _, component := range p.cfg.Pkg.Components {
 
 		deployedComponent := types.DeployedComponent{
 			Name:               component.Name,
@@ -118,7 +139,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		}
 
 		// If this component requires a cluster, connect to one
-		if requiresCluster(component) {
+		if component.RequiresCluster() {
 			timeout := cluster.DefaultTimeout
 			if p.cfg.Pkg.IsInitConfig() {
 				timeout = 5 * time.Minute
@@ -209,7 +230,7 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	}
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
-	if requiresCluster(component) && p.cfg.State == nil {
+	if component.RequiresCluster() && p.cfg.State == nil {
 		err = p.cluster.InitZarfState(p.cfg.InitOpts)
 		if err != nil {
 			return charts, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -263,7 +284,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	onDeploy := component.Actions.OnDeploy
 
-	if !p.valueTemplate.Ready() && requiresCluster(component) {
+	if !p.valueTemplate.Ready() && component.RequiresCluster() {
 		// Setup the state in the config and get the valuesTemplate
 		p.valueTemplate, err = p.setupStateValuesTemplate()
 		if err != nil {

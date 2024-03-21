@@ -36,17 +36,17 @@ type Node struct {
 	next *Node
 }
 
-// GetIndex returns the .components index location for this node's source `zarf.yaml`
-func (n *Node) GetIndex() int {
+// Index returns the .components index location for this node's source `zarf.yaml`
+func (n *Node) Index() int {
 	return n.index
 }
 
-// GetOriginalPackageName returns the .metadata.name of the zarf package the component originated from
-func (n *Node) GetOriginalPackageName() string {
+// OriginalPackageName returns the .metadata.name for this node's source `zarf.yaml`
+func (n *Node) OriginalPackageName() string {
 	return n.originalPackageName
 }
 
-// ImportLocation gets the path from the base zarf file to the imported zarf file
+// ImportLocation gets the path from the base `zarf.yaml` to the imported `zarf.yaml`
 func (n *Node) ImportLocation() string {
 	if n.prev != nil {
 		if n.prev.ZarfComponent.Import.URL != "" {
