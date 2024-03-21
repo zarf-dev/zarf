@@ -639,14 +639,6 @@ const (
 	PkgCreateErrDifferentialNoVersion   = "unable to create differential package. Please ensure both package versions are set"
 )
 
-// Package deploy
-const (
-	PkgDeployErrMultipleComponentsSameGroup        = "You cannot specify multiple components (%q, %q) within the same group (%q) when using the --components flag."
-	PkgDeployErrNoDefaultOrSelection               = "You must make a selection from %q with the --components flag as there is no default in their group."
-	PkgDeployErrNoCompatibleComponentsForSelection = "No compatible components found that matched %q. Please check spelling and try again."
-	PkgDeployErrComponentSelectionCanceled         = "Component selection canceled: %s"
-)
-
 // Package validate
 const (
 	PkgValidateTemplateDeprecation        = "Package template %q is using the deprecated syntax ###ZARF_PKG_VAR_%s###. This will be removed in Zarf v1.0.0. Please update to ###ZARF_PKG_TMPL_%s###."
@@ -663,6 +655,7 @@ const (
 	PkgValidateErrChartURLOrPath          = "chart %q must have either a url or localPath"
 	PkgValidateErrChartVersion            = "chart %q must include a chart version"
 	PkgValidateErrComponentName           = "component name %q must be all lowercase and contain no special characters except '-' and cannot start with a '-'"
+	PkgValidateErrComponentLocalOS        = "component %q contains a localOS value that is not supported: %s (supported: %s)"
 	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
 	PkgValidateErrComponent               = "invalid component %q: %w"
 	PkgValidateErrComponentReqDefault     = "component %q cannot be both required and default"

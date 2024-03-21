@@ -52,12 +52,14 @@ const (
 	ZarfGitServerSecretName = "private-git-server"
 
 	ZarfLoggingUser = "zarf-admin"
+
+	UnsetCLIVersion = "unset-development-only"
 )
 
 // Zarf Global Configuration Variables.
 var (
 	// CLIVersion track the version of the CLI
-	CLIVersion = "unset"
+	CLIVersion = UnsetCLIVersion
 
 	// ActionsUseSystemZarf sets whether to use Zarf from the system path if Zarf is being used as a library
 	ActionsUseSystemZarf = false
@@ -155,22 +157,6 @@ func GetCraneAuthOption(username string, secret string) crane.Option {
 			Username: username,
 			Password: secret,
 		}))
-}
-
-// GetValidPackageExtensions returns the valid package extensions.
-func GetValidPackageExtensions() [2]string {
-	return [...]string{".tar.zst", ".tar"}
-}
-
-// IsValidFileExtension returns true if the filename has a valid package extension.
-func IsValidFileExtension(filename string) bool {
-	for _, extension := range GetValidPackageExtensions() {
-		if strings.HasSuffix(filename, extension) {
-			return true
-		}
-	}
-
-	return false
 }
 
 // GetAbsCachePath gets the absolute cache path for images and git repos.
