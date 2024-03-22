@@ -30,7 +30,7 @@ Given the Syft CLI is vendored into Zarf you can run these commands with the Zar
 
 ```bash
 # Syft is vendored as `zarf tools sbom`
-$ zarf tools sbom packages file:path/to/yourproject/file -o json > my-sbom.json
+$ zarf tools sbom scan file:path/to/yourproject/file -o json > my-sbom.json
 ```
 
 :::
