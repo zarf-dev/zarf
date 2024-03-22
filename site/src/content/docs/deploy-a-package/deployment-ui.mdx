@@ -21,7 +21,7 @@ Follow these steps to get started using the Web UI
 2. Step two: (if applicable) Mark the file as executable with `chmod +x zarf-ui_v0.1.0-Darwin_arm64`
 3. Step three: Run the binary with `./zarf-ui_v0.1.0-Darwin_arm64` or by double clicking the file in your file browser
 
-![GIF showing the Web UI launched from the CLI terminal](../../../assets/dashboard/Web%20UI%20-%20Launch.gif)
+![GIF showing the Web UI launched from the CLI terminal](../../../assets/dashboard/web-ui-launch.gif)
 
 ## Using the Zarf Deployment Web UI
 
@@ -31,7 +31,7 @@ When Zarf UI is running it automatically searches for a Kubeconfig on the local 
 
 #### Cluster not Connected (Not Initialized)
 
-![Web UI shows orange warning status and message "cluster not connected" on the cluster card](../.images/dashboard/Web%20UI%20-%20Cluster%20Not%20Connected.png)
+![Web UI shows orange warning status and message "cluster not connected" on the cluster card](../../../assets/dashboard/web-ui-cluster-not-connected.png)
 
 1. Shown when there is no Kubeconfig found on the machine.
 2. Shown when a Kubeconfig is found on the machine, but Zarf has not been deployed and set up in the cluster.
@@ -40,7 +40,7 @@ When Zarf UI is running it automatically searches for a Kubeconfig on the local 
 
 If Zarf finds a cluster in the Kubeconfig that has Zarf resources in it it will automatically connect to the cluster and display the cluster details on the Web UI.
 
-![Web UI shows cluster meta data in on the cluster card when a connected cluster is found](../.images/dashboard/Web%20UI%20-%20Status%20Cluster%20connected.png)
+![Web UI shows cluster meta data in on the cluster card when a connected cluster is found](../../../assets/dashboard/web-ui-cluster-connected.png)
 
 1. Shown when there is a Kubeconfig found on the machine with a default cluster that has Zarf resources in it.
 
@@ -97,7 +97,7 @@ Once a package is deployed into the cluster, the Web UI offers additional comman
 - Update: Use when you wish to update a package with a new version of the same package.
 - Remove: Use when you wish to remove a package and all of its resources from the cluster. This cannot be undone.
 
-![Web UI deployed packages table with a context menu showing additional package commands](../../../assets/dashboard/Web%20UI%20-%20package%20commands.png)
+![Web UI deployed packages table with a context menu showing additional package commands](../../../assets/dashboard/web-ui-package-commands.png)
 
 ## Technical Details
 
@@ -113,8 +113,8 @@ Use the Zarf Deployment UI to execute the existing Zarf CLI commands:
 - [Zarf Tools Sbom](../2-the-zarf-cli/100-cli-commands/zarf_tools_sbom.md)
 - [Zarf Connect](../2-the-zarf-cli/100-cli-commands/zarf_connect.md)
 
-:::info
+:::note
 
-All other zarf [CLI commands](../2-the-zarf-cli/index.md) will require interfacing with the CLI directly.
+All other zarf [CLI commands](/cli) will require interfacing with the CLI directly.
 
 :::

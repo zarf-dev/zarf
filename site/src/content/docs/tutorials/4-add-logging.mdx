@@ -23,7 +23,7 @@ Prior to this tutorial you'll want to have a working cluster with Zarf initializ
 - Perform the [Retro Arcade Tutorial](./3-deploy-a-retro-arcade.md).
 
 ## Youtube Tutorial
-[![Tutorial: Add Logging to an existing Zarf Cluster with Zarf Init](../.images/tutorials/logging_thumbnail.png)](https://youtu.be/FYkafs1idlQ "Add Logging to an existing Zarf Cluster with Zarf Init")
+[![Tutorial: Add Logging to an existing Zarf Cluster with Zarf Init](../../../assets/tutorials/logging_thumbnail.png)](https://youtu.be/FYkafs1idlQ "Add Logging to an existing Zarf Cluster with Zarf Init")
 
 ## Installing the Logging Component
 
@@ -71,7 +71,7 @@ To open Grafana you can use the `zarf connect logging` command.
 
 You'll be redirected the `/login` page where you have to sign in with the Grafana credentials you saved [in a previous step](#note-the-credentials).
 
-![zarf user logging into Loki](../.images/tutorials/logging_login.png)
+![zarf user logging into Loki](../../../assets/tutorials/logging_login.png)
 
 Once you've successfully logged in go to:
 
@@ -79,11 +79,11 @@ Once you've successfully logged in go to:
 2. Select `Loki` in the dropdown, and then
 3. Enter `{app="game"}` into the Log Browser query input field
 
-![zarf user typing {app='game'} into the Loki Log Browser](../.images/tutorials/logging_query.png)
+![zarf user typing {app='game'} into the Loki Log Browser](../../../assets/tutorials/logging_query.png)
 
 Submit that query and you'll get back a dump of all the game pod logs that Loki has collected.
 
-![Loki query results](../.images/tutorials/logging_logs.png)
+![Loki query results](../../../assets/tutorials/logging_logs.png)
 
 ## Removal
 
