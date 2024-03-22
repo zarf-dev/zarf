@@ -48,13 +48,15 @@ func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths, warni
 		return types.ZarfPackage{}, err
 	}
 
-	pkg.Metadata.Architecture = zoci.SkeletonArch
+	pkg.Metadata.Architecture = config.GetArch()
 
 	// Compose components into a single zarf.yaml file
 	pkg, err = ComposeComponents(pkg, sc.createOpts.Flavor, warnings)
 	if err != nil {
 		return types.ZarfPackage{}, err
 	}
+
+	pkg.Metadata.Architecture = zoci.SkeletonArch
 
 	pkg.Components, err = sc.processExtensions(pkg.Components, dst)
 	if err != nil {
