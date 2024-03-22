@@ -1,7 +1,7 @@
 ---
 import { Code } from "@astrojs/starlight/components";
 
-const { src, component, showLink = true } = Astro.props;
+const { src, component, /* showLink = true */ } = Astro.props;
 
 const text = (await src).default as string;
 
