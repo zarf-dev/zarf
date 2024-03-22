@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: longhorn
   description: Example package for Longhorn cloud native distributed block storage for Kubernetes
-  version: 1.4.0
+  version: 1.4.2
 components:
   - name: longhorn-environment-check
     required: true
@@ -11,9 +11,9 @@ components:
         target: environment_check.sh
         shasum: 4df400fa81e65e51d83db8ff8e4f513ddd32c124619bb36c94319e71ca4d0a4d
         executable: true
-      - source: https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+      - source: /home/austin/code/zarf/examples/longhorn/values.yaml
         target: jq
-        shasum: af986793a515d500ab2d35f8d2aecd656e764504b789b66d7e1a0b727a124c44
+        #shasum: af986793a515d500ab2d35f8d2aecd656e764504b789b66d7e1a0b727a124c44
         executable: true
     actions:
       # Run the Longhorn Environment Check on this cluster's nodes.
@@ -57,5 +57,5 @@ components:
       - longhornio/longhorn-instance-manager:v1.4.0
       - longhornio/longhorn-manager:v1.4.0
       - longhornio/longhorn-share-manager:v1.4.0
-      - longhornio/longhorn-ui:v1.4.0
+      - longhornio/longhorn-ui:v1.4.2
       - longhornio/support-bundle-kit:v0.0.17
