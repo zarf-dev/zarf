@@ -6,21 +6,13 @@ import Properties from "@components/SchemaItemProperties.astro";
 import ExampleYAML from "@components/ExampleYAML.astro";
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-:::note
-
-The following examples are not all-inclusive and are only meant to showcase the different types of resources that can be defined in a component. For a full list of fields and their options, please see the [component schema documentation](zarf-schema.md#components).
-
-:::
-
-## Overview
-
 The actual capabilities that Zarf Packages provided are defined within named components.
 
 These components define what dependencies they have along with a declarative definition of how they should be deployed.
 
 Each package can have as many components as the package creator wants but a package isn't anything without at least one component.
 
-Fully defined examples of components can be found in the [examples section](/../../../../../examples/) of the documentation.
+Fully defined examples of components can be found in the [examples section](/examples) of the documentation.
 
 ## Common Component Fields
 
@@ -36,7 +28,7 @@ There are certain fields that will be common across all component definitions. T
 
 <Properties item="ZarfComponent" include={["actions"]} />
 
-Component actions are explored in the [component actions documentation](7-component-actions.md).
+Component actions are explored in the [component actions documentation](/create-a-package/component-actions).
 
 ### Files
 
