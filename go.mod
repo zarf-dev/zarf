@@ -1,6 +1,8 @@
 module github.com/defenseunicorns/zarf
 
-go 1.21.6
+go 1.22.0
+
+toolchain go1.22.1
 
 // TODO (@AABRO): Pending merge into github.com/gojsonschema/gojsonschema (https://github.com/gojsonschema/gojsonschema/pull/5)
 replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
@@ -14,6 +16,7 @@ require (
 	github.com/anchore/clio v0.0.0-20240301210832-abcb7197da84
 	github.com/anchore/stereoscope v0.0.1
 	github.com/anchore/syft v0.100.0
+	github.com/defenseunicorns/pkg/helpers v0.0.1
 	github.com/derailed/k9s v0.31.7
 	github.com/distribution/reference v0.5.0
 	github.com/docker/cli v24.0.9+incompatible
@@ -29,8 +32,7 @@ require (
 	github.com/gosuri/uitable v0.0.4
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/moby/moby v24.0.9+incompatible
-	github.com/opencontainers/image-spec v1.1.0-rc6
-	github.com/otiai10/copy v1.14.0
+	github.com/opencontainers/image-spec v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.18.0
 	github.com/pterm/pterm v0.12.78
@@ -55,7 +57,7 @@ require (
 	k8s.io/component-base v0.29.1
 	k8s.io/klog/v2 v2.120.1
 	k8s.io/kubectl v0.29.1
-	oras.land/oras-go/v2 v2.4.0
+	oras.land/oras-go/v2 v2.5.0
 	sigs.k8s.io/kustomize/api v0.16.0
 	sigs.k8s.io/kustomize/kyaml v0.16.0
 	sigs.k8s.io/yaml v1.4.0
@@ -372,6 +374,7 @@ require (
 	github.com/opencontainers/selinux v1.11.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/openvex/go-vex v0.2.5 // indirect
+	github.com/otiai10/copy v1.14.0 // indirect
 	github.com/owenrumney/go-sarif v1.1.2-0.20231003122901-1000f5e05554 // indirect
 	github.com/package-url/packageurl-go v0.1.1 // indirect
 	github.com/pborman/indent v1.2.1 // indirect
