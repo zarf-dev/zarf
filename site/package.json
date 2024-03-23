@@ -3,10 +3,10 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "predev": "cp ../zarf.schema.json ./src/assets/zarf.schema.json",
+    "predev": "cp ../zarf.schema.json ./src/assets/zarf.schema.json && node src/hack/copy-examples.js",
     "dev": "astro dev",
     "start": "astro dev",
-    "prebuild": "cp ../zarf.schema.json ./src/assets/zarf.schema.json",
+    "prebuild": "cp ../zarf.schema.json ./src/assets/zarf.schema.json && node src/hack/copy-examples.js",
     "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro"
@@ -18,5 +18,8 @@
     "mermaid": "^10.9.0",
     "sharp": "^0.32.5",
     "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "yaml": "^2.4.1"
   }
 }

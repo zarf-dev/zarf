@@ -1,4 +1,4 @@
-import ExampleYAML from "@site/src/components/ExampleYAML";
+import ExampleYAML from "@components/ExampleYAML.astro";
 
 # Composable Packages
 
@@ -34,7 +34,7 @@ When merging components together Zarf will adopt the following strategies depend
 
 ## `zarf.yaml` {#zarf.yaml}
 
-:::info
+:::note
 
 To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
 
@@ -42,7 +42,7 @@ To view the example in its entirety, select the `Edit this page` link below the 
 
 <ExampleYAML src={require('./zarf.yaml')} showLink={false} />
 
-:::info
+:::note
 
 As you can see in the example, the `import` key can be combined with other keys to merge components together.  This can be done as many components deep as you wish and in the end will generate one main `zarf.yaml` file with all of the defined resources included.
 

@@ -60,6 +60,14 @@ var genCLIDocs = &cobra.Command{
 		// Don't include the datestamp in the output
 		rootCmd.DisableAutoGenTag = true
 
+		resetStringFlags := func(cmd *cobra.Command) {
+			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+				if flag.Value.Type() == "string" {
+					flag.DefValue = ""
+				}
+			})
+		}
+
 		for _, cmd := range rootCmd.Commands() {
 			if cmd.Use == "tools" {
 				for _, toolCmd := range cmd.Commands() {
@@ -77,33 +85,17 @@ var genCLIDocs = &cobra.Command{
 
 					// Remove the default values from all of the helm commands during the CLI command doc generation
 					if toolCmd.Use == "helm" || toolCmd.Use == "sbom" {
-						toolCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
-							if flag.Value.Type() == "string" {
-								flag.DefValue = ""
-							}
-						})
+						resetStringFlags(toolCmd)
 						for _, subCmd := range toolCmd.Commands() {
-							subCmd.Flags().VisitAll(func(flag *pflag.Flag) {
-								if flag.Value.Type() == "string" {
-									flag.DefValue = ""
-								}
-							})
+							resetStringFlags(subCmd)
 							for _, helmSubCmd := range subCmd.Commands() {
-								helmSubCmd.Flags().VisitAll(func(flag *pflag.Flag) {
-									if flag.Value.Type() == "string" {
-										flag.DefValue = ""
-									}
-								})
+								resetStringFlags(helmSubCmd)
 							}
 						}
 					}
 
 					if toolCmd.Use == "monitor" {
-						toolCmd.Flags().VisitAll(func(flag *pflag.Flag) {
-							if flag.Value.Type() == "string" {
-								flag.DefValue = ""
-							}
-						})
+						resetStringFlags(toolCmd)
 					}
 				}
 			}

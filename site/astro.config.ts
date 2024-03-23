@@ -3,14 +3,6 @@ import starlight from "@astrojs/starlight";
 
 // https://astro.build/config
 export default defineConfig({
-  vite: {
-    resolve: {
-      alias: {
-        "@examples": "../examples",
-        "@packages": "../packages",
-      },
-    },
-  },
   integrations: [
     starlight({
       title: "Zarf",
@@ -46,6 +38,11 @@ export default defineConfig({
         {
           label: "Deploy a Package",
           autogenerate: { directory: "deploy-a-package" },
+          collapsed: true,
+        },
+        {
+          label: "Examples",
+          autogenerate: { directory: "examples" },
           collapsed: true,
         },
         {

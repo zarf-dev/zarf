@@ -1,4 +1,4 @@
-import ExampleYAML from "@site/src/components/ExampleYAML";
+import ExampleYAML from "@components/ExampleYAML.astro";
 
 # Helm Charts
 
@@ -6,7 +6,7 @@ This example shows the many ways you can deploy Helm Charts with Zarf. To learn 
 
 ## `zarf.yaml` {#zarf.yaml}
 
-:::info
+:::note
 
 To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
 

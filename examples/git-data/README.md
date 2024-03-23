@@ -1,4 +1,4 @@
-import ExampleYAML from "@site/src/components/ExampleYAML";
+import ExampleYAML from "@components/ExampleYAML.astro";
 
 # Git Repositories
 
@@ -50,7 +50,7 @@ If you want to learn more about how Zarf works with GitOps, see the [podinfo-flu
 
 ## `zarf.yaml` {#zarf.yaml}
 
-:::info
+:::note
 
 To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
 

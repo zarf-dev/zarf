@@ -1,4 +1,4 @@
-import ExampleYAML from "@site/src/components/ExampleYAML";
+import ExampleYAML from "@components/ExampleYAML.astro";
 
 # Package Flavors
 
@@ -8,7 +8,7 @@ Given package flavors are built by specifying the `--flavor` flag on `zarf packa
 
 ## `zarf.yaml` {#zarf.yaml}
 
-:::info
+:::note
 
 To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
 

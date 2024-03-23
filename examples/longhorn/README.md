@@ -18,7 +18,7 @@ You do not need to use the values file and can remove it from the Zarf package c
 
 ## `zarf.yaml` {#zarf.yaml}
 
-:::info
+:::note
 
 To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
 
