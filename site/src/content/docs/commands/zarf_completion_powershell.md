@@ -1,6 +1,7 @@
 ---
 title: zarf completion powershell
 description: Zarf CLI command reference for <code>zarf completion powershell</code>.
+tableOfContents: false
 ---
 
 ## zarf completion powershell
@@ -45,5 +46,5 @@ zarf completion powershell [flags]
 
 ### SEE ALSO
 
-* [zarf completion](/cli/commands/zarf_completion/)	 - Generate the autocompletion script for the specified shell
+* [zarf completion](/commands/zarf_completion/)	 - Generate the autocompletion script for the specified shell
 

@@ -1,6 +1,7 @@
 ---
 title: zarf tools helm dependency build
 description: Zarf CLI command reference for <code>zarf tools helm dependency build</code>.
+tableOfContents: false
 ---
 
 ## zarf tools helm dependency build
@@ -56,5 +57,5 @@ zarf tools helm dependency build CHART [flags]
 
 ### SEE ALSO
 
-* [zarf tools helm dependency](/cli/commands/zarf_tools_helm_dependency/)	 - manage a chart's dependencies
+* [zarf tools helm dependency](/commands/zarf_tools_helm_dependency/)	 - manage a chart's dependencies
 

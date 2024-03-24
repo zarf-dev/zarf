@@ -1,6 +1,7 @@
 ---
 title: zarf tools helm repo index
 description: Zarf CLI command reference for <code>zarf tools helm repo index</code>.
+tableOfContents: false
 ---
 
 ## zarf tools helm repo index
@@ -55,5 +56,5 @@ zarf tools helm repo index [DIR] [flags]
 
 ### SEE ALSO
 
-* [zarf tools helm repo](/cli/commands/zarf_tools_helm_repo/)	 - add, list, remove, update, and index chart repositories
+* [zarf tools helm repo](/commands/zarf_tools_helm_repo/)	 - add, list, remove, update, and index chart repositories
 

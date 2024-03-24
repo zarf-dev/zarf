@@ -1,6 +1,7 @@
 ---
 title: zarf tools sbom
 description: Zarf CLI command reference for <code>zarf tools sbom</code>.
+tableOfContents: false
 ---
 
 ## zarf tools sbom
@@ -37,10 +38,10 @@ zarf tools sbom [flags]
 
 ### SEE ALSO
 
-* [zarf tools](/cli/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
-* [zarf tools sbom attest](/cli/commands/zarf_tools_sbom_attest/)	 - Generate an SBOM as an attestation for the given [SOURCE] container image
-* [zarf tools sbom convert](/cli/commands/zarf_tools_sbom_convert/)	 - Convert between SBOM formats
-* [zarf tools sbom login](/cli/commands/zarf_tools_sbom_login/)	 - Log in to a registry
-* [zarf tools sbom scan](/cli/commands/zarf_tools_sbom_scan/)	 - Generate an SBOM
-* [zarf tools sbom version](/cli/commands/zarf_tools_sbom_version/)	 - show version information
+* [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools sbom attest](/commands/zarf_tools_sbom_attest/)	 - Generate an SBOM as an attestation for the given [SOURCE] container image
+* [zarf tools sbom convert](/commands/zarf_tools_sbom_convert/)	 - Convert between SBOM formats
+* [zarf tools sbom login](/commands/zarf_tools_sbom_login/)	 - Log in to a registry
+* [zarf tools sbom scan](/commands/zarf_tools_sbom_scan/)	 - Generate an SBOM
+* [zarf tools sbom version](/commands/zarf_tools_sbom_version/)	 - show version information
 

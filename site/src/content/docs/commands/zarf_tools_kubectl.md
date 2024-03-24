@@ -1,6 +1,7 @@
 ---
 title: zarf tools kubectl
 description: Zarf CLI command reference for <code>zarf tools kubectl</code>.
+tableOfContents: false
 ---
 
 ## zarf tools kubectl
@@ -19,5 +20,5 @@ zarf tools kubectl [flags]
 
 ### SEE ALSO
 
-* [zarf tools](/cli/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
 

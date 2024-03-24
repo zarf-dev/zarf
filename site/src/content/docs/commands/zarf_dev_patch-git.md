@@ -1,6 +1,7 @@
 ---
 title: zarf dev patch-git
 description: Zarf CLI command reference for <code>zarf dev patch-git</code>.
+tableOfContents: false
 ---
 
 ## zarf dev patch-git
@@ -34,5 +35,5 @@ zarf dev patch-git HOST FILE [flags]
 
 ### SEE ALSO
 
-* [zarf dev](/cli/commands/zarf_dev/)	 - Commands useful for developing packages
+* [zarf dev](/commands/zarf_dev/)	 - Commands useful for developing packages
 

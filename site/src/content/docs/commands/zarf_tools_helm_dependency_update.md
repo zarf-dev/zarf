@@ -1,6 +1,7 @@
 ---
 title: zarf tools helm dependency update
 description: Zarf CLI command reference for <code>zarf tools helm dependency update</code>.
+tableOfContents: false
 ---
 
 ## zarf tools helm dependency update
@@ -60,5 +61,5 @@ zarf tools helm dependency update CHART [flags]
 
 ### SEE ALSO
 
-* [zarf tools helm dependency](/cli/commands/zarf_tools_helm_dependency/)	 - manage a chart's dependencies
+* [zarf tools helm dependency](/commands/zarf_tools_helm_dependency/)	 - manage a chart's dependencies
 

@@ -1,6 +1,7 @@
 ---
 title: zarf dev find-images
 description: Zarf CLI command reference for <code>zarf dev find-images</code>.
+tableOfContents: false
 ---
 
 ## zarf dev find-images
@@ -41,5 +42,5 @@ zarf dev find-images [ PACKAGE ] [flags]
 
 ### SEE ALSO
 
-* [zarf dev](/cli/commands/zarf_dev/)	 - Commands useful for developing packages
+* [zarf dev](/commands/zarf_dev/)	 - Commands useful for developing packages
 

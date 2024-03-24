@@ -1,6 +1,7 @@
 ---
 title: zarf dev deploy
 description: Zarf CLI command reference for <code>zarf dev deploy</code>.
+tableOfContents: false
 ---
 
 ## zarf dev deploy
@@ -42,5 +43,5 @@ zarf dev deploy [flags]
 
 ### SEE ALSO
 
-* [zarf dev](/cli/commands/zarf_dev/)	 - Commands useful for developing packages
+* [zarf dev](/commands/zarf_dev/)	 - Commands useful for developing packages
 

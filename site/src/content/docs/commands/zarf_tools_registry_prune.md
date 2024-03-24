@@ -1,6 +1,7 @@
 ---
 title: zarf tools registry prune
 description: Zarf CLI command reference for <code>zarf tools registry prune</code>.
+tableOfContents: false
 ---
 
 ## zarf tools registry prune
@@ -29,5 +30,5 @@ zarf tools registry prune [flags]
 
 ### SEE ALSO
 
-* [zarf tools registry](/cli/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
+* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
 

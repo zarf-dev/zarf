@@ -1,6 +1,7 @@
 ---
 title: zarf tools gen-pki
 description: Zarf CLI command reference for <code>zarf tools gen-pki</code>.
+tableOfContents: false
 ---
 
 ## zarf tools gen-pki
@@ -33,5 +34,5 @@ zarf tools gen-pki HOST [flags]
 
 ### SEE ALSO
 
-* [zarf tools](/cli/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
 

@@ -1,6 +1,7 @@
 ---
 title: zarf tools registry pull
 description: Zarf CLI command reference for <code>zarf tools registry pull</code>.
+tableOfContents: false
 ---
 
 ## zarf tools registry pull
@@ -43,5 +44,5 @@ $ zarf tools registry pull reg.example.com/stefanprodan/podinfo:6.4.0 image.tar
 
 ### SEE ALSO
 
-* [zarf tools registry](/cli/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
+* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
 

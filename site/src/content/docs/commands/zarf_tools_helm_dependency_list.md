@@ -1,6 +1,7 @@
 ---
 title: zarf tools helm dependency list
 description: Zarf CLI command reference for <code>zarf tools helm dependency list</code>.
+tableOfContents: false
 ---
 
 ## zarf tools helm dependency list
@@ -52,5 +53,5 @@ zarf tools helm dependency list CHART [flags]
 
 ### SEE ALSO
 
-* [zarf tools helm dependency](/cli/commands/zarf_tools_helm_dependency/)	 - manage a chart's dependencies
+* [zarf tools helm dependency](/commands/zarf_tools_helm_dependency/)	 - manage a chart's dependencies
 

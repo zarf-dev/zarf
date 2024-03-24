@@ -1,6 +1,7 @@
 ---
 title: zarf tools wait-for
 description: Zarf CLI command reference for <code>zarf tools wait-for</code>.
+tableOfContents: false
 ---
 
 ## zarf tools wait-for
@@ -53,5 +54,5 @@ $ zarf tools wait-for http google.com success                           #  wait 
 
 ### SEE ALSO
 
-* [zarf tools](/cli/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
 

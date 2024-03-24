@@ -1,6 +1,7 @@
 ---
 title: zarf package remove
 description: Zarf CLI command reference for <code>zarf package remove</code>.
+tableOfContents: false
 ---
 
 ## zarf package remove
@@ -36,5 +37,5 @@ zarf package remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm [flags]
 
 ### SEE ALSO
 
-* [zarf package](/cli/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf package](/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
 

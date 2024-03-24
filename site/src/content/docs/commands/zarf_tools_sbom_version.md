@@ -1,6 +1,7 @@
 ---
 title: zarf tools sbom version
 description: Zarf CLI command reference for <code>zarf tools sbom version</code>.
+tableOfContents: false
 ---
 
 ## zarf tools sbom version
@@ -28,5 +29,5 @@ zarf tools sbom version [flags]
 
 ### SEE ALSO
 
-* [zarf tools sbom](/cli/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
+* [zarf tools sbom](/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
 

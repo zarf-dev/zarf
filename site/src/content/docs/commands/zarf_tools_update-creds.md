@@ -1,6 +1,7 @@
 ---
 title: zarf tools update-creds
 description: Zarf CLI command reference for <code>zarf tools update-creds</code>.
+tableOfContents: false
 ---
 
 ## zarf tools update-creds
@@ -81,5 +82,5 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 
 ### SEE ALSO
 
-* [zarf tools](/cli/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
 

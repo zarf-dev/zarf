@@ -1,6 +1,7 @@
 ---
 title: zarf tools registry login
 description: Zarf CLI command reference for <code>zarf tools registry login</code>.
+tableOfContents: false
 ---
 
 ## zarf tools registry login
@@ -31,5 +32,5 @@ zarf tools registry login [OPTIONS] [SERVER] [flags]
 
 ### SEE ALSO
 
-* [zarf tools registry](/cli/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
+* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
 

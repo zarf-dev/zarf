@@ -1,6 +1,7 @@
 ---
 title: zarf completion bash
 description: Zarf CLI command reference for <code>zarf completion bash</code>.
+tableOfContents: false
 ---
 
 ## zarf completion bash
@@ -57,5 +58,5 @@ zarf completion bash
 
 ### SEE ALSO
 
-* [zarf completion](/cli/commands/zarf_completion/)	 - Generate the autocompletion script for the specified shell
+* [zarf completion](/commands/zarf_completion/)	 - Generate the autocompletion script for the specified shell
 

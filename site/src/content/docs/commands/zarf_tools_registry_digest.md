@@ -1,6 +1,7 @@
 ---
 title: zarf tools registry digest
 description: Zarf CLI command reference for <code>zarf tools registry digest</code>.
+tableOfContents: false
 ---
 
 ## zarf tools registry digest
@@ -42,5 +43,5 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 
 ### SEE ALSO
 
-* [zarf tools registry](/cli/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
+* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
 

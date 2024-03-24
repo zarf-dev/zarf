@@ -1,6 +1,7 @@
 ---
 title: zarf tools helm repo
 description: Zarf CLI command reference for <code>zarf tools helm repo</code>.
+tableOfContents: false
 ---
 
 ## zarf tools helm repo
@@ -44,10 +45,10 @@ It can be used to add, remove, list, and index chart repositories.
 
 ### SEE ALSO
 
-* [zarf tools helm](/cli/commands/zarf_tools_helm/)	 - Subset of the Helm CLI included with Zarf to help manage helm charts.
-* [zarf tools helm repo add](/cli/commands/zarf_tools_helm_repo_add/)	 - add a chart repository
-* [zarf tools helm repo index](/cli/commands/zarf_tools_helm_repo_index/)	 - generate an index file given a directory containing packaged charts
-* [zarf tools helm repo list](/cli/commands/zarf_tools_helm_repo_list/)	 - list chart repositories
-* [zarf tools helm repo remove](/cli/commands/zarf_tools_helm_repo_remove/)	 - remove one or more chart repositories
-* [zarf tools helm repo update](/cli/commands/zarf_tools_helm_repo_update/)	 - update information of available charts locally from chart repositories
+* [zarf tools helm](/commands/zarf_tools_helm/)	 - Subset of the Helm CLI included with Zarf to help manage helm charts.
+* [zarf tools helm repo add](/commands/zarf_tools_helm_repo_add/)	 - add a chart repository
+* [zarf tools helm repo index](/commands/zarf_tools_helm_repo_index/)	 - generate an index file given a directory containing packaged charts
+* [zarf tools helm repo list](/commands/zarf_tools_helm_repo_list/)	 - list chart repositories
+* [zarf tools helm repo remove](/commands/zarf_tools_helm_repo_remove/)	 - remove one or more chart repositories
+* [zarf tools helm repo update](/commands/zarf_tools_helm_repo_update/)	 - update information of available charts locally from chart repositories
 

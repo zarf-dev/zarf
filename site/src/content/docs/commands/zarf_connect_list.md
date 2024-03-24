@@ -1,6 +1,7 @@
 ---
 title: zarf connect list
 description: Zarf CLI command reference for <code>zarf connect list</code>.
+tableOfContents: false
 ---
 
 ## zarf connect list
@@ -32,5 +33,5 @@ zarf connect list [flags]
 
 ### SEE ALSO
 
-* [zarf connect](/cli/commands/zarf_connect/)	 - Accesses services or pods deployed in the cluster
+* [zarf connect](/commands/zarf_connect/)	 - Accesses services or pods deployed in the cluster
 

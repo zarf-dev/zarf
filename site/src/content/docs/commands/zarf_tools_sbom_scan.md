@@ -1,6 +1,7 @@
 ---
 title: zarf tools sbom scan
 description: Zarf CLI command reference for <code>zarf tools sbom scan</code>.
+tableOfContents: false
 ---
 
 ## zarf tools sbom scan
@@ -42,5 +43,5 @@ zarf tools sbom scan [SOURCE] [flags]
 
 ### SEE ALSO
 
-* [zarf tools sbom](/cli/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
+* [zarf tools sbom](/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
 

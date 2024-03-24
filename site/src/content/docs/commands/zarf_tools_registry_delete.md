@@ -1,6 +1,7 @@
 ---
 title: zarf tools registry delete
 description: Zarf CLI command reference for <code>zarf tools registry delete</code>.
+tableOfContents: false
 ---
 
 ## zarf tools registry delete
@@ -40,5 +41,5 @@ $ zarf tools registry delete reg.example.com/stefanprodan/podinfo@sha256:57a654a
 
 ### SEE ALSO
 
-* [zarf tools registry](/cli/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
+* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
 

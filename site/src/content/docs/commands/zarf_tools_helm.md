@@ -1,6 +1,7 @@
 ---
 title: zarf tools helm
 description: Zarf CLI command reference for <code>zarf tools helm</code>.
+tableOfContents: false
 ---
 
 ## zarf tools helm
@@ -35,8 +36,8 @@ Subset of the Helm CLI that includes the repo and dependency commands for managi
 
 ### SEE ALSO
 
-* [zarf tools](/cli/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
-* [zarf tools helm dependency](/cli/commands/zarf_tools_helm_dependency/)	 - manage a chart's dependencies
-* [zarf tools helm repo](/cli/commands/zarf_tools_helm_repo/)	 - add, list, remove, update, and index chart repositories
-* [zarf tools helm version](/cli/commands/zarf_tools_helm_version/)	 - Print the version
+* [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools helm dependency](/commands/zarf_tools_helm_dependency/)	 - manage a chart's dependencies
+* [zarf tools helm repo](/commands/zarf_tools_helm_repo/)	 - add, list, remove, update, and index chart repositories
+* [zarf tools helm version](/commands/zarf_tools_helm_version/)	 - Print the version
 

@@ -1,6 +1,7 @@
 ---
 title: zarf package list
 description: Zarf CLI command reference for <code>zarf package list</code>.
+tableOfContents: false
 ---
 
 ## zarf package list
@@ -34,5 +35,5 @@ zarf package list [flags]
 
 ### SEE ALSO
 
-* [zarf package](/cli/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf package](/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
 

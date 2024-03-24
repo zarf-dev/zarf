@@ -1,6 +1,7 @@
 ---
 title: zarf init
 description: Zarf CLI command reference for <code>zarf init</code>.
+tableOfContents: false
 ---
 
 ## zarf init
@@ -95,5 +96,5 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 
 ### SEE ALSO
 
-* [zarf](/cli/commands/zarf/)	 - DevSecOps for Airgap
+* [zarf](/commands/zarf/)	 - DevSecOps for Airgap
 

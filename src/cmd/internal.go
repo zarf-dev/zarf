@@ -122,13 +122,14 @@ var genCLIDocs = &cobra.Command{
 			return fmt.Sprintf(`---
 title: %s
 description: Zarf CLI command reference for <code>%s</code>.
+tableOfContents: false
 ---
 
 `, title, title)
 		}
 
 		var linkHandler = func(link string) string {
-			return "/cli/commands/" + link[:len(link)-3] + "/"
+			return "/commands/" + link[:len(link)-3] + "/"
 		}
 
 		if err := doc.GenMarkdownTreeCustom(rootCmd, "./site/src/content/docs/commands", prependTitle, linkHandler); err != nil {

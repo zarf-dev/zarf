@@ -1,6 +1,7 @@
 ---
 title: zarf tools registry catalog
 description: Zarf CLI command reference for <code>zarf tools registry catalog</code>.
+tableOfContents: false
 ---
 
 ## zarf tools registry catalog
@@ -41,5 +42,5 @@ $ zarf tools registry catalog reg.example.com
 
 ### SEE ALSO
 
-* [zarf tools registry](/cli/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
+* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
 

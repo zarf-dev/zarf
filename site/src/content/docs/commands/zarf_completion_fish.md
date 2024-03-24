@@ -1,6 +1,7 @@
 ---
 title: zarf completion fish
 description: Zarf CLI command reference for <code>zarf completion fish</code>.
+tableOfContents: false
 ---
 
 ## zarf completion fish
@@ -48,5 +49,5 @@ zarf completion fish [flags]
 
 ### SEE ALSO
 
-* [zarf completion](/cli/commands/zarf_completion/)	 - Generate the autocompletion script for the specified shell
+* [zarf completion](/commands/zarf_completion/)	 - Generate the autocompletion script for the specified shell
 

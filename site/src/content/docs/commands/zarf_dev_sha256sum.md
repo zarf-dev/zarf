@@ -1,6 +1,7 @@
 ---
 title: zarf dev sha256sum
 description: Zarf CLI command reference for <code>zarf dev sha256sum</code>.
+tableOfContents: false
 ---
 
 ## zarf dev sha256sum
@@ -33,5 +34,5 @@ zarf dev sha256sum { FILE | URL } [flags]
 
 ### SEE ALSO
 
-* [zarf dev](/cli/commands/zarf_dev/)	 - Commands useful for developing packages
+* [zarf dev](/commands/zarf_dev/)	 - Commands useful for developing packages
 

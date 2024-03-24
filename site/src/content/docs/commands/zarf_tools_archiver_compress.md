@@ -1,6 +1,7 @@
 ---
 title: zarf tools archiver compress
 description: Zarf CLI command reference for <code>zarf tools archiver compress</code>.
+tableOfContents: false
 ---
 
 ## zarf tools archiver compress
@@ -32,5 +33,5 @@ zarf tools archiver compress SOURCES ARCHIVE [flags]
 
 ### SEE ALSO
 
-* [zarf tools archiver](/cli/commands/zarf_tools_archiver/)	 - Compresses/Decompresses generic archives, including Zarf packages
+* [zarf tools archiver](/commands/zarf_tools_archiver/)	 - Compresses/Decompresses generic archives, including Zarf packages
 

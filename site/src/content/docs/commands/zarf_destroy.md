@@ -1,6 +1,7 @@
 ---
 title: zarf destroy
 description: Zarf CLI command reference for <code>zarf destroy</code>.
+tableOfContents: false
 ---
 
 ## zarf destroy
@@ -44,5 +45,5 @@ zarf destroy --confirm [flags]
 
 ### SEE ALSO
 
-* [zarf](/cli/commands/zarf/)	 - DevSecOps for Airgap
+* [zarf](/commands/zarf/)	 - DevSecOps for Airgap
 

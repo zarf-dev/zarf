@@ -1,6 +1,7 @@
 ---
 title: zarf tools sbom attest
 description: Zarf CLI command reference for <code>zarf tools sbom attest</code>.
+tableOfContents: false
 ---
 
 ## zarf tools sbom attest
@@ -40,5 +41,5 @@ zarf tools sbom attest --output [FORMAT] <IMAGE> [flags]
 
 ### SEE ALSO
 
-* [zarf tools sbom](/cli/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
+* [zarf tools sbom](/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
 

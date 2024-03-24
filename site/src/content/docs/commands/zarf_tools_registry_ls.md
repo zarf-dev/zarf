@@ -1,6 +1,7 @@
 ---
 title: zarf tools registry ls
 description: Zarf CLI command reference for <code>zarf tools registry ls</code>.
+tableOfContents: false
 ---
 
 ## zarf tools registry ls
@@ -42,5 +43,5 @@ $ zarf tools registry ls reg.example.com/stefanprodan/podinfo
 
 ### SEE ALSO
 
-* [zarf tools registry](/cli/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
+* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
 

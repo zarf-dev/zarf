@@ -1,6 +1,7 @@
 ---
 title: zarf version
 description: Zarf CLI command reference for <code>zarf version</code>.
+tableOfContents: false
 ---
 
 ## zarf version
@@ -37,5 +38,5 @@ zarf version [flags]
 
 ### SEE ALSO
 
-* [zarf](/cli/commands/zarf/)	 - DevSecOps for Airgap
+* [zarf](/commands/zarf/)	 - DevSecOps for Airgap
 

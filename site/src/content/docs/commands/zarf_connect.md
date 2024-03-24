@@ -1,6 +1,7 @@
 ---
 title: zarf connect
 description: Zarf CLI command reference for <code>zarf connect</code>.
+tableOfContents: false
 ---
 
 ## zarf connect
@@ -48,6 +49,6 @@ zarf connect { REGISTRY | LOGGING | GIT | connect-name } [flags]
 
 ### SEE ALSO
 
-* [zarf](/cli/commands/zarf/)	 - DevSecOps for Airgap
-* [zarf connect list](/cli/commands/zarf_connect_list/)	 - Lists all available connection shortcuts
+* [zarf](/commands/zarf/)	 - DevSecOps for Airgap
+* [zarf connect list](/commands/zarf_connect_list/)	 - Lists all available connection shortcuts
 

@@ -1,6 +1,7 @@
 ---
 title: zarf tools registry copy
 description: Zarf CLI command reference for <code>zarf tools registry copy</code>.
+tableOfContents: false
 ---
 
 ## zarf tools registry copy
@@ -31,5 +32,5 @@ zarf tools registry copy SRC DST [flags]
 
 ### SEE ALSO
 
-* [zarf tools registry](/cli/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
+* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
 

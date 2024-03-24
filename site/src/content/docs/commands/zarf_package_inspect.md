@@ -1,6 +1,7 @@
 ---
 title: zarf package inspect
 description: Zarf CLI command reference for <code>zarf package inspect</code>.
+tableOfContents: false
 ---
 
 ## zarf package inspect
@@ -40,5 +41,5 @@ zarf package inspect [ PACKAGE_SOURCE ] [flags]
 
 ### SEE ALSO
 
-* [zarf package](/cli/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf package](/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
 

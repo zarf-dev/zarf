@@ -1,6 +1,7 @@
 ---
 title: zarf tools registry
 description: Zarf CLI command reference for <code>zarf tools registry</code>.
+tableOfContents: false
 ---
 
 ## zarf tools registry
@@ -19,15 +20,15 @@ Tools for working with container registries using go-containertools
 
 ### SEE ALSO
 
-* [zarf tools](/cli/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
-* [zarf tools registry catalog](/cli/commands/zarf_tools_registry_catalog/)	 - List the repos in a registry
-* [zarf tools registry copy](/cli/commands/zarf_tools_registry_copy/)	 - Efficiently copy a remote image from src to dst while retaining the digest value
-* [zarf tools registry delete](/cli/commands/zarf_tools_registry_delete/)	 - Delete an image reference from its registry
-* [zarf tools registry digest](/cli/commands/zarf_tools_registry_digest/)	 - Get the digest of an image
-* [zarf tools registry login](/cli/commands/zarf_tools_registry_login/)	 - Log in to a registry
-* [zarf tools registry ls](/cli/commands/zarf_tools_registry_ls/)	 - List the tags in a repo
-* [zarf tools registry prune](/cli/commands/zarf_tools_registry_prune/)	 - Prunes images from the registry that are not currently being used by any Zarf packages.
-* [zarf tools registry pull](/cli/commands/zarf_tools_registry_pull/)	 - Pull remote images by reference and store their contents locally
-* [zarf tools registry push](/cli/commands/zarf_tools_registry_push/)	 - Push local image contents to a remote registry
-* [zarf tools registry version](/cli/commands/zarf_tools_registry_version/)	 - Print the version
+* [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools registry catalog](/commands/zarf_tools_registry_catalog/)	 - List the repos in a registry
+* [zarf tools registry copy](/commands/zarf_tools_registry_copy/)	 - Efficiently copy a remote image from src to dst while retaining the digest value
+* [zarf tools registry delete](/commands/zarf_tools_registry_delete/)	 - Delete an image reference from its registry
+* [zarf tools registry digest](/commands/zarf_tools_registry_digest/)	 - Get the digest of an image
+* [zarf tools registry login](/commands/zarf_tools_registry_login/)	 - Log in to a registry
+* [zarf tools registry ls](/commands/zarf_tools_registry_ls/)	 - List the tags in a repo
+* [zarf tools registry prune](/commands/zarf_tools_registry_prune/)	 - Prunes images from the registry that are not currently being used by any Zarf packages.
+* [zarf tools registry pull](/commands/zarf_tools_registry_pull/)	 - Pull remote images by reference and store their contents locally
+* [zarf tools registry push](/commands/zarf_tools_registry_push/)	 - Push local image contents to a remote registry
+* [zarf tools registry version](/commands/zarf_tools_registry_version/)	 - Print the version
 

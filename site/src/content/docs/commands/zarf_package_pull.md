@@ -1,6 +1,7 @@
 ---
 title: zarf package pull
 description: Zarf CLI command reference for <code>zarf package pull</code>.
+tableOfContents: false
 ---
 
 ## zarf package pull
@@ -49,5 +50,5 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 
 ### SEE ALSO
 
-* [zarf package](/cli/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf package](/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
 

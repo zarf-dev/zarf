@@ -1,6 +1,7 @@
 ---
 title: zarf package mirror-resources
 description: Zarf CLI command reference for <code>zarf package mirror-resources</code>.
+tableOfContents: false
 ---
 
 ## zarf package mirror-resources
@@ -72,5 +73,5 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 
 ### SEE ALSO
 
-* [zarf package](/cli/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf package](/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
 

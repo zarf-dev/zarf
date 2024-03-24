@@ -1,6 +1,7 @@
 ---
 title: zarf tools sbom login
 description: Zarf CLI command reference for <code>zarf tools sbom login</code>.
+tableOfContents: false
 ---
 
 ## zarf tools sbom login
@@ -30,5 +31,5 @@ zarf tools sbom login [OPTIONS] [SERVER] [flags]
 
 ### SEE ALSO
 
-* [zarf tools sbom](/cli/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
+* [zarf tools sbom](/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
 

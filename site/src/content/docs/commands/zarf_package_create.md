@@ -1,6 +1,7 @@
 ---
 title: zarf package create
 description: Zarf CLI command reference for <code>zarf package create</code>.
+tableOfContents: false
 ---
 
 ## zarf package create
@@ -51,5 +52,5 @@ zarf package create [ DIRECTORY ] [flags]
 
 ### SEE ALSO
 
-* [zarf package](/cli/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf package](/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
 

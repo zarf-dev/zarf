@@ -1,6 +1,7 @@
 ---
 title: zarf tools sbom convert
 description: Zarf CLI command reference for <code>zarf tools sbom convert</code>.
+tableOfContents: false
 ---
 
 ## zarf tools sbom convert
@@ -34,5 +35,5 @@ zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
 
 ### SEE ALSO
 
-* [zarf tools sbom](/cli/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
+* [zarf tools sbom](/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
 

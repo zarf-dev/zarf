@@ -1,6 +1,7 @@
 ---
 title: zarf tools clear-cache
 description: Zarf CLI command reference for <code>zarf tools clear-cache</code>.
+tableOfContents: false
 ---
 
 ## zarf tools clear-cache
@@ -32,5 +33,5 @@ zarf tools clear-cache [flags]
 
 ### SEE ALSO
 
-* [zarf tools](/cli/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
 

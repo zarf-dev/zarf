@@ -1,6 +1,7 @@
 ---
 title: zarf tools archiver version
 description: Zarf CLI command reference for <code>zarf tools archiver version</code>.
+tableOfContents: false
 ---
 
 ## zarf tools archiver version
@@ -32,5 +33,5 @@ zarf tools archiver version [flags]
 
 ### SEE ALSO
 
-* [zarf tools archiver](/cli/commands/zarf_tools_archiver/)	 - Compresses/Decompresses generic archives, including Zarf packages
+* [zarf tools archiver](/commands/zarf_tools_archiver/)	 - Compresses/Decompresses generic archives, including Zarf packages
 

@@ -1,6 +1,7 @@
 ---
 title: zarf tools helm version
 description: Zarf CLI command reference for <code>zarf tools helm version</code>.
+tableOfContents: false
 ---
 
 ## zarf tools helm version
@@ -40,5 +41,5 @@ zarf tools helm version [flags]
 
 ### SEE ALSO
 
-* [zarf tools helm](/cli/commands/zarf_tools_helm/)	 - Subset of the Helm CLI included with Zarf to help manage helm charts.
+* [zarf tools helm](/commands/zarf_tools_helm/)	 - Subset of the Helm CLI included with Zarf to help manage helm charts.
 

@@ -1,6 +1,7 @@
 ---
 title: zarf tools
 description: Zarf CLI command reference for <code>zarf tools</code>.
+tableOfContents: false
 ---
 
 ## zarf tools
@@ -28,18 +29,18 @@ Collection of additional tools to make airgap easier
 
 ### SEE ALSO
 
-* [zarf](/cli/commands/zarf/)	 - DevSecOps for Airgap
-* [zarf tools archiver](/cli/commands/zarf_tools_archiver/)	 - Compresses/Decompresses generic archives, including Zarf packages
-* [zarf tools clear-cache](/cli/commands/zarf_tools_clear-cache/)	 - Clears the configured git and image cache directory
-* [zarf tools download-init](/cli/commands/zarf_tools_download-init/)	 - Downloads the init package for the current Zarf version into the specified directory
-* [zarf tools gen-key](/cli/commands/zarf_tools_gen-key/)	 - Generates a cosign public/private keypair that can be used to sign packages
-* [zarf tools gen-pki](/cli/commands/zarf_tools_gen-pki/)	 - Generates a Certificate Authority and PKI chain of trust for the given host
-* [zarf tools get-creds](/cli/commands/zarf_tools_get-creds/)	 - Displays a table of credentials for deployed Zarf services. Pass a service key to get a single credential
-* [zarf tools helm](/cli/commands/zarf_tools_helm/)	 - Subset of the Helm CLI included with Zarf to help manage helm charts.
-* [zarf tools kubectl](/cli/commands/zarf_tools_kubectl/)	 - Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information.
-* [zarf tools monitor](/cli/commands/zarf_tools_monitor/)	 - Launches a terminal UI to monitor the connected cluster using K9s.
-* [zarf tools registry](/cli/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
-* [zarf tools sbom](/cli/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
-* [zarf tools update-creds](/cli/commands/zarf_tools_update-creds/)	 - Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service
-* [zarf tools wait-for](/cli/commands/zarf_tools_wait-for/)	 - Waits for a given Kubernetes resource to be ready
+* [zarf](/commands/zarf/)	 - DevSecOps for Airgap
+* [zarf tools archiver](/commands/zarf_tools_archiver/)	 - Compresses/Decompresses generic archives, including Zarf packages
+* [zarf tools clear-cache](/commands/zarf_tools_clear-cache/)	 - Clears the configured git and image cache directory
+* [zarf tools download-init](/commands/zarf_tools_download-init/)	 - Downloads the init package for the current Zarf version into the specified directory
+* [zarf tools gen-key](/commands/zarf_tools_gen-key/)	 - Generates a cosign public/private keypair that can be used to sign packages
+* [zarf tools gen-pki](/commands/zarf_tools_gen-pki/)	 - Generates a Certificate Authority and PKI chain of trust for the given host
+* [zarf tools get-creds](/commands/zarf_tools_get-creds/)	 - Displays a table of credentials for deployed Zarf services. Pass a service key to get a single credential
+* [zarf tools helm](/commands/zarf_tools_helm/)	 - Subset of the Helm CLI included with Zarf to help manage helm charts.
+* [zarf tools kubectl](/commands/zarf_tools_kubectl/)	 - Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information.
+* [zarf tools monitor](/commands/zarf_tools_monitor/)	 - Launches a terminal UI to monitor the connected cluster using K9s.
+* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
+* [zarf tools sbom](/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
+* [zarf tools update-creds](/commands/zarf_tools_update-creds/)	 - Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service
+* [zarf tools wait-for](/commands/zarf_tools_wait-for/)	 - Waits for a given Kubernetes resource to be ready
 

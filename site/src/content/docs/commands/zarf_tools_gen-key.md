@@ -1,6 +1,7 @@
 ---
 title: zarf tools gen-key
 description: Zarf CLI command reference for <code>zarf tools gen-key</code>.
+tableOfContents: false
 ---
 
 ## zarf tools gen-key
@@ -32,5 +33,5 @@ zarf tools gen-key [flags]
 
 ### SEE ALSO
 
-* [zarf tools](/cli/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
 

@@ -1,6 +1,7 @@
 ---
 title: zarf
 description: Zarf CLI command reference for <code>zarf</code>.
+tableOfContents: false
 ---
 
 ## zarf
@@ -32,12 +33,12 @@ zarf COMMAND [flags]
 
 ### SEE ALSO
 
-* [zarf completion](/cli/commands/zarf_completion/)	 - Generate the autocompletion script for the specified shell
-* [zarf connect](/cli/commands/zarf_connect/)	 - Accesses services or pods deployed in the cluster
-* [zarf destroy](/cli/commands/zarf_destroy/)	 - Tears down Zarf and removes its components from the environment
-* [zarf dev](/cli/commands/zarf_dev/)	 - Commands useful for developing packages
-* [zarf init](/cli/commands/zarf_init/)	 - Prepares a k8s cluster for the deployment of Zarf packages
-* [zarf package](/cli/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
-* [zarf tools](/cli/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
-* [zarf version](/cli/commands/zarf_version/)	 - Shows the version of the running Zarf binary
+* [zarf completion](/commands/zarf_completion/)	 - Generate the autocompletion script for the specified shell
+* [zarf connect](/commands/zarf_connect/)	 - Accesses services or pods deployed in the cluster
+* [zarf destroy](/commands/zarf_destroy/)	 - Tears down Zarf and removes its components from the environment
+* [zarf dev](/commands/zarf_dev/)	 - Commands useful for developing packages
+* [zarf init](/commands/zarf_init/)	 - Prepares a k8s cluster for the deployment of Zarf packages
+* [zarf package](/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf version](/commands/zarf_version/)	 - Shows the version of the running Zarf binary
 

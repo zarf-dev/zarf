@@ -1,6 +1,7 @@
 ---
 title: zarf dev generate-config
 description: Zarf CLI command reference for <code>zarf dev generate-config</code>.
+tableOfContents: false
 ---
 
 ## zarf dev generate-config
@@ -41,5 +42,5 @@ zarf dev generate-config [ FILENAME ] [flags]
 
 ### SEE ALSO
 
-* [zarf dev](/cli/commands/zarf_dev/)	 - Commands useful for developing packages
+* [zarf dev](/commands/zarf_dev/)	 - Commands useful for developing packages
 

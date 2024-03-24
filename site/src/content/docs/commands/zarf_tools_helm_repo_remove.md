@@ -1,6 +1,7 @@
 ---
 title: zarf tools helm repo remove
 description: Zarf CLI command reference for <code>zarf tools helm repo remove</code>.
+tableOfContents: false
 ---
 
 ## zarf tools helm repo remove
@@ -40,5 +41,5 @@ zarf tools helm repo remove [REPO1 [REPO2 ...]] [flags]
 
 ### SEE ALSO
 
-* [zarf tools helm repo](/cli/commands/zarf_tools_helm_repo/)	 - add, list, remove, update, and index chart repositories
+* [zarf tools helm repo](/commands/zarf_tools_helm_repo/)	 - add, list, remove, update, and index chart repositories
 

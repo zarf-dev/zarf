@@ -1,6 +1,7 @@
 ---
 title: zarf package publish
 description: Zarf CLI command reference for <code>zarf package publish</code>.
+tableOfContents: false
 ---
 
 ## zarf package publish
@@ -48,5 +49,5 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 
 ### SEE ALSO
 
-* [zarf package](/cli/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf package](/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
 
