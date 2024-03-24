@@ -4,11 +4,13 @@ sidebar:
   order: 60
 ---
 
+import Mermaid from "@components/Mermaid.astro";
+
 The following diagram shows the order of operations for the `zarf package create` command and the hook locations for [actions](/ref/actions).
 
 ## Lifecycle Diagram
 
-```mermaid
+<Mermaid diagram={`
 graph TD
     A1(set working directory)-->A2
     A2(parse zarf.yaml)-->A3
@@ -56,7 +58,7 @@ graph TD
     classDef prompt fill:#4adede,color:#000000
     classDef action fill:#bd93f9,color:#000000
     classDef fail fill:#aa0000
-```
+`}/>
 
 ## Types of Zarf Packages
 
