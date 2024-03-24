@@ -5,7 +5,7 @@ import yaml from "yaml";
 const __dirname = import.meta.dirname;
 
 const examplesDir = path.join(__dirname, "../../examples");
-const dstDir = path.join(__dirname, "src/content/docs/ref/Examples");
+const dstDir = path.join(__dirname, "../src/content/docs/ref/Examples");
 
 async function preflight() {
   await fs.rm(dstDir, { recursive: true, force: true });
