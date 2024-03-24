@@ -24,7 +24,7 @@ export default defineConfig({
         github: "https://github.com/defenseunicorns/zarf",
         slack: "https://kubernetes.slack.com/archives/C03B6BJAUJ3",
       },
-      favicon: "./src/assets/favicon.svg",
+      favicon: "/favicon.svg",
       editLink: {
         baseUrl: "https://github.com/defenseunicorns/zarf/edit/main/",
       },

@@ -6,7 +6,7 @@
 [![Zarf Documentation Status](https://api.netlify.com/api/v1/badges/fe846ae4-25fb-4274-9968-90782640ee9f/deploy-status)](https://app.netlify.com/sites/zarf-docs/deploys)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/zarf/badge)](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/zarf)
 
-<img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
+<img align="right" alt="zarf logo" src="site/src/assets/zarf-logo.png"  height="256" />
 
 [![Zarf Website](https://img.shields.io/badge/web-zarf.dev-6d87c3)](https://zarf.dev/)
 [![Zarf Documentation](https://img.shields.io/badge/docs-docs.zarf.dev-775ba1)](https://docs.zarf.dev/)
@@ -53,7 +53,7 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 
 ## Demo
 
-[![preview](.images/zarf-v0.21-preview.gif)](https://www.youtube.com/watch?v=WnOYlFVVKDE)
+[![preview](./site/src/assets/zarf-v0.21-preview.gif)](https://www.youtube.com/watch?v=WnOYlFVVKDE)
 
 _<https://www.youtube.com/watch?v=WnOYlFVVKDE>_
 
@@ -77,7 +77,7 @@ Join our community and developers on the [#Zarf slack](https://zarf.dev/slack) h
 We are so grateful to our Zarf community for contributing bug fixes and collaborating on new features:
 
 <a href="https://github.com/defenseunicorns/zarf/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=defenseunicorns/zarf" />
+  <img src="https://contrib.rocks/image?repo=defenseunicorns/zarf" alt="Zarf contributors" />
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks).
@@ -90,9 +90,7 @@ We also recommend checking out our architectural diagram.
 
 To dive deeper into the tech, you can read the [Nerd Notes](https://docs.zarf.dev/docs/contribute-to-zarf/nerd-notes) in our Docs.
 
-![Architecture Diagram](./docs/.images/architecture.drawio.svg)
-
-[Source DrawIO](docs/.images/architecture.drawio.svg)
+![Architecture Diagram](./site/public/architecture.drawio.svg)
 
 ## ⭐️ Special Thanks
 
