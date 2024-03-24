@@ -33,84 +33,62 @@ chmod +x zarf
 
 ### Linux
 
+To download Zarf on Linux you can run the following (replacing `<zarf-version>` with a version of Zarf):
+
 <Tabs>
 <TabItem label="x86-64">
-
-To download Zarf on Linux you can run the following (replacing `<zarf-version>` with a version of Zarf):
-
 <Code code={downloadScript("Linux", "amd64")} lang="bash" />
-
-On most Linux distributions, install the binary onto your `$PATH` by simply moving the downloaded binary to the `/usr/local/bin` directory:
-
-```bash
-sudo mv zarf /usr/local/bin/zarf
-```
-
 </TabItem>
 <TabItem label="ARM64">
-
-To download Zarf on Linux you can run the following (replacing `<zarf-version>` with a version of Zarf):
-
 <Code code={downloadScript("Linux", "arm64")} lang="bash" />
+</TabItem>
+</Tabs>
 
-On most Linux distributions, install the binary onto your `$PATH` by simply moving the downloaded binary to the `/usr/local/bin` directory:
+On most Linux distributions, install the binary onto your `$PATH` by moving the downloaded binary to the `/usr/local/bin` directory:
 
 ```bash
 sudo mv zarf /usr/local/bin/zarf
 ```
-
-</TabItem>
-</Tabs>
 
 ### macOS
 
+To download Zarf on macOS you can run the following (replacing `<zarf-version>` with a version of Zarf):
+
 <Tabs>
 <TabItem label="Intel">
-
-To download Zarf on macOS you can run the following (replacing `<zarf-version>` with a version of Zarf):
-
 <Code code={downloadScript("Darwin", "amd64")} lang="zsh" />
-
-Install the binary onto your `$PATH` by simply moving the downloaded binary to the `/usr/local/bin` directory:
-
-```bash
-sudo mv zarf /usr/local/bin/zarf
-```
-
 </TabItem>
 <TabItem label="Apple Silicon">
-
-To download Zarf on macOS you can run the following (replacing `<zarf-version>` with a version of Zarf):
-
 <Code code={downloadScript("Darwin", "arm64")} lang="zsh" />
+</TabItem>
+</Tabs>
 
-Install the binary onto your `$PATH` by simply moving the downloaded binary to the `/usr/local/bin` directory:
+Install the binary onto your `$PATH` by moving the downloaded binary to the `/usr/local/bin` directory:
 
 ```bash
 sudo mv zarf /usr/local/bin/zarf
 ```
-
-</TabItem>
-</Tabs>
 
 ### Windows
 
-<Tabs>
-<TabItem label="Windows">
-
 To download Zarf on Windows you can run the following (replacing `<zarf-version>` with a version of Zarf and `<zarf-arch>` with either `amd64` or `arm64` depending on your system):
 
-```powershell
-$ZarfVersion="<zarf-version>"
-$ZarfArch="<zarf-arch>"
+export const downloadPowerShellScript = (arch) => `
+$ZarfVersion = (Invoke-RestMethod https://api.github.com/repos/defenseunicorns/zarf/releases/latest).tag_name
 
-Start-BitsTransfer -Source "https://github.com/defenseunicorns/zarf/releases/download/$($ZarfVersion)/zarf_$($ZarfVersion)_Windows_$($ZarfArch).exe" -Destination zarf.exe
-```
+Start-BitsTransfer -Source "https://github.com/defenseunicorns/zarf/releases/download/$($ZarfVersion)/zarf_$($ZarfVersion)_Windows_${arch}.exe" -Destination zarf.exe
+`
 
-You can also install the binary onto your `$PATH` by moving the downloaded binary to the desired directory and modifying the `$PATH` environment variable to include that directory.
-
+<Tabs>
+<TabItem label="x86-64">
+<Code code={downloadPowerShellScript("amd64")} lang="powershell" />
+</TabItem>
+<TabItem label="Windows">
+<Code code={downloadPowerShellScript("arm64")} lang="powershell" />
 </TabItem>
 </Tabs>
+
+You can also install the binary onto your `$PATH` by moving the downloaded binary to the desired directory and modifying the `$PATH` environment variable to include that directory.
 
 ## Community
 
