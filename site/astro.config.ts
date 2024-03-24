@@ -18,6 +18,9 @@ export default defineConfig({
         src: "./src/assets/zarf-logo-header.svg",
         replacesTitle: true,
       },
+      customCss: [
+        "./src/styles/custom.css",
+      ],
       lastUpdated: true,
       sidebar: [
         {
