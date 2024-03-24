@@ -1,8 +1,22 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import { rehypeHeadingIds } from "@astrojs/markdown-remark";
+import rehypeAutolinkHeadings from "rehype-autolink-headings";
 
 // https://astro.build/config
 export default defineConfig({
+  markdown: {
+    rehypePlugins: [
+      rehypeHeadingIds,
+      [
+        rehypeAutolinkHeadings,
+        {
+          behavior: "wrap",
+          properties: { ariaHidden: true, tabIndex: -1, class: "heading-link" },
+        },
+      ],
+    ],
+  },
   integrations: [
     starlight({
       title: "Zarf",
@@ -47,10 +61,6 @@ export default defineConfig({
         {
           label: "Roadmap",
           link: "/roadmap",
-        },
-        {
-          label: "Community",
-          link: "/community",
         },
         {
           label: "Support",

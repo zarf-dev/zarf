@@ -5,6 +5,7 @@ sidebar:
 ---
 
 import Mermaid from "@components/Mermaid.astro";
+import Details from "@components/Details.astro";
 
 Zarf Packages are designed to be easily deployable on a variety of systems, including air-gapped systems. All of the necessary dependencies are included within the package, eliminating the need for outbound internet connectivity. When deploying the package onto a cluster, the dependencies contained in each component are automatically pushed into a Docker registry and/or Git server created by or known to Zarf on the air-gapped system.
 
@@ -16,10 +17,9 @@ For a comprehensive tutorial of deploying a Zarf Package, see the [Deploying Zar
 
 :::
 
-## Lifecycle Diagram
-
 The following diagram shows the order of operations for the `zarf package deploy` command and the hook locations for [actions](../../examples/component-actions/README.md).
 
+<Details label="Lifecycle Diagram">
 <Mermaid diagram={`
 graph TD
     B1(load package archive)-->B2
@@ -61,6 +61,7 @@ graph TD
     classDef action fill:#bd93f9,color:#000000
     classDef fail fill:#aa0000
 `}/>
+</Details>
 
 ## Deployment Options
 

@@ -16,6 +16,7 @@
     "@astrojs/starlight": "^0.19.0",
     "astro": "^4.3.5",
     "mermaid": "^10.9.0",
+    "rehype-autolink-headings": "^7.1.0",
     "sharp": "^0.32.5",
     "typescript": "^5.3.3"
   },
