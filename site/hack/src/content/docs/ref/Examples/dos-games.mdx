@@ -1,0 +1,52 @@
+---
+title: "dos-games"
+editURL: "https://github.com/defenseunicorns/zarf/edit/main/examples/dos-games/zarf.yaml"
+description: ""
+tableOfContents: false
+---
+
+:::note
+
+To view the full example, as well as its dependencies, please visit [examples/dos-games](https://github.com/defenseunicorns/zarf/tree/main/examples/dos-games).
+
+:::
+
+This example provides the basis for Zarf's [Retro Arcade](/tutorials/3-deploy-a-retro-arcade) tutorial.  It deploys a Dos Games arcade into the cluster and provides an easy way to connect and play games.
+
+:::note
+
+In this example, there is no requirement for a "GitOps" service; Zarf is only showing off its ability to act as a standard means of packaging, distribution, and deployment runtime.
+
+:::
+
+## zarf.yaml
+
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: dos-games
+  description: Simple example to load classic DOS games into K8s in the airgap
+  version: 1.0.0
+
+components:
+  - name: baseline
+    required: true
+    manifests:
+      - name: multi-games
+        namespace: dos-games
+        files:
+          - manifests/deployment.yaml
+          - manifests/service.yaml
+    images:
+      - defenseunicorns/zarf-game:multi-tile-dark
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: game
+                namespace: dos-games
+                condition: available
+
+```

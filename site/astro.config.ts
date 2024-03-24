@@ -18,35 +18,22 @@ export default defineConfig({
         src: "./src/assets/zarf-logo-header.svg",
         replacesTitle: true,
       },
-      customCss: [
-        "./src/styles/custom.css",
-      ],
+      customCss: ["./src/styles/custom.css"],
       lastUpdated: true,
       sidebar: [
         {
           label: "Start Here",
           autogenerate: { directory: "getting-started" },
+        },
+        {
+          label: "CLI Commands",
+          autogenerate: { directory: "commands" },
           collapsed: true,
         },
         {
-          label: "CLI",
-          autogenerate: { directory: "cli" },
-          collapsed: true,
-        },
-        {
-          label: "Create a Package",
-          autogenerate: { directory: "create-a-package" },
-          collapsed: true,
-        },
-        {
-          label: "Deploy a Package",
-          autogenerate: { directory: "deploy-a-package" },
-          collapsed: true,
-        },
-        {
-          label: "Examples",
-          autogenerate: { directory: "examples" },
-          collapsed: true,
+          label: "Reference",
+          autogenerate: { directory: "ref", collapsed: true },
+          collapsed: false,
         },
         {
           label: "Tutorials",

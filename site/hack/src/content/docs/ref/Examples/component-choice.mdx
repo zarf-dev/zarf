@@ -1,0 +1,42 @@
+---
+title: "component-choice"
+editURL: "https://github.com/defenseunicorns/zarf/edit/main/examples/component-choice/zarf.yaml"
+description: ""
+tableOfContents: false
+---
+
+:::note
+
+To view the full example, as well as its dependencies, please visit [examples/component-choice](https://github.com/defenseunicorns/zarf/tree/main/examples/component-choice).
+
+:::
+
+:::caution
+
+Component Choice is currently a [Deprecated Feature](/roadmap#alpha). This feature will be removed in Zarf v1.0.0. Please migrate any existing packages you may have that utilize it.  In doing so you may want to consider [Package Flavors](/examples/flavors) as an alternative.
+
+:::
+
+## zarf.yaml
+
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: component-choice
+  description: Test component to demonstrate grouping components for a user to choose from
+
+components:
+  - name: first-choice
+    group: example-choice
+    files:
+      - source: blank-file.txt
+        target: first-choice-file.txt
+
+  - name: second-choice
+    group: example-choice
+    default: true
+    files:
+      - source: blank-file.txt
+        target: second-choice-file.txt
+
+```

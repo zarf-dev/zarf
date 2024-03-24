@@ -1,0 +1,67 @@
+---
+title: "podinfo-flux"
+editURL: "https://github.com/defenseunicorns/zarf/edit/main/examples/podinfo-flux/zarf.yaml"
+description: ""
+tableOfContents: false
+---
+
+:::note
+
+To view the full example, as well as its dependencies, please visit [examples/podinfo-flux](https://github.com/defenseunicorns/zarf/tree/main/examples/podinfo-flux).
+
+:::
+
+This example demonstrates how to use flux with Zarf to deploy the `stefanprodan/podinfo` app using GitOps.
+
+It uses a vanilla configuration of flux with upstream containers.
+
+If you want to learn more about how Zarf handles `git` repositories, see the [git-data](../git-data/README.md) example.
+
+## zarf.yaml
+
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: podinfo-flux
+  description: Deploy flux and then podinfo via flux
+
+components:
+  - name: flux
+    description: Installs the flux CRDs / controllers to use flux-based deployments
+      in the cluster
+    required: true
+    manifests:
+      - name: flux-crds
+        namespace: flux
+        files:
+          - flux-install.yaml
+    images:
+      - ghcr.io/fluxcd/kustomize-controller:v0.27.1
+      - ghcr.io/fluxcd/source-controller:v0.28.0
+
+  - name: podinfo-via-flux
+    description: Example deployment via flux using the famous podinfo example
+    required: true
+    manifests:
+      - name: podinfo-via-flux
+        namespace: podinfo
+        files:
+          - podinfo-source.yaml
+          - podinfo-kustomization.yaml
+    repos:
+      - https://github.com/stefanprodan/podinfo.git
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.3.3
+    actions:
+      onDeploy:
+        after:
+          # This will use a wait action to wait for the podinfo pod to be ready
+          - description: Podinfo pods to be ready via wait action
+            wait:
+              cluster:
+                kind: pod
+                name: app=podinfo
+                namespace: podinfo
+                condition: ready
+
+```

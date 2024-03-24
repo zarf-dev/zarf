@@ -1,7 +1,7 @@
 ---
-title: Building
+title: Building the CLI
 sidebar:
-  order: 1
+  order: 10
 tableOfContents: false
 ---
 
@@ -9,11 +9,9 @@ To build the Zarf CLI from scratch, you'll need to have the following dependenci
 
 1. The Zarf [repository](https://github.com/defenseunicorns/zarf) cloned to your local machine.
 2. Have [Go 1.21.x]((https://go.dev/doc/install)) installed on your PATH.
-4. `make` utility installed on your PATH.
+3. `make` utility installed on your PATH.
    - Instructions to install on macOS with [Homebrew](https://formulae.brew.sh/formula/make).
    - Instructions to install on Windows with [Chocolatey](https://community.chocolatey.org/packages/make), [Scoop](https://scoop.sh/#/apps?q=make&s=0&d=1&o=true&id=c43ff861c0f1713336e5304d85334a29ffb86317), or [MSYS2](https://packages.msys2.org/package/make).
-
-## Building the CLI
 
 > If you are running `make` targets other than the `build-cli-*` targets described below, you may need more software installed.  Inspect the `Makefile` at the root of the project to view the commands each target runs.
 

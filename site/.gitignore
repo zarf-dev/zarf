@@ -22,4 +22,4 @@ pnpm-debug.log*
 
 # zarf specific
 src/assets/zarf.schema.json
-src/content/docs/examples
+src/content/docs/ref/Examples
