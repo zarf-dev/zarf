@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/pkg/helpers"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"

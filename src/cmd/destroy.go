@@ -9,13 +9,13 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 
 	"github.com/spf13/cobra"
 )

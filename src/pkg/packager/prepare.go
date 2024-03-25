@@ -14,6 +14,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
@@ -24,7 +25,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "k8s.io/api/apps/v1"

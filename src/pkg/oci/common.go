@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"

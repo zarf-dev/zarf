@@ -7,8 +7,8 @@ package helm
 import (
 	"fmt"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"

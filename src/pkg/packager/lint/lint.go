@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
@@ -19,7 +20,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/xeipuuv/gojsonschema"
 )

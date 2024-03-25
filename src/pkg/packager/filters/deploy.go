@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/agnivade/levenshtein"
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
