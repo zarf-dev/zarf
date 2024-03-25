@@ -18,19 +18,18 @@ func TestCreateTemplating(t *testing.T) {
 
 	// run `zarf package create` with a specified image cache location
 	tmpdir := t.TempDir()
-	cachePath := filepath.Join(tmpdir, ".cache-location")
 	decompressPath := filepath.Join(tmpdir, ".package-decompressed")
 	sbomPath := filepath.Join(tmpdir, ".sbom-location")
 
 	pkgName := fmt.Sprintf("zarf-package-variables-%s.tar.zst", e2e.Arch)
 
 	// Test that not specifying a package variable results in an error
-	_, stdErr, _ := e2e.Zarf("package", "create", "examples/variables", "--zarf-cache", cachePath, "--confirm")
+	_, stdErr, _ := e2e.Zarf("package", "create", "examples/variables", "--confirm")
 	expectedOutString := "variable 'NGINX_VERSION' must be '--set' when using the '--confirm' flag"
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test a simple package variable example with `--set` (will fail to pull an image if this is not set correctly)
-	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/variables", "--set", "NGINX_VERSION=1.23.3", "--zarf-cache", cachePath, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/variables", "--set", "NGINX_VERSION=1.23.3", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf("t", "archiver", "decompress", pkgName, decompressPath, "--unarchive-all")

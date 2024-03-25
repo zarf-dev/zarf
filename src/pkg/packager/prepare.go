@@ -12,12 +12,17 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/goccy/go-yaml"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
+	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -35,28 +40,29 @@ type imageMap map[string]bool
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
 func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
-	repoHelmChartPath := p.cfg.FindImagesOpts.RepoHelmChartPath
-	kubeVersionOverride := p.cfg.FindImagesOpts.KubeVersionOverride
-
-	imagesMap := make(map[string][]string)
-	erroredCharts := []string{}
-	erroredCosignLookups := []string{}
-
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
-
+	defer func() {
+		// Return to the original working directory
+		if err := os.Chdir(cwd); err != nil {
+			message.Warnf("Unable to return to the original working directory: %s", err.Error())
+		}
+	}()
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return nil, fmt.Errorf("unable to access directory '%s': %w", p.cfg.CreateOpts.BaseDir, err)
+		return nil, fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
-	if err = p.readZarfYAML(layout.ZarfYAML); err != nil {
-		return nil, fmt.Errorf("unable to read the zarf.yaml file: %s", err.Error())
+	c := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
+
+	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+		return nil, err
 	}
 
-	if err := p.composeComponents(); err != nil {
+	p.cfg.Pkg, p.warnings, err = c.LoadPackageDefinition(p.layout)
+	if err != nil {
 		return nil, err
 	}
 
@@ -64,10 +70,18 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		message.Warn(warning)
 	}
 
-	// After components are composed, template the active package
-	if err := p.fillActiveTemplate(); err != nil {
-		return nil, fmt.Errorf("unable to fill values in template: %s", err.Error())
-	}
+	return p.findImages()
+}
+
+func (p *Packager) findImages() (imgMap map[string][]string, err error) {
+	repoHelmChartPath := p.cfg.FindImagesOpts.RepoHelmChartPath
+	kubeVersionOverride := p.cfg.FindImagesOpts.KubeVersionOverride
+	whyImage := p.cfg.FindImagesOpts.Why
+
+	imagesMap := make(map[string][]string)
+	erroredCharts := []string{}
+	erroredCosignLookups := []string{}
+	whyResources := []string{}
 
 	for _, component := range p.cfg.Pkg.Components {
 		if len(component.Repos) > 0 && repoHelmChartPath == "" {
@@ -80,8 +94,11 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 
 	componentDefinition := "\ncomponents:\n"
 
-	for _, component := range p.cfg.Pkg.Components {
+	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
+		return nil, err
+	}
 
+	for _, component := range p.cfg.Pkg.Components {
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
 			continue
@@ -120,36 +137,64 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		if err != nil {
 			return nil, err
 		}
-
+		values, err := template.Generate(p.cfg)
+		if err != nil {
+			return nil, fmt.Errorf("unable to generate template values")
+		}
+		// Adding these so the default builtin values exist in case any helm charts rely on them
+		registryInfo := types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}
+		err = registryInfo.FillInEmptyValues()
+		if err != nil {
+			return nil, err
+		}
+		gitServer := types.GitServerInfo{}
+		err = gitServer.FillInEmptyValues()
+		if err != nil {
+			return nil, err
+		}
+		artifactServer := types.ArtifactServerInfo{}
+		artifactServer.FillInEmptyValues()
+		values.SetState(&types.ZarfState{
+			RegistryInfo:   registryInfo,
+			GitServer:      gitServer,
+			ArtifactServer: artifactServer})
 		for _, chart := range component.Charts {
+
 			helmCfg := helm.New(
 				chart,
 				componentPaths.Charts,
 				componentPaths.Values,
 				helm.WithKubeVersion(kubeVersionOverride),
+				helm.WithPackageConfig(p.cfg),
 			)
 
-			err := helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
+			err = helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
 			if err != nil {
-				return nil, fmt.Errorf("unable to package the chart %s: %s", chart.URL, err.Error())
+				return nil, fmt.Errorf("unable to package the chart %s: %w", chart.Name, err)
+			}
+
+			valuesFilePaths, _ := helpers.RecursiveFileList(componentPaths.Values, nil, false)
+			for _, path := range valuesFilePaths {
+				if err := values.Apply(component, path, false); err != nil {
+					return nil, err
+				}
 			}
 
 			// Generate helm templates for this chart
-			template, values, err := helmCfg.TemplateChart()
-
+			chartTemplate, chartValues, err := helmCfg.TemplateChart()
 			if err != nil {
-				message.WarnErrf(err, "Problem rendering the helm template for %s: %s", chart.URL, err.Error())
-				erroredCharts = append(erroredCharts, chart.URL)
+				message.WarnErrf(err, "Problem rendering the helm template for %s: %s", chart.Name, err.Error())
+				erroredCharts = append(erroredCharts, chart.Name)
 				continue
 			}
 
 			// Break the template into separate resources
-			yamls, _ := utils.SplitYAML([]byte(template))
+			yamls, _ := utils.SplitYAML([]byte(chartTemplate))
 			resources = append(resources, yamls...)
 
 			chartTarball := helm.StandardName(componentPaths.Charts, chart) + ".tgz"
 
-			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
+			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, chartValues)
 			if err != nil {
 				message.WarnErrf(err, "Problem looking for image annotations for %s: %s", chart.URL, err.Error())
 				erroredCharts = append(erroredCharts, chart.URL)
@@ -157,6 +202,15 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 			}
 			for _, image := range annotatedImages {
 				matchedImages[image] = true
+			}
+
+			// Check if the --why flag is set
+			if whyImage != "" {
+				whyResourcesChart, err := findWhyResources(yamls, whyImage, component.Name, chart.Name, true)
+				if err != nil {
+					message.WarnErrf(err, "Error finding why resources for chart %s: %s", chart.Name, err.Error())
+				}
+				whyResources = append(whyResources, whyResourcesChart...)
 			}
 		}
 
@@ -166,7 +220,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
 				destination := filepath.Join(componentPaths.Manifests, kname)
 				if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
-					return nil, fmt.Errorf("unable to build the kustomization for %s: %s", k, err.Error())
+					return nil, fmt.Errorf("unable to build the kustomization for %s: %w", k, err)
 				}
 				manifest.Files = append(manifest.Files, destination)
 			}
@@ -179,8 +233,18 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 					}
 					f = destination
+				} else {
+					filename := filepath.Base(f)
+					newDestination := filepath.Join(componentPaths.Manifests, filename)
+					if err := helpers.CreatePathAndCopy(f, newDestination); err != nil {
+						return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
+					}
+					f = newDestination
 				}
 
+				if err := values.Apply(component, f, true); err != nil {
+					return nil, err
+				}
 				// Read the contents of each file
 				contents, err := os.ReadFile(f)
 				if err != nil {
@@ -193,6 +257,15 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 				message.Debugf("%s", contentString)
 				yamls, _ := utils.SplitYAML(contents)
 				resources = append(resources, yamls...)
+
+				// Check if the --why flag is set and if it is process the manifests
+				if whyImage != "" {
+					whyResourcesManifest, err := findWhyResources(yamls, whyImage, component.Name, manifest.Name, false)
+					if err != nil {
+						message.WarnErrf(err, "Error finding why resources for manifest %s: %s", manifest.Name, err.Error())
+					}
+					whyResources = append(whyResources, whyResourcesManifest...)
+				}
 			}
 		}
 
@@ -268,12 +341,14 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		}
 	}
 
-	fmt.Println(componentDefinition)
-
-	// Return to the original working directory
-	if err := os.Chdir(cwd); err != nil {
-		return nil, err
+	if whyImage != "" {
+		if len(whyResources) == 0 {
+			message.Warnf("image %q not found in any charts or manifests", whyImage)
+		}
+		return nil, nil
 	}
+
+	fmt.Println(componentDefinition)
 
 	if len(erroredCharts) > 0 || len(erroredCosignLookups) > 0 {
 		errMsg := ""
@@ -354,6 +429,27 @@ func (p *Packager) processUnstructuredImages(resource *unstructured.Unstructured
 	}
 
 	return matchedImages, maybeImages, nil
+}
+
+func findWhyResources(resources []*unstructured.Unstructured, whyImage, componentName, resourceName string, isChart bool) ([]string, error) {
+	foundWhyResources := []string{}
+	for _, resource := range resources {
+		bytes, err := yaml.Marshal(resource.Object)
+		if err != nil {
+			return nil, err
+		}
+		yaml := string(bytes)
+		resourceTypeKey := "manifest"
+		if isChart {
+			resourceTypeKey = "chart"
+		}
+
+		if strings.Contains(yaml, whyImage) {
+			fmt.Printf("component: %s\n%s: %s\nresource:\n\n%s\n", componentName, resourceTypeKey, resourceName, yaml)
+			foundWhyResources = append(foundWhyResources, resourceName)
+		}
+	}
+	return foundWhyResources, nil
 }
 
 // BuildImageMap looks for init container, ephemeral and regular container images.

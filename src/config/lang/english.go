@@ -7,7 +7,9 @@
 // Alternative languages can be created by duplicating this file and changing the build tag to "//go:build alt_language && <language>".
 package lang
 
-import "errors"
+import (
+	"errors"
+)
 
 // All language strings should be in the form of a constant
 // The constants should be grouped by the top level package they are used in (or common)
@@ -232,6 +234,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdPackageShort             = "Zarf package commands for creating, deploying, and inspecting packages"
 	CmdPackageFlagConcurrency   = "Number of concurrent layer operations to perform when interacting with a remote package."
 	CmdPackageFlagFlagPublicKey = "Path to public key file for validating signed packages"
+	CmdPackageFlagRetries       = "Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs"
 
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
 	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.\n" +
@@ -359,6 +362,8 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevMigrateShort = "[beta] Migrates the zarf.yaml in a given directory to the latest version of the zarf.yaml format"
 	CmdDevMigrateLong  = "[beta] Migrates the zarf.yaml in a given directory to the latest version of the zarf.yaml format.\n\n" +
 		"This command modifies the original zarf.yaml file, performs a best effort attempt to preserve comments, and will format the contents in an opinionated manner."
+	CmdDevGenerateShort   = "[alpha] Creates a zarf.yaml automatically from a given remote (git) Helm chart"
+	CmdDevGenerateExample = "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo"
 
 	CmdDevPatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
@@ -383,11 +388,13 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 	CmdDevGenerateConfigErr = "Unable to write the config file %s, make sure the file doesn't already exist"
 
-	CmdDevFlagExtractPath   = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
-	CmdDevFlagSet           = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
-	CmdDevFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
-	CmdDevFlagGitAccount    = "User or organization name for the git account that the repos are created under."
-	CmdDevFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
+	CmdDevFlagExtractPath        = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
+	CmdDevFlagSet                = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
+	CmdDevFlagRepoChartPath      = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
+	CmdDevFlagGitAccount         = "User or organization name for the git account that the repos are created under."
+	CmdDevFlagKubeVersion        = "Override the default helm template KubeVersion when performing a package chart template"
+	CmdDevFlagFindImagesRegistry = "Override the ###ZARF_REGISTRY### value"
+	CmdDevFlagFindImagesWhy      = "Prints the source manifest for the specified image"
 
 	CmdDevLintShort = "Lints the given package for valid schema and recommended practices"
 	CmdDevLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
@@ -459,6 +466,10 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	CmdToolsRegistryPruneFlagConfirm = "Confirm the image prune action to prevent accidental deletions"
 	CmdToolsRegistryPruneImageList   = "The following image digests will be pruned from the registry:"
 	CmdToolsRegistryPruneNoImages    = "There are no images to prune"
+	CmdToolsRegistryPruneLookup      = "Looking up images within package definitions"
+	CmdToolsRegistryPruneCatalog     = "Cataloging images in the registry"
+	CmdToolsRegistryPruneCalculate   = "Calculating images to prune"
+	CmdToolsRegistryPruneDelete      = "Deleting unused images"
 
 	CmdToolsRegistryInvalidPlatformErr = "Invalid platform '%s': %s"
 	CmdToolsRegistryFlagVerbose        = "Enable debug logs"
@@ -593,6 +604,9 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 	CmdVersionShort = "Shows the version of the running Zarf binary"
 	CmdVersionLong  = "Displays the version of the Zarf release that the current binary was built from."
 
+	// tools version
+	CmdToolsVersionShort = "Print the version"
+
 	// cmd viper setup
 	CmdViperErrLoadingConfigFile = "failed to load config file: %s"
 	CmdViperInfoUsingConfigFile  = "Using config file %s"
@@ -622,20 +636,13 @@ const (
 	AgentErrUnableTransform        = "unable to transform the provided request; see zarf http proxy logs for more details"
 )
 
-// src/internal/packager/create
+// Package create
 const (
-	PkgCreateErrDifferentialSameVersion = "unable to create a differential package with the same version as the package you are using as a reference; the package version must be incremented"
+	PkgCreateErrDifferentialSameVersion = "unable to create differential package. Please ensure the differential package version and reference package version are not the same. The package version must be incremented"
+	PkgCreateErrDifferentialNoVersion   = "unable to create differential package. Please ensure both package versions are set"
 )
 
-// src/internal/packager/deploy
-const (
-	PkgDeployErrMultipleComponentsSameGroup        = "cannot specify multiple components (%q, %q) within the same group (%q) when using the --components flag"
-	PkgDeployErrNoDefaultOrSelection               = "no selection made from %q with the --components flag and there is no default in the group"
-	PkgDeployErrNoCompatibleComponentsForSelection = "no compatible components found that matched %q, suggestion(s): %s"
-	PkgDeployErrComponentSelectionCanceled         = "Component selection canceled: %s"
-)
-
-// src/internal/packager/validate
+// Package validate
 const (
 	PkgValidateTemplateDeprecation        = "Package template %q is using the deprecated syntax ###ZARF_PKG_VAR_%s###. This will be removed in Zarf v1.0.0. Please update to ###ZARF_PKG_TMPL_%s###."
 	PkgValidateMustBeUppercase            = "variable name %q must be all uppercase and contain no special characters except _"
@@ -651,6 +658,7 @@ const (
 	PkgValidateErrChartURLOrPath          = "chart %q must have either a url or localPath"
 	PkgValidateErrChartVersion            = "chart %q must include a chart version"
 	PkgValidateErrComponentName           = "component name %q must be all lowercase and contain no special characters except '-' and cannot start with a '-'"
+	PkgValidateErrComponentLocalOS        = "component %q contains a localOS value that is not supported: %s (supported: %s)"
 	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
 	PkgValidateErrComponent               = "invalid component %q: %w"
 	PkgValidateErrComponentRequired       = "component %q contains deprecated usage of required. Please use `zarf dev migrate <directory> --run required-to-optional` to migrate your zarf.yaml"

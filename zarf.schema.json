@@ -82,6 +82,49 @@
         "^x-": {}
       }
     },
+    "Shell": {
+      "properties": {
+        "windows": {
+          "type": "string",
+          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
+          "examples": [
+            "powershell",
+            "cmd",
+            "pwsh",
+            "sh",
+            "bash",
+            "gsh"
+          ]
+        },
+        "linux": {
+          "type": "string",
+          "description": "(default 'sh') Indicates a preference for the shell to use on Linux systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ]
+        },
+        "darwin": {
+          "type": "string",
+          "description": "(default 'sh') Indicates a preference for the shell to use on macOS systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
     "ZarfBuildData": {
       "required": [
         "terminal",
@@ -118,10 +161,6 @@
           "type": "array",
           "description": "Any migrations that have been run on this package"
         },
-        "differential": {
-          "type": "boolean",
-          "description": "Whether this package was created with differential components"
-        },
         "registryOverrides": {
           "patternProperties": {
             ".*": {
@@ -130,6 +169,14 @@
           },
           "type": "object",
           "description": "Any registry domains that were overridden on package create when pulling images"
+        },
+        "differential": {
+          "type": "boolean",
+          "description": "Whether this package was created with differential components"
+        },
+        "differentialPackageVersion": {
+          "type": "string",
+          "description": "Version of a previously built package used as the basis for creating this differential package"
         },
         "differentialMissing": {
           "items": {
@@ -359,7 +406,7 @@
           "description": "The command to run. Must specify either cmd or wait for the action to do anything."
         },
         "shell": {
-          "$ref": "#/definitions/ZarfComponentActionShell",
+          "$ref": "#/definitions/Shell",
           "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
         },
         "setVariable": {
@@ -418,7 +465,7 @@
         },
         "shell": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentActionShell",
+          "$ref": "#/definitions/Shell",
           "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
         }
       },
@@ -500,49 +547,6 @@
         "autoIndent": {
           "type": "boolean",
           "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
-    "ZarfComponentActionShell": {
-      "properties": {
-        "windows": {
-          "type": "string",
-          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
-          "examples": [
-            "powershell",
-            "cmd",
-            "pwsh",
-            "sh",
-            "bash",
-            "gsh"
-          ]
-        },
-        "linux": {
-          "type": "string",
-          "description": "(default 'sh') Indicates a preference for the shell to use on Linux systems",
-          "examples": [
-            "sh",
-            "bash",
-            "fish",
-            "zsh",
-            "pwsh"
-          ]
-        },
-        "darwin": {
-          "type": "string",
-          "description": "(default 'sh') Indicates a preference for the shell to use on macOS systems",
-          "examples": [
-            "sh",
-            "bash",
-            "fish",
-            "zsh",
-            "pwsh"
-          ]
         }
       },
       "additionalProperties": false,

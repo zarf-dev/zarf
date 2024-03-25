@@ -37,7 +37,7 @@ metadata:
 :::tip
 
 If you are using an Integrated Development Environment (such as [VS Code](../3-create-a-zarf-package/8-vscode.md)) to create and edit the `zarf.yaml` file, you can install or reference the [`zarf.schema.json`](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json) file to get error checking and autocomplete.
-Additionally, you can run `zarf dev lint <directory>` to validate aginst the [`zarf.schema.json`](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json)
+Additionally, you can run `zarf dev lint <directory>` to validate against the [`zarf.schema.json`](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json)
 
 :::
 

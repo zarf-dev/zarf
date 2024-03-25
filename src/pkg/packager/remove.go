@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime"
 
 	"slices"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
@@ -36,13 +38,8 @@ func (p *Packager) Remove() (err error) {
 
 	// we do not want to allow removal of signed packages without a signature if there are remove actions
 	// as this is arbitrary code execution from an untrusted source
-	if err = p.source.LoadPackageMetadata(p.layout, false, false); err != nil {
-		return err
-	}
-	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
-		return err
-	}
-	if err := p.filterComponentsByArchAndOS(); err != nil {
+	p.cfg.Pkg, p.warnings, err = p.source.LoadPackageMetadata(p.layout, false, false)
+	if err != nil {
 		return err
 	}
 	packageName = p.cfg.Pkg.Metadata.Name
@@ -52,7 +49,10 @@ func (p *Packager) Remove() (err error) {
 	packageRequiresCluster := false
 
 	// If components were provided; just remove the things we were asked to remove
-	filter := filters.BySelectState(p.cfg.PkgOpts.OptionalComponents)
+	filter := filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
+	)
 	included, err := filter.Apply(p.cfg.Pkg)
 	if err != nil {
 		return err
@@ -131,12 +131,12 @@ func (p *Packager) removeComponent(deployedPackage *types.DeployedPackage, deplo
 
 	onRemove := c.Actions.OnRemove
 	onFailure := func() {
-		if err := p.runActions(onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
+		if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
 			message.Debugf("Unable to run the failure action: %s", err)
 		}
 	}
 
-	if err := p.runActions(onRemove.Defaults, onRemove.Before, nil); err != nil {
+	if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.Before, nil); err != nil {
 		onFailure()
 		return nil, fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
 	}
@@ -165,12 +165,12 @@ func (p *Packager) removeComponent(deployedPackage *types.DeployedPackage, deplo
 		p.updatePackageSecret(*deployedPackage)
 	}
 
-	if err := p.runActions(onRemove.Defaults, onRemove.After, nil); err != nil {
+	if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.After, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the after action: %w", err)
 	}
 
-	if err := p.runActions(onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
+	if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the success action: %w", err)
 	}

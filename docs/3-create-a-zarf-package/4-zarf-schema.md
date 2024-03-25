@@ -409,6 +409,25 @@ Must be one of:
 </blockquote>
 </details>
 
+<details open>
+<summary>
+<strong> <a name="build_registryOverrides"></a>registryOverrides</strong>
+</summary>
+&nbsp;
+<blockquote>
+
+  ## build > registryOverrides
+
+**Description:** Any registry domains that were overridden on package create when pulling images
+
+|                           |                                                                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Type**                  | `object`                                                                                                                          |
+| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
+
+</blockquote>
+</details>
+
 <details>
 <summary>
 <strong> <a name="build_differential"></a>differential</strong>
@@ -425,21 +444,18 @@ Must be one of:
 </blockquote>
 </details>
 
-<details open>
+<details>
 <summary>
-<strong> <a name="build_registryOverrides"></a>registryOverrides</strong>
+<strong> <a name="build_differentialPackageVersion"></a>differentialPackageVersion</strong>
 </summary>
 &nbsp;
 <blockquote>
 
-  ## build > registryOverrides
+**Description:** Version of a previously built package used as the basis for creating this differential package
 
-**Description:** Any registry domains that were overridden on package create when pulling images
-
-|                           |                                                                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Type**                  | `object`                                                                                                                          |
-| **Additional properties** | [![Any type: allowed](https://img.shields.io/badge/Any%20type-allowed-green)](# "Additional Properties of any type are allowed.") |
+|          |          |
+| -------- | -------- |
+| **Type** | `string` |
 
 </blockquote>
 </details>
@@ -1832,7 +1848,7 @@ Must be one of:
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
 | **Type**                  | `object`                                                                                                 |
 | **Additional properties** | [![Not allowed](https://img.shields.io/badge/Not%20allowed-red)](# "Additional Properties not allowed.") |
-| **Defined in**            | #/definitions/ZarfComponentActionShell                                                                   |
+| **Defined in**            | #/definitions/Shell                                                                                      |
 
 <details>
 <summary>

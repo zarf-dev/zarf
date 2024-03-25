@@ -13,7 +13,8 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/mholt/archiver/v3"
@@ -36,7 +37,7 @@ func IsValidFileExtension(filename string) bool {
 }
 
 func identifyUnknownTarball(path string) (string, error) {
-	if utils.InvalidPath(path) {
+	if helpers.InvalidPath(path) {
 		return "", &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
 	}
 	if filepath.Ext(path) != "" && IsValidFileExtension(path) {
@@ -128,7 +129,7 @@ func NameFromMetadata(pkg *types.ZarfPackage, isSkeleton bool) string {
 	arch := config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
 
 	if isSkeleton {
-		arch = "skeleton"
+		arch = zoci.SkeletonArch
 	}
 
 	switch pkg.Kind {
@@ -141,10 +142,26 @@ func NameFromMetadata(pkg *types.ZarfPackage, isSkeleton bool) string {
 	}
 
 	if pkg.Build.Differential {
-		name = fmt.Sprintf("%s-differential-%s", name, pkg.Metadata.Version)
+		name = fmt.Sprintf("%s-%s-differential-%s", name, pkg.Build.DifferentialPackageVersion, pkg.Metadata.Version)
 	} else if pkg.Metadata.Version != "" {
 		name = fmt.Sprintf("%s-%s", name, pkg.Metadata.Version)
 	}
 
 	return name
+}
+
+// GetInitPackageName returns the formatted name of the init package.
+func GetInitPackageName() string {
+	// No package has been loaded yet so lookup GetArch() with no package info
+	arch := config.GetArch()
+	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", arch, config.CLIVersion)
+}
+
+// PkgSuffix returns a package suffix based on whether it is uncompressed or not.
+func PkgSuffix(uncompressed bool) (suffix string) {
+	suffix = ".tar.zst"
+	if uncompressed {
+		suffix = ".tar"
+	}
+	return suffix
 }

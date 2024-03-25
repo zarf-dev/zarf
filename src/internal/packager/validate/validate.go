@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"slices"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -22,7 +23,19 @@ var (
 	// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
 	// https://regex101.com/r/tfsEuZ/1
 	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
+	// Define allowed OS, an empty string means it is allowed on all operating systems
+	// same as enums on ZarfComponentOnlyTarget
+	supportedOS = []string{"linux", "darwin", "windows", ""}
 )
+
+// SupportedOS returns the supported operating systems.
+//
+// The supported operating systems are: linux, darwin, windows.
+//
+// An empty string signifies no OS restrictions.
+func SupportedOS() []string {
+	return supportedOS
+}
 
 // Run performs config validations.
 func Run(pkg types.ZarfPackage) error {
@@ -131,6 +144,10 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 
 	if component.DeprecatedRequired != nil {
 		return fmt.Errorf(lang.PkgValidateErrComponentRequired, component.Name)
+	}
+
+	if !slices.Contains(supportedOS, component.Only.LocalOS) {
+		return fmt.Errorf(lang.PkgValidateErrComponentLocalOS, component.Name, component.Only.LocalOS, supportedOS)
 	}
 
 	if component.Optional == nil || !*component.Optional {

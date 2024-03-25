@@ -12,7 +12,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/agnivade/levenshtein"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -33,6 +32,14 @@ type deploymentFilter struct {
 	requestedComponents []string
 	isInteractive       bool
 }
+
+// Errors for the deployment filter.
+var (
+	ErrMultipleSameGroup    = fmt.Errorf("cannot specify multiple components from the same group")
+	ErrNoDefaultOrSelection = fmt.Errorf("no default or selected component found")
+	ErrNotFound             = fmt.Errorf("no compatible components found")
+	ErrSelectionCanceled    = fmt.Errorf("selection canceled")
+)
 
 // Apply applies the filter.
 func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
@@ -101,7 +108,7 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 
 					// Then check for already selected groups
 					if groupSelected != nil {
-						return []types.ZarfComponent{}, fmt.Errorf(lang.PkgDeployErrMultipleComponentsSameGroup, groupSelected.Name, component.Name, component.DeprecatedGroup)
+						return nil, fmt.Errorf("%w: group: %s selected: %s, %s", ErrMultipleSameGroup, component.DeprecatedGroup, groupSelected.Name, component.Name)
 					}
 
 					// Then append to the final list
@@ -119,7 +126,7 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 				for _, component := range groupedComponents[groupKey] {
 					componentNames = append(componentNames, component.Name)
 				}
-				return []types.ZarfComponent{}, fmt.Errorf(lang.PkgDeployErrNoDefaultOrSelection, strings.Join(componentNames, ", "))
+				return nil, fmt.Errorf("%w: choose from %s", ErrNoDefaultOrSelection, strings.Join(componentNames, ", "))
 			}
 		}
 
@@ -133,7 +140,7 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 						closeEnough = append(closeEnough, c.Name)
 					}
 				}
-				return nil, fmt.Errorf(lang.PkgDeployErrNoCompatibleComponentsForSelection, requestedComponent, strings.Join(closeEnough, ", "))
+				return nil, fmt.Errorf("%w: %s, suggestions (%s)", ErrNotFound, requestedComponent, strings.Join(closeEnough, ", "))
 			}
 		}
 	} else {
@@ -141,7 +148,10 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 			group := groupedComponents[groupKey]
 			if len(group) > 1 {
 				if f.isInteractive {
-					component := interactive.SelectChoiceGroup(group)
+					component, err := interactive.SelectChoiceGroup(group)
+					if err != nil {
+						return nil, fmt.Errorf("%w: %w", ErrSelectionCanceled, err)
+					}
 					selectedComponents = append(selectedComponents, component)
 				} else {
 					foundDefault := false
@@ -158,20 +168,31 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 					}
 					if !foundDefault {
 						// If no default component was found, give up
-						return []types.ZarfComponent{}, fmt.Errorf(lang.PkgDeployErrNoDefaultOrSelection, strings.Join(componentNames, ", "))
+						return nil, fmt.Errorf("%w: choose from %s", ErrNoDefaultOrSelection, strings.Join(componentNames, ", "))
 					}
 				}
 			} else {
 				component := groupedComponents[groupKey][0]
 
+				if isRequired(component, useRequiredLogic) {
+					selectedComponents = append(selectedComponents, component)
+					continue
+				}
+
 				if f.isInteractive {
-					if selected := interactive.SelectOptionalComponent(component); selected {
-						selectedComponents = append(selectedComponents, component)
+					selected, err := interactive.SelectOptionalComponent(component)
+					if err != nil {
+						return nil, fmt.Errorf("%w: %w", ErrSelectionCanceled, err)
 					}
-				} else {
-					if isRequired(component, useRequiredLogic) || component.Default {
+					if selected {
 						selectedComponents = append(selectedComponents, component)
+						continue
 					}
+				}
+
+				if component.Default {
+					selectedComponents = append(selectedComponents, component)
+					continue
 				}
 			}
 		}

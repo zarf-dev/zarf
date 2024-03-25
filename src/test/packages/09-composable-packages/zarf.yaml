@@ -2,6 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: test-compose-package
   description: A contrived example for podinfo using many Zarf primitives for compose testing
+  version: 0.0.1
 
 components:
   - name: test-compose-package

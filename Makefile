@@ -36,12 +36,22 @@ K8S_MODULES_VER=$(subst ., ,$(subst v,,$(shell go list -f '{{.Version}}' -m k8s.
 K8S_MODULES_MAJOR_VER=$(shell echo $$(($(firstword $(K8S_MODULES_VER)) + 1)))
 K8S_MODULES_MINOR_VER=$(word 2,$(K8S_MODULES_VER))
 K8S_MODULES_PATCH_VER=$(word 3,$(K8S_MODULES_VER))
+K9S_VERSION=$(shell go list -f '{{.Version}}' -m github.com/derailed/k9s)
+CRANE_VERSION=$(shell go list -f '{{.Version}}' -m github.com/google/go-containerregistry)
+SYFT_VERSION=$(shell go list -f '{{.Version}}' -m github.com/anchore/syft)
+ARCHIVER_VERSION=$(shell go list -f '{{.Version}}' -m github.com/mholt/archiver/v3)
+HELM_VERSION=$(shell go list -f '{{.Version}}' -m helm.sh/helm/v3)
 
 BUILD_ARGS += -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
 BUILD_ARGS += -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMinor=$(K8S_MODULES_MINOR_VER)
 BUILD_ARGS += -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
 BUILD_ARGS += -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor=$(K8S_MODULES_MINOR_VER)
 BUILD_ARGS += -X k8s.io/component-base/version.gitVersion=v$(K8S_MODULES_MAJOR_VER).$(K8S_MODULES_MINOR_VER).$(K8S_MODULES_PATCH_VER)
+BUILD_ARGS += -X github.com/derailed/k9s/cmd.version=$(K9S_VERSION)
+BUILD_ARGS += -X github.com/google/go-containerregistry/cmd/crane/cmd.Version=$(CRANE_VERSION)
+BUILD_ARGS += -X github.com/defenseunicorns/zarf/src/cmd/tools.syftVersion=$(SYFT_VERSION)
+BUILD_ARGS += -X github.com/defenseunicorns/zarf/src/cmd/tools.archiverVersion=$(ARCHIVER_VERSION)
+BUILD_ARGS += -X github.com/defenseunicorns/zarf/src/cmd/tools.helmVersion=$(HELM_VERSION)
 
 GIT_SHA := $(if $(shell git rev-parse HEAD),$(shell git rev-parse HEAD),"")
 BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
@@ -210,10 +220,11 @@ test-docs-and-schema:
 
 # INTERNAL: used to test for new CVEs that may have been introduced
 test-cves:
-	go run main.go tools sbom packages . -o json --exclude './docs-website' --exclude './examples' | grype --fail-on low
+	go run main.go tools sbom scan . -o json --exclude './docs-website' --exclude './examples' | grype --fail-on low
 
 cve-report: ## Create a CVE report for the current project (must `brew install grype` first)
-	go run main.go tools sbom packages . -o json --exclude './docs-website' --exclude './examples' | grype -o template -t hack/.templates/grype.tmpl > build/zarf-known-cves.csv
+	@test -d ./build || mkdir ./build
+	go run main.go tools sbom scan . -o json --exclude './docs-website' --exclude './examples' | grype -o template -t hack/.templates/grype.tmpl > build/zarf-known-cves.csv
 
 lint-go: ## Run revive to lint the go code (must `brew install revive` first)
 	revive -config revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...

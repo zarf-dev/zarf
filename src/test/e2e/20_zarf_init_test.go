@@ -69,8 +69,9 @@ func TestZarfInit(t *testing.T) {
 	_, initStdErr, err := e2e.Zarf("init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace", "--confirm")
 	require.NoError(t, err)
 	require.Contains(t, initStdErr, "an inventory of all software contained in this package")
+	require.NotContains(t, initStdErr, "This package does NOT contain an SBOM. If you require an SBOM, please contact the creator of this package to request a version that includes an SBOM.")
 
-	logText := e2e.GetLogFileContents(t, initStdErr)
+	logText := e2e.GetLogFileContents(t, e2e.StripMessageFormatting(initStdErr))
 
 	// Verify that any state secrets were not included in the log
 	state := types.ZarfState{}
