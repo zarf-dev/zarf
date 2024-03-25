@@ -36,11 +36,11 @@ $ zarf init
 2. When prompted to deploy the package select `y` for Yes, then hit the `enter`
 key. <br/> When prompted to deploy the logging component select `y` for Yes, then hit the `enter` key.
 
-<iframe src="/docs/tutorials/logging_init_manual.html" height="800px" width="100%"></iframe>
+<iframe src="/tutorials/logging_init_manual.html" height="800px" width="100%"></iframe>
 
 4. You can automatically accept the logging component, and confirm the package using the `--confirm` and `--components` flags.
 
-<iframe src="/docs/tutorials/logging_init.html" height="800px" width="100%"></iframe>
+<iframe src="/tutorials/logging_init.html" height="800px" width="100%"></iframe>
 
 ### Connecting to the Logging Component
 
@@ -48,7 +48,7 @@ key. <br/> When prompted to deploy the logging component select `y` for Yes, the
 
 1. Review the `zarf init` command output for the following:
 
-<iframe src="/docs/tutorials/logging_credentials.html" width="100%"></iframe>
+<iframe src="/tutorials/logging_credentials.html" width="100%"></iframe>
 
 You should see a section for `Logging`.  You will need these credentials later on.
 
@@ -89,18 +89,18 @@ Submit that query and you'll get back a dump of all the game pod logs that Loki 
 
 1. Use the `zarf package list` command to get a list of the installed packages and their components.  This will give you the name of the init package and the logging component to remove it.
 
-<iframe src="/docs/tutorials/logging_list.html" width="100%"></iframe>
+<iframe src="/tutorials/logging_list.html" width="100%"></iframe>
 
 2. Use the `zarf package remove` command to remove the `logging` component from the init package.  Don't forget the `--confirm` flag.  Otherwise you'll receive an error.
 
-<iframe src="/docs/tutorials/logging_remove.html" width="100%" height="120px"></iframe>
+<iframe src="/tutorials/logging_remove.html" width="100%" height="120px"></iframe>
 
 
 ## Troubleshooting
 
 ### Unable to connect to the Kubernetes cluster.
 
-<iframe src="/docs/tutorials/troubleshoot_unreachable.html" width="100%" height="200px"></iframe>
+<iframe src="/tutorials/troubleshoot_unreachable.html" width="100%" height="200px"></iframe>
 
 :::info Remediation
 
