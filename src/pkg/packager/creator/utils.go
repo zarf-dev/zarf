@@ -43,10 +43,10 @@ func recordPackageMetadata(pkg *types.ZarfPackage, createOpts types.ZarfCreateOp
 	// Record the time of package creation.
 	pkg.Build.Timestamp = now.Format(time.RFC1123Z)
 
-	// Record the migrations that will be ran on the package.
-	pkg.Build.Migrations = []string{
-		deprecated.ScriptsToActionsMigrated,
-		deprecated.PluralizeSetVariable,
+	// Record the migrations that will run on the package.
+	pkg.Build.Migrations = []string{}
+	for _, m := range deprecated.Migrations() {
+		pkg.Build.Migrations = append(pkg.Build.Migrations, m.ID())
 	}
 
 	// Record the flavor of Zarf used to build this package (if any).
