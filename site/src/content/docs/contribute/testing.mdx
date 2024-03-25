@@ -10,10 +10,9 @@ In addition, Zarf undergoes a series of unit tests for specific functions where 
 
 To run the end-to-end tests locally, you must meet the same prerequisites as those required for building and running Zarf, which include:
 
-1. GoLang >= `1.19.x`.
+1. GoLang >= 1.21.x.
 2. Make.
 3. Any clean K8s cluster (local or remote) or Linux with sudo if you want to use the Zarf-installed K3s cluster.
-4. NodeJS >= `18.x.x`.
 
 ### CLI End-to-End Tests
 
@@ -77,7 +76,7 @@ Due to resource constraints in public GitHub runners, K8s tests are only perform
 - 21 is reserved for logging tests so they can be removed first (they take the most resources in the cluster).
 - 22 is reserved for tests required the git-server, which is removed at the end of the test.
 - 23-98 are for the remaining tests that only require a basic Zarf cluster without logging or the git-server.
-- 99 is reserved for the `zarf destroy` and [YOLO Mode](../../examples/yolo/README.md) test.
+- 99 is reserved for the `zarf destroy` and [YOLO Mode](/examples/yolo/) test.
 
 ## CLI Unit Tests
 

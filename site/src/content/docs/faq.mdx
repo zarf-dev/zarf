@@ -38,11 +38,11 @@ The Agent does not need to create any secrets in the cluster. Instead, during `z
 
 Resources can be excluded at the namespace or resources level by adding the `zarf.dev/agent: ignore` label.
 
-## What happens to resources that exist in the cluster before [`zarf init`](/cli/commands/zarf_init)?
+## What happens to resources that exist in the cluster before [`zarf init`](/commands/zarf_init/)?
 
 During the `zarf init` operation, the Zarf Agent will patch any existing namespaces with the `zarf.dev/agent: ignore` label to prevent the Agent from modifying any resources in that namespace. This is done because there is no way to guarantee the images used by pods in existing namespaces are available in the Zarf Registry.
 
-If you would like to adopt pre-existing resources into a Zarf deployment you can use the `--adopt-existing-resources` flag on [`zarf package deploy`](/cli/commands/zarf_package_deploy) to adopt those resources into the Helm Releases that Zarf manages (including namespaces). This will add the requisite annotations and labels to those resources and drop the `zarf.dev/agent: ignore` label from any namespaces specified by those resources.
+If you would like to adopt pre-existing resources into a Zarf deployment you can use the `--adopt-existing-resources` flag on [`zarf package deploy`](/commands/zarf_package_deploy/) to adopt those resources into the Helm Releases that Zarf manages (including namespaces). This will add the requisite annotations and labels to those resources and drop the `zarf.dev/agent: ignore` label from any namespaces specified by those resources.
 
 :::note
 
@@ -56,7 +56,7 @@ Additionally, when adopting resources, you should ensure that the namespaces you
 
 Due to some limitations with how Docker provides access to local image layers, `zarf package create` has to rely on `docker save` under the hood which is [very slow overall](https://github.com/defenseunicorns/zarf/issues/1214) and also takes a long time to report progress. We experimented with many ways to improve this, but for now recommend leveraging a local docker registry to speed up the process.
 
-This can be done by running a local registry and pushing the images to it before running `zarf package create`. This will allow `zarf package create` to pull the images from the local registry instead of Docker. This can also be combined with [component actions](3-create-a-zarf-package/7-component-actions.md) and [`--registry-override`](./2-the-zarf-cli/100-cli-commands/zarf_package_create.md) to make the process automatic. Given an example image of `registry.enterprise.corp/my-giant-image:v2` you could do something like this:
+This can be done by running a local registry and pushing the images to it before running `zarf package create`. This will allow `zarf package create` to pull the images from the local registry instead of Docker. This can also be combined with [component actions](/ref/actions/) and [`--registry-override`](/commands/zarf_package_create/) to make the process automatic. Given an example image of `registry.enterprise.corp/my-giant-image:v2` you could do something like this:
 
 ```sh
 # Create a local registry
