@@ -1,6 +1,6 @@
 module github.com/defenseunicorns/zarf
 
-go 1.22.0
+go 1.21.8
 
 // TODO (@AABRO): Pending merge into github.com/gojsonschema/gojsonschema (https://github.com/gojsonschema/gojsonschema/pull/5)
 replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
@@ -14,7 +14,7 @@ require (
 	github.com/anchore/clio v0.0.0-20240301210832-abcb7197da84
 	github.com/anchore/stereoscope v0.0.1
 	github.com/anchore/syft v0.100.0
-	github.com/defenseunicorns/pkg/helpers v0.0.1
+	github.com/defenseunicorns/pkg/helpers v0.0.2
 	github.com/derailed/k9s v0.31.7
 	github.com/distribution/reference v0.5.0
 	github.com/docker/cli v24.0.9+incompatible
