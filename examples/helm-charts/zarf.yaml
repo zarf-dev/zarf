@@ -16,6 +16,13 @@ components:
         localPath: chart
         valuesFiles:
           - values.yaml
+        # Variables are used to override the default values in the chart
+        # This can be overridden by the user at deployment time with the `--set` flag
+        variables:
+          - name: replicaCount
+            description: "Override the number of pod replicas"
+            path: replicaCount
+            value: 2
 
       - name: podinfo-oci
         version: 6.4.0
@@ -77,3 +84,4 @@ components:
                 name: cool-release-name-podinfo
                 namespace: podinfo-from-repo
                 condition: available
+
