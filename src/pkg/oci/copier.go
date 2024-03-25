@@ -11,7 +11,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/pkg/helpers"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
