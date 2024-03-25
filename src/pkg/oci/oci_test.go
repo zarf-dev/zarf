@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -35,53 +34,6 @@ type OCISuite struct {
 
 func (suite *OCISuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
-}
-
-const (
-	testArch = "fake-test-arch"
-)
-
-func checkHealth(url string, maxRetries int, retryInterval time.Duration) error {
-	endpoint := fmt.Sprintf("http://%s/v2", url)
-	for i := 0; i < maxRetries; i++ {
-		resp, err := http.Get(endpoint)
-		if err == nil && resp.StatusCode == http.StatusOK {
-			return nil
-		}
-		if resp != nil {
-			resp.Body.Close()
-		}
-		time.Sleep(retryInterval)
-	}
-	return fmt.Errorf("service did not become ready at %s", endpoint)
-}
-
-func (suite *OCISuite) setupInMemoryRegistry(ctx context.Context) string {
-	port, err := freeport.GetFreePort()
-	suite.NoError(err)
-	config := &configuration.Configuration{}
-	config.HTTP.Addr = fmt.Sprintf(":%d", port)
-	config.Log.AccessLog.Disabled = true
-	config.Log.Level = "error"
-	config.HTTP.DrainTimeout = 10 * time.Second
-	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]interface{}{}}
-
-	ref, err := registry.NewRegistry(ctx, config)
-	suite.NoError(err)
-
-	go ref.ListenAndServe()
-	url := fmt.Sprintf("localhost:%d", port)
-	err = checkHealth(url, 3, 100*time.Millisecond)
-	if err != nil {
-		// Occasionally the registry doesn't stand up properly which causes a test flake, if that happens we just start another registry
-		suite.setupInMemoryRegistry(ctx)
-	}
-
-	return fmt.Sprintf("oci://%s/package:1.0.1", url)
-}
-
-// This runs before each test, starting each test with a new, empty registry
-func (suite *OCISuite) SetupTest() {
 	ctx := context.TODO()
 	registry := suite.setupInMemoryRegistry(ctx)
 	platform := PlatformForArch(testArch)
@@ -94,6 +46,29 @@ func (suite *OCISuite) SetupTest() {
 	logger := slog.New(handler)
 	suite.remote, err = NewOrasRemote(registry, platform, WithPlainHTTP(true), WithLogger(logger))
 	suite.NoError(err)
+}
+
+const (
+	testArch = "fake-test-arch"
+)
+
+func (suite *OCISuite) setupInMemoryRegistry(ctx context.Context) string {
+	port, err := freeport.GetFreePort()
+	suite.NoError(err)
+	config := &configuration.Configuration{}
+	config.HTTP.Addr = fmt.Sprintf(":%d", port)
+	config.HTTP.Secret = "Fake secret so we don't get warning"
+	config.Log.AccessLog.Disabled = true
+	config.HTTP.DrainTimeout = 10 * time.Second
+	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]interface{}{}}
+
+	ref, err := registry.NewRegistry(ctx, config)
+	suite.NoError(err)
+
+	go ref.ListenAndServe()
+	url := fmt.Sprintf("localhost:%d", port)
+
+	return fmt.Sprintf("oci://%s/package:1.0.1", url)
 }
 
 func (suite *OCISuite) TestPublishFailNoTitle() {
