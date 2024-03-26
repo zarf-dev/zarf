@@ -42,8 +42,8 @@ func TestGit(t *testing.T) {
 	defer tunnelGit.Close()
 
 	testGitServerConnect(t, tunnelGit.HTTPEndpoint())
-	testGitServerReadOnly(t, ctx, tunnelGit.HTTPEndpoint())
-	testGitServerTagAndHash(t, ctx, tunnelGit.HTTPEndpoint())
+	testGitServerReadOnly(ctx, t, tunnelGit.HTTPEndpoint())
+	testGitServerTagAndHash(ctx, t, tunnelGit.HTTPEndpoint())
 }
 
 func TestGitOpsFlux(t *testing.T) {
@@ -67,7 +67,7 @@ func testGitServerConnect(t *testing.T, gitURL string) {
 	require.Equal(t, 200, resp.StatusCode)
 }
 
-func testGitServerReadOnly(t *testing.T, ctx context.Context, gitURL string) {
+func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 	// Init the state variable
 	state, err := cluster.NewClusterOrDie(ctx).LoadZarfState(ctx)
 	require.NoError(t, err)
@@ -90,7 +90,7 @@ func testGitServerReadOnly(t *testing.T, ctx context.Context, gitURL string) {
 	require.True(t, permissionsMap["pull"].(bool))
 }
 
-func testGitServerTagAndHash(t *testing.T, ctx context.Context, gitURL string) {
+func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 	// Init the state variable
 	state, err := cluster.NewClusterOrDie(ctx).LoadZarfState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
