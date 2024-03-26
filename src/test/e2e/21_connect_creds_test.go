@@ -30,7 +30,7 @@ func TestConnectAndCreds(t *testing.T) {
 
 	ctx := context.TODO()
 
-	connectToZarfServices(t, ctx)
+	connectToZarfServices(ctx, t)
 
 	stdOut, stdErr, err := e2e.Zarf("tools", "update-creds", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
@@ -39,7 +39,7 @@ func TestConnectAndCreds(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, prevAgentSecretData, newAgentSecretData, "agent secrets should not be the same")
 
-	connectToZarfServices(t, ctx)
+	connectToZarfServices(ctx, t)
 
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "init", "--components=logging", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
@@ -101,7 +101,7 @@ func TestMetrics(t *testing.T) {
 	require.Equal(t, 200, resp.StatusCode)
 }
 
-func connectToZarfServices(t *testing.T, ctx context.Context) {
+func connectToZarfServices(ctx context.Context, t *testing.T) {
 	// Make the Registry contains the images we expect
 	stdOut, stdErr, err := e2e.Zarf("tools", "registry", "catalog")
 	require.NoError(t, err, stdOut, stdErr)
