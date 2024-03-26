@@ -6,10 +6,12 @@ package helm
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -93,13 +95,15 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 
 	finalManifestsOutput := bytes.NewBuffer(nil)
 
-	// Otherwise, loop over the resources,
 	if r.cluster != nil {
-		if err := r.editHelmResources(resources, finalManifestsOutput); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := r.editHelmResources(ctx, resources, finalManifestsOutput); err != nil {
 			return nil, err
 		}
 
-		if err := r.adoptAndUpdateNamespaces(); err != nil {
+		if err := r.adoptAndUpdateNamespaces(ctx); err != nil {
 			return nil, err
 		}
 	} else {
@@ -112,9 +116,9 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	return finalManifestsOutput, nil
 }
 
-func (r *renderer) adoptAndUpdateNamespaces() error {
+func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 	c := r.cluster
-	existingNamespaces, _ := c.GetNamespaces()
+	existingNamespaces, _ := c.GetNamespaces(ctx)
 	for name, namespace := range r.namespaces {
 
 		// Check to see if this namespace already exists
@@ -127,7 +131,7 @@ func (r *renderer) adoptAndUpdateNamespaces() error {
 
 		if !existingNamespace {
 			// This is a new namespace, add it
-			if _, err := c.CreateNamespace(namespace); err != nil {
+			if _, err := c.CreateNamespace(ctx, namespace); err != nil {
 				return fmt.Errorf("unable to create the missing namespace %s", name)
 			}
 		} else if r.cfg.DeployOpts.AdoptExistingResources {
@@ -136,7 +140,7 @@ func (r *renderer) adoptAndUpdateNamespaces() error {
 				message.Warnf("Refusing to adopt the initial namespace: %s", name)
 			} else {
 				// This is an existing namespace to adopt
-				if _, err := c.UpdateNamespace(namespace); err != nil {
+				if _, err := c.UpdateNamespace(ctx, namespace); err != nil {
 					return fmt.Errorf("unable to adopt the existing namespace %s", name)
 				}
 			}
@@ -151,10 +155,10 @@ func (r *renderer) adoptAndUpdateNamespaces() error {
 		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.cfg.State.RegistryInfo)
 
 		// Try to get a valid existing secret
-		currentRegistrySecret, _ := c.GetSecret(name, config.ZarfImagePullSecretName)
+		currentRegistrySecret, _ := c.GetSecret(ctx, name, config.ZarfImagePullSecretName)
 		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentRegistrySecret.Data, validRegistrySecret.Data) {
 			// Create or update the zarf registry secret
-			if _, err := c.CreateOrUpdateSecret(validRegistrySecret); err != nil {
+			if _, err := c.CreateOrUpdateSecret(ctx, validRegistrySecret); err != nil {
 				message.WarnErrf(err, "Problem creating registry secret for the %s namespace", name)
 			}
 
@@ -162,7 +166,7 @@ func (r *renderer) adoptAndUpdateNamespaces() error {
 			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.cfg.State.GitServer)
 
 			// Create or update the zarf git server secret
-			if _, err := c.CreateOrUpdateSecret(gitServerSecret); err != nil {
+			if _, err := c.CreateOrUpdateSecret(ctx, gitServerSecret); err != nil {
 				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
 			}
 		}
@@ -170,7 +174,7 @@ func (r *renderer) adoptAndUpdateNamespaces() error {
 	return nil
 }
 
-func (r *renderer) editHelmResources(resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
+func (r *renderer) editHelmResources(ctx context.Context, resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
 	for _, resource := range resources {
 		// parse to unstructured to have access to more data than just the name
 		rawData := &unstructured.Unstructured{}
@@ -236,7 +240,7 @@ func (r *renderer) editHelmResources(resources []releaseutil.Manifest, finalMani
 				"meta.helm.sh/release-namespace": r.chart.Namespace,
 			}
 
-			if err := r.cluster.AddLabelsAndAnnotations(deployedNamespace, rawData.GetName(), rawData.GroupVersionKind().GroupKind(), helmLabels, helmAnnotations); err != nil {
+			if err := r.cluster.AddLabelsAndAnnotations(ctx, deployedNamespace, rawData.GetName(), rawData.GroupVersionKind().GroupKind(), helmLabels, helmAnnotations); err != nil {
 				// Print a debug message since this could just be because the resource doesn't exist
 				message.Debugf("Unable to adopt resource %s: %s", rawData.GetName(), err.Error())
 			}

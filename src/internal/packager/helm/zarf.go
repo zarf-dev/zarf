@@ -5,6 +5,7 @@
 package helm
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
@@ -48,7 +49,7 @@ func (h *Helm) UpdateZarfRegistryValues() error {
 }
 
 // UpdateZarfAgentValues updates the Zarf agent deployment with the new state values
-func (h *Helm) UpdateZarfAgentValues() error {
+func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 	spinner := message.NewProgressSpinner("Gathering information to update Zarf Agent TLS")
 	defer spinner.Stop()
 
@@ -58,10 +59,14 @@ func (h *Helm) UpdateZarfAgentValues() error {
 	}
 
 	// Get the current agent image from one of its pods.
-	pods := h.cluster.WaitForPodsAndContainers(k8s.PodLookup{
-		Namespace: cluster.ZarfNamespaceName,
-		Selector:  "app=agent-hook",
-	}, nil)
+	pods := h.cluster.WaitForPodsAndContainers(
+		ctx,
+		k8s.PodLookup{
+			Namespace: cluster.ZarfNamespaceName,
+			Selector:  "app=agent-hook",
+		},
+		nil,
+	)
 
 	var currentAgentImage transform.Image
 	if len(pods) > 0 && len(pods[0].Spec.Containers) > 0 {
@@ -115,10 +120,13 @@ func (h *Helm) UpdateZarfAgentValues() error {
 	defer spinner.Stop()
 
 	// Force pods to be recreated to get the updated secret.
-	err = h.cluster.DeletePods(k8s.PodLookup{
-		Namespace: cluster.ZarfNamespaceName,
-		Selector:  "app=agent-hook",
-	})
+	err = h.cluster.DeletePods(
+		ctx,
+		k8s.PodLookup{
+			Namespace: cluster.ZarfNamespaceName,
+			Selector:  "app=agent-hook",
+		},
+	)
 	if err != nil {
 		return fmt.Errorf("error recycling pods for the Zarf Agent: %w", err)
 	}

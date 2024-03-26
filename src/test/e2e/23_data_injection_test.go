@@ -42,7 +42,7 @@ func TestDataInjection(t *testing.T) {
 	// need target to equal svc that we are trying to connect to call checkForZarfConnectLabel
 	c, err := cluster.NewCluster()
 	require.NoError(t, err)
-	tunnel, err := c.Connect("kiwix")
+	tunnel, err := c.Connect(context.TODO(), "kiwix")
 	require.NoError(t, err)
 	defer tunnel.Close()
 

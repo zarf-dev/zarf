@@ -5,9 +5,11 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/alecthomas/jsonschema"
 	"github.com/defenseunicorns/pkg/helpers"
@@ -161,14 +163,17 @@ var createReadOnlyGiteaUser = &cobra.Command{
 	Short: lang.CmdInternalCreateReadOnlyGiteaUserShort,
 	Long:  lang.CmdInternalCreateReadOnlyGiteaUserLong,
 	Run: func(_ *cobra.Command, _ []string) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
 		// Load the state so we can get the credentials for the admin git user
-		state, err := cluster.NewClusterOrDie().LoadZarfState()
+		state, err := cluster.NewClusterOrDie(ctx).LoadZarfState(ctx)
 		if err != nil {
 			message.WarnErr(err, lang.ErrLoadState)
 		}
 
 		// Create the non-admin user
-		if err = git.New(state.GitServer).CreateReadOnlyUser(); err != nil {
+		if err = git.New(state.GitServer).CreateReadOnlyUser(ctx); err != nil {
 			message.WarnErr(err, lang.CmdInternalCreateReadOnlyGiteaUserErr)
 		}
 	},
@@ -179,23 +184,26 @@ var createPackageRegistryToken = &cobra.Command{
 	Short: lang.CmdInternalArtifactRegistryGiteaTokenShort,
 	Long:  lang.CmdInternalArtifactRegistryGiteaTokenLong,
 	Run: func(_ *cobra.Command, _ []string) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
 		// Load the state so we can get the credentials for the admin git user
-		c := cluster.NewClusterOrDie()
-		state, err := c.LoadZarfState()
+		c := cluster.NewClusterOrDie(ctx)
+		state, err := c.LoadZarfState(ctx)
 		if err != nil {
 			message.WarnErr(err, lang.ErrLoadState)
 		}
 
 		// If we are setup to use an internal artifact server, create the artifact registry token
 		if state.ArtifactServer.InternalServer {
-			token, err := git.New(state.GitServer).CreatePackageRegistryToken()
+			token, err := git.New(state.GitServer).CreatePackageRegistryToken(ctx)
 			if err != nil {
 				message.WarnErr(err, lang.CmdInternalArtifactRegistryGiteaTokenErr)
 			}
 
 			state.ArtifactServer.PushToken = token.Sha1
 
-			c.SaveZarfState(state)
+			c.SaveZarfState(ctx, state)
 		}
 	},
 }
@@ -205,9 +213,11 @@ var updateGiteaPVC = &cobra.Command{
 	Short: lang.CmdInternalUpdateGiteaPVCShort,
 	Long:  lang.CmdInternalUpdateGiteaPVCLong,
 	Run: func(_ *cobra.Command, _ []string) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
 
 		// There is a possibility that the pvc does not yet exist and Gitea helm chart should create it
-		helmShouldCreate, err := git.UpdateGiteaPVC(rollback)
+		helmShouldCreate, err := git.UpdateGiteaPVC(ctx, rollback)
 		if err != nil {
 			message.WarnErr(err, lang.CmdInternalUpdateGiteaPVCErr)
 		}

@@ -5,6 +5,7 @@
 package cluster
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -34,7 +35,7 @@ const (
 )
 
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
-func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
+func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitOptions) error {
 	var (
 		distro string
 		err    error
@@ -46,7 +47,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 	// Attempt to load an existing state prior to init.
 	// NOTE: We are ignoring the error here because we don't really expect a state to exist yet.
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
-	state, _ := c.LoadZarfState()
+	state, _ := c.LoadZarfState(ctx)
 
 	// If state is nil, this is a new cluster.
 	if state == nil {
@@ -59,7 +60,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 			state.ZarfAppliance = true
 		} else {
 			// Otherwise, trying to detect the K8s distro type.
-			distro, err = c.DetectDistro()
+			distro, err = c.DetectDistro(ctx)
 			if err != nil {
 				// This is a basic failure right now but likely could be polished to provide user guidance to resolve.
 				return fmt.Errorf("unable to connect to the cluster to verify the distro: %w", err)
@@ -79,7 +80,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 		// Setup zarf agent PKI
 		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
 
-		namespaces, err := c.GetNamespaces()
+		namespaces, err := c.GetNamespaces(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
 		}
@@ -93,7 +94,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 			// This label will tell the Zarf Agent to ignore this namespace.
 			namespace.Labels[agentLabel] = "ignore"
 			namespaceCopy := namespace
-			if _, err = c.UpdateNamespace(&namespaceCopy); err != nil {
+			if _, err = c.UpdateNamespace(ctx, &namespaceCopy); err != nil {
 				// This is not a hard failure, but we should log it.
 				message.WarnErrf(err, "Unable to mark the namespace %s as ignored by Zarf Agent", namespace.Name)
 			}
@@ -102,14 +103,16 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 		// Try to create the zarf namespace.
 		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := c.NewZarfManagedNamespace(ZarfNamespaceName)
-		if _, err := c.CreateNamespace(zarfNamespace); err != nil {
+		if _, err := c.CreateNamespace(ctx, zarfNamespace); err != nil {
 			return fmt.Errorf("unable to create the zarf namespace: %w", err)
 		}
 
 		// Wait up to 2 minutes for the default service account to be created.
 		// Some clusters seem to take a while to create this, see https://github.com/kubernetes/kubernetes/issues/66689.
 		// The default SA is required for pods to start properly.
-		if _, err := c.WaitForServiceAccount(ZarfNamespaceName, "default", 2*time.Minute); err != nil {
+		saCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+		if _, err := c.WaitForServiceAccount(saCtx, ZarfNamespaceName, "default"); err != nil {
 			return fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 
@@ -158,7 +161,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 	spinner.Success()
 
 	// Save the state back to K8s
-	if err := c.SaveZarfState(state); err != nil {
+	if err := c.SaveZarfState(ctx, state); err != nil {
 		return fmt.Errorf("unable to save the Zarf state: %w", err)
 	}
 
@@ -166,9 +169,9 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 }
 
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.
-func (c *Cluster) LoadZarfState() (state *types.ZarfState, err error) {
+func (c *Cluster) LoadZarfState(ctx context.Context) (state *types.ZarfState, err error) {
 	// Set up the API connection
-	secret, err := c.GetSecret(ZarfNamespaceName, ZarfStateSecretName)
+	secret, err := c.GetSecret(ctx, ZarfNamespaceName, ZarfStateSecretName)
 	if err != nil {
 		return nil, fmt.Errorf("%w. %s", err, message.ColorWrap("Did you remember to zarf init?", color.Bold))
 	}
@@ -218,7 +221,7 @@ func (c *Cluster) debugPrintZarfState(state *types.ZarfState) {
 }
 
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.
-func (c *Cluster) SaveZarfState(state *types.ZarfState) error {
+func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) error {
 	c.debugPrintZarfState(state)
 
 	// Convert the data back to JSON.
@@ -249,7 +252,7 @@ func (c *Cluster) SaveZarfState(state *types.ZarfState) error {
 	}
 
 	// Attempt to create or update the secret and return.
-	if _, err := c.CreateOrUpdateSecret(secret); err != nil {
+	if _, err := c.CreateOrUpdateSecret(ctx, secret); err != nil {
 		return fmt.Errorf("unable to create the zarf state secret")
 	}
 

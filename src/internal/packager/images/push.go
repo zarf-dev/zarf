@@ -5,6 +5,7 @@
 package images
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -23,7 +24,7 @@ import (
 
 // PushToZarfRegistry pushes a provided image into the configured Zarf registry
 // This function will optionally shorten the image name while appending a checksum of the original image name.
-func (i *ImageConfig) PushToZarfRegistry() error {
+func (i *ImageConfig) PushToZarfRegistry(ctx context.Context) error {
 	message.Debug("images.PushToZarfRegistry()")
 
 	logs.Warn.SetOutput(&message.DebugWriter{})
@@ -72,7 +73,7 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 
 	c, _ := cluster.NewCluster()
 	if c != nil {
-		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(i.RegInfo)
+		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, i.RegInfo)
 		if err != nil {
 			return err
 		}

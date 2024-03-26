@@ -11,9 +11,9 @@ import (
 )
 
 // DeleteZarfNamespace deletes the Zarf namespace from the connected cluster.
-func (c *Cluster) DeleteZarfNamespace() {
+func (c *Cluster) DeleteZarfNamespace(ctx context.Context) error {
 	spinner := message.NewProgressSpinner("Deleting the zarf namespace from this cluster")
 	defer spinner.Stop()
 
-	c.DeleteNamespace(context.TODO(), ZarfNamespaceName)
+	return c.DeleteNamespace(ctx, ZarfNamespaceName)
 }

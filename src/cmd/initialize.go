@@ -5,12 +5,14 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers"
@@ -67,8 +69,11 @@ var initCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+		defer cancel()
+
 		// Deploy everything
-		err = pkgClient.Deploy()
+		err = pkgClient.Deploy(ctx)
 		if err != nil {
 			message.Fatal(err, err.Error())
 		}

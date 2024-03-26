@@ -5,6 +5,7 @@
 package test
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -35,13 +36,14 @@ func TestGit(t *testing.T) {
 
 	c, err := cluster.NewCluster()
 	require.NoError(t, err)
-	tunnelGit, err := c.Connect(cluster.ZarfGit)
+	ctx := context.TODO()
+	tunnelGit, err := c.Connect(ctx, cluster.ZarfGit)
 	require.NoError(t, err)
 	defer tunnelGit.Close()
 
 	testGitServerConnect(t, tunnelGit.HTTPEndpoint())
-	testGitServerReadOnly(t, tunnelGit.HTTPEndpoint())
-	testGitServerTagAndHash(t, tunnelGit.HTTPEndpoint())
+	testGitServerReadOnly(t, ctx, tunnelGit.HTTPEndpoint())
+	testGitServerTagAndHash(t, ctx, tunnelGit.HTTPEndpoint())
 }
 
 func TestGitOpsFlux(t *testing.T) {
@@ -65,9 +67,9 @@ func testGitServerConnect(t *testing.T, gitURL string) {
 	require.Equal(t, 200, resp.StatusCode)
 }
 
-func testGitServerReadOnly(t *testing.T, gitURL string) {
+func testGitServerReadOnly(t *testing.T, ctx context.Context, gitURL string) {
 	// Init the state variable
-	state, err := cluster.NewClusterOrDie().LoadZarfState()
+	state, err := cluster.NewClusterOrDie(ctx).LoadZarfState(ctx)
 	require.NoError(t, err)
 
 	gitCfg := git.New(state.GitServer)
@@ -88,9 +90,9 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 	require.True(t, permissionsMap["pull"].(bool))
 }
 
-func testGitServerTagAndHash(t *testing.T, gitURL string) {
+func testGitServerTagAndHash(t *testing.T, ctx context.Context, gitURL string) {
 	// Init the state variable
-	state, err := cluster.NewClusterOrDie().LoadZarfState()
+	state, err := cluster.NewClusterOrDie(ctx).LoadZarfState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
 	repoName := "zarf-public-test-2469062884"
 

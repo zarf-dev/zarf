@@ -5,10 +5,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -84,8 +86,11 @@ var packageDeployCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+		defer cancel()
+
 		// Deploy the package
-		if err := pkgClient.Deploy(); err != nil {
+		if err := pkgClient.Deploy(ctx); err != nil {
 			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
 		}
 	},
@@ -105,8 +110,10 @@ var packageMirrorCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		// Deploy the package
-		if err := pkgClient.Mirror(); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := pkgClient.Mirror(ctx); err != nil {
 			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
 		}
 	},
@@ -140,8 +147,11 @@ var packageListCmd = &cobra.Command{
 	Aliases: []string{"l", "ls"},
 	Short:   lang.CmdPackageListShort,
 	Run: func(_ *cobra.Command, _ []string) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
 		// Get all the deployed packages
-		deployedZarfPackages, errs := cluster.NewClusterOrDie().GetDeployedZarfPackages()
+		deployedZarfPackages, errs := cluster.NewClusterOrDie(ctx).GetDeployedZarfPackages(ctx)
 		if len(errs) > 0 && len(deployedZarfPackages) == 0 {
 			message.Fatalf(errs, lang.CmdPackageListNoPackageWarn)
 		}
@@ -185,7 +195,10 @@ var packageRemoveCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
-		if err := pkgClient.Remove(); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+
+		if err := pkgClient.Remove(ctx); err != nil {
 			message.Fatalf(err, lang.CmdPackageRemoveErr, err.Error())
 		}
 	},
@@ -296,8 +309,11 @@ func getPackageCompletionArgs(_ *cobra.Command, _ []string, _ string) ([]string,
 		return pkgCandidates, cobra.ShellCompDirectiveDefault
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	// Get all the deployed packages
-	deployedZarfPackages, _ := c.GetDeployedZarfPackages()
+	deployedZarfPackages, _ := c.GetDeployedZarfPackages(ctx)
 	// Populate list of package names
 	for _, pkg := range deployedZarfPackages {
 		pkgCandidates = append(pkgCandidates, pkg.Name)

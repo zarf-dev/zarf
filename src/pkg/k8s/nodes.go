@@ -12,12 +12,12 @@ import (
 )
 
 // GetNodes returns a list of nodes from the k8s cluster.
-func (k *K8s) GetNodes() (*corev1.NodeList, error) {
+func (k *K8s) GetNodes(ctx context.Context) (*corev1.NodeList, error) {
 	metaOptions := metav1.ListOptions{}
-	return k.Clientset.CoreV1().Nodes().List(context.TODO(), metaOptions)
+	return k.Clientset.CoreV1().Nodes().List(ctx, metaOptions)
 }
 
 // GetNode returns a node from the k8s cluster.
-func (k *K8s) GetNode(nodeName string) (*corev1.Node, error) {
-	return k.Clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+func (k *K8s) GetNode(ctx context.Context, nodeName string) (*corev1.Node, error) {
+	return k.Clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 }

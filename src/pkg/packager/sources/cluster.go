@@ -5,7 +5,9 @@
 package sources
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
@@ -26,7 +28,11 @@ func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) 
 	if !validate.IsLowercaseNumberHyphenNoStartHyphen(pkgOpts.PackageSource) {
 		return nil, fmt.Errorf("invalid package name %q", pkgOpts.PackageSource)
 	}
-	cluster, err := cluster.NewClusterWithWait(cluster.DefaultTimeout)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cluster, err := cluster.NewClusterWithWait(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +61,10 @@ func (s *ClusterSource) Collect(_ string) (string, error) {
 
 // LoadPackageMetadata loads package metadata from a cluster.
 func (s *ClusterSource) LoadPackageMetadata(dst *layout.PackagePaths, _ bool, _ bool) (types.ZarfPackage, []string, error) {
-	dpkg, err := s.GetDeployedPackage(s.PackageSource)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	dpkg, err := s.GetDeployedPackage(ctx, s.PackageSource)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}

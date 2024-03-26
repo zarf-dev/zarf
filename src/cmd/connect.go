@@ -5,10 +5,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -43,12 +45,15 @@ var (
 				spinner.Fatalf(err, lang.CmdConnectErrCluster, err.Error())
 			}
 
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
 			var tunnel *k8s.Tunnel
 			if connectResourceName != "" {
 				zt := cluster.NewTunnelInfo(connectNamespace, connectResourceType, connectResourceName, "", connectLocalPort, connectRemotePort)
-				tunnel, err = c.ConnectTunnelInfo(zt)
+				tunnel, err = c.ConnectTunnelInfo(ctx, zt)
 			} else {
-				tunnel, err = c.Connect(target)
+				tunnel, err = c.Connect(ctx, target)
 			}
 			if err != nil {
 				spinner.Fatalf(err, lang.CmdConnectErrService, err.Error())
@@ -91,7 +96,9 @@ var (
 		Aliases: []string{"l"},
 		Short:   lang.CmdConnectListShort,
 		Run: func(_ *cobra.Command, _ []string) {
-			cluster.NewClusterOrDie().PrintConnectTable()
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			cluster.NewClusterOrDie(ctx).PrintConnectTable(ctx)
 		},
 	}
 )
