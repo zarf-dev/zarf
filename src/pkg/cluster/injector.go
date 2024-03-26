@@ -441,7 +441,7 @@ func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeM
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("get image list timed-out: %w", ctx.Err())
-		default:
+		case <-time.After(2 * time.Second):
 			pods, err := c.GetPods(ctx, corev1.NamespaceAll)
 			if err != nil {
 				return nil, fmt.Errorf("unable to get the list of pods in the cluster: %w", err)
@@ -487,12 +487,6 @@ func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeM
 			}
 
 			c.Log("No images found on any node. Retrying...")
-
-			select {
-			case <-ctx.Done():
-				return nil, fmt.Errorf("get image list cancelled or timed out while waiting to retry: %w", ctx.Err())
-			case <-time.After(2 * time.Second):
-			}
 		}
 	}
 }
