@@ -6,7 +6,7 @@ sidebar:
 
 ## Introduction
 
-In previous tutorials, we learned how to [create a package](./0-creating-a-zarf-package.md), [initialize a cluster](./1-initializing-a-k8s-cluster.md), and [deploy a package](./2-deploying-zarf-packages.md). In this tutorial, we will leverage all that past work and deploy a fun application onto your cluster.
+In previous tutorials, we learned how to [create a package](/tutorials/0-creating-a-zarf-package/), [initialize a cluster](/tutorials/1-initializing-a-k8s-cluster/), and [deploy a package](./2-deploying-zarf-packages.md). In this tutorial, we will leverage all that past work and deploy a fun application onto your cluster.
 
 ## System Requirements
 
@@ -17,12 +17,8 @@ In previous tutorials, we learned how to [create a package](./0-creating-a-zarf-
 Before beginning this tutorial you will need the following:
 
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
-- Zarf binary installed on your $PATH: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
-- [An initialized cluster](./1-initializing-a-k8s-cluster.md)
-
-## YouTube Tutorial
-
-[![Deploying Packages with Zarf Video on YouTube](../../../assets/tutorials/package_deploy_thumbnail.jpg)](https://youtu.be/7hDK4ew_bTo "Deploying Packages with Zarf")
+- Zarf binary installed on your $PATH: ([Installing Zarf](/getting-started/install/))
+- [An initialized cluster](/tutorials/1-initializing-a-k8s-cluster/)
 
 ## Deploying the Arcade
 
@@ -87,7 +83,7 @@ If you receive this error, either you don't have a Kubernetes cluster, your clus
 If you need to setup a cluster, you can perform the following.
 
 1. Deploy a Kubernetes cluster with the [Creating a K8s Cluster with Zarf](./5-creating-a-k8s-cluster-with-zarf.md) tutorial.
-2. Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) tutorial.
+2. Perform the [Initialize a cluster](/tutorials/1-initializing-a-k8s-cluster/) tutorial.
 
 After that you can try deploying the package again.
 
@@ -99,7 +95,7 @@ After that you can try deploying the package again.
 
 :::info Remediation
 
-If you receive this error when zarf is attempting to deploy the `BASELINE COMPONENT`, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this tutorial.  Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) tutorial, then try again.
+If you receive this error when zarf is attempting to deploy the `BASELINE COMPONENT`, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this tutorial.  Perform the [Initialize a cluster](/tutorials/1-initializing-a-k8s-cluster/) tutorial, then try again.
 
 :::
 

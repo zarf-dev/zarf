@@ -17,12 +17,9 @@ In this tutorial, we are going to run through how to publish a Zarf package to a
 
 For following along locally, please ensure the following prerequisites are met:
 
-- Zarf binary installed on your `$PATH`: ([Installing Zarf](../1-getting-started/index.md#installing-zarf))
+- Zarf binary installed on your `$PATH`: ([Installing Zarf](/getting-started/install/))
 - Access to a [Registry supporting the OCI Distribution Spec](https://oras.land/implementors/#registries-supporting-oci-artifacts), this tutorial will be using Docker Hub
-- Access to a cluster that has been [initialized with zarf](./1-initializing-a-k8s-cluster.md).
-
-## Youtube Tutorial
-[![Using OCI to Store & Deploy Zarf Packages Video on YouTube](../../../assets/tutorials/publish_and_deploy_thumbnail.png)](https://www.youtube.com/watch?v=QKxgJnC_37Y "Using OCI to Store & Deploy Zarf Packages")
+- Access to a cluster that has been [initialized with zarf](/tutorials/1-initializing-a-k8s-cluster/).
 
 ## Working with OCI Packages
 
@@ -163,7 +160,7 @@ If you receive this error, either you don't have a Kubernetes cluster, your clus
 If you need to setup a cluster, you can perform the following.
 
 1. Deploy a Kubernetes cluster with the [Creating a K8s Cluster with Zarf](./5-creating-a-k8s-cluster-with-zarf.md) tutorial.
-2. Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) tutorial.
+2. Perform the [Initialize a cluster](/tutorials/1-initializing-a-k8s-cluster/) tutorial.
 
 After that you can try deploying the package again.
 
@@ -175,6 +172,6 @@ After that you can try deploying the package again.
 
 :::info Remediation
 
-If you receive this error when zarf is attempting to deploy any component, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this tutorial.  Perform the [Initialize a cluster](./1-initializing-a-k8s-cluster.md) tutorial, then try again.
+If you receive this error when zarf is attempting to deploy any component, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this tutorial.  Perform the [Initialize a cluster](/tutorials/1-initializing-a-k8s-cluster/) tutorial, then try again.
 
 :::

@@ -45,7 +45,6 @@ If Zarf finds a cluster in the Kubeconfig that has Zarf resources in it it will 
 
 1. Shown when there is a Kubeconfig found on the machine with a default cluster that has Zarf resources in it.
 
-
 ### Connect to Existing Cluster
 
 The Zarf Web UI makes connecting to existing clusters easy. When on the packages page, if there is no Zarf cluster currently connected, select the connect cluster button. If Zarf finds a Kubeconfig it will ask the user if they want to connect to the default cluster context.
@@ -105,6 +104,7 @@ Once a package is deployed into the cluster, the Web UI offers additional comman
 The web UI is packaged into a separate Go binary using Zarf as a library, so you don't have to worry about additional dependencies or needing to manually hook it into Zarf! The web UI is served through your machine's local browser, running on `localhost`, and utilizes the Go binary as the backend.
 
 Use the Zarf Deployment UI to execute the existing Zarf CLI commands:
+
 - [Zarf tools Kubectl top](../2-the-zarf-cli/100-cli-commands/zarf_tools_kubectl.md)
 - [Zarf Init](../2-the-zarf-cli/100-cli-commands/zarf_init.md)
 - [Zarf Package Deploy](../2-the-zarf-cli/100-cli-commands/zarf_package_deploy.md)
@@ -116,6 +116,6 @@ Use the Zarf Deployment UI to execute the existing Zarf CLI commands:
 
 :::note
 
-All other zarf [CLI commands](/cli) will require interfacing with the CLI directly.
+All other zarf [CLI commands](/commands/zarf) will require interfacing with the CLI directly.
 
 :::
