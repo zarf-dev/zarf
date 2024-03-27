@@ -29,7 +29,7 @@ func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) 
 		return nil, fmt.Errorf("invalid package name %q", pkgOpts.PackageSource)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 	defer cancel()
 
 	cluster, err := cluster.NewClusterWithWait(ctx)
