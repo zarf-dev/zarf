@@ -71,7 +71,9 @@ func (p *Packager) Remove(ctx context.Context) (err error) {
 	deployedPackage := &types.DeployedPackage{}
 
 	if packageRequiresCluster {
-		err = p.connectToCluster(ctx)
+		connectCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
+		defer cancel()
+		err = p.connectToCluster(connectCtx)
 		if err != nil {
 			return err
 		}

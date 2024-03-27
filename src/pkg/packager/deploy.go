@@ -144,7 +144,13 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 
 		// If this component requires a cluster, connect to one
 		if component.RequiresCluster() {
-			if err := p.connectToCluster(ctx); err != nil {
+			timeout := cluster.DefaultTimeout
+			if p.cfg.Pkg.IsInitConfig() {
+				timeout = 5 * time.Minute
+			}
+			connectCtx, cancel := context.WithTimeout(ctx, timeout)
+			defer cancel()
+			if err := p.connectToCluster(connectCtx); err != nil {
 				return deployedComponents, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}
 		}
@@ -510,7 +516,9 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
 			if svcInfo != nil {
 				if !p.isConnectedToCluster() {
-					err := p.connectToCluster(ctx)
+					connectCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
+					defer cancel()
+					err := p.connectToCluster(connectCtx)
 					if err != nil {
 						return err
 					}
