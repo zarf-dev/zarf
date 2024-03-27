@@ -213,4 +213,24 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, tlsKey)
 	})
 
+	t.Run("zarf tools yq should function appropriately across different uses", func(t *testing.T) {
+		t.Parallel()
+
+		file := "src/test/packages/00-yq-checks/file1.yaml"
+		otherFile := "src/test/packages/00-yq-checks/file2.yaml"
+
+		// Test that yq can eval properly
+		_, stdErr, err := e2e.Zarf("tools", "yq", "eval", "-i", `.items[1].name = "renamed-item"`, file)
+		require.NoError(t, err, stdErr)
+		stdOut, stdErr, err := e2e.Zarf("tools", "yq", ".items[1].name", file)
+		require.Contains(t, stdOut, "renamed-item")
+
+		// Test that yq ea can be used properly
+		_, stdErr, err = e2e.Zarf("tools", "yq", "eval-all", "-i", `. as $doc ireduce ({}; .items += $doc.items)`, file, otherFile)
+		require.NoError(t, err, stdErr)
+		stdOut, stdErr, err = e2e.Zarf("tools", "yq", "e", ".items | length", file)
+		require.Equal(t, "4\n", stdOut)
+
+	})
 }
+
