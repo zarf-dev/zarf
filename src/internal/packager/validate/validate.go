@@ -150,7 +150,7 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 		return fmt.Errorf(lang.PkgValidateErrComponentLocalOS, component.Name, component.Only.LocalOS, supportedOS)
 	}
 
-	if component.Optional == nil || !*component.Optional {
+	if component.Optional != nil || !*component.Optional {
 		if component.Default {
 			return fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name)
 		}

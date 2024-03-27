@@ -77,7 +77,6 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 	if isPartial {
 		matchedRequests := map[string]bool{}
 
-		// NOTE: This does not use forIncludedComponents as it takes group, default and required status into account.
 		for _, groupKey := range orderedComponentGroups {
 			var groupDefault *types.ZarfComponent
 			var groupSelected *types.ZarfComponent
