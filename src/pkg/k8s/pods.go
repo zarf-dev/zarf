@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -97,7 +98,7 @@ func (k *K8s) GetPods(ctx context.Context, namespace string) (*corev1.PodList, e
 // It will wait up to 30 seconds for the pods to be found and will return a list of matching pod names
 // If the timeout is reached, an empty list will be returned.
 func (k *K8s) WaitForPodsAndContainers(ctx context.Context, target PodLookup, include PodFilter) []corev1.Pod {
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	waitCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
 
 	for {

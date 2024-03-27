@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"slices"
 
@@ -53,7 +52,7 @@ var getCredsCmd = &cobra.Command{
 	Aliases: []string{"gc"},
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(_ *cobra.Command, args []string) {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancel()
 
 		state, err := cluster.NewClusterOrDie(ctx).LoadZarfState(ctx)
@@ -89,7 +88,7 @@ var updateCredsCmd = &cobra.Command{
 			}
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancel()
 
 		c := cluster.NewClusterOrDie(ctx)

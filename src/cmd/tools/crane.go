@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/cmd/common"
@@ -125,7 +124,7 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 			return err
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancel()
 
 		// Load Zarf state
@@ -177,7 +176,7 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 
 		message.Note(lang.CmdToolsRegistryZarfState)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancel()
 
 		// Load the state (if able)
@@ -225,7 +224,7 @@ func pruneImages(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 	defer cancel()
 
 	// Load the state

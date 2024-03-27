@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/alecthomas/jsonschema"
 	"github.com/defenseunicorns/pkg/helpers"
@@ -163,7 +162,7 @@ var createReadOnlyGiteaUser = &cobra.Command{
 	Short: lang.CmdInternalCreateReadOnlyGiteaUserShort,
 	Long:  lang.CmdInternalCreateReadOnlyGiteaUserLong,
 	Run: func(_ *cobra.Command, _ []string) {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancel()
 
 		// Load the state so we can get the credentials for the admin git user
@@ -184,7 +183,7 @@ var createPackageRegistryToken = &cobra.Command{
 	Short: lang.CmdInternalArtifactRegistryGiteaTokenShort,
 	Long:  lang.CmdInternalArtifactRegistryGiteaTokenLong,
 	Run: func(_ *cobra.Command, _ []string) {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancel()
 
 		// Load the state so we can get the credentials for the admin git user
@@ -213,7 +212,7 @@ var updateGiteaPVC = &cobra.Command{
 	Short: lang.CmdInternalUpdateGiteaPVCShort,
 	Long:  lang.CmdInternalUpdateGiteaPVCLong,
 	Run: func(_ *cobra.Command, _ []string) {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancel()
 
 		// There is a possibility that the pvc does not yet exist and Gitea helm chart should create it

@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -45,7 +44,7 @@ var (
 				spinner.Fatalf(err, lang.CmdConnectErrCluster, err.Error())
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 			defer cancel()
 
 			var tunnel *k8s.Tunnel
@@ -96,9 +95,12 @@ var (
 		Aliases: []string{"l"},
 		Short:   lang.CmdConnectListShort,
 		Run: func(_ *cobra.Command, _ []string) {
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 			defer cancel()
-			cluster.NewClusterOrDie(ctx).PrintConnectTable(ctx)
+			err := cluster.NewClusterOrDie(ctx).PrintConnectTable(ctx)
+			if err != nil {
+				message.Fatal(err, err.Error())
+			}
 		},
 	}
 )

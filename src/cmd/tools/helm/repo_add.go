@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -128,7 +129,7 @@ func (o *repoAddOptions) run(out io.Writer) error {
 		lockPath = o.repoFile + ".lock"
 	}
 	fileLock := flock.New(lockPath)
-	lockCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	lockCtx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 	defer cancel()
 	locked, err := fileLock.TryLockContext(lockCtx, time.Second)
 	if err == nil && locked {

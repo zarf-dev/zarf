@@ -110,7 +110,7 @@ var packageMirrorCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancel()
 
 		if err := pkgClient.Mirror(ctx); err != nil {
@@ -147,7 +147,7 @@ var packageListCmd = &cobra.Command{
 	Aliases: []string{"l", "ls"},
 	Short:   lang.CmdPackageListShort,
 	Run: func(_ *cobra.Command, _ []string) {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancel()
 
 		// Get all the deployed packages
@@ -309,7 +309,7 @@ func getPackageCompletionArgs(_ *cobra.Command, _ []string, _ string) ([]string,
 		return pkgCandidates, cobra.ShellCompDirectiveDefault
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 	defer cancel()
 
 	// Get all the deployed packages

@@ -34,7 +34,7 @@ var destroyCmd = &cobra.Command{
 		ctxLong, cancelLong := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancelLong()
 
-		ctxShort, cancelShort := context.WithTimeout(context.Background(), 30*time.Second)
+		ctxShort, cancelShort := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancelShort()
 
 		c, err := cluster.NewClusterWithWait(ctxShort)

@@ -11,11 +11,11 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -96,7 +96,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	finalManifestsOutput := bytes.NewBuffer(nil)
 
 	if r.cluster != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancel()
 
 		if err := r.editHelmResources(ctx, resources, finalManifestsOutput); err != nil {
