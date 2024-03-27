@@ -516,7 +516,7 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
 			if svcInfo != nil {
 				if !p.isConnectedToCluster() {
-					connectCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
+					connectCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 					defer cancel()
 					err := p.connectToCluster(connectCtx)
 					if err != nil {
