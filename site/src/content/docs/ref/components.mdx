@@ -8,7 +8,7 @@ import Properties from "@components/SchemaItemProperties.astro";
 import ExampleYAML from "@components/ExampleYAML.astro";
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-The actual capabilities that Zarf Packages provided are defined within named components.
+The actual capabilities that Zarf Packages provide are defined within named components.
 
 These components define what dependencies they have along with a declarative definition of how they should be deployed.
 
@@ -85,7 +85,7 @@ Charts using the `url` key can be:
 
 :::note
 
-To use a private Helm repository the repo must be added to Helm. You can add a repo to Helm with the [`helm repo add`](https://helm.sh/docs/helm/helm_repo_add/) command or the internal [`zarf tools helm repo add`](../2-the-zarf-cli/100-cli-commands/zarf_tools_helm_repo_add.md) command.
+To use a private Helm repository the repo must be added to Helm. You can add a repo to Helm with the [`helm repo add`](https://helm.sh/docs/helm/helm_repo_add/) command or the internal [`zarf tools helm repo add`](/commands/zarf_tools_helm_repo_add) command.
 
 :::
 
@@ -125,7 +125,7 @@ Zarf dynamically generates a Helm Chart from the named manifest entries that you
 
 :::note
 
-Kustomizations are handled a bit differently than normal manifests in that Zarf will automatically run `kustomize build` on them during `zarf package create`, thus rendering the Kustomization into a single manifest file. This prevents needing to grab any remote Kustomization resources during `zarf package deploy` but also means that any Zarf [`variables`](../../../../../examples/../../variables/README.md#deploy-time-variables-and-constants) will only apply to the rendered manifest not the `kustomize build` process.
+Kustomizations are handled a bit differently than normal manifests in that Zarf will automatically run `kustomize build` on them during `zarf package create`, thus rendering the Kustomization into a single manifest file. This prevents needing to grab any remote Kustomization resources during `zarf package deploy` but also means that any Zarf [`variables`](/ref/variables/) will only apply to the rendered manifest not the `kustomize build` process.
 
 :::
 
@@ -137,7 +137,7 @@ Kustomizations are handled a bit differently than normal manifests in that Zarf 
 
 <Properties item="ZarfComponent" include={["images"]} />
 
-Images can either be discovered manually, or automatically by using [`zarf dev find-images`](../2-the-zarf-cli/100-cli-commands/zarf_dev_find-images.md).
+Images can either be discovered manually, or automatically by using [`zarf dev find-images`](/commands/zarf_dev_find-images/).
 
 :::note
 

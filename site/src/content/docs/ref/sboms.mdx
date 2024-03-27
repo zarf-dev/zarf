@@ -8,7 +8,7 @@ Zarf builds [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/
 
 By default, Zarf will generate SBOMs for all components in a package and include them in the package itself.  This means that wherever you end up moving your package, you will always be able to take a peek inside to see what it contains. If you would like to skip this behavior you can use the [`--skip-sbom`](/commands/zarf_package_create) flag when creating a package.
 
-## Viewing the SBOM of a Package
+## Viewing a Package's SBOM
 
 You can quickly view a package's SBOMS in your browser by running `zarf package inspect` with the `-s` or `--sbom` flag. If there are any SBOMs included in the package, Zarf will open the SBOM viewer to the first SBOM in the list.
 
@@ -19,7 +19,7 @@ zarf package inspect <package source> --sbom
 
 ![SBOM Prompt](../../../assets/dashboard/SBOM-prompt-example.png)
 
-## Extracting SBOMs from a Package
+## Extracting a Package's SBOM
 
 ```bash
 # copy the SBOMs of a package to a directory
@@ -49,7 +49,7 @@ The SBOM viewer also has an SBOM comparison tool built in that you can access by
 
 ## How SBOMs are Generated
 
-Zarf uses [Syft](https://github.com/anchore/syft) under the hood to provide SBOMs for container `images`, as well as `files` and `dataInjections` included in components.  This is run during the final step of package creation with the SBOM information for a package being placed within an `sboms` directory at the root of the Zarf Package tarball.  Additionally, the SBOMs are created in the Syft `.json` format which is a superset of all of the information that Syft can discover and is used so that we can provide the most information possible even when performing [lossy conversions to formats like `spdx-json` or `cyclonedx-json`](../4-deploy-a-zarf-package/4-view-sboms.md#sboms-built-into-packages).
+Zarf uses [Syft](https://github.com/anchore/syft) under the hood to provide SBOMs for container `images`, as well as `files` and `dataInjections` included in components.  This is run during the final step of package creation with the SBOM information for a package being placed within an `sboms` directory at the root of the Zarf Package tarball.  Additionally, the SBOMs are created in the Syft `.json` format which is a superset of all of the information that Syft can discover and is used so that we can provide the most information possible even when performing [lossy conversions to formats like `spdx-json` or `cyclonedx-json`](#extracting-a-packages-sbom).
 
 If you were using the Syft CLI to create these SBOM files manually this would be equivalent to the following commands:
 

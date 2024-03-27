@@ -47,7 +47,7 @@ export default defineConfig({
         {
           label: "Reference",
           autogenerate: { directory: "ref", collapsed: true },
-          collapsed: false,
+          collapsed: true,
         },
         {
           label: "Tutorials",

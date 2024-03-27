@@ -8,6 +8,12 @@ sidebar:
     variant: caution
 ---
 
+:::caution
+
+The Zarf Deployment Web UI is deprecated and will be removed in a future release. Please use the [Zarf CLI](/commands/zarf) for all Zarf operations.
+
+:::
+
 Zarf is also available in a version that exposes a Deployment Web UI that supports a number of Zarf features used during the package deployment process. For users who prefer not to use the command line tool, the Web UI creates a simple experience to deploy and manage Zarf clusters and packages. The Web UI can be used to connect to existing clusters (via a Kubeconfig), initialize a cluster, deploy packages into a cluster, update packages in the cluster, and remove packages from the cluster.
 
 The Zarf Web UI mirrors the functionality of the Zarf CLI commands, but with a more intuitive flow and familiar web application patterns for non-technical users. The web UI does not offer any additional commands or core functionality to Zarf.
@@ -102,20 +108,3 @@ Once a package is deployed into the cluster, the Web UI offers additional comman
 ## Technical Details
 
 The web UI is packaged into a separate Go binary using Zarf as a library, so you don't have to worry about additional dependencies or needing to manually hook it into Zarf! The web UI is served through your machine's local browser, running on `localhost`, and utilizes the Go binary as the backend.
-
-Use the Zarf Deployment UI to execute the existing Zarf CLI commands:
-
-- [Zarf tools Kubectl top](../2-the-zarf-cli/100-cli-commands/zarf_tools_kubectl.md)
-- [Zarf Init](../2-the-zarf-cli/100-cli-commands/zarf_init.md)
-- [Zarf Package Deploy](../2-the-zarf-cli/100-cli-commands/zarf_package_deploy.md)
-- [Zarf Package Remove](../2-the-zarf-cli/100-cli-commands/zarf_package_remove.md)
-- [Zarf Package List](../2-the-zarf-cli/100-cli-commands/zarf_package_list.md)
-- [Zarf Package Inspect](../2-the-zarf-cli/100-cli-commands/zarf_package_inspect.md)
-- [Zarf Tools Sbom](../2-the-zarf-cli/100-cli-commands/zarf_tools_sbom.md)
-- [Zarf Connect](../2-the-zarf-cli/100-cli-commands/zarf_connect.md)
-
-:::note
-
-All other zarf [CLI commands](/commands/zarf) will require interfacing with the CLI directly.
-
-:::

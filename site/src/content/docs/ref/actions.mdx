@@ -7,7 +7,7 @@ sidebar:
 import ExampleYAML from "@components/ExampleYAML.astro";
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 
-Component Actions offer several exec entrypoints that allow a component to perform additional logic at key stages of its lifecycle. These actions are executed within a shell with the same context as the Zarf binary. For a detailed overview of the execution sequence of component actions, please refer to the Zarf [package create lifecycle documentation](./5-package-create-lifecycle.md) and [package deploy lifecycle documentation](../4-deploy-a-zarf-package/1-package-deploy-lifecycle.md). Additionally, you can experiment with the component actions example located in the [Component Actions](../../examples/component-actions/README.md) example page.
+Component Actions offer several exec entrypoints that allow a component to perform additional logic at key stages of its lifecycle. These actions are executed within a shell with the same context as the Zarf binary. For a detailed overview of the execution sequence of component actions, please refer to the Zarf [package create lifecycle documentation](/ref/create/) and [package deploy lifecycle documentation](/ref/deploy/). Additionally, you can experiment with the component actions example located in the [Component Actions example](/ref/examples/component-actions/).
 
 ## Action Sets
 
@@ -93,7 +93,7 @@ Below are some examples of putting together simple actions at various points in 
 
 Below is a simple example of an `onCreate` action set that declares `defaults` as well as `before` and `after` action lists:
 
-<ExampleYAML 
+<ExampleYAML
   src={import("../../../../../examples/component-actions/zarf.yaml?raw")}
   component="on-create"
 />
@@ -102,8 +102,8 @@ Below is a simple example of an `onCreate` action set that declares `defaults` a
 
 Below is an example of an `onDeploy` action set that demonstrates how you can use `onFailure` actions to perform cleanup tasks or user messaging when an action of component lifecycle step fails:
 
-<ExampleYAML 
-  src={import("../../../../../examples/component-actions/zarf.yaml?raw")} 
+<ExampleYAML
+  src={import("../../../../../examples/component-actions/zarf.yaml?raw")}
   component="on-deploy-with-timeout"
 />
 </TabItem>
@@ -111,11 +111,11 @@ Below is an example of an `onDeploy` action set that demonstrates how you can us
 
 Below are examples of waiting for resources to exist or be available within an action using `wait` actions:
 
-<ExampleYAML 
+<ExampleYAML
   src={import("../../../../../examples/component-actions/zarf.yaml?raw")}
   component="on-create-with-network-wait-action"
 />
-<ExampleYAML 
+<ExampleYAML
   src={import("../../../../../examples/component-actions/zarf.yaml?raw")}
   component="on-deploy-with-wait-action"
   showLink={false}
@@ -147,7 +147,7 @@ Unlike normal variables, `setVariables` do not need to be defined with the `vari
 
 :::
 
-<ExampleYAML 
+<ExampleYAML
   src={import("../../../../../examples/component-actions/zarf.yaml?raw")}
   component="on-deploy-with-multiple-variables"
 />
@@ -157,7 +157,7 @@ Unlike normal variables, `setVariables` do not need to be defined with the `vari
 
 Below is an example of an `onRemove` action set that demonstrates how you can use `./zarf `&nbsp;to use Zarf commands like `zarf tools kubectl` to perform actions on systems that might not have the pre-requisite software (like `kubectl`) installed onto them:
 
-<ExampleYAML 
+<ExampleYAML
   src={import("../../../../../examples/component-actions/zarf.yaml?raw")}
   component="on-remove"
 />
@@ -186,11 +186,11 @@ The below example shows the `kiwix-serve` component from the data injections exa
 
 The below example includes the `eksctl` binary and `eks.yaml` file in one component, setting it up in an `onDeploy.after` action and then uses the `eksctl` binary in a second component to create an EKS cluster in an `onDeploy.before` action.
 
-<ExampleYAML 
+<ExampleYAML
   src={import("../../../../../packages/distros/eks/zarf.yaml?raw")}
   component="load-eksctl"
 />
-<ExampleYAML 
+<ExampleYAML
   src={import("../../../../../packages/distros/eks/zarf.yaml?raw")}
   component="deploy-eks-cluster"
   showLink={false}
@@ -201,7 +201,7 @@ The below example includes the `eksctl` binary and `eks.yaml` file in one compon
 
 The below example shows using a `wait` command to wait for a GitOps deployment to happen after Zarf configures the initial `GitRepository` manifest.  By default Zarf will only track the resources it directly deploys, but adding a `wait` action allows you to control the lifecycle more directly.
 
-<ExampleYAML 
+<ExampleYAML
   src={import("../../../../../examples/podinfo-flux/zarf.yaml?raw")}
   component="podinfo-via-flux"
 />
