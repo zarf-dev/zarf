@@ -38,3 +38,4 @@ Collection of additional tools to make airgap easier
 * [zarf tools sbom](zarf_tools_sbom.md)	 - Generates a Software Bill of Materials (SBOM) for the given package
 * [zarf tools update-creds](zarf_tools_update-creds.md)	 - Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service
 * [zarf tools wait-for](zarf_tools_wait-for.md)	 - Waits for a given Kubernetes resource to be ready
+* [zarf tools yq](zarf_tools_yq.md)	 - yq is a lightweight and portable command-line data file processor.

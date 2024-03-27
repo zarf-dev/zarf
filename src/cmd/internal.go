@@ -104,6 +104,14 @@ var genCLIDocs = &cobra.Command{
 							}
 						})
 					}
+					
+					if toolCmd.Use == "yq" {
+						for _, subCmd := range toolCmd.Commands() {
+							if subCmd.Name() == "shell-completion" {
+								subCmd.Hidden = true
+							}
+						}
+					}
 				}
 			}
 		}
