@@ -69,23 +69,23 @@ func TestGenerateValuesOverrides(t *testing.T) {
 			},
 		},
 		{
-			name: "Multiple variables with nested and non-nested paths",
+			name: "Multiple variables with nested and non-nested paths, distinct values",
 			chartVariables: []types.ZarfChartVariable{
-				{Name: "nestedVar.level2", Path: "nestedVar.level2"},
+				{Name: "NESTED_VAR_LEVEL2", Path: "nestedVar.level2"},
 				{Name: "simpleVar", Path: "simpleVar"},
 			},
 			setVariableMap: map[string]*types.ZarfSetVariable{
-				"nestedVar.level2": {Value: "nestedValue"},
-				"simpleVar":        {Value: "simpleValue"},
+				"NESTED_VAR_LEVEL2": {Value: "distinctNestedValue"},
+				"simpleVar":         {Value: "distinctSimpleValue"},
 			},
 			deployOpts:    types.ZarfDeployOptions{},
 			componentName: "mixedComponent",
 			chartName:     "mixedChart",
 			want: map[string]any{
 				"nestedVar": map[string]any{
-					"level2": "nestedValue",
+					"level2": "distinctNestedValue",
 				},
-				"simpleVar": "simpleValue",
+				"simpleVar": "distinctSimpleValue",
 			},
 		},
 		{

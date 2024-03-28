@@ -23,6 +23,6 @@ Key aspects of the proposed implementation include:
 ## Consequences
 
 Adopting this feature would lead to several key improvements:
-- **Streamlined Configuration Process**: Centralizing overrides in a single, unified file significantly simplifies the management of configuration settings, aligning more closely with standard Helm practices and reducing the reliance on extensive command-line arguments.
+- **Streamlined Configuration Process**: Centralizing overrides in a single, unified file significantly simplifies the management of configuration settings, aligning more closely with standard Helm practices and reducing the reliance on extensive custom `###` templating.
 
 Ultimately, this feature is aimed at enhancing the deployment workflow by offering a straightforward and efficient means of customizing Helm chart deployments via command-line inputs.

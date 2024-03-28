@@ -575,10 +575,7 @@ func generateValuesOverrides(chartVariables []types.ZarfChartVariable,
 	// Apply any direct overrides specified in the deployment options for this component and chart
 	if componentOverrides, ok := deployOpts.ValuesOverridesMap[componentName]; ok {
 		if chartSpecificOverrides, ok := componentOverrides[chartName]; ok {
-			for k, v := range chartSpecificOverrides {
-				// Directly apply overrides to valuesOverrides to avoid overwriting by path.
-				valuesOverrides[k] = v
-			}
+			valuesOverrides = chartSpecificOverrides
 		}
 	}
 

@@ -120,7 +120,7 @@ type ZarfChart struct {
 
 // ZarfChartVariable represents a variable that can be set for a Helm chart overrides.
 type ZarfChartVariable struct {
-	Name        string `json:"name" jsonschema:"description=The name of the variable"`
+	Name        string `json:"name" jsonschema:"description=The name of the variable,pattern=^[A-Z0-9_]+$"`
 	Description string `json:"description" jsonschema:"description=A brief description of what the variable controls"`
 	Path        string `json:"path" jsonschema:"description=The path within the Helm chart values where this variable applies"`
 }

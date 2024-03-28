@@ -19,7 +19,7 @@ components:
         # Variables are used to override the default values in the chart
         # This can be overridden by the user at deployment time with the `--set` flag
         variables:
-          - name: replicaCount
+          - name: REPLICA_COUNT
             description: "Override the number of pod replicas"
             path: replicaCount
             value: 2

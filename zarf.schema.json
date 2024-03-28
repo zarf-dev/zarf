@@ -280,6 +280,7 @@
       ],
       "properties": {
         "name": {
+          "pattern": "^[A-Z0-9_]+$",
           "type": "string",
           "description": "The name of the variable"
         },

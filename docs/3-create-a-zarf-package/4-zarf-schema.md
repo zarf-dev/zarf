@@ -1228,6 +1228,10 @@ Must be one of:
 | -------- | -------- |
 | **Type** | `string` |
 
+| Restrictions                      |                                                                               |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| **Must match regular expression** | ```^[A-Z0-9_]+$``` [Test](https://regex101.com/?regex=%5E%5BA-Z0-9_%5D%2B%24) |
+
 </blockquote>
 </details>
 
