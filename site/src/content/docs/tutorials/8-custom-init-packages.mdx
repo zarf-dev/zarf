@@ -62,7 +62,7 @@ After you confirm package creation, Zarf will create the Zarf 'init' package in 
 
 The above will simply build the init package as it is defined for your version of Zarf. To build something custom you will need to make some modifications.
 
-The Zarf 'init' Package is a [composed Zarf Package](/ref/components/#composing-package-components) made up of many sub-Zarf Packages. The root `zarf.yaml` file is defined at the root of the Zarf git repository.
+The Zarf 'init' Package is a [composed Zarf Package](/ref/components/#component-imports) made up of many sub-Zarf Packages. The root `zarf.yaml` file is defined at the root of the Zarf git repository.
 
 ### Swapping Images
 
@@ -102,7 +102,7 @@ You can find all of the `--set` configurations by looking at the `zarf-config.to
 
 ### Removing Components
 
-You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them. Because the [Zarf Package is composed](/ref/components/#composing-package-components) all you need to do is remove the component that imports the component you wish to exclude.
+You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them. Because the [Zarf Package is composed](/ref/components/#component-imports) all you need to do is remove the component that imports the component you wish to exclude.
 
 ## Troubleshooting
 

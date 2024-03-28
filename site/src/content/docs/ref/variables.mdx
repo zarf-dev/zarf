@@ -1,15 +1,9 @@
+---
+title: Variables
+---
+
 import Properties from '@site/src/components/SchemaItemProperties';
 import ExampleYAML from "@components/ExampleYAML.astro";
-
-# Variables
-
-This example demonstrates how to define `variables` and `constants` in your package that will be templated across the manifests and charts your package uses during `zarf package deploy` with `###ZARF_VAR_*###` and `###ZARF_CONST_*###`, and also shows how package configuration templates can be used in the `zarf.yaml` during `zarf package create` with `###ZARF_PKG_TMPL_*###`.
-
-With these variables and templating features, you can define values in the `zarf.yaml` file without having to set them manually in every manifest and chart, and can prompt the deploy user for certain information you may want to make dynamic on `zarf package deploy`.
-
-This becomes useful when you are working with an upstream chart that is often changing, or a lot of charts that have slightly different conventions for their values. Now you can standardize all of that from your `zarf.yaml` file.
-
-Text files are also templated during `zarf package deploy` so you can use these variables in any text file that you want to be templated.
 
 :::note
 
@@ -161,13 +155,3 @@ If you use `--confirm` and do not `--set` all of the package configuration templ
 You cannot template the component import path using package configuration templates
 
 :::
-
-## `zarf.yaml` {#zarf.yaml}
-
-:::note
-
-To view the example in its entirety, select the `Edit this page` link below the article and select the parent folder.
-
-:::
-
-<ExampleYAML src={require('./zarf.yaml')} showLink={false} />

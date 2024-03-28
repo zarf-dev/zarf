@@ -10,8 +10,8 @@ metadata:
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/examples
 x-mdx: |
   This example demonstrates how to use Zarf to deploy a WordPress blog into a cluster.
-  
-  It is used as a part of the [Creating a Zarf Package](../../docs/5-zarf-tutorials/0-creating-a-zarf-package.md) and [Deploying a Zarf Package](../../docs/5-zarf-tutorials/2-deploying-zarf-packages.md) tutorials.
+
+  It is used as a part of the [Creating a Zarf Package](/tutorials/0-creating-a-zarf-package/) and [Deploying a Zarf Package](/tutorials/2-deploying-zarf-packages/) tutorials.
 
 variables:
     # The unique name of the variable corresponding to the ###ZARF_VAR_### template
