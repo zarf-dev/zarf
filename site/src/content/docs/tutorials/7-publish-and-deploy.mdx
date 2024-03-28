@@ -48,7 +48,7 @@ First, create a valid Zarf package definition (`zarf.yaml`), with the `metadata.
 
 Create the package locally:
 
-[CLI Reference](../2-the-zarf-cli/100-cli-commands/zarf_package_create.md)
+[CLI Reference](/commands/zarf_package_create/)
 
 <iframe src="/tutorials/publish_and_deploy_create.html" width="100%" height="600px"></iframe>
 
@@ -60,7 +60,7 @@ Your package tarball may be named differently based on your machine's architectu
 
 :::
 
-[CLI Reference](../2-the-zarf-cli/100-cli-commands/zarf_package_publish.md)
+[CLI Reference](/commands/zarf_package_publish/)
 
 <iframe src="/tutorials/publish_and_deploy_publish.html" width="100%" height="700px"></iframe>
 
@@ -76,13 +76,13 @@ To modify, edit `zarf.yaml` and re-run `zarf package create .`
 
 The above publish command publishes a fully-built package that is ready to deploy to a cluster, but this isn't the only kind of package you can publish to an OCI registry.
 
-If you specify a path to a directory containing a `zarf.yaml` (as you would on `zarf package create`) you can create a `skeleton` package that is importable into other packages using [component composability](../../examples/composable-packages/README.md).  These can be inspected like normal Zarf packages but cannot be deployed as they haven't been fully created yet.
+If you specify a path to a directory containing a `zarf.yaml` (as you would on `zarf package create`) you can create a `skeleton` package that is importable into other packages using [component composability](/ref/examples/composable-packages/).  These can be inspected like normal Zarf packages but cannot be deployed as they haven't been fully created yet.
 
 :::
 
 ### Inspect Package
 
-[CLI Reference](../2-the-zarf-cli/100-cli-commands/zarf_package_inspect.md)
+[CLI Reference](/commands/zarf_package_inspect/)
 
 Inspecting a Zarf package stored in an OCI registry is the same as inspecting a local package and has the same flags:
 
@@ -91,7 +91,7 @@ Inspecting a Zarf package stored in an OCI registry is the same as inspecting a 
 
 ### Deploy Package
 
-[CLI Reference](../2-the-zarf-cli/100-cli-commands/zarf_package_deploy.md)
+[CLI Reference](/commands/zarf_package_deploy/)
 
 Deploying a package stored in an OCI registry is nearly the same experience as deploying a local package:
 
@@ -99,12 +99,11 @@ Deploying a package stored in an OCI registry is nearly the same experience as d
 
 ### Pull Package
 
-[CLI Reference](../2-the-zarf-cli/100-cli-commands/zarf_package_pull.md)
+[CLI Reference](/commands/zarf_package_pull/)
 
 Packages can be saved to the local disk in order to deploy a package multiple times without needing to fetch it every time.
 
 <iframe src="/tutorials/publish_and_deploy_pull.html" width="100%" height="450px"></iframe>
-
 
 ## Removal
 
@@ -112,7 +111,7 @@ Packages can be saved to the local disk in order to deploy a package multiple ti
 
 <iframe src="/tutorials/publish_and_deploy_list.html" width="100%"></iframe>
 
-2. Use the `zarf package remove` command to remove the `helm-oci-chart` package.  Don't forget the `--confirm` flag.  Otherwise you'll receive an error.
+1. Use the `zarf package remove` command to remove the `helm-oci-chart` package.  Don't forget the `--confirm` flag.  Otherwise you'll receive an error.
 
 <iframe src="/tutorials/publish_and_deploy_remove.html" width="100%" height="115px"></iframe>
 
@@ -122,7 +121,7 @@ Packages can be saved to the local disk in order to deploy a package multiple ti
 
 <iframe src="/tutorials/troubleshoot_version_required_publish.html" width="100%" height="130px"></iframe>
 
-:::info Remediation
+:::info[Remediation]
 
 You attempted to publish a package with no version metadata.
 
@@ -139,7 +138,7 @@ You attempted to publish a package with no version metadata.
 
 <iframe src="/tutorials/troubleshoot_insecure_registry.html" width="100%" height="375px"></iframe>
 
-:::info Remediation
+:::info[Remediation]
 
 You attempted to publish a package to an insecure registry, using http instead of https.
 
@@ -151,7 +150,7 @@ You attempted to publish a package to an insecure registry, using http instead o
 
 <iframe src="/tutorials/troubleshoot_unreachable.html" width="100%" height="200px"></iframe>
 
-:::info Remediation
+:::info[Remediation]
 
 If you receive this error, either you don't have a Kubernetes cluster, your cluster is down, or your cluster is unreachable.
 
@@ -170,7 +169,7 @@ After that you can try deploying the package again.
 
 <iframe src="/tutorials/troubleshoot_uninitialized.html" width="100%" height="250px"></iframe>
 
-:::info Remediation
+:::info[Remediation]
 
 If you receive this error when zarf is attempting to deploy any component, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this tutorial.  Perform the [Initialize a cluster](/tutorials/1-initializing-a-k8s-cluster/) tutorial, then try again.
 

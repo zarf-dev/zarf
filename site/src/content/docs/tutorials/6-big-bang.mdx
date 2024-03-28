@@ -12,7 +12,7 @@ Zarf integrates with Big Bang through the use of an extension that simplifies th
 
 ### Limitations
 
-The current version of this extension requires Big Bang version `1.54.0` or later, and is not fully integrated into the `zarf package remove` lifecycle (see the [Big Bang example](../../examples/big-bang/README.md) for how to introduce those lifecycle hooks manually).  Zarf also relies on [helm.sh/images annotations](https://github.com/helm/community/blob/main/hips/hip-0015.md) to discover images within charts (e.g. [GitLab](https://repo1.dso.mil/big-bang/product/packages/gitlab/-/blob/main/chart/Chart.yaml#L61)) - this is a relatively new feature for Big Bang so if you see an `ImagePullBackOff` error, check that these annotations are set correctly for the sub charts you are using. To work around this issue if you come across it, simply add the missing image to the images list on the same component that contains the Big Bang extension like the following:
+The current version of this extension requires Big Bang version `1.54.0` or later, and is not fully integrated into the `zarf package remove` lifecycle (see the [Big Bang example](/ref/examples/big-bang/) for how to introduce those lifecycle hooks manually).  Zarf also relies on [helm.sh/images annotations](https://github.com/helm/community/blob/main/hips/hip-0015.md) to discover images within charts (e.g. [GitLab](https://repo1.dso.mil/big-bang/product/packages/gitlab/-/blob/main/chart/Chart.yaml#L61)) - this is a relatively new feature for Big Bang so if you see an `ImagePullBackOff` error, check that these annotations are set correctly for the sub charts you are using. To work around this issue if you come across it, simply add the missing image to the images list on the same component that contains the Big Bang extension like the following:
 
 ```yaml
 components:
@@ -87,7 +87,7 @@ Now navigate to the `examples/big-bang` folder within the Zarf repository you cl
 
 ### Configure Big Bang
 
-Within the `examples/big-bang` folder you will see a `zarf.yaml` that has the following [component](../3-create-a-zarf-package/2-zarf-components.md) defined:
+Within the `examples/big-bang` folder you will see a `zarf.yaml` that has the following [component](/ref/components/) defined:
 
 ```yaml
 components:

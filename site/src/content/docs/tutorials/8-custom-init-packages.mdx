@@ -8,7 +8,7 @@ sidebar:
 
 In most cases the default Zarf 'init' Package will provide what you need to get started deploying packages into the air gap, however there are cases where you may want to tweak this package to tailor it for your target environment. This could include adding or removing components or including hardened versions of components specific to your use case.
 
-In this tutorial, we will demonstrate how to build a custom [Zarf 'init' Package](../3-create-a-zarf-package/3-zarf-init-package.md) with `zarf package create`.
+In this tutorial, we will demonstrate how to build a custom [Zarf 'init' Package](/ref/init-package/) with `zarf package create`.
 
 When creating a Zarf 'init' package, you must have a network connection so that Zarf can fetch all of the dependencies and resources necessary to build the package. If your version of the 'init' package is using images from a private registry or is referencing repositories in a private repository, you will need to have your credentials configured on your machine for Zarf to be able to fetch the resources.
 
@@ -22,7 +22,7 @@ Before beginning this tutorial you will need the following:
 
 - The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 - Zarf binary installed on your $PATH: ([Installing Zarf](/getting-started/install/))
-- (if building a local [`zarf-agent`](../8-faq.md#what-is-the-zarf-agent)) The [Docker CLI](https://docs.docker.com/desktop/) installed and the tools to [Build your own CLI](../2-the-zarf-cli/0-building-your-own-cli.md)
+- (if building a local [`zarf-agent`](/faq#what-is-the-zarf-agent)) The [Docker CLI](https://docs.docker.com/desktop/) installed and the tools to [Build your own CLI](/getting-started/install/#building-from-source)
 
 ## Building the init-package
 
@@ -41,10 +41,6 @@ $ zarf package create . --set AGENT_IMAGE_TAG=vX.X.X
 :::tip
 
 For development if you omit the `AGENT_IMAGE_TAG` Zarf will build a Zarf Agent image based on the source code within the Zarf git repository you cloned.
-
-:::
-
-:::note
 
 Prior to v0.26.0 `AGENT_IMAGE_TAG` was `AGENT_IMAGE` and would be set like: `zarf package create . --set AGENT_IMAGE=agent:vX.X.X`
 
@@ -66,7 +62,7 @@ After you confirm package creation, Zarf will create the Zarf 'init' package in 
 
 The above will simply build the init package as it is defined for your version of Zarf. To build something custom you will need to make some modifications.
 
-The Zarf 'init' Package is a [composed Zarf Package](../3-create-a-zarf-package/2-zarf-components.md#composing-package-components) made up of many sub-Zarf Packages. The root `zarf.yaml` file is defined at the root of the Zarf git repository.
+The Zarf 'init' Package is a [composed Zarf Package](/ref/components/#composing-package-components) made up of many sub-Zarf Packages. The root `zarf.yaml` file is defined at the root of the Zarf git repository.
 
 ### Swapping Images
 
@@ -106,7 +102,7 @@ You can find all of the `--set` configurations by looking at the `zarf-config.to
 
 ### Removing Components
 
-You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them. Because the [Zarf Package is composed](../3-create-a-zarf-package/2-zarf-components.md#composing-package-components) all you need to do is remove the component that imports the component you wish to exclude.
+You may not need or want all of the components in your 'init' package and may choose to slim down your package by removing them. Because the [Zarf Package is composed](/ref/components/#composing-package-components) all you need to do is remove the component that imports the component you wish to exclude.
 
 ## Troubleshooting
 
@@ -114,7 +110,7 @@ You may not need or want all of the components in your 'init' package and may ch
 
 <iframe src="/tutorials/package_create_error.html" height="120px" width="100%"></iframe>
 
-:::note Remediation
+:::note[Remediation]
 
 If you receive this error, you may not be in the correct directory. Double-check where you are in your system and try again once you're in the correct directory with the zarf.yaml file that you're trying to build.
 

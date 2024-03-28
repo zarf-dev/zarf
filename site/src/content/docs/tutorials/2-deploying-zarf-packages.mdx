@@ -4,6 +4,8 @@ sidebar:
   order: 2
 ---
 
+import { Steps } from '@astrojs/starlight/components';
+
 ## Introduction
 
 In this tutorial, we are going to deploy the WordPress package onto your cluster using the package we created in the earlier [create a package](/tutorials/0-creating-a-zarf-package/) tutorial and the cluster we initialized in the [initialize a k8s cluster](/tutorials/1-initializing-a-k8s-cluster/) tutorial. We will be leveraging that past work to go the extra step of deploying an application we packaged onto our cluster with the `zarf package deploy` command.
@@ -22,45 +24,49 @@ Prior to this tutorial you'll want to have a built package and a working cluster
 
 ## Deploying the WordPress package
 
+<Steps>
+
 1. Use the `zarf package deploy` command to deploy the package you built in a the previous tutorial (see [prerequisites](#prerequisites)).
 
-<iframe src="/tutorials/package_deploy_wordpress.html" width="100%" height="550px"></iframe>
+   <iframe src="/tutorials/package_deploy_wordpress.html" width="100%" height="550px"></iframe>
 
-:::note
+   :::note
 
-If you do not provide the path to the package as an argument to the `zarf package deploy` command, Zarf will prompt you asking for you to choose which package you want to deploy. You can use the `tab` key, to be prompted for available packages in the current working directory.
+   If you do not provide the path to the package as an argument to the `zarf package deploy` command, Zarf will prompt you asking for you to choose which package you want to deploy. You can use the `tab` key, to be prompted for available packages in the current working directory.
 
-<iframe src="/tutorials/package_deploy_suggest.html" width="100%" height="120px"></iframe>
+   <iframe src="/tutorials/package_deploy_suggest.html" width="100%" height="120px"></iframe>
 
-By hitting 'tab', you can use the arrow keys to select which package you want to deploy. Since we are deploying the WordPress package in this tutorial, we will select that package and hit 'enter'.
+   By hitting 'tab', you can use the arrow keys to select which package you want to deploy. Since we are deploying the WordPress package in this tutorial, we will select that package and hit 'enter'.
 
-<iframe src="/tutorials/package_deploy_wordpress_suggestions.html" width="100%" height="150px"></iframe>
+   <iframe src="/tutorials/package_deploy_wordpress_suggestions.html" width="100%" height="150px"></iframe>
 
-:::
+   :::
 
 2. You will be presented with a chance to review the SBOMs for the package along with its definition followed by a series of prompts for each variable we setup in the [previous tutorial](/tutorials/0-creating-a-zarf-package/#setting-up-variables).  To confirm package deployment press `y` then `enter` and input a value for each variable when prompted followed by `enter` for them as well.
 
-:::tip
+   :::tip
 
-To accept a default value for a given variable, simply press the `enter` key.  You can also set variables from the CLI with the `--set` flag, an environment variable, or a [config file](../2-the-zarf-cli/index.md#using-a-config-file-to-make-cli-command-flags-declarative).
+   To accept a default value for a given variable, simply press the `enter` key.  You can also set variables from the CLI with the `--set` flag, an environment variable, or a [config file](/ref/config-files).
 
-:::
+   :::
 
-<iframe src="/tutorials/package_deploy_wordpress_bottom.html" width="100%" height="690px"></iframe>
+   <iframe src="/tutorials/package_deploy_wordpress_bottom.html" width="100%" height="690px"></iframe>
 
 3. Because we included the connect services in the [previous tutorial](/tutorials/0-creating-a-zarf-package/#setting-up-a-zarf-connect-service) we can quickly test our package in a browser with `zarf connect wordpress-blog`.
 
-![Zarf Connect WordPress](../../../assets/tutorials/wordpress_connected.png)
+   ![Zarf Connect WordPress](../../../assets/tutorials/wordpress_connected.png)
 
-4. We can also explore the resources deployed by our package by running the `zarf tools monitor` command to start [`K9s`](../4-deploy-a-zarf-package/5-k9s-dashboard.md). Once you are done, hit `ctrl/control c` to exit.
+4. We can also explore the resources deployed by our package by running the `zarf tools monitor` command to start [`k9s`](/ref/tools/#k9s). Once you are done, hit `ctrl/control c` to exit.
 
-![Zarf Tools Monitor](../../../assets/tutorials/zarf_tools_monitor.png)
+   ![Zarf Tools Monitor](../../../assets/tutorials/zarf_tools_monitor.png)
 
-:::tip
+   :::tip
 
-Deploying packages isn't the only way to interact with them in the air gap.  If you would like to quickly inspect a package and it's SBOMs you can use [`zarf package inspect`](../4-deploy-a-zarf-package/4-view-sboms.md) to view them, and if you would like to push resources inside of a Zarf package (i.e. the images in this Wordpress package) to services in the air gap without running a deployment, you can do so with [`zarf package mirror-resources`](../2-the-zarf-cli/100-cli-commands/zarf_package_mirror-resources.md).
+   Deploying packages isn't the only way to interact with them in the air gap.  If you would like to quickly inspect a package and it's SBOMs you can use [`zarf package inspect`](/ref/sboms/#viewing-a-packages-sboms) to view them, and if you would like to push resources inside of a Zarf package (i.e. the images in this Wordpress package) to services in the air gap without running a deployment, you can do so with [`zarf package mirror-resources`](/commands/zarf_package_mirror-resources/).
 
-:::
+   :::
+
+</Steps>
 
 ## Removal
 

@@ -8,10 +8,12 @@ In this tutorial, we will demonstrate how to use Zarf on a fresh Linux machine t
 
 ## System Requirements
 
--  `root` access on a Linux machine
+- `root` access on a Linux machine
 
-:::note REQUIRES ROOT
+:::note[REQUIRES ROOT]
+
 The 'k3s' component requires root access (not just `sudo`!) when deploying as it will modify your host machine to install the cluster.
+
 :::
 
 ## Prerequisites
@@ -30,33 +32,32 @@ Before beginning this tutorial you will need the following:
 # zarf init
 ```
 
-2. Confirm Package Deployment: <br/>
-- When prompted to deploy the package select `y` for Yes, then hit the `enter` key. <br/>
+1. Confirm Package Deployment:
 
-3. Confirm k3s Component Deployment: <br/>
+- When prompted to deploy the package select `y` for Yes, then hit the `enter` key.
+
+1. Confirm k3s Component Deployment:
+
 - When prompted to deploy the k3s component select `y` for Yes, then hit the `enter` key.
 
 <iframe src="/tutorials/k3s_init.html" height="750px" width="100%"></iframe>
 
 :::tip
+
 You can automatically accept the k3s component and confirm the package using the `--components` and `--confirm` flags.
 
 ```sh
-$ zarf init --components="k3s" --confirm
+zarf init --components="k3s" --confirm
 ```
+
 :::
 
 ### Validating the Deployment
-After the `zarf init` command is done running, you should see a k3s cluster running and a few `zarf` pods in the Kubernetes cluster.
 
-```sh
-# zarf tools monitor
-```
-:::note
-You can press `0` if you want to see all namespaces and CTRL-C to exit
-:::
+After the `zarf init` command is done running, you should see a k3s cluster running and a few `zarf` pods in the `zarf` namespace.
 
 ### Accessing the Cluster as a Normal User
+
 By default, the k3s component will only automatically provide cluster access to the root user. To access the cluster as another user, you can run the following to setup the `~/.kube/config` file:
 
 ```sh
@@ -67,7 +68,7 @@ By default, the k3s component will only automatically provide cluster access to 
 
 ## Cleaning Up
 
-The [`zarf destroy`](../2-the-zarf-cli/100-cli-commands/zarf_destroy.md) command will remove all of the resources, including the k3s cluster, that was created by the initialization command.
+The [`zarf destroy`](/commands/zarf_destroy/) command will remove all of the resources, including the k3s cluster, that was created by the initialization command.
 
 ```sh
 zarf destroy --confirm
