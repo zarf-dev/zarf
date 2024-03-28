@@ -12,13 +12,14 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/check": "^0.5.4",
-    "@astrojs/starlight": "^0.19.0",
-    "astro": "^4.3.5",
+    "@astrojs/check": "^0.5.10",
+    "@astrojs/starlight": "^0.21.2",
+    "astro": "^4.5.10",
     "mermaid": "^10.9.0",
     "rehype-autolink-headings": "^7.1.0",
-    "sharp": "^0.32.5",
-    "typescript": "^5.3.3"
+    "sharp": "^0.33.3",
+    "starlight-links-validator": "^0.6.0",
+    "typescript": "^5.4.3"
   },
   "devDependencies": {
     "yaml": "^2.4.1"
