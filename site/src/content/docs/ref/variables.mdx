@@ -2,7 +2,7 @@
 title: Variables
 ---
 
-import Properties from '@site/src/components/SchemaItemProperties';
+import Properties from '@components/SchemaItemProperties.astro';
 import ExampleYAML from "@components/ExampleYAML.astro";
 
 :::note
@@ -141,12 +141,6 @@ It is not recommended to use package configuration templates for any `sensitive`
 :::note
 
 You can only template string values in this way as non-string values will not marshal/unmarshal properly through the yaml.
-
-:::
-
-:::note
-
-If you use `--confirm` and do not `--set` all of the package configuration templates you will receive an error
 
 :::
 
