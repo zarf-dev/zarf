@@ -14,6 +14,7 @@ async function preflight() {
 
 async function copyExamples() {
   const dirs = await fs.readdir(examplesDir);
+  const examples = [];
   for (const dir of dirs) {
     const content = await fs.readFile(path.join(examplesDir, dir, "zarf.yaml"), "utf-8");
     const parsed = yaml.parseDocument(content);
@@ -22,6 +23,7 @@ async function copyExamples() {
       // throw new Error(`No x-mdx field in ${dir}/zarf.yaml`);
       continue;
     }
+    examples.push(dir);
     const repo = "https://github.com/defenseunicorns/zarf";
     const link = new URL(`${repo}/edit/main/examples/${dir}/zarf.yaml`).toString();
     const fm = `---
@@ -41,13 +43,41 @@ To view the full example, as well as its dependencies, please visit [examples/${
 
     parsed.delete("x-mdx");
 
-    const final = parsed.toString();
+    const pkg = parsed.toString();
 
-    await fs.writeFile(path.join(dstDir, `${dir}.mdx`), fm + mdx + "\n## zarf.yaml\n\n```yaml\n" + final + "\n```\n");
+    const final = `${fm}
+${mdx}
+
+## zarf.yaml
+
+\`\`\`yaml
+${pkg}
+\`\`\`
+`;
+
+    await fs.writeFile(path.join(dstDir, `${dir}.mdx`), final);
 
     // await fs.copyFile(path.join(examplesDir, dir, "zarf.yaml"), path.join(dstDir, `${dir}.yaml`));
     // await fs.copyFile(path.join(examplesDir, dir, "README.md"), path.join(dstDir, `${dir}.mdx`));
   }
+
+  const index = `---
+title: "Examples"
+description: "Examples of \`zarf.yaml\` configurations"
+tableOfContents: false
+---
+
+import { LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+${examples.map((e) => `- [${e}](/ref/examples/${e}/)`).join("\n")}
+
+<CardGrid>
+  ${examples.map((e) => `<LinkCard title="${e}" href="/ref/examples/${e}/" />`).join("\n")}
+</CardGrid>
+
+`;
+
+  await fs.writeFile(path.join(dstDir, `index.mdx`), index);
 }
 
 async function main() {
