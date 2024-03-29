@@ -29,13 +29,13 @@ Commands useful for developing packages
 
 ### SEE ALSO
 
-* [zarf](zarf.md)	 - DevSecOps for Airgap
-* [zarf dev deploy](zarf_dev_deploy.md)	 - [beta] Creates and deploys a Zarf package from a given directory
-* [zarf dev find-images](zarf_dev_find-images.md)	 - Evaluates components in a Zarf file to identify images specified in their helm charts and manifests
-* [zarf dev generate](zarf_dev_generate.md)	 - [alpha] Creates a zarf.yaml automatically from a given remote (git) Helm chart
-* [zarf dev generate-config](zarf_dev_generate-config.md)	 - Generates a config file for Zarf
-* [zarf dev lint](zarf_dev_lint.md)	 - Lints the given package for valid schema and recommended practices
-* [zarf dev patch-git](zarf_dev_patch-git.md)	 - Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:
+* [zarf](/commands/zarf/)	 - DevSecOps for Airgap
+* [zarf dev deploy](/commands/zarf_dev_deploy/)	 - [beta] Creates and deploys a Zarf package from a given directory
+* [zarf dev find-images](/commands/zarf_dev_find-images/)	 - Evaluates components in a Zarf file to identify images specified in their helm charts and manifests
+* [zarf dev generate](/commands/zarf_dev_generate/)	 - [alpha] Creates a zarf.yaml automatically from a given remote (git) Helm chart
+* [zarf dev generate-config](/commands/zarf_dev_generate-config/)	 - Generates a config file for Zarf
+* [zarf dev lint](/commands/zarf_dev_lint/)	 - Lints the given package for valid schema and recommended practices
+* [zarf dev patch-git](/commands/zarf_dev_patch-git/)	 - Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:
 This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook.
 * [zarf dev sha256sum](/commands/zarf_dev_sha256sum/)	 - Generates a SHA256SUM for the given file
 
