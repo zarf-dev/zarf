@@ -47,3 +47,19 @@ import configJson from "../../../../../examples/config-file/zarf-config.json?raw
     <Code code={configJson} lang="json" title="zarf-config.json" />
   </TabItem>
 </Tabs>
+
+## Example Package
+
+import packageConfig from "../../../../../examples/config-file/zarf.yaml?raw";
+
+```bash
+export ZARF_CONFIG=examples/config-file/zarf-config.yaml
+
+zarf package create examples/config-file --confirm
+
+# replace <arch> with your system architecture
+zarf package deploy zarf-package-config-file-<arch>.tar.zst --confirm
+```
+
+<Code code={packageConfig} lang="yaml" title="zarf.yaml" />
+

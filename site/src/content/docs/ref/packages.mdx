@@ -52,6 +52,15 @@ If you already have a Zarf package and you want to create an updated package you
 
 ## Package Sources
 
+A source can be used with the following commands as their first argument:
+
+- `zarf package deploy <source>`
+- `zarf package inspect <source>`
+- `zarf package remove <source>`
+- `zarf package publish <source>`
+- `zarf package pull <source>`
+- `zarf package mirror-resources <source>`
+
 Zarf currently supports consuming packages from the following sources:
 
 ### Local Tarball Path (`.tar` and `.tar.zst`)
@@ -69,17 +78,6 @@ A remote tarball is a Zarf package tarball that is hosted on a web server that i
 ### Remote OCI Reference (`oci://`)
 
 An OCI package is one that has been published to an OCI compatible registry using `zarf package publish` or the `-o` option on `zarf package create`.  These packages live within a given registry and you can learn more about them in our [Publish & Deploy Packages w/OCI Tutorial](/tutorials/7-publish-and-deploy/).
-
-### Commands with Sources
-
-A source can be used with the following commands as their first argument:
-
-- `zarf package deploy <source>`
-- `zarf package inspect <source>`
-- `zarf package remove <source>`
-- `zarf package publish <source>`
-- `zarf package pull <source>`
-- `zarf package mirror-resources <source>`
 
 :::note
 
