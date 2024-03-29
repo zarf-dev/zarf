@@ -80,6 +80,8 @@ components:
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
 
+# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
+# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
 x-mdx: |
   This example shows you how to specify Kubernetes resources in a component's `manifests` list.  These files can either be local or remote and under the hood Zarf will wrap them in an auto-generated helm chart to manage their install, rollback, and uninstall logic.
 

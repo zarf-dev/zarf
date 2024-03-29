@@ -5,9 +5,19 @@ metadata:
   url: https://github.com/defenseunicorns/pepr
   version: 0.0.1
 
-# YAML keys starting with `x-` are custom keys that are not part of the Zarf spec
-# These keys are NOT used by the Zarf CLI and are only used for documentation purposes
-# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/examples
+components:
+  - name: module
+    required: true
+    manifests:
+      - name: module
+        namespace: pepr-system
+        files:
+          - pepr-module-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b.yaml
+    images:
+      - ghcr.io/defenseunicorns/pepr/controller:v0.15.0
+
+# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
+# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
 x-mdx: |
   :::caution
 
@@ -34,14 +44,3 @@ x-mdx: |
   ```
 
   :::
-
-components:
-  - name: module
-    required: true
-    manifests:
-      - name: module
-        namespace: pepr-system
-        files:
-          - pepr-module-cb5693ef-d13c-5fe1-b5ad-c870fd911b3b.yaml
-    images:
-      - ghcr.io/defenseunicorns/pepr/controller:v0.15.0

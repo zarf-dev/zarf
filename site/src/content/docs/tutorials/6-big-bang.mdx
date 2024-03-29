@@ -72,7 +72,7 @@ The below section covers creating and tuning the Big Bang package:
 
 ### Setup
 
-By default, Big Bang uses images from [Iron Bank](https://p1.dso.mil/products/iron-bank) which will require you to set your login credentials for [Registry One](https://registry1.dso.mil) (see [pre-requisites](#pre-requisites) for information on account setup).
+By default, Big Bang uses images from [Iron Bank](https://p1.dso.mil/products/iron-bank) which will require you to set your login credentials for [Registry One](https://registry1.dso.mil) (see [pre-requisites](#prerequisites) for information on account setup).
 
 ```bash
 # Authenticate to https://registry1.dso.mil/, then retrieve your CLI secret from your User Profile and run the following:
@@ -83,7 +83,7 @@ echo $REGISTRY1_CLI_SECRET | zarf tools registry login registry1.dso.mil --usern
 set -o history
 ```
 
-Now navigate to the `examples/big-bang` folder within the Zarf repository you cloned in the [pre-requisites](#pre-requisites) section.
+Now navigate to the `examples/big-bang` folder within the Zarf repository you cloned in the [pre-requisites](#prerequisites) section.
 
 ### Configure Big Bang
 
@@ -136,7 +136,7 @@ The below section covers deploying the Big Bang package from the previous sectio
 
 ### Initialize Zarf
 
-Before you can deploy the Big Bang package you must first initialize Zarf on the cluster you created in the [pre-requisites](#pre-requisites) section.  To do so you can run the following:
+Before you can deploy the Big Bang package you must first initialize Zarf on the cluster you created in the [pre-requisites](#prerequisites) section.  To do so you can run the following:
 
 ```bash
 # Initialize Zarf (interactively)
@@ -197,7 +197,7 @@ zarf tools k9s
 
 ## Package Removal
 
-The Big Bang extension is not fully integrated into the Zarf package remove lifecycle (see [known issues](#known-issues)). To get around this limitation, an onRemove.before action has been added to the bigbang component in the zarf.yaml file that ensures all the Big Bang resources are torn down in the correct order when Zarf is used to remove the package:
+The Big Bang extension is not fully integrated into the Zarf package remove lifecycle. To get around this limitation, an [`onRemove.before` action](/ref/actions/) has been added to the bigbang component in the zarf.yaml file that ensures all the Big Bang resources are torn down in the correct order when Zarf is used to remove the package:
 
 ```bash
 zarf package remove big-bang-example --confirm
@@ -207,6 +207,6 @@ zarf package remove big-bang-example --confirm
 
 See the Troubleshooting section of the Big Bang Quick Start for help troubleshooting the Big Bang deployment: https://repo1.dso.mil/big-bang/bigbang/-/blob/master/docs/guides/deployment-scenarios/quickstart.md#troubleshooting
 
-Also, ensure that you have followed all of the steps required in the [pre-requisites](#pre-requisites) section and have reviewed the [known issues](#known-issues).
+Also, ensure that you have followed all of the steps required in the [pre-requisites](#prerequisites) section.
 
 If you feel that the error you are encountering is one with Zarf feel free to [open an issue](https://github.com/defenseunicorns/zarf/issues/new/choose) or reach out via [slack](https://kubernetes.slack.com/archives/C03B6BJAUJ3).

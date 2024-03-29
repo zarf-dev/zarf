@@ -4,9 +4,27 @@ metadata:
   yolo: true
   description: Game example in YOLO (online-only) mode that can be deployed without a Zarf cluster
 
-# YAML keys starting with `x-` are custom keys that are not part of the Zarf spec
-# These keys are NOT used by the Zarf CLI and are only used for documentation purposes
-# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/examples
+components:
+  - name: yolo-games
+    required: true
+    manifests:
+      - name: multi-games
+        namespace: zarf-yolo-example
+        files:
+          - ../dos-games/manifests/deployment.yaml
+          - ../dos-games/manifests/service.yaml
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: game
+                namespace: zarf-yolo-example
+                condition: available
+
+# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
+# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
 x-mdx: |
   This example demonstrates YOLO mode, an optional mode for using Zarf in a fully connected environment where users can bring their own external container registry and Git server.
 
@@ -46,22 +64,3 @@ x-mdx: |
   # Gitea server and Zarf agent pods are not present in the cluster. This means
   # that the game's container image was pulled directly from the public registry and the URL was not mutated by Zarf.
   ```
-
-components:
-  - name: yolo-games
-    required: true
-    manifests:
-      - name: multi-games
-        namespace: zarf-yolo-example
-        files:
-          - ../dos-games/manifests/deployment.yaml
-          - ../dos-games/manifests/service.yaml
-    actions:
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: deployment
-                name: game
-                namespace: zarf-yolo-example
-                condition: available

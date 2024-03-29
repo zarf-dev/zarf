@@ -60,6 +60,8 @@ components:
       - longhornio/longhorn-ui:v1.4.0
       - longhornio/support-bundle-kit:v0.0.17
 
+# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
+# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
 x-mdx: |
   This example shows you how to deploy [Longhorn](https://longhorn.io/) using Zarf.
 
