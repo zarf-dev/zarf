@@ -2,7 +2,6 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import { rehypeHeadingIds } from "@astrojs/markdown-remark";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
-// import starlightLinksValidator from 'starlight-links-validator'
 
 // https://astro.build/config
 export default defineConfig({
@@ -21,7 +20,6 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Zarf",
-      // plugins: [starlightLinksValidator()],
       social: {
         github: "https://github.com/defenseunicorns/zarf",
         slack: "https://kubernetes.slack.com/archives/C03B6BJAUJ3",
