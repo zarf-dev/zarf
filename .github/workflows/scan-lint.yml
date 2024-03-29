@@ -11,6 +11,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
+      - name: Docs and schemas
+        run: "make test-docs-and-schema"
+
       - name: Run Revive Action by pulling pre-built image
         uses: docker://morphy/revive-action:v2
         with:
@@ -19,3 +22,7 @@ jobs:
           exclude: "src/cmd/viper.go"
           # Path pattern (default: ./...)
           path: "./src/..."
+
+      - name: Save logs
+        if: always()
+        uses: ./.github/actions/save-logs

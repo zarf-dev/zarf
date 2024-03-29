@@ -12,10 +12,11 @@
   // Define glob expressions to use (only valid at root)
   "globs": [
     "**/*.mdx",
-    "**/*.md"
+    "../**/*.md"
   ],
   "ignores": [
     "**/node_modules/**",
-    "src/content/docs/commands/*.md"
+    "src/content/docs/commands/*.md",
+    "site/src/content/docs/commands/*.md"
   ]
 }

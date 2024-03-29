@@ -4,8 +4,8 @@
   "version": "latest",
   "private": true,
   "scripts": {
-    "lint": "markdownlint-cli2 .",
-    "lint:fix": "markdownlint-cli2 --fix .",
+    "lint": "markdownlint-cli2 . --config ../.markdownlint-cli2.jsonc",
+    "lint:fix": "markdownlint-cli2 --fix . --config ../.markdownlint-cli2.jsonc",
     "predev": "cp ../zarf.schema.json ./src/assets/zarf.schema.json && node hack/copy-examples.js",
     "dev": "astro dev",
     "start": "astro dev",
