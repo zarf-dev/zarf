@@ -62,14 +62,12 @@ ${pkg}
   }
 
   const index = `---
-title: "Examples"
+title: "Overview"
 description: "Examples of \`zarf.yaml\` configurations"
 tableOfContents: false
 ---
 
 import { LinkCard, CardGrid } from '@astrojs/starlight/components';
-
-${examples.map((e) => `- [${e}](/ref/examples/${e}/)`).join("\n")}
 
 <CardGrid>
   ${examples.map((e) => `<LinkCard title="${e}" href="/ref/examples/${e}/" />`).join("\n")}
