@@ -34,7 +34,7 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 - Build and [publish packages as OCI image artifacts](https://docs.zarf.dev/tutorials/publish-and-deploy)
 - Provide a [web dashboard](https://docs.zarf.dev/ref/sboms/#the-sbom-viewer) for viewing SBOM output
 - Create and verify package signatures with [cosign](https://github.com/sigstore/cosign)
-- [Publish](https://docs.zarf.dev/docs/commands/zarf_package_publish), [pull](https://docs.zarf.dev/docs/commands/zarf_package_pull), and [deploy](https://docs.zarf.dev/commands/zarf_package_deploy) packages from an [OCI registry](https://opencontainers.org/)
+- [Publish](https://docs.zarf.dev/commands/zarf_package_publish), [pull](https://docs.zarf.dev/commands/zarf_package_pull), and [deploy](https://docs.zarf.dev/commands/zarf_package_deploy) packages from an [OCI registry](https://opencontainers.org/)
 - Powerful component lifecycle [actions](https://docs.zarf.dev/ref/actions)
 - Deploy a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
 - Builtin logging stack with [Loki](https://grafana.com/oss/loki/)
@@ -87,10 +87,10 @@ Made with [contrib.rocks](https://contrib.rocks).
 
 ## 💻 Contributing
 
-Check out our [Contributor Guide](https://docs.zarf.dev/docs/contribute-to-zarf/contributor-guide) to learn more about how to set up your development environment and begin contributing.
+Check out our [Contributor Guide](https://docs.zarf.dev/contribute-to-zarf/contributor-guide) to learn more about how to set up your development environment and begin contributing.
 We also recommend checking out our architectural diagram.
 
-To dive deeper into the tech, you can read the [Nerd Notes](https://docs.zarf.dev/docs/contribute-to-zarf/nerd-notes) in our Docs.
+To dive deeper into the tech, you can read the [Nerd Notes](https://docs.zarf.dev/contribute-to-zarf/nerd-notes) in our Docs.
 
 ![Architecture Diagram](./site/public/architecture.drawio.svg)
 
