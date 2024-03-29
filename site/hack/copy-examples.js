@@ -20,7 +20,6 @@ async function copyExamples() {
     const parsed = yaml.parseDocument(content);
     const mdx = parsed.get("x-mdx");
     if (!parsed.has("x-mdx")) {
-      // throw new Error(`No x-mdx field in ${dir}/zarf.yaml`);
       continue;
     }
     examples.push(dir);
@@ -56,9 +55,6 @@ ${pkg}
 `;
 
     await fs.writeFile(path.join(dstDir, `${dir}.mdx`), final);
-
-    // await fs.copyFile(path.join(examplesDir, dir, "zarf.yaml"), path.join(dstDir, `${dir}.yaml`));
-    // await fs.copyFile(path.join(examplesDir, dir, "README.md"), path.join(dstDir, `${dir}.mdx`));
   }
 
   const index = `---
