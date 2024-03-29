@@ -1,8 +1,11 @@
 {
-  "name": "zarf-docs-next",
+  "name": "zarf-docs",
   "type": "module",
-  "version": "0.0.1",
+  "version": "latest",
+  "private": true,
   "scripts": {
+    "lint": "markdownlint-cli2 .",
+    "lint:fix": "markdownlint-cli2 --fix .",
     "predev": "cp ../zarf.schema.json ./src/assets/zarf.schema.json && node hack/copy-examples.js",
     "dev": "astro dev",
     "start": "astro dev",
@@ -21,6 +24,7 @@
     "typescript": "^5.4.3"
   },
   "devDependencies": {
+    "markdownlint-cli2": "^0.12.1",
     "yaml": "^2.4.1"
   }
 }

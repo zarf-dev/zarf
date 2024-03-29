@@ -18,10 +18,10 @@ async function copyExamples() {
   for (const dir of dirs) {
     const content = await fs.readFile(path.join(examplesDir, dir, "zarf.yaml"), "utf-8");
     const parsed = yaml.parseDocument(content);
-    const mdx = parsed.get("x-mdx");
     if (!parsed.has("x-mdx")) {
       continue;
     }
+    const mdx = parsed.get("x-mdx").trim();
     examples.push(dir);
     const repo = "https://github.com/defenseunicorns/zarf";
     const link = new URL(`${repo}/edit/main/examples/${dir}/zarf.yaml`).toString();
@@ -37,12 +37,11 @@ tableOfContents: false
 To view the full example, as well as its dependencies, please visit [examples/${dir}](${repo}/tree/main/examples/${dir}).
 
 :::
-
 `;
 
     parsed.delete("x-mdx");
 
-    const pkg = parsed.toString();
+    const pkg = parsed.toString().trim();
 
     const final = `${fm}
 ${mdx}
@@ -52,9 +51,9 @@ ${mdx}
 \`\`\`yaml
 ${pkg}
 \`\`\`
-`;
+`.trim();
 
-    await fs.writeFile(path.join(dstDir, `${dir}.mdx`), final);
+    await fs.writeFile(path.join(dstDir, `${dir}.mdx`), final + "\n");
   }
 
   const index = `---
@@ -68,10 +67,9 @@ import { LinkCard, CardGrid } from '@astrojs/starlight/components';
 <CardGrid>
   ${examples.map((e) => `<LinkCard title="${e}" href="/ref/examples/${e}/" />`).join("\n")}
 </CardGrid>
-
 `;
 
-  await fs.writeFile(path.join(dstDir, `index.mdx`), index);
+  await fs.writeFile(path.join(dstDir, `index.mdx`), index + "\n");
 }
 
 async function main() {
