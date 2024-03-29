@@ -7,9 +7,9 @@ package zoci
 import (
 	"log/slog"
 
+	"github.com/defenseunicorns/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 

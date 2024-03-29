@@ -82,6 +82,49 @@
         "^x-": {}
       }
     },
+    "Shell": {
+      "properties": {
+        "windows": {
+          "type": "string",
+          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
+          "examples": [
+            "powershell",
+            "cmd",
+            "pwsh",
+            "sh",
+            "bash",
+            "gsh"
+          ]
+        },
+        "linux": {
+          "type": "string",
+          "description": "(default 'sh') Indicates a preference for the shell to use on Linux systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ]
+        },
+        "darwin": {
+          "type": "string",
+          "description": "(default 'sh') Indicates a preference for the shell to use on macOS systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
     "ZarfBuildData": {
       "required": [
         "terminal",
@@ -118,10 +161,6 @@
           "type": "array",
           "description": "Any migrations that have been run on this package"
         },
-        "differential": {
-          "type": "boolean",
-          "description": "Whether this package was created with differential components"
-        },
         "registryOverrides": {
           "patternProperties": {
             ".*": {
@@ -130,6 +169,14 @@
           },
           "type": "object",
           "description": "Any registry domains that were overridden on package create when pulling images"
+        },
+        "differential": {
+          "type": "boolean",
+          "description": "Whether this package was created with differential components"
+        },
+        "differentialPackageVersion": {
+          "type": "string",
+          "description": "Version of a previously built package used as the basis for creating this differential package"
         },
         "differentialMissing": {
           "items": {
@@ -257,18 +304,13 @@
           "$ref": "#/definitions/ZarfComponentImport",
           "description": "Import a component from another Zarf package"
         },
-        "scripts": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/DeprecatedZarfComponentScripts",
-          "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0."
-        },
-        "files": {
+        "manifests": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfFile"
+            "$ref": "#/definitions/ZarfManifest"
           },
           "type": "array",
-          "description": "Files or folders to place on disk during package deployment"
+          "description": "Kubernetes manifests to be included in a generated Helm chart on package deploy"
         },
         "charts": {
           "items": {
@@ -278,13 +320,21 @@
           "type": "array",
           "description": "Helm charts to install during package deploy"
         },
-        "manifests": {
+        "dataInjections": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfManifest"
+            "$ref": "#/definitions/ZarfDataInjection"
           },
           "type": "array",
-          "description": "Kubernetes manifests to be included in a generated Helm chart on package deploy"
+          "description": "Datasets to inject into a container in the target cluster"
+        },
+        "files": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfFile"
+          },
+          "type": "array",
+          "description": "Files or folders to place on disk during package deployment"
         },
         "images": {
           "items": {
@@ -300,18 +350,15 @@
           "type": "array",
           "description": "List of git repos to include in the package"
         },
-        "dataInjections": {
-          "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfDataInjection"
-          },
-          "type": "array",
-          "description": "Datasets to inject into a container in the target cluster"
-        },
         "extensions": {
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfComponentExtensions",
           "description": "Extend component functionality with additional features"
+        },
+        "scripts": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/DeprecatedZarfComponentScripts",
+          "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0."
         },
         "actions": {
           "$schema": "http://json-schema.org/draft-04/schema#",
@@ -355,7 +402,7 @@
           "description": "The command to run. Must specify either cmd or wait for the action to do anything."
         },
         "shell": {
-          "$ref": "#/definitions/ZarfComponentActionShell",
+          "$ref": "#/definitions/Shell",
           "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
         },
         "setVariable": {
@@ -414,7 +461,7 @@
         },
         "shell": {
           "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentActionShell",
+          "$ref": "#/definitions/Shell",
           "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
         }
       },
@@ -477,18 +524,6 @@
           "type": "string",
           "description": "The name to be used for the variable"
         },
-        "sensitive": {
-          "type": "boolean",
-          "description": "Whether to mark this variable as sensitive to not print it in the Zarf log"
-        },
-        "autoIndent": {
-          "type": "boolean",
-          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
-        },
-        "pattern": {
-          "type": "string",
-          "description": "An optional regex pattern that a variable value must match before a package deployment can continue."
-        },
         "type": {
           "enum": [
             "raw",
@@ -496,49 +531,18 @@
           ],
           "type": "string",
           "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
-    "ZarfComponentActionShell": {
-      "properties": {
-        "windows": {
-          "type": "string",
-          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
-          "examples": [
-            "powershell",
-            "cmd",
-            "pwsh",
-            "sh",
-            "bash",
-            "gsh"
-          ]
         },
-        "linux": {
+        "pattern": {
           "type": "string",
-          "description": "(default 'sh') Indicates a preference for the shell to use on Linux systems",
-          "examples": [
-            "sh",
-            "bash",
-            "fish",
-            "zsh",
-            "pwsh"
-          ]
+          "description": "An optional regex pattern that a variable value must match before a package deployment can continue."
         },
-        "darwin": {
-          "type": "string",
-          "description": "(default 'sh') Indicates a preference for the shell to use on macOS systems",
-          "examples": [
-            "sh",
-            "bash",
-            "fish",
-            "zsh",
-            "pwsh"
-          ]
+        "sensitive": {
+          "type": "boolean",
+          "description": "Whether to mark this variable as sensitive to not print it in the Zarf log"
+        },
+        "autoIndent": {
+          "type": "boolean",
+          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
         }
       },
       "additionalProperties": false,

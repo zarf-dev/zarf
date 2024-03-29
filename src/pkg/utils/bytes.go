@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
@@ -78,7 +79,7 @@ func RenderProgressBarForLocalDirWrite(filepath string, expectedTotal int64, com
 			}
 		default:
 			// Read the directory size
-			currentBytes, dirErr := GetDirSize(filepath)
+			currentBytes, dirErr := helpers.GetDirSize(filepath)
 			if dirErr != nil {
 				message.Debugf("unable to get updated progress: %s", dirErr.Error())
 				time.Sleep(200 * time.Millisecond)

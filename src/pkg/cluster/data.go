@@ -12,13 +12,13 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -46,7 +46,7 @@ func (c *Cluster) HandleDataInjection(wg *sync.WaitGroup, data types.ZarfDataInj
 	}
 
 	// Get the OS shell to execute commands in
-	shell, shellArgs := exec.GetOSShell(types.ZarfComponentActionShell{Windows: "cmd"})
+	shell, shellArgs := exec.GetOSShell(exec.Shell{Windows: "cmd"})
 
 	if _, _, err := exec.Cmd(shell, append(shellArgs, "tar --version")...); err != nil {
 		message.WarnErr(err, "Unable to execute tar on this system.  Please ensure it is installed and on your $PATH.")
@@ -58,10 +58,10 @@ iterator:
 	for {
 		message.Debugf("Attempting to inject data into %s", data.Target)
 		source := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
-		if utils.InvalidPath(source) {
+		if helpers.InvalidPath(source) {
 			// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
 			source = filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
-			if utils.InvalidPath(source) {
+			if helpers.InvalidPath(source) {
 				message.Warnf("Unable to find the data injection source path %s", source)
 				return
 			}

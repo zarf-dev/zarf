@@ -5,8 +5,11 @@
 package types
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 )
 
@@ -30,6 +33,21 @@ const (
 	ComponentStatusFailed    ComponentStatus = "Failed"
 	ComponentStatusDeploying ComponentStatus = "Deploying"
 	ComponentStatusRemoving  ComponentStatus = "Removing"
+)
+
+// Values during setup of the initial zarf state
+const (
+	ZarfGeneratedPasswordLen               = 24
+	ZarfGeneratedSecretLen                 = 48
+	ZarfInClusterContainerRegistryNodePort = 31999
+	ZarfRegistryPushUser                   = "zarf-push"
+	ZarfRegistryPullUser                   = "zarf-pull"
+
+	ZarfGitPushUser = "zarf-git-user"
+	ZarfGitReadUser = "zarf-git-read-user"
+
+	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 )
 
 // ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data.
@@ -91,6 +109,43 @@ type GitServerInfo struct {
 	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a git server that Zarf is directly managing"`
 }
 
+// FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
+func (gs *GitServerInfo) FillInEmptyValues() error {
+	var err error
+	// Set default svc url if an external repository was not provided
+	if gs.Address == "" {
+		gs.Address = ZarfInClusterGitServiceURL
+		gs.InternalServer = true
+	}
+
+	// Generate a push-user password if not provided by init flag
+	if gs.PushPassword == "" {
+		if gs.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
+			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
+		}
+	}
+
+	// Set read-user information if using an internal repository, otherwise copy from the push-user
+	if gs.PullUsername == "" {
+		if gs.InternalServer {
+			gs.PullUsername = ZarfGitReadUser
+		} else {
+			gs.PullUsername = gs.PushUsername
+		}
+	}
+	if gs.PullPassword == "" {
+		if gs.InternalServer {
+			if gs.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
+				return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
+			}
+		} else {
+			gs.PullPassword = gs.PushPassword
+		}
+	}
+
+	return nil
+}
+
 // ArtifactServerInfo contains information Zarf uses to communicate with a artifact registry to push/pull repositories to.
 type ArtifactServerInfo struct {
 	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the artifact registry"`
@@ -98,6 +153,20 @@ type ArtifactServerInfo struct {
 
 	Address        string `json:"address" jsonschema:"description=URL address of the artifact registry"`
 	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a artifact registry that Zarf is directly managing"`
+}
+
+// FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
+func (as *ArtifactServerInfo) FillInEmptyValues() {
+	// Set default svc url if an external registry was not provided
+	if as.Address == "" {
+		as.Address = ZarfInClusterArtifactServiceURL
+		as.InternalServer = true
+	}
+
+	// Set the push username to the git push user if not specified
+	if as.PushUsername == "" {
+		as.PushUsername = ZarfGitPushUser
+	}
 }
 
 // RegistryInfo contains information Zarf uses to communicate with a container registry to push/pull images.
@@ -112,4 +181,54 @@ type RegistryInfo struct {
 	InternalRegistry bool   `json:"internalRegistry" jsonschema:"description=Indicates if we are using a registry that Zarf is directly managing"`
 
 	Secret string `json:"secret" jsonschema:"description=Secret value that the registry was seeded with"`
+}
+
+// FillInEmptyValues sets every necessary value not already set to a reasonable default
+func (ri *RegistryInfo) FillInEmptyValues() error {
+	var err error
+	// Set default NodePort if none was provided
+	if ri.NodePort == 0 {
+		ri.NodePort = ZarfInClusterContainerRegistryNodePort
+	}
+
+	// Set default url if an external registry was not provided
+	if ri.Address == "" {
+		ri.InternalRegistry = true
+		ri.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
+	}
+
+	// Generate a push-user password if not provided by init flag
+	if ri.PushPassword == "" {
+		if ri.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
+			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
+		}
+	}
+
+	// Set pull-username if not provided by init flag
+	if ri.PullUsername == "" {
+		if ri.InternalRegistry {
+			ri.PullUsername = ZarfRegistryPullUser
+		} else {
+			// If this is an external registry and a pull-user wasn't provided, use the same credentials as the push user
+			ri.PullUsername = ri.PushUsername
+		}
+	}
+	if ri.PullPassword == "" {
+		if ri.InternalRegistry {
+			if ri.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
+				return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
+			}
+		} else {
+			// If this is an external registry and a pull-user wasn't provided, use the same credentials as the push user
+			ri.PullPassword = ri.PushPassword
+		}
+	}
+
+	if ri.Secret == "" {
+		if ri.Secret, err = helpers.RandomString(ZarfGeneratedSecretLen); err != nil {
+			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
+		}
+	}
+
+	return nil
 }

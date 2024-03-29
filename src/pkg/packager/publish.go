@@ -10,12 +10,15 @@ import (
 	"os"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -46,24 +49,37 @@ func (p *Packager) Publish() (err error) {
 	}
 
 	if p.cfg.CreateOpts.IsSkeleton {
-		cwd, err := os.Getwd()
+		if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
+			return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
+		}
+
+		sc := creator.NewSkeletonCreator(p.cfg.CreateOpts, p.cfg.PublishOpts)
+
+		if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+			return err
+		}
+
+		p.cfg.Pkg, p.warnings, err = sc.LoadPackageDefinition(p.layout)
 		if err != nil {
 			return err
 		}
-		if err := p.cdToBaseDir(p.cfg.CreateOpts.BaseDir, cwd); err != nil {
+
+		if err := sc.Assemble(p.layout, p.cfg.Pkg.Components, ""); err != nil {
 			return err
 		}
-		if err := p.load(); err != nil {
-			return err
-		}
-		if err := p.assembleSkeleton(); err != nil {
+
+		if err := sc.Output(p.layout, &p.cfg.Pkg); err != nil {
 			return err
 		}
 	} else {
-		if err = p.source.LoadPackage(p.layout, false); err != nil {
+		filter := filters.Empty()
+		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, false)
+		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
-		if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
+
+		// Sign the package if a key has been provided
+		if err := p.layout.SignPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword, !config.CommonOptions.Confirm); err != nil {
 			return err
 		}
 	}
@@ -77,18 +93,11 @@ func (p *Packager) Publish() (err error) {
 	if p.cfg.CreateOpts.IsSkeleton {
 		platform = zoci.PlatformForSkeleton()
 	} else {
-		platform = oci.PlatformForArch(config.GetArch())
+		platform = oci.PlatformForArch(p.cfg.Pkg.Build.Architecture)
 	}
 	remote, err := zoci.NewRemote(ref, platform)
 	if err != nil {
 		return err
-	}
-
-	// Sign the package if a key has been provided
-	if p.cfg.PublishOpts.SigningKeyPath != "" {
-		if err := p.signPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword); err != nil {
-			return err
-		}
 	}
 
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref)

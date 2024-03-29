@@ -11,12 +11,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -66,7 +66,7 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", name)))
 
 	cache := filepath.Join(config.GetAbsCachePath(), "oci")
-	if err := utils.CreateDirectory(cache, helpers.ReadWriteExecuteUser); err != nil {
+	if err := helpers.CreateDirectory(cache, helpers.ReadWriteExecuteUser); err != nil {
 		return err
 	}
 
@@ -110,7 +110,7 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 		}
 	}
 
-	if err := utils.CreateDirectory(dir, helpers.ReadWriteExecuteUser); err != nil {
+	if err := helpers.CreateDirectory(dir, helpers.ReadWriteExecuteUser); err != nil {
 		return err
 	}
 

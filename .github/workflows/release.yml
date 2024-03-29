@@ -1,4 +1,4 @@
-name: Publish Zarf Packages on Tag
+name: Release CLI and Packages on Tag
 
 permissions:
   contents: read
@@ -117,6 +117,7 @@ jobs:
   push:
     runs-on: ubuntu-latest
     needs: validate
+    environment: release
     permissions:
       contents: write
     steps:
@@ -172,6 +173,15 @@ jobs:
           echo ARCHIVER_VERSION=$(go list -f '{{.Version}}' -m github.com/mholt/archiver/v3) >> $GITHUB_ENV
           echo HELM_VERSION=$(go list -f '{{.Version}}' -m helm.sh/helm/v3) >> $GITHUB_ENV
 
+      - name: Get Brew tap repo token
+        id: brew-tap-token
+        uses: actions/create-github-app-token@f2acddfb5195534d487896a656232b016a682f3c # v1.9.0
+        with:
+          app-id: ${{ secrets.HOMEBREW_TAP_WORKFLOW_GITHUB_APP_ID }}
+          private-key: ${{ secrets.HOMEBREW_TAP_WORKFLOW_GITHUB_APP_SECRET }}
+          owner: defenseunicorns
+          repositories: homebrew-tap
+
       # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
@@ -181,8 +191,7 @@ jobs:
           args: release --rm-dist --debug
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.ZARF_ORG_PROJECT_TOKEN }}
-
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ steps.brew-tap-token.outputs.token }}
 
       - name: Save CVE report
         uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1

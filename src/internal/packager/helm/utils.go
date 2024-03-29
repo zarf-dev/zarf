@@ -6,10 +6,9 @@ package helm
 
 import (
 	"fmt"
-	"strconv"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -43,7 +42,7 @@ func (h *Helm) parseChartValues() (chartutil.Values, error) {
 	valueOpts := &values.Options{}
 
 	for idx := range h.chart.ValuesFiles {
-		path := StandardName(h.valuesPath, h.chart) + "-" + strconv.Itoa(idx)
+		path := StandardValuesName(h.valuesPath, h.chart, idx)
 		valueOpts.ValueFiles = append(valueOpts.ValueFiles, path)
 	}
 

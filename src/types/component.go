@@ -5,8 +5,7 @@
 package types
 
 import (
-	"reflect"
-
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 )
 
@@ -22,32 +21,33 @@ type ZarfComponent struct {
 	Default bool `json:"default,omitempty" jsonschema:"description=Determines the default Y/N state for installing this component on package deploy"`
 
 	// Required makes this component mandatory for package deployment
-	Required bool `json:"required,omitempty" jsonschema:"description=Do not prompt user to install this component, always install on package deploy"`
+	Required *bool `json:"required,omitempty" jsonschema:"description=Do not prompt user to install this component, always install on package deploy."`
 
 	// Only include compatible components during package deployment
 	Only ZarfComponentOnlyTarget `json:"only,omitempty" jsonschema:"description=Filter when this component is included in package creation or deployment"`
 
-	// Key to match other components to produce a user selector field, used to create a BOOLEAN XOR for a set of components
+	// DeprecatedGroup is a key to match other components to produce a user selector field, used to create a BOOLEAN XOR for a set of components
+	//
 	// Note: ignores default and required flags
-	Group string `json:"group,omitempty" jsonschema:"description=[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.,deprecated=true"`
+	DeprecatedGroup string `json:"group,omitempty" jsonschema:"description=[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.,deprecated=true"`
 
-	// (Deprecated) Path to cosign public key for signed online resources
+	// DeprecatedCosignKeyPath to cosign public key for signed online resources
 	DeprecatedCosignKeyPath string `json:"cosignKeyPath,omitempty" jsonschema:"description=[Deprecated] Specify a path to a public key to validate signed online resources. This will be removed in Zarf v1.0.0.,deprecated=true"`
 
 	// Import refers to another zarf.yaml package component.
 	Import ZarfComponentImport `json:"import,omitempty" jsonschema:"description=Import a component from another Zarf package"`
 
-	// (Deprecated) DeprecatedScripts are custom commands that run before or after package deployment
-	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0.,deprecated=true"`
-
-	// Files are files to place on disk during deploy
-	Files []ZarfFile `json:"files,omitempty" jsonschema:"description=Files or folders to place on disk during package deployment"`
+	// Manifests are raw manifests that get converted into zarf-generated helm charts during deploy
+	Manifests []ZarfManifest `json:"manifests,omitempty" jsonschema:"description=Kubernetes manifests to be included in a generated Helm chart on package deploy"`
 
 	// Charts are helm charts to install during package deploy
 	Charts []ZarfChart `json:"charts,omitempty" jsonschema:"description=Helm charts to install during package deploy"`
 
-	// Manifests are raw manifests that get converted into zarf-generated helm charts during deploy
-	Manifests []ZarfManifest `json:"manifests,omitempty" jsonschema:"description=Kubernetes manifests to be included in a generated Helm chart on package deploy"`
+	// Data packages to push into a running cluster
+	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a container in the target cluster"`
+
+	// Files are files to place on disk during deploy
+	Files []ZarfFile `json:"files,omitempty" jsonschema:"description=Files or folders to place on disk during package deployment"`
 
 	// Images are the online images needed to be included in the zarf package
 	Images []string `json:"images,omitempty" jsonschema:"description=List of OCI images to include in the package"`
@@ -55,14 +55,29 @@ type ZarfComponent struct {
 	// Repos are any git repos that need to be pushed into the git server
 	Repos []string `json:"repos,omitempty" jsonschema:"description=List of git repos to include in the package"`
 
-	// Data packages to push into a running cluster
-	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a container in the target cluster"`
-
 	// Extensions provide additional functionality to a component
 	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
 
+	// DeprecatedScripts are custom commands that run before or after package deployment
+	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0.,deprecated=true"`
+
 	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
 	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
+}
+
+// RequiresCluster returns if the component requires a cluster connection to deploy
+func (c ZarfComponent) RequiresCluster() bool {
+	hasImages := len(c.Images) > 0
+	hasCharts := len(c.Charts) > 0
+	hasManifests := len(c.Manifests) > 0
+	hasRepos := len(c.Repos) > 0
+	hasDataInjections := len(c.DataInjections) > 0
+
+	if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections {
+		return true
+	}
+
+	return false
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
@@ -140,19 +155,12 @@ type ZarfComponentActionSet struct {
 
 // ZarfComponentActionDefaults sets the default configs for child actions
 type ZarfComponentActionDefaults struct {
-	Mute            bool                     `json:"mute,omitempty" jsonschema:"description=Hide the output of commands during execution (default false)"`
-	MaxTotalSeconds int                      `json:"maxTotalSeconds,omitempty" jsonschema:"description=Default timeout in seconds for commands (default to 0, no timeout)"`
-	MaxRetries      int                      `json:"maxRetries,omitempty" jsonschema:"description=Retry commands given number of times if they fail (default 0)"`
-	Dir             string                   `json:"dir,omitempty" jsonschema:"description=Working directory for commands (default CWD)"`
-	Env             []string                 `json:"env,omitempty" jsonschema:"description=Additional environment variables for commands"`
-	Shell           ZarfComponentActionShell `json:"shell,omitempty" jsonschema:"description=(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"`
-}
-
-// ZarfComponentActionShell represents the desired shell to use for a given command
-type ZarfComponentActionShell struct {
-	Windows string `json:"windows,omitempty" jsonschema:"description=(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item),example=powershell,example=cmd,example=pwsh,example=sh,example=bash,example=gsh"`
-	Linux   string `json:"linux,omitempty" jsonschema:"description=(default 'sh') Indicates a preference for the shell to use on Linux systems,example=sh,example=bash,example=fish,example=zsh,example=pwsh"`
-	Darwin  string `json:"darwin,omitempty" jsonschema:"description=(default 'sh') Indicates a preference for the shell to use on macOS systems,example=sh,example=bash,example=fish,example=zsh,example=pwsh"`
+	Mute            bool       `json:"mute,omitempty" jsonschema:"description=Hide the output of commands during execution (default false)"`
+	MaxTotalSeconds int        `json:"maxTotalSeconds,omitempty" jsonschema:"description=Default timeout in seconds for commands (default to 0, no timeout)"`
+	MaxRetries      int        `json:"maxRetries,omitempty" jsonschema:"description=Retry commands given number of times if they fail (default 0)"`
+	Dir             string     `json:"dir,omitempty" jsonschema:"description=Working directory for commands (default CWD)"`
+	Env             []string   `json:"env,omitempty" jsonschema:"description=Additional environment variables for commands"`
+	Shell           exec.Shell `json:"shell,omitempty" jsonschema:"description=(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"`
 }
 
 // ZarfComponentAction represents a single action to run during a zarf package operation
@@ -163,7 +171,7 @@ type ZarfComponentAction struct {
 	Dir                   *string                          `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
 	Env                   []string                         `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
 	Cmd                   string                           `json:"cmd,omitempty" jsonschema:"description=The command to run. Must specify either cmd or wait for the action to do anything."`
-	Shell                 *ZarfComponentActionShell        `json:"shell,omitempty" jsonschema:"description=(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"`
+	Shell                 *exec.Shell                      `json:"shell,omitempty" jsonschema:"description=(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"`
 	DeprecatedSetVariable string                           `json:"setVariable,omitempty" jsonschema:"description=[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0,pattern=^[A-Z0-9_]+$"`
 	SetVariables          []ZarfComponentActionSetVariable `json:"setVariables,omitempty" jsonschema:"description=(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."`
 	Description           string                           `json:"description,omitempty" jsonschema:"description=Description of the action to be displayed during package execution instead of the command"`
@@ -173,10 +181,10 @@ type ZarfComponentAction struct {
 // ZarfComponentActionSetVariable represents a variable that is to be set via an action
 type ZarfComponentActionSetVariable struct {
 	Name       string       `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
+	Type       VariableType `json:"type,omitempty" jsonschema:"description=Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB),enum=raw,enum=file"`
+	Pattern    string       `json:"pattern,omitempty" jsonschema:"description=An optional regex pattern that a variable value must match before a package deployment can continue."`
 	Sensitive  bool         `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
 	AutoIndent bool         `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
-	Pattern    string       `json:"pattern,omitempty" jsonschema:"description=An optional regex pattern that a variable value must match before a package deployment can continue."`
-	Type       VariableType `json:"type,omitempty" jsonschema:"description=Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB),enum=raw,enum=file"`
 }
 
 // ZarfComponentActionWait specifies a condition to wait for before continuing
@@ -222,31 +230,4 @@ type ZarfComponentImport struct {
 	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from"`
 	// For further explanation see https://regex101.com/r/nxX8vx/1
 	URL string `json:"url,omitempty" jsonschema:"description=[beta] The URL to a Zarf package to import via OCI,pattern=^oci://.*$"`
-}
-
-// IsEmpty returns if the components fields (other than the fields we were told to ignore) are empty or set to the types zero-value
-func (c *ZarfComponent) IsEmpty(fieldsToIgnore []string) bool {
-	// Make a map for the fields we are going to ignore
-	ignoredFieldsMap := make(map[string]bool)
-	for _, field := range fieldsToIgnore {
-		ignoredFieldsMap[field] = true
-	}
-
-	// Get a value representation of the component
-	componentReflectValue := reflect.Indirect(reflect.ValueOf(c))
-
-	// Loop through all of the Components struct fields
-	for i := 0; i < componentReflectValue.NumField(); i++ {
-		// If we were told to ignore this field, continue on..
-		if ignoredFieldsMap[componentReflectValue.Type().Field(i).Name] {
-			continue
-		}
-
-		// Check if this field is empty/zero
-		if !componentReflectValue.Field(i).IsZero() {
-			return false
-		}
-	}
-
-	return true
 }

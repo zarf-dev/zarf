@@ -14,9 +14,9 @@ import (
 	"net"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
 // Based off of https://github.com/dmcgowan/quicktls/blob/master/main.go

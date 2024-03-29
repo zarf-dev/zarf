@@ -54,6 +54,7 @@ $ zarf package mirror-resources <your-package.tar.zst> \
       --registry-push-password string   Password for the push-user to connect to the registry
       --registry-push-username string   Username to access to the registry Zarf is configured to use (default "zarf-push")
       --registry-url string             External registry url address to use for this Zarf cluster
+      --retries int                     Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
 ```
 
 ### Options inherited from parent commands
