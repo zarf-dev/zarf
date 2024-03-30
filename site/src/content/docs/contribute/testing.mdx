@@ -43,6 +43,58 @@ test caching explicitly.
 The Zarf binary and built packages are required to be stored in the ./build directory. However, if you intend to run tests locally using 'go test ./...', the zarf-init package must also be present in this directory.
 :::
 
+### The Upgrade Test
+
+:::caution
+
+This test is meant to be run on a fresh cluster.
+
+Additionally, the documentation for this test is still in progress. Please refer to the code for more information.
+
+:::
+
+Depends on:
+
+- A locally built Zarf binary.
+- A fresh cluster.
+
+``` bash
+# The default way, from the root directory of the repo. This will automatically build any Zarf related resources if they don't already exist (i.e. binary, init-package, example packages):
+make test-upgrade
+
+# or
+
+# If you are in the root folder of the repository and already have everything built (i.e., the binary, the init-package and the flux-test example package):
+go test ./src/test/upgrade/...
+```
+
+### The External Test
+
+:::caution
+
+This test is meant to be run on a fresh cluster.
+
+Additionally, the documentation for this test is still in progress. Please refer to the code for more information.
+
+:::
+
+Depends on:
+
+- A locally built Zarf binary.
+- A fresh cluster.
+
+> Note: For this test case, we deploy an 'external' Git server and container registry as pods running within the k8s cluster. These are still considered 'external' servers since they already existed inside the k8s cluster before `zarf init` command is executed
+
+``` bash
+# The default way, from the root directory of the repo. This will automatically build any Zarf related resources if they don't already exist (i.e. binary, init-package, example packages):
+make test-external
+
+# or
+
+# If you are in the root folder of the repository and already have everything built (i.e., the binary, the init-package and the flux-test example package):
+go test ./src/test/external/... -v
+```
+
 ### Adding New CLI End-to-End Tests
 
 When adding new tests, there are several requirements that must be followed, including:

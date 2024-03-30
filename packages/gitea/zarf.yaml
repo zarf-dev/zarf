@@ -66,7 +66,7 @@ components:
     actions:
       onDeploy:
         before:
-          - cmd: ./zarf internal update-gitea-pvc --no-progress 
+          - cmd: ./zarf internal update-gitea-pvc --no-progress
             setVariables:
               - name: GIT_SERVER_CREATE_PVC
             mute: true
@@ -85,6 +85,17 @@ components:
             maxRetries: 3
             maxTotalSeconds: 60
             description: Create an artifact registry token
-          
+
         onFailure:
           - cmd: ./zarf internal update-gitea-pvc --rollback --no-progress
+
+# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
+x-mdx: |
+  The default setup for this package is to use a `rootless` image, specified in `gitea-values.yaml`. Because the gitea helm chart does its own appending of `-rootless` to the image tag, based on the `rootless` helm value, users don't need to supply the full image tag when overriding the default gitea image. Instead you need to use the `GITEA_SERVER_VERSION`, either in the zarf-config.toml or with `--set`.
+
+  _Make sure, though, that the `x.x.x-rootless` tag does exist for Zarf to find._
+
+  ```bash
+  $ zarf package create . --set GITEA_IMAGE="custom.enterprise.corp/ironbank/opensource/gitea" \
+    --set GITEA_SERVER_VERSION="v1.19.3"
+  ```
