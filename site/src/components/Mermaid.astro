@@ -1,24 +1,23 @@
 ---
-const { diagram } = Astro.props
+const { diagram } = Astro.props;
 ---
 
 <div class="mermaid">
-    {diagram}
+  {diagram}
 </div>
 
 <script>
-    if (document.getElementsByClassName("mermaid").length > 0) {
-        const { default: mermaid } = await import("mermaid")
+  if (document.getElementsByClassName("mermaid").length > 0) {
+    const { default: mermaid } = await import("mermaid");
 
-        mermaid.initialize({
-          startOnLoad: false,
-        //   fontFamily: "var(--sans-font)",
-          // @ts-ignore This works, but TS expects a enum for some reason
-          theme: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default",
-        })
+    mermaid.initialize({
+      startOnLoad: false,
+      // @ts-ignore This works, but TS expects a enum for some reason
+      theme: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default",
+    });
 
-        await mermaid.run({
-            querySelector: ".mermaid",
-        })
-    }
+    await mermaid.run({
+      querySelector: ".mermaid",
+    });
+  }
 </script>

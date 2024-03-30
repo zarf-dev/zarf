@@ -8,8 +8,8 @@
 *.key
 *.crt
 *.tar
-*.tgz
 *.zst
+*.zim
 build
 data/
 dist/

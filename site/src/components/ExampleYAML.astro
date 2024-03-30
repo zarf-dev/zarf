@@ -1,7 +1,7 @@
 ---
 import { Code } from "@astrojs/starlight/components";
 
-const { src, component, /* showLink = true */ } = Astro.props;
+const { src, component } = Astro.props;
 
 let text = "";
 
@@ -22,13 +22,5 @@ if (component) {
   content = text;
 }
 ---
-
-<!-- {
-  showLink && (
-    <p>
-      This example's full <code>zarf.yaml</code> can be viewed at <a href={`/${linkBaseUrl}/#zarf.yaml`}>{linkBaseUrl}</a>
-    </p>
-  )
-} -->
 
 <Code code={content} lang="yaml" />
