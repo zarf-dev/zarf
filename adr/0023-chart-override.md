@@ -9,7 +9,7 @@ Accepted
 
 ## Context
 
-The process of deploying applications with Helm charts in Kubernetes environments often necessitates the customization of chart values to align with specific operational or environmental requirements. The current method for customizing these values—either through manual edits or `###`. A more streamlined approach would greatly enhance the deployment experience by offering both flexibility and reliability.
+The process of deploying applications with Helm charts in Kubernetes environments often necessitates the customization of chart values to align with specific operational or environmental requirements. The current method for customizing these values—either through manual edits or `###ZARF_VAR_XYZ###`. A more streamlined approach would greatly enhance the deployment experience by offering both flexibility and reliability.
 
 ## Decision
 
