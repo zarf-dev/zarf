@@ -36,8 +36,14 @@ export default defineConfig({
       lastUpdated: true,
       sidebar: [
         {
+          label: "Overview",
+          link: "/",
+        },
+        {
           label: "Start Here",
-          autogenerate: { directory: "getting-started" },
+          autogenerate: {
+            directory: "getting-started",
+          },
         },
         {
           label: "CLI Commands",
