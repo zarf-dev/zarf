@@ -8,8 +8,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"maps"
 
-	"github.com/defenseunicorns/pkg/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,8 +41,9 @@ func (k *K8s) GenerateSecret(namespace, name string, secretType corev1.SecretTyp
 		Data: map[string][]byte{},
 	}
 
-	// Merge in common labels so that later modifications to the secret can't mutate them
-	secret.ObjectMeta.Labels = helpers.MergeMap[string](k.Labels, secret.ObjectMeta.Labels)
+	// Merge in common labels so that later modifications to the namespace can't mutate them
+	maps.Copy(k.Labels, secret.ObjectMeta.Labels)
+	secret.ObjectMeta.Labels = k.Labels
 
 	return secret
 }

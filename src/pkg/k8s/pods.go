@@ -6,10 +6,10 @@ package k8s
 
 import (
 	"context"
+	"maps"
 	"sort"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,8 +30,9 @@ func (k *K8s) GeneratePod(name, namespace string) *corev1.Pod {
 		},
 	}
 
-	// Merge in common labels so that later modifications to the pod can't mutate them
-	pod.ObjectMeta.Labels = helpers.MergeMap[string](k.Labels, pod.ObjectMeta.Labels)
+	// Merge in common labels so that later modifications to the namespace can't mutate them
+	maps.Copy(k.Labels, pod.ObjectMeta.Labels)
+	pod.ObjectMeta.Labels = k.Labels
 
 	return pod
 }

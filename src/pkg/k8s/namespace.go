@@ -6,10 +6,10 @@ package k8s
 
 import (
 	"context"
+	"maps"
 	"time"
 
 	"cuelang.org/go/pkg/strings"
-	"github.com/defenseunicorns/pkg/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -75,7 +75,8 @@ func (k *K8s) NewZarfManagedNamespace(name string) *corev1.Namespace {
 	}
 
 	// Merge in common labels so that later modifications to the namespace can't mutate them
-	namespace.ObjectMeta.Labels = helpers.MergeMap[string](k.Labels, namespace.ObjectMeta.Labels)
+	maps.Copy(k.Labels, namespace.ObjectMeta.Labels)
+	namespace.ObjectMeta.Labels = k.Labels
 
 	return namespace
 }

@@ -7,6 +7,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -49,8 +50,9 @@ func (k *K8s) GenerateService(namespace, name string) *corev1.Service {
 		},
 	}
 
-	// Merge in common labels so that later modifications to the service can't mutate them
-	service.ObjectMeta.Labels = helpers.MergeMap[string](k.Labels, service.ObjectMeta.Labels)
+	// Merge in common labels so that later modifications to the namespace can't mutate them
+	maps.Copy(k.Labels, service.ObjectMeta.Labels)
+	service.ObjectMeta.Labels = k.Labels
 
 	return service
 }
