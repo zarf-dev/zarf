@@ -8,7 +8,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"maps"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -36,14 +35,11 @@ func (k *K8s) GenerateSecret(namespace, name string, secretType corev1.SecretTyp
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    make(Labels),
 		},
 		Type: secretType,
 		Data: map[string][]byte{},
 	}
-
-	// Merge in common labels so that later modifications to the namespace can't mutate them
-	maps.Copy(k.Labels, secret.ObjectMeta.Labels)
-	secret.ObjectMeta.Labels = k.Labels
 
 	return secret
 }

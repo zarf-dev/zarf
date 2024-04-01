@@ -6,7 +6,6 @@ package k8s
 
 import (
 	"context"
-	"maps"
 	"sort"
 	"time"
 
@@ -27,12 +26,9 @@ func (k *K8s) GeneratePod(name, namespace string) *corev1.Pod {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    make(Labels),
 		},
 	}
-
-	// Merge in common labels so that later modifications to the namespace can't mutate them
-	maps.Copy(k.Labels, pod.ObjectMeta.Labels)
-	pod.ObjectMeta.Labels = k.Labels
 
 	return pod
 }

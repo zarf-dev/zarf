@@ -6,7 +6,6 @@ package k8s
 
 import (
 	"context"
-	"maps"
 	"time"
 
 	"cuelang.org/go/pkg/strings"
@@ -70,13 +69,10 @@ func (k *K8s) NewZarfManagedNamespace(name string) *corev1.Namespace {
 			Kind:       "Namespace",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:   name,
+			Labels: make(Labels),
 		},
 	}
-
-	// Merge in common labels so that later modifications to the namespace can't mutate them
-	maps.Copy(k.Labels, namespace.ObjectMeta.Labels)
-	namespace.ObjectMeta.Labels = k.Labels
 
 	return namespace
 }

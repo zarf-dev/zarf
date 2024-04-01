@@ -7,7 +7,6 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"maps"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -29,13 +28,10 @@ func (k *K8s) CreateConfigmap(namespace, name string, data map[string][]byte) (*
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    make(Labels),
 		},
 		BinaryData: data,
 	}
-
-	// Merge in common labels so that later modifications to the namespace can't mutate them
-	maps.Copy(k.Labels, configMap.ObjectMeta.Labels)
-	configMap.ObjectMeta.Labels = k.Labels
 
 	createOptions := metav1.CreateOptions{}
 	return k.Clientset.CoreV1().ConfigMaps(namespace).Create(context.TODO(), configMap, createOptions)
