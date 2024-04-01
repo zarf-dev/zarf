@@ -17,7 +17,7 @@ To address this issue, we propose the introduction of a feature designed to simp
 
 Key aspects of the proposed implementation include:
 - Use existing `--set`  flags to specify overrides for chart values.
-- The ability to list all overrides in a structured and easily understandable format within the ZarfConfig file.
+- The ability to list all overrides in a structured and easily understandable format within `zarf.yaml`.
 - Ensuring that during deployment, these specified overrides take precedence over the chart's default values, thus facilitating customized deployments without necessitating permanent modifications to the chart.
 
 ## Consequences
