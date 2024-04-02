@@ -222,4 +222,15 @@ func verifyZarfServiceLabels(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expectedLabels, actualLabels)
 
+	// logging
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/connect-name":"logging"}'`
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "service", "zarf-connect-logging", "-o=jsonpath='{.metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+
+	// git server
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/connect-name":"git"}'`
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "service", "zarf-connect-git", "-o=jsonpath='{.metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
 }
