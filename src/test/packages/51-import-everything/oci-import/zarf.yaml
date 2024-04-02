@@ -7,7 +7,7 @@ metadata:
 components:
   - name: import-component-oci
     description: "import-component-oci == ###ZARF_COMPONENT_NAME###"
-    optional: true
+    required: false
     import:
       name: demo-helm-charts
       url: oci://localhost:555/helm-charts:0.0.1

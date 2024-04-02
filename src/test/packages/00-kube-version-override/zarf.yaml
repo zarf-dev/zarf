@@ -5,6 +5,7 @@ metadata:
 components:
 - name: cert-manager-component
   description: Cloud native certificate management
+  required: true
   charts:
   - name: cert-manager
     version: v1.11.1

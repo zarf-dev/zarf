@@ -6,7 +6,7 @@ metadata:
 
 components:
   - name: bad-helm-repository-name
-    optional: true
+    required: false
     charts:
       - name: asdf
         version: 6.4.0

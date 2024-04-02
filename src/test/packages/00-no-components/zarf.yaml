@@ -4,8 +4,6 @@ metadata:
 
 components:
 - name: deselect-me
-  optional: true
   default: true
 
 - name: optional
-  optional: true

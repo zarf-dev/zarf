@@ -5,6 +5,7 @@ metadata:
 components:
 - name: istio-repo1-component
   description: Helm chart for the Istio Control Plane
+  required: true
   charts:
   - name: istio
     version: 1.17.2-bb.2

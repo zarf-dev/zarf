@@ -4,6 +4,7 @@ metadata:
 
 components:
   - name: test
+    required: true
     manifests:
       - name: configmap
         files:

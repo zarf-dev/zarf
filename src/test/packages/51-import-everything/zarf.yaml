@@ -8,7 +8,7 @@ components:
   # Test every simple primitive that Zarf has through a local import
   - name: import-component-local
     description: "import-component-local == ###ZARF_COMPONENT_NAME###"
-    optional: true
+    required: false
     import:
       path: ../09-composable-packages
       name: test-compose-package
@@ -16,7 +16,7 @@ components:
   # Test nested local to oci imports
   - name: import-component-oci
     description: "import-component-oci == ###ZARF_COMPONENT_NAME###"
-    optional: true
+    required: false
     import:
       name: import-component-oci
       path: oci-import
@@ -24,7 +24,7 @@ components:
   # Test big bang extension files
   - name: import-big-bang
     description: "import-big-bang == ###ZARF_COMPONENT_NAME###"
-    optional: true
+    required: false
     import:
       name: bigbang
       url: oci://localhost:555/big-bang-min:2.10.0
@@ -32,7 +32,7 @@ components:
   # Test file imports including cosignKeyPath
   - name: file-imports
     description: "file-imports == ###ZARF_COMPONENT_NAME###"
-    optional: true
+    required: false
     cosignKeyPath: ../../../../cosign.pub
     files:
       # Import of a local file
@@ -57,7 +57,7 @@ components:
   # Test local charts (for skeletons)
   - name: local-chart-import
     description: "local-chart-import == ###ZARF_COMPONENT_NAME###"
-    optional: true
+    required: false
     charts:
       - name: podinfo
         localPath: ../../../../examples/helm-charts/chart
