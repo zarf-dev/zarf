@@ -10,7 +10,6 @@ variables:
 # See the example README.md in this folder or /adrs/0010-scripts-actions.md for more info.
 components:
   - name: on-create
-    optional: true
     actions:
       # runs during "zarf package create"
       onCreate:
@@ -64,7 +63,6 @@ components:
               sleep 0.5
 
   - name: on-deploy-and-remove
-    optional: true
     actions:
       # runs during "zarf package deploy"
       onDeploy:
@@ -84,7 +82,6 @@ components:
           - cmd: rm test-deploy-after.txt
 
   - name: on-deploy-with-variable
-    optional: true
     actions:
       # runs during "zarf package deploy"
       onDeploy:
@@ -93,7 +90,6 @@ components:
           - cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
 
   - name: on-deploy-with-dynamic-variable
-    optional: true
     actions:
       # runs during "zarf package deploy"
       onDeploy:
@@ -108,7 +104,6 @@ components:
           - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
 
   - name: on-deploy-with-multiple-variables
-    optional: true
     actions:
       # runs during "zarf package deploy"
       onDeploy:
@@ -138,7 +133,6 @@ components:
           - cmd: echo "with a TF_VAR, the snake also says ${TF_VAR_snake_sound}"
 
   - name: on-deploy-with-template-use-of-variable
-    optional: true
     files:
       # this file will be copied to the target location and the cat, dog, and snake sounds will be replaced with their values
       # requires the on-deploy-with-dynamic-variable and on-deploy-with-multiple-variables components
@@ -147,7 +141,6 @@ components:
         shasum: 3c0404e0c767ace905c361fadded6c4b91fdb88aa07d5c42d2a220a87564836d
 
   - name: on-deploy-with-timeout
-    optional: true
     description: This component will fail after 1 second
     actions:
       # runs during "zarf package deploy"
@@ -163,7 +156,6 @@ components:
           - cmd: echo "😭😭😭 this action failed because it took too long to run 😭😭😭"
 
   - name: on-remove
-    optional: true
     # A manifest that we expect to be removed by Zarf
     manifests:
       - name: test-configmap
@@ -180,7 +172,6 @@ components:
           - cmd: ./zarf tools kubectl get configmap -n zarf remove-test-configmap || echo "Not Found"
 
   - name: on-deploy-with-env-var
-    optional: true
     actions:
       onDeploy:
         before:
@@ -190,7 +181,6 @@ components:
               - ZARF_VAR_TEST_FILENAME=test-filename-from-env.txt
 
   - name: on-create-with-network-wait-action
-    optional: true
     description: This component will wait for 15 seconds for a network resource to be available
     actions:
       onCreate:
@@ -205,7 +195,6 @@ components:
                 code: 200
 
   - name: on-deploy-with-wait-action
-    optional: true
     description: This component will wait for 5 seconds for the test-configmap to be exist
     manifests:
       - name: test-configmap
@@ -224,7 +213,6 @@ components:
                 namespace: zarf
 
   - name: on-deploy-immediate-failure
-    optional: true
     description: This component will fail on the first error instead of continuing execution
    # the default for multi-line commands is set -e
     actions:

@@ -6,6 +6,7 @@ metadata:
 
 components:
   - name: yolo-games
+    required: true
     manifests:
       - name: multi-games
         namespace: zarf-yolo-example

@@ -5,16 +5,12 @@ metadata:
 
 components:
   - name: first-choice
-    # if using a group, all members of the group must be optional
-    optional: true
     group: example-choice
     files:
       - source: blank-file.txt
         target: first-choice-file.txt
 
   - name: second-choice
-    # if using a group, all members of the group must be optional
-    optional: true
     group: example-choice
     default: true
     files:

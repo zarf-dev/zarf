@@ -6,6 +6,7 @@ metadata:
 
 components:
   - name: demo-helm-charts
+    required: true
     charts:
       # Charts are organized in a list with unique chart names per component - note that a Zarf chart name does not need to match the chart name in a Chart.yaml
       - name: podinfo-local

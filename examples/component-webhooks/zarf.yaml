@@ -6,6 +6,7 @@ metadata:
   version: 0.0.1
 components:
   - name: module
+    required: true
     manifests:
       - name: module
         namespace: pepr-system

@@ -5,6 +5,7 @@ metadata:
   version: 1.4.0
 components:
   - name: longhorn-environment-check
+    required: true
     files:
       - source: https://raw.githubusercontent.com/longhorn/longhorn/v1.4.0/scripts/environment_check.sh
         target: environment_check.sh
@@ -25,6 +26,7 @@ components:
               chmod +x ./environment_check.sh
               ./environment_check.sh
   - name: longhorn
+    required: true
     description: Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io
     actions:
       # Set the delete confirmation flag for Longhorn

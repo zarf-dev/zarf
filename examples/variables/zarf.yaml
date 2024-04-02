@@ -50,6 +50,7 @@ components:
   # NOTE: this component does not actually execute this file in this example
   - name: variables-with-terraform
     description: Change a value in a regular file with a Zarf variable. Set AWS_REGION variable to modify the file.
+    required: true
     files:
       - source: simple-terraform.tf
         target: modified-terraform.tf
@@ -70,6 +71,7 @@ components:
   # The following component deploys nginx to the cluster using the defined variables
   - name: variables-with-nginx
     description: "This component deploys nginx version ###ZARF_PKG_TMPL_NGINX_VERSION### to the cluster"
+    required: true
     images:
       # This sets the nginx image tag to the same PKG_TMPL used for the constant above to keep the zarf.yaml and nginx-deployment.yaml in sync
       - "nginx:###ZARF_PKG_TMPL_NGINX_VERSION###"

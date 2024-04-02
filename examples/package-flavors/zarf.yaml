@@ -6,6 +6,7 @@ metadata:
 
 components:
   - name: image
+    required: true
     description: "Sets the Enterprise Linux flavor to Rocky Linux"
     only:
       flavor: rocky-road
@@ -19,6 +20,7 @@ components:
               - name: IMAGE
 
   - name: image
+    required: true
     description: "Sets the Enterprise Linux flavor to Oracle Linux"
     only:
       flavor: oracle-cookie-crunch
@@ -32,6 +34,7 @@ components:
               - name: IMAGE
 
   - name: image
+    required: true
     description: "Sets the Enterprise Linux flavor to Alma Linux"
     only:
       flavor: vanilla-alma-nd
@@ -45,6 +48,7 @@ components:
               - name: IMAGE
 
   - name: image
+    required: true
     description: "Sets the Enterprise Linux flavor to OpenSUSE"
     only:
       flavor: strawberry-suse
@@ -59,6 +63,7 @@ components:
 
   - name: pod
     description: "The pod that runs the specified flavor of Enterprise Linux"
+    required: true
     manifests:
       - name: enterprise-linux
         namespace: enterprise-linux

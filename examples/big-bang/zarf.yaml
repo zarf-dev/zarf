@@ -15,6 +15,7 @@ variables:
 
 components:
   - name: bigbang
+    required: true
     actions:
       onRemove:
         before:
@@ -56,7 +57,6 @@ components:
           # Values are merged in order, so this would override the above and disable everything if uncommented
           # - config/disable-all.yaml
   - name: gitea-virtual-service
-    optional: true
     description: >
       Expose the internal Zarf Gitea server through the Big Bang Istio deployment via a virtual service.
       (only applies if you are using the Zarf-provided Gitea deployment - not an externally configured git host)
