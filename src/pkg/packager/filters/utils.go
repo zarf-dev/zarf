@@ -40,4 +40,3 @@ func includedOrExcluded(componentName string, requestedComponentNames []string) 
 	// All other cases we don't know if we should include or exclude yet
 	return unknown, ""
 }
-
