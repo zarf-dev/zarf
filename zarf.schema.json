@@ -284,11 +284,7 @@
         },
         "required": {
           "type": "boolean",
-          "description": "[Deprecated] Do not prompt user to install this component"
-        },
-        "optional": {
-          "type": "boolean",
-          "description": "Prompt user to install this component on package deploy"
+          "description": "Do not prompt user to install this component"
         },
         "only": {
           "$schema": "http://json-schema.org/draft-04/schema#",
@@ -968,6 +964,13 @@
         "aggregateChecksum": {
           "type": "string",
           "description": "Checksum of a checksums.txt file that contains checksums all the layers within the package."
+        },
+        "betaFeatures": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "List of beta feature flags to enable for this package"
         }
       },
       "additionalProperties": false,
