@@ -28,18 +28,12 @@ func componentFromQuery(t *testing.T, q string) types.ZarfComponent {
 			c.Default = true
 		case "default=false":
 			c.Default = false
-		case "optional=<nil>":
-			c.Optional = nil
-		case "optional=false":
-			c.Optional = helpers.BoolPtr(false)
-		case "optional=true":
-			c.Optional = helpers.BoolPtr(true)
 		case "required=<nil>":
-			c.DeprecatedRequired = nil
+			c.Required = nil
 		case "required=false":
-			c.DeprecatedRequired = helpers.BoolPtr(false)
+			c.Required = helpers.BoolPtr(false)
 		case "required=true":
-			c.DeprecatedRequired = helpers.BoolPtr(true)
+			c.Required = helpers.BoolPtr(true)
 		default:
 			if strings.HasPrefix(cond, "group=") {
 				c.DeprecatedGroup = cond[6:]
@@ -64,23 +58,20 @@ func componentMatrix(t *testing.T) []types.ZarfComponent {
 
 	defaultValues := []bool{true, false}
 	requiredValues := []interface{}{nil, true, false}
-	optionalValues := []interface{}{nil, true, false}
 
 	// all possible combinations of default, required, and optional
 	for _, defaultValue := range defaultValues {
-		for _, optionalValue := range optionalValues {
-			for _, requiredValue := range requiredValues {
+		for _, requiredValue := range requiredValues {
 
-				// per validate, components cannot be both default and required
-				if defaultValue == true && (requiredValue == true || optionalValue == false || optionalValue == nil) {
-					continue
-				}
-
-				query := fmt.Sprintf("default=%t && required=%v && optional=%v", defaultValue, requiredValue, optionalValue)
-
-				c := componentFromQuery(t, query)
-				components = append(components, c)
+			// per validate, components cannot be both default and required
+			if defaultValue == true && requiredValue == true {
+				continue
 			}
+
+			query := fmt.Sprintf("default=%t && required=%v", defaultValue, requiredValue)
+
+			c := componentFromQuery(t, query)
+			components = append(components, c)
 		}
 	}
 
@@ -95,9 +86,8 @@ func componentMatrix(t *testing.T) []types.ZarfComponent {
 			}
 			c := componentFromQuery(t, fmt.Sprintf("group=%s && idx=%d && default=%t", group, i, defaultValue))
 			// due to validation on create, there will not be a case where
-			// c.Default == true && (c.Optional = false || c.DeprecatedRequired = true)
-			c.Optional = nil
-			c.DeprecatedRequired = nil
+			// c.Default == true && c.Required == true)
+			c.Required = nil
 			components = append(components, c)
 		}
 	}
@@ -115,52 +105,39 @@ func TestDeployFilter_Apply(t *testing.T) {
 		want               []types.ZarfComponent
 		expectedErr        error
 	}{
-		"[v0.32.6] Test when no optional components selected": {
+		"Test when no optional components selected": {
 			pkg: types.ZarfPackage{
-				Build: types.ZarfBuildData{
-					Version: "v0.32.6",
-				},
 				Components: possibilities,
 			},
 			optionalComponents: "",
 			want: []types.ZarfComponent{
-				componentFromQuery(t, "default=true && required=<nil> && optional=true"),
-				componentFromQuery(t, "default=true && required=false && optional=true"),
-				componentFromQuery(t, "default=false && required=true && optional=<nil>"),
-				componentFromQuery(t, "default=false && required=true && optional=true"),
-				componentFromQuery(t, "default=false && required=true && optional=false"),
+				componentFromQuery(t, "default=true && required=<nil>"),
+				componentFromQuery(t, "default=true && required=false"),
+				componentFromQuery(t, "default=false && required=true"),
 				componentFromQuery(t, "group=foo && idx=0 && default=true"),
 				componentFromQuery(t, "group=bar && idx=0 && default=true"),
 			},
 		},
-		"[v0.32.6] Test when some optional components selected": {
+		"Test when some optional components selected": {
 			pkg: types.ZarfPackage{
-				Build: types.ZarfBuildData{
-					Version: "v0.32.6",
-				},
 				Components: possibilities,
 			},
 			optionalComponents: strings.Join([]string{
-				"default=false && required=false && optional=true",
+				"default=false && required=false",
 				"group=bar && idx=2 && default=false",
-				"-default=false && required=true && optional=false",
+				"-default=false && required=true",
 			}, ","),
 			want: []types.ZarfComponent{
-				componentFromQuery(t, "default=true && required=<nil> && optional=true"),
-				componentFromQuery(t, "default=true && required=false && optional=true"),
-				componentFromQuery(t, "default=false && required=true && optional=<nil>"),
-				componentFromQuery(t, "default=false && required=true && optional=true"),
-				componentFromQuery(t, "default=false && required=false && optional=true"),
-				componentFromQuery(t, "default=false && required=true && optional=false"),
+				componentFromQuery(t, "default=true && required=<nil>"),
+				componentFromQuery(t, "default=true && required=false"),
+				componentFromQuery(t, "default=false && required=true"),
+				componentFromQuery(t, "default=false && required=false"),
 				componentFromQuery(t, "group=foo && idx=0 && default=true"),
 				componentFromQuery(t, "group=bar && idx=2 && default=false"),
 			},
 		},
-		"[v0.32.6] Test failing when group has no default and no selection was made": {
+		"Test failing when group has no default and no selection was made": {
 			pkg: types.ZarfPackage{
-				Build: types.ZarfBuildData{
-					Version: "v0.32.6",
-				},
 				Components: []types.ZarfComponent{
 					componentFromQuery(t, "group=foo && default=true"),
 					componentFromQuery(t, "group=foo && default=false"),
@@ -170,11 +147,8 @@ func TestDeployFilter_Apply(t *testing.T) {
 			optionalComponents: "-group=foo && default=true",
 			expectedErr:        ErrNoDefaultOrSelection,
 		},
-		"[v0.32.6] Test failing when multiple are selected from the same group": {
+		"Test failing when multiple are selected from the same group": {
 			pkg: types.ZarfPackage{
-				Build: types.ZarfBuildData{
-					Version: "v0.32.6",
-				},
 				Components: []types.ZarfComponent{
 					componentFromQuery(t, "group=foo && default=true"),
 					componentFromQuery(t, "group=foo && default=false"),
@@ -183,33 +157,28 @@ func TestDeployFilter_Apply(t *testing.T) {
 			optionalComponents: strings.Join([]string{"group=foo && default=false", "group=foo && default=true"}, ","),
 			expectedErr:        ErrMultipleSameGroup,
 		},
-		"[v0.32.6] Test failing when no components are found that match the query": {
+		"Test failing when no components are found that match the query": {
 			pkg: types.ZarfPackage{
-				Build: types.ZarfBuildData{
-					Version: "v0.32.6",
-				},
 				Components: possibilities,
 			},
 			optionalComponents: "nonexistent",
 			expectedErr:        ErrNotFound,
 		},
-		"[v0.33.0+] Test when no optional components selected": {
+		"[default-required] Test when no optional components selected": {
 			pkg: types.ZarfPackage{
-				Build: types.ZarfBuildData{
-					Version: "v0.33.0",
+				Metadata: types.ZarfMetadata{
+					BetaFeatures: []types.FeatureFlag{
+						types.DefaultRequired,
+					},
 				},
 				Components: possibilities,
 			},
 			optionalComponents: "",
 			want: []types.ZarfComponent{
-				componentFromQuery(t, "default=true && required=<nil> && optional=true"),
-				componentFromQuery(t, "default=true && required=false && optional=true"),
-				componentFromQuery(t, "default=false && required=<nil> && optional=<nil>"),
-				componentFromQuery(t, "default=false && required=true && optional=<nil>"),
-				componentFromQuery(t, "default=false && required=false && optional=<nil>"),
-				componentFromQuery(t, "default=false && required=<nil> && optional=false"),
-				componentFromQuery(t, "default=false && required=true && optional=false"),
-				componentFromQuery(t, "default=false && required=false && optional=false"),
+				componentFromQuery(t, "default=true && required=<nil>"),
+				componentFromQuery(t, "default=true && required=false"),
+				componentFromQuery(t, "default=false && required=<nil>"),
+				componentFromQuery(t, "default=false && required=true"),
 				componentFromQuery(t, "group=foo && idx=0 && default=true"),
 				componentFromQuery(t, "group=bar && idx=0 && default=true"),
 			},

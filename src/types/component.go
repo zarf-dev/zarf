@@ -5,6 +5,8 @@
 package types
 
 import (
+	"slices"
+
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 )
@@ -20,13 +22,8 @@ type ZarfComponent struct {
 	// Default changes the default option when deploying this component
 	Default bool `json:"default,omitempty" jsonschema:"description=Determines the default Y/N state for installing this component on package deploy"`
 
-	// DeprecatedRequired makes this component mandatory for package deployment
-	DeprecatedRequired *bool `json:"required,omitempty" jsonschema:"description=[Deprecated] Do not prompt user to install this component, always install on package deploy. This will be removed in Zarf v1.0.0.,deprecated=true"`
-
-	// Optional controls if the component is required or not
-	//
-	// Components are required by default (implicit optional:false)
-	Optional *bool `json:"optional,omitempty" jsonschema:"description=Prompt user to install this component on package deploy, defaults to false"`
+	// Required makes this component mandatory for package deployment
+	Required *bool `json:"required,omitempty" jsonschema:"description=Do not prompt user to install this component, always install on package deploy."`
 
 	// Only include compatible components during package deployment
 	Only ZarfComponentOnlyTarget `json:"only,omitempty" jsonschema:"description=Filter when this component is included in package creation or deployment"`
@@ -79,6 +76,25 @@ func (c ZarfComponent) RequiresCluster() bool {
 	hasDataInjections := len(c.DataInjections) > 0
 
 	if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections {
+		return true
+	}
+
+	return false
+}
+
+// IsRequired returns if the component is required or not.
+//
+// If the `Required` field is set, it will return that value.
+//
+// If the `DefaultRequired` feature flag is present, it will return true.
+//
+// Otherwise, it will return false.
+func (c ZarfComponent) IsRequired(ff []FeatureFlag) bool {
+	if c.Required != nil {
+		return *c.Required
+	}
+
+	if slices.Contains(ff, DefaultRequired) {
 		return true
 	}
 

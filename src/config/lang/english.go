@@ -480,7 +480,7 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	CmdToolsGetGitPasswdShort       = "[Deprecated] Returns the push user's password for the Git server"
 	CmdToolsGetGitPasswdLong        = "[Deprecated] Reads the password for a user with push access to the configured Git server in Zarf State. Note that this command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
 	CmdToolsGetGitPasswdDeprecation = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
-	CmdToolsYqExample = `
+	CmdToolsYqExample               = `
 # yq defaults to 'eval' command if no command is specified. See "zarf tools yq eval --help" for more examples.
 
 # read the "stuff" node from "myfile.yml"
@@ -687,10 +687,10 @@ const (
 
 // Package validate
 const (
+	PkgValidateErrBetaFeatureNotFound     = "beta feature %q not found, available features: %s"
 	PkgValidateTemplateDeprecation        = "Package template %q is using the deprecated syntax ###ZARF_PKG_VAR_%s###. This will be removed in Zarf v1.0.0. Please update to ###ZARF_PKG_TMPL_%s###."
 	PkgValidateMustBeUppercase            = "variable name %q must be all uppercase and contain no special characters except _"
 	PkgValidateErrAction                  = "invalid action: %w"
-	PkgValidateErrActionVariables         = "component %q cannot contain setVariables outside of onDeploy in actions"
 	PkgValidateErrActionCmdWait           = "action %q cannot be both a command and wait action"
 	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
 	PkgValidateErrChart                   = "invalid chart definition: %w"
@@ -704,7 +704,7 @@ const (
 	PkgValidateErrComponentLocalOS        = "component %q contains a localOS value that is not supported: %s (supported: %s)"
 	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
 	PkgValidateErrComponent               = "invalid component %q: %w"
-	PkgValidateErrComponentRequired       = "component %q contains deprecated usage of required. Please use `zarf dev migrate <directory> --run required-to-optional` to migrate your zarf.yaml"
+	PkgValidateErrComponentMissingGroup   = "component %q cannot use default without a group"
 	PkgValidateErrComponentReqDefault     = "component %q cannot be both required and default"
 	PkgValidateErrComponentReqGrouped     = "component %q cannot be both required and grouped"
 	PkgValidateErrComponentYOLO           = "component %q incompatible with the online-only package flag (metadata.yolo): %w"

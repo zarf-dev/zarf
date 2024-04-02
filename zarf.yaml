@@ -2,10 +2,11 @@ kind: ZarfInitConfig
 metadata:
   name: init
   description: Used to establish a new Zarf cluster
+  betaFeatures: [default-required]
 
 components:
   - name: k3s
-    optional: true
+    required: false
     import:
       path: packages/distros/k3s
 
@@ -31,12 +32,12 @@ components:
 
   # (Optional) Adds logging to the cluster
   - name: logging
-    optional: true
+    required: false
     import:
       path: packages/logging-pgl
 
   # (Optional) Adds a git server to the cluster
   - name: git-server
-    optional: true
+    required: false
     import:
       path: packages/gitea

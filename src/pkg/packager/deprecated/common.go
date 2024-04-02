@@ -55,7 +55,6 @@ func Migrations() []Migration {
 	return []Migration{
 		ScriptsToActions{},
 		SetVariableToSetVariables{},
-		RequiredToOptional{},
 	}
 }
 

@@ -7,12 +7,27 @@ package types
 // ZarfPackageKind is an enum of the different kinds of Zarf packages.
 type ZarfPackageKind string
 
+// FeatureFlag is an enum of the different feature flags that can be set on a Zarf package.
+type FeatureFlag string
+
 const (
 	// ZarfInitConfig is the kind of Zarf package used during `zarf init`.
 	ZarfInitConfig ZarfPackageKind = "ZarfInitConfig"
 	// ZarfPackageConfig is the default kind of Zarf package, primarily used during `zarf package`.
 	ZarfPackageConfig ZarfPackageKind = "ZarfPackageConfig"
 )
+
+const (
+	// DefaultRequired changes the default state for all components in a package to be required.
+	DefaultRequired FeatureFlag = "default-required"
+)
+
+// AllFeatureFlags returns a list of all available feature flags.
+func AllFeatureFlags() []FeatureFlag {
+	return []FeatureFlag{
+		DefaultRequired,
+	}
+}
 
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
@@ -41,19 +56,20 @@ func (pkg ZarfPackage) IsSBOMAble() bool {
 
 // ZarfMetadata lists information about the current ZarfPackage.
 type ZarfMetadata struct {
-	Name              string `json:"name" jsonschema:"description=Name to identify this Zarf package,pattern=^[a-z0-9\\-]*[a-z0-9]$"`
-	Description       string `json:"description,omitempty" jsonschema:"description=Additional information about this package"`
-	Version           string `json:"version,omitempty" jsonschema:"description=Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with)"`
-	URL               string `json:"url,omitempty" jsonschema:"description=Link to package information when online"`
-	Image             string `json:"image,omitempty" jsonschema:"description=An image URL to embed in this package (Reserved for future use in Zarf UI)"`
-	Uncompressed      bool   `json:"uncompressed,omitempty" jsonschema:"description=Disable compression of this package"`
-	Architecture      string `json:"architecture,omitempty" jsonschema:"description=The target cluster architecture for this package,example=arm64,example=amd64"`
-	YOLO              bool   `json:"yolo,omitempty" jsonschema:"description=Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries."`
-	Authors           string `json:"authors,omitempty" jsonschema:"description=Comma-separated list of package authors (including contact info),example=Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"`
-	Documentation     string `json:"documentation,omitempty" jsonschema:"description=Link to package documentation when online"`
-	Source            string `json:"source,omitempty" jsonschema:"description=Link to package source code when online"`
-	Vendor            string `json:"vendor,omitempty" jsonschema_description:"Name of the distributing entity, organization or individual."`
-	AggregateChecksum string `json:"aggregateChecksum,omitempty" jsonschema:"description=Checksum of a checksums.txt file that contains checksums all the layers within the package."`
+	Name              string        `json:"name" jsonschema:"description=Name to identify this Zarf package,pattern=^[a-z0-9\\-]*[a-z0-9]$"`
+	Description       string        `json:"description,omitempty" jsonschema:"description=Additional information about this package"`
+	Version           string        `json:"version,omitempty" jsonschema:"description=Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with)"`
+	URL               string        `json:"url,omitempty" jsonschema:"description=Link to package information when online"`
+	Image             string        `json:"image,omitempty" jsonschema:"description=An image URL to embed in this package (Reserved for future use in Zarf UI)"`
+	Uncompressed      bool          `json:"uncompressed,omitempty" jsonschema:"description=Disable compression of this package"`
+	Architecture      string        `json:"architecture,omitempty" jsonschema:"description=The target cluster architecture for this package,example=arm64,example=amd64"`
+	YOLO              bool          `json:"yolo,omitempty" jsonschema:"description=Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries."`
+	Authors           string        `json:"authors,omitempty" jsonschema:"description=Comma-separated list of package authors (including contact info),example=Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"`
+	Documentation     string        `json:"documentation,omitempty" jsonschema:"description=Link to package documentation when online"`
+	Source            string        `json:"source,omitempty" jsonschema:"description=Link to package source code when online"`
+	Vendor            string        `json:"vendor,omitempty" jsonschema_description:"Name of the distributing entity, organization or individual."`
+	AggregateChecksum string        `json:"aggregateChecksum,omitempty" jsonschema:"description=Checksum of a checksums.txt file that contains checksums all the layers within the package."`
+	BetaFeatures      []FeatureFlag `json:"betaFeatures,omitempty" jsonschema:"description=List of beta feature flags to enable for this package"`
 }
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.

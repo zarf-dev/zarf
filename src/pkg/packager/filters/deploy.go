@@ -9,10 +9,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/agnivade/levenshtein"
 	"github.com/defenseunicorns/pkg/helpers"
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -35,7 +33,7 @@ type deploymentFilter struct {
 
 // Errors for the deployment filter.
 var (
-	ErrMultipleSameGroup    = fmt.Errorf("cannot specify multiple components from the same group")
+	ErrMultipleSameGroup    = fmt.Errorf("cannot specify multiple components")
 	ErrNoDefaultOrSelection = fmt.Errorf("no default or selected component found")
 	ErrNotFound             = fmt.Errorf("no compatible components found")
 	ErrSelectionCanceled    = fmt.Errorf("selection canceled")
@@ -43,17 +41,6 @@ var (
 
 // Apply applies the filter.
 func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
-	useRequiredLogic := false
-	if pkg.Build.Version != config.UnsetCLIVersion {
-		buildVersion, err := semver.NewVersion(pkg.Build.Version)
-		if err != nil {
-			return []types.ZarfComponent{}, fmt.Errorf("unable to parse package version %q: %w", pkg.Build.Version, err)
-		}
-		if buildVersion.LessThan(semver.MustParse("v0.33.0")) {
-			useRequiredLogic = true
-		}
-	}
-
 	var selectedComponents []types.ZarfComponent
 	groupedComponents := map[string][]types.ZarfComponent{}
 	orderedComponentGroups := []string{}
@@ -87,7 +74,7 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 
 				selectState, matchedRequest := includedOrExcluded(component.Name, f.requestedComponents)
 
-				if !isRequired(component, useRequiredLogic) {
+				if !component.IsRequired(pkg.Metadata.BetaFeatures) {
 					if selectState == excluded {
 						// If the component was explicitly excluded, record the match and continue
 						matchedRequests[matchedRequest] = true
@@ -107,7 +94,7 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 
 					// Then check for already selected groups
 					if groupSelected != nil {
-						return nil, fmt.Errorf("%w: group: %s selected: %s, %s", ErrMultipleSameGroup, component.DeprecatedGroup, groupSelected.Name, component.Name)
+						return nil, fmt.Errorf("%w: group: %q selected: %q, %s", ErrMultipleSameGroup, component.DeprecatedGroup, groupSelected.Name, component.Name)
 					}
 
 					// Then append to the final list
@@ -173,7 +160,7 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 			} else {
 				component := groupedComponents[groupKey][0]
 
-				if isRequired(component, useRequiredLogic) {
+				if component.IsRequired(pkg.Metadata.BetaFeatures) {
 					selectedComponents = append(selectedComponents, component)
 					continue
 				}
