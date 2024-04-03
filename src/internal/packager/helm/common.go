@@ -156,7 +156,7 @@ func WithKubeVersion(kubeVersion string) Modifier {
 	}
 }
 
-// WithPackageConfig sets the packager config for the chart
+// WithVariableConfig sets the variable config for the chart
 func WithVariableConfig(variableConfig *variables.VariableConfig) Modifier {
 	return func(h *Helm) {
 		h.variableConfig = variableConfig
