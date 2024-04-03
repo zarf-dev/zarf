@@ -167,7 +167,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 				componentPaths.Charts,
 				componentPaths.Values,
 				helm.WithKubeVersion(kubeVersionOverride),
-				helm.WithPackageConfig(p.cfg),
+				helm.WithVariableConfig(p.variableConfig),
 			)
 
 			err = helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
