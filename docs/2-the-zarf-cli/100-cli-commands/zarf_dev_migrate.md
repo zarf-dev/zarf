@@ -16,8 +16,9 @@ zarf dev migrate [flags]
 ## Options
 
 ```
-  -h, --help              help for migrate
-      --run stringArray   migrations to run (default: all, available: scripts-to-actions, pluralize-set-variable)
+      --enable-beta-feature stringArray   beta migrations to run and enable (default: all, available: default-required)
+  -h, --help                              help for migrate
+      --run stringArray                   migrations to run (default: all, available: scripts-to-actions, pluralize-set-variable)
 ```
 
 ## Options inherited from parent commands

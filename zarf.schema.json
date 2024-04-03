@@ -125,81 +125,6 @@
         "^x-": {}
       }
     },
-    "ZarfBuildData": {
-      "required": [
-        "terminal",
-        "user",
-        "architecture",
-        "timestamp",
-        "version"
-      ],
-      "properties": {
-        "terminal": {
-          "type": "string",
-          "description": "The machine name that created this package"
-        },
-        "user": {
-          "type": "string",
-          "description": "The username who created this package"
-        },
-        "architecture": {
-          "type": "string",
-          "description": "The architecture this package was created on"
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "The timestamp when this package was created"
-        },
-        "version": {
-          "type": "string",
-          "description": "The version of Zarf used to build this package"
-        },
-        "migrations": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Any migrations that have been run on this package"
-        },
-        "registryOverrides": {
-          "patternProperties": {
-            ".*": {
-              "type": "string"
-            }
-          },
-          "type": "object",
-          "description": "Any registry domains that were overridden on package create when pulling images"
-        },
-        "differential": {
-          "type": "boolean",
-          "description": "Whether this package was created with differential components"
-        },
-        "differentialPackageVersion": {
-          "type": "string",
-          "description": "Version of a previously built package used as the basis for creating this differential package"
-        },
-        "differentialMissing": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "List of components that were not included in this package due to differential packaging"
-        },
-        "lastNonBreakingVersion": {
-          "type": "string",
-          "description": "The minimum version of Zarf that does not have breaking package structure changes"
-        },
-        "flavor": {
-          "type": "string",
-          "description": "The flavor of Zarf used to build this package"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
     "ZarfChart": {
       "required": [
         "name",
@@ -998,11 +923,6 @@
           "$schema": "http://json-schema.org/draft-04/schema#",
           "$ref": "#/definitions/ZarfMetadata",
           "description": "Package metadata"
-        },
-        "build": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfBuildData",
-          "description": "Zarf-generated package build data"
         },
         "components": {
           "items": {
