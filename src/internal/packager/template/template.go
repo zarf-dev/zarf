@@ -7,6 +7,7 @@ package template
 import (
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/types"
@@ -30,7 +31,7 @@ func GetZarfVariableConfig() *variables.VariableConfig {
 		deprecatedKeys(),
 		make(variables.SetVariableMap),
 		make([]variables.Constant, 0),
-		message.Warnf)
+		slog.New(message.ZarfHandler{}))
 }
 
 // GetZarfTemplates returns the template keys and values to be used for templating.

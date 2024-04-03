@@ -4,6 +4,8 @@
 // Package variables contains functions for interacting with variables
 package variables
 
+import "log/slog"
+
 // VariableConfig represents a value to be templated into a text file.
 type VariableConfig struct {
 	templatePrefix string
@@ -13,11 +15,11 @@ type VariableConfig struct {
 	SetVariableMap       SetVariableMap
 	Constants            []Constant
 
-	logger func(format string, a ...any)
+	logger *slog.Logger
 }
 
 // New creates a new VariableConfig
-func New(templatePrefix string, deprecatedKeys map[string]string, setVariableMap SetVariableMap, constants []Constant, logger func(format string, a ...any)) *VariableConfig {
+func New(templatePrefix string, deprecatedKeys map[string]string, setVariableMap SetVariableMap, constants []Constant, logger *slog.Logger) *VariableConfig {
 	return &VariableConfig{
 		templatePrefix:       templatePrefix,
 		deprecatedKeys:       deprecatedKeys,

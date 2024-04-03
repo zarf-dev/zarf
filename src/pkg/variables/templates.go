@@ -90,7 +90,8 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) error {
 
 			_, present := vc.deprecatedKeys[templateKey]
 			if present {
-				vc.logger("This Zarf Package uses a deprecated variable: '%s' changed to '%s'.  Please notify your package creator for an update.", templateKey, vc.deprecatedKeys[templateKey])
+				deprecationWarning := fmt.Sprintf("This Zarf Package uses a deprecated variable: '%s' changed to '%s'.  Please notify your package creator for an update.", templateKey, vc.deprecatedKeys[templateKey])
+				vc.logger.Warn(deprecationWarning)
 			}
 
 			template := templateMap[templateKey]
@@ -103,14 +104,16 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) error {
 				// Check if the value is a file type and load the value contents from the file
 				if template.Type == FileVariableType && value != "" {
 					if isText, err := helpers.IsTextFile(value); err != nil || !isText {
-						vc.logger("Refusing to load a non-text file for templating %s", templateKey)
+						nonTextWarning := fmt.Sprintf("Refusing to load a non-text file for templating %s", templateKey)
+						vc.logger.Warn(nonTextWarning)
 						line = matches[regexTemplateLine.SubexpIndex("postTemplate")]
 						continue
 					}
 
 					contents, err := os.ReadFile(value)
 					if err != nil {
-						vc.logger("Unable to read file for templating - skipping: %s", err.Error())
+						unableToReadWarning := fmt.Sprintf("Unable to read file for templating - skipping: %s", err.Error())
+						vc.logger.Warn(unableToReadWarning)
 						line = matches[regexTemplateLine.SubexpIndex("postTemplate")]
 						continue
 					}
