@@ -27,9 +27,9 @@ import (
 // const bbProjID = "2872"
 
 var (
-	zarf     string
-	previous string
-	latest   string
+	zarf string
+	// previous string
+	// latest string
 )
 
 func TestMain(m *testing.M) {
@@ -81,7 +81,7 @@ func TestReleases(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the previous version
-	pkgPath := fmt.Sprintf("zarf-package-big-bang-test-%s-%s.tar.zst", arch, previous)
+	pkgPath := fmt.Sprintf("zarf-package-big-bang-test-%s-2.22.0.tar.zst", arch)
 	stdOut, stdErr, err = zarfExec("package", "deploy", pkgPath, tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
@@ -111,7 +111,7 @@ func TestReleases(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the latest version
-	pkgPath = fmt.Sprintf("zarf-package-big-bang-test-%s-%s-differential-%s.tar.zst", arch, previous, latest)
+	pkgPath = fmt.Sprintf("zarf-package-big-bang-test-%s-2.22.0-differential-2.23.0.tar.zst", arch)
 	stdOut, stdErr, err = zarfExec("package", "deploy", pkgPath, tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
