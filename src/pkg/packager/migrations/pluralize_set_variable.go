@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package deprecated handles package deprecations and migrations
-package deprecated
+package migrations
 
 import (
 	"fmt"
@@ -17,12 +16,12 @@ const PluralizeSetVariableID = "pluralize-set-variable"
 type SetVariableToSetVariables struct{}
 
 // ID returns the ID of the migration
-func (m SetVariableToSetVariables) ID() string {
+func (SetVariableToSetVariables) ID() string {
 	return PluralizeSetVariableID
 }
 
 // Clear the deprecated setVariable.
-func (m SetVariableToSetVariables) Clear(mc types.ZarfComponent) types.ZarfComponent {
+func (SetVariableToSetVariables) Clear(mc types.ZarfComponent) types.ZarfComponent {
 	clear := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
 		for i := range actions {
 			actions[i].DeprecatedSetVariable = ""
@@ -53,7 +52,7 @@ func (m SetVariableToSetVariables) Clear(mc types.ZarfComponent) types.ZarfCompo
 }
 
 // Run coverts the deprecated setVariable to the new setVariables
-func (m SetVariableToSetVariables) Run(c types.ZarfComponent) (types.ZarfComponent, string) {
+func (SetVariableToSetVariables) Run(c types.ZarfComponent) (types.ZarfComponent, string) {
 	hasSetVariable := false
 
 	migrate := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {

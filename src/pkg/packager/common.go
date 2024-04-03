@@ -22,7 +22,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/migrations"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
@@ -207,7 +207,7 @@ func (p *Packager) attemptClusterChecks() (err error) {
 	// Check for any breaking changes between the initialized Zarf version and this CLI
 	if existingInitPackage, _ := p.cluster.GetDeployedPackage("init"); existingInitPackage != nil {
 		// Use the build version instead of the metadata since this will support older Zarf versions
-		deprecated.PrintBreakingChanges(existingInitPackage.Data.Build.Version)
+		migrations.PrintBreakingChanges(existingInitPackage.Data.Build.Version)
 	}
 
 	spinner.Success()

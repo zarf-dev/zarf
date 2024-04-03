@@ -15,7 +15,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/migrations"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -69,11 +69,14 @@ func (pp *PackagePaths) ReadZarfYAML() (pkg types.ZarfPackage, warnings []string
 	}
 
 	if len(pkg.Build.Migrations) > 0 {
-		var componentWarnings []string
 		for idx, component := range pkg.Components {
-			// Handle component configuration deprecations
-			pkg.Components[idx], componentWarnings = deprecated.MigrateComponent(pkg.Build, component)
-			warnings = append(warnings, componentWarnings...)
+			// Clear out component configuration migrations
+			for _, m := range migrations.DeprecatedComponentMigrations() {
+				if slices.Contains(pkg.Build.Migrations, m.ID()) {
+					mc := m.Clear(component)
+					pkg.Components[idx] = mc
+				}
+			}
 		}
 	}
 

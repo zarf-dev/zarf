@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package deprecated handles package deprecations and migrations
-package deprecated
+package migrations
 
 import (
 	"fmt"
@@ -18,12 +17,12 @@ const ScriptsToActionsID = "scripts-to-actions"
 type ScriptsToActions struct{}
 
 // ID returns the ID of the migration
-func (m ScriptsToActions) ID() string {
+func (ScriptsToActions) ID() string {
 	return ScriptsToActionsID
 }
 
 // Clear the deprecated scripts.
-func (m ScriptsToActions) Clear(mc types.ZarfComponent) types.ZarfComponent {
+func (ScriptsToActions) Clear(mc types.ZarfComponent) types.ZarfComponent {
 	mc.DeprecatedScripts = types.DeprecatedZarfComponentScripts{}
 	return mc
 }
@@ -35,7 +34,7 @@ func (m ScriptsToActions) Clear(mc types.ZarfComponent) types.ZarfComponent {
 // - Actions.*.OnSuccess
 // - Actions.*.OnFailure
 // - Actions.*.*.Env
-func (m ScriptsToActions) Run(c types.ZarfComponent) (types.ZarfComponent, string) {
+func (ScriptsToActions) Run(c types.ZarfComponent) (types.ZarfComponent, string) {
 	var hasScripts bool
 
 	// Convert a script configs to action defaults.

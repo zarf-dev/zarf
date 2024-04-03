@@ -7,9 +7,6 @@ package types
 // ZarfPackageKind is an enum of the different kinds of Zarf packages.
 type ZarfPackageKind string
 
-// FeatureFlag is an enum of the different feature flags that can be set on a Zarf package.
-type FeatureFlag string
-
 const (
 	// ZarfInitConfig is the kind of Zarf package used during `zarf init`.
 	ZarfInitConfig ZarfPackageKind = "ZarfInitConfig"
@@ -17,23 +14,11 @@ const (
 	ZarfPackageConfig ZarfPackageKind = "ZarfPackageConfig"
 )
 
-const (
-	// DefaultRequired changes the default state for all components in a package to be required.
-	DefaultRequired FeatureFlag = "default-required"
-)
-
-// AllFeatureFlags returns a list of all available feature flags.
-func AllFeatureFlags() []FeatureFlag {
-	return []FeatureFlag{
-		DefaultRequired,
-	}
-}
-
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
 	Kind       ZarfPackageKind       `json:"kind" jsonschema:"description=The kind of Zarf package,enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	Metadata   ZarfMetadata          `json:"metadata,omitempty" jsonschema:"description=Package metadata"`
-	Build      ZarfBuildData         `json:"build,omitempty" jsonschema:"description=Zarf-generated package build data"`
+	Build      ZarfBuildData         `json:"build,omitempty" jsonschema:"-"`
 	Components []ZarfComponent       `json:"components" jsonschema:"description=List of components to deploy in this package"`
 	Constants  []ZarfPackageConstant `json:"constants,omitempty" jsonschema:"description=Constant template values applied on deploy for K8s resources"`
 	Variables  []ZarfPackageVariable `json:"variables,omitempty" jsonschema:"description=Variable template values applied on deploy for K8s resources"`

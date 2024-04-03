@@ -39,7 +39,7 @@ func SupportedOS() []string {
 	return supportedOS
 }
 
-// Run performs config validations.
+// Validate runs all validation checks on the package.
 func (pkg ZarfPackage) Validate() error {
 	if pkg.Kind == ZarfInitConfig && pkg.Metadata.YOLO {
 		return fmt.Errorf(lang.PkgValidateErrInitNoYOLO)
@@ -173,6 +173,7 @@ func (pkg ZarfPackage) Validate() error {
 	return nil
 }
 
+// Validate runs all validation checks on component actions.
 func (a ZarfComponentActions) Validate() error {
 	if err := a.OnCreate.Validate(); err != nil {
 		return fmt.Errorf(lang.PkgValidateErrAction, err)
@@ -193,7 +194,7 @@ func (a ZarfComponentActions) Validate() error {
 	return nil
 }
 
-// ImportDefinition validates the component trying to be imported.
+// ValidateImportDefinition validates the component trying to be imported.
 func (c ZarfComponent) ValidateImportDefinition() error {
 	path := c.Import.Path
 	url := c.Import.URL
@@ -227,6 +228,7 @@ func (c ZarfComponent) ValidateImportDefinition() error {
 	return nil
 }
 
+// HasSetVariables returns true if any of the actions contain setVariables.
 func (as ZarfComponentActionSet) HasSetVariables() bool {
 	check := func(actions []ZarfComponentAction) bool {
 		for _, action := range actions {
@@ -240,6 +242,7 @@ func (as ZarfComponentActionSet) HasSetVariables() bool {
 	return check(as.Before) || check(as.After) || check(as.OnSuccess) || check(as.OnFailure)
 }
 
+// Validate runs all validation checks on component action sets.
 func (as ZarfComponentActionSet) Validate() error {
 	validate := func(actions []ZarfComponentAction) error {
 		for _, action := range actions {
@@ -258,13 +261,10 @@ func (as ZarfComponentActionSet) Validate() error {
 	if err := validate(as.OnSuccess); err != nil {
 		return err
 	}
-	if err := validate(as.OnFailure); err != nil {
-		return err
-	}
-
-	return nil
+	return validate(as.OnFailure)
 }
 
+// Validate runs all validation checks on an action.
 func (action ZarfComponentAction) Validate() error {
 	// Validate SetVariable
 	for _, variable := range action.SetVariables {
@@ -293,6 +293,7 @@ func (action ZarfComponentAction) Validate() error {
 	return nil
 }
 
+// Validate runs all validation checks on a package variable.
 func (variable ZarfPackageVariable) Validate() error {
 	if !IsUppercaseNumberUnderscore(variable.Name) {
 		return fmt.Errorf(lang.PkgValidateMustBeUppercase, variable.Name)
@@ -301,6 +302,7 @@ func (variable ZarfPackageVariable) Validate() error {
 	return nil
 }
 
+// Validate runs all validation checks on a package constant.
 func (constant ZarfPackageConstant) Validate() error {
 	// ensure the constant name is only capitals and underscores
 	if !IsUppercaseNumberUnderscore(constant.Name) {
@@ -314,6 +316,7 @@ func (constant ZarfPackageConstant) Validate() error {
 	return nil
 }
 
+// Validate runs all validation checks on a chart.
 func (chart ZarfChart) Validate() error {
 	// Don't allow empty names
 	if chart.Name == "" {
@@ -348,6 +351,7 @@ func (chart ZarfChart) Validate() error {
 	return nil
 }
 
+// Validate runs all validation checks on a manifest.
 func (manifest ZarfManifest) Validate() error {
 	// Don't allow empty names
 	if manifest.Name == "" {

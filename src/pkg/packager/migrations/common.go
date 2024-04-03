@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package deprecated handles package deprecations and migrations
-package deprecated
+// Package migrations handles component deprecations and package migrations
+package migrations
 
 import (
-	"fmt"
 	"strings"
-
-	"slices"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -42,47 +39,41 @@ var breakingChanges = []breakingChange{
 type Migration interface {
 	// ID returns the ID of the migration
 	ID() string
-	// Clear clears the deprecated configuration from the component
-	Clear(mc types.ZarfComponent) types.ZarfComponent
-	// Run runs the migration on the component
-	Run(c types.ZarfComponent) (types.ZarfComponent, string)
 }
 
-// Migrations returns a list of all current migrations.
+// DeprecatedComponentMigration represents a migration that can be run on a component.
 //
-// This function operates as the source of truth for consuming migrations.
-func Migrations() []Migration {
-	return []Migration{
+// DeprecatedComponentMigrations are migrations that seamlessly migrate deprecated component definitions.
+type DeprecatedComponentMigration interface {
+	Migration
+	// Run runs the migration on the component
+	Run(c types.ZarfComponent) (types.ZarfComponent, string)
+	// Clear clears the deprecated configuration from the component
+	Clear(mc types.ZarfComponent) types.ZarfComponent
+}
+
+// DeprecatedComponentMigrations returns a list of all current deprecated component-level migrations.
+func DeprecatedComponentMigrations() []DeprecatedComponentMigration {
+	return []DeprecatedComponentMigration{
 		ScriptsToActions{},
 		SetVariableToSetVariables{},
 	}
 }
 
-// MigrateComponent runs all migrations on a component.
-// Build should be empty on package create, but include just in case someone copied a zarf.yaml from a zarf package.
-func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) (migratedComponent types.ZarfComponent, warnings []string) {
-	migratedComponent = component
+// BetaFeatureMigration represents a migration that can be run on a package.
+//
+// Every migration is mapped to a specific beta feature, and the beta feature is added to the package metadata.
+type BetaFeatureMigration interface {
+	Migration
+	// Run runs the beta migration on the package
+	Run(pkg types.ZarfPackage) types.ZarfPackage
+}
 
-	// Run all migrations
-	for _, m := range Migrations() {
-		if slices.Contains(build.Migrations, m.ID()) {
-			migratedComponent = m.Clear(migratedComponent)
-		} else {
-			// Otherwise, run the migration.
-			var warning string
-			if migratedComponent, warning = m.Run(migratedComponent); warning != "" {
-				warnings = append(warnings, warning)
-			}
-		}
+// BetaFeatureMigrations returns a list of all current beta feature migrations.
+func BetaFeatureMigrations() []BetaFeatureMigration {
+	return []BetaFeatureMigration{
+		DefaultRequired{},
 	}
-
-	// Show a warning if the component contains a group as that has been deprecated and will be removed.
-	if component.DeprecatedGroup != "" {
-		warnings = append(warnings, fmt.Sprintf("Component %s is using group which has been deprecated and will be removed in v1.0.0.  Please migrate to another solution.", component.Name))
-	}
-
-	// Future migrations here.
-	return migratedComponent, warnings
 }
 
 // PrintBreakingChanges prints the breaking changes between the provided version and the current CLIVersion

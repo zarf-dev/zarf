@@ -12,7 +12,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/migrations"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -255,12 +255,21 @@ func (ic *ImportChain) String() string {
 }
 
 // Migrate performs migrations on the import chain
-func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
+func (ic *ImportChain) Migrate() (warnings []string) {
 	node := ic.head
 	for node != nil {
-		migrated, w := deprecated.MigrateComponent(build, node.ZarfComponent)
-		node.ZarfComponent = migrated
-		warnings = append(warnings, w...)
+		for _, m := range migrations.DeprecatedComponentMigrations() {
+			migrated, warning := m.Run(node.ZarfComponent)
+			node.ZarfComponent = migrated
+			if warning != "" {
+				warnings = append(warnings, warning)
+			}
+		}
+
+		// Show a warning if the component contains a group as that has been deprecated and will be removed.
+		if node.DeprecatedGroup != "" {
+			warnings = append(warnings, fmt.Sprintf("Component %s is using group which has been deprecated and will be removed in v1.0.0.  Please migrate to another solution.", node.Name))
+		}
 		node = node.next
 	}
 	if len(warnings) > 0 {
@@ -291,9 +300,9 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 	node := ic.tail
 	for node != nil {
 		// if prev.required is nil, and node.required is != nil, then error
-		if node.prev != nil && node.prev.Required == nil && node.Required != nil {
-			return nil, fmt.Errorf("component %q: required cannot be unset during composition from %q to %q", node.ImportName(), node.ImportLocation(), node.prev.ImportLocation())
-		}
+		// if node.prev != nil && node.prev.Required == nil && node.Required != nil {
+		// 	return nil, fmt.Errorf("component %q: required cannot be unset during composition from %q to %q", node.ImportName(), node.ImportLocation(), node.prev.ImportLocation())
+		// }
 
 		fixPaths(&node.ZarfComponent, node.relativeToHead)
 

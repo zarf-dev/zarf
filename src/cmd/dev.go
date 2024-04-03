@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	goyaml "github.com/goccy/go-yaml"
@@ -21,8 +22,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/migrations"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -32,7 +33,8 @@ import (
 )
 
 var extractPath string
-var migrationsToRun []string
+var deprecatedMigrationsToRun []string
+var betaFeatureMigrationsToRun []string
 
 var devCmd = &cobra.Command{
 	Use:     "dev",
@@ -71,7 +73,7 @@ var devMigrateCmd = &cobra.Command{
 	Short: lang.CmdDevMigrateShort,
 	Long:  lang.CmdDevMigrateLong,
 	Args:  cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, args []string) error {
 		dir := common.SetBaseDirectory(args)
 		var pkg types.ZarfPackage
 		cm := goyaml.CommentMap{}
@@ -90,36 +92,34 @@ var devMigrateCmd = &cobra.Command{
 			return err
 		}
 
-		all := deprecated.Migrations()
+		deprecatedMigrationsToRun = slices.Compact(deprecatedMigrationsToRun)
 
-		migrations := []deprecated.Migration{}
+		for _, m := range migrations.DeprecatedComponentMigrations() {
+			if !slices.Contains(deprecatedMigrationsToRun, m.ID()) && deprecatedMigrationsToRun != nil {
+				continue
+			}
 
-		// Only run the specified migrations
-		for _, migrationToRun := range migrationsToRun {
-			for _, migration := range all {
-				if migration.ID() == migrationToRun {
-					migrations = append(migrations, migration)
+			// Migrate the package definition
+			for idx, component := range pkg.Components {
+				ran := []string{}
+				ran = append(ran, m.ID())
+				c, _ := m.Run(component)
+				c = m.Clear(c)
+				pkg.Components[idx] = c
+
+				if len(ran) > 0 {
+					message.Successf("Ran %s on %q", strings.Join(ran, ", "), component.Name)
 				}
 			}
 		}
 
-		if len(migrations) == 0 {
-			// Run all migrations
-			migrations = all
-		}
-
-		// Migrate the package definition
-		for idx, component := range pkg.Components {
-			ran := []string{}
-			for _, migration := range migrations {
-				ran = append(ran, migration.ID())
-				c, _ := migration.Run(component)
-				c = migration.Clear(c)
-				pkg.Components[idx] = c
+		betaFeatureMigrationsToRun = slices.Compact(betaFeatureMigrationsToRun)
+		for _, m := range migrations.BetaFeatureMigrations() {
+			if !slices.Contains(betaFeatureMigrationsToRun, m.ID()) && betaFeatureMigrationsToRun != nil {
+				continue
 			}
-			if len(ran) > 0 {
-				message.Successf("Ran %s on %q", strings.Join(ran, ", "), component.Name)
-			}
+			pkg = m.Run(pkg)
+			message.Successf("Enabled [BETA FEATURE FLAG] %s", m.ID())
 		}
 
 		b, err = goyaml.MarshalWithOptions(pkg, goyaml.WithComment(cm), goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
@@ -362,13 +362,36 @@ func init() {
 	bindDevDeployFlags(v)
 	bindDevGenerateFlags(v)
 
-	allMigrations := []string{}
-	for _, migration := range deprecated.Migrations() {
-		allMigrations = append(allMigrations, migration.ID())
+	dcm := []string{}
+	for _, m := range migrations.DeprecatedComponentMigrations() {
+		dcm = append(dcm, m.ID())
 	}
-	devMigrateCmd.Flags().StringArrayVar(&migrationsToRun, "run", []string{}, fmt.Sprintf("migrations to run (default: all, available: %s)", strings.Join(allMigrations, ", ")))
-	devMigrateCmd.RegisterFlagCompletionFunc("run", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return allMigrations, cobra.ShellCompDirectiveNoFileComp
+	devMigrateCmd.Flags().StringArrayVar(&deprecatedMigrationsToRun, "run", []string{}, fmt.Sprintf("migrations to run (default: all, available: %s)", strings.Join(dcm, ", ")))
+	devMigrateCmd.RegisterFlagCompletionFunc("run", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		ids := []string{}
+		for _, migration := range migrations.DeprecatedComponentMigrations() {
+			if slices.Contains(deprecatedMigrationsToRun, migration.ID()) {
+				continue
+			}
+			ids = append(ids, migration.ID())
+		}
+		return ids, cobra.ShellCompDirectiveNoFileComp
+	})
+
+	bfm := []string{}
+	for _, m := range migrations.BetaFeatureMigrations() {
+		bfm = append(bfm, m.ID())
+	}
+	devMigrateCmd.Flags().StringArrayVar(&betaFeatureMigrationsToRun, "enable-beta-feature", []string{}, fmt.Sprintf("beta migrations to run and enable (default: all, available: %s)", strings.Join(bfm, ", ")))
+	devMigrateCmd.RegisterFlagCompletionFunc("enable-beta-feature", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+		ids := []string{}
+		for _, migration := range migrations.BetaFeatureMigrations() {
+			if slices.Contains(betaFeatureMigrationsToRun, migration.ID()) {
+				continue
+			}
+			ids = append(ids, migration.ID())
+		}
+		return ids, cobra.ShellCompDirectiveNoFileComp
 	})
 
 	devSha256SumCmd.Flags().StringVarP(&extractPath, "extract-path", "e", "", lang.CmdDevFlagExtractPath)
