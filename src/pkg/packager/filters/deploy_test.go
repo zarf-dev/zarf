@@ -68,7 +68,11 @@ func componentMatrix(t *testing.T) []types.ZarfComponent {
 				continue
 			}
 
-			query := fmt.Sprintf("default=%t && required=%v", defaultValue, requiredValue)
+			query := fmt.Sprintf("required=%v", requiredValue)
+
+			if defaultValue {
+				query = fmt.Sprintf("%s && default=true", query)
+			}
 
 			c := componentFromQuery(t, query)
 			components = append(components, c)
@@ -111,9 +115,9 @@ func TestDeployFilter_Apply(t *testing.T) {
 			},
 			optionalComponents: "",
 			want: []types.ZarfComponent{
-				componentFromQuery(t, "default=true && required=<nil>"),
-				componentFromQuery(t, "default=true && required=false"),
-				componentFromQuery(t, "default=false && required=true"),
+				componentFromQuery(t, "required=<nil> && default=true"),
+				componentFromQuery(t, "required=false && default=true"),
+				componentFromQuery(t, "required=true"),
 				componentFromQuery(t, "group=foo && idx=0 && default=true"),
 				componentFromQuery(t, "group=bar && idx=0 && default=true"),
 			},
@@ -123,17 +127,17 @@ func TestDeployFilter_Apply(t *testing.T) {
 				Components: possibilities,
 			},
 			optionalComponents: strings.Join([]string{
-				"default=false && required=false",
+				"required=false",
 				"group=bar && idx=2 && default=false",
-				"-default=false && required=true",
+				"-required=true",
 			}, ","),
 			want: []types.ZarfComponent{
-				componentFromQuery(t, "default=true && required=<nil>"),
-				componentFromQuery(t, "default=true && required=false"),
-				componentFromQuery(t, "default=false && required=true"),
-				componentFromQuery(t, "default=false && required=false"),
+				componentFromQuery(t, "required=<nil> && default=true"),
+				componentFromQuery(t, "required=false && default=true"),
+				componentFromQuery(t, "required=true"),  // required components cannot be deselected
+				componentFromQuery(t, "required=false"), // optional components can be selected
 				componentFromQuery(t, "group=foo && idx=0 && default=true"),
-				componentFromQuery(t, "group=bar && idx=2 && default=false"),
+				componentFromQuery(t, "group=bar && idx=2 && default=false"), // components within a group can be selected, the default is not selected
 			},
 		},
 		"Test failing when group has no default and no selection was made": {
@@ -175,10 +179,10 @@ func TestDeployFilter_Apply(t *testing.T) {
 			},
 			optionalComponents: "",
 			want: []types.ZarfComponent{
-				componentFromQuery(t, "default=true && required=<nil>"),
-				componentFromQuery(t, "default=true && required=false"),
-				componentFromQuery(t, "default=false && required=<nil>"),
-				componentFromQuery(t, "default=false && required=true"),
+				componentFromQuery(t, "required=<nil> && default=true"),
+				componentFromQuery(t, "required=false && default=true"),
+				componentFromQuery(t, "required=<nil>"),
+				componentFromQuery(t, "required=true"),
 				componentFromQuery(t, "group=foo && idx=0 && default=true"),
 				componentFromQuery(t, "group=bar && idx=0 && default=true"),
 			},

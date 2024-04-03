@@ -118,10 +118,10 @@ var devMigrateCmd = &cobra.Command{
 
 			ran := false
 			for idx, component := range pkg.Components {
-				c, _ := m.Run(component)
-				c = m.Clear(c)
-				pkg.Components[idx] = c
-				diff := diffYAML(component, c)
+				mc, _ := m.Run(component)
+				mc = m.Clear(mc)
+				pkg.Components[idx] = mc
+				diff := diffYAML(component, mc)
 				if diff != "" {
 					ran = true
 					pterm.Println(diff)
@@ -138,14 +138,14 @@ var devMigrateCmd = &cobra.Command{
 				continue
 			}
 			message.HeaderInfof("🚀 Enabling %q", m.ID())
-			new := m.Run(pkg)
-			diff := diffYAML(pkg, new)
+			pkgWithBeta := m.Run(pkg)
+			diff := diffYAML(pkg, pkgWithBeta)
 			if diff != "" {
 				pterm.Println(diff)
 			} else {
 				message.Successf("No changes made by enabling %q", m.ID())
 			}
-			pkg = new
+			pkg = pkgWithBeta
 		}
 
 		after, err := goyaml.MarshalWithOptions(pkg, goyaml.WithComment(cm), goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
