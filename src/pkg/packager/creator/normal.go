@@ -129,7 +129,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 		onCreate := component.Actions.OnCreate
 
 		onFailure := func() {
-			if err := actions.Run(pc.cfg, onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
+			if err := actions.Run(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -139,7 +139,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
 		}
 
-		if err := actions.Run(pc.cfg, onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
+		if err := actions.Run(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -351,7 +351,7 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 	}
 
 	onCreate := component.Actions.OnCreate
-	if err := actions.Run(pc.cfg, onCreate.Defaults, onCreate.Before, nil); err != nil {
+	if err := actions.Run(onCreate.Defaults, onCreate.Before, nil); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -515,7 +515,7 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 		spinner.Success()
 	}
 
-	if err := actions.Run(pc.cfg, onCreate.Defaults, onCreate.After, nil); err != nil {
+	if err := actions.Run(onCreate.Defaults, onCreate.After, nil); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 

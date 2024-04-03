@@ -44,12 +44,6 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		h.chart.ReleaseName = h.chart.Name
 	}
 
-	// Do not wait for the chart to be ready if data injections are present.
-	if len(h.component.DataInjections) > 0 {
-		spinner.Updatef("Data injections detected, not waiting for chart to be ready")
-		h.chart.NoWait = true
-	}
-
 	// Setup K8s connection.
 	err := h.createActionConfig(h.chart.Namespace, spinner)
 	if err != nil {

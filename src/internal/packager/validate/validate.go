@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -296,7 +297,7 @@ func validatePackageName(subject string) error {
 	return nil
 }
 
-func validatePackageVariable(subject types.ZarfPackageVariable) error {
+func validatePackageVariable(subject variables.InteractiveVariable) error {
 	// ensure the variable name is only capitals and underscores
 	if !IsUppercaseNumberUnderscore(subject.Name) {
 		return fmt.Errorf(lang.PkgValidateMustBeUppercase, subject.Name)
@@ -305,7 +306,7 @@ func validatePackageVariable(subject types.ZarfPackageVariable) error {
 	return nil
 }
 
-func validatePackageConstant(subject types.ZarfPackageConstant) error {
+func validatePackageConstant(subject variables.Constant) error {
 	// ensure the constant name is only capitals and underscores
 	if !IsUppercaseNumberUnderscore(subject.Name) {
 		return fmt.Errorf(lang.PkgValidateErrPkgConstantName, subject.Name)

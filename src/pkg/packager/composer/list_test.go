@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	"github.com/stretchr/testify/require"
@@ -265,23 +266,23 @@ func TestMerging(t *testing.T) {
 	type testCase struct {
 		name           string
 		ic             *ImportChain
-		existingVars   []types.ZarfPackageVariable
-		existingConsts []types.ZarfPackageConstant
-		expectedVars   []types.ZarfPackageVariable
-		expectedConsts []types.ZarfPackageConstant
+		existingVars   []variables.InteractiveVariable
+		existingConsts []variables.Constant
+		expectedVars   []variables.InteractiveVariable
+		expectedConsts []variables.Constant
 	}
 
 	head := Node{
-		vars: []types.ZarfPackageVariable{
+		vars: []variables.InteractiveVariable{
 			{
-				Name:    "TEST",
-				Default: "head",
+				Variable: variables.Variable{Name: "TEST"},
+				Default:  "head",
 			},
 			{
-				Name: "HEAD",
+				Variable: variables.Variable{Name: "HEAD"},
 			},
 		},
-		consts: []types.ZarfPackageConstant{
+		consts: []variables.Constant{
 			{
 				Name:  "TEST",
 				Value: "head",
@@ -292,16 +293,16 @@ func TestMerging(t *testing.T) {
 		},
 	}
 	tail := Node{
-		vars: []types.ZarfPackageVariable{
+		vars: []variables.InteractiveVariable{
 			{
-				Name:    "TEST",
-				Default: "tail",
+				Variable: variables.Variable{Name: "TEST"},
+				Default:  "tail",
 			},
 			{
-				Name: "TAIL",
+				Variable: variables.Variable{Name: "TAIL"},
 			},
 		},
-		consts: []types.ZarfPackageConstant{
+		consts: []variables.Constant{
 			{
 				Name:  "TEST",
 				Value: "tail",
@@ -319,22 +320,22 @@ func TestMerging(t *testing.T) {
 		{
 			name: "empty-ic",
 			ic:   &ImportChain{},
-			existingVars: []types.ZarfPackageVariable{
+			existingVars: []variables.InteractiveVariable{
+				{
+					Variable: variables.Variable{Name: "TEST"},
+				},
+			},
+			existingConsts: []variables.Constant{
 				{
 					Name: "TEST",
 				},
 			},
-			existingConsts: []types.ZarfPackageConstant{
+			expectedVars: []variables.InteractiveVariable{
 				{
-					Name: "TEST",
+					Variable: variables.Variable{Name: "TEST"},
 				},
 			},
-			expectedVars: []types.ZarfPackageVariable{
-				{
-					Name: "TEST",
-				},
-			},
-			expectedConsts: []types.ZarfPackageConstant{
+			expectedConsts: []variables.Constant{
 				{
 					Name: "TEST",
 				},
@@ -343,21 +344,21 @@ func TestMerging(t *testing.T) {
 		{
 			name:           "no-existing",
 			ic:             testIC,
-			existingVars:   []types.ZarfPackageVariable{},
-			existingConsts: []types.ZarfPackageConstant{},
-			expectedVars: []types.ZarfPackageVariable{
+			existingVars:   []variables.InteractiveVariable{},
+			existingConsts: []variables.Constant{},
+			expectedVars: []variables.InteractiveVariable{
 				{
-					Name:    "TEST",
-					Default: "head",
+					Variable: variables.Variable{Name: "TEST"},
+					Default:  "head",
 				},
 				{
-					Name: "HEAD",
+					Variable: variables.Variable{Name: "HEAD"},
 				},
 				{
-					Name: "TAIL",
+					Variable: variables.Variable{Name: "TAIL"},
 				},
 			},
-			expectedConsts: []types.ZarfPackageConstant{
+			expectedConsts: []variables.Constant{
 				{
 					Name:  "TEST",
 					Value: "head",
@@ -373,16 +374,16 @@ func TestMerging(t *testing.T) {
 		{
 			name: "with-existing",
 			ic:   testIC,
-			existingVars: []types.ZarfPackageVariable{
+			existingVars: []variables.InteractiveVariable{
 				{
-					Name:    "TEST",
-					Default: "existing",
+					Variable: variables.Variable{Name: "TEST"},
+					Default:  "existing",
 				},
 				{
-					Name: "EXISTING",
+					Variable: variables.Variable{Name: "EXISTING"},
 				},
 			},
-			existingConsts: []types.ZarfPackageConstant{
+			existingConsts: []variables.Constant{
 				{
 					Name:  "TEST",
 					Value: "existing",
@@ -391,22 +392,22 @@ func TestMerging(t *testing.T) {
 					Name: "EXISTING",
 				},
 			},
-			expectedVars: []types.ZarfPackageVariable{
+			expectedVars: []variables.InteractiveVariable{
 				{
-					Name:    "TEST",
-					Default: "existing",
+					Variable: variables.Variable{Name: "TEST"},
+					Default:  "existing",
 				},
 				{
-					Name: "EXISTING",
+					Variable: variables.Variable{Name: "EXISTING"},
 				},
 				{
-					Name: "HEAD",
+					Variable: variables.Variable{Name: "HEAD"},
 				},
 				{
-					Name: "TAIL",
+					Variable: variables.Variable{Name: "TAIL"},
 				},
 			},
-			expectedConsts: []types.ZarfPackageConstant{
+			expectedConsts: []variables.Constant{
 				{
 					Name:  "TEST",
 					Value: "existing",

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/fatih/color"
 	"github.com/pterm/pterm"
@@ -253,7 +254,7 @@ func Title(title string, help string) {
 // HeaderInfof prints a large header with a formatted message.
 func HeaderInfof(format string, a ...any) {
 	pterm.Println()
-	message := Truncate(fmt.Sprintf(format, a...), TermWidth, false)
+	message := helpers.Truncate(fmt.Sprintf(format, a...), TermWidth, false)
 	// Ensure the text is consistent for the header width
 	padding := TermWidth - len(message)
 	pterm.DefaultHeader.
@@ -297,23 +298,6 @@ func PrintDiff(textA, textB string) {
 	diffs = dmp.DiffCleanupSemantic(diffs)
 
 	pterm.Println(dmp.DiffPrettyText(diffs))
-}
-
-// Truncate truncates provided text to the requested length
-func Truncate(text string, length int, invert bool) string {
-	// Remove newlines and replace with semicolons
-	textEscaped := strings.ReplaceAll(text, "\n", "; ")
-	// Truncate the text if it is longer than length so it isn't too long.
-	if len(textEscaped) > length {
-		if invert {
-			start := len(textEscaped) - length + 3
-			textEscaped = "..." + textEscaped[start:]
-		} else {
-			end := length - 3
-			textEscaped = textEscaped[:end] + "..."
-		}
-	}
-	return textEscaped
 }
 
 // Table prints a padded table containing the specified header and data
