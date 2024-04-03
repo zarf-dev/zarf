@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/pterm/pterm"
+	"github.com/sergi/go-diff/diffmatchpatch"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers"
@@ -68,6 +70,24 @@ var devDeployCmd = &cobra.Command{
 	},
 }
 
+func diffYAML[T any](old, new T) string {
+	oldYaml, _ := goyaml.MarshalWithOptions(old, goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
+	newYaml, _ := goyaml.MarshalWithOptions(new, goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
+
+	if string(oldYaml) == string(newYaml) {
+		return ""
+	}
+
+	dmp := diffmatchpatch.New()
+
+	diffs := dmp.DiffMain(string(oldYaml), string(newYaml), true)
+	diffs = dmp.DiffCleanupSemantic(diffs)
+	diffs = dmp.DiffCleanupEfficiency(diffs)
+	s := dmp.DiffPrettyText(diffs)
+
+	return s
+}
+
 var devMigrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: lang.CmdDevMigrateShort,
@@ -78,17 +98,12 @@ var devMigrateCmd = &cobra.Command{
 		var pkg types.ZarfPackage
 		cm := goyaml.CommentMap{}
 
-		fi, err := os.Stat(filepath.Join(dir, layout.ZarfYAML))
+		before, err := os.ReadFile(filepath.Join(dir, layout.ZarfYAML))
 		if err != nil {
 			return err
 		}
 
-		b, err := os.ReadFile(filepath.Join(dir, layout.ZarfYAML))
-		if err != nil {
-			return err
-		}
-
-		if err := goyaml.UnmarshalWithOptions(b, &pkg, goyaml.CommentToMap(cm)); err != nil {
+		if err := goyaml.UnmarshalWithOptions(before, &pkg, goyaml.CommentToMap(cm)); err != nil {
 			return err
 		}
 
@@ -99,17 +114,21 @@ var devMigrateCmd = &cobra.Command{
 				continue
 			}
 
-			// Migrate the package definition
+			message.HeaderInfof("🔨 Running %q", m.ID())
+
+			ran := false
 			for idx, component := range pkg.Components {
-				ran := []string{}
-				ran = append(ran, m.ID())
 				c, _ := m.Run(component)
 				c = m.Clear(c)
 				pkg.Components[idx] = c
-
-				if len(ran) > 0 {
-					message.Successf("Ran %s on %q", strings.Join(ran, ", "), component.Name)
+				diff := diffYAML(component, c)
+				if diff != "" {
+					ran = true
+					pterm.Println(diff)
 				}
+			}
+			if !ran {
+				message.Successf("No changes made by migration %q", m.ID())
 			}
 		}
 
@@ -118,21 +137,27 @@ var devMigrateCmd = &cobra.Command{
 			if !slices.Contains(betaFeatureMigrationsToRun, m.ID()) && betaFeatureMigrationsToRun != nil {
 				continue
 			}
-			pkg = m.Run(pkg)
-			message.Successf("Enabled [BETA FEATURE FLAG] %s", m.ID())
+			message.HeaderInfof("🚀 Enabling %q", m.ID())
+			new := m.Run(pkg)
+			diff := diffYAML(pkg, new)
+			if diff != "" {
+				pterm.Println(diff)
+			} else {
+				message.Successf("No changes made by enabling %q", m.ID())
+			}
+			pkg = new
 		}
 
-		b, err = goyaml.MarshalWithOptions(pkg, goyaml.WithComment(cm), goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
+		after, err := goyaml.MarshalWithOptions(pkg, goyaml.WithComment(cm), goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
 		if err != nil {
 			return err
 		}
 
-		formatted, err := utils.FormatZarfYAML(b)
-		if err != nil {
-			return err
-		}
+		message.HeaderInfof("📦 Final zarf.yaml")
 
-		return os.WriteFile(filepath.Join(dir, layout.ZarfYAML), formatted, fi.Mode())
+		fmt.Println(string(after))
+
+		return nil
 	},
 }
 
