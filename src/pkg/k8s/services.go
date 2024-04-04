@@ -46,11 +46,9 @@ func (k *K8s) GenerateService(namespace, name string) *corev1.Service {
 			Name:        name,
 			Namespace:   namespace,
 			Annotations: make(Labels),
+			Labels:      make(Labels),
 		},
 	}
-
-	// Merge in common labels so that later modifications to the service can't mutate them
-	service.ObjectMeta.Labels = helpers.MergeMap[string](k.Labels, service.ObjectMeta.Labels)
 
 	return service
 }

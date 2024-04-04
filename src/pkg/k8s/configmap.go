@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/defenseunicorns/pkg/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,12 +27,10 @@ func (k *K8s) CreateConfigmap(ctx context.Context, namespace, name string, data 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    make(Labels),
 		},
 		BinaryData: data,
 	}
-
-	// Merge in common labels so that later modifications to the namespace can't mutate them
-	configMap.ObjectMeta.Labels = helpers.MergeMap[string](k.Labels, configMap.ObjectMeta.Labels)
 
 	createOptions := metav1.CreateOptions{}
 	return k.Clientset.CoreV1().ConfigMaps(namespace).Create(ctx, configMap, createOptions)
