@@ -9,7 +9,6 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	"github.com/defenseunicorns/pkg/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +27,7 @@ func (k *K8s) GetSecretsWithLabel(namespace, labelSelector string) (*corev1.Secr
 
 // GenerateSecret returns a Kubernetes secret object without applying it to the cluster.
 func (k *K8s) GenerateSecret(namespace, name string, secretType corev1.SecretType) *corev1.Secret {
-	secret := &corev1.Secret{
+	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Secret",
@@ -36,15 +35,13 @@ func (k *K8s) GenerateSecret(namespace, name string, secretType corev1.SecretTyp
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels: map[string]string{
+				zarfManagedByLabel: "zarf",
+			},
 		},
 		Type: secretType,
 		Data: map[string][]byte{},
 	}
-
-	// Merge in common labels so that later modifications to the secret can't mutate them
-	secret.ObjectMeta.Labels = helpers.MergeMap[string](k.Labels, secret.ObjectMeta.Labels)
-
-	return secret
 }
 
 // GenerateTLSSecret returns a Kubernetes secret object without applying it to the cluster.
