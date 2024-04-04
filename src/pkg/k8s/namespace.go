@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"cuelang.org/go/pkg/strings"
-	"github.com/defenseunicorns/pkg/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,20 +63,18 @@ func (k *K8s) DeleteNamespace(ctx context.Context, name string) error {
 
 // NewZarfManagedNamespace returns a corev1.Namespace with Zarf-managed labels
 func (k *K8s) NewZarfManagedNamespace(name string) *corev1.Namespace {
-	namespace := &corev1.Namespace{
+	return &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Namespace",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
+			Labels: map[string]string{
+				zarfManagedByLabel: "zarf",
+			},
 		},
 	}
-
-	// Merge in common labels so that later modifications to the namespace can't mutate them
-	namespace.ObjectMeta.Labels = helpers.MergeMap[string](k.Labels, namespace.ObjectMeta.Labels)
-
-	return namespace
 }
 
 // IsInitialNamespace returns true if the given namespace name is an initial k8s namespace: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
