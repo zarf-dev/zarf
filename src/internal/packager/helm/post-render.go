@@ -58,7 +58,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	}
 
 	// Run the template engine against the chart output
-	if _, err := r.variableConfig.ProcessYamlFilesInPath(tempDir); err != nil {
+	if err := r.variableConfig.ReplaceTextTemplate(path); err != nil {
 		return nil, fmt.Errorf("error templating the helm chart: %w", err)
 	}
 

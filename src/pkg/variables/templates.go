@@ -138,18 +138,3 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) error {
 
 	return os.WriteFile(path, []byte(text), helpers.ReadWriteUser)
 }
-
-// ProcessYamlFilesInPath iterates over all yaml files in a given path and performs Zarf templating + image swapping.
-func (vc *VariableConfig) ProcessYamlFilesInPath(path string) ([]string, error) {
-	// Only pull in yml and yaml files
-	pattern := regexp.MustCompile(`(?mi)\.ya?ml$`)
-	manifests, _ := helpers.RecursiveFileList(path, pattern, false)
-
-	for _, manifest := range manifests {
-		if err := vc.ReplaceTextTemplate(manifest); err != nil {
-			return nil, err
-		}
-	}
-
-	return manifests, nil
-}
