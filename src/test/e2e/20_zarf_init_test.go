@@ -105,12 +105,19 @@ func TestZarfInit(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "Min")
 
+	verifyZarfNamespaceLabels(t)
+	verifyZarfSecretLabels(t)
+	verifyZarfPodLabels(t)
+	verifyZarfServiceLabels(t)
+
 	// Special sizing-hacking for reducing resources where Kind + CI eats a lot of free cycles (ignore errors)
 	_, _, _ = e2e.Kubectl("scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1")
 	_, _, _ = e2e.Kubectl("scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")
 }
 
 func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.ZarfState) {
+	t.Helper()
+
 	require.NotContains(t, logText, zarfState.AgentTLS.CA)
 	require.NotContains(t, logText, string(zarfState.AgentTLS.CA))
 	require.NotContains(t, logText, zarfState.AgentTLS.Cert)
@@ -124,4 +131,106 @@ func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.Zar
 	require.NotContains(t, logText, zarfState.RegistryInfo.PushPassword)
 	require.NotContains(t, logText, zarfState.RegistryInfo.Secret)
 	require.NotContains(t, logText, zarfState.LoggingSecret)
+}
+
+func verifyZarfNamespaceLabels(t *testing.T) {
+	t.Helper()
+
+	expectedLabels := `'{"app.kubernetes.io/managed-by":"zarf","kubernetes.io/metadata.name":"zarf"}'`
+	actualLabels, _, err := e2e.Kubectl("get", "ns", "zarf", "-o=jsonpath='{.metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+}
+
+func verifyZarfSecretLabels(t *testing.T) {
+	t.Helper()
+
+	// zarf state
+	expectedLabels := `'{"app.kubernetes.io/managed-by":"zarf"}'`
+	actualLabels, _, err := e2e.Kubectl("get", "-n=zarf", "secret", "zarf-state", "-o=jsonpath='{.metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+
+	// init package secret
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"zarf","package-deploy-info":"init"}'`
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "secret", "zarf-package-init", "-o=jsonpath='{.metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+
+	// registry
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"zarf"}'`
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "secret", "private-registry", "-o=jsonpath='{.metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+
+	// agent hook TLS
+	//
+	// this secret does not have the managed by zarf label
+	// because it is deployed as a helm chart rather than generated in Go code.
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"Helm"}'`
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "secret", "agent-hook-tls", "-o=jsonpath='{.metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+
+	// git server
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"zarf"}'`
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "secret", "private-git-server", "-o=jsonpath='{.metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+}
+
+func verifyZarfPodLabels(t *testing.T) {
+	t.Helper()
+
+	// registry
+	podHash, _, err := e2e.Kubectl("get", "-n=zarf", "--selector=app=docker-registry", "pods", `-o=jsonpath="{.items[0].metadata.labels['pod-template-hash']}"`)
+	require.NoError(t, err)
+	expectedLabels := fmt.Sprintf(`'{"app":"docker-registry","pod-template-hash":%s,"release":"zarf-docker-registry","zarf.dev/agent":"ignore"}'`, podHash)
+	actualLabels, _, err := e2e.Kubectl("get", "-n=zarf", "--selector=app=docker-registry", "pods", "-o=jsonpath='{.items[0].metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+
+	// agent
+	podHash, _, err = e2e.Kubectl("get", "-n=zarf", "--selector=app=agent-hook", "pods", `-o=jsonpath="{.items[0].metadata.labels['pod-template-hash']}"`)
+	require.NoError(t, err)
+	expectedLabels = fmt.Sprintf(`'{"app":"agent-hook","pod-template-hash":%s,"zarf.dev/agent":"ignore"}'`, podHash)
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "--selector=app=agent-hook", "pods", "-o=jsonpath='{.items[0].metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+
+	// logging and git server pods should have the `zarf-agent=patched` label
+	// since they should have been mutated by the agent
+	patchedLabel := `"zarf-agent":"patched"`
+
+	// logging
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "--selector=app.kubernetes.io/instance=zarf-loki-stack", "pods", "-o=jsonpath='{.items[0].metadata.labels}'")
+	require.NoError(t, err)
+	require.Contains(t, actualLabels, patchedLabel)
+
+	// git server
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "--selector=app.kubernetes.io/instance=zarf-gitea  ", "pods", "-o=jsonpath='{.items[0].metadata.labels}'")
+	require.NoError(t, err)
+	require.Contains(t, actualLabels, patchedLabel)
+}
+
+func verifyZarfServiceLabels(t *testing.T) {
+	t.Helper()
+
+	// registry
+	expectedLabels := `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/connect-name":"registry"}'`
+	actualLabels, _, err := e2e.Kubectl("get", "-n=zarf", "service", "zarf-connect-registry", "-o=jsonpath='{.metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+
+	// logging
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/connect-name":"logging"}'`
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "service", "zarf-connect-logging", "-o=jsonpath='{.metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+
+	// git server
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/connect-name":"git"}'`
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "service", "zarf-connect-git", "-o=jsonpath='{.metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
 }
