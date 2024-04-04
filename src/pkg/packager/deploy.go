@@ -566,7 +566,7 @@ func generateValuesOverrides(chartVariables []types.ZarfChartVariable,
 	for _, variable := range chartVariables {
 		if setVar, ok := setVariableMap[variable.Name]; ok && setVar != nil {
 			// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
-			if err := mergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
+			if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
 				return nil, fmt.Errorf("unable to merge path and value into map: %w", err)
 			}
 		}
@@ -582,31 +582,6 @@ func generateValuesOverrides(chartVariables []types.ZarfChartVariable,
 	// Merge chartOverrides into valuesOverrides to ensure all overrides are applied.
 	// This corrects the logic to ensure that chartOverrides and valuesOverrides are merged correctly.
 	return helpers.MergeMapRecursive(valuesOverrides, chartOverrides), nil
-}
-
-// mergePathAndValueIntoMap takes a path in dot notation as a string and a value (also as a string for simplicity),
-// then merges this into the provided map. The value can be any type.
-func mergePathAndValueIntoMap(m map[string]any, path string, value any) error {
-	pathParts := strings.Split(path, ".")
-	current := m
-	for i, part := range pathParts {
-		if i == len(pathParts)-1 {
-			// Set the value at the last key in the path.
-			current[part] = value
-		} else {
-			if _, exists := current[part]; !exists {
-				// If the part does not exist, create a new map for it.
-				current[part] = make(map[string]any)
-			}
-
-			nextMap, ok := current[part].(map[string]any)
-			if !ok {
-				return fmt.Errorf("conflict at '%s', expected map but got %T", strings.Join(pathParts[:i+1], "."), current[part])
-			}
-			current = nextMap
-		}
-	}
-	return nil
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster.

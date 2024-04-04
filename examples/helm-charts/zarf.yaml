@@ -22,7 +22,6 @@ components:
           - name: REPLICA_COUNT
             description: "Override the number of pod replicas"
             path: replicaCount
-            value: 2
 
       - name: podinfo-oci
         version: 6.4.0

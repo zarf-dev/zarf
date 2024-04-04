@@ -206,7 +206,10 @@ func TestGenerateValuesOverrides(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			got, _ := generateValuesOverrides(tt.chartVariables, tt.setVariableMap, tt.deployOpts, tt.componentName, tt.chartName)
+			got, err := generateValuesOverrides(tt.chartVariables, tt.setVariableMap, tt.deployOpts, tt.componentName, tt.chartName)
+			if err != nil {
+				t.Errorf("%s: generateValuesOverrides() error = %v", tt.name, err)
+			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("%s: generateValuesOverrides() got = %v, want %v", tt.name, got, tt.want)
 			}
