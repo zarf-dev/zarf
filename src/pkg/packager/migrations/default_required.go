@@ -6,6 +6,7 @@ package migrations
 import (
 	"slices"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -21,14 +22,19 @@ func (DefaultRequired) ID() string {
 //
 // and cleanly migrates components explicitly marked as required to be nil
 func (DefaultRequired) Run(pkg types.ZarfPackage) types.ZarfPackage {
+	if slices.Contains(pkg.Metadata.BetaFeatures, types.DefaultRequired) {
+		return pkg
+	} else {
+		pkg.Metadata.BetaFeatures = append(pkg.Metadata.BetaFeatures, types.DefaultRequired)
+	}
+
 	for idx, component := range pkg.Components {
 		if component.Required != nil && *component.Required {
 			pkg.Components[idx].Required = nil
 		}
-	}
-
-	if !slices.Contains(pkg.Metadata.BetaFeatures, types.DefaultRequired) {
-		pkg.Metadata.BetaFeatures = append(pkg.Metadata.BetaFeatures, types.DefaultRequired)
+		if component.Required == nil {
+			pkg.Components[idx].Required = helpers.BoolPtr(false)
+		}
 	}
 
 	return pkg

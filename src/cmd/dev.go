@@ -9,12 +9,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/pterm/pterm"
-	"github.com/sergi/go-diff/diffmatchpatch"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers"
@@ -70,24 +70,6 @@ var devDeployCmd = &cobra.Command{
 	},
 }
 
-func diffYAML[T any](old, new T) string {
-	oldYaml, _ := goyaml.MarshalWithOptions(old, goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
-	newYaml, _ := goyaml.MarshalWithOptions(new, goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
-
-	if string(oldYaml) == string(newYaml) {
-		return ""
-	}
-
-	dmp := diffmatchpatch.New()
-
-	diffs := dmp.DiffMain(string(oldYaml), string(newYaml), true)
-	diffs = dmp.DiffCleanupSemantic(diffs)
-	diffs = dmp.DiffCleanupEfficiency(diffs)
-	s := dmp.DiffPrettyText(diffs)
-
-	return s
-}
-
 var devMigrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: lang.CmdDevMigrateShort,
@@ -107,28 +89,32 @@ var devMigrateCmd = &cobra.Command{
 			return err
 		}
 
-		deprecatedMigrationsToRun = slices.Compact(deprecatedMigrationsToRun)
+		data := [][]string{}
 
+		deprecatedMigrationsToRun = slices.Compact(deprecatedMigrationsToRun)
 		for _, m := range migrations.DeprecatedComponentMigrations() {
 			if !slices.Contains(deprecatedMigrationsToRun, m.ID()) && deprecatedMigrationsToRun != nil {
 				continue
 			}
 
-			message.HeaderInfof("🔨 Running %q", m.ID())
+			entry := []string{
+				m.ID(),
+				"deprecation",
+				"",
+			}
 
-			ran := false
 			for idx, component := range pkg.Components {
 				mc, _ := m.Run(component)
 				mc = m.Clear(mc)
-				pkg.Components[idx] = mc
-				diff := diffYAML(component, mc)
-				if diff != "" {
-					ran = true
-					pterm.Println(diff)
+				if !reflect.DeepEqual(mc, component) {
+					entry[2] = fmt.Sprintf("%s, %s", entry[2], component.Name)
 				}
+				pkg.Components[idx] = mc
 			}
-			if !ran {
-				message.Successf("No changes made by migration %q", m.ID())
+
+			if entry[2] != "" {
+				entry[2] = strings.TrimSuffix(entry[2], ", ")
+				data = append(data, entry)
 			}
 		}
 
@@ -137,13 +123,13 @@ var devMigrateCmd = &cobra.Command{
 			if !slices.Contains(betaFeatureMigrationsToRun, m.ID()) && betaFeatureMigrationsToRun != nil {
 				continue
 			}
-			message.HeaderInfof("🚀 Enabling %q", m.ID())
 			pkgWithBeta := m.Run(pkg)
-			diff := diffYAML(pkg, pkgWithBeta)
-			if diff != "" {
-				pterm.Println(diff)
-			} else {
-				message.Successf("No changes made by enabling %q", m.ID())
+			if !reflect.DeepEqual(pkgWithBeta, pkg) {
+				data = append(data, []string{
+					m.ID(),
+					"beta-feature",
+					"entire package",
+				})
 			}
 			pkg = pkgWithBeta
 		}
@@ -153,9 +139,19 @@ var devMigrateCmd = &cobra.Command{
 			return err
 		}
 
-		message.HeaderInfof("📦 Final zarf.yaml")
+		header := []string{
+			"Migration",
+			"Type",
+			"Affected",
+		}
 
-		fmt.Println(string(after))
+		if len(data) == 0 {
+			message.Warn("No changes made")
+		} else {
+			pterm.Println()
+			fmt.Println(string(after))
+			message.Table(header, data)
+		}
 
 		return nil
 	},
