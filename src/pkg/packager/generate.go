@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
 )
@@ -38,7 +38,7 @@ func (p *Packager) Generate() (err error) {
 
 	generatedComponent := types.ZarfComponent{
 		Name:     p.cfg.GenerateOpts.Name,
-		Required: true,
+		Required: helpers.BoolPtr(true),
 		Charts: []types.ZarfChart{
 			{
 				Name:      p.cfg.GenerateOpts.Name,

@@ -10,13 +10,13 @@ import (
 	"os"
 
 	"github.com/alecthomas/jsonschema"
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -102,6 +102,14 @@ var genCLIDocs = &cobra.Command{
 								flag.DefValue = ""
 							}
 						})
+					}
+					
+					if toolCmd.Use == "yq" {
+						for _, subCmd := range toolCmd.Commands() {
+							if subCmd.Name() == "shell-completion" {
+								subCmd.Hidden = true
+							}
+						}
 					}
 				}
 			}

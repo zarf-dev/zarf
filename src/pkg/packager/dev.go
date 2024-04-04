@@ -7,11 +7,15 @@ package packager
 import (
 	"fmt"
 	"os"
+	"runtime"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -32,23 +36,30 @@ func (p *Packager) DevDeploy() error {
 
 	pc := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
 
+	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+		return err
+	}
+
 	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(p.layout)
 	if err != nil {
 		return err
 	}
 
-	// Filter out components that are not compatible with this system
-	p.filterComponents()
-
-	// Also filter out components that are not required, nor requested via --components
-	// This is different from the above filter, as it is not based on the system, but rather
-	// the user's selection and the component's `required` field
-	// This is also different from regular package creation, where we still assemble and package up
-	// all components and their dependencies, regardless of whether they are required or not
-	p.cfg.Pkg.Components = p.getSelectedComponents()
+	filter := filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, false),
+	)
+	p.cfg.Pkg.Components, err = filter.Apply(p.cfg.Pkg)
+	if err != nil {
+		return err
+	}
 
 	if err := validate.Run(p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
+	}
+
+	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
+		return err
 	}
 
 	// If building in yolo mode, strip out all images and repos
@@ -64,11 +75,6 @@ func (p *Packager) DevDeploy() error {
 	}
 
 	message.HeaderInfof("📦 PACKAGE DEPLOY %s", p.cfg.Pkg.Metadata.Name)
-
-	// Set variables and prompt if --confirm is not set
-	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
-		return err
-	}
 
 	p.connectStrings = make(types.ConnectStrings)
 

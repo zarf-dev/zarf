@@ -11,23 +11,39 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/mholt/archiver/v3"
 )
 
+// GetValidPackageExtensions returns the valid package extensions.
+func GetValidPackageExtensions() [2]string {
+	return [...]string{".tar.zst", ".tar"}
+}
+
+// IsValidFileExtension returns true if the filename has a valid package extension.
+func IsValidFileExtension(filename string) bool {
+	for _, extension := range GetValidPackageExtensions() {
+		if strings.HasSuffix(filename, extension) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func identifyUnknownTarball(path string) (string, error) {
 	if helpers.InvalidPath(path) {
 		return "", &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
 	}
-	if filepath.Ext(path) != "" && config.IsValidFileExtension(path) {
+	if filepath.Ext(path) != "" && IsValidFileExtension(path) {
 		return path, nil
-	} else if filepath.Ext(path) != "" && !config.IsValidFileExtension(path) {
-		return "", fmt.Errorf("%s is not a supported tarball format (%+v)", path, config.GetValidPackageExtensions())
+	} else if filepath.Ext(path) != "" && !IsValidFileExtension(path) {
+		return "", fmt.Errorf("%s is not a supported tarball format (%+v)", path, GetValidPackageExtensions())
 	}
 
 	// rename to .tar.zst and check if it's a valid tar.zst
@@ -58,7 +74,7 @@ func identifyUnknownTarball(path string) (string, error) {
 		return tb, nil
 	}
 
-	return "", fmt.Errorf("%s is not a supported tarball format (%+v)", path, config.GetValidPackageExtensions())
+	return "", fmt.Errorf("%s is not a supported tarball format (%+v)", path, GetValidPackageExtensions())
 }
 
 // RenameFromMetadata renames a tarball based on its metadata.

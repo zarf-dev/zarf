@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 )
@@ -28,6 +30,10 @@ func (p *Packager) Create() (err error) {
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
 	pc := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
+
+	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+		return err
+	}
 
 	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(p.layout)
 	if err != nil {

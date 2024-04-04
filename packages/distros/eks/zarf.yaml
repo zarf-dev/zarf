@@ -2,7 +2,6 @@ kind: ZarfPackageConfig
 metadata:
   name: distro-eks
   description: Deploy a EKS K8s cluster
-  architecture: multi
   version: 0.0.3
 
 variables:
