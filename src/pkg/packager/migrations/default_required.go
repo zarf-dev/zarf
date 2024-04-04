@@ -24,9 +24,9 @@ func (DefaultRequired) String() string {
 func (DefaultRequired) Run(pkg types.ZarfPackage) types.ZarfPackage {
 	if slices.Contains(pkg.Metadata.BetaFeatures, types.DefaultRequired) {
 		return pkg
-	} else {
-		pkg.Metadata.BetaFeatures = append(pkg.Metadata.BetaFeatures, types.DefaultRequired)
 	}
+
+	pkg.Metadata.BetaFeatures = append(pkg.Metadata.BetaFeatures, types.DefaultRequired)
 
 	for idx, component := range pkg.Components {
 		if component.Required != nil && *component.Required {

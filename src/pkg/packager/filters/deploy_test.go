@@ -49,10 +49,6 @@ func componentFromQuery(t *testing.T, q string) types.ZarfComponent {
 	return c
 }
 
-// componentMatrix generates all possible combinations of component values
-// for testing the deploy filter.
-// some of these combinations are invalid, but the deploy filter should
-// handle them gracefully.
 func componentMatrix(t *testing.T) []types.ZarfComponent {
 	var components []types.ZarfComponent
 
