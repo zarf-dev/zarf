@@ -5,6 +5,7 @@
 package migrations
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -35,17 +36,11 @@ var breakingChanges = []breakingChange{
 	},
 }
 
-// Migration represents a migration that can be run on a component.
-type Migration interface {
-	// ID returns the ID of the migration
-	ID() string
-}
-
 // DeprecatedComponentMigration represents a migration that can be run on a component.
 //
 // DeprecatedComponentMigrations are migrations that seamlessly migrate deprecated component definitions.
 type DeprecatedComponentMigration interface {
-	Migration
+	fmt.Stringer
 	// Run runs the migration on the component
 	Run(c types.ZarfComponent) (types.ZarfComponent, string)
 	// Clear clears the deprecated configuration from the component
@@ -64,7 +59,7 @@ func DeprecatedComponentMigrations() []DeprecatedComponentMigration {
 //
 // Every migration is mapped to a specific beta feature, and the beta feature is added to the package metadata.
 type BetaFeatureMigration interface {
-	Migration
+	fmt.Stringer
 	// Run runs the beta migration on the package
 	Run(pkg types.ZarfPackage) types.ZarfPackage
 }

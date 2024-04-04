@@ -16,8 +16,8 @@ const ScriptsToActionsID = "scripts-to-actions"
 // ScriptsToActions migrates scripts to actions
 type ScriptsToActions struct{}
 
-// ID returns the ID of the migration
-func (ScriptsToActions) ID() string {
+// String returns the name of the migration
+func (ScriptsToActions) String() string {
 	return ScriptsToActionsID
 }
 

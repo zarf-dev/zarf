@@ -72,7 +72,7 @@ func (pp *PackagePaths) ReadZarfYAML() (pkg types.ZarfPackage, warnings []string
 		for idx, component := range pkg.Components {
 			// Clear out component configuration migrations
 			for _, m := range migrations.DeprecatedComponentMigrations() {
-				if slices.Contains(pkg.Build.Migrations, m.ID()) {
+				if slices.Contains(pkg.Build.Migrations, m.String()) {
 					mc := m.Clear(component)
 					pkg.Components[idx] = mc
 				}

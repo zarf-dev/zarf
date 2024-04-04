@@ -93,12 +93,12 @@ var devMigrateCmd = &cobra.Command{
 
 		deprecatedMigrationsToRun = slices.Compact(deprecatedMigrationsToRun)
 		for _, m := range migrations.DeprecatedComponentMigrations() {
-			if !slices.Contains(deprecatedMigrationsToRun, m.ID()) && deprecatedMigrationsToRun != nil {
+			if !slices.Contains(deprecatedMigrationsToRun, m.String()) && deprecatedMigrationsToRun != nil {
 				continue
 			}
 
 			entry := []string{
-				m.ID(),
+				m.String(),
 				"deprecation",
 				"",
 			}
@@ -120,13 +120,13 @@ var devMigrateCmd = &cobra.Command{
 
 		betaFeatureMigrationsToRun = slices.Compact(betaFeatureMigrationsToRun)
 		for _, m := range migrations.BetaFeatureMigrations() {
-			if !slices.Contains(betaFeatureMigrationsToRun, m.ID()) && betaFeatureMigrationsToRun != nil {
+			if !slices.Contains(betaFeatureMigrationsToRun, m.String()) && betaFeatureMigrationsToRun != nil {
 				continue
 			}
 			pkgWithBeta := m.Run(pkg)
 			if !reflect.DeepEqual(pkgWithBeta, pkg) {
 				data = append(data, []string{
-					m.ID(),
+					m.String(),
 					"beta-feature",
 					"entire package",
 				})
@@ -385,32 +385,32 @@ func init() {
 
 	dcm := []string{}
 	for _, m := range migrations.DeprecatedComponentMigrations() {
-		dcm = append(dcm, m.ID())
+		dcm = append(dcm, m.String())
 	}
 	devMigrateCmd.Flags().StringArrayVar(&deprecatedMigrationsToRun, "run", []string{}, fmt.Sprintf("migrations to run (default: all, available: %s)", strings.Join(dcm, ", ")))
 	devMigrateCmd.RegisterFlagCompletionFunc("run", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		ids := []string{}
-		for _, migration := range migrations.DeprecatedComponentMigrations() {
-			if slices.Contains(deprecatedMigrationsToRun, migration.ID()) {
+		for _, m := range migrations.DeprecatedComponentMigrations() {
+			if slices.Contains(deprecatedMigrationsToRun, m.String()) {
 				continue
 			}
-			ids = append(ids, migration.ID())
+			ids = append(ids, m.String())
 		}
 		return ids, cobra.ShellCompDirectiveNoFileComp
 	})
 
 	bfm := []string{}
 	for _, m := range migrations.BetaFeatureMigrations() {
-		bfm = append(bfm, m.ID())
+		bfm = append(bfm, m.String())
 	}
 	devMigrateCmd.Flags().StringArrayVar(&betaFeatureMigrationsToRun, "enable-beta-feature", []string{}, fmt.Sprintf("beta migrations to run and enable (default: all, available: %s)", strings.Join(bfm, ", ")))
 	devMigrateCmd.RegisterFlagCompletionFunc("enable-beta-feature", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		ids := []string{}
-		for _, migration := range migrations.BetaFeatureMigrations() {
-			if slices.Contains(betaFeatureMigrationsToRun, migration.ID()) {
+		for _, m := range migrations.BetaFeatureMigrations() {
+			if slices.Contains(betaFeatureMigrationsToRun, m.String()) {
 				continue
 			}
-			ids = append(ids, migration.ID())
+			ids = append(ids, m.String())
 		}
 		return ids, cobra.ShellCompDirectiveNoFileComp
 	})

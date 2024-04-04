@@ -13,8 +13,8 @@ import (
 // DefaultRequired migrates the package to change components to be required by default
 type DefaultRequired struct{}
 
-// ID returns the ID of the migration
-func (DefaultRequired) ID() string {
+// String returns the name of the migration
+func (DefaultRequired) String() string {
 	return string(types.DefaultRequired)
 }
 

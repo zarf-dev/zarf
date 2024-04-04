@@ -15,8 +15,8 @@ const PluralizeSetVariableID = "pluralize-set-variable"
 // SetVariableToSetVariables migrates setVariable to setVariables
 type SetVariableToSetVariables struct{}
 
-// ID returns the ID of the migration
-func (SetVariableToSetVariables) ID() string {
+// String returns the name of the migration
+func (SetVariableToSetVariables) String() string {
 	return PluralizeSetVariableID
 }
 

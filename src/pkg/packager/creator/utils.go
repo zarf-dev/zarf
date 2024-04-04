@@ -46,7 +46,7 @@ func recordPackageMetadata(pkg *types.ZarfPackage, createOpts types.ZarfCreateOp
 	// Record the migrations that will run on the package.
 	pkg.Build.Migrations = []string{}
 	for _, m := range migrations.DeprecatedComponentMigrations() {
-		pkg.Build.Migrations = append(pkg.Build.Migrations, m.ID())
+		pkg.Build.Migrations = append(pkg.Build.Migrations, m.String())
 	}
 
 	// Record the flavor of Zarf used to build this package (if any).
