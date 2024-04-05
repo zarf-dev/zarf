@@ -36,7 +36,8 @@ func (p *Packager) Generate() (err error) {
 	}
 
 	generatedComponent := types.ZarfComponent{
-		Name: p.cfg.GenerateOpts.Name,
+		Name:     p.cfg.GenerateOpts.Name,
+		Required: helpers.BoolPtr(true),
 		Charts: []types.ZarfChart{
 			{
 				Name:      p.cfg.GenerateOpts.Name,
