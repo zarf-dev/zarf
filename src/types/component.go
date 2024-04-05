@@ -115,7 +115,7 @@ type ZarfChart struct {
 	ReleaseName string              `json:"releaseName,omitempty" jsonschema:"description=The name of the Helm release to create (defaults to the Zarf name of the chart)"`
 	NoWait      bool                `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for chart resources to be ready before continuing"`
 	ValuesFiles []string            `json:"valuesFiles,omitempty" jsonschema:"description=List of local values file paths or remote URLs to include in the package; these will be merged together when deployed"`
-	Variables   []ZarfChartVariable `json:"variables,omitempty" jsonschema:"description=List of variables to set in the Helm chart"`
+	Variables   []ZarfChartVariable `json:"variables,omitempty" jsonschema:"description=[alpha] List of variables to set in the Helm chart"`
 }
 
 // ZarfChartVariable represents a variable that can be set for a Helm chart overrides.
