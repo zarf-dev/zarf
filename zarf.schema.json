@@ -263,7 +263,7 @@
             "$ref": "#/definitions/ZarfChartVariable"
           },
           "type": "array",
-          "description": "List of variables to set in the Helm chart"
+          "description": "[alpha] List of variables to set in the Helm chart"
         }
       },
       "additionalProperties": false,
