@@ -35,7 +35,7 @@ Before beginning this tutorial you will need the following:
   - `git clone https://github.com/defenseunicorns/zarf.git`
 - A kubernetes cluster onto which you can deploy Zarf and Big Bang
 - The latest version of the Zarf `cli`
-  - Follow instructions on https://zarf.dev/install/
+  - Follow instructions on https://docs.zarf.dev/docs/getting-started/#installing-zarf
 - An account on `https://registry1.dso.mil` to retrieve Big Bang images
   - You can register for an account [here](https://login.dso.mil/auth/realms/baby-yoda/protocol/openid-connect/registrations?client_id=account&response_type=code)
 
