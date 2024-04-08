@@ -48,9 +48,12 @@ ${mdx}
 
 ## zarf.yaml
 
-\`\`\`yaml
-${pkg}
-\`\`\`
+import { Code } from '@astrojs/starlight/components';
+
+<Code
+lang="yaml"
+code={\`${pkg}\`}
+/>
 `.trim();
 
     await fs.writeFile(path.join(dstDir, `${dir}.mdx`), final + "\n");
