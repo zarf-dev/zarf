@@ -59,9 +59,9 @@ _<https://www.youtube.com/watch?v=WnOYlFVVKDE>_
 
 ## ✅ Getting Started
 
-To try Zarf out for yourself, visit the ["Try It Now"](https://zarf.dev/install) section on our website.
+Follow the instructions at <https://docs.zarf.dev/getting-started/>.
 
-To learn more about Zarf and its use cases, visit [docs.zarf.dev](https://docs.zarf.dev). From the docs, you can learn more about:
+To discover more about Zarf and explore its features, please visit [docs.zarf.dev](https://docs.zarf.dev/). The documentation offers in-depth insights on:
 
 - [installation](https://docs.zarf.dev/getting-started/install)
 - [packages](https://docs.zarf.dev/ref/packages)
