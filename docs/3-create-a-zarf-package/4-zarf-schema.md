@@ -1194,7 +1194,7 @@ Must be one of:
 
   ## components > charts > variables
 
-**Description:** List of variables to set in the Helm chart
+**Description:** [alpha] List of variables to set in the Helm chart
 
 |          |         |
 | -------- | ------- |
