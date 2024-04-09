@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
@@ -40,7 +41,7 @@ func (p *Packager) Create() (err error) {
 	}
 
 	// Perform early package validation.
-	if err := p.cfg.Pkg.Validate(); err != nil {
+	if err := validate.Run(p.cfg.Pkg); err != nil {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 

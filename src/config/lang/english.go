@@ -359,8 +359,8 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
 	CmdDevDeployErr        = "Failed to dev deploy: %s"
 
-	CmdDevMigrateShort = "[alpha] Migrates the zarf.yaml in a given directory to the latest version of the zarf.yaml format"
-	CmdDevMigrateExample   = `
+	CmdDevMigrateShort   = "[alpha] Migrates the zarf.yaml in a given directory to the latest version of the zarf.yaml format"
+	CmdDevMigrateExample = `
 # Migrate the zarf.yaml in the current directory
 $ zarf dev migrate .
 
@@ -699,6 +699,7 @@ const (
 	PkgValidateTemplateDeprecation        = "Package template %q is using the deprecated syntax ###ZARF_PKG_VAR_%s###. This will be removed in Zarf v1.0.0. Please update to ###ZARF_PKG_TMPL_%s###."
 	PkgValidateMustBeUppercase            = "variable name %q must be all uppercase and contain no special characters except _"
 	PkgValidateErrAction                  = "invalid action: %w"
+	PkgValidateErrActionVariables         = "component %q cannot contain setVariables outside of onDeploy in actions"
 	PkgValidateErrActionCmdWait           = "action %q cannot be both a command and wait action"
 	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
 	PkgValidateErrChart                   = "invalid chart definition: %w"

@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
@@ -22,7 +23,7 @@ var (
 
 // NewClusterSource creates a new cluster source.
 func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
-	if !types.IsLowercaseNumberHyphenNoStartHyphen(pkgOpts.PackageSource) {
+	if !validate.IsLowercaseNumberHyphenNoStartHyphen(pkgOpts.PackageSource) {
 		return nil, fmt.Errorf("invalid package name %q", pkgOpts.PackageSource)
 	}
 	cluster, err := cluster.NewClusterWithWait(cluster.DefaultTimeout)

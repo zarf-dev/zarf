@@ -25,6 +25,9 @@ import (
 const (
 	GithubProject = "defenseunicorns/zarf"
 
+	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
+	ZarfMaxChartNameLength = 40
+
 	ZarfAgentHost = "agent-hook.zarf.svc"
 
 	ZarfConnectLabelName             = "zarf.dev/connect-name"
