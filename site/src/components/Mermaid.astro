@@ -1,4 +1,5 @@
 ---
+// adapted from https://github.com/squidfunk/mkdocs-material/blob/cd086110bfd65eb6dfeed8c3a01f500e9cdb7468/src/templates/assets/javascripts/components/content/mermaid/index.ts#L113
 const { diagram } = Astro.props;
 ---
 
@@ -9,12 +10,24 @@ const { diagram } = Astro.props;
 <script>
   if (document.getElementsByClassName("mermaid").length > 0) {
     const { default: mermaid } = await import("mermaid");
-
     mermaid.initialize({
       startOnLoad: false,
       // @ts-ignore This works, but TS expects a enum for some reason
       theme: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default",
     });
+    for (const node of document.getElementsByClassName("mermaid")) {
+      const text = node.textContent!.trim();
+      const { svg, bindFunctions } = await mermaid.render(
+        "mermaid-svg-" + Math.random().toString(36).substring(7),
+        text
+      );
+
+      const shadow = node.attachShadow({ mode: "closed" });
+      shadow.innerHTML = svg;
+
+      node.replaceWith(shadow);
+      bindFunctions?.(shadow as unknown as Element);
+    }
 
     await mermaid.run({
       querySelector: ".mermaid",
