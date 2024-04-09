@@ -256,6 +256,41 @@
           },
           "type": "array",
           "description": "List of local values file paths or remote URLs to include in the package; these will be merged together when deployed"
+        },
+        "variables": {
+          "items": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/ZarfChartVariable"
+          },
+          "type": "array",
+          "description": "[alpha] List of variables to set in the Helm chart"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
+    "ZarfChartVariable": {
+      "required": [
+        "name",
+        "description",
+        "path"
+      ],
+      "properties": {
+        "name": {
+          "pattern": "^[A-Z0-9_]+$",
+          "type": "string",
+          "description": "The name of the variable"
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of what the variable controls"
+        },
+        "path": {
+          "type": "string",
+          "description": "The path within the Helm chart values where this variable applies"
         }
       },
       "additionalProperties": false,
