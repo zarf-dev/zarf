@@ -74,7 +74,6 @@ var devDeployCmd = &cobra.Command{
 var devMigrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: lang.CmdDevMigrateShort,
-	Long:  lang.CmdDevMigrateLong,
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(_ *cobra.Command, args []string) error {
 		dir := common.SetBaseDirectory(args)
