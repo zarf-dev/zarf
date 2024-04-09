@@ -1,0 +1,34 @@
+{
+  "name": "zarf-docs",
+  "type": "module",
+  "version": "latest",
+  "private": true,
+  "scripts": {
+    "lint": "markdownlint-cli2 . --config ../.markdownlint-cli2.jsonc",
+    "lint:fix": "markdownlint-cli2 --fix . --config ../.markdownlint-cli2.jsonc",
+    "predev": "cp ../zarf.schema.json ./src/assets/zarf.schema.json && node hack/copy-examples.js",
+    "dev": "astro dev",
+    "start": "astro dev",
+    "prebuild": "cp ../zarf.schema.json ./src/assets/zarf.schema.json && node hack/copy-examples.js",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.5.10",
+    "@astrojs/starlight": "^0.21.2",
+    "astro": "^4.5.12",
+    "mermaid": "^10.9.0",
+    "rehype-autolink-headings": "^7.1.0",
+    "sharp": "^0.33.3",
+    "typescript": "^5.4.3"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "^0.12.1",
+    "remark-gemoji": "^8.0.0",
+    "yaml": "^2.4.1"
+  },
+  "engines": {
+    "node": ">=20.11.1"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  // Disable some built-in rules
+  "config": {
+    "first-line-heading": false,
+    "line-length": false,
+    "single-h1": true,
+    "hr-style": false,
+    "no-trailing-punctuation": false,
+    "code-block-style": false,
+    "no-inline-html": false
+  },
+  // Define glob expressions to use (only valid at root)
+  "globs": [
+    "**/*.mdx",
+    "../**/*.md"
+  ],
+  "ignores": [
+    "**/node_modules/**",
+    "src/content/docs/commands/*.md",
+    "site/src/content/docs/commands/*.md"
+  ]
+}
