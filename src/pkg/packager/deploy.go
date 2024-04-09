@@ -572,7 +572,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 // Returns:
 // - A map containing the final set of value overrides for the chart, where keys are the variable names.
 func generateValuesOverrides(chartVariables []types.ZarfChartVariable,
-	setVariableMap map[string]*types.ZarfSetVariable,
+	setVariableMap variables.SetVariableMap,
 	deployOpts types.ZarfDeployOptions,
 	componentName, chartName string) (map[string]any, error) {
 
@@ -620,7 +620,7 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 		// The order of precedence is as follows:
 		// 1. Set Variables and Chart Variables from the ZarfComponent
 		// 2. DeployOpts
-		valuesOverrides, err := generateValuesOverrides(chart.Variables, p.cfg.SetVariableMap, p.cfg.DeployOpts, component.Name, chart.Name)
+		valuesOverrides, err := generateValuesOverrides(chart.Variables, p.variableConfig.SetVariableMap, p.cfg.DeployOpts, component.Name, chart.Name)
 		if err != nil {
 			return installedCharts, err
 		}

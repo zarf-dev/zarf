@@ -33,7 +33,7 @@ func (p *Packager) DevDeploy() error {
 		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
 
-	pc := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
+	pc := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
 
 	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
 		return err
