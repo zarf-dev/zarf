@@ -385,13 +385,14 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 	CmdDevGenerateConfigErr = "Unable to write the config file %s, make sure the file doesn't already exist"
 
-	CmdDevFlagExtractPath        = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
-	CmdDevFlagSet                = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
-	CmdDevFlagRepoChartPath      = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
-	CmdDevFlagGitAccount         = "User or organization name for the git account that the repos are created under."
-	CmdDevFlagKubeVersion        = "Override the default helm template KubeVersion when performing a package chart template"
-	CmdDevFlagFindImagesRegistry = "Override the ###ZARF_REGISTRY### value"
-	CmdDevFlagFindImagesWhy      = "Prints the source manifest for the specified image"
+	CmdDevFlagExtractPath          = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
+	CmdDevFlagSet                  = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
+	CmdDevFlagRepoChartPath        = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
+	CmdDevFlagGitAccount           = "User or organization name for the git account that the repos are created under."
+	CmdDevFlagKubeVersion          = "Override the default helm template KubeVersion when performing a package chart template"
+	CmdDevFlagFindImagesRegistry   = "Override the ###ZARF_REGISTRY### value"
+	CmdDevFlagFindImagesWhy        = "Prints the source manifest for the specified image"
+	CmdDevFlagFindImagesSkipCosign = "Skip searching for cosign artifacts related to discovered images"
 
 	CmdDevLintShort = "Lints the given package for valid schema and recommended practices"
 	CmdDevLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
