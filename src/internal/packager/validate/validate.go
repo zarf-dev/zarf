@@ -146,7 +146,7 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 		return fmt.Errorf(lang.PkgValidateErrComponentLocalOS, component.Name, component.Only.LocalOS, supportedOS)
 	}
 
-	if component.Required != nil && *component.Required {
+	if component.IsRequired(pkg.Metadata.Features) {
 		if component.Default {
 			return fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name)
 		}
