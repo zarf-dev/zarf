@@ -85,6 +85,11 @@ var genCLIDocs = &cobra.Command{
 
 					// Remove the default values from all of the helm commands during the CLI command doc generation
 					if toolCmd.Use == "helm" || toolCmd.Use == "sbom" {
+						toolCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
+							if flag.Value.Type() == "string" {
+								flag.DefValue = ""
+							}
+						})
 						resetStringFlags(toolCmd)
 						for _, subCmd := range toolCmd.Commands() {
 							resetStringFlags(subCmd)

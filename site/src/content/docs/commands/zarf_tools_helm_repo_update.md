@@ -48,9 +48,9 @@ zarf tools helm repo update [REPO1 [REPO2 ...]] [flags]
       --kubeconfig string               path to the kubeconfig file
   -n, --namespace string                namespace scope for this request
       --qps float32                     queries per second used when communicating with the Kubernetes API, not including bursting
-      --registry-config string          path to the registry config file (default "/home/thicc/.config/helm/registry/config.json")
-      --repository-cache string         path to the file containing cached repository indexes (default "/home/thicc/.cache/helm/repository")
-      --repository-config string        path to the file containing repository names and URLs (default "/home/thicc/.config/helm/repositories.yaml")
+      --registry-config string          path to the registry config file
+      --repository-cache string         path to the file containing cached repository indexes
+      --repository-config string        path to the file containing repository names and URLs
 ```
 
 ### SEE ALSO
