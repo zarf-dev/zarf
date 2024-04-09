@@ -16,15 +16,15 @@
     "write-heading-ids": "docusaurus write-heading-ids"
   },
   "dependencies": {
-    "@docusaurus/core": "2.4.3",
-    "@docusaurus/preset-classic": "2.4.3",
-    "@docusaurus/theme-mermaid": "2.4.3",
+    "@docusaurus/core": "3.2.1",
+    "@docusaurus/preset-classic": "3.2.1",
+    "@docusaurus/theme-mermaid": "3.2.1",
     "@easyops-cn/docusaurus-search-local": "^0.40.0",
     "prism-react-renderer": "2.3.1",
     "custom-loaders": "file:plugins/custom-loaders"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "2.4.3"
+    "@docusaurus/module-type-aliases": "3.2.1"
   },
   "browserslist": {
     "production": [
