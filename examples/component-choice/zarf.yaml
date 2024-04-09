@@ -22,6 +22,6 @@ components:
 x-mdx: |
   :::caution
 
-  Component Choice is currently a [Deprecated Feature](/roadmap#alpha). This feature will be removed in Zarf v1.0.0. Please migrate any existing packages you may have that utilize it.  In doing so you may want to consider [Package Flavors](/ref/examples/package-flavors/) as an alternative.
+  Component Choice is currently a [Deprecated Feature](/roadmap#deprecated). This feature will be removed in Zarf v1.0.0. Please migrate any existing packages you may have that utilize it.  In doing so you may want to consider [Package Flavors](/ref/examples/package-flavors/) as an alternative.
 
   :::
