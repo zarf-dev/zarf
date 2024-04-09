@@ -320,7 +320,7 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 			imageOptions := "please select one of the images below based on your platform"
 			imageBaseName := strings.Split(src, "@")[0]
 			for _, manifest := range idx.Manifests {
-				imageOptions = fmt.Sprintf("%s\n %s@%s for platform %v", imageOptions, imageBaseName, manifest.Digest, manifest.Platform)
+				imageOptions = fmt.Sprintf("%s\n %s@%s for platform %s", imageOptions, imageBaseName, manifest.Digest, manifest.Platform)
 			}
 			return nil, false, fmt.Errorf("%w: %s", lang.ErrUnsupportedImageType, imageOptions)
 		}
