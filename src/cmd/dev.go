@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/fatih/color"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/pterm/pterm"
 
@@ -36,7 +37,7 @@ import (
 
 var extractPath string
 var deprecatedMigrationsToRun []string
-var betaFeatureMigrationsToRun []string
+var featureMigrationsToRun []string
 
 var devCmd = &cobra.Command{
 	Use:     "dev",
@@ -93,13 +94,13 @@ var devMigrateCmd = &cobra.Command{
 
 		deprecatedMigrationsToRun = slices.Compact(deprecatedMigrationsToRun)
 		for _, m := range migrations.DeprecatedComponentMigrations() {
-			if !slices.Contains(deprecatedMigrationsToRun, m.String()) && deprecatedMigrationsToRun != nil {
+			if !slices.Contains(deprecatedMigrationsToRun, m.String()) && len(deprecatedMigrationsToRun) != 0 {
 				continue
 			}
 
 			entry := []string{
 				m.String(),
-				"deprecation",
+				message.ColorWrap("deprecated", color.FgYellow),
 				"",
 			}
 
@@ -107,31 +108,27 @@ var devMigrateCmd = &cobra.Command{
 				mc, _ := m.Run(component)
 				mc = m.Clear(mc)
 				if !reflect.DeepEqual(mc, component) {
-					entry[2] = fmt.Sprintf("%s, %s", entry[2], component.Name)
+					entry[2] = fmt.Sprintf(".components.[%d]", idx)
+					data = append(data, entry)
 				}
 				pkg.Components[idx] = mc
 			}
-
-			if entry[2] != "" {
-				entry[2] = strings.TrimSuffix(entry[2], ", ")
-				data = append(data, entry)
-			}
 		}
 
-		betaFeatureMigrationsToRun = slices.Compact(betaFeatureMigrationsToRun)
-		for _, m := range migrations.BetaFeatureMigrations() {
-			if !slices.Contains(betaFeatureMigrationsToRun, m.String()) && betaFeatureMigrationsToRun != nil {
+		featureMigrationsToRun = slices.Compact(featureMigrationsToRun)
+		for _, m := range migrations.FeatureMigrations() {
+			if !slices.Contains(featureMigrationsToRun, m.String()) {
 				continue
 			}
-			pkgWithBeta := m.Run(pkg)
-			if !reflect.DeepEqual(pkgWithBeta, pkg) {
+			pkgWithFeature := m.Run(pkg)
+			if !reflect.DeepEqual(pkgWithFeature, pkg) {
 				data = append(data, []string{
 					m.String(),
-					"beta-feature",
-					"entire package",
+					message.ColorWrap("feature", color.FgMagenta),
+					".",
 				})
 			}
-			pkg = pkgWithBeta
+			pkg = pkgWithFeature
 		}
 
 		after, err := goyaml.MarshalWithOptions(pkg, goyaml.WithComment(cm), goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
@@ -142,7 +139,7 @@ var devMigrateCmd = &cobra.Command{
 		header := []string{
 			"Migration",
 			"Type",
-			"Affected",
+			"Affected Path(s)",
 		}
 
 		if len(data) == 0 {
@@ -383,11 +380,11 @@ func init() {
 	bindDevDeployFlags(v)
 	bindDevGenerateFlags(v)
 
-	dcm := []string{}
+	cm := []string{}
 	for _, m := range migrations.DeprecatedComponentMigrations() {
-		dcm = append(dcm, m.String())
+		cm = append(cm, m.String())
 	}
-	devMigrateCmd.Flags().StringArrayVar(&deprecatedMigrationsToRun, "run", []string{}, fmt.Sprintf("migrations to run (default: all, available: %s)", strings.Join(dcm, ", ")))
+	devMigrateCmd.Flags().StringArrayVar(&deprecatedMigrationsToRun, "run", []string{}, fmt.Sprintf("migrations of deprecated features to run (default: all, available: %s)", strings.Join(cm, ", ")))
 	devMigrateCmd.RegisterFlagCompletionFunc("run", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		ids := []string{}
 		for _, m := range migrations.DeprecatedComponentMigrations() {
@@ -399,15 +396,15 @@ func init() {
 		return ids, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	bfm := []string{}
-	for _, m := range migrations.BetaFeatureMigrations() {
-		bfm = append(bfm, m.String())
+	fm := []string{}
+	for _, m := range migrations.FeatureMigrations() {
+		fm = append(fm, m.String())
 	}
-	devMigrateCmd.Flags().StringArrayVar(&betaFeatureMigrationsToRun, "enable-beta-feature", []string{}, fmt.Sprintf("beta migrations to run and enable (default: all, available: %s)", strings.Join(bfm, ", ")))
-	devMigrateCmd.RegisterFlagCompletionFunc("enable-beta-feature", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+	devMigrateCmd.Flags().StringArrayVar(&featureMigrationsToRun, "enable-feature", []string{}, fmt.Sprintf("feature migrations to run and enable (available: %s)", strings.Join(fm, ", ")))
+	devMigrateCmd.RegisterFlagCompletionFunc("enable-feature", func(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 		ids := []string{}
-		for _, m := range migrations.BetaFeatureMigrations() {
-			if slices.Contains(betaFeatureMigrationsToRun, m.String()) {
+		for _, m := range migrations.FeatureMigrations() {
+			if slices.Contains(featureMigrationsToRun, m.String()) {
 				continue
 			}
 			ids = append(ids, m.String())

@@ -55,18 +55,18 @@ func DeprecatedComponentMigrations() []DeprecatedComponentMigration {
 	}
 }
 
-// BetaFeatureMigration represents a migration that can be run on a package.
+// FeatureMigration represents a feature migration that can be run on a package.
 //
-// Every migration is mapped to a specific beta feature, and the beta feature is added to the package metadata.
-type BetaFeatureMigration interface {
+// Every migration is mapped to a specific feature, and the feature's identifier is added to the package metadata.
+type FeatureMigration interface {
 	fmt.Stringer
-	// Run runs the beta migration on the package
+	// Run runs the feature migration on the package
 	Run(pkg types.ZarfPackage) types.ZarfPackage
 }
 
-// BetaFeatureMigrations returns a list of all current beta feature migrations.
-func BetaFeatureMigrations() []BetaFeatureMigration {
-	return []BetaFeatureMigration{
+// FeatureMigrations returns a list of all current feature migrations.
+func FeatureMigrations() []FeatureMigration {
+	return []FeatureMigration{
 		DefaultRequired{},
 	}
 }

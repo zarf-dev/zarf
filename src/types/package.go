@@ -54,7 +54,7 @@ type ZarfMetadata struct {
 	Source            string        `json:"source,omitempty" jsonschema:"description=Link to package source code when online"`
 	Vendor            string        `json:"vendor,omitempty" jsonschema_description:"Name of the distributing entity, organization or individual."`
 	AggregateChecksum string        `json:"aggregateChecksum,omitempty" jsonschema:"description=Checksum of a checksums.txt file that contains checksums all the layers within the package."`
-	BetaFeatures      []FeatureFlag `json:"betaFeatures,omitempty" jsonschema:"description=List of beta feature flags to enable for this package"`
+	Features          []FeatureFlag `json:"features,omitempty" jsonschema:"description=List of feature flags to enable for this package"`
 }
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.

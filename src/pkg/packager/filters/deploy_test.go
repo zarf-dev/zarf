@@ -167,7 +167,7 @@ func TestDeployFilter_Apply(t *testing.T) {
 		"[default-required] Test when no optional components selected": {
 			pkg: types.ZarfPackage{
 				Metadata: types.ZarfMetadata{
-					BetaFeatures: []types.FeatureFlag{
+					Features: []types.FeatureFlag{
 						types.DefaultRequired,
 					},
 				},

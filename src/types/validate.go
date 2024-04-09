@@ -46,7 +46,7 @@ func (pkg ZarfPackage) Validate() error {
 	}
 
 	allFF := AllFeatureFlags()
-	for _, ff := range pkg.Metadata.BetaFeatures {
+	for _, ff := range pkg.Metadata.Features {
 		if !slices.Contains(allFF, ff) {
 			return fmt.Errorf(lang.PkgValidateErrBetaFeatureNotFound, ff, allFF)
 		}
@@ -107,7 +107,7 @@ func (pkg ZarfPackage) Validate() error {
 			return fmt.Errorf(lang.PkgValidateErrComponentLocalOS, component.Name, component.Only.LocalOS, supportedOS)
 		}
 
-		if component.IsRequired(pkg.Metadata.BetaFeatures) {
+		if component.IsRequired(pkg.Metadata.Features) {
 			if component.Default {
 				return fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name)
 			}
@@ -118,7 +118,7 @@ func (pkg ZarfPackage) Validate() error {
 
 		// progressive enhancement: "required" behavior can only follow "required" key
 		// if using `DefaultRequired` behavior
-		if slices.Contains(pkg.Metadata.BetaFeatures, DefaultRequired) && component.Default && component.DeprecatedGroup == "" {
+		if slices.Contains(pkg.Metadata.Features, DefaultRequired) && component.Default && component.DeprecatedGroup == "" {
 			return fmt.Errorf(lang.PkgValidateErrComponentMissingGroup, component.Name)
 		}
 

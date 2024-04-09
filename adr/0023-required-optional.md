@@ -22,15 +22,15 @@ A few ways to handle this:
 
 3. Do something more significant like combine various condition-based things such as `only`, `optional` (instead of `required`), or `default`.
 
-4. Introduce `betaFeature` flags to allow for certain schema behavior to be configurable to the user.
+4. Introduce `feature` flags to allow for certain schema behavior to be configurable to the user.
 
 ## Decision
 
-Option 4. Introduce `.metadata.betaFeatures` flags to `zarf.yaml` to allow for certain schema behavior to be configurable to the user.
+Option 4. Introduce `.metadata.features` flags to `zarf.yaml` to allow for certain schema behavior to be configurable to the user.
 
-The `betaFeatures` key will be added to the `metadata` section of the package schema. This key will be an array of strings, where each string is the name of a beta feature that can be enabled. To enable a beta feature, the user will need to add the name of the feature to this array and edit the package schema accordingly.
+The `features` key will be added to the `metadata` section of the package schema. This key will be an array of strings, where each string is the name of a beta feature that can be enabled. To enable a feature, the user will need to add the name of the feature to this array and edit the package schema accordingly.
 
-> Such beta feature migrations can also be accomplished using `zarf dev migrate`, see the [Consequences](#consequences) section for more information.
+> Such feature migrations can also be accomplished using `zarf dev migrate`, see the [Consequences](#consequences) section for more information.
 
 e.g.
 
@@ -39,7 +39,7 @@ kind: ZarfInitConfig
 metadata:
   name: init
   description: Used to establish a new Zarf cluster
-+ betaFeatures:
++ features:
 +   - default-required
 
 components:
@@ -61,14 +61,14 @@ The introduction of feature flags will allow Zarf to introduce new features and 
 
 Beta feature flags will become the default behavior of Zarf upon the next major release, and will _not_ be configurable by the user at that time. This will allow for a more consistent experience across all Zarf packages.
 
-There will be a flag added to the `zarf dev migrate` command `--enable-beta-feature <feature-name>` to allow users to enable beta features on a per-package basis. This will allow users to test new features in a controlled environment before they are enabled by default.
+There will be a flag added to the `zarf dev migrate` command `--enable-feature <feature-name>` to allow users to enable features on a per-package basis. This will allow users to test new features in a controlled environment before they are enabled by default.
 
-> Tab autocompletion for the `--enable-beta-feature` flag is enabled for the `zarf dev migrate` command.
+> Tab autocompletion for the `--enable-feature` flag is enabled for the `zarf dev migrate` command.
 
 e.g. (some output omitted for brevity)
 
 ```bash
-$ zarf dev migrate --enable-beta-feature default-required > migrated-zarf.yaml
+$ zarf dev migrate --enable-feature default-required > migrated-zarf.yaml
 
  NOTE  Using config file ...
 
@@ -76,7 +76,7 @@ $ zarf dev migrate --enable-beta-feature default-required > migrated-zarf.yaml
 
 
      Migration        | Type         | Affected
-     default-required | beta-feature | entire package
+     default-required | feature      | .
 
 ```
 
@@ -87,7 +87,7 @@ kind: ZarfInitConfig
  metadata:
    name: init
    description: Used to establish a new Zarf cluster
-+  betaFeatures:
++  features:
 +    - default-required
  components:
    - name: k3s

@@ -22,11 +22,11 @@ func (DefaultRequired) String() string {
 //
 // and cleanly migrates components explicitly marked as required to be nil
 func (DefaultRequired) Run(pkg types.ZarfPackage) types.ZarfPackage {
-	if slices.Contains(pkg.Metadata.BetaFeatures, types.DefaultRequired) {
+	if slices.Contains(pkg.Metadata.Features, types.DefaultRequired) {
 		return pkg
 	}
 
-	pkg.Metadata.BetaFeatures = append(pkg.Metadata.BetaFeatures, types.DefaultRequired)
+	pkg.Metadata.Features = append(pkg.Metadata.Features, types.DefaultRequired)
 
 	for idx, component := range pkg.Components {
 		if component.Required != nil && *component.Required {
