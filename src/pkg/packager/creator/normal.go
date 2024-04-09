@@ -186,6 +186,10 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 			}
 
 			pulled, err = imgConfig.PullAll()
+			if errors.Is(err, lang.ErrUnsupportedImageType) {
+				message.Fatal(err, err.Error())
+			}
+
 			return err
 		}
 

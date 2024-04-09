@@ -134,12 +134,12 @@ func GetCraneOptions(insecure bool, archs ...string) []crane.Option {
 		options = append(options, crane.Insecure, crane.WithTransport(roundTripper))
 	}
 
+	if archs != nil {
+		options = append(options, crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: GetArch(archs...)}))
+	}
+
 	// Add the image platform info
 	options = append(options,
-		crane.WithPlatform(&v1.Platform{
-			OS:           "linux",
-			Architecture: GetArch(archs...),
-		}),
 		crane.WithUserAgent("zarf"),
 		crane.WithNoClobber(true),
 		// TODO: (@WSTARR) this is set to limit pushes to registry pods and reduce the likelihood that crane will get stuck.

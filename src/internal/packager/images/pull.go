@@ -6,12 +6,14 @@ package images
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
@@ -25,6 +27,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
+	ctypes "github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/moby/moby/client"
 )
 
@@ -271,7 +274,7 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		if err != nil {
 			return nil, false, err
 		}
-	} else if _, err := crane.Manifest(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
+	} else if manifest, err := crane.Manifest(src, config.GetCraneOptions(i.Insecure)...); err != nil {
 		// If crane is unable to pull the image, try to load it from the local docker daemon.
 		message.Notef("Falling back to local 'docker' images, failed to find the manifest on a remote: %s", err.Error())
 
@@ -308,6 +311,20 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 			return nil, false, fmt.Errorf("failed to load image from docker daemon: %w", err)
 		}
 	} else {
+		var idx v1.IndexManifest
+		if err := json.Unmarshal(manifest, &idx); err != nil {
+			return nil, false, lang.ErrUnsupportedImageType
+		}
+
+		if strings.Contains(src, "@") && (idx.MediaType == ctypes.OCIImageIndex || idx.MediaType == ctypes.DockerManifestList) {
+			imageOptions := "please select one of the images below based on your platform"
+			imageBaseName := strings.Split(src, "@")[0]
+			for _, manifest := range idx.Manifests {
+				imageOptions = fmt.Sprintf("%s\n %s@%s for platform %v", imageOptions, imageBaseName, manifest.Digest, manifest.Platform)
+			}
+			return nil, false, fmt.Errorf("%w: %s", lang.ErrUnsupportedImageType, imageOptions)
+		}
+
 		// Manifest was found, so use crane to pull the image.
 		if img, err = crane.Pull(src, config.GetCraneOptions(i.Insecure, i.Architectures...)...); err != nil {
 			return nil, false, fmt.Errorf("failed to pull image: %w", err)

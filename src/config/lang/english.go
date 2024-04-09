@@ -477,7 +477,7 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	CmdToolsGetGitPasswdShort       = "[Deprecated] Returns the push user's password for the Git server"
 	CmdToolsGetGitPasswdLong        = "[Deprecated] Reads the password for a user with push access to the configured Git server in Zarf State. Note that this command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
 	CmdToolsGetGitPasswdDeprecation = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
-	CmdToolsYqExample = `
+	CmdToolsYqExample               = `
 # yq defaults to 'eval' command if no command is specified. See "zarf tools yq eval --help" for more examples.
 
 # read the "stuff" node from "myfile.yml"
@@ -505,10 +505,10 @@ cat file2.yml | zarf tools yq ea '.a.b' file1.yml - file3.yml
 `
 	CmdToolsYqEvalExample = `
 # Reads field under the given path for each file
-zarf tools yq e '.a.b' f1.yml f2.yml 
+zarf tools yq e '.a.b' f1.yml f2.yml
 
 # Prints out the file
-zarf tools yq e sample.yaml 
+zarf tools yq e sample.yaml
 
 # Pipe from STDIN
 ## use '-' as a filename to pipe from STDIN
@@ -516,10 +516,10 @@ cat file2.yml | zarf tools yq e '.a.b' file1.yml - file3.yml
 
 # Creates a new yaml document
 ## Note that editing an empty file does not work.
-zarf tools yq e -n '.a.b.c = "cat"' 
+zarf tools yq e -n '.a.b.c = "cat"'
 
 # Update a file inplace
-zarf tools yq e '.a.b = "cool"' -i file.yaml 
+zarf tools yq e '.a.b = "cool"' -i file.yaml
 `
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
 
@@ -727,10 +727,11 @@ const (
 
 // Collection of reusable error messages.
 var (
-	ErrInitNotFound        = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
-	ErrUnableToCheckArch   = errors.New("unable to get the configured cluster's architecture")
-	ErrInterrupt           = errors.New("execution cancelled due to an interrupt")
-	ErrUnableToGetPackages = errors.New("unable to load the Zarf Package data from the cluster")
+	ErrInitNotFound         = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
+	ErrUnableToCheckArch    = errors.New("unable to get the configured cluster's architecture")
+	ErrInterrupt            = errors.New("execution cancelled due to an interrupt")
+	ErrUnableToGetPackages  = errors.New("unable to load the Zarf Package data from the cluster")
+	ErrUnsupportedImageType = errors.New("zarf does not currently support image indexes or docker manifest lists")
 )
 
 // Collection of reusable warn messages.
