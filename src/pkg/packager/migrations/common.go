@@ -25,7 +25,7 @@ type breakingChange struct {
 // LastNonBreakingVersion is the last version that did not have any breaking changes
 //
 // This should be updated when a breaking change is introduced to the Zarf package structure.  See: https://github.com/defenseunicorns/zarf/releases/tag/v0.32.2
-const LastNonBreakingVersion = "v0.32.2"
+const LastNonBreakingVersion = "v0.27.0"
 
 // List of breaking changes to warn the user of.
 var breakingChanges = []breakingChange{
