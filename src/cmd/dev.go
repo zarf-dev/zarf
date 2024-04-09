@@ -75,18 +75,18 @@ var devMigrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: lang.CmdDevMigrateShort,
 	Args:  cobra.MaximumNArgs(1),
-	RunE: func(_ *cobra.Command, args []string) error {
+	Run: func(_ *cobra.Command, args []string) {
 		dir := common.SetBaseDirectory(args)
 		var pkg types.ZarfPackage
 		cm := goyaml.CommentMap{}
 
 		before, err := os.ReadFile(filepath.Join(dir, layout.ZarfYAML))
 		if err != nil {
-			return err
+			message.Fatalf(err, lang.CmdDevMigrateErr, err.Error())
 		}
 
 		if err := goyaml.UnmarshalWithOptions(before, &pkg, goyaml.CommentToMap(cm)); err != nil {
-			return err
+			message.Fatalf(err, lang.CmdDevMigrateErr, err.Error())
 		}
 
 		data := [][]string{}
@@ -132,7 +132,7 @@ var devMigrateCmd = &cobra.Command{
 
 		after, err := goyaml.MarshalWithOptions(pkg, goyaml.WithComment(cm), goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
 		if err != nil {
-			return err
+			message.Fatalf(err, lang.CmdDevMigrateErr, err.Error())
 		}
 
 		header := []string{
@@ -148,8 +148,6 @@ var devMigrateCmd = &cobra.Command{
 			fmt.Println(string(after))
 			message.Table(header, data)
 		}
-
-		return nil
 	},
 }
 

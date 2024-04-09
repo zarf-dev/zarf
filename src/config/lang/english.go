@@ -370,6 +370,8 @@ $ zarf dev migrate --run scripts-to-actions --run pluralize-set-variable .
 # Enable feature flag(s) and run migrations
 $ zarf dev migrate --enable-feature default-required .
 `
+	CmdDevMigrateErr = "Failed to migrate: %s"
+
 	CmdDevGenerateShort   = "[alpha] Creates a zarf.yaml automatically from a given remote (git) Helm chart"
 	CmdDevGenerateExample = "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo"
 
