@@ -14,10 +14,10 @@ require (
 	github.com/anchore/clio v0.0.0-20240307182142-fb5fc4c9db3c
 	github.com/anchore/stereoscope v0.0.1
 	github.com/anchore/syft v0.100.0
-	github.com/defenseunicorns/pkg/helpers v0.0.2
+	github.com/defenseunicorns/pkg/helpers v1.0.0
+	github.com/defenseunicorns/pkg/oci v0.0.1
 	github.com/derailed/k9s v0.31.7
 	github.com/distribution/reference v0.5.0
-	github.com/docker/cli v24.0.9+incompatible
 	github.com/fairwindsops/pluto/v5 v5.18.4
 	github.com/fatih/color v1.16.0
 	github.com/fluxcd/helm-controller/api v0.37.4
@@ -46,7 +46,6 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/crypto v0.21.0
-	golang.org/x/sync v0.6.0
 	golang.org/x/term v0.18.0
 	helm.sh/helm/v3 v3.14.2
 	k8s.io/api v0.29.1
@@ -200,6 +199,7 @@ require (
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
+	github.com/docker/cli v26.0.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker v24.0.9+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.0 // indirect
@@ -259,7 +259,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/gomodule/redigo v1.8.9 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/certificate-transparency-go v1.1.7 // indirect
 	github.com/google/gnostic-models v0.6.9-0.20230804172637-c7be7c783f49 // indirect
@@ -312,7 +311,7 @@ require (
 	github.com/kastenhq/goversion v0.0.0-20230811215019-93b2f8823953 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
-	github.com/klauspost/compress v1.17.2 // indirect
+	github.com/klauspost/compress v1.17.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/knqyf263/go-apk-version v0.0.0-20200609155635-041fdbb8563f // indirect
@@ -473,6 +472,7 @@ require (
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.22.0 // indirect
 	golang.org/x/oauth2 v0.17.0 // indirect
+	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
@@ -25,7 +26,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
