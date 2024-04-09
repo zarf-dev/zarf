@@ -53,4 +53,4 @@ x-mdx: |
 
   It uses a vanilla configuration of ArgoCD with upstream containers.
 
-  If you want to learn more about how Zarf handles `git` repositories, refer to the [components reference](/ref/components/).
+  To learn more about how Zarf handles `git` repositories, see the [Git Repositories section](/ref/components/#git-repositories) of the package components documentation.
