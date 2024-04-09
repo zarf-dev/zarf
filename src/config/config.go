@@ -138,7 +138,6 @@ func GetCraneOptions(insecure bool, archs ...string) []crane.Option {
 		options = append(options, crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: GetArch(archs...)}))
 	}
 
-	// Add the image platform info
 	options = append(options,
 		crane.WithUserAgent("zarf"),
 		crane.WithNoClobber(true),
