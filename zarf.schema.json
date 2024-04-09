@@ -890,12 +890,12 @@
           "type": "string",
           "description": "Checksum of a checksums.txt file that contains checksums all the layers within the package."
         },
-        "betaFeatures": {
+        "features": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "List of beta feature flags to enable for this package"
+          "description": "List of feature flags to enable for this package"
         }
       },
       "additionalProperties": false,
