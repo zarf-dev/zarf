@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 # Directory containing the Go files
 DIRECTORY="$1"
 
