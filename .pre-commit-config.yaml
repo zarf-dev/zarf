@@ -25,7 +25,15 @@ repos:
         files: "src/types/types.go"
         types: [go]
         language: script
-        description: "Checks if there have been changes made to the docs and schema"
+      - id: goimports
+        name: goimports
+        entry: goimports
+        files: .go$
+        args:
+          - -l
+          - -w
+        language: system
+        pass_filenames: true
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.14.0
     hooks:
@@ -38,10 +46,3 @@ repos:
           (?x)^(
             src/test/packages/12-lint/.*
           )$
-  - repo: local
-    hooks:
-      - id: go-fmt
-        name: go fmt
-        entry: go fmt ./...
-        language: system
-        pass_filenames: false
