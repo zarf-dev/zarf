@@ -23,7 +23,7 @@ jobs:
           ref: ${{ github.event.inputs.branchName }}
 
       - name: Install The Latest Release Version of Zarf
-        uses: defenseunicorns/setup-zarf@main
+        uses: defenseunicorns/setup-zarf@f95763914e20e493bb5d45d63e30e17138f981d6 # v1.0.0
 
       - name: "Login to GHCR"
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
