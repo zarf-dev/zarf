@@ -35,3 +35,7 @@ components:
       # The following performs a SHA Git Repo Mirror forcing a fallback to host `git`
       - https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@01a23218923f24194133b5eb11268cf8d73ff1bb
 
+# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
+# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
+x-mdx: |
+  To learn more about how Zarf handles `git` repositories, see the [Git Repositories section](/ref/components/#git-repositories) of the package components documentation.

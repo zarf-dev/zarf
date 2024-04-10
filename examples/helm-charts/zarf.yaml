@@ -16,6 +16,12 @@ components:
         localPath: chart
         valuesFiles:
           - values.yaml
+        # Variables are used to override the default values in the chart
+        # This can be overridden by the user at deployment time with the `--set` flag
+        variables:
+          - name: REPLICA_COUNT
+            description: "Override the number of pod replicas"
+            path: replicaCount
 
       - name: podinfo-oci
         version: 6.4.0
@@ -77,3 +83,8 @@ components:
                 name: cool-release-name-podinfo
                 namespace: podinfo-from-repo
                 condition: available
+
+# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
+# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
+x-mdx: |
+  This example shows the many ways you can deploy Helm Charts with Zarf. To learn more about how `charts` work in Zarf, see the [Helm Charts section](/ref/components/#helm-charts) of the package components documentation.
