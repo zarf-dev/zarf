@@ -1,0 +1,75 @@
+---
+title: Creating a K8s Cluster with Zarf
+sidebar:
+  order: 5
+---
+
+In this tutorial, we will demonstrate how to use Zarf on a fresh Linux machine to deploy a [k3s](https://k3s.io/) cluster through Zarf's `k3s` component.
+
+## System Requirements
+
+- `root` access on a Linux machine
+
+:::note[REQUIRES ROOT]
+
+The 'k3s' component requires root access (not just `sudo`!) when deploying as it will modify your host machine to install the cluster.
+
+:::
+
+## Prerequisites
+
+Before beginning this tutorial you will need the following:
+
+- The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
+- Zarf binary installed on your $PATH: ([Installing Zarf](/getting-started/install/))
+- An init-package built/downloaded: ([init-package Build Instructions](/tutorials/0-creating-a-zarf-package/)) or ([Download Location](https://github.com/defenseunicorns/zarf/releases))
+
+## Creating the Cluster
+
+1. Run the `zarf init` command as `root`.
+
+```sh
+# zarf init
+```
+
+1. Confirm Package Deployment:
+
+- When prompted to deploy the package select `y` for Yes, then hit the `enter` key.
+
+1. Confirm k3s Component Deployment:
+
+- When prompted to deploy the k3s component select `y` for Yes, then hit the `enter` key.
+
+<iframe src="/tutorials/k3s_init.html" height="750px" width="100%"></iframe>
+
+:::tip
+
+You can automatically accept the k3s component and confirm the package using the `--components` and `--confirm` flags.
+
+```sh
+zarf init --components="k3s" --confirm
+```
+
+:::
+
+### Validating the Deployment
+
+After the `zarf init` command is done running, you should see a k3s cluster running and a few `zarf` pods in the `zarf` namespace.
+
+### Accessing the Cluster as a Normal User
+
+By default, the k3s component will only automatically provide cluster access to the root user. To access the cluster as another user, you can run the following to setup the `~/.kube/config` file:
+
+```sh
+# cp /root/.kube/config /home/otheruser/.kube
+# chown otheruser /home/otheruser/.kube/config
+# chgrp otheruser /home/otheruser/.kube/config
+```
+
+## Cleaning Up
+
+The [`zarf destroy`](/commands/zarf_destroy/) command will remove all of the resources, including the k3s cluster, that was created by the initialization command.
+
+```sh
+zarf destroy --confirm
+```

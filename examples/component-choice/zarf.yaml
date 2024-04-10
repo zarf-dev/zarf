@@ -16,3 +16,12 @@ components:
     files:
       - source: blank-file.txt
         target: second-choice-file.txt
+
+# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
+# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
+x-mdx: |
+  :::caution
+
+  Component Choice is currently a [Deprecated Feature](/roadmap#deprecated). This feature will be removed in Zarf v1.0.0. Please migrate any existing packages you may have that utilize it.  In doing so you may want to consider [Package Flavors](/ref/examples/package-flavors/) as an alternative.
+
+  :::

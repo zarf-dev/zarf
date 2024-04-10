@@ -6,7 +6,7 @@
 [![Zarf Documentation Status](https://api.netlify.com/api/v1/badges/fe846ae4-25fb-4274-9968-90782640ee9f/deploy-status)](https://app.netlify.com/sites/zarf-docs/deploys)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/zarf/badge)](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/zarf)
 
-<img align="right" alt="zarf logo" src=".images/zarf-logo.png"  height="256" />
+<img align="right" alt="zarf logo" src="site/src/assets/zarf-logo.png"  height="256" />
 
 [![Zarf Website](https://img.shields.io/badge/web-zarf.dev-6d87c3)](https://zarf.dev/)
 [![Zarf Documentation](https://img.shields.io/badge/docs-docs.zarf.dev-775ba1)](https://docs.zarf.dev/)
@@ -30,69 +30,69 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 ## 📦 Out of the Box Features
 
 - Automate Kubernetes deployments in disconnected environments
-- Automate [Software Bill of Materials (SBOM)](https://docs.zarf.dev/docs/create-a-zarf-package/package-sboms) generation
-- Build and [publish packages as OCI image artifacts](https://docs.zarf.dev/docs/zarf-tutorials/publish-and-deploy)
-- Provide a [web dashboard](https://docs.zarf.dev/docs/deploy-a-zarf-package/view-sboms) for viewing SBOM output
+- Automate [Software Bill of Materials (SBOM)](https://docs.zarf.dev/ref/sboms/) generation
+- Build and [publish packages as OCI image artifacts](https://docs.zarf.dev/tutorials/publish-and-deploy)
+- Provide a [web dashboard](https://docs.zarf.dev/ref/sboms/#the-sbom-viewer) for viewing SBOM output
 - Create and verify package signatures with [cosign](https://github.com/sigstore/cosign)
-- [Publish](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_package_publish), [pull](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_package_pull), and [deploy](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_package_deploy) packages from an [OCI registry](https://opencontainers.org/)
-- Powerful component lifecycle [actions](https://docs.zarf.dev/docs/create-a-zarf-package/component-actions)
+- [Publish](https://docs.zarf.dev/commands/zarf_package_publish), [pull](https://docs.zarf.dev/commands/zarf_package_pull), and [deploy](https://docs.zarf.dev/commands/zarf_package_deploy) packages from an [OCI registry](https://opencontainers.org/)
+- Powerful component lifecycle [actions](https://docs.zarf.dev/ref/actions)
 - Deploy a new cluster while fully disconnected with [K3s](https://k3s.io/) or into any existing cluster using a [kube config](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/)
 - Builtin logging stack with [Loki](https://grafana.com/oss/loki/)
 - Built-in Git server with [Gitea](https://gitea.io/en-us/)
 - Built-in Docker registry
 - Builtin [K9s Dashboard](https://k9scli.io/) for managing a cluster from the terminal
 - [Mutating Webhook](adr/0005-mutating-webhook.md) to automatically update Kubernetes pod's image path and pull secrets as well as [Flux Git Repository](https://fluxcd.io/docs/components/source/gitrepositories/) URLs and secret references
-- Builtin [command to find images](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_dev_find-images) and resources from a Helm chart
-- Tunneling capability to [connect to Kubernetes resources](https://docs.zarf.dev/docs/the-zarf-cli/cli-commands/zarf_connect) without network routing, DNS, TLS or Ingress configuration required
+- Builtin [command to find images](https://docs.zarf.dev/commands/zarf_dev_find-images) and resources from a Helm chart
+- Tunneling capability to [connect to Kubernetes resources](https://docs.zarf.dev/commands/zarf_connect) without network routing, DNS, TLS or Ingress configuration required
 
 ## 🛠️ Configurable Features
 
-- Customizable [variables and package templates](https://docs.zarf.dev/examples/variables/) with defaults and user prompting
-- [Composable packages](https://docs.zarf.dev/docs/create-a-zarf-package/zarf-components#composing-package-components) to include multiple sub-packages/components
+- Customizable [variables and package templates](https://docs.zarf.dev/ref/variables/) with defaults and user prompting
+- [Composable packages](https://docs.zarf.dev/ref/components/#component-imports) to include multiple sub-packages/components
 - Component-level OS/architecture filtering
 
 ## Demo
 
-[![preview](.images/zarf-v0.21-preview.gif)](https://www.youtube.com/watch?v=WnOYlFVVKDE)
+[![preview](./site/src/assets/zarf-v0.21-preview.gif)](https://www.youtube.com/watch?v=WnOYlFVVKDE)
 
 _<https://www.youtube.com/watch?v=WnOYlFVVKDE>_
 
 ## ✅ Getting Started
 
-To try Zarf out for yourself, visit the ["Try It Now"](https://zarf.dev/install) section on our website.
+Follow the instructions at <https://docs.zarf.dev/getting-started/>.
 
-To learn more about Zarf and its use cases, visit [docs.zarf.dev](https://docs.zarf.dev/docs/zarf-overview). From the docs, you can learn more about:
+To discover more about Zarf and explore its features, please visit [docs.zarf.dev](https://docs.zarf.dev/). The documentation offers in-depth insights on:
 
-- [installation](https://docs.zarf.dev/docs/getting-started/#installing-zarf)
-- [using the CLI](https://docs.zarf.dev/docs/the-zarf-cli/),
-- [making packages](https://docs.zarf.dev/docs/create-a-zarf-package/zarf-packages/),
-- [Zarf package schema](https://docs.zarf.dev/docs/create-a-zarf-package/zarf-schema).
+- [installation](https://docs.zarf.dev/getting-started/install)
+- [packages](https://docs.zarf.dev/ref/packages)
+- [components](https://docs.zarf.dev/ref/components)
+- [actions](https://docs.zarf.dev/ref/actions)
+- [variables](https://docs.zarf.dev/ref/variables)
+- [SBOMs](https://docs.zarf.dev/ref/sboms)
+- and more!
 
 Using Zarf in GitHub workflows? Check out the [setup-zarf](https://github.com/defenseunicorns/setup-zarf) action. Install any version of Zarf and its `init` package with zero added dependencies.
 
 ## 🫶 Our Community
 
-Join our community and developers on the [#Zarf slack](https://zarf.dev/slack) hosted on K8s slack. Our active community of developers, users, and contributors are available to answer questions, share examples, and find new ways use Zarf together!
+Join us on the [Kubernetes Slack](https://kubernetes.slack.com/) in the [_#zarf_](https://kubernetes.slack.com/archives/C03B6BJAUJ3) channel or the [_#zarf-dev_](https://kubernetes.slack.com/archives/C03BP9Z3CMA) channel! Our active community of developers, users, and contributors are available to answer questions, share examples, and find new ways use Zarf together!
 
 We are so grateful to our Zarf community for contributing bug fixes and collaborating on new features:
 
 <a href="https://github.com/defenseunicorns/zarf/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=defenseunicorns/zarf" />
+  <img src="https://contrib.rocks/image?repo=defenseunicorns/zarf" alt="Zarf contributors" />
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks).
 
 ## 💻 Contributing
 
-Want to contribute to Zarf?
-Check out our [Contributor Guide](https://docs.zarf.dev/docs/contribute-to-zarf/contributor-guide) to learn more about how to set up your development environment and begin contributing.
+Check out our [Contributor Guide](https://docs.zarf.dev/contribute-to-zarf/contributor-guide) to learn more about how to set up your development environment and begin contributing.
 We also recommend checking out our architectural diagram.
 
-To dive deeper into the tech, you can read the [Nerd Notes](https://docs.zarf.dev/docs/contribute-to-zarf/nerd-notes) in our Docs.
+To dive deeper into the tech, you can read the [Nerd Notes](https://docs.zarf.dev/contribute-to-zarf/nerd-notes) in our Docs.
 
-![Architecture Diagram](./docs/.images/architecture.drawio.svg)
-
-[Source DrawIO](docs/.images/architecture.drawio.svg)
+![Architecture Diagram](./site/public/architecture.drawio.svg)
 
 ## ⭐️ Special Thanks
 

@@ -1,0 +1,81 @@
+---
+title: SBOMs
+sidebar:
+  order: 80
+---
+
+Zarf builds [Software Bill of Materials (SBOM)](https://www.linuxfoundation.org/tools/the-state-of-software-bill-of-materials-sbom-and-cybersecurity-readiness/) into packages to help with the management of software being brought into the air gap.
+
+By default, Zarf will generate SBOMs for all components in a package and include them in the package itself.  This means that wherever you end up moving your package, you will always be able to take a peek inside to see what it contains. If you would like to skip this behavior you can use the [`--skip-sbom`](/commands/zarf_package_create) flag when creating a package.
+
+## Viewing a Package's SBOM
+
+You can quickly view a package's SBOMS in your browser by running `zarf package inspect` with the `-s` or `--sbom` flag. If there are any SBOMs included in the package, Zarf will open the SBOM viewer to the first SBOM in the list.
+
+```bash
+# interactively view the SBOMs of a package
+zarf package inspect <package source> --sbom
+```
+
+![SBOM Prompt](../../../assets/dashboard/SBOM-prompt-example.png)
+
+## Extracting a Package's SBOM
+
+```bash
+# copy the SBOMs of a package to a directory
+zarf package inspect <package source> --sbom-out <output directory>
+ls <output directory>
+```
+
+This will output the raw SBOM viewer `.html` files as well as the Syft `.json` files contained in the package.  Both of these files contain the same information, but the `.html` files are a lightweight representation of the `.json` SBOM files to be more human-readable.  The `.json` files exist to be injected into other tools, such as [Grype](https://github.com/anchore/grype) for vulnerability checking.
+
+The Syft `.json` files can also be converted to other formats with the Syft CLI (which is vendored into Zarf) including `spdx-json` and `cyclonedx-json`.
+
+```bash
+zarf tools sbom convert nginx_1.23.0.json -o cyclonedx-json > nginx_1.23.0.cyclonedx.json
+```
+
+To learn more about the formats Syft supports see [`zarf tools sbom convert`](/commands/zarf_tools_sbom_convert).
+
+## The SBOM Viewer
+
+![SBOM Dashboard](../../../assets/dashboard/SBOM-dashboard.png)
+
+In each package that contains SBOM information, Zarf includes a simple dashboard that allows you to see the contents of each container image or set of component files within your package. You can toggle through the different images or components in the dropdown at the top right of the dashboard as well as export the table contents to a CSV.
+
+![SBOM Comparer](../../../assets/dashboard/SBOM-compare.png)
+
+The SBOM viewer also has an SBOM comparison tool built in that you can access by clicking the "Compare Tool" button next to the image selector.  This view allows you to take the SBOM `.json` data (extracted alongside the `.html` files with `--sbom-out`) and compare that across images or packages (if you extract multiple Zarf packages at a time).  This is useful for seeing what has changed between different image or component versions.
+
+## How SBOMs are Generated
+
+Zarf uses [Syft](https://github.com/anchore/syft) under the hood to provide SBOMs for container `images`, as well as `files` and `dataInjections` included in components.  This is run during the final step of package creation with the SBOM information for a package being placed within an `sboms` directory at the root of the Zarf Package tarball.  Additionally, the SBOMs are created in the Syft `.json` format which is a superset of all of the information that Syft can discover and is used so that we can provide the most information possible even when performing [lossy conversions to formats like `spdx-json` or `cyclonedx-json`](#extracting-a-packages-sbom).
+
+If you were using the Syft CLI to create these SBOM files manually this would be equivalent to the following commands:
+
+```bash
+# For `images` contained within the package
+$ syft packages oci-dir:path/to/yourimage -o json > my-sbom.json
+```
+
+```bash
+# For `files` or `dataInjections` contained within the package
+$ syft packages file:path/to/yourproject/file -o json > my-sbom.json
+```
+
+:::note
+
+Zarf uses the `file:` Syft SBOM scheme even if given a directory as the `files` or `dataInjection` source since this generally provides more information (at the cost of execution speed).
+
+:::
+
+:::tip
+
+Given the Syft CLI is vendored into Zarf you can run these commands with the Zarf binary as well:
+
+```bash
+# Syft is vendored as `zarf tools sbom`
+$ zarf tools sbom packages file:path/to/yourproject/file -o json > my-sbom.json
+```
+
+:::
