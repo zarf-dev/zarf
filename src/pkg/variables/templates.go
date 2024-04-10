@@ -24,9 +24,9 @@ type TextTemplate struct {
 
 // GetAllTemplates gets all of the current templates stored in the VariableConfig
 func (vc *VariableConfig) GetAllTemplates() map[string]*TextTemplate {
-	templateMap := vc.ApplicationTemplates
+	templateMap := vc.applicationTemplates
 
-	for key, variable := range vc.SetVariableMap {
+	for key, variable := range vc.setVariableMap {
 		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
 		templateMap[strings.ToUpper(fmt.Sprintf("###%s_VAR_%s###", vc.templatePrefix, key))] = &TextTemplate{
 			Value:      variable.Value,
@@ -36,7 +36,7 @@ func (vc *VariableConfig) GetAllTemplates() map[string]*TextTemplate {
 		}
 	}
 
-	for _, constant := range vc.Constants {
+	for _, constant := range vc.constants {
 		// Constant keys are always uppercase in the format ###ZARF_CONST_KEY###
 		templateMap[strings.ToUpper(fmt.Sprintf("###%s_CONST_%s###", vc.templatePrefix, constant.Name))] = &TextTemplate{
 			Value:      constant.Value,
@@ -56,6 +56,7 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) error {
 	if err != nil {
 		return err
 	}
+	defer textFile.Close()
 
 	// This regex takes a line and parses the text before and after a discovered template: https://regex101.com/r/ilUxAz/1
 	regexTemplateLine := regexp.MustCompile(fmt.Sprintf("(?P<preTemplate>.*?)(?P<template>%s)(?P<postTemplate>.*)", templateRegex))
@@ -133,8 +134,6 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) error {
 			line = matches[regexTemplateLine.SubexpIndex("postTemplate")]
 		}
 	}
-
-	textFile.Close()
 
 	return os.WriteFile(path, []byte(text), helpers.ReadWriteUser)
 }

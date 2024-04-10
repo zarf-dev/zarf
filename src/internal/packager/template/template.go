@@ -14,6 +14,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/variables"
@@ -26,11 +27,17 @@ const (
 
 // GetZarfVariableConfig gets a variable configuration specific to Zarf
 func GetZarfVariableConfig() *variables.VariableConfig {
+	prompt := func(variable variables.InteractiveVariable) (value string, err error) {
+		if config.CommonOptions.Confirm {
+			return variable.Default, nil
+		}
+		return interactive.PromptVariable(variable)
+	}
+
 	return variables.New(
 		"zarf",
 		deprecatedKeys(),
-		make(variables.SetVariableMap),
-		make([]variables.Constant, 0),
+		prompt,
 		slog.New(message.ZarfHandler{}))
 }
 

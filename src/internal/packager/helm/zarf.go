@@ -92,7 +92,7 @@ func (h *Helm) UpdateZarfAgentValues() error {
 				Namespace:   "zarf",
 				ReleaseName: release.Name,
 			}
-			h.variableConfig.Constants = []variables.Constant{
+			h.variableConfig.SetConstants([]variables.Constant{
 				{
 					Name:  "AGENT_IMAGE",
 					Value: currentAgentImage.Path,
@@ -101,13 +101,14 @@ func (h *Helm) UpdateZarfAgentValues() error {
 					Name:  "AGENT_IMAGE_TAG",
 					Value: currentAgentImage.Tag,
 				},
-			}
-			h.variableConfig.ApplicationTemplates, err = template.GetZarfTemplates("zarf-agent", h.state)
+			})
+			applicationTemplates, err := template.GetZarfTemplates("zarf-agent", h.state)
 			if err != nil {
 				return fmt.Errorf("error setting up the templates: %w", err)
 			}
+			h.variableConfig.SetApplicationTemplates(applicationTemplates)
 
-			err := h.UpdateReleaseValues(map[string]interface{}{})
+			err = h.UpdateReleaseValues(map[string]interface{}{})
 			if err != nil {
 				return fmt.Errorf("error updating the release values: %w", err)
 			}

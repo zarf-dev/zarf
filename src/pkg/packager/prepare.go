@@ -92,7 +92,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 
 	componentDefinition := "\ncomponents:\n"
 
-	if err := p.populatePackageVariables(); err != nil {
+	if err := p.populatePackageVariableConfig(); err != nil {
 		return nil, fmt.Errorf("unable to set the active variables: %w", err)
 	}
 

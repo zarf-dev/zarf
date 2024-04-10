@@ -57,7 +57,7 @@ func (p *Packager) DevDeploy() error {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 
-	if err := p.populatePackageVariables(); err != nil {
+	if err := p.populatePackageVariableConfig(); err != nil {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 

@@ -22,14 +22,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -65,7 +63,7 @@ func (p *Packager) Deploy() (err error) {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
 
-		if err := p.populatePackageVariables(); err != nil {
+		if err := p.populatePackageVariableConfig(); err != nil {
 			return fmt.Errorf("unable to set the active variables: %w", err)
 		}
 	}
@@ -94,7 +92,7 @@ func (p *Packager) Deploy() (err error) {
 		}
 
 		// Set variables and prompt if --confirm is not set
-		if err := p.populatePackageVariables(); err != nil {
+		if err := p.populatePackageVariableConfig(); err != nil {
 			return fmt.Errorf("unable to set the active variables: %w", err)
 		}
 	}
@@ -468,21 +466,17 @@ func (p *Packager) setupState() (err error) {
 }
 
 func (p *Packager) populateComponentAndStateTemplates(componentName string) error {
-	var err error
-	p.variableConfig.ApplicationTemplates, err = template.GetZarfTemplates(componentName, p.state)
-	return err
+	applicationTemplates, err := template.GetZarfTemplates(componentName, p.state)
+	if err != nil {
+		return err
+	}
+	p.variableConfig.SetApplicationTemplates(applicationTemplates)
+	return nil
 }
 
-func (p *Packager) populatePackageVariables() error {
-	promptFunc := interactive.PromptVariable
-	if config.CommonOptions.Confirm {
-		promptFunc = func(variable variables.InteractiveVariable) (value string, err error) { return variable.Default, nil }
-	}
-
-	p.variableConfig.Constants = p.cfg.Pkg.Constants
-
-	return p.variableConfig.SetVariableMap.PopulateSetVariableMap(
-		p.cfg.Pkg.Variables, p.cfg.PkgOpts.SetVariables, promptFunc)
+func (p *Packager) populatePackageVariableConfig() error {
+	p.variableConfig.SetConstants(p.cfg.Pkg.Constants)
+	return p.variableConfig.PopulateVariables(p.cfg.Pkg.Variables, p.cfg.PkgOpts.SetVariables)
 }
 
 // Push all of the components images to the configured container registry.
@@ -563,24 +557,14 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 	return nil
 }
 
-// generateValuesOverrides creates a map containing overrides for chart values based on the given inputs.
-// It prioritizes the overrides in this order:
-// 1. Variables defined in the ZarfComponent, including both Set Variables and Chart Variables.
-// 2. Deployment options specified through DeployOpts.
-// This function is useful for customizing the deployment of a Helm chart by programmatically setting chart values.
-//
-// Returns:
-// - A map containing the final set of value overrides for the chart, where keys are the variable names.
-func generateValuesOverrides(chartVariables []types.ZarfChartVariable,
-	setVariableMap variables.SetVariableMap,
-	deployOpts types.ZarfDeployOptions,
-	componentName, chartName string) (map[string]any, error) {
-
+// generateValuesOverrides creates a map containing overrides for chart values based on the chart and component
+// Specifically it merges DeployOpts.ValuesOverridesMap over Zarf `variables` for a given component/chart combination
+func (p *Packager) generateValuesOverrides(chart types.ZarfChart, componentName string) (map[string]any, error) {
 	valuesOverrides := make(map[string]any)
 	chartOverrides := make(map[string]any)
 
-	for _, variable := range chartVariables {
-		if setVar, ok := setVariableMap[variable.Name]; ok && setVar != nil {
+	for _, variable := range chart.Variables {
+		if setVar, ok := p.variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
 			// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
 			if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
 				return nil, fmt.Errorf("unable to merge path and value into map: %w", err)
@@ -589,15 +573,15 @@ func generateValuesOverrides(chartVariables []types.ZarfChartVariable,
 	}
 
 	// Apply any direct overrides specified in the deployment options for this component and chart
-	if componentOverrides, ok := deployOpts.ValuesOverridesMap[componentName]; ok {
-		if chartSpecificOverrides, ok := componentOverrides[chartName]; ok {
+	if componentOverrides, ok := p.cfg.DeployOpts.ValuesOverridesMap[componentName]; ok {
+		if chartSpecificOverrides, ok := componentOverrides[chart.Name]; ok {
 			valuesOverrides = chartSpecificOverrides
 		}
 	}
 
 	// Merge chartOverrides into valuesOverrides to ensure all overrides are applied.
 	// This corrects the logic to ensure that chartOverrides and valuesOverrides are merged correctly.
-	return helpers.MergeMapRecursive(valuesOverrides, chartOverrides), nil
+	return helpers.MergeMapRecursive(chartOverrides, valuesOverrides), nil
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
@@ -615,12 +599,10 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 				return installedCharts, err
 			}
 		}
-		// this is to get the overrides for the chart from the commandline and
-		// the chart variables set in the ZarfComponent and as well as DeployOpts set from the Library user.
-		// The order of precedence is as follows:
-		// 1. Set Variables and Chart Variables from the ZarfComponent
-		// 2. DeployOpts
-		valuesOverrides, err := generateValuesOverrides(chart.Variables, p.variableConfig.SetVariableMap, p.cfg.DeployOpts, component.Name, chart.Name)
+
+		// Create a Helm values overrides map from set Zarf `variables` and DeployOpts library inputs
+		// Values overrides are to be applied in order of Helm Chart Defaults -> Zarf `valuesFiles` -> Zarf `variables` -> DeployOpts overrides
+		valuesOverrides, err := p.generateValuesOverrides(chart, component.Name)
 		if err != nil {
 			return installedCharts, err
 		}
