@@ -3,7 +3,6 @@
 
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
-KEY ?= ""
 ######################################################################################
 
 # Figure out which Zarf binary we should use based on the operating system we are on
