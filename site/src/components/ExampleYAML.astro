@@ -1,0 +1,26 @@
+---
+import { Code } from "@astrojs/starlight/components";
+
+const { src, component } = Astro.props;
+
+let text = "";
+
+try {
+  text = (await src).default as string;
+} catch (e) {
+  console.error(e);
+}
+
+let content = "";
+
+if (component) {
+  const lines = text.split("\n");
+  const start = lines.indexOf(`  - name: ${component}`);
+  const end = lines.findIndex((line, index) => index > start && line.startsWith("  - name: "));
+  content = lines.slice(start, end).join("\n");
+} else {
+  content = text;
+}
+---
+
+<Code code={content} lang="yaml" />

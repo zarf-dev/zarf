@@ -1,0 +1,62 @@
+---
+title: Initializing a K8s Cluster
+sidebar:
+  order: 1
+---
+
+## Introduction
+
+In this tutorial, we will demonstrate how to initialize Zarf onto a K8s cluster. This is done by running the [`zarf init`](/commands/zarf_init) command, which uses a specialized package called an 'init-package'. More information about this specific package can be found [here](/ref/init-package/).
+
+## Prerequisites
+
+Before beginning this tutorial you will need the following:
+
+- The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([`git clone` Instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
+- Zarf binary installed on your $PATH: ([Installing Zarf](/getting-started/install/))
+- An init-package downloaded: ([init-package Build Instructions](/tutorials/0-creating-a-zarf-package/)) or ([Download Location](https://github.com/defenseunicorns/zarf/releases))
+- A local Kubernetes cluster
+
+## Initializing the Cluster
+
+1. Run the `zarf init` command on your cluster.
+
+    ```sh
+    zarf init
+    ```
+
+1. When prompted to deploy the package select `y` for Yes, then hit the `enter` key.
+
+1. Decline Optional Components
+
+:::note
+
+More information about the init-package and its components can be found [here](/ref/init-package/)
+
+:::
+
+<iframe src="/tutorials/zarf_init.html" height="800px" width="100%"></iframe>
+
+:::note
+You will only be prompted to deploy the k3s component if you are on a Linux machine
+:::
+
+### Validating the Deployment
+
+After the `zarf init` command is done running, you should see a few new `zarf` pods in the Kubernetes cluster.
+
+```bash
+zarf tools monitor
+
+# Note you can press `0` if you want to see all namespaces and CTRL-C to exit
+```
+
+![Zarf Tools Monitor](../../../assets/tutorials/zarf_tools_monitor.png)
+
+## Cleaning Up
+
+The [`zarf destroy`](/commands/zarf_destroy) command will remove all of the resources that were created by the initialization command. This command will leave you with a clean cluster that you can either destroy or use for another tutorial.
+
+```sh
+zarf destroy --confirm
+```
