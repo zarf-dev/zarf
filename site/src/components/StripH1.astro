@@ -1,0 +1,9 @@
+---
+let html = await Astro.slots.render("default");
+
+//  remove any h1 from the html
+const h1 = /<h1[^>]*>.*?<\/h1>/g;
+html = html.replace(h1, "");
+---
+
+<Fragment set:html={html} />
