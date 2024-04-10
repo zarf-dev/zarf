@@ -34,7 +34,11 @@ export default defineConfig({
         src: "./src/assets/zarf-logo-header.svg",
         replacesTitle: true,
       },
-      customCss: ["./src/styles/custom.css"],
+      customCss: [
+        "./src/styles/custom.css",
+        "@fontsource/space-grotesk/400.css",
+        "@fontsource/source-code-pro/400.css",
+      ],
       lastUpdated: true,
       sidebar: [
         {
