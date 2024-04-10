@@ -12,11 +12,11 @@ tableOfContents: false
 
 ### Synopsis
 
-yq is a portable command-line data file processor (https://github.com/mikefarah/yq/)
+yq is a portable command-line data file processor (https://github.com/mikefarah/yq/) 
 See https://mikefarah.gitbook.io/yq/ for detailed documentation and examples.
 
 ## Evaluate Sequence ##
-This command iterates over each yaml document from each given file, applies the
+This command iterates over each yaml document from each given file, applies the 
 expression and prints the result in sequence.
 
 ```
@@ -38,7 +38,7 @@ zarf tools yq e sample.yaml
 cat file2.yml | zarf tools yq e '.a.b' file1.yml - file3.yml
 
 # Creates a new yaml document
-# Note that editing an empty file does not work.
+## Note that editing an empty file does not work.
 zarf tools yq e -n '.a.b.c = "cat"'
 
 # Update a file inplace
@@ -98,3 +98,4 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 ### SEE ALSO
 
 * [zarf tools yq](/commands/zarf_tools_yq/)	 - yq is a lightweight and portable command-line data file processor.
+

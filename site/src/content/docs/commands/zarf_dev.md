@@ -37,6 +37,7 @@ Commands useful for developing packages
 * [zarf dev generate](/commands/zarf_dev_generate/)	 - [alpha] Creates a zarf.yaml automatically from a given remote (git) Helm chart
 * [zarf dev generate-config](/commands/zarf_dev_generate-config/)	 - Generates a config file for Zarf
 * [zarf dev lint](/commands/zarf_dev_lint/)	 - Lints the given package for valid schema and recommended practices
+* [zarf dev migrate](/commands/zarf_dev_migrate/)	 - [alpha] Migrates the zarf.yaml in a given directory to the latest version of the zarf.yaml format
 * [zarf dev patch-git](/commands/zarf_dev_patch-git/)	 - Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:
 This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook.
 * [zarf dev sha256sum](/commands/zarf_dev_sha256sum/)	 - Generates a SHA256SUM for the given file
