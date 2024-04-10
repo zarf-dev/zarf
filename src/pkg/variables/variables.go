@@ -12,6 +12,7 @@ import (
 // SetVariableMap represents a map of variable names to their set values
 type SetVariableMap map[string]*SetVariable
 
+// GetSetVariable gets a variable set within a VariableConfig by its name
 func (vc *VariableConfig) GetSetVariable(name string) (variable *SetVariable, ok bool) {
 	variable, ok = vc.setVariableMap[name]
 	return variable, ok
