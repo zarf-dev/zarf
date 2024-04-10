@@ -446,7 +446,7 @@ func (c *Cluster) getImagesAndNodesForInjection(timeoutDuration time.Duration) (
 
 		// After delay, try running
 		default:
-			pods, err := c.GetPods(corev1.NamespaceAll, &metav1.ListOptions{
+			pods, err := c.GetPods(corev1.NamespaceAll, metav1.ListOptions{
 				FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
 			})
 			if err != nil {

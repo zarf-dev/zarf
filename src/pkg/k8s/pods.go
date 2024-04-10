@@ -79,15 +79,12 @@ func (k *K8s) CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
 
 // GetAllPods returns a list of pods from the cluster for all namespaces.
 func (k *K8s) GetAllPods() (*corev1.PodList, error) {
-	return k.GetPods(corev1.NamespaceAll, nil)
+	return k.GetPods(corev1.NamespaceAll, metav1.ListOptions{})
 }
 
 // GetPods returns a list of pods from the cluster by namespace.
-func (k *K8s) GetPods(namespace string, listOpts *metav1.ListOptions) (*corev1.PodList, error) {
-	if listOpts == nil {
-		listOpts = &metav1.ListOptions{}
-	}
-	return k.Clientset.CoreV1().Pods(namespace).List(context.TODO(), *listOpts)
+func (k *K8s) GetPods(namespace string, listOpts metav1.ListOptions) (*corev1.PodList, error) {
+	return k.Clientset.CoreV1().Pods(namespace).List(context.TODO(), listOpts)
 }
 
 // WaitForPodsAndContainers attempts to find pods matching the given selector and optional inclusion filter
