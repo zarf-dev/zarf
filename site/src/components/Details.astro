@@ -1,0 +1,56 @@
+---
+import { Icon } from "@astrojs/starlight/components";
+
+const { label } = Astro.props;
+const html = await Astro.slots.render("default");
+---
+
+<style>
+  details {
+    padding: 0 1rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+    box-shadow: var(--sl-shadow-sm);
+  }
+
+  details[open] {
+    background-color: var(--sl-color-gray-6);
+    padding-bottom: 1rem;
+  }
+
+  summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0;
+    line-height: 1.4;
+    cursor: pointer;
+    user-select: none;
+    color: var(--sl-color-white);
+    font-weight: 600;
+    font-size: var(--sl-text-lg);
+  }
+  summary::marker,
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .caret {
+    transition: transform 0.2s ease-in-out;
+    flex-shrink: 0;
+  }
+  :global([dir="rtl"]) .caret {
+    transform: rotateZ(180deg);
+  }
+  [open] > summary .caret {
+    transform: rotateZ(90deg);
+  }
+</style>
+
+<details>
+  <summary>
+    {label}
+    <Icon name="right-caret" class="caret" size="1.5rem" />
+  </summary>
+  <Fragment set:html={html} />
+</details>

@@ -114,16 +114,24 @@ type ZarfFile struct {
 
 // ZarfChart defines a helm chart to be deployed.
 type ZarfChart struct {
-	Name        string   `json:"name" jsonschema:"description=The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo"`
-	Version     string   `json:"version,omitempty" jsonschema:"description=The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos')"`
-	URL         string   `json:"url,omitempty" jsonschema:"example=OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo,example=helm chart repo: https://stefanprodan.github.io/podinfo,example=git repo: https://github.com/stefanprodan/podinfo (note the '@' syntax for 'repos' is supported here too)" jsonschema_description:"The URL of the OCI registry, chart repository, or git repo where the helm chart is stored"`
-	RepoName    string   `json:"repoName,omitempty" jsonschema:"description=The name of a chart within a Helm repository (defaults to the Zarf name of the chart)"`
-	GitPath     string   `json:"gitPath,omitempty" jsonschema:"description=(git repo only) The sub directory to the chart within a git repo,example=charts/your-chart"`
-	LocalPath   string   `json:"localPath,omitempty" jsonschema:"description=The path to a local chart's folder or .tgz archive"`
-	Namespace   string   `json:"namespace" jsonschema:"description=The namespace to deploy the chart to"`
-	ReleaseName string   `json:"releaseName,omitempty" jsonschema:"description=The name of the Helm release to create (defaults to the Zarf name of the chart)"`
-	NoWait      bool     `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for chart resources to be ready before continuing"`
-	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"description=List of local values file paths or remote URLs to include in the package; these will be merged together when deployed"`
+	Name        string              `json:"name" jsonschema:"description=The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo"`
+	Version     string              `json:"version,omitempty" jsonschema:"description=The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos')"`
+	URL         string              `json:"url,omitempty" jsonschema:"example=OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo,example=helm chart repo: https://stefanprodan.github.io/podinfo,example=git repo: https://github.com/stefanprodan/podinfo (note the '@' syntax for 'repos' is supported here too)" jsonschema_description:"The URL of the OCI registry, chart repository, or git repo where the helm chart is stored"`
+	RepoName    string              `json:"repoName,omitempty" jsonschema:"description=The name of a chart within a Helm repository (defaults to the Zarf name of the chart)"`
+	GitPath     string              `json:"gitPath,omitempty" jsonschema:"description=(git repo only) The sub directory to the chart within a git repo,example=charts/your-chart"`
+	LocalPath   string              `json:"localPath,omitempty" jsonschema:"description=The path to a local chart's folder or .tgz archive"`
+	Namespace   string              `json:"namespace" jsonschema:"description=The namespace to deploy the chart to"`
+	ReleaseName string              `json:"releaseName,omitempty" jsonschema:"description=The name of the Helm release to create (defaults to the Zarf name of the chart)"`
+	NoWait      bool                `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for chart resources to be ready before continuing"`
+	ValuesFiles []string            `json:"valuesFiles,omitempty" jsonschema:"description=List of local values file paths or remote URLs to include in the package; these will be merged together when deployed"`
+	Variables   []ZarfChartVariable `json:"variables,omitempty" jsonschema:"description=[alpha] List of variables to set in the Helm chart"`
+}
+
+// ZarfChartVariable represents a variable that can be set for a Helm chart overrides.
+type ZarfChartVariable struct {
+	Name        string `json:"name" jsonschema:"description=The name of the variable,pattern=^[A-Z0-9_]+$"`
+	Description string `json:"description" jsonschema:"description=A brief description of what the variable controls"`
+	Path        string `json:"path" jsonschema:"description=The path within the Helm chart values where this variable applies"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
