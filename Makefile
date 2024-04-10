@@ -74,7 +74,7 @@ destroy: ## Run `zarf destroy` on the current cluster
 	rm -fr build
 
 delete-packages: ## Delete all Zarf package tarballs in the project recursively
-	find . -type f -name 'zarf-package-*' -delete
+	find . -type f \( -name 'zarf-package-*' -o -name 'zarf-init-*' \) -delete
 
 # Note: the path to the main.go file is not used due to https://github.com/golang/go/issues/51831#issuecomment-1074188363
 .PHONY: build
@@ -223,7 +223,7 @@ test-cves:
 
 cve-report: ## Create a CVE report for the current project (must `brew install grype` first)
 	@test -d ./build || mkdir ./build
-	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/.templates/grype.tmpl > build/zarf-known-cves.csv
+	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
 
 lint-go: ## Run revive to lint the go code (must `brew install revive` first)
-	revive -config revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...
+	revive -config hack/revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...

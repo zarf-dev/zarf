@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ZARF_BIN=$1
 LINT_SRC_TEST=$2
