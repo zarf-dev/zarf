@@ -79,5 +79,5 @@ func (vc *VariableConfig) CheckVariablePattern(name, pattern string) error {
 		return nil
 	}
 
-	return fmt.Errorf("provided value for variable %q does not match pattern \"%s\"", name, pattern)
+	return fmt.Errorf("provided value for variable %q does not match pattern %q", name, pattern)
 }
