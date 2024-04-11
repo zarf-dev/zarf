@@ -2,17 +2,17 @@
 title: Running Tests
 ---
 
-Currently, we primarily test Zarf through a series of end-to-end tests located in the [e2e directory](https://github.com/defenseunicorns/zarf/tree/main/src/test/e2e) of the project. This directory houses all of the e2e tests that we use to verify Zarf's functionality in an environment that replicates a live setting. The tests in this directory undergo automatic execution against several K8s distros whenever a pull request is created or updated. Through this testing, we ensure that Zarf performs consistently across a range of K8s environments, ensuring its reliability for users.
+Currently, we primarily test Zarf through a series of [end-to-end tests](https://github.com/defenseunicorns/zarf/tree/main/src/test/e2e). These tests are called in the `test-*.yml` workflows and undergo automatic execution against several K8s distros whenever a pull request is created or updated.
 
-In addition, Zarf undergoes a series of unit tests for specific functions where edge cases prove difficult to cover through end-to-end testing alone. You can locate these tests in the [src/pkg directory](https://github.com/defenseunicorns/zarf/tree/main/src/pkg), where they are identified by `*_test.go` files.
+In addition, Zarf implements unit tests for specific functions where edge cases prove difficult to cover through end-to-end testing alone. Unit tests follow standard Go convention and are `*_test.go` files.
 
 ## Dependencies
 
 To run the end-to-end tests locally, you must meet the same prerequisites as those required for building and running Zarf, which include:
 
-1. GoLang >= 1.21.x.
-2. Make.
-3. Any clean K8s cluster (local or remote) or Linux with sudo if you want to use the Zarf-installed K3s cluster.
+1. GoLang >= 1.21.x
+2. Make
+3. Any clean K8s cluster (local or remote) or Linux with sudo if you want to use the Zarf-installed K3s cluster
 
 ### CLI End-to-End Tests
 
