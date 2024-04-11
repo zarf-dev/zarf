@@ -6,3 +6,23 @@
 
 [build.environment]
   NODE_VERSION = "20.11.1"
+
+[[redirects]]
+from = "/docs/the-zarf-cli/cli-commands/*"
+to = "/commands/:splat"
+
+[[redirects]]
+from = "/docs/create-a-zarf-package/*"
+to = "/ref/"
+
+[[redirects]]
+from = "/docs/deploy-a-zarf-package/*"
+to = "/ref/"
+
+[[redirects]]
+from = "/examples/*"
+to = "/ref/examples/:splat"
+
+[[redirects]]
+from = "/docs/*"
+to = "/:splat"
