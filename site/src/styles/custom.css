@@ -7,9 +7,9 @@ Gray- H: 273.019 C: 0.064
 
 /* Dark mode colors. */
 :root {
-  --sl-color-accent-low: #13272e;
-  --sl-color-accent: #1d758d;
-  --sl-color-accent-high: #b5cdd6;
+  --sl-color-accent-low: #13282f;
+  --sl-color-accent: #1d748c;
+  --sl-color-accent-high: #4cb2d6;
   --sl-color-white: #ffffff;
   --sl-color-gray-1: #e8edff;
   --sl-color-gray-2: #bbc1d7;
@@ -22,7 +22,7 @@ Gray- H: 273.019 C: 0.064
 /* Light mode colors. */
 :root[data-theme="light"] {
   --sl-color-accent-low: #c8dbe1;
-  --sl-color-accent: #20778f;
+  --sl-color-accent:  #2684a6;
   --sl-color-accent-high: #153742;
   --sl-color-white: #131727;
   --sl-color-gray-1: #1d2446;
@@ -42,7 +42,6 @@ html {
 
 :root {
   --transition-speed: 0.2s;
-  --sl-font: "Space Grotesk", sans-serif;
   --sl-font-mono: "Source Code Pro", monospace;
 }
 
