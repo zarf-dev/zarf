@@ -176,6 +176,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 		var pulled []images.ImgInfo
 		var err error
 
+		ctx, cancel := context.WithCancel(context.TODO())
 		doPull := func() error {
 			imgConfig := images.ImageConfig{
 				ImagesPath:        dst.Images.Base,
@@ -187,14 +188,14 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 
 			pulled, err = imgConfig.PullAll()
 			if errors.Is(err, lang.ErrUnsupportedImageType) {
-				message.Fatal(err, err.Error())
+				cancel()
 			}
 
 			return err
 		}
 
-		if err := helpers.Retry(doPull, 3, 5*time.Second, message.Warnf); err != nil {
-			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
+		if err := helpers.RetryWithContext(ctx, doPull, 3, 5*time.Second, message.Warnf); err != nil {
+			return fmt.Errorf("unable to pull images: %w", err)
 		}
 
 		for _, imgInfo := range pulled {
