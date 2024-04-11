@@ -4,7 +4,7 @@ metadata:
   name: zarf-connect-logging
   labels:
     # Enables "zarf connect logging"
-    zarf.dev/connect-name: logging    
+    zarf.dev/connect-name: logging
   annotations:
     zarf.dev/connect-description: "Zarf Cluster Logging Service (Grafana)"
 spec:
