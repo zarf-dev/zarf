@@ -8,7 +8,7 @@ import remarkGemoji from "remark-gemoji";
 export default defineConfig({
   redirects: {
     "/docs/[...slug]": "/[...slug]/",
-    "/examples": "/ref/examples/",
+    "/examples/[...slug]": "/ref/examples/",
     "/docs/create-a-zarf-package/[...slug]": "/ref/",
     "/docs/deploy-a-zarf-package/[...slug]": "/ref/",
     "/docs/the-zarf-cli/cli-commands/[...slug]": "/commands/[...slug]/",
