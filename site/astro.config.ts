@@ -8,7 +8,6 @@ import remarkGemoji from "remark-gemoji";
 export default defineConfig({
   redirects: {
     '/docs/zarf-overview': '/',
-    '/examples/': '/ref/examples'
   },
   markdown: {
     remarkPlugins: [remarkGemoji],
