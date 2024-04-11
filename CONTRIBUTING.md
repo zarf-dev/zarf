@@ -47,7 +47,7 @@ Our E2E tests can be found in the `/test` folder and follow the journey of someo
 Our Unit tests can be found as `*_test.go` files inside the package that they are designed to test. These are also run in CI and are designed to test small functions with clear interfaces that would be difficult to test otherwise. As a general rule, we are limiting unit tests to the `src/pkg/*` folder.
 
 All of our tests should be able to be run locally or in CI.
-You can learn more about the testing of Zarf [here](docs/12-contribute-to-zarf/2-testing.md).
+You can learn more about the testing of Zarf [here](https://docs.zarf.dev/contribute/testing).
 
 ## Documentation
 

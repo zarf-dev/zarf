@@ -1,0 +1,301 @@
+---
+title: Components
+sidebar:
+  order: 30
+---
+
+import Properties from "@components/SchemaItemProperties.astro";
+import ExampleYAML from "@components/ExampleYAML.astro";
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+The actual capabilities that Zarf Packages provide are defined within named components.
+
+These components define what dependencies they have along with a declarative definition of how they should be deployed.
+
+Each package can have as many components as the package creator wants but a package isn't anything without at least one component.
+
+{/* 
+## What can be Packaged?
+
+The following types of software can be rolled into a Zarf Package:
+
+- Container images + artifacts: to serve images and OCI artifacts for clusters and other consumers to pull.
+- [Repositories](/ref/examples/git-data/): to serve as the git-based "source of truth" for GitOps application deployments.
+- Pre-compiled binaries: to provide the software necessary to start and support a cluster.
+- [Component actions](/ref/actions/): to support scripts and commands that run at various stages of the Zarf [package create lifecycle](/ref/create/), and [package deploy lifecycle](/ref/deploy/).
+- Helm charts, kustomizations, and other K8s manifests: to apply to a Kubernetes cluster.
+- [Data injections](/ref/examples/kiwix/): to declaratively inject data into running containers in a Kubernetes cluster.
+*/}
+
+## Common Component Fields
+
+There are certain fields that will be common across all component definitions. These fields are:
+
+<Properties
+  item="ZarfComponent"
+  invert
+  include={["files", "charts", "manifests", "images", "repos", "dataInjections", "extensions", "scripts", "actions"]}
+/>
+
+### Actions
+
+<Properties item="ZarfComponent" include={["actions"]} />
+
+Component actions are explored in the [component actions documentation](/ref/actions/).
+
+### Files
+
+<Properties item="ZarfComponent" include={["files"]} />
+
+Files can be:
+
+- Relative paths to either a file or directory (from the `zarf.yaml` file)
+- A remote URL (http/https)
+- Verified using the `shasum` field for data integrity (optional and only available for files)
+
+<Tabs>
+  <TabItem label="Local">
+    <ExampleYAML
+      src={import("../../../../../examples/component-actions/zarf.yaml?raw")}
+      component="on-deploy-with-template-use-of-variable"
+    />
+  </TabItem>
+  <TabItem label="Remote with SHA sums">
+    <ExampleYAML src={import("../../../../../packages/distros/k3s/zarf.yaml?raw")} component="k3s" />
+  </TabItem>
+</Tabs>
+
+### Helm Charts
+
+<Properties item="ZarfComponent" include={["charts"]} />
+
+Charts using the `localPath` key can be:
+
+- Relative paths to either a file or directory (from the `zarf.yaml` file)
+
+Charts using the `url` key can be:
+
+- A remote URL (http/https) to a Git repository
+- A remote URL (oci://) to an OCI registry
+- A remote URL (http/https) to a Helm repository
+
+:::note
+
+To use a private Helm repository the repo must be added to Helm. You can add a repo to Helm with the [`helm repo add`](https://helm.sh/docs/helm/helm_repo_add/) command or the internal [`zarf tools helm repo add`](/commands/zarf_tools_helm_repo_add/) command.
+
+:::
+
+<ExampleYAML src={import("../../../../../examples/helm-charts/zarf.yaml?raw")} component="demo-helm-charts" />
+
+### Kubernetes Manifests
+
+<Properties item="ZarfComponent" include={["manifests"]} />
+
+Manifests under the `files` key can be:
+
+- Relative paths to a Kubernetes manifest file (from the `zarf.yaml` file)
+- Verified using the `url@shasum` syntax for data integrity (optional and only for remote URLs)
+
+Manifests under the `kustomizations` key can be:
+
+- Any valid Kustomize reference both local and [remote](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md) (ie. anything you could do a `kustomize build` on)
+
+:::note
+
+Zarf dynamically generates a Helm Chart from the named manifest entries that you specify. This means that any given set of files under a manifest entry will be applied according to [Helm Chart template and manifest install ordering](https://github.com/helm/helm/blob/main/pkg/releaseutil/manifest_sorter.go#L78) and not necessarily in the order that files are declared. If ordering is important, consider moving each file into its own manifest entry in the `manifests` array.
+
+:::
+
+<Tabs>
+<TabItem label="Local">
+<ExampleYAML src={import('../../../../../examples/manifests/zarf.yaml?raw')} component="httpd-local" />
+</TabItem>
+<TabItem label="Remote">
+<ExampleYAML src={import ('../../../../../examples/manifests/zarf.yaml?raw')} component="nginx-remote" />
+</TabItem>
+<TabItem label="Kustomizations">
+
+:::note
+
+Kustomizations are handled a bit differently than normal manifests in that Zarf will automatically run `kustomize build` on them during `zarf package create`, thus rendering the Kustomization into a single manifest file. This prevents needing to grab any remote Kustomization resources during `zarf package deploy` but also means that any Zarf [`variables`](/ref/variables/) will only apply to the rendered manifest not the `kustomize build` process.
+
+:::
+
+<ExampleYAML src={import('../../../../../examples/manifests/zarf.yaml?raw')} component="podinfo-kustomize" />
+</TabItem>
+</Tabs>
+
+### Container Images
+
+<Properties item="ZarfComponent" include={["images"]} />
+
+Images can either be discovered manually, or automatically by using [`zarf dev find-images`](/commands/zarf_dev_find-images/).
+
+:::note
+
+`zarf dev find-images` will find images for most standard manifests, kustomizations, and helm charts, however some images cannot be discovered this way as some upstream resources (like operators) may bury image definitions inside. For these images, `zarf dev find-images` also offers support for the draft [Helm Improvement Proposal 15](https://github.com/helm/community/blob/main/hips/hip-0015.md) which allows chart creators to annotate any hidden images in their charts along with the [values conditions](https://github.com/helm/community/issues/277) that will cause those images to be used.
+
+:::
+
+<ExampleYAML src={import("../../../../../examples/podinfo-flux/zarf.yaml?raw")} component="flux" />
+
+### Git Repositories
+
+The [`podinfo-flux`](/ref/examples/podinfo-flux/) example showcases a simple GitOps workflow using Flux and Zarf.
+
+<Properties item="ZarfComponent" include={["repos"]} />
+
+<Tabs>
+  <TabItem label="Full Mirror">
+    <ExampleYAML src={import("../../../../../examples/git-data/zarf.yaml?raw")} component="full-repo" />
+  </TabItem>
+  <TabItem label="Specific Tag">
+    <ExampleYAML src={import("../../../../../examples/git-data/zarf.yaml?raw")} component="specific-tag" />
+  </TabItem>
+  <TabItem label="Specific Branch">
+    <ExampleYAML src={import("../../../../../examples/git-data/zarf.yaml?raw")} component="specific-branch" />
+  </TabItem>
+  <TabItem label="Specific Hash">
+    <ExampleYAML src={import("../../../../../examples/git-data/zarf.yaml?raw")} component="specific-hash" />
+  </TabItem>
+</Tabs>
+
+#### Tag-Based Git Repository Clone
+
+Tag-based `git` repository cloning is the **recommended** way of cloning a `git` repository for air-gapped deployments because it wraps meaning around a specific point in git history that can easily be traced back to the online world. Tag-based clones are defined using the `scheme://host/repo@tag` format as seen in the example of the `defenseunicorns/zarf` repository (`https://github.com/defenseunicorns/zarf.git@v0.15.0`).
+
+A tag-based clone only mirrors the tag defined in the Zarf definition. The tag will be applied on the `git` mirror to a zarf-specific branch name based on the tag name (e.g. the tag `v0.1.0` will be pushed to the `zarf-ref-v0.1.0` branch).  This ensures that this tag will be pushed and received properly by the airgap `git` server.
+
+:::note
+
+If you would like to use a protocol scheme other than http/https, you can do so with something like the following: `ssh://git@github.com/defenseunicorns/zarf.git@v0.15.0`.  Using this you can also clone from a local repo to help you manage larger git repositories: `file:///home/zarf/workspace/zarf@v0.15.0`.
+
+:::
+
+:::caution
+
+Because Zarf creates long-lived mirrors of repositories in the air gap, it does not support shallow clones (i.e. `git clone --depth x`).  These may be present in build environments (i.e. [GitLab runners](https://github.com/defenseunicorns/zarf/issues/1698)) and should be avoided.  To learn more about shallow and partial clones see the [GitHub blog on the topic](https://github.blog/2020-12-21-get-up-to-speed-with-partial-clone-and-shallow-clone).
+
+:::
+
+<ExampleYAML src={import("../../../../../examples/git-data/zarf.yaml?raw")} component="specific-tag" />
+
+#### SHA-Based Git Repository Clone
+
+In addition to tags, Zarf also supports cloning and pushing a specific SHA hash from a `git` repository, but this is **not recommended** as it is less readable/understandable than tag cloning.  Commit SHAs are defined using the same `scheme://host/repo@shasum` format as seen in the example of the `defenseunicorns/zarf` repository (`https://github.com/defenseunicorns/zarf.git@c74e2e9626da0400e0a41e78319b3054c53a5d4e`).
+
+A SHA-based clone only mirrors the SHA hash defined in the Zarf definition. The SHA will be applied on the `git` mirror to a zarf-specific branch name based on the SHA hash (e.g. the SHA `c74e2e9626da0400e0a41e78319b3054c53a5d4e` will be pushed to the `zarf-ref-c74e2e9626da0400e0a41e78319b3054c53a5d4e` branch).  This ensures that this tag will be pushed and received properly by the airgap `git` server.
+
+<ExampleYAML src={import("../../../../../examples/git-data/zarf.yaml?raw")} component="specific-hash" />
+
+#### Git Reference-Based Git Repository Clone
+
+If you need even more control, Zarf also supports providing full `git` [refspecs](https://git-scm.com/book/en/v2/Git-Internals-The-Refspec), as seen in `https://repo1.dso.mil/big-bang/bigbang.git@refs/heads/release-1.54.x`.  This allows you to pull specific tags or branches by using this standard.  The branch name used by zarf on deploy will depend on the kind of ref specified, branches will use the upstream branch name, whereas other refs (namely tags) will use the `zarf-ref-*` branch name.
+
+#### Git Repository Full Clone
+
+Full clones are used in this example with the `stefanprodan/podinfo` repository and follow the `scheme://host/repo` format (`https://github.com/stefanprodan/podinfo.git`). Full clones will contain **all** branches and tags in the mirrored repository rather than any one specific tag.
+
+<ExampleYAML src={import("../../../../../examples/git-data/zarf.yaml?raw")} component="full-repo" />
+
+:::tip
+
+Git repositories included in a package can be deployed with `zarf package deploy` if an existing Kubernetes cluster has been initialized with `zarf init`.  If you do not have an initialized cluster but want to push resources to a remote registry anyway, you can use [`zarf package mirror-resources`](/commands/zarf_package_mirror-resources/).
+
+:::
+
+### Data Injections
+
+<Properties item="ZarfComponent" include={["dataInjections"]} />
+
+<ExampleYAML src={import("../../../../../examples/kiwix/zarf.yaml?raw")} component="kiwix-serve" />
+
+### Component Imports
+
+<Properties item="ZarfComponent" include={["import"]} />
+
+The `import` key in Zarf supports two modes to pull in a component:
+
+1. The `path` key allows you to specify a path to a directory that contains the `zarf.yaml` that you wish to import on your local filesystem.  This allows you to have a common component that you can reuse across multiple packages *within* a project (i.e. within one team/codebase).
+
+2. The `url` key allows you to specify an `oci://` URL to a skeleton package that was published to an OCI registry.  Skeleton packages are special package bundles that contain the `zarf.yaml` package definition and any local files referenced by that definition at publish time.  This allows you to version a set of reusable components and import them into multiple packages *across* projects (i.e. across teams/codebases).
+
+:::caution
+
+The import `path` or `url` must be statically defined at create time.  You cannot use [package templates](/ref/variables/#create-time-package-configuration-templates) within them.
+
+:::
+
+<Tabs>
+  <TabItem label="Local Path">
+    <ExampleYAML src={import("../../../../../examples/composable-packages/zarf.yaml?raw")} component="local-games-path" />
+  </TabItem>
+  <TabItem label="OCI URL">
+    <ExampleYAML src={import("../../../../../examples/composable-packages/zarf.yaml?raw")} component="oci-games-url" />
+  </TabItem>
+</Tabs>
+
+:::tip
+
+You can create a skeleton package from a `zarf.yaml` by pointing `zarf package publish` at the directory that contains it:
+
+```bash
+zarf package publish path/containing/package/definition oci://your-registry.com
+```
+
+:::
+
+#### Merge Strategies
+
+When merging components together Zarf will adopt the following strategies depending on the kind of primitive (`files`, `required`, `manifests`) that it is merging:
+
+| Kind                       | Key(s)                                 | Description |
+|----------------------------|----------------------------------------|-------------|
+| Component Behavior         | `name`, `group`, `default`, `required` | These keys control how Zarf interacts with a given component and will *always* take the value of the overriding component |
+| Component Description      | `description` | This key will only take the value of the overriding component if it is not empty |
+| Cosign Key Path            | `cosignKeyPath` | [Deprecated] This key will only take the value of the overriding component if it is not empty |
+| Un'name'd Primitive Arrays | `actions`, `dataInjections`, `files`, `images`, `repos` | These keys will append the overriding component's version of the array to the end of the base component's array |
+| 'name'd Primitive Arrays   | `charts`, `manifests` | For any given element in the overriding component, if the element matches based on `name` then its values will be merged with the base element of the same `name`. If not then the element will be appended to the end of the array |
+
+### Extensions
+
+<Properties item="ZarfComponent" include={["extensions"]} />
+
+<ExampleYAML src={import("../../../../../examples/big-bang/zarf.yaml?raw")} component="bigbang" />
+
+## Deploying Components
+
+When deploying a Zarf package, components are deployed in the order they are defined in the `zarf.yaml`.
+
+The `zarf.yaml` configuration for each component also defines whether the component is 'required' or not. 'Required' components are always deployed without any additional user interaction while optional components are printed out in an interactive prompt asking the user if they wish to the deploy the component.
+
+If you already know which components you want to deploy, you can do so without getting prompted by passing the components as a comma-separated list to the `--components` flag during the deploy command.
+
+```bash
+# deploy all required components, prompting for optional components and variables
+$ zarf package deploy ./path/to/package.tar.zst
+
+# deploy all required components, ignoring optional components and variable prompts
+$ zarf package deploy ./path/to/package.tar.zst --confirm
+
+# deploy optional-component-1 and optional-component-2 components whether they are required or not
+$ zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,optional-component-2
+```
+
+:::tip
+
+You can deploy components in a package using globbing as well. The following would deploy all components regardless of optional status:
+
+```bash
+# deploy optional-component-1 and optional-component-2 components whether they are required or not
+$ zarf package deploy ./path/to/package.tar.zst --components=*
+```
+
+If you have any `default` components in a package definition you can also exclude those from the CLI with a leading dash (`-`) (similar to how you can exclude search terms in a search engine).
+
+```bash
+# deploy optional-component-1 but exclude default-component-1
+$ zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,-default-component-1
+```
+
+:::
