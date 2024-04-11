@@ -8,7 +8,7 @@ Gray- H: 273.019 C: 0.064
 /* Dark mode colors. */
 :root {
   --sl-color-accent-low: #13282f;
-  --sl-color-accent: hsl(196, 100%, 50%);
+  --sl-color-accent: #00bbff;
   --sl-color-accent-high: #70d9ff;
   --sl-color-white: #ffffff;
   --sl-color-gray-1: #e8edff;
@@ -23,7 +23,7 @@ Gray- H: 273.019 C: 0.064
 /* Light mode colors. */
 :root[data-theme="light"] {
   --sl-color-accent-low: #c8dbe1;
-  --sl-color-accent: #2684a6;
+  --sl-color-accent: #007099;
   --sl-color-accent-high: #153742;
   --sl-color-white: #131727;
   --sl-color-gray-1: #1d2446;
