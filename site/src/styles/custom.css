@@ -36,14 +36,10 @@ Gray- H: 273.019 C: 0.064
   --sl-color-black: #ffffff;
 }
 
-html {
-  /* fluid sizing: https://frontaid.io/blog/fluid-typography-2d-css-locks-clamp/ */
-  font-size: clamp(1em, 0.909em + 0.45vmin, 1.25em);
-}
-
 :root {
   --transition-speed: 0.2s;
   --sl-font-mono: "Source Code Pro", monospace;
+  --sl-content-width: 52rem;
 }
 
 /* Heading link styling */
