@@ -12,7 +12,7 @@ injector_arm64_shasum = '663df681deea957b0ec53538eab221691a83de8e95d86b8a29008af
 # The image reference to use for the registry that Zarf deploys into the cluster
 registry_image_domain = ''
 registry_image = 'library/registry'
-registry_image_tag = '3.0.0-alpha.1'
+registry_image_tag = '2.8.3'
 
 # The image reference to use for the optional git-server Zarf deploys
 gitea_image = 'gitea/gitea:1.21.5-rootless'
