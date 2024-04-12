@@ -134,11 +134,11 @@ release-init-package:
 # INTERNAL: used to build an iron bank version of the init package with (eventually) an ib version of the registry image
 ib-init-package:
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
-	ZARF_CONFIG=zarf-config-registry1.toml $(ZARF_BIN) package create -o build/ib -a $(ARCH) --confirm .
+	ZARF_CONFIG=zarf-config-registry1.toml $(ZARF_BIN) package create -o build -a $(ARCH) --confirm .
 
 # INTERNAL: used to build a release version of the ib init package with a specific agent image
 release-ib-init-package:
-	ZARF_CONFIG=zarf-config-registry1.toml $(ZARF_BIN) package create -o build/ib -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
+	ZARF_CONFIG=zarf-config-registry1.toml $(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
 
 # INTERNAL: used to publish the init package
 publish-init-package:
