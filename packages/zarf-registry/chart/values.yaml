@@ -82,3 +82,8 @@ extraEnvVars: []
 ## Additional ENV variables to set
 # - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
 #   value: "/var/lib/example"
+
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}
