@@ -1,0 +1,20 @@
+package:
+  create:
+    set:
+      # The image reference to use for the Zarf agent, defaults to a locally built image
+      agent_image_domain: "ghcr.io/"
+      agent_image: "defenseunicorns/zarf/agent"
+      agent_image_tag: "local"
+
+      # Tag for the zarf injector binary to use
+      injector_version: "2023-08-02"
+      injector_amd64_shasum: "91de0768855ee2606a4f85a92bb480ff3a14ca205fd8d05eb397c18e15aa0247"
+      injector_arm64_shasum: "663df681deea957b0ec53538eab221691a83de8e95d86b8a29008af711934bee"
+
+      # The image reference to use for the registry that Zarf deploys into the cluster
+      registry_image_domain: ""
+      registry_image: "library/registry"
+      registry_image_tag: "3.0.0-alpha.1"
+
+      # The image reference to use for the optional git-server Zarf deploys
+      gitea_image: "gitea/gitea:1.21.10-rootless"
