@@ -4,7 +4,7 @@ podLabels: {}
 
 image:
   repository: registry
-  tag: 2.8.3
+  tag: 3.0.0-alpha.1
 
 service:
   name: registry

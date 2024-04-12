@@ -47,7 +47,7 @@ func TestConnectAndCreds(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/library/registry")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "2.8.3")
+	require.Contains(t, stdOut, "3.0.0-alpha.1")
 	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/grafana/promtail")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Equal(t, stdOut, "")
