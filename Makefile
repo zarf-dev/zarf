@@ -131,21 +131,20 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 release-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
 
+# INTERNAL: used to publish the init package
+publish-init-package:
+	$(ZARF_BIN) package publish build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst oci://$(REPOSITORY_URL)
+	$(ZARF_BIN) package publish . oci://$(REPOSITORY_URL)
+
 # INTERNAL: used to build an iron bank version of the init package and output to a local directory for testing
 build-registry1-init-package:
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	ZARF_CONFIG=$(ZARF_CONFIG) $(ZARF_BIN) package create --output build --confirm .
 
 # INTERNAL: used to build a release version of the ib init package with a specific agent image
-# NOTE: this has a flavor in order to publish with a specific tag
-release-registry1-init-package:
+publish-registry1-init-package:
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	ZARF_CONFIG=$(ZARF_CONFIG) $(ZARF_BIN) package create --output $(REPOSITORY_URL) --confirm .
-
-# INTERNAL: used to publish the init package
-publish-init-package:
-	$(ZARF_BIN) package publish build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst oci://$(REPOSITORY_URL)
-	$(ZARF_BIN) package publish . oci://$(REPOSITORY_URL)
 
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
