@@ -1,5 +1,5 @@
 [package.create]
-flavor = "registry1.alpha.1"
+flavor = "registry1.alpha"
 architecture = "amd64"
 
 [package.create.set]
