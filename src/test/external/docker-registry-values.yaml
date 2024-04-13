@@ -1,9 +1,9 @@
 image:
   repository: registry
-  tag: 3.0.0-alpha.1
+  tag: 2.8.3
   pullPolicy: IfNotPresent
 imagePullSecrets:
-    - name: private-registry
+  - name: private-registry
 
 service:
   name: registry
