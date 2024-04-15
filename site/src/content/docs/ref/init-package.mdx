@@ -104,6 +104,35 @@ The `registry:2` image and the Zarf Agent image can be configured with a custom 
 
 :::
 
+## Making the Registry Highly-Availabile
+
+By default the registry included in the init package creates a ReadWriteOnce PVC and only schedules onto one node at a time. For smaller and simpler deployments this is usually enough. However, for larger deployments or deployments where nodes will be restarted or updated somewhat frequently, you may want to make the registry highly-available.
+
+This can have some prerequisites, such as having a storage class that supports ReadWriteMany, or being in an environment where you can configure the registry to use an s3 compatible backend. Beyond the backing storage, though, you will need to pass some custom configuration to the registry so that it spreads out across all nodes and has the correct amount of replicas. Below is an example configuration using a ReadWriteMany storage class:
+
+```yaml
+package:
+  deploy:
+    set:
+      REGISTRY_PVC_ENABLED: "true"
+      REGISTRY_PVC_ACCESS_MODE: "ReadWriteMany"
+      REGISTRY_HPA_AUTO_SIZE: "true"
+      REGISTRY_AFFINITY_CUSTOM: |
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - docker-registry
+                topologyKey: kubernetes.io/hostname
+```
+
+Of note is the `REGISTRY_AFFINITY_CUSTOM` variable which overrides the default pod anti-affinity and `REGISTRY_HPA_AUTO_SIZE` which will automatically set the min and max replicas for the registry based on the number of nodes in the cluster. If you would prefer to set the min and max replicas manually you can set `REGISTRY_HPA_MIN` and `REGISTRY_HPA_MAX` to the desired values instead.
+
 ## The `zarf init` Lifecycle
 
 The `zarf init` lifecycle is _very similar_ to the [`zarf package deploy` lifecycle](/ref/deploy/) except that it sets up resources specific to Zarf such as the `zarf-state` and performs special actions such as the injection procedure.
@@ -123,7 +152,7 @@ graph TD
     B12(prompt to confirm components)-->B13
     B13(prompt to choose components in '.group')-->B14
 
-    subgraph  
+    subgraph
     B52 --> |Yes|B14(deploy each component)-->B14
     B14 --> B15{Component is \n zarf-seed-registry}
     B15 --> |Yes|B51(initialize zarf-state secret):::action
