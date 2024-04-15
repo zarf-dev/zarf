@@ -24,6 +24,7 @@ import (
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -442,18 +443,15 @@ func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeM
 		case <-ctx.Done():
 			return nil, fmt.Errorf("get image list timed-out: %w", ctx.Err())
 		case <-time.After(2 * time.Second):
-			pods, err := c.GetPods(ctx, corev1.NamespaceAll)
+			pods, err := c.GetPods(ctx, corev1.NamespaceAll, metav1.ListOptions{
+				FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
+			})
 			if err != nil {
-				return nil, fmt.Errorf("unable to get the list of pods in the cluster: %w", err)
+				return nil, fmt.Errorf("unable to get the list of %q pods in the cluster: %w", corev1.PodRunning, err)
 			}
 
 			for _, pod := range pods.Items {
 				nodeName := pod.Spec.NodeName
-
-				// If this pod doesn't have a node (i.e. is Pending), skip it
-				if nodeName == "" {
-					continue
-				}
 
 				nodeDetails, err := c.GetNode(ctx, nodeName)
 				if err != nil {
