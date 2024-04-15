@@ -49,7 +49,7 @@ jobs:
         if: ${{ env.IRON_BANK_ROBOT_USERNAME != '' }}
         env:
           IRON_BANK_ROBOT_USERNAME: ${{ secrets.IRON_BANK_ROBOT_USERNAME }}
-        run: make build-registry1-init-package ZARF_CONFIG=./hack/zarf-config-registry1.toml
+        run: make ib-init-package
 
       # Upload the contents of the build directory for later stages to use
       - name: Upload build artifacts

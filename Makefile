@@ -119,7 +119,7 @@ build-local-agent-image: ## Build the Zarf agent image to be used in a locally b
 	@ if [ "$(ARCH)" = "amd64" ]; then cp build/zarf build/zarf-linux-amd64; fi
 	@ if [ "$(ARCH)" = "arm64" ] && [ ! -s ./build/zarf-arm ]; then $(MAKE) build-cli-linux-arm; fi
 	@ if [ "$(ARCH)" = "arm64" ]; then cp build/zarf-arm build/zarf-linux-arm64; fi
-	docker buildx build --load --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local --tag registry1.dso.mil/ironbank/opensource/defenseunicorns/zarf/zarf-agent:local .
+	docker buildx build --load --platform linux/$(ARCH) --tag ghcr.io/defenseunicorns/zarf/agent:local .
 	@ if [ "$(ARCH)" = "amd64" ]; then rm build/zarf-linux-amd64; fi
 	@ if [ "$(ARCH)" = "arm64" ]; then rm build/zarf-linux-arm64; fi
 
@@ -131,20 +131,18 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 release-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
 
+# INTERNAL: used to build an iron bank version of the init package with an ib version of the registry image
+ib-init-package:
+	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm . \
+		--set REGISTRY_IMAGE_DOMAIN="registry1.dso.mil/" \
+		--set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
+		--set REGISTRY_IMAGE_TAG="2.8.3"
+
 # INTERNAL: used to publish the init package
 publish-init-package:
 	$(ZARF_BIN) package publish build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst oci://$(REPOSITORY_URL)
 	$(ZARF_BIN) package publish . oci://$(REPOSITORY_URL)
-
-# INTERNAL: used to build an iron bank version of the init package and output to a local directory for testing
-build-registry1-init-package:
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
-	ZARF_CONFIG=$(ZARF_CONFIG) $(ZARF_BIN) package create --output build --confirm .
-
-# INTERNAL: used to build a release version of the ib init package with a specific agent image
-publish-registry1-init-package:
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
-	ZARF_CONFIG=$(ZARF_CONFIG) $(ZARF_BIN) package create --output $(REPOSITORY_URL) --confirm .
 
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
