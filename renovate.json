@@ -1,0 +1,87 @@
+{
+  "extends": [
+    "config:base",
+    "group:allNonMajor"
+  ],
+  "ignoreDeps": [
+    "sigs.k8s.io/kustomize/kyaml"
+  ],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/__fixtures__/**"
+  ],
+  "packageRules": [
+    {
+      "matchUpdateTypes": [
+        "patch",
+        "pin",
+        "digest"
+      ],
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "matchDepTypes": [
+        "devDependencies"
+      ],
+      "automerge": true,
+      "automergeType": "pr"
+    }
+  ],
+  "platformAutomerge": true,
+  "platformCommit": true,
+  "postUpdateOptions": [
+    "gomodTidy"
+  ],
+  "regexManagers": [
+    {
+      "fileMatch": [
+        "(^|/)zarf.yaml$"
+      ],
+      "matchStringsStrategy": "recursive",
+      "matchStrings": [
+        "(?m)charts:(.|\\n)*?(^\\s{4}[\\w:]+|\\n$|^\\s{2}-)",
+        "(?m)name:(.|\\n)+?(^\\s{4}[\\w\\-:]+|\\n$|^\\s{2}-)",
+        "(?m)name: (?<depName>.+)(.|\\n)*?url: (?<registryUrl>.+)(.|\\n)*?version: (?<currentValue>.+)"
+      ],
+      "datasourceTemplate": "helm"
+    },
+    {
+      "fileMatch": [
+        "(^|/)zarf.yaml$"
+      ],
+      "matchStringsStrategy": "recursive",
+      "matchStrings": [
+        "(?m)charts:(.|\\n)*?(^\\s{4}[\\w:]+|\\n$|^\\s{2}-)",
+        "(?m)name:(.|\\n)+?(^\\s{4}[\\w\\-:]+|\\n$|^\\s{2}-)",
+        "(?m)name: (?<depName>.+)(.|\\n)*?version: (?<currentValue>.+)(.|\\n)*?url: (?<registryUrl>.+)"
+      ],
+      "datasourceTemplate": "helm"
+    },
+    {
+      "fileMatch": [
+        "(^|/)zarf.yaml$"
+      ],
+      "matchStringsStrategy": "recursive",
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?( registryUrl=(?<registryUrl>.*?))?\\s.*?version: (?<currentValue>.*)\\s"
+      ],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
+    },
+    {
+      "fileMatch": [
+        "(^|/)zarf.yaml$"
+      ],
+      "matchStringsStrategy": "recursive",
+      "matchStrings": [
+        "https:\\/\\/github.com\\/(?<depName>[\\w\\/\\-\\.\\+\\%]+?)\\/releases\\/download\\/(?<currentValue>[\\w\\/\\-\\.\\+\\%]+?)\\/"
+      ],
+      "datasourceTemplate": "github-releases"
+    }
+  ]
+}
