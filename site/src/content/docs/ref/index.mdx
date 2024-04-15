@@ -18,11 +18,15 @@ Zarf provides a suite of commands that streamline the creation, deployment, and 
 
 As previously mentioned, Zarf was specifically designed to facilitate the deployment of applications in disconnected environments with ease. As a result, the most commonly utilized commands are `zarf init`, `zarf package create`, and `zarf package deploy`. Detailed information on all commands can be found in the [CLI Commands](/commands/zarf) section. However, brief descriptions of the most frequently used commands are provided below. It's worth noting that these three commands are closely linked to what we refer to as a "Zarf Package". Additional information on Zarf Packages can be found on the [Zarf Packages](/ref/packages/) page.
 
-### [`zarf init`](/commands/zarf_init)
+### Init
+
+> [`zarf init`](/commands/zarf_init/)
 
 Used to configure a K8s cluster in preparation for the deployment of future Zarf Packages. The init command uses a specialized 'init' package to operate which may be located in your current working directory, the directory where the Zarf CLI binary is located, or downloaded from the GitHub Container Registry during command execution. For further details regarding the init-package, please refer to the [init-package](/ref/init-package/) page.
 
-### [`zarf package create`](/commands/zarf_package_create)
+### Create
+
+> [`zarf package create`](/commands/zarf_package_create/)
 
 Used to create a Zarf package from a `zarf.yaml` package definition.  This command will pull all of the defined resources into a single package you can take with you to a disconnected environment.  You can learn more about creating Zarf packages on the [Create a Zarf Package](/ref/create/) page.
 
@@ -32,7 +36,9 @@ When developing packages you may find the sub-commands under `zarf dev` useful t
 
 :::
 
-### [`zarf package deploy`](/commands/zarf_package_deploy)
+### Deploy
+
+> [`zarf package deploy`](/commands/zarf_package_deploy/)
 
 Used to deploy an already created Zarf package onto a machine, typically to a K8s cluster. Generally, it is presumed that the `zarf init` command has already been executed on the target machine, however, there are a few exceptional cases where this assumption does not apply.  You can learn more about deploying Zarf packages on the [Deploy a Zarf Package](/ref/deploy/) page.
 
