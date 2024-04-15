@@ -59,7 +59,7 @@ variables:
     autoIndent: true
 
   - name: REGISTRY_CREATE_SERVICE_ACCOUNT
-    description: Toggle the ability to use an IRSA for the registry
+    description: Toggle the creation of a new service account for the registry
     default: "false"
 
   - name: REGISTRY_SERVICE_ACCOUNT_NAME
@@ -67,7 +67,7 @@ variables:
     default: ""
 
   - name: REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS
-    description: The ARN of the IAM Role to assume
+    description: Map of annotations to add to the created service account
     default: ""
 
   - name: REGISTRY_AFFINITY_ENABLE
