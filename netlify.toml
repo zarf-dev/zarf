@@ -26,3 +26,7 @@ to = "/ref/examples/:splat"
 [[redirects]]
 from = "/docs/:page"
 to = "/:page"
+
+[[redirects]]
+from = "docs/contribute-to-zarf/contributor-guide"
+to = "contribute/contributor-guide/"
