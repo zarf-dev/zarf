@@ -62,7 +62,7 @@ Zarf `actions` can also pull values from the shell's environment when running a 
 
 :::note
 
-All value `name`s must match the regex pattern `^[A-Z0-9_]+$` [Test](https://regex101.com/r/BG5ZqW/1)).
+All value `name` fields must match the regex pattern `^[A-Z0-9_]+$` ([Test](https://regex101.com/r/BG5ZqW/1)).
 
 :::
 
@@ -115,7 +115,7 @@ When not specifying `default`, `prompt`, `sensitive`, `autoIndent`, or `type` Za
 
 :::
 
-## Constants (`ZARF_CONST_`)
+### Constants (`ZARF_CONST_`)
 
 Constants are static values that are set by the `zarf package create` user and are used as a way to bake in a common value that the package creator would like to template or use within the deployment process.  They are useful to centralize the setting of resources that will be baked into the package (such as image references) to have a singular place to update potentially many downstream references.  They are set with a top-level `constants` key as in the below:
 
@@ -129,7 +129,7 @@ constants:
 <Properties item="Constant" />
 
 
-## Internal Values (`ZARF_`)
+### Internal Values (`ZARF_`)
 
 In addition to user supplied Variables, and Constants, Zarf maintains a list of internal variables that components can use for more advanced functionality (such as within [`init` packages](/ref/init-package)).  Below are the current values Zarf supports:
 
