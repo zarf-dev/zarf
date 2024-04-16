@@ -1,5 +1,5 @@
 ---
-title: Variables
+title: Deployment Values
 sidebar:
   order: 35
 ---
@@ -7,15 +7,13 @@ sidebar:
 import Properties from '@components/SchemaItemProperties.astro';
 import ExampleYAML from "@components/ExampleYAML.astro";
 
-## Deploy-Time Values
-
 Deploy time values are used throughout the Zarf deployment process to template `manifests` and `files`, set Helm values, or provide environment variables for `actions`, and can be provided by the `zarf package deploy` user, the `zarf package create` user, or internally by Zarf itself.
 
-### Using Values
+## Using Values
 
-#### Value Templates
+### Value Templates
 
-Values can be templated into `manifests`, `files`, and `charts` using a unique `###ZARF_<VALUE_KEY>###` syntax anywhere in the file, where `<VALUE_KEY>` is the name of the value along with any associated prefix in ALL_CAPS (see [Setting Values](#setting-values) below).  This allows you to punch through other templating engines to place values precisely where you want in a given file.  You can also control how this templating happens when defining a value such as with the `autoIndent` key on `constants` and `variables`.  A simple value template for a [Zarf Variable](#variables) named `DATABASE_USERNAME` would look like the following:
+Values can be templated into `manifests`, `files`, and `charts` using a unique `###ZARF_<VALUE_KEY>###` syntax anywhere in the file, where `<VALUE_KEY>` is the name of the value along with any associated prefix in ALL_CAPS (see [Setting Values](#setting-values) below).  This allows you to punch through other templating engines to place values precisely where you want in a given file.  You can also control how this templating happens when defining a value such as with the `autoIndent` key on `constants` and `variables`.  A simple value template for a [Zarf Variable](#variables-zarf_var_) named `DATABASE_USERNAME` would look like the following:
 
 ```yaml
 apiVersion: v1
@@ -26,9 +24,9 @@ data:
   username: ###ZARF_VAR_DATABASE_USERNAME###
 ```
 
-#### Helm Chart Mapping
+### Helm Chart Mapping
 
-[Zarf Variables](#variables) can also be mapped directly to Helm values within a given `charts` definition.  This is done with the `variables` key within a chart that allows you to take a Zarf Variable `name` and map it to a YAML path within that chart's Helm values.  This chart's Helm value will then be set to the current value of the Zarf Variable at the time of it's installation.
+[Zarf Variables](#variables-zarf_var_) can also be mapped directly to Helm values within a given `charts` definition.  This is done with the `variables` key within a chart that allows you to take a Zarf Variable `name` and map it to a YAML path within that chart's Helm values.  This chart's Helm value will then be set to the current value of the Zarf Variable at the time of it's installation.
 
 ```yaml
     charts:
@@ -41,7 +39,7 @@ data:
             path: db.username
 ```
 
-<Properties item="ChartVariable" />
+<Properties item="ZarfChartVariable" />
 
 :::caution
 
@@ -49,26 +47,26 @@ Chart `variables` in Zarf are currently an `alpha` feature and may be subject to
 
 :::
 
-#### Environment Variables
+### Environment Variables
 
 Zarf `actions` can also pull values from the shell's environment when running a `cmd`.  These values are available under the same `ZARF_<VALUE_KEY>` as value templates (without any `#`s) and can be used like the below:
 
-```
+```yaml
     actions:
       onDeploy:
         after:
           - cmd: echo ${ZARF_VAR_DATABASE_USERNAME}
 ```
 
-### Setting Values
+## Setting Values
 
 :::note
 
-All `name`s must match the regex pattern `^[A-Z0-9_]+$` [Test](https://regex101.com/r/BG5ZqW/1)).
+All value `name`s must match the regex pattern `^[A-Z0-9_]+$` [Test](https://regex101.com/r/BG5ZqW/1)).
 
 :::
 
-#### Variables (`ZARF_VAR_`)
+### Variables (`ZARF_VAR_`)
 
 Variables are dynamic values that are set by the `zarf package deploy` user or internally by the outputs of `actions`.  When used they are prefixed with `ZARF_VAR`, and they can be defined with the top-level `variables` key for input by the user:
 
@@ -80,7 +78,7 @@ variables:
 
 <Properties item="InteractiveVariable" unwrap={["Variable"]} />
 
-Or within an `actions` `setVariables` key to take the value from the standard output of the given `cmd`:
+Or can be set within an `actions` `setVariables` key to take the value from the standard output of the given `cmd`:
 
 ```yaml
 components:
@@ -104,7 +102,7 @@ Variables with `type: file` will be set to the filepath when used in `actions` (
 :::tip
 
 
-For user-specified variables, you can also specify a `default` value for the variable to take in case a user does not provide one on deploy, and can specify whether to `prompt` the user for the variable when not using the `--confirm` or `--set` flags.
+For user-specified variables, you can specify a `default` value for the variable to take in case a user does not provide one on deploy, and can specify whether to `prompt` the user for the variable when not using the `--confirm` or `--set` flags.
 
 ```yaml
 variables:
@@ -117,7 +115,7 @@ When not specifying `default`, `prompt`, `sensitive`, `autoIndent`, or `type` Za
 
 :::
 
-### Constants (`ZARF_CONST_`)
+## Constants (`ZARF_CONST_`)
 
 Constants are static values that are set by the `zarf package create` user and are used as a way to bake in a common value that the package creator would like to template or use within the deployment process.  They are useful to centralize the setting of resources that will be baked into the package (such as image references) to have a singular place to update potentially many downstream references.  They are set with a top-level `constants` key as in the below:
 
@@ -131,7 +129,7 @@ constants:
 <Properties item="Constant" />
 
 
-### Internal Values (`ZARF_`)
+## Internal Values (`ZARF_`)
 
 In addition to user supplied Variables, and Constants, Zarf maintains a list of internal variables that components can use for more advanced functionality (such as within [`init` packages](./init-package)).  Below are the current values Zarf supports:
 
@@ -149,50 +147,5 @@ In addition to user supplied Variables, and Constants, Zarf maintains a list of 
 :::note
 
 Because files can be deployed without a Kubernetes cluster, some built-in values such as `###ZARF_REGISTRY###` may not be available if no previous component has required access to the cluster. If you need one of these built-in values, a prior component will need to have been called that requires access to the cluster, such as `images`, `repos`, `charts`, `manifests`, or `dataInjections`.
-
-:::
-
-## Create-Time Package Configuration Templates
-
-:::caution
-
-`zarf package create` only templates `###ZARF_PKG_TMP_` entries the `zarf.yaml` file - `zarf package deploy` only templates other `manifests`, `charts`, `files`, and `actions`.
-
-:::
-
-You can also specify package configuration templates at package create time by including `###_ZARF_PKG_TMPL_*###` as the value for any string-type data in your package definition. These values are discovered during `zarf package create` and will always be prompted for if not using `--confirm` or `--set`. An example of this is below:
-
-```yaml
-kind: ZarfPackageConfig
-metadata:
-  name: 'pkg-variables'
-  description: 'Prompt for a variables during package create'
-
-constants:
-  - name: PROMPT_IMAGE
-    value: '###ZARF_PKG_TMPL_PROMPT_ON_CREATE###'
-
-components:
-  - name: zarf-prompt-image
-    required: true
-    images:
-      - '###ZARF_PKG_TMPL_PROMPT_ON_CREATE###'
-```
-
-:::caution
-
-It is not recommended to use package configuration templates for any `sensitive` data as this will be baked into the package as plain text.  Please use a deploy-time variable with the `sensitive` key set instead.
-
-:::
-
-:::note
-
-You can only template string values in this way as non-string values will not marshal/unmarshal properly through the yaml.
-
-:::
-
-:::note
-
-You cannot template the component import path using package configuration templates
 
 :::

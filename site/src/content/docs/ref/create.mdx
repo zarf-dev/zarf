@@ -96,3 +96,50 @@ You do not need to create init configs by yourself unless you want to customize 
 To deploy a Zarf Package, you can use the command `zarf package deploy`. This will prompt you to select from all of the files in your current directory that match the name `zarf-package-*.tar.zst`. Alternatively, if you already know which package you want to deploy, you can simply use the command `zarf package deploy {PACKAGE_NAME}`.
 
 During the deployment process, Zarf will leverage the infrastructure created during the 'init' process (such as the Docker registry and Git server) to push all the necessary images and repositories required for the package to operate.
+
+
+### Package Templates
+
+:::caution
+
+`zarf package create` templates only template `###ZARF_PKG_TMP_` entries the `zarf.yaml` file while `zarf package deploy` only templates other `manifests`, `charts`, `files`, and `actions`.  To learn more about using deployment values see the [Deployment Values](../values) page.
+
+:::
+
+You can also specify `zarf.yaml` package configuration templates at package create time by including `###_ZARF_PKG_TMPL_*###` as the value for any string-type data in your package definition. These values are discovered during `zarf package create` and will always be prompted for if not using `--confirm` or `--set`. An example of this is below:
+
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: 'pkg-variables'
+  description: 'Prompt for a variables during package create'
+
+constants:
+  - name: PROMPT_IMAGE
+    value: '###ZARF_PKG_TMPL_PROMPT_ON_CREATE###'
+
+components:
+  - name: zarf-prompt-image
+    required: true
+    images:
+      - '###ZARF_PKG_TMPL_PROMPT_ON_CREATE###'
+```
+
+:::caution
+
+It is not recommended to use package configuration templates for any `sensitive` data as this will be baked into the package as plain text.  Please use a deploy-time variable with the `sensitive` key set instead.
+
+:::
+
+:::note
+
+You can only template string values in this way as non-string values will not marshal/unmarshal properly through the yaml.
+
+:::
+
+:::note
+
+You cannot template the component import path using package configuration templates
+
+:::
+
