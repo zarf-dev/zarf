@@ -274,7 +274,7 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		if err != nil {
 			return nil, false, err
 		}
-	} else if manifest, err := crane.Manifest(src, config.GetCraneOptions(i.Insecure)...); err != nil {
+	} else if desc, err := crane.Get(src, config.GetCraneOptions(i.Insecure)...); err != nil {
 		// If crane is unable to pull the image, try to load it from the local docker daemon.
 		message.Notef("Falling back to local 'docker' images, failed to find the manifest on a remote: %s", err.Error())
 
@@ -311,14 +311,17 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 			return nil, false, fmt.Errorf("failed to load image from docker daemon: %w", err)
 		}
 	} else {
-		var idx v1.IndexManifest
-		if err := json.Unmarshal(manifest, &idx); err != nil {
-			return nil, false, lang.ErrUnsupportedImageType
-		}
-
-		if strings.Contains(src, "@") && (idx.MediaType == ctypes.OCIImageIndex || idx.MediaType == ctypes.DockerManifestList) {
+		if strings.Contains(src, "@") && (desc.MediaType == ctypes.OCIImageIndex || desc.MediaType == ctypes.DockerManifestList) {
 			imageOptions := "please select one of the images below based on your platform to use instead"
 			imageBaseName := strings.Split(src, "@")[0]
+			manifest, err := crane.Manifest(src, config.GetCraneOptions(i.Insecure)...)
+			if err != nil {
+				return nil, false, fmt.Errorf("%w: %w", lang.ErrUnsupportedImageType, err)
+			}
+			var idx v1.IndexManifest
+			if err := json.Unmarshal(manifest, &idx); err != nil {
+				return nil, false, fmt.Errorf("%w: %w", lang.ErrUnsupportedImageType, err)
+			}
 			for _, manifest := range idx.Manifests {
 				imageOptions = fmt.Sprintf("%s\n %s@%s for platform %s", imageOptions, imageBaseName, manifest.Digest, manifest.Platform)
 			}
