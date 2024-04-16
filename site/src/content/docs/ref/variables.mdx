@@ -7,20 +7,15 @@ sidebar:
 import Properties from '@components/SchemaItemProperties.astro';
 import ExampleYAML from "@components/ExampleYAML.astro";
 
-:::note
+## Deploy-Time Values
 
-Because files can be deployed without a Kubernetes cluster, some built-in variables such as `###ZARF_REGISTRY###` may not be available if no previous component has required access to the cluster. If you need one of these built-in variables, a prior component will need to have been called that requires access to the cluster, such as `images`, `repos`, `manifests`, `dataInjections`.
+Deploy time values are used throughout the Zarf deployment process to template `manifests` and `files`, set Helm values, or provide environment variables for `actions`, and can be provided by the `zarf package deploy` user, the `zarf package create` user, or internally by Zarf itself.
 
-:::
+### Using Values
 
-## Deploy-Time Variables and Constants
+#### Value Templates
 
-To use variables and constants at deploy time you need to have two things:
-
-1. a manifest that you want to template a value in
-2. a defined variable in the `zarf.yaml` file from `variables` or `setVariable`
-
-The manifest should have your desired variable name in ALL CAPS prefixed with `###ZARF_VAR` for `variables` or prefixed with `###ZARF_CONST` for `constants` and suffixed with `###`.  For example in a configmap that took a variable named `DATABASE_USERNAME` you would provide the following:
+Values can be templated into `manifests`, `files`, and `charts` using a unique `###ZARF_<VALUE_KEY>###` syntax anywhere in the file, where `<VALUE_KEY>` is the name of the value along with any associated prefix in ALL_CAPS (see [Setting Values](#setting-values) below).  This allows you to punch through other templating engines to place values precisely where you want in a given file.  You can also control how this templating happens when defining a value such as with the `autoIndent` key on `constants` and `variables`.  A simple value template for a [Zarf Variable](#variables) named `DATABASE_USERNAME` would look like the following:
 
 ```yaml
 apiVersion: v1
@@ -31,7 +26,51 @@ data:
   username: ###ZARF_VAR_DATABASE_USERNAME###
 ```
 
-In the `zarf.yaml`, you would need to define the variable in the `variables` section or as output from an action with `setVariable` with the same `name` as above. Or for a constant you would use the `constants` section.  For the same example as above, you would have the following for a variable defined by the deploy user:
+#### Helm Chart Mapping
+
+[Zarf Variables](#variables) can also be mapped directly to Helm values within a given `charts` definition.  This is done with the `variables` key within a chart that allows you to take a Zarf Variable `name` and map it to a YAML path within that chart's Helm values.  This chart's Helm value will then be set to the current value of the Zarf Variable at the time of it's installation.
+
+```yaml
+    charts:
+      - name: wordpress
+        version: 16.0.4
+        namespace: wordpress
+        localPath: chart
+        variables:
+          - name: DATABASE_USERNAME
+            path: db.username
+```
+
+<Properties item="ChartVariable" />
+
+:::caution
+
+Chart `variables` in Zarf are currently an `alpha` feature and may be subject to change in later versions of Zarf.
+
+:::
+
+#### Environment Variables
+
+Zarf `actions` can also pull values from the shell's environment when running a `cmd`.  These values are available under the same `ZARF_<VALUE_KEY>` as value templates (without any `#`s) and can be used like the below:
+
+```
+    actions:
+      onDeploy:
+        after:
+          - cmd: echo ${ZARF_VAR_DATABASE_USERNAME}
+```
+
+### Setting Values
+
+:::note
+
+All `name`s must match the regex pattern `^[A-Z0-9_]+$` [Test](https://regex101.com/r/BG5ZqW/1)).
+
+:::
+
+#### Variables (`ZARF_VAR_`)
+
+Variables are dynamic values that are set by the `zarf package deploy` user or internally by the outputs of `actions`.  When used they are prefixed with `ZARF_VAR`, and they can be defined with the top-level `variables` key for input by the user:
 
 ```yaml
 variables:
@@ -39,7 +78,9 @@ variables:
   description: 'The username for the database'
 ```
 
-And the following for a variable defined as an output from an action:
+<Properties item="InteractiveVariable" unwrap={["Variable"]} />
+
+Or within an `actions` `setVariables` key to take the value from the standard output of the given `cmd`:
 
 ```yaml
 components:
@@ -52,37 +93,16 @@ components:
               - name: DATABASE_USERNAME
 ```
 
-Zarf `variables` can also have additional fields that describe how Zarf will handle them which are described below:
-
-<Properties item="InteractiveVariable" unwrap={["Variable"]} />
+<Properties item="Variable" />
 
 :::note
 
-Variables with `type: file` will be set to the filepath in `actions` due to constraints on the size of environment variables in the shell.  This also allows for additional processing of the file by its filename.
-
-:::
-
-:::note
-
-The fields `default`, `description` and `prompt` are not available on `setVariables` since they always take the standard output of an action command and will not be interacted with directly by a deploy user.
-
-:::
-
-Zarf `constants` are similar but have fewer options as they are static by the time `zarf package deploy` is run:
-
-<Properties item="Constant" />
-
-:::note
-
-All names must match the regex pattern `^[A-Z0-9_]+$` [Test](https://regex101.com/r/BG5ZqW/1)).
+Variables with `type: file` will be set to the filepath when used in `actions` (see [Environment Variables](#environment-variables) above) due to constraints on the size of environment variables in the shell.  This also allows for additional processing of the file by its filename.
 
 :::
 
 :::tip
 
-When not specifying `default`, `prompt`, `sensitive`, `autoIndent`, or `type` Zarf will default to `default: ""`, `prompt: false`, `sensitive: false`, `autoIndent: false`, and `type: "raw"`
-
-:::
 
 For user-specified variables, you can also specify a `default` value for the variable to take in case a user does not provide one on deploy, and can specify whether to `prompt` the user for the variable when not using the `--confirm` or `--set` flags.
 
@@ -93,27 +113,52 @@ variables:
   prompt: true
 ```
 
-:::note
-
-Variables that do not have a default, are not `--set` and are not prompted for during deploy will be replaced with an empty string in manifests/charts/files
+When not specifying `default`, `prompt`, `sensitive`, `autoIndent`, or `type` Zarf will default to `default: ""`, `prompt: false`, `sensitive: false`, `autoIndent: false`, and `type: "raw"`
 
 :::
 
-For constants, you must specify the value they will use at package create. These values cannot be overridden with `--set` during `zarf package deploy`, but you can use package template variables (described below) to variablize them during `zarf package create`.
+### Constants (`ZARF_CONST_`)
+
+Constants are static values that are set by the `zarf package create` user and are used as a way to bake in a common value that the package creator would like to template or use within the deployment process.  They are useful to centralize the setting of resources that will be baked into the package (such as image references) to have a singular place to update potentially many downstream references.  They are set with a top-level `constants` key as in the below:
 
 ```yaml
 constants:
-  name: DATABASE_TABLE
-  value: 'users'
+  name: DATABASE_USERNAME
+  description: 'The username for the database'
+  value: 'postgres'
 ```
+
+<Properties item="Constant" />
+
+
+### Internal Values (`ZARF_`)
+
+In addition to user supplied Variables, and Constants, Zarf maintains a list of internal variables that components can use for more advanced functionality (such as within [`init` packages](./init-package)).  Below are the current values Zarf supports:
+
+- `STORAGE_CLASS`: Storage class specified for persistent storage within the Kubernetes cluster (maps to `--storage-class` on `zarf init`)
+- `REGISTRY`: Address of the registry server used during `zarf init` (maps to `--registry-url` on `zarf init`)
+- `NODEPORT`: Nodeport used for a registry internal to the cluster (maps to `--nodeport` on `zarf init`)
+- `REGISTRY_AUTH_PUSH`: Password for pushing images to the registry (maps to `--registry-push-password` on `zarf init`)
+- `REGISTRY_AUTH_PULL`: Password for pulling images from the registry (maps to `--registry-pull-password` on `zarf init`)
+- `GIT_PUSH`: Username utilized for pushing changes to the Git server (maps to `--git-push-username` on `zarf init`)
+- `GIT_AUTH_PUSH`: Password required for pushing changes to the Git server (maps to `--git-push-password` on `zarf init`)
+- `GIT_PULL`: Username employed for pulling changes from the Git server (maps to `--git-pull-username` on `zarf init`)
+- `GIT_AUTH_PULL`: Password required for pulling changes from the Git server (maps to `--git-pull-password` on `zarf init`)
+- `DATA_INJECTION_MARKER`: The marker used within a `dataInjection` target Pod `spec` that Zarf uses to track a data injection
 
 :::note
 
-`zarf package create` only templates the `zarf.yaml` file, and `zarf package deploy` only templates other manifests, charts and files
+Because files can be deployed without a Kubernetes cluster, some built-in values such as `###ZARF_REGISTRY###` may not be available if no previous component has required access to the cluster. If you need one of these built-in values, a prior component will need to have been called that requires access to the cluster, such as `images`, `repos`, `charts`, `manifests`, or `dataInjections`.
 
 :::
 
 ## Create-Time Package Configuration Templates
+
+:::caution
+
+`zarf package create` only templates `###ZARF_PKG_TMP_` entries the `zarf.yaml` file - `zarf package deploy` only templates other `manifests`, `charts`, `files`, and `actions`.
+
+:::
 
 You can also specify package configuration templates at package create time by including `###_ZARF_PKG_TMPL_*###` as the value for any string-type data in your package definition. These values are discovered during `zarf package create` and will always be prompted for if not using `--confirm` or `--set`. An example of this is below:
 
