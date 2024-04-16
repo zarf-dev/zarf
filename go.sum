@@ -599,6 +599,10 @@ github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240411133953-c27224059905 h1:x
 github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240411133953-c27224059905/go.mod h1:F4S5VZLDrlNWQKklzv4v9tFWjjZNhxJ1gT79j4XiLwk=
 github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240411154501-d8e8145af112 h1:Z6MQCjpKBA1CQfr3XqaRQsjXt+LYtNzfT4Adm53mfyE=
 github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240411154501-d8e8145af112/go.mod h1:F4S5VZLDrlNWQKklzv4v9tFWjjZNhxJ1gT79j4XiLwk=
+github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240416120542-1f7cefc0731b h1:0GwCv4pz9ncqXW/gDpGeKalXRVZwXmarPubett6GbwU=
+github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240416120542-1f7cefc0731b/go.mod h1:F4S5VZLDrlNWQKklzv4v9tFWjjZNhxJ1gT79j4XiLwk=
+github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240416125436-7c54d5ed05a0 h1:7Pzb4Y6f+GCeCVrgeMW/jD3X7qSGrxdQWeoyfskc4AU=
+github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240416125436-7c54d5ed05a0/go.mod h1:F4S5VZLDrlNWQKklzv4v9tFWjjZNhxJ1gT79j4XiLwk=
 github.com/defenseunicorns/pkg/oci v0.0.1 h1:EFRp3NeiwzhOWKpQ6mAxi0l9chnrAvDcIgjMr0o0fkM=
 github.com/defenseunicorns/pkg/oci v0.0.1/go.mod h1:zVBgRjckEAhfdvbnQrnfOP/3M/GYJkIgWtJtY7pjYdo=
 github.com/deitch/magic v0.0.0-20230404182410-1ff89d7342da h1:ZOjWpVsFZ06eIhnh4mkaceTiVoktdU67+M7KDHJ268M=

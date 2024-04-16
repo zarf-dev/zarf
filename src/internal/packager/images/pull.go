@@ -317,7 +317,7 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		}
 
 		if strings.Contains(src, "@") && (idx.MediaType == ctypes.OCIImageIndex || idx.MediaType == ctypes.DockerManifestList) {
-			imageOptions := "please select one of the images below based on your platform"
+			imageOptions := "please select one of the images below based on your platform to use instead"
 			imageBaseName := strings.Split(src, "@")[0]
 			for _, manifest := range idx.Manifests {
 				imageOptions = fmt.Sprintf("%s\n %s@%s for platform %s", imageOptions, imageBaseName, manifest.Digest, manifest.Platform)
