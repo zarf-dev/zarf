@@ -131,7 +131,7 @@ package:
                 topologyKey: kubernetes.io/hostname
 ```
 
-Of note is the `REGISTRY_AFFINITY_CUSTOM` variable which overrides the default pod anti-affinity and `REGISTRY_HPA_AUTO_SIZE` which will automatically set the min and max replicas for the registry based on the number of nodes in the cluster. If you would prefer to set the min and max replicas manually you can set `REGISTRY_HPA_MIN` and `REGISTRY_HPA_MAX` to the desired values instead.
+Notably, the `REGISTRY_AFFINITY_CUSTOM` variable overrides the default pod anti-affinity, and `REGISTRY_HPA_AUTO_SIZE` automatically adjusts the minimum and maximum replicas for the registry based on the number of nodes in the cluster. If you prefer to manually set the minimum and maximum replicas, you can use `REGISTRY_HPA_MIN` and `REGISTRY_HPA_MAX` to specify the desired values.
 
 ## The `zarf init` Lifecycle
 
