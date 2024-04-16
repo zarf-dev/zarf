@@ -108,7 +108,7 @@ The `registry:2` image and the Zarf Agent image can be configured with a custom 
 
 By default, the registry included in the init package creates a ReadWriteOnce PVC and is only scheduled to run on one node at a time. This setup is usually enough for smaller and simpler deployments. However, for larger deployments or those where nodes are frequently restarted or updated, you may want to make the registry highly-available.
 
-This can have some prerequisites, such as having a storage class that supports ReadWriteMany, or being in an environment where you can configure the registry to use an s3 compatible backend. Beyond the backing storage, though, you will need to pass some custom configuration to the registry so that it spreads out across all nodes and has the correct amount of replicas. Below is an example configuration using a ReadWriteMany storage class:
+This approach requires certain prerequisites, such as a storage class that supports ReadWriteMany, or being in an environment that allows you to configure the registry to use an S3-compatible backend. Additionally, you must provide custom configuration to the registry to ensure it is distributed across all nodes and has the appropriate number of replicas. Below is an example configuration using a ReadWriteMany storage class:
 
 ```yaml
 package:
