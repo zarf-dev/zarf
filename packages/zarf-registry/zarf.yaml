@@ -69,6 +69,7 @@ variables:
   - name: REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS
     description: Map of annotations to add to the created service account
     default: ""
+    autoIndent: true
 
   - name: REGISTRY_AFFINITY_ENABLE
     description: Enable pod affinity for the registry
