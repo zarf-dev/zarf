@@ -34,6 +34,17 @@ repos:
           - -w
         language: system
         pass_filenames: true
+      - id: lint
+        name: revive go lint
+        entry: revive
+        args:
+          - "-config"
+          - "revive.toml"
+          - "-exclude"
+          - "src/cmd/viper.go"
+        files: .go$
+        language: system
+        pass_filenames: true
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.14.0
     hooks:
