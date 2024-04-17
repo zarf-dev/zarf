@@ -226,8 +226,10 @@ func TestUseCLI(t *testing.T) {
 		file := filepath.Join(tmpdir, "file1.yaml")
 		otherFile := filepath.Join(tmpdir, "file2.yaml")
 
-		copy.Copy(originalFile, file)
-		copy.Copy(originalOtherFile, otherFile)
+		err := copy.Copy(originalFile, file)
+		require.NoError(t, err)
+		err = copy.Copy(originalOtherFile, otherFile)
+		require.NoError(t, err)
 
 		// Test that yq can eval properly
 		_, stdErr, err := e2e.Zarf("tools", "yq", "eval", "-i", `.items[1].name = "renamed-item"`, file)
@@ -237,9 +239,9 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, "renamed-item")
 
 		// Test that yq ea can be used properly
-		_, stdErr, err = e2e.Zarf("tools", "yq", "eval-all", "-i", `. as $doc ireduce ({}; .items += $doc.items)`, file, otherFile)
-		require.NoError(t, err, stdErr)
-		stdOut, stdErr, err = e2e.Zarf("tools", "yq", "e", ".items | length", file)
+		_, _, err = e2e.Zarf("tools", "yq", "eval-all", "-i", `. as $doc ireduce ({}; .items += $doc.items)`, file, otherFile)
+		require.NoError(t, err)
+		stdOut, _, err = e2e.Zarf("tools", "yq", "e", ".items | length", file)
 		require.NoError(t, err)
 		require.Equal(t, "4\n", stdOut)
 
