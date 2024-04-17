@@ -593,14 +593,6 @@ github.com/daviddengcn/go-colortext v1.0.0 h1:ANqDyC0ys6qCSvuEK7l3g5RaehL/Xck9EX
 github.com/daviddengcn/go-colortext v1.0.0/go.mod h1:zDqEI5NVUop5QPpVJUxE9UO10hRnmkD5G4Pmri9+m4c=
 github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6 h1:gwevOZ0fxT2nzM9hrtdPbsiOHjFqDRIYMzJHba3/G6Q=
 github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6/go.mod h1:StKLYMmPj1R5yIs6CK49EkcW1TvUYuw5Vri+LRk7Dy8=
-github.com/defenseunicorns/pkg/helpers v1.0.0 h1:0o3Rs+J/g0UemZHcENBS1Z2Qw2y4FIUUrGs75iEyPb4=
-github.com/defenseunicorns/pkg/helpers v1.0.0/go.mod h1:F4S5VZLDrlNWQKklzv4v9tFWjjZNhxJ1gT79j4XiLwk=
-github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240411133953-c27224059905 h1:x4KxchKd18SoYFAb/UmqpsJVhOVMB1VYJsVxt7w3s9s=
-github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240411133953-c27224059905/go.mod h1:F4S5VZLDrlNWQKklzv4v9tFWjjZNhxJ1gT79j4XiLwk=
-github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240411154501-d8e8145af112 h1:Z6MQCjpKBA1CQfr3XqaRQsjXt+LYtNzfT4Adm53mfyE=
-github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240411154501-d8e8145af112/go.mod h1:F4S5VZLDrlNWQKklzv4v9tFWjjZNhxJ1gT79j4XiLwk=
-github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240416120542-1f7cefc0731b h1:0GwCv4pz9ncqXW/gDpGeKalXRVZwXmarPubett6GbwU=
-github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240416120542-1f7cefc0731b/go.mod h1:F4S5VZLDrlNWQKklzv4v9tFWjjZNhxJ1gT79j4XiLwk=
 github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240416125436-7c54d5ed05a0 h1:7Pzb4Y6f+GCeCVrgeMW/jD3X7qSGrxdQWeoyfskc4AU=
 github.com/defenseunicorns/pkg/helpers v1.0.1-0.20240416125436-7c54d5ed05a0/go.mod h1:F4S5VZLDrlNWQKklzv4v9tFWjjZNhxJ1gT79j4XiLwk=
 github.com/defenseunicorns/pkg/oci v0.0.1 h1:EFRp3NeiwzhOWKpQ6mAxi0l9chnrAvDcIgjMr0o0fkM=
