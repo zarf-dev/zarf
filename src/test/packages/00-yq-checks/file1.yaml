@@ -1,3 +1,5 @@
 items:
   - name: item1
   - name: renamed-item
+  - name: item3
+  - name: item4

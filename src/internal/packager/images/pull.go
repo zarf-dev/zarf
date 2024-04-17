@@ -311,17 +311,18 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 			return nil, false, fmt.Errorf("failed to load image from docker daemon: %w", err)
 		}
 	} else {
-		if strings.Contains(src, "@") && (desc.MediaType == ctypes.OCIImageIndex || desc.MediaType == ctypes.DockerManifestList) {
-			imageOptions := "please select one of the images below based on your platform to use instead"
-			imageBaseName := strings.Split(src, "@")[0]
-			manifest, err := crane.Manifest(src, config.GetCraneOptions(i.Insecure)...)
-			if err != nil {
-				return nil, false, fmt.Errorf("%w: %w", lang.ErrUnsupportedImageType, err)
-			}
+		reference, err := name.ParseReference(src)
+		if err != nil {
+			return nil, false, err
+		}
+
+		if _, ok := reference.(name.Digest); ok && (desc.MediaType == ctypes.OCIImageIndex || desc.MediaType == ctypes.DockerManifestList) {
 			var idx v1.IndexManifest
-			if err := json.Unmarshal(manifest, &idx); err != nil {
+			if err := json.Unmarshal(desc.Manifest, &idx); err != nil {
 				return nil, false, fmt.Errorf("%w: %w", lang.ErrUnsupportedImageType, err)
 			}
+			imageOptions := "please select one of the images below based on your platform to use instead"
+			imageBaseName := fmt.Sprintf("%s/%s", reference.Context().Registry.RegistryStr(), reference.Context().RepositoryStr())
 			for _, manifest := range idx.Manifests {
 				imageOptions = fmt.Sprintf("%s\n %s@%s for platform %s", imageOptions, imageBaseName, manifest.Digest, manifest.Platform)
 			}
