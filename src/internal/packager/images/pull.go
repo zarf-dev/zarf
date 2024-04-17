@@ -311,18 +311,21 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 			return nil, false, fmt.Errorf("failed to load image from docker daemon: %w", err)
 		}
 	} else {
-		reference, err := name.ParseReference(src)
+		refInfo, err := transform.ParseImageRef(src)
 		if err != nil {
 			return nil, false, err
 		}
 
-		if _, ok := reference.(name.Digest); ok && (desc.MediaType == ctypes.OCIImageIndex || desc.MediaType == ctypes.DockerManifestList) {
+		if refInfo.Digest != "" && (desc.MediaType == ctypes.OCIImageIndex || desc.MediaType == ctypes.DockerManifestList) {
 			var idx v1.IndexManifest
 			if err := json.Unmarshal(desc.Manifest, &idx); err != nil {
 				return nil, false, fmt.Errorf("%w: %w", lang.ErrUnsupportedImageType, err)
 			}
 			imageOptions := "please select one of the images below based on your platform to use instead"
-			imageBaseName := fmt.Sprintf("%s/%s", reference.Context().Registry.RegistryStr(), reference.Context().RepositoryStr())
+			imageBaseName := refInfo.Name
+			if refInfo.Tag != "" {
+				imageBaseName = fmt.Sprintf("%s:%s", imageBaseName, refInfo.Tag)
+			}
 			for _, manifest := range idx.Manifests {
 				imageOptions = fmt.Sprintf("%s\n %s@%s for platform %s", imageOptions, imageBaseName, manifest.Digest, manifest.Platform)
 			}
