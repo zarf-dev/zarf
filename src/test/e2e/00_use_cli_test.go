@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 )
 
@@ -216,21 +217,31 @@ func TestUseCLI(t *testing.T) {
 	t.Run("zarf tools yq should function appropriately across different uses", func(t *testing.T) {
 		t.Parallel()
 
-		file := "src/test/packages/00-yq-checks/file1.yaml"
-		otherFile := "src/test/packages/00-yq-checks/file2.yaml"
+		tmpdir := t.TempDir()
+		originalPath := "src/test/packages/00-yq-checks"
+
+		originalFile := filepath.Join(originalPath, "file1.yaml")
+		originalOtherFile := filepath.Join(originalPath, "file2.yaml")
+
+		file := filepath.Join(tmpdir, "file1.yaml")
+		otherFile := filepath.Join(tmpdir, "file2.yaml")
+
+		copy.Copy(originalFile, file)
+		copy.Copy(originalOtherFile, otherFile)
 
 		// Test that yq can eval properly
 		_, stdErr, err := e2e.Zarf("tools", "yq", "eval", "-i", `.items[1].name = "renamed-item"`, file)
 		require.NoError(t, err, stdErr)
-		stdOut, stdErr, err := e2e.Zarf("tools", "yq", ".items[1].name", file)
+		stdOut, _, err := e2e.Zarf("tools", "yq", ".items[1].name", file)
+		require.NoError(t, err)
 		require.Contains(t, stdOut, "renamed-item")
 
 		// Test that yq ea can be used properly
 		_, stdErr, err = e2e.Zarf("tools", "yq", "eval-all", "-i", `. as $doc ireduce ({}; .items += $doc.items)`, file, otherFile)
 		require.NoError(t, err, stdErr)
 		stdOut, stdErr, err = e2e.Zarf("tools", "yq", "e", ".items | length", file)
+		require.NoError(t, err)
 		require.Equal(t, "4\n", stdOut)
 
 	})
 }
-
