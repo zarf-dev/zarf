@@ -4,7 +4,7 @@
 [![Go version](https://img.shields.io/github/go-mod/go-version/defenseunicorns/zarf?filename=go.mod)](https://go.dev/)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/defenseunicorns/zarf/release.yml)](https://github.com/defenseunicorns/zarf/actions/workflows/release.yml)
 [![Zarf Documentation Status](https://api.netlify.com/api/v1/badges/fe846ae4-25fb-4274-9968-90782640ee9f/deploy-status)](https://app.netlify.com/sites/zarf-docs/deploys)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/zarf/badge)](https://securityscorecards.dev/viewer/?uri=github.com/defenseunicorns/pkg)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/zarf/badge)](https://securityscorecards.dev/viewer/?uri=github.com/defenseunicorns/zarf)
 
 <img align="right" alt="zarf logo" src="site/src/assets/zarf-logo.png"  height="256" />
 
