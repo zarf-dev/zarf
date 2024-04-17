@@ -85,7 +85,7 @@
     },
     {
       "fileMatch": [
-        ".github/actions/install-tools/action.yaml"
+        ".github/**"
       ],
       "matchStrings": [
         "# renovate: datasource=github-tags depName=anchore/grype versioning=semver\n\\s*VERSION: (?<currentValue>v[\\d.]+)"
