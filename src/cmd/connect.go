@@ -44,14 +44,15 @@ var (
 				spinner.Fatalf(err, lang.CmdConnectErrCluster, err.Error())
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-			defer cancel()
-
 			var tunnel *k8s.Tunnel
 			if connectResourceName != "" {
 				zt := cluster.NewTunnelInfo(connectNamespace, connectResourceType, connectResourceName, "", connectLocalPort, connectRemotePort)
+				ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+				defer cancel()
 				tunnel, err = c.ConnectTunnelInfo(ctx, zt)
 			} else {
+				ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+				defer cancel()
 				tunnel, err = c.Connect(ctx, target)
 			}
 			if err != nil {
@@ -95,10 +96,11 @@ var (
 		Aliases: []string{"l"},
 		Short:   lang.CmdConnectListShort,
 		Run: func(_ *cobra.Command, _ []string) {
-			ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+			clusterCtx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 			defer cancel()
-			err := cluster.NewClusterOrDie(ctx).PrintConnectTable(ctx)
-			if err != nil {
+			connectCtx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+			defer cancel()
+			if err := cluster.NewClusterOrDie(clusterCtx).PrintConnectTable(connectCtx); err != nil {
 				message.Fatal(err, err.Error())
 			}
 		},
