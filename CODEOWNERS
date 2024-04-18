@@ -1,6 +1,5 @@
 * @defenseunicorns/zarf
 
-/.github/ @defenseunicorns/zarf-admin
 /CODEOWNERS @jeff-mccoy @austenbryan
 /cosign.pub @jeff-mccoy @austenbryan
 /LICENSE @jeff-mccoy @austenbryan
