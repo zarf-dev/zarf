@@ -48,12 +48,16 @@ type PackageCreator struct {
 	cfg *types.PackagerConfig
 }
 
+func updateRelativeDifferentialPackagePath(path string, cwd string) string {
+	if path != "" && !filepath.IsAbs(path) && !helpers.IsURL(path) {
+		return filepath.Join(cwd, path)
+	}
+	return path
+}
+
 // NewPackageCreator returns a new PackageCreator.
 func NewPackageCreator(createOpts types.ZarfCreateOptions, cfg *types.PackagerConfig, cwd string) *PackageCreator {
-	if createOpts.DifferentialPackagePath != "" && !filepath.IsAbs(createOpts.DifferentialPackagePath) {
-		createOpts.DifferentialPackagePath = filepath.Join(cwd, createOpts.DifferentialPackagePath)
-	}
-
+	createOpts.DifferentialPackagePath = updateRelativeDifferentialPackagePath(createOpts.DifferentialPackagePath, cwd)
 	return &PackageCreator{createOpts, cfg}
 }
 
