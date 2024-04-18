@@ -11,10 +11,10 @@ import (
 	"regexp"
 
 	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 
@@ -30,14 +30,7 @@ var destroyCmd = &cobra.Command{
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
 	Run: func(_ *cobra.Command, _ []string) {
-		clusterCtx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-		defer cancel()
-
-		c, err := cluster.NewClusterWithWait(clusterCtx)
-		if err != nil {
-			message.Fatalf(err, lang.ErrNoClusterConnection)
-		}
-
+		c := common.NewClusterOrDie()
 		ctx := context.Background()
 
 		// NOTE: If 'zarf init' failed to deploy the k3s component (or if we're looking at the wrong kubeconfig)
