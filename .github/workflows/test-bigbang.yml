@@ -72,6 +72,13 @@ jobs:
           name: build-artifacts
           path: build/
 
+      - name: copy init package
+        run: |
+          sudo mkdir /mnt/zarf-tmp
+          sudo chown -R runner:runner /mnt/zarf-tmp
+          mv build/zarf-init* /mnt/zarf-tmp
+
+
       - name: Setup golang
         uses: ./.github/actions/golang
 
@@ -101,8 +108,6 @@ jobs:
         env:
           IRON_BANK_ROBOT_USERNAME: ${{ secrets.IRON_BANK_ROBOT_USERNAME }}
         run: |
-          sudo mkdir /mnt/zarf-tmp
-          sudo chown -R runner:runner /mnt/zarf-tmp
           CI=true go test ./src/extensions/bigbang/test -failfast -v -timeout 30m
 
       - name: Save logs
