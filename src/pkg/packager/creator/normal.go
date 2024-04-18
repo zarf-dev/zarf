@@ -50,7 +50,9 @@ type PackageCreator struct {
 
 // NewPackageCreator returns a new PackageCreator.
 func NewPackageCreator(createOpts types.ZarfCreateOptions, cfg *types.PackagerConfig, cwd string) *PackageCreator {
-	if createOpts.DifferentialPackagePath != "" && !filepath.IsAbs(createOpts.DifferentialPackagePath) {
+	if createOpts.DifferentialPackagePath != "" &&
+		!filepath.IsAbs(createOpts.DifferentialPackagePath) &&
+		!helpers.IsURL(createOpts.DifferentialPackagePath) {
 		createOpts.DifferentialPackagePath = filepath.Join(cwd, createOpts.DifferentialPackagePath)
 	}
 
