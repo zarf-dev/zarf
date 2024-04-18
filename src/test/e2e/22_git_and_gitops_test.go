@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -69,7 +70,7 @@ func testGitServerConnect(t *testing.T, gitURL string) {
 
 func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 	// Init the state variable
-	state, err := cluster.NewClusterOrDie(ctx).LoadZarfState(ctx)
+	state, err := common.NewClusterOrDie().LoadZarfState(ctx)
 	require.NoError(t, err)
 
 	gitCfg := git.New(state.GitServer)
@@ -92,7 +93,7 @@ func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 
 func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 	// Init the state variable
-	state, err := cluster.NewClusterOrDie(ctx).LoadZarfState(ctx)
+	state, err := common.NewClusterOrDie().LoadZarfState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
 	repoName := "zarf-public-test-2469062884"
 

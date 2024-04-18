@@ -5,11 +5,13 @@
 package common
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
@@ -34,4 +36,15 @@ func ExitOnInterrupt() {
 			message.Fatal(lang.ErrInterrupt, lang.ErrInterrupt.Error())
 		}
 	}()
+}
+
+// NewClusterOrDie creates a new Cluster instance and waits for the cluster to be ready or throws a fatal error.
+func NewClusterOrDie() *cluster.Cluster {
+	ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+	defer cancel()
+	c, err := cluster.NewClusterWithWait(ctx)
+	if err != nil {
+		message.Fatalf(err, "Failed to connect to cluster")
+	}
+	return c
 }

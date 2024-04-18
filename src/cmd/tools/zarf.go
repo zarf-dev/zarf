@@ -19,7 +19,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
@@ -52,10 +51,8 @@ var getCredsCmd = &cobra.Command{
 	Aliases: []string{"gc"},
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(_ *cobra.Command, args []string) {
-		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-		defer cancel()
-
-		state, err := cluster.NewClusterOrDie(ctx).LoadZarfState(ctx)
+		ctx := context.Background()
+		state, err := common.NewClusterOrDie().LoadZarfState(ctx)
 		if err != nil || state.Distro == "" {
 			// If no distro the zarf secret did not load properly
 			message.Fatalf(nil, lang.ErrLoadState)
@@ -88,10 +85,8 @@ var updateCredsCmd = &cobra.Command{
 			}
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-		defer cancel()
-
-		c := cluster.NewClusterOrDie(ctx)
+		c := common.NewClusterOrDie()
+		ctx := context.Background()
 		oldState, err := c.LoadZarfState(ctx)
 		if err != nil || oldState.Distro == "" {
 			// If no distro the zarf secret did not load properly

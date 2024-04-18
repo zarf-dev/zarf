@@ -94,10 +94,8 @@ var (
 		Aliases: []string{"l"},
 		Short:   lang.CmdConnectListShort,
 		Run: func(_ *cobra.Command, _ []string) {
-			clusterCtx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-			defer cancel()
 			ctx := context.Background()
-			if err := cluster.NewClusterOrDie(clusterCtx).PrintConnectTable(ctx); err != nil {
+			if err := common.NewClusterOrDie().PrintConnectTable(ctx); err != nil {
 				message.Fatal(err, err.Error())
 			}
 		},
