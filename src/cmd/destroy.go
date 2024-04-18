@@ -31,21 +31,21 @@ var destroyCmd = &cobra.Command{
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
 	Run: func(_ *cobra.Command, _ []string) {
-		ctxLong, cancelLong := context.WithTimeout(context.Background(), 5*time.Minute)
-		defer cancelLong()
+		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+		defer cancel()
 
-		ctxShort, cancelShort := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-		defer cancelShort()
-
-		c, err := cluster.NewClusterWithWait(ctxShort)
+		c, err := cluster.NewClusterWithWait(ctx)
 		if err != nil {
 			message.Fatalf(err, lang.ErrNoClusterConnection)
 		}
 
+		ctx, cancel = context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+		defer cancel()
+
 		// NOTE: If 'zarf init' failed to deploy the k3s component (or if we're looking at the wrong kubeconfig)
 		//       there will be no zarf-state to load and the struct will be empty. In these cases, if we can find
 		//       the scripts to remove k3s, we will still try to remove a locally installed k3s cluster
-		state, err := c.LoadZarfState(ctxShort)
+		state, err := c.LoadZarfState(ctx)
 		if err != nil {
 			message.WarnErr(err, lang.ErrLoadState)
 		}
@@ -81,11 +81,19 @@ var destroyCmd = &cobra.Command{
 			// Perform chart uninstallation
 			helm.Destroy(removeComponents)
 
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+			defer cancel()
+
 			// If Zarf didn't deploy the cluster, only delete the ZarfNamespace
-			c.DeleteZarfNamespace(ctxLong)
+			if err := c.DeleteZarfNamespace(ctx); err != nil {
+				message.Fatal(err, err.Error())
+			}
+
+			ctx, cancel = context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+			defer cancel()
 
 			// Remove zarf agent labels and secrets from namespaces Zarf doesn't manage
-			c.StripZarfLabelsAndSecretsFromNamespaces(ctxLong)
+			c.StripZarfLabelsAndSecretsFromNamespaces(ctx)
 		}
 	},
 }
