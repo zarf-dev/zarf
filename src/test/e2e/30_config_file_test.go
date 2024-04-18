@@ -27,8 +27,8 @@ func TestConfigFile(t *testing.T) {
 
 	// Test the config file environment variable
 	os.Setenv("ZARF_CONFIG", filepath.Join(dir, config))
+	defer os.Unsetenv("ZARF_CONFIG")
 	configFileTests(t, dir, path)
-	os.Unsetenv("ZARF_CONFIG")
 
 	configFileDefaultTests(t)
 
@@ -39,6 +39,8 @@ func TestConfigFile(t *testing.T) {
 }
 
 func configFileTests(t *testing.T, dir, path string) {
+	t.Helper()
+
 	_, stdErr, err := e2e.Zarf("package", "create", dir, "--confirm")
 	require.NoError(t, err)
 	require.Contains(t, string(stdErr), "This is a zebra and they have stripes")
@@ -94,6 +96,7 @@ H4RxbE+FpmsMAUCpdrzvFkc=
 }
 
 func configFileDefaultTests(t *testing.T) {
+	t.Helper()
 
 	globalFlags := []string{
 		"architecture: 509a38f0",
@@ -137,6 +140,7 @@ func configFileDefaultTests(t *testing.T) {
 
 	// Test remaining default initializers
 	os.Setenv("ZARF_CONFIG", filepath.Join("src", "test", "zarf-config-test.toml"))
+	defer os.Unsetenv("ZARF_CONFIG")
 
 	// Test global flags
 	stdOut, _, _ := e2e.Zarf("--help")
@@ -161,6 +165,4 @@ func configFileDefaultTests(t *testing.T) {
 	for _, test := range packageDeployFlags {
 		require.Contains(t, string(stdOut), test)
 	}
-
-	os.Unsetenv("ZARF_CONFIG")
 }

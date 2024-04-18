@@ -29,7 +29,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/spf13/cobra"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -157,10 +156,7 @@ func NewRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 	// This call is required to gather configuration information prior to
 	// execution.
 	flags.ParseErrorsWhitelist.UnknownFlags = true
-	err = flags.Parse(args)
-	if err != nil {
-		message.Fatal(err, err.Error())
-	}
+	_ = flags.Parse(args)
 
 	registryClient, err := newDefaultRegistryClient()
 	if err != nil {
