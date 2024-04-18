@@ -9,7 +9,6 @@ import (
 	"errors"
 	"os"
 	"regexp"
-	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -31,16 +30,15 @@ var destroyCmd = &cobra.Command{
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
 	Run: func(_ *cobra.Command, _ []string) {
-		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+		clusterCtx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancel()
 
-		c, err := cluster.NewClusterWithWait(ctx)
+		c, err := cluster.NewClusterWithWait(clusterCtx)
 		if err != nil {
 			message.Fatalf(err, lang.ErrNoClusterConnection)
 		}
 
-		ctx, cancel = context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-		defer cancel()
+		ctx := context.Background()
 
 		// NOTE: If 'zarf init' failed to deploy the k3s component (or if we're looking at the wrong kubeconfig)
 		//       there will be no zarf-state to load and the struct will be empty. In these cases, if we can find
@@ -81,16 +79,10 @@ var destroyCmd = &cobra.Command{
 			// Perform chart uninstallation
 			helm.Destroy(removeComponents)
 
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-			defer cancel()
-
 			// If Zarf didn't deploy the cluster, only delete the ZarfNamespace
 			if err := c.DeleteZarfNamespace(ctx); err != nil {
 				message.Fatal(err, err.Error())
 			}
-
-			ctx, cancel = context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-			defer cancel()
 
 			// Remove zarf agent labels and secrets from namespaces Zarf doesn't manage
 			c.StripZarfLabelsAndSecretsFromNamespaces(ctx)
