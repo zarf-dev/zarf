@@ -124,10 +124,8 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 			return err
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-		defer cancel()
+		ctx := context.Background()
 
-		// Load Zarf state
 		zarfState, err := c.LoadZarfState(ctx)
 		if err != nil {
 			return err
@@ -176,10 +174,8 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 
 		message.Note(lang.CmdToolsRegistryZarfState)
 
-		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-		defer cancel()
+		ctx := context.Background()
 
-		// Load the state (if able)
 		zarfState, err := c.LoadZarfState(ctx)
 		if err != nil {
 			message.Warnf(lang.CmdToolsCraneConnectedButBadStateErr, err.Error())
