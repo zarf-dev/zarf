@@ -39,7 +39,7 @@ repos:
         entry: revive
         args:
           - "-config"
-          - "revive.toml"
+          - "hack/revive.toml"
           - "-exclude"
           - "src/cmd/viper.go"
         files: .go$
