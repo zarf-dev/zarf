@@ -25,6 +25,9 @@ pre-commit install
 
 # install goimports
 go install golang.org/x/tools/cmd/goimports@latest
+
+# install revive
+go install github.com/mgechev/revive@latest
 ```
 
 Now every time you commit, the hooks will run and format your code, linting can be called via `make lint-go`.
