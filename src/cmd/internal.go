@@ -103,7 +103,7 @@ var genCLIDocs = &cobra.Command{
 					if toolCmd.Use == "monitor" {
 						resetStringFlags(toolCmd)
 					}
-					
+
 					if toolCmd.Use == "yq" {
 						for _, subCmd := range toolCmd.Commands() {
 							if subCmd.Name() == "shell-completion" {
@@ -195,11 +195,12 @@ var createReadOnlyGiteaUser = &cobra.Command{
 	Short: lang.CmdInternalCreateReadOnlyGiteaUserShort,
 	Long:  lang.CmdInternalCreateReadOnlyGiteaUserLong,
 	Run: func(_ *cobra.Command, _ []string) {
-		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+		clusterCtx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancel()
+		ctx := context.Background()
 
 		// Load the state so we can get the credentials for the admin git user
-		state, err := cluster.NewClusterOrDie(ctx).LoadZarfState(ctx)
+		state, err := cluster.NewClusterOrDie(clusterCtx).LoadZarfState(ctx)
 		if err != nil {
 			message.WarnErr(err, lang.ErrLoadState)
 		}
@@ -216,11 +217,12 @@ var createPackageRegistryToken = &cobra.Command{
 	Short: lang.CmdInternalArtifactRegistryGiteaTokenShort,
 	Long:  lang.CmdInternalArtifactRegistryGiteaTokenLong,
 	Run: func(_ *cobra.Command, _ []string) {
-		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+		clusterCtx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancel()
+		ctx := context.Background()
 
 		// Load the state so we can get the credentials for the admin git user
-		c := cluster.NewClusterOrDie(ctx)
+		c := cluster.NewClusterOrDie(clusterCtx)
 		state, err := c.LoadZarfState(ctx)
 		if err != nil {
 			message.WarnErr(err, lang.ErrLoadState)
@@ -235,7 +237,9 @@ var createPackageRegistryToken = &cobra.Command{
 
 			state.ArtifactServer.PushToken = token.Sha1
 
-			c.SaveZarfState(ctx, state)
+			if err := c.SaveZarfState(ctx, state); err != nil {
+				message.Fatal(err, err.Error())
+			}
 		}
 	},
 }
@@ -302,6 +306,9 @@ func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {
 	if cmd.PersistentFlags().Lookup(flagDummy) == nil {
 		var dummyStr string
 		cmd.PersistentFlags().StringVar(&dummyStr, flagDummy, "", "")
-		cmd.PersistentFlags().MarkHidden(flagDummy)
+		err := cmd.PersistentFlags().MarkHidden(flagDummy)
+		if err != nil {
+			message.Fatal(err, err.Error())
+		}
 	}
 }
