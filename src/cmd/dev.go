@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers"
@@ -56,10 +55,7 @@ var devDeployCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
-		defer cancel()
-
-		// Create the package
+		ctx := context.Background()
 		if err := pkgClient.DevDeploy(ctx); err != nil {
 			message.Fatalf(err, lang.CmdDevDeployErr, err.Error())
 		}
@@ -297,8 +293,14 @@ func init() {
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
 
-	devFindImagesCmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
-	devFindImagesCmd.Flags().MarkHidden("set")
+	err := devFindImagesCmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
+	err = devFindImagesCmd.Flags().MarkHidden("set")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
 	devFindImagesCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
@@ -346,7 +348,16 @@ func bindDevGenerateFlags(_ *viper.Viper) {
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "", "Output directory for the generated zarf.yaml")
 	generateFlags.StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
-	devGenerateCmd.MarkFlagRequired("url")
-	devGenerateCmd.MarkFlagRequired("version")
-	devGenerateCmd.MarkFlagRequired("output-directory")
+	err := devGenerateCmd.MarkFlagRequired("url")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
+	err = devGenerateCmd.MarkFlagRequired("version")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
+	err = devGenerateCmd.MarkFlagRequired("output-directory")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
 }
