@@ -12,7 +12,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers"
@@ -60,19 +59,15 @@ var initCmd = &cobra.Command{
 			message.Fatal(err, err.Error())
 		}
 
-		// Ensure uppercase keys from viper
 		v := common.GetViper()
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
-		defer cancel()
+		ctx := context.Background()
 
-		// Deploy everything
 		err = pkgClient.Deploy(ctx)
 		if err != nil {
 			message.Fatal(err, err.Error())

@@ -51,11 +51,11 @@ var devDeployCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
 		ctx := context.Background()
+
 		if err := pkgClient.DevDeploy(ctx); err != nil {
 			message.Fatalf(err, lang.CmdDevDeployErr, err.Error())
 		}
@@ -210,19 +210,15 @@ var devFindImagesCmd = &cobra.Command{
 	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 
-		// Ensure uppercase keys from viper
 		v := common.GetViper()
 
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
-
-		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		// Find all the images the package might need
 		if _, err := pkgClient.FindImages(); err != nil {
 			message.Fatalf(err, lang.CmdDevFindImagesErr, err.Error())
 		}
