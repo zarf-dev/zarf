@@ -113,6 +113,7 @@ This approach requires certain prerequisites, such as a storage class that suppo
 ```yaml
 # zarf-config.yaml
 package:
+  deploy:
     set:
       REGISTRY_PVC_ENABLED: "true"
       REGISTRY_PVC_ACCESS_MODE: "ReadWriteMany"
