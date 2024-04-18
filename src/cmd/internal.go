@@ -18,7 +18,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/spf13/cobra"
@@ -243,8 +242,7 @@ var updateGiteaPVC = &cobra.Command{
 	Short: lang.CmdInternalUpdateGiteaPVCShort,
 	Long:  lang.CmdInternalUpdateGiteaPVCLong,
 	Run: func(_ *cobra.Command, _ []string) {
-		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-		defer cancel()
+		ctx := context.Background()
 
 		// There is a possibility that the pvc does not yet exist and Gitea helm chart should create it
 		helmShouldCreate, err := git.UpdateGiteaPVC(ctx, rollback)
