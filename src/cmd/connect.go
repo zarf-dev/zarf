@@ -44,15 +44,13 @@ var (
 				spinner.Fatalf(err, lang.CmdConnectErrCluster, err.Error())
 			}
 
+			ctx := context.Background()
+
 			var tunnel *k8s.Tunnel
 			if connectResourceName != "" {
 				zt := cluster.NewTunnelInfo(connectNamespace, connectResourceType, connectResourceName, "", connectLocalPort, connectRemotePort)
-				ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-				defer cancel()
 				tunnel, err = c.ConnectTunnelInfo(ctx, zt)
 			} else {
-				ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-				defer cancel()
 				tunnel, err = c.Connect(ctx, target)
 			}
 			if err != nil {
