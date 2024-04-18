@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -50,16 +49,13 @@ var packageCreateCmd = &cobra.Command{
 			config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 		}
 
-		// Ensure uppercase keys from viper
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		// Create the package
 		if err := pkgClient.Create(); err != nil {
 			message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
 		}
@@ -75,21 +71,15 @@ var packageDeployCmd = &cobra.Command{
 	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
-		// Ensure uppercase keys from viper and CLI --set
 		v := common.GetViper()
-
-		// Merge the viper config file variables and provided CLI flag variables (CLI takes precedence))
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
-		defer cancel()
+		ctx := context.Background()
 
-		// Deploy the package
 		if err := pkgClient.Deploy(ctx); err != nil {
 			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
 		}
@@ -106,12 +96,10 @@ var packageMirrorCmd = &cobra.Command{
 	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
-		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-		defer cancel()
+		ctx := context.Background()
 
 		if err := pkgClient.Mirror(ctx); err != nil {
 			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
@@ -130,11 +118,9 @@ var packageInspectCmd = &cobra.Command{
 
 		src := identifyAndFallbackToClusterSource()
 
-		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
-		// Inspect the package
 		if err := pkgClient.Inspect(); err != nil {
 			message.Fatalf(err, lang.CmdPackageInspectErr, err.Error())
 		}
@@ -147,11 +133,11 @@ var packageListCmd = &cobra.Command{
 	Aliases: []string{"l", "ls"},
 	Short:   lang.CmdPackageListShort,
 	Run: func(_ *cobra.Command, _ []string) {
-		ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+		clusterCtx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 		defer cancel()
+		ctx := context.Background()
 
-		// Get all the deployed packages
-		deployedZarfPackages, errs := cluster.NewClusterOrDie(ctx).GetDeployedZarfPackages(ctx)
+		deployedZarfPackages, errs := cluster.NewClusterOrDie(clusterCtx).GetDeployedZarfPackages(ctx)
 		if len(errs) > 0 && len(deployedZarfPackages) == 0 {
 			message.Fatalf(errs, lang.CmdPackageListNoPackageWarn)
 		}
@@ -171,7 +157,6 @@ var packageListCmd = &cobra.Command{
 			})
 		}
 
-		// Print out the table for the user
 		header := []string{"Package", "Version", "Components"}
 		message.Table(header, packageData)
 
@@ -191,12 +176,11 @@ var packageRemoveCmd = &cobra.Command{
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		src := identifyAndFallbackToClusterSource()
-		// Configure the packager
+
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-		defer cancel()
+		ctx := context.Background()
 
 		if err := pkgClient.Remove(ctx); err != nil {
 			message.Fatalf(err, lang.CmdPackageRemoveErr, err.Error())
@@ -233,11 +217,9 @@ var packagePublishCmd = &cobra.Command{
 
 		pkgConfig.PublishOpts.PackageDestination = ref.String()
 
-		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		// Publish the package
 		if err := pkgClient.Publish(); err != nil {
 			message.Fatalf(err, lang.CmdPackagePublishErr, err.Error())
 		}
@@ -252,11 +234,9 @@ var packagePullCmd = &cobra.Command{
 	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = args[0]
 
-		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		// Pull the package
 		if err := pkgClient.Pull(); err != nil {
 			message.Fatalf(err, lang.CmdPackagePullErr, err.Error())
 		}
@@ -309,10 +289,8 @@ func getPackageCompletionArgs(_ *cobra.Command, _ []string, _ string) ([]string,
 		return pkgCandidates, cobra.ShellCompDirectiveDefault
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-	defer cancel()
+	ctx := context.Background()
 
-	// Get all the deployed packages
 	deployedZarfPackages, _ := c.GetDeployedZarfPackages(ctx)
 	// Populate list of package names
 	for _, pkg := range deployedZarfPackages {
@@ -382,9 +360,18 @@ func bindCreateFlags(v *viper.Viper) {
 
 	createFlags.IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)
 
-	createFlags.MarkHidden("output-directory")
-	createFlags.MarkHidden("key")
-	createFlags.MarkHidden("key-pass")
+	err := createFlags.MarkHidden("output-directory")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
+	err = createFlags.MarkHidden("key")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
+	err = createFlags.MarkHidden("key-pass")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
 }
 
 func bindDeployFlags(v *viper.Viper) {
@@ -404,7 +391,10 @@ func bindDeployFlags(v *viper.Viper) {
 	deployFlags.StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(common.VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.SGetKeyPath, "sget", v.GetString(common.VPkgDeploySget), lang.CmdPackageDeployFlagSget)
 
-	deployFlags.MarkHidden("sget")
+	err := deployFlags.MarkHidden("sget")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
 }
 
 func bindMirrorFlags(v *viper.Viper) {
