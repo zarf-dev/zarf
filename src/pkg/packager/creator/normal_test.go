@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewImportChain(t *testing.T) {
+func TestDifferentialPackagePathSetCorrectly(t *testing.T) {
 	type testCase struct {
 		name     string
 		path     string
@@ -49,7 +49,7 @@ func TestNewImportChain(t *testing.T) {
 
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tc.expected, localizeDifferentialPackagePath(tc.path, tc.cwd))
+			require.Equal(t, tc.expected, updateRelativeDifferentialPackagePath(tc.path, tc.cwd))
 		})
 	}
 }

@@ -48,7 +48,7 @@ type PackageCreator struct {
 	cfg *types.PackagerConfig
 }
 
-func localizeDifferentialPackagePath(path string, cwd string) string {
+func updateRelativeDifferentialPackagePath(path string, cwd string) string {
 	if path != "" && !filepath.IsAbs(path) && !helpers.IsURL(path) {
 		return filepath.Join(cwd, path)
 	}
@@ -57,7 +57,7 @@ func localizeDifferentialPackagePath(path string, cwd string) string {
 
 // NewPackageCreator returns a new PackageCreator.
 func NewPackageCreator(createOpts types.ZarfCreateOptions, cfg *types.PackagerConfig, cwd string) *PackageCreator {
-	createOpts.DifferentialPackagePath = localizeDifferentialPackagePath(createOpts.DifferentialPackagePath, cwd)
+	createOpts.DifferentialPackagePath = updateRelativeDifferentialPackagePath(createOpts.DifferentialPackagePath, cwd)
 	return &PackageCreator{createOpts, cfg}
 }
 
