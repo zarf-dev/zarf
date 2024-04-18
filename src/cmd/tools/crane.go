@@ -220,16 +220,13 @@ func pruneImages(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-	defer cancel()
+	ctx := context.Background()
 
-	// Load the state
 	zarfState, err := c.LoadZarfState(ctx)
 	if err != nil {
 		return err
 	}
 
-	// Load the currently deployed packages
 	zarfPackages, errs := c.GetDeployedZarfPackages(ctx)
 	if len(errs) > 0 {
 		return lang.ErrUnableToGetPackages
