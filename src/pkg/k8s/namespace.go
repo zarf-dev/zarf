@@ -50,14 +50,14 @@ func (k *K8s) DeleteNamespace(ctx context.Context, name string) error {
 	}
 
 	for {
+		_, err := k.Clientset.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			return nil
+		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(1 * time.Second):
-			_, err := k.Clientset.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
-			if errors.IsNotFound(err) {
-				return nil
-			}
 		}
 	}
 }
