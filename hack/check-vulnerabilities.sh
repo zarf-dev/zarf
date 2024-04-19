@@ -6,6 +6,8 @@ set -euo pipefail
 MAIN_BRANCH="main"
 TARGET_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
+mkdir -p build
+
 git checkout $MAIN_BRANCH
 go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/.templates/compare.tmpl > build/main.json
 
