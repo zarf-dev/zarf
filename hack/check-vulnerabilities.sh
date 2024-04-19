@@ -5,6 +5,7 @@ set -euo pipefail
 
 MAIN_BRANCH="main"
 TARGET_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+echo "target branch is $TARGET_BRANCH"
 
 mkdir -p build
 
