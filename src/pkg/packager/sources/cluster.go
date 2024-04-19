@@ -60,8 +60,7 @@ func (s *ClusterSource) Collect(_ string) (string, error) {
 
 // LoadPackageMetadata loads package metadata from a cluster.
 func (s *ClusterSource) LoadPackageMetadata(dst *layout.PackagePaths, _ bool, _ bool) (types.ZarfPackage, []string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
-	defer cancel()
+	ctx := context.Background()
 
 	dpkg, err := s.GetDeployedPackage(ctx, s.PackageSource)
 	if err != nil {
