@@ -12,7 +12,7 @@ git checkout $MAIN_BRANCH
 go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' > build/main-syft.json
 
 git checkout $TARGET_BRANCH
-cat main-syft.json | grype -o template -t hack/.templates/compare.tmpl > build/main.json
+cat build/main-syft.json | grype -o template -t hack/.templates/compare.tmpl > build/main.json
 go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/.templates/compare.tmpl > build/target.json
 
 
