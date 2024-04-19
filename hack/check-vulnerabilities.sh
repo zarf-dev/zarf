@@ -9,9 +9,10 @@ TARGET_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 mkdir -p build
 
 git checkout $MAIN_BRANCH
-go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/.templates/compare.tmpl > build/main.json
+go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' > build/main-syft.json
 
 git checkout $TARGET_BRANCH
+cat main-syft.json | grype -o template -t hack/.templates/compare.tmpl > build/main.json
 go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/.templates/compare.tmpl > build/target.json
 
 
