@@ -45,14 +45,15 @@ func (k *K8s) DeletePod(ctx context.Context, namespace string, name string) erro
 	}
 
 	for {
+		_, err := k.Clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			return nil
+		}
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(1 * time.Second):
-			_, err := k.Clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
-			if errors.IsNotFound(err) {
-				return nil
-			}
 		}
 	}
 }
