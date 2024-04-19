@@ -40,18 +40,21 @@ func (k *K8s) UpdateServiceAccount(ctx context.Context, svcAccount *corev1.Servi
 // WaitForServiceAccount waits for a service account to be created in the cluster.
 func (k *K8s) WaitForServiceAccount(ctx context.Context, ns, name string) (*corev1.ServiceAccount, error) {
 	for {
+		sa, err := k.Clientset.CoreV1().ServiceAccounts(ns).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				k.Log("Service account %s/%s not found, retrying...", ns, name)
+			} else {
+				return nil, fmt.Errorf("error getting service account %s/%s: %w", ns, name, err)
+			}
+		} else {
+			return sa, nil
+		}
+
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("timed out waiting for service account %s/%s to exist: %w", ns, name, ctx.Err())
 		case <-time.After(1 * time.Second):
-			sa, err := k.Clientset.CoreV1().ServiceAccounts(ns).Get(ctx, name, metav1.GetOptions{})
-			if err != nil {
-				if errors.IsNotFound(err) {
-					continue
-				}
-				return nil, fmt.Errorf("error getting service account %s/%s: %w", ns, name, err)
-			}
-			return sa, nil
 		}
 	}
 }
