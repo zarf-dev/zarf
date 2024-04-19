@@ -17,10 +17,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-        env:
-          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         with:
-          ref: ${{ env.BRANCH_NAME }}
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: fetch main
         run: git fetch origin main --depth 1
