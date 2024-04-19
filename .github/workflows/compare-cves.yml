@@ -1,0 +1,28 @@
+name: Compare CVEs to main
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - "cargo.toml"
+      - "cargo.lock"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Install tools
+        uses: ./.github/actions/install-tools
+
+      - name: Check for CVEs in Dependencies
+        run: "hack/check-vulnerabilities.sh"
