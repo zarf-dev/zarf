@@ -133,7 +133,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg types.
 	packageNeedsWait, waitSeconds, hookName := c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
 	// If no webhooks need to complete, we can return immediately.
 	if !packageNeedsWait {
-		return nil, nil
+		return deployedPackage, nil
 	}
 
 	waitDuration := types.DefaultWebhookWaitDuration
@@ -148,19 +148,21 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg types.
 	defer spinner.Stop()
 
 	for {
+		deployedPackage, err = c.GetDeployedPackage(ctx, deployedPackage.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		packageNeedsWait, _, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
+		if !packageNeedsWait {
+			spinner.Success()
+			return deployedPackage, nil
+		}
+
 		select {
 		case <-waitCtx.Done():
-			return nil, fmt.Errorf("timed out waiting for package deployment to complete: %w", waitCtx.Err())
+			return nil, fmt.Errorf("timed out waiting for webhook %q to complete for component %q: %w", hookName, component.Name, waitCtx.Err())
 		case <-time.After(1 * time.Second):
-			deployedPackage, err = c.GetDeployedPackage(ctx, deployedPackage.Name)
-			if err != nil {
-				return nil, err
-			}
-			packageNeedsWait, _, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
-			if !packageNeedsWait {
-				spinner.Success()
-				return deployedPackage, nil
-			}
 		}
 	}
 }
