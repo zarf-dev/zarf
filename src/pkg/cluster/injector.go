@@ -164,28 +164,30 @@ func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSr
 		spinner.Updatef("Loading the seed image '%s' from the package", src)
 		ref, err := transform.ParseImageRef(src)
 		if err != nil {
-			return seedImages, fmt.Errorf("failed to create ref for image %s: %w", src, err)
+			return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
 		}
 		img, err := utils.LoadOCIImage(imagesDir, ref)
 		if err != nil {
-			return seedImages, err
+			return nil, err
 		}
 
-		crane.SaveOCI(img, seedImagesDir)
+		if err := crane.SaveOCI(img, seedImagesDir); err != nil {
+			return nil, err
+		}
 
 		seedImages = append(seedImages, ref)
 
 		// Get the image digest so we can set an annotation in the image.json later
 		imgDigest, err := img.Digest()
 		if err != nil {
-			return seedImages, err
+			return nil, err
 		}
 		// This is done _without_ the domain (different from pull.go) since the injector only handles local images
 		localReferenceToDigest[ref.Path+ref.TagOrDigest] = imgDigest.String()
 	}
 
 	if err := utils.AddImageNameAnnotation(seedImagesDir, localReferenceToDigest); err != nil {
-		return seedImages, fmt.Errorf("unable to format OCI layout: %w", err)
+		return nil, fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 
 	return seedImages, nil
@@ -434,57 +436,58 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 	return pod, nil
 }
 
-// getImagesFromAvailableNodes checks for images on schedulable nodes within a cluster and returns
+// getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
 func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeMap, error) {
 	result := make(imageNodeMap)
 
 	for {
+		pods, err := c.GetPods(ctx, corev1.NamespaceAll, metav1.ListOptions{
+			FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("unable to get the list of %q pods in the cluster: %w", corev1.PodRunning, err)
+		}
+
+		for _, pod := range pods.Items {
+			nodeName := pod.Spec.NodeName
+
+			nodeDetails, err := c.GetNode(ctx, nodeName)
+			if err != nil {
+				return nil, fmt.Errorf("unable to get the node %q: %w", nodeName, err)
+			}
+
+			if nodeDetails.Status.Allocatable.Cpu().Cmp(injectorRequestedCPU) < 0 ||
+				nodeDetails.Status.Allocatable.Memory().Cmp(injectorRequestedMemory) < 0 {
+				continue
+			}
+
+			for _, taint := range nodeDetails.Spec.Taints {
+				if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
+					continue
+				}
+			}
+
+			for _, container := range pod.Spec.InitContainers {
+				result[container.Image] = append(result[container.Image], nodeName)
+			}
+			for _, container := range pod.Spec.Containers {
+				result[container.Image] = append(result[container.Image], nodeName)
+			}
+			for _, container := range pod.Spec.EphemeralContainers {
+				result[container.Image] = append(result[container.Image], nodeName)
+			}
+		}
+
+		if len(result) > 0 {
+			return result, nil
+		}
+
+		c.Log("No images found on any node. Retrying...")
+
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("get image list timed-out: %w", ctx.Err())
 		case <-time.After(2 * time.Second):
-			pods, err := c.GetPods(ctx, corev1.NamespaceAll, metav1.ListOptions{
-				FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
-			})
-			if err != nil {
-				return nil, fmt.Errorf("unable to get the list of %q pods in the cluster: %w", corev1.PodRunning, err)
-			}
-
-			for _, pod := range pods.Items {
-				nodeName := pod.Spec.NodeName
-
-				nodeDetails, err := c.GetNode(ctx, nodeName)
-				if err != nil {
-					return nil, fmt.Errorf("unable to get the node %q: %w", nodeName, err)
-				}
-
-				if nodeDetails.Status.Allocatable.Cpu().Cmp(injectorRequestedCPU) < 0 ||
-					nodeDetails.Status.Allocatable.Memory().Cmp(injectorRequestedMemory) < 0 {
-					continue
-				}
-
-				for _, taint := range nodeDetails.Spec.Taints {
-					if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
-						continue
-					}
-				}
-
-				for _, container := range pod.Spec.InitContainers {
-					result[container.Image] = append(result[container.Image], nodeName)
-				}
-				for _, container := range pod.Spec.Containers {
-					result[container.Image] = append(result[container.Image], nodeName)
-				}
-				for _, container := range pod.Spec.EphemeralContainers {
-					result[container.Image] = append(result[container.Image], nodeName)
-				}
-			}
-
-			if len(result) > 0 {
-				return result, nil
-			}
-
-			c.Log("No images found on any node. Retrying...")
 		}
 	}
 }
