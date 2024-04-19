@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# # Exit on error
-set -e
+set -euo pipefail
+
 
 MAIN_BRANCH="main"
 TARGET_BRANCH=$(git rev-parse --abbrev-ref HEAD)
