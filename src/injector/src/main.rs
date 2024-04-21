@@ -8,6 +8,8 @@ use std::io;
 use std::io::Read;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
+use std::thread;
 
 use flate2::read::GzDecoder;
 use glob::glob;
@@ -18,6 +20,10 @@ use sha2::{Digest, Sha256};
 use tar::Archive;
 
 const DOCKER_MIME_TYPE: &str = "application/vnd.docker.distribution.manifest.v2+json";
+
+#[derive(Debug)]
+struct TimeoutError;
+
 
 // Reads the binary contents of a file
 fn get_file(path: &PathBuf) -> io::Result<Vec<u8>> {
@@ -94,9 +100,15 @@ fn unpack(sha_sum: &String) {
 /// blobs/sha256/<sha256sum> - the image layers
 /// oci-layout - the OCI image layout
 fn start_seed_registry() {
+    // Define the timeout duration
+    let timeout_duration = Duration::from_secs(5);
+
+    // Wrap the handler with the timeout middleware
+    let wrapped_handler = timeout_middleware(handler, timeout_duration);
+    
     let root = PathBuf::from("/zarf-seed");
     println!("Starting seed registry at {} on port 5000", root.display());
-    rouille::start_server("0.0.0.0:5000", move |request| {
+    rouille::start_server("0.0.0.0:5000", move |request| wrapped_handler(request) {
         rouille::log(request, io::stdout(), || {
             router!(request,
                 (GET) (/v2/) => {
@@ -206,6 +218,30 @@ fn handle_get_digest(root: &Path, digest: &String) -> Response {
         .with_additional_header("Etag", digest.to_owned())
         .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
         .with_additional_header("Cache-Control", "max-age=31536000")
+}
+
+// Middleware function to handle timeouts
+fn timeout_middleware(inner_handler: impl Fn(&Request) -> Response, timeout_duration: Duration) -> impl Fn(&Request) -> Response {
+    move |request: &Request| {
+        // Clone the request for later execution
+        let cloned_request = request.clone();
+        
+        // Spawn a new thread to handle the request with a timeout
+        let handle = thread::spawn(move || {
+            let start_time = Instant::now();
+            inner_handler(&cloned_request)
+        });
+
+        // Wait for the handle with a timeout
+        match handle.join_timeout(timeout_duration) {
+            Ok(result) => result.unwrap_or_else(|_| Response::empty_500()),
+            Err(_) => {
+                // Request timed out
+                eprintln!("Request timed out");
+                Response::empty_500()
+            }
+        }
+    }
 }
 
 fn main() {
