@@ -315,7 +315,7 @@ func (i *ImageConfig) PullImage(src string, spinner *message.Spinner) (img v1.Im
 		if err != nil {
 			return nil, false, err
 		}
-		// Check if we have an indexImage or manifest list and if so error out
+		// Check if we have an image index or manifest list and if so error out
 		if refInfo.Digest != "" && (desc.MediaType == ctypes.OCIImageIndex || desc.MediaType == ctypes.DockerManifestList) {
 			var idx v1.IndexManifest
 			if err := json.Unmarshal(desc.Manifest, &idx); err != nil {
