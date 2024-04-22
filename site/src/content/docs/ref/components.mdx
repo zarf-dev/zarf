@@ -117,7 +117,7 @@ Zarf dynamically generates a Helm Chart from the named manifest entries that you
 
 :::note
 
-Kustomizations are handled a bit differently than normal manifests in that Zarf will automatically run `kustomize build` on them during `zarf package create`, thus rendering the Kustomization into a single manifest file. This prevents needing to grab any remote Kustomization resources during `zarf package deploy` but also means that any Zarf [`variables`](/ref/variables/) will only apply to the rendered manifest not the `kustomize build` process.
+Kustomizations are handled a bit differently than normal manifests in that Zarf will automatically run `kustomize build` on them during `zarf package create`, thus rendering the Kustomization into a single manifest file. This prevents needing to grab any remote Kustomization resources during `zarf package deploy` but also means that any Zarf [`variables`](/ref/values/) will only apply to the rendered manifest not the `kustomize build` process.
 
 :::
 
@@ -222,7 +222,7 @@ The `import` key in Zarf supports two modes to pull in a component:
 
 :::caution
 
-The import `path` or `url` must be statically defined at create time.  You cannot use [package templates](/ref/variables/#create-time-package-configuration-templates) within them.
+The import `path` or `url` must be statically defined at create time.  You cannot use [package templates](/ref/create/#package-templates) within them.
 
 :::
 
