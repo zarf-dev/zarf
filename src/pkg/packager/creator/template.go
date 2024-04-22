@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -32,8 +33,8 @@ func FillActiveTemplate(pkg types.ZarfPackage, setVariables map[string]string) (
 
 			_, present := setVariables[key]
 			if !present && !config.CommonOptions.Confirm {
-				setVal, err := interactive.PromptVariable(types.ZarfPackageVariable{
-					Name: key,
+				setVal, err := interactive.PromptVariable(variables.InteractiveVariable{
+					Variable: variables.Variable{Name: key},
 				})
 				if err != nil {
 					return err
