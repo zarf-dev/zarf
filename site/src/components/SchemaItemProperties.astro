@@ -1,5 +1,5 @@
 ---
-const { item, include, invert } = Astro.props;
+const { item, include, invert, unwrap } = Astro.props;
 
 const includesElement = (key: string) => {
   if (!include) {
@@ -15,6 +15,21 @@ const json = await import("../assets/zarf.schema.json");
 
 // @ts-expect-error - We don't import a TS type for the schema, but we know it's structured correctly
 const itemSchema = json.definitions[item];
+
+if (unwrap) {
+  unwrap.forEach((wrapped: string) => {
+    if (itemSchema.properties[wrapped]) {
+      // @ts-expect-error - We don't import a TS type for the schema, but we know it's structured correctly
+      const wrappedSchema = json.definitions[wrapped];
+
+      delete itemSchema.properties[wrapped]
+      itemSchema.required = itemSchema.required.filter((elem: string) => elem != wrapped)
+
+      itemSchema.properties = {...wrappedSchema.properties, ...itemSchema.properties}
+      itemSchema.required = [...wrappedSchema.required, ...itemSchema.required]
+    }
+  });
+}
 
 const properties = Object.keys(itemSchema.properties)
   .filter(includesElement)

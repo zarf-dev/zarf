@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -14,52 +16,54 @@ func TestGenerateValuesOverrides(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		chartVariables []types.ZarfChartVariable
-		setVariableMap map[string]*types.ZarfSetVariable
-		deployOpts     types.ZarfDeployOptions
-		componentName  string
-		chartName      string
-		want           map[string]any
+		name          string
+		chart         types.ZarfChart
+		setVariables  map[string]string
+		deployOpts    types.ZarfDeployOptions
+		componentName string
+		want          map[string]any
 	}{
 		{
-			name:           "Empty inputs",
-			chartVariables: []types.ZarfChartVariable{},
-			setVariableMap: map[string]*types.ZarfSetVariable{},
-			deployOpts:     types.ZarfDeployOptions{},
-			componentName:  "",
-			chartName:      "",
-			want:           map[string]any{},
-		},
-		{
-			name:           "Single variable",
-			chartVariables: []types.ZarfChartVariable{{Name: "testVar", Path: "testVar"}},
-			setVariableMap: map[string]*types.ZarfSetVariable{"testVar": {Value: "testValue"}},
-			deployOpts:     types.ZarfDeployOptions{},
-			componentName:  "testComponent",
-			chartName:      "testChart",
-			want:           map[string]any{"testVar": "testValue"},
-		},
-		{
-			name:           "Non-matching setVariable",
-			chartVariables: []types.ZarfChartVariable{{Name: "expectedVar", Path: "path.to.expectedVar"}},
-			setVariableMap: map[string]*types.ZarfSetVariable{"unexpectedVar": {Value: "unexpectedValue"}},
-			deployOpts:     types.ZarfDeployOptions{},
-			componentName:  "testComponent",
-			chartName:      "testChart",
-			want:           map[string]any{},
-		},
-		{
-			name: "Nested 3 level setVariableMap",
-			chartVariables: []types.ZarfChartVariable{
-				{Name: "level1.level2.level3Var", Path: "level1.level2.level3Var"},
-			},
-			setVariableMap: map[string]*types.ZarfSetVariable{
-				"level1.level2.level3Var": {Value: "nestedValue"},
-			},
+			name:          "Empty inputs",
+			chart:         types.ZarfChart{},
+			setVariables:  map[string]string{},
 			deployOpts:    types.ZarfDeployOptions{},
-			componentName: "nestedComponent",
-			chartName:     "nestedChart",
+			componentName: "",
+			want:          map[string]any{},
+		},
+		{
+			name: "Single variable",
+			chart: types.ZarfChart{
+				Name:      "test-chart",
+				Variables: []types.ZarfChartVariable{{Name: "TEST_VAR", Path: "testVar"}},
+			},
+			setVariables:  map[string]string{"TEST_VAR": "testValue"},
+			deployOpts:    types.ZarfDeployOptions{},
+			componentName: "test-component",
+			want:          map[string]any{"testVar": "testValue"},
+		},
+		{
+			name: "Non-matching setVariable",
+			chart: types.ZarfChart{
+				Name:      "test-chart",
+				Variables: []types.ZarfChartVariable{{Name: "EXPECTED_VAR", Path: "path.to.expectedVar"}},
+			},
+			setVariables:  map[string]string{"UNEXPECTED_VAR": "unexpectedValue"},
+			deployOpts:    types.ZarfDeployOptions{},
+			componentName: "test-component",
+			want:          map[string]any{},
+		},
+		{
+			name: "Nested 3 level setVariables",
+			chart: types.ZarfChart{
+				Name: "nested-chart",
+				Variables: []types.ZarfChartVariable{
+					{Name: "LEVEL1_LEVEL2_LEVEL3_VAR", Path: "level1.level2.level3Var"},
+				},
+			},
+			setVariables:  map[string]string{"LEVEL1_LEVEL2_LEVEL3_VAR": "nestedValue"},
+			deployOpts:    types.ZarfDeployOptions{},
+			componentName: "nested-component",
 			want: map[string]any{
 				"level1": map[string]any{
 					"level2": map[string]any{
@@ -70,17 +74,19 @@ func TestGenerateValuesOverrides(t *testing.T) {
 		},
 		{
 			name: "Multiple variables with nested and non-nested paths, distinct values",
-			chartVariables: []types.ZarfChartVariable{
-				{Name: "NESTED_VAR_LEVEL2", Path: "nestedVar.level2"},
-				{Name: "simpleVar", Path: "simpleVar"},
+			chart: types.ZarfChart{
+				Name: "mixed-chart",
+				Variables: []types.ZarfChartVariable{
+					{Name: "NESTED_VAR_LEVEL2", Path: "nestedVar.level2"},
+					{Name: "SIMPLE_VAR", Path: "simpleVar"},
+				},
 			},
-			setVariableMap: map[string]*types.ZarfSetVariable{
-				"NESTED_VAR_LEVEL2": {Value: "distinctNestedValue"},
-				"simpleVar":         {Value: "distinctSimpleValue"},
+			setVariables: map[string]string{
+				"NESTED_VAR_LEVEL2": "distinctNestedValue",
+				"SIMPLE_VAR":        "distinctSimpleValue",
 			},
 			deployOpts:    types.ZarfDeployOptions{},
-			componentName: "mixedComponent",
-			chartName:     "mixedChart",
+			componentName: "mixed-component",
 			want: map[string]any{
 				"nestedVar": map[string]any{
 					"level2": "distinctNestedValue",
@@ -90,93 +96,94 @@ func TestGenerateValuesOverrides(t *testing.T) {
 		},
 		{
 			name: "Values override test",
-			chartVariables: []types.ZarfChartVariable{
-				{Name: "overrideVar", Path: "path"},
+			chart: types.ZarfChart{
+				Name: "test-chart",
+				Variables: []types.ZarfChartVariable{
+					{Name: "OVERRIDE_VAR", Path: "path"},
+				},
 			},
-			setVariableMap: map[string]*types.ZarfSetVariable{
-				"path": {Value: "overrideValue"},
-			},
+			setVariables: map[string]string{"OVERRIDE_VAR": "overrideValue"},
 			deployOpts: types.ZarfDeployOptions{
 				ValuesOverridesMap: map[string]map[string]map[string]any{
-					"testComponent": {
-						"testChart": {
+					"test-component": {
+						"test-chart": {
 							"path": "deployOverrideValue",
 						},
 					},
 				},
 			},
-			componentName: "testComponent",
-			chartName:     "testChart",
+			componentName: "test-component",
 			want: map[string]any{
 				"path": "deployOverrideValue",
 			},
 		},
 		{
-			name: "Missing variable in setVariableMap but present in ValuesOverridesMap",
-			chartVariables: []types.ZarfChartVariable{
-				{Name: "missingVar", Path: "missingVarPath"},
+			name: "Missing variable in setVariables but present in ValuesOverridesMap",
+			chart: types.ZarfChart{
+				Name: "test-chart",
+				Variables: []types.ZarfChartVariable{
+					{Name: "MISSING_VAR", Path: "missingVarPath"},
+				},
 			},
-			setVariableMap: map[string]*types.ZarfSetVariable{},
+			setVariables: map[string]string{},
 			deployOpts: types.ZarfDeployOptions{
 				ValuesOverridesMap: map[string]map[string]map[string]any{
-					"testComponent": {
-						"testChart": {
+					"test-component": {
+						"test-chart": {
 							"missingVarPath": "overrideValue",
 						},
 					},
 				},
 			},
-			componentName: "testComponent",
-			chartName:     "testChart",
+			componentName: "test-component",
 			want: map[string]any{
 				"missingVarPath": "overrideValue",
 			},
 		},
 		{
-			name:           "Non-existent component or chart",
-			chartVariables: []types.ZarfChartVariable{{Name: "someVar", Path: "someVar"}},
-			setVariableMap: map[string]*types.ZarfSetVariable{"someVar": {Value: "value"}},
+			name: "Non-existent component or chart",
+			chart: types.ZarfChart{
+				Name:      "actual-chart",
+				Variables: []types.ZarfChartVariable{{Name: "SOME_VAR", Path: "someVar"}},
+			},
+			setVariables: map[string]string{"SOME_VAR": "value"},
 			deployOpts: types.ZarfDeployOptions{
 				ValuesOverridesMap: map[string]map[string]map[string]any{
-					"nonExistentComponent": {
-						"nonExistentChart": {
+					"non-existent-component": {
+						"non-existent-chart": {
 							"someVar": "overrideValue",
 						},
 					},
 				},
 			},
-			componentName: "actualComponent",
-			chartName:     "actualChart",
+			componentName: "actual-component",
 			want:          map[string]any{"someVar": "value"},
 		},
 		{
-			name:           "Variable in setVariableMap but not in chartVariables",
-			chartVariables: []types.ZarfChartVariable{},
-			setVariableMap: map[string]*types.ZarfSetVariable{
-				"orphanVar": {Value: "orphanValue"},
-			},
+			name:          "Variable in setVariables but not in chartVariables",
+			chart:         types.ZarfChart{Name: "orphan-chart"},
+			setVariables:  map[string]string{"ORPHAN_VAR": "orphanValue"},
 			deployOpts:    types.ZarfDeployOptions{},
-			componentName: "orphanComponent",
-			chartName:     "orphanChart",
+			componentName: "orphan-component",
 			want:          map[string]any{},
 		},
 		{
 			name: "Empty ValuesOverridesMap with non-empty setVariableMap and chartVariables",
-			chartVariables: []types.ZarfChartVariable{
-				{Name: "var1", Path: "path.to.var1"},
-				{Name: "var2", Path: "path.to.var2"},
-				{Name: "var3", Path: "path.to3.var3"},
+			chart: types.ZarfChart{
+				Name: "chart-with-vars",
+				Variables: []types.ZarfChartVariable{
+					{Name: "VAR1", Path: "path.to.var1"},
+					{Name: "VAR2", Path: "path.to.var2"},
+					{Name: "VAR3", Path: "path.to3.var3"},
+				},
 			},
-			setVariableMap: map[string]*types.ZarfSetVariable{
-				"var1": {Value: "value1"},
-				"var2": {Value: "value2"},
-				"var3": {Value: "value3"},
+			setVariables: map[string]string{
+				"VAR1": "value1",
+				"VAR2": "value2",
+				"VAR3": "value3",
 			},
-			deployOpts: types.ZarfDeployOptions{
-				ValuesOverridesMap: map[string]map[string]map[string]any{},
-			},
-			componentName: "componentWithVars",
-			chartName:     "chartWithVars",
+			deployOpts:    types.ZarfDeployOptions{},
+			componentName: "component-with-vars",
 			want: map[string]any{
 				"path": map[string]any{
 					"to": map[string]any{
@@ -190,15 +197,14 @@ func TestGenerateValuesOverrides(t *testing.T) {
 			},
 		},
 		{
-			name:           "Empty chartVariables and non-empty setVariableMap",
-			chartVariables: []types.ZarfChartVariable{},
-			setVariableMap: map[string]*types.ZarfSetVariable{
-				"var1": {Value: "value1"},
-				"var2": {Value: "value2"},
+			name:  "Empty chartVariables and non-empty setVariableMap",
+			chart: types.ZarfChart{Name: "chart-with-vars"},
+			setVariables: map[string]string{
+				"VAR1": "value1",
+				"VAR2": "value2",
 			},
 			deployOpts:    types.ZarfDeployOptions{},
-			componentName: "componentWithVars",
-			chartName:     "chartWithVars",
+			componentName: "component-with-vars",
 			want:          map[string]any{},
 		},
 	}
@@ -206,7 +212,12 @@ func TestGenerateValuesOverrides(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := generateValuesOverrides(tt.chartVariables, tt.setVariableMap, tt.deployOpts, tt.componentName, tt.chartName)
+			p := NewOrDie(&types.PackagerConfig{DeployOpts: tt.deployOpts}, WithSource(&sources.TarballSource{}))
+			for k, v := range tt.setVariables {
+				p.variableConfig.SetVariable(k, v, false, false, variables.RawVariableType)
+			}
+
+			got, err := p.generateValuesOverrides(tt.chart, tt.componentName)
 			if err != nil {
 				t.Errorf("%s: generateValuesOverrides() error = %v", tt.name, err)
 			}

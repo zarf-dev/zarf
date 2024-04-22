@@ -8,23 +8,25 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 )
 
 // UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
 func (h *Helm) UpdateZarfRegistryValues() error {
-	pushUser, err := utils.GetHtpasswdString(h.cfg.State.RegistryInfo.PushUsername, h.cfg.State.RegistryInfo.PushPassword)
+	pushUser, err := utils.GetHtpasswdString(h.state.RegistryInfo.PushUsername, h.state.RegistryInfo.PushPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
 	}
 
-	pullUser, err := utils.GetHtpasswdString(h.cfg.State.RegistryInfo.PullUsername, h.cfg.State.RegistryInfo.PullPassword)
+	pullUser, err := utils.GetHtpasswdString(h.state.RegistryInfo.PullUsername, h.state.RegistryInfo.PullPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
 	}
@@ -95,10 +97,7 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 				Namespace:   "zarf",
 				ReleaseName: release.Name,
 			}
-			h.component = types.ZarfComponent{
-				Name: "zarf-agent",
-			}
-			h.cfg.Pkg.Constants = []types.ZarfPackageConstant{
+			h.variableConfig.SetConstants([]variables.Constant{
 				{
 					Name:  "AGENT_IMAGE",
 					Value: currentAgentImage.Path,
@@ -107,9 +106,14 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 					Name:  "AGENT_IMAGE_TAG",
 					Value: currentAgentImage.Tag,
 				},
+			})
+			applicationTemplates, err := template.GetZarfTemplates("zarf-agent", h.state)
+			if err != nil {
+				return fmt.Errorf("error setting up the templates: %w", err)
 			}
+			h.variableConfig.SetApplicationTemplates(applicationTemplates)
 
-			err := h.UpdateReleaseValues(map[string]interface{}{})
+			err = h.UpdateReleaseValues(map[string]interface{}{})
 			if err != nil {
 				return fmt.Errorf("error updating the release values: %w", err)
 			}

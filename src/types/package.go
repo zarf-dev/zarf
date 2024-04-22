@@ -4,6 +4,8 @@
 // Package types contains all the types used by Zarf.
 package types
 
+import "github.com/defenseunicorns/zarf/src/pkg/variables"
+
 // ZarfPackageKind is an enum of the different kinds of Zarf packages.
 type ZarfPackageKind string
 
@@ -16,12 +18,12 @@ const (
 
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
-	Kind       ZarfPackageKind       `json:"kind" jsonschema:"description=The kind of Zarf package,enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
-	Metadata   ZarfMetadata          `json:"metadata,omitempty" jsonschema:"description=Package metadata"`
-	Build      ZarfBuildData         `json:"build,omitempty" jsonschema:"description=Zarf-generated package build data"`
-	Components []ZarfComponent       `json:"components" jsonschema:"description=List of components to deploy in this package"`
-	Constants  []ZarfPackageConstant `json:"constants,omitempty" jsonschema:"description=Constant template values applied on deploy for K8s resources"`
-	Variables  []ZarfPackageVariable `json:"variables,omitempty" jsonschema:"description=Variable template values applied on deploy for K8s resources"`
+	Kind       ZarfPackageKind                 `json:"kind" jsonschema:"description=The kind of Zarf package,enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
+	Metadata   ZarfMetadata                    `json:"metadata,omitempty" jsonschema:"description=Package metadata"`
+	Build      ZarfBuildData                   `json:"build,omitempty" jsonschema:"description=Zarf-generated package build data"`
+	Components []ZarfComponent                 `json:"components" jsonschema:"description=List of components to deploy in this package"`
+	Constants  []variables.Constant            `json:"constants,omitempty" jsonschema:"description=Constant template values applied on deploy for K8s resources"`
+	Variables  []variables.InteractiveVariable `json:"variables,omitempty" jsonschema:"description=Variable template values applied on deploy for K8s resources"`
 }
 
 // IsInitConfig returns whether a Zarf package is an init config.
@@ -70,26 +72,4 @@ type ZarfBuildData struct {
 	DifferentialMissing        []string          `json:"differentialMissing,omitempty" jsonschema:"description=List of components that were not included in this package due to differential packaging"`
 	LastNonBreakingVersion     string            `json:"lastNonBreakingVersion,omitempty" jsonschema:"description=The minimum version of Zarf that does not have breaking package structure changes"`
 	Flavor                     string            `json:"flavor,omitempty" jsonschema:"description=The flavor of Zarf used to build this package"`
-}
-
-// ZarfPackageVariable are variables that can be used to dynamically template K8s resources.
-type ZarfPackageVariable struct {
-	Name        string       `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
-	Description string       `json:"description,omitempty" jsonschema:"description=A description of the variable to be used when prompting the user a value"`
-	Default     string       `json:"default,omitempty" jsonschema:"description=The default value to use for the variable"`
-	Prompt      bool         `json:"prompt,omitempty" jsonschema:"description=Whether to prompt the user for input for this variable"`
-	Sensitive   bool         `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
-	AutoIndent  bool         `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
-	Pattern     string       `json:"pattern,omitempty" jsonschema:"description=An optional regex pattern that a variable value must match before a package can be deployed."`
-	Type        VariableType `json:"type,omitempty" jsonschema:"description=Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB),enum=raw,enum=file"`
-}
-
-// ZarfPackageConstant are constants that can be used to dynamically template K8s resources.
-type ZarfPackageConstant struct {
-	Name  string `json:"name" jsonschema:"description=The name to be used for the constant,pattern=^[A-Z0-9_]+$"`
-	Value string `json:"value" jsonschema:"description=The value to set for the constant during deploy"`
-	// Include a description that will only be displayed during package create/deploy confirm prompts
-	Description string `json:"description,omitempty" jsonschema:"description=A description of the constant to explain its purpose on package create or deploy confirmation prompts"`
-	AutoIndent  bool   `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_CONST_."`
-	Pattern     string `json:"pattern,omitempty" jsonschema:"description=An optional regex pattern that a constant value must match before a package can be created."`
 }

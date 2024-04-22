@@ -144,4 +144,4 @@ Typically you should not deploy a Zarf package in YOLO mode if the cluster has a
 
 A `skeleton` package is a bare-bones Zarf package definition alongside its associated local files and manifests that has been published to an OCI registry. These packages are intended for use with [component composability](/ref/components) to provide versioned imports for components that you wish to mix and match or modify with merge-overrides across multiple separate packages.
 
-Skeleton packages have not been run through the `zarf package create` process yet, and thus do not have any remote resources included (no images, repos, or remote manifests and files) thereby retaining any [create-time package configuration templates](/ref/variables) as they were defined in the original `zarf.yaml` (i.e. untemplated).
+Skeleton packages have not been run through the `zarf package create` process yet, and thus do not have any remote resources included (no images, repos, or remote manifests and files) thereby retaining any [create-time package configuration templates](/ref/values) as they were defined in the original `zarf.yaml` (i.e. untemplated).

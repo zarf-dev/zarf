@@ -29,7 +29,7 @@ func (p *Packager) Create() (err error) {
 
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
-	pc := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
+	pc := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
 
 	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
 		return err

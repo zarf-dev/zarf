@@ -41,7 +41,7 @@ func (p *Packager) Mirror(ctx context.Context) (err error) {
 		return fmt.Errorf("mirror cancelled")
 	}
 
-	p.cfg.State = &types.ZarfState{
+	p.state = &types.ZarfState{
 		RegistryInfo: p.cfg.InitOpts.RegistryInfo,
 		GitServer:    p.cfg.InitOpts.GitServer,
 	}
