@@ -61,7 +61,7 @@ func (k *K8s) WaitForHealthyCluster(ctx context.Context) error {
 				config, clientset, err := connect()
 				if err != nil {
 					k.Log("Cluster connection not available yet: %w", err)
-					continue
+					timer.Reset(1 * time.Second)
 				}
 
 				k.RestConfig = config
@@ -71,14 +71,14 @@ func (k *K8s) WaitForHealthyCluster(ctx context.Context) error {
 			// Make sure there is at least one running Node
 			nodes, err = k.GetNodes(ctx)
 			if err != nil || len(nodes.Items) < 1 {
-				k.Log("No nodes reporting healthy yet: %#v\n", err)
-				continue
+				k.Log("No nodes reporting healthy yet: %v\n", err)
+				timer.Reset(1 * time.Second)
 			}
 
 			// Get the cluster pod list
 			if pods, err = k.GetAllPods(ctx); err != nil {
 				k.Log("Could not get the pod list: %w", err)
-				continue
+				timer.Reset(1 * time.Second)
 			}
 
 			// Check that at least one pod is in the 'succeeded' or 'running' state
