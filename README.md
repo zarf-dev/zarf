@@ -47,7 +47,7 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 
 ## 🛠️ Configurable Features
 
-- Customizable [variables and package templates](https://docs.zarf.dev/ref/variables/) with defaults and user prompting
+- Customizable [variables and package templates](https://docs.zarf.dev/ref/values/) with defaults and user prompting
 - [Composable packages](https://docs.zarf.dev/ref/components/#component-imports) to include multiple sub-packages/components
 - Component-level OS/architecture filtering
 
@@ -67,7 +67,7 @@ To discover more about Zarf and explore its features, please visit [docs.zarf.de
 - [packages](https://docs.zarf.dev/ref/packages)
 - [components](https://docs.zarf.dev/ref/components)
 - [actions](https://docs.zarf.dev/ref/actions)
-- [variables](https://docs.zarf.dev/ref/variables)
+- [variables](https://docs.zarf.dev/ref/values)
 - [SBOMs](https://docs.zarf.dev/ref/sboms)
 - and more!
 

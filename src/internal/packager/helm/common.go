@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -29,19 +30,20 @@ type Helm struct {
 	chartPath  string
 	valuesPath string
 
-	cfg       *types.PackagerConfig
-	component types.ZarfComponent
-	cluster   *cluster.Cluster
-	timeout   time.Duration
-	retries   int
+	cfg     *types.PackagerConfig
+	cluster *cluster.Cluster
+	timeout time.Duration
+	retries int
 
 	kubeVersion string
 
 	chartOverride   *chart.Chart
 	valuesOverrides map[string]any
 
-	settings     *cli.EnvSettings
-	actionConfig *action.Configuration
+	settings       *cli.EnvSettings
+	actionConfig   *action.Configuration
+	variableConfig *variables.VariableConfig
+	state          *types.ZarfState
 }
 
 // Modifier is a function that modifies the Helm config.
@@ -64,12 +66,14 @@ func New(chart types.ZarfChart, chartPath string, valuesPath string, mods ...Mod
 }
 
 // NewClusterOnly returns a new Helm config struct geared toward interacting with the cluster (not packages)
-func NewClusterOnly(cfg *types.PackagerConfig, cluster *cluster.Cluster) *Helm {
+func NewClusterOnly(cfg *types.PackagerConfig, variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster) *Helm {
 	return &Helm{
-		cfg:     cfg,
-		cluster: cluster,
-		timeout: config.ZarfDefaultTimeout,
-		retries: config.ZarfDefaultRetries,
+		cfg:            cfg,
+		variableConfig: variableConfig,
+		state:          state,
+		cluster:        cluster,
+		timeout:        config.ZarfDefaultTimeout,
+		retries:        config.ZarfDefaultRetries,
 	}
 }
 
@@ -133,10 +137,11 @@ func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName,
 }
 
 // WithDeployInfo adds the necessary information to deploy a given chart
-func WithDeployInfo(component types.ZarfComponent, cfg *types.PackagerConfig, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration, retries int) Modifier {
+func WithDeployInfo(cfg *types.PackagerConfig, variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration, retries int) Modifier {
 	return func(h *Helm) {
-		h.component = component
 		h.cfg = cfg
+		h.variableConfig = variableConfig
+		h.state = state
 		h.cluster = cluster
 		h.valuesOverrides = valuesOverrides
 		h.timeout = timeout
@@ -151,10 +156,10 @@ func WithKubeVersion(kubeVersion string) Modifier {
 	}
 }
 
-// WithPackageConfig sets the packager config for the chart
-func WithPackageConfig(cfg *types.PackagerConfig) Modifier {
+// WithVariableConfig sets the variable config for the chart
+func WithVariableConfig(variableConfig *variables.VariableConfig) Modifier {
 	return func(h *Helm) {
-		h.cfg = cfg
+		h.variableConfig = variableConfig
 	}
 }
 
