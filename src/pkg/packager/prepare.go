@@ -19,11 +19,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
-	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -55,7 +53,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	}
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
-	c := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
+	c := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
 
 	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
 		return nil, err
@@ -94,11 +92,31 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 
 	componentDefinition := "\ncomponents:\n"
 
-	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
+	if err := p.populatePackageVariableConfig(); err != nil {
+		return nil, fmt.Errorf("unable to set the active variables: %w", err)
+	}
+
+	// Set default builtin values so they exist in case any helm charts rely on them
+	registryInfo := types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}
+	err = registryInfo.FillInEmptyValues()
+	if err != nil {
 		return nil, err
+	}
+	gitServer := types.GitServerInfo{}
+	err = gitServer.FillInEmptyValues()
+	if err != nil {
+		return nil, err
+	}
+	artifactServer := types.ArtifactServerInfo{}
+	artifactServer.FillInEmptyValues()
+	p.state = &types.ZarfState{
+		RegistryInfo:   registryInfo,
+		GitServer:      gitServer,
+		ArtifactServer: artifactServer,
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
+
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
 			continue
@@ -137,27 +155,11 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 		if err != nil {
 			return nil, err
 		}
-		values, err := template.Generate(p.cfg)
-		if err != nil {
-			return nil, fmt.Errorf("unable to generate template values")
-		}
-		// Adding these so the default builtin values exist in case any helm charts rely on them
-		registryInfo := types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}
-		err = registryInfo.FillInEmptyValues()
+		err = p.populateComponentAndStateTemplates(component.Name)
 		if err != nil {
 			return nil, err
 		}
-		gitServer := types.GitServerInfo{}
-		err = gitServer.FillInEmptyValues()
-		if err != nil {
-			return nil, err
-		}
-		artifactServer := types.ArtifactServerInfo{}
-		artifactServer.FillInEmptyValues()
-		values.SetState(&types.ZarfState{
-			RegistryInfo:   registryInfo,
-			GitServer:      gitServer,
-			ArtifactServer: artifactServer})
+
 		for _, chart := range component.Charts {
 
 			helmCfg := helm.New(
@@ -165,7 +167,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 				componentPaths.Charts,
 				componentPaths.Values,
 				helm.WithKubeVersion(kubeVersionOverride),
-				helm.WithPackageConfig(p.cfg),
+				helm.WithVariableConfig(p.variableConfig),
 			)
 
 			err = helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
@@ -174,8 +176,8 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 			}
 
 			valuesFilePaths, _ := helpers.RecursiveFileList(componentPaths.Values, nil, false)
-			for _, path := range valuesFilePaths {
-				if err := values.Apply(component, path, false); err != nil {
+			for _, valueFilePath := range valuesFilePaths {
+				if err := p.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
 					return nil, err
 				}
 			}
@@ -242,7 +244,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 					f = newDestination
 				}
 
-				if err := values.Apply(component, f, true); err != nil {
+				if err := p.variableConfig.ReplaceTextTemplate(f); err != nil {
 					return nil, err
 				}
 				// Read the contents of each file
