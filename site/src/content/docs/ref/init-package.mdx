@@ -135,7 +135,7 @@ graph TD
     B12(prompt to confirm components)-->B13
     B13(prompt to choose components in '.group')-->B14
 
-    subgraph
+    subgraph  ""
     B52 --> |Yes|B14(deploy each component)-->B14
     B14 --> B15{Component is \n zarf-seed-registry}
     B15 --> |Yes|B51(initialize zarf-state secret):::action
