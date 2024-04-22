@@ -106,7 +106,7 @@ The `registry:2` image and the Zarf Agent image can be configured with a custom 
 
 ## Cluster creation
 
-If there is no running cluster, the init package can be used to create one. It has a deployable K3s cluster component that can be optionally deployed on your machine. To install a K8s distribution other than k3s, finding or creating a custom package is necessary.
+If there is no running cluster, the init package can be used to create one. It has a deployable K3s cluster component that can be optionally deployed on your machine. To install a K8s distribution other than k3s, finding or creating a custom Zarf package is necessary.
 
 Typically, an init package is the first Zarf Package to be deployed on a cluster as other packages often rely on the services it installs or configures, however Zarf may be used to package and install the cluster distribution itself.  In this scenario, the distribution package would be deployed first, followed by the init package, and then any other packages planned for deployment.
 
