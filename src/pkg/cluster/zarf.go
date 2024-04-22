@@ -147,22 +147,26 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg types.
 	spinner := message.NewProgressSpinner("Waiting for webhook %q to complete for component %q", hookName, component.Name)
 	defer spinner.Stop()
 
+	timer := time.NewTimer(0)
+	defer timer.Stop()
+
 	for {
-		deployedPackage, err = c.GetDeployedPackage(ctx, deployedPackage.Name)
-		if err != nil {
-			return nil, err
-		}
-
-		packageNeedsWait, _, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
-		if !packageNeedsWait {
-			spinner.Success()
-			return deployedPackage, nil
-		}
-
 		select {
 		case <-waitCtx.Done():
 			return nil, fmt.Errorf("timed out waiting for webhook %q to complete for component %q: %w", hookName, component.Name, waitCtx.Err())
-		case <-time.After(1 * time.Second):
+		case <-timer.C:
+			deployedPackage, err = c.GetDeployedPackage(ctx, deployedPackage.Name)
+			if err != nil {
+				return nil, err
+			}
+
+			packageNeedsWait, _, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
+			if !packageNeedsWait {
+				spinner.Success()
+				return deployedPackage, nil
+			}
+
+			timer.Reset(1 * time.Second)
 		}
 	}
 }

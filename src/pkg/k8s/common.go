@@ -49,44 +49,47 @@ func (k *K8s) WaitForHealthyCluster(ctx context.Context) error {
 	var nodes *v1.NodeList
 	var pods *v1.PodList
 
+	timer := time.NewTimer(0)
+	defer timer.Stop()
+
 	for {
-		if k.RestConfig == nil || k.Clientset == nil {
-			config, clientset, err := connect()
-			if err != nil {
-				k.Log("Cluster connection not available yet: %w", err)
-				continue
-			}
-
-			k.RestConfig = config
-			k.Clientset = clientset
-		}
-
-		// Make sure there is at least one running Node
-		nodes, err = k.GetNodes(ctx)
-		if err != nil || len(nodes.Items) < 1 {
-			k.Log("No nodes reporting healthy yet: %#v\n", err)
-			continue
-		}
-
-		// Get the cluster pod list
-		if pods, err = k.GetAllPods(ctx); err != nil {
-			k.Log("Could not get the pod list: %w", err)
-			continue
-		}
-
-		// Check that at least one pod is in the 'succeeded' or 'running' state
-		for _, pod := range pods.Items {
-			if pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodRunning {
-				return nil
-			}
-		}
-
-		k.Log("No pods reported 'succeeded' or 'running' state yet.")
-
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("timed out waiting for cluster to report healthy: %w", ctx.Err())
-		case <-time.After(1 * time.Second):
+		case <-timer.C:
+			if k.RestConfig == nil || k.Clientset == nil {
+				config, clientset, err := connect()
+				if err != nil {
+					k.Log("Cluster connection not available yet: %w", err)
+					continue
+				}
+
+				k.RestConfig = config
+				k.Clientset = clientset
+			}
+
+			// Make sure there is at least one running Node
+			nodes, err = k.GetNodes(ctx)
+			if err != nil || len(nodes.Items) < 1 {
+				k.Log("No nodes reporting healthy yet: %#v\n", err)
+				continue
+			}
+
+			// Get the cluster pod list
+			if pods, err = k.GetAllPods(ctx); err != nil {
+				k.Log("Could not get the pod list: %w", err)
+				continue
+			}
+
+			// Check that at least one pod is in the 'succeeded' or 'running' state
+			for _, pod := range pods.Items {
+				if pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodRunning {
+					return nil
+				}
+			}
+
+			k.Log("No pods reported 'succeeded' or 'running' state yet.")
+			timer.Reset(1 * time.Second)
 		}
 	}
 }

@@ -440,54 +440,57 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeMap, error) {
 	result := make(imageNodeMap)
 
+	timer := time.NewTimer(0)
+	defer timer.Stop()
+
 	for {
-		pods, err := c.GetPods(ctx, corev1.NamespaceAll, metav1.ListOptions{
-			FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("unable to get the list of %q pods in the cluster: %w", corev1.PodRunning, err)
-		}
-
-		for _, pod := range pods.Items {
-			nodeName := pod.Spec.NodeName
-
-			nodeDetails, err := c.GetNode(ctx, nodeName)
-			if err != nil {
-				return nil, fmt.Errorf("unable to get the node %q: %w", nodeName, err)
-			}
-
-			if nodeDetails.Status.Allocatable.Cpu().Cmp(injectorRequestedCPU) < 0 ||
-				nodeDetails.Status.Allocatable.Memory().Cmp(injectorRequestedMemory) < 0 {
-				continue
-			}
-
-			for _, taint := range nodeDetails.Spec.Taints {
-				if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
-					continue
-				}
-			}
-
-			for _, container := range pod.Spec.InitContainers {
-				result[container.Image] = append(result[container.Image], nodeName)
-			}
-			for _, container := range pod.Spec.Containers {
-				result[container.Image] = append(result[container.Image], nodeName)
-			}
-			for _, container := range pod.Spec.EphemeralContainers {
-				result[container.Image] = append(result[container.Image], nodeName)
-			}
-		}
-
-		if len(result) > 0 {
-			return result, nil
-		}
-
-		c.Log("No images found on any node. Retrying...")
-
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("get image list timed-out: %w", ctx.Err())
-		case <-time.After(2 * time.Second):
+		case <-timer.C:
+			pods, err := c.GetPods(ctx, corev1.NamespaceAll, metav1.ListOptions{
+				FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
+			})
+			if err != nil {
+				return nil, fmt.Errorf("unable to get the list of %q pods in the cluster: %w", corev1.PodRunning, err)
+			}
+
+			for _, pod := range pods.Items {
+				nodeName := pod.Spec.NodeName
+
+				nodeDetails, err := c.GetNode(ctx, nodeName)
+				if err != nil {
+					return nil, fmt.Errorf("unable to get the node %q: %w", nodeName, err)
+				}
+
+				if nodeDetails.Status.Allocatable.Cpu().Cmp(injectorRequestedCPU) < 0 ||
+					nodeDetails.Status.Allocatable.Memory().Cmp(injectorRequestedMemory) < 0 {
+					continue
+				}
+
+				for _, taint := range nodeDetails.Spec.Taints {
+					if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
+						continue
+					}
+				}
+
+				for _, container := range pod.Spec.InitContainers {
+					result[container.Image] = append(result[container.Image], nodeName)
+				}
+				for _, container := range pod.Spec.Containers {
+					result[container.Image] = append(result[container.Image], nodeName)
+				}
+				for _, container := range pod.Spec.EphemeralContainers {
+					result[container.Image] = append(result[container.Image], nodeName)
+				}
+			}
+
+			if len(result) > 0 {
+				return result, nil
+			}
+
+			c.Log("No images found on any node. Retrying...")
+			timer.Reset(2 * time.Second)
 		}
 	}
 }

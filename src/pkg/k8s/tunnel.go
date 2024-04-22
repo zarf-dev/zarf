@@ -97,15 +97,19 @@ func (tunnel *Tunnel) Connect(ctx context.Context) (string, error) {
 		tunnel.kube.Log("%s", err.Error())
 		tunnel.kube.Log("Delay creating tunnel, waiting %d seconds...", delay)
 
+		timer := time.NewTimer(0)
+		defer timer.Stop()
+
 		select {
 		case <-ctx.Done():
 			return "", ctx.Err()
-		case <-time.After(time.Duration(delay) * time.Second):
-		}
+		case <-timer.C:
+			url, err = tunnel.Connect(ctx)
+			if err != nil {
+				return "", err
+			}
 
-		url, err = tunnel.Connect(ctx)
-		if err != nil {
-			return "", err
+			timer.Reset(time.Duration(delay) * time.Second)
 		}
 	}
 
