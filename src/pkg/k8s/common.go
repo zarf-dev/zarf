@@ -45,9 +45,11 @@ func New(logger Log, defaultLabels Labels) (*K8s, error) {
 
 // WaitForHealthyCluster checks for an available K8s cluster every second until timeout.
 func (k *K8s) WaitForHealthyCluster(ctx context.Context) error {
-	var err error
-	var nodes *v1.NodeList
-	var pods *v1.PodList
+	var (
+		err   error
+		nodes *v1.NodeList
+		pods  *v1.PodList
+	)
 
 	timer := time.NewTimer(0)
 	defer timer.Stop()
@@ -62,6 +64,7 @@ func (k *K8s) WaitForHealthyCluster(ctx context.Context) error {
 				if err != nil {
 					k.Log("Cluster connection not available yet: %w", err)
 					timer.Reset(1 * time.Second)
+					continue
 				}
 
 				k.RestConfig = config
@@ -73,12 +76,14 @@ func (k *K8s) WaitForHealthyCluster(ctx context.Context) error {
 			if err != nil || len(nodes.Items) < 1 {
 				k.Log("No nodes reporting healthy yet: %v\n", err)
 				timer.Reset(1 * time.Second)
+				continue
 			}
 
 			// Get the cluster pod list
 			if pods, err = k.GetAllPods(ctx); err != nil {
 				k.Log("Could not get the pod list: %w", err)
 				timer.Reset(1 * time.Second)
+				continue
 			}
 
 			// Check that at least one pod is in the 'succeeded' or 'running' state
