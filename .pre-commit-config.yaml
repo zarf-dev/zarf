@@ -10,9 +10,11 @@ repos:
           - "--allow-missing-credentials"
       - id: detect-private-key
       - id: end-of-file-fixer
+        exclude: site/src/content/docs/commands/.*
       - id: fix-byte-order-marker
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
+        exclude: site/src/content/docs/commands/.*
   - repo: https://github.com/sirosen/texthooks
     rev: 0.6.4
     hooks:
