@@ -107,7 +107,7 @@ func (k *K8s) WaitForPodsAndContainers(ctx context.Context, target PodLookup, in
 	for {
 		select {
 		case <-waitCtx.Done():
-			k.Log("Pod lookup timeout or context cancelled: %w", ctx.Err())
+			k.Log("Pod lookup failed: %w", ctx.Err())
 			return nil
 		case <-timer.C:
 			pods, err := k.GetPods(ctx, target.Namespace, metav1.ListOptions{
