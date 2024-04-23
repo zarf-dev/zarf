@@ -16,7 +16,7 @@ cat build/main-syft.json | grype -o template -t hack/.templates/compare.tmpl > b
 go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/.templates/compare.tmpl > build/target.json
 
 
-result=$(jq --slurp '.[0] - .[1]' build/target.json build/main.json)
+result=$(jq --slurp '.[0] - .[1]' build/target.json build/main.json | jq '[.[] | select(.severity != "Low" and .severity != "Medium")]')
 
 echo "CVEs on $MAIN_BRANCH are $(cat build/main.json | jq )"
 echo "CVEs on $TARGET_BRANCH are $(cat build/target.json | jq)"

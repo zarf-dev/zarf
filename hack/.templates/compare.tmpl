@@ -1,9 +1,7 @@
 [
   {{- $length := len .Matches -}}
   {{- range $index, $match := .Matches -}}
-    {{- if and (ne $match.Vulnerability.Severity "Low") (ne $match.Vulnerability.Severity "Medium") -}}
-      "{{$match.Vulnerability.ID}}"
-      {{ if lt (add $index 1) $length }},{{ end }}
-    {{- end -}}
+  { "id": "{{$match.Vulnerability.ID}}", "severity": "{{$match.Vulnerability.Severity}}" }
+  {{ if lt (add $index 1) $length }},{{ end }}
   {{- end -}}
 ]
