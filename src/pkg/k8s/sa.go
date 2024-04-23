@@ -45,7 +45,7 @@ func (k *K8s) WaitForServiceAccount(ctx context.Context, ns, name string) (*core
 	for {
 		select {
 		case <-ctx.Done():
-			return nil, fmt.Errorf("timed out waiting for service account %s/%s to exist: %w", ns, name, ctx.Err())
+			return nil, fmt.Errorf("failed to get service account %s/%s: %w", ns, name, ctx.Err())
 		case <-timer.C:
 			sa, err := k.Clientset.CoreV1().ServiceAccounts(ns).Get(ctx, name, metav1.GetOptions{})
 			if err == nil {
