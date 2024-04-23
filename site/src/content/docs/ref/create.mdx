@@ -71,9 +71,9 @@ Throughout the rest of the documentation, we will refer to the `ZarfInitConfig` 
 
 The init package is used to initialize a cluster, making it ready for deployment of other Zarf Packages. It must be executed once on each cluster that you want to deploy another package onto, even if multiple clusters share the same host. For additional information on the init package, we provide detailed documentation on the Zarf ['init' package page](/ref/init-package/).
 
-If there is no running cluster, the init package can be used to create one. It has a deployable K3s cluster component that can be optionally deployed on your machine. To install a K8s distribution other than k3s, finding or creating a custom Zarf package is necessary.
+If there is no running cluster, the init package can be used to create one. It has a deployable K3s cluster component that can be optionally deployed onto your machine. To install a K8s distribution other than k3s, finding or creating a custom Zarf package is necessary.
 
-Typically, an init package is the first Zarf Package to be deployed on a cluster as other packages often rely on the services it installs or configures, however Zarf may be used to package and install the cluster distribution itself.  In this scenario, the distribution package would be deployed first, followed by the init package, and then any other packages planned for deployment.
+Typically, an init package is the first Zarf Package to be deployed onto a cluster as other packages often rely on the services it installs or configures, however Zarf may be used to package and install the cluster distribution itself.  In this scenario, the distribution package would be deployed first, followed by the init package, and then any other packages planned for deployment.
 
 :::tip
 
