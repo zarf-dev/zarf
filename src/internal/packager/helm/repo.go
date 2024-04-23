@@ -376,7 +376,7 @@ func (h *Helm) listAvailableChartsAndVersions(pull *action.Pull) error {
 			versions += entry.Version + separator
 		}
 
-		versions = message.Truncate(versions, 75, false)
+		versions = helpers.Truncate(versions, 75, false)
 		chartData = append(chartData, []string{name, versions})
 	}
 
