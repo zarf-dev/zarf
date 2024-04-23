@@ -55,7 +55,7 @@ func (k *K8s) WaitForHealthyCluster(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("timed out waiting for cluster to report healthy: %w", ctx.Err())
+			return fmt.Errorf("error waiting for cluster to report healthy: %w", ctx.Err())
 		case <-timer.C:
 			if k.RestConfig == nil || k.Clientset == nil {
 				config, clientset, err := connect()

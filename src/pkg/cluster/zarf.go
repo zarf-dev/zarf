@@ -153,7 +153,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg types.
 	for {
 		select {
 		case <-waitCtx.Done():
-			return nil, fmt.Errorf("timed out waiting for webhook %q to complete for component %q: %w", hookName, component.Name, waitCtx.Err())
+			return nil, fmt.Errorf("error waiting for webhook %q to complete for component %q: %w", hookName, component.Name, waitCtx.Err())
 		case <-timer.C:
 			deployedPackage, err = c.GetDeployedPackage(ctx, deployedPackage.Name)
 			if err != nil {
