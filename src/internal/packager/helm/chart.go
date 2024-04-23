@@ -115,12 +115,6 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 			return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts", h.retries)
 		}
 
-		spinner.Updatef("Performing chart uninstall")
-		_, err = h.uninstallChart(h.chart.ReleaseName)
-		if err != nil {
-			return nil, "", fmt.Errorf("unable to install chart after %d attempts and unable to uninstall: %w", h.retries, err)
-		}
-
 		return nil, "", fmt.Errorf("unable to install chart after %d attempts", h.retries)
 	}
 
