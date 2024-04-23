@@ -25,7 +25,6 @@ use axum::{
     response::{Response, IntoResponse},
     body::Body,
 };
-use axum_macros::debug_handler;
 
 use lazy_static::lazy_static;
 
@@ -113,8 +112,8 @@ fn start_seed_registry() -> Router{
     // The name and reference parameter identify the image
     // The reference may include a tag or digest.
     Router::new()
-    .route("/v2/*name/manifest/*reference", get(handle_get_manifest))
-    .route("/v2/*name/blobs/*tag", get(handle_get_digest))
+    .route("/v2/:name/manifest/:reference", get(handle_get_manifest))
+    .route("/v2/:name/blobs/:tag", get(handle_get_digest))
     .route("/v2", get(|| async { 
     Response::builder()
         .status(StatusCode::OK)
@@ -129,8 +128,6 @@ fn start_seed_registry() -> Router{
 
 
 /// Handles the GET request for the manifest (only returns a OCI manifest regardless of Accept header)
-
-#[debug_handler]
 async fn handle_get_manifest(Path((name, reference)): Path<(String, String)>) -> Response {
     let index = fs::read_to_string(ROOT_DIR.join("index.json")).expect("read index.json");
     let json: Value = serde_json::from_str(&index).expect("unable to parse index.json");
