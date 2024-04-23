@@ -18,6 +18,9 @@ go run main.go tools sbom scan . -o json --exclude './site' --exclude './example
 
 result=$(jq --slurp '.[0] - .[1]' build/target.json build/main.json)
 
+echo "CVEs on $MAIN_BRANCH are $(cat build/main.json | jq )"
+echo "CVEs on $TARGET_BRANCH are $(cat build/target.json | jq)"
+
 if [[ "$result" == "[]" ]]; then
   echo "no new vulnerabilities on $TARGET_BRANCH"
   exit 0
