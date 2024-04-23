@@ -25,8 +25,9 @@ use axum::{
     response::{Response, IntoResponse},
     body::Body,
 };
-
 use lazy_static::lazy_static;
+use tower_http::normalize_path::NormalizePathLayer;
+
 
 lazy_static! {
     static ref ROOT_DIR: PathBuf = PathBuf::from("/zarf-seed");
@@ -69,6 +70,12 @@ fn collect_binary_data(paths: &Vec<PathBuf>) -> io::Result<Vec<u8>> {
 ///
 /// Inspired by https://medium.com/@nlauchande/rust-coding-up-a-simple-concatenate-files-tool-and-first-impressions-a8cbe680e887
 fn unpack(sha_sum: &String) {
+    
+    if !sha_sum.starts_with("sha256:") {
+    println!("Error: expected sha sum got: {}", sha_sum);
+    std::process::exit(1)
+    }
+
     // get the list of file matches to merge
     let file_partials: Result<Vec<_>, _> = glob("zarf-payload-*")
         .expect("Failed to read glob pattern")
@@ -112,6 +119,7 @@ fn start_seed_registry() -> Router{
     // The name and reference parameter identify the image
     // The reference may include a tag or digest.
     Router::new()
+    .layer(NormalizePathLayer::trim_trailing_slash()) 
     .route("/v2/:name/manifest/:reference", get(handle_get_manifest))
     .route("/v2/:name/blobs/:tag", get(handle_get_digest))
     .route("/v2", get(|| async { 
@@ -123,7 +131,6 @@ fn start_seed_registry() -> Router{
         .body(Body::empty())
         .unwrap()
     }))
-
 }
 
 
@@ -208,20 +215,42 @@ async fn handle_get_digest(Path((_, tag)): Path<(String, String)>) -> Response {
 async fn main() {
     let args: Vec<String> = env::args().collect();
 
-    match args.len() {
-        2 => {
-            let payload_sha = &args[1];
-            unpack(payload_sha);
+    println!("unpacking: {}", args[1]);
+    let payload_sha = &args[1];
+    unpack(payload_sha);
 
-            let listener = tokio::net::TcpListener::bind("0.0.0.0:5000")
-            .await
-            .unwrap();
-        
-            println!("listening on {}", listener.local_addr().unwrap());
-            axum::serve(listener,  start_seed_registry()).await.unwrap();
-        }
-        _ => {
-            println!("Usage: {} <sha256sum>", args[0]);
-        }
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:5000")
+    .await
+    .unwrap();
+
+    println!("listening on {}", listener.local_addr().unwrap());
+    axum::serve(listener,start_seed_registry())
+        .await
+        .unwrap();
+    println!("Usage: {} <sha256sum>", args[1]);
+
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{
+        body::Body,
+        extract::connect_info::MockConnectInfo,
+        http::{self, Request, StatusCode},
+    };
+
+    #[tokio::test]
+    async fn test_https() {
+
+        let listener = tokio::net::TcpListener::bind("0.0.0.0:5000")
+        .await
+        .unwrap();
+
+        axum::serve(listener,start_seed_registry())
+        .await
+        .unwrap();
+
+    http::Request
     }
 }
