@@ -8,13 +8,6 @@ import (
 	"time"
 )
 
-const (
-	// RawVariableType is the default type for a Zarf package variable
-	RawVariableType VariableType = "raw"
-	// FileVariableType is a type for a Zarf package variable that loads its contents from a file
-	FileVariableType VariableType = "file"
-)
-
 // Zarf looks for these strings in zarf.yaml to make dynamic changes
 const (
 	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
@@ -22,9 +15,6 @@ const (
 	ZarfPackageArch           = "###ZARF_PKG_ARCH###"
 	ZarfComponentName         = "###ZARF_COMPONENT_NAME###"
 )
-
-// VariableType represents a type of a Zarf package variable
-type VariableType string
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
@@ -57,7 +47,8 @@ type ZarfFindImagesOptions struct {
 	RepoHelmChartPath   string `json:"repoHelmChartPath" jsonschema:"description=Path to the helm chart directory"`
 	KubeVersionOverride string `json:"kubeVersionOverride" jsonschema:"description=Kubernetes version to use for the helm chart"`
 	RegistryURL         string `json:"registryURL" jsonschema:"description=Manual override for ###ZARF_REGISTRY###"`
-	Why                 string `json:"why" jsonschema:"description=Find the location of the image given as an argument and print it to the console."`
+	Why                 string `json:"why" jsonschema:"description=Find the location of the image given as an argument and print it to the console"`
+	SkipCosign          bool   `json:"skip-cosign" jsonschema:"description=Optionally skip lookup of cosign artifacts when finding images"`
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.
@@ -132,15 +123,6 @@ type ZarfSplitPackageData struct {
 	Sha256Sum string `json:"sha256Sum" jsonschema:"description=The sha256sum of the package"`
 	Bytes     int64  `json:"bytes" jsonschema:"description=The size of the package in bytes"`
 	Count     int    `json:"count" jsonschema:"description=The number of parts the package is split into"`
-}
-
-// ZarfSetVariable tracks internal variables that have been set during this run of Zarf
-type ZarfSetVariable struct {
-	Name       string       `json:"name" jsonschema:"description=The name to be used for the variable,pattern=^[A-Z0-9_]+$"`
-	Sensitive  bool         `json:"sensitive,omitempty" jsonschema:"description=Whether to mark this variable as sensitive to not print it in the Zarf log"`
-	AutoIndent bool         `json:"autoIndent,omitempty" jsonschema:"description=Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."`
-	Value      string       `json:"value" jsonschema:"description=The value the variable is currently set with"`
-	Type       VariableType `json:"type,omitempty" jsonschema:"description=Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB),enum=raw,enum=file"`
 }
 
 // ConnectString contains information about a connection made with Zarf connect.

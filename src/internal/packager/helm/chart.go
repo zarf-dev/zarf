@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/pkg/helpers"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -42,12 +42,6 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 	// If no release name is specified, use the chart name.
 	if h.chart.ReleaseName == "" {
 		h.chart.ReleaseName = h.chart.Name
-	}
-
-	// Do not wait for the chart to be ready if data injections are present.
-	if len(h.component.DataInjections) > 0 {
-		spinner.Updatef("Data injections detected, not waiting for chart to be ready")
-		h.chart.NoWait = true
 	}
 
 	// Setup K8s connection.

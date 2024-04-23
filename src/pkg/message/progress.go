@@ -5,6 +5,8 @@
 package message
 
 import (
+	"os"
+
 	"github.com/pterm/pterm"
 )
 
@@ -28,6 +30,7 @@ func NewProgressBar(total int64, text string) *ProgressBar {
 			WithTitle(padding + text).
 			WithRemoveWhenDone(true).
 			WithMaxWidth(TermWidth).
+			WithWriter(os.Stderr).
 			Start()
 	}
 

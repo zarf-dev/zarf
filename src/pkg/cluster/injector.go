@@ -12,17 +12,18 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -445,24 +446,20 @@ func (c *Cluster) getImagesAndNodesForInjection(timeoutDuration time.Duration) (
 
 		// After delay, try running
 		default:
-			pods, err := c.GetPods(corev1.NamespaceAll)
+			pods, err := c.GetPods(corev1.NamespaceAll, metav1.ListOptions{
+				FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
+			})
 			if err != nil {
-				return nil, fmt.Errorf("unable to get the list of pods in the cluster")
+				return nil, fmt.Errorf("unable to get the list of %q pods in the cluster: %w", corev1.PodRunning, err)
 			}
 
 		findImages:
 			for _, pod := range pods.Items {
 				nodeName := pod.Spec.NodeName
 
-				// If this pod doesn't have a node (i.e. is Pending), skip it
-				if nodeName == "" {
-					continue
-				}
-
 				nodeDetails, err := c.GetNode(nodeName)
-
 				if err != nil {
-					return nil, fmt.Errorf("unable to get the node %s", pod.Spec.NodeName)
+					return nil, fmt.Errorf("unable to get the node %q: %w", nodeName, err)
 				}
 
 				if nodeDetails.Status.Allocatable.Cpu().Cmp(injectorRequestedCPU) < 0 ||

@@ -19,10 +19,10 @@ import (
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

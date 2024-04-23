@@ -35,13 +35,9 @@ func loadDifferentialData(diffPkgPath string) (diffData *types.DifferentialData,
 		return nil, err
 	}
 
-	if err := src.LoadPackageMetadata(diffLayout, false, false); err != nil {
+	diffPkg, _, err := src.LoadPackageMetadata(diffLayout, false, false)
+	if err != nil {
 		return nil, err
-	}
-
-	var diffPkg types.ZarfPackage
-	if err := utils.ReadYaml(diffLayout.ZarfYAML, &diffPkg); err != nil {
-		return nil, fmt.Errorf("error reading the differential Zarf package: %w", err)
 	}
 
 	allIncludedImagesMap := map[string]bool{}

@@ -12,18 +12,23 @@ import (
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Run runs all provided actions.
-func Run(cfg *types.PackagerConfig, defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, valueTemplate *template.Values) error {
+func Run(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+	if variableConfig == nil {
+		variableConfig = template.GetZarfVariableConfig()
+	}
+
 	for _, a := range actions {
-		if err := runAction(cfg, defaultCfg, a, valueTemplate); err != nil {
+		if err := runAction(defaultCfg, a, variableConfig); err != nil {
 			return err
 		}
 	}
@@ -31,14 +36,13 @@ func Run(cfg *types.PackagerConfig, defaultCfg types.ZarfComponentActionDefaults
 }
 
 // Run commands that a component has provided.
-func runAction(cfg *types.PackagerConfig, defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, valueTemplate *template.Values) error {
+func runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
 	var (
 		ctx        context.Context
 		cancel     context.CancelFunc
 		cmdEscaped string
 		out        string
 		err        error
-		vars       map[string]*template.TextTemplate
 
 		cmd = action.Cmd
 	)
@@ -68,27 +72,20 @@ func runAction(cfg *types.PackagerConfig, defaultCfg types.ZarfComponentActionDe
 		d := ""
 		action.Dir = &d
 		action.Env = []string{}
-		action.SetVariables = []types.ZarfComponentActionSetVariable{}
+		action.SetVariables = []variables.Variable{}
 	}
 
 	if action.Description != "" {
 		cmdEscaped = action.Description
 	} else {
-		cmdEscaped = message.Truncate(cmd, 60, false)
+		cmdEscaped = helpers.Truncate(cmd, 60, false)
 	}
 
 	spinner := message.NewProgressSpinner("Running \"%s\"", cmdEscaped)
 	// Persist the spinner output so it doesn't get overwritten by the command output.
 	spinner.EnablePreserveWrites()
 
-	// If the value template is not nil, get the variables for the action.
-	// No special variables or deprecations will be used in the action.
-	// Reload the variables each time in case they have been changed by a previous action.
-	if valueTemplate != nil {
-		vars, _ = valueTemplate.GetVariables(types.ZarfComponent{})
-	}
-
-	actionDefaults := actionGetCfg(defaultCfg, action, vars)
+	actionDefaults := actionGetCfg(defaultCfg, action, variableConfig.GetAllTemplates())
 
 	if cmd, err = actionCmdMutation(cmd, actionDefaults.Shell); err != nil {
 		spinner.Errorf(err, "Error mutating command: %s", cmdEscaped)
@@ -112,8 +109,8 @@ retryCmd:
 
 			// If an output variable is defined, set it.
 			for _, v := range action.SetVariables {
-				cfg.SetVariable(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
-				if err := cfg.CheckVariablePattern(v.Name, v.Pattern); err != nil {
+				variableConfig.SetVariable(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
+				if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
 					message.WarnErr(err, err.Error())
 					return err
 				}
@@ -241,7 +238,7 @@ func actionCmdMutation(cmd string, shellPref exec.Shell) (string, error) {
 }
 
 // Merge the ActionSet defaults with the action config.
-func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]*template.TextTemplate) types.ZarfComponentActionDefaults {
+func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]*variables.TextTemplate) types.ZarfComponentActionDefaults {
 	if a.Mute != nil {
 		cfg.Mute = *a.Mute
 	}

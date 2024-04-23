@@ -14,16 +14,15 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
-	"github.com/defenseunicorns/zarf/src/internal/packager/template"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "k8s.io/api/apps/v1"
@@ -54,7 +53,11 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 	}
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 
-	c := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
+	c := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
+
+	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+		return nil, err
+	}
 
 	p.cfg.Pkg, p.warnings, err = c.LoadPackageDefinition(p.layout)
 	if err != nil {
@@ -89,11 +92,31 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 
 	componentDefinition := "\ncomponents:\n"
 
-	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
+	if err := p.populatePackageVariableConfig(); err != nil {
+		return nil, fmt.Errorf("unable to set the active variables: %w", err)
+	}
+
+	// Set default builtin values so they exist in case any helm charts rely on them
+	registryInfo := types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}
+	err = registryInfo.FillInEmptyValues()
+	if err != nil {
 		return nil, err
+	}
+	gitServer := types.GitServerInfo{}
+	err = gitServer.FillInEmptyValues()
+	if err != nil {
+		return nil, err
+	}
+	artifactServer := types.ArtifactServerInfo{}
+	artifactServer.FillInEmptyValues()
+	p.state = &types.ZarfState{
+		RegistryInfo:   registryInfo,
+		GitServer:      gitServer,
+		ArtifactServer: artifactServer,
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
+
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
 			continue
@@ -132,27 +155,11 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 		if err != nil {
 			return nil, err
 		}
-		values, err := template.Generate(p.cfg)
-		if err != nil {
-			return nil, fmt.Errorf("unable to generate template values")
-		}
-		// Adding these so the default builtin values exist in case any helm charts rely on them
-		registryInfo := types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}
-		err = registryInfo.FillInEmptyValues()
+		err = p.populateComponentAndStateTemplates(component.Name)
 		if err != nil {
 			return nil, err
 		}
-		gitServer := types.GitServerInfo{}
-		err = gitServer.FillInEmptyValues()
-		if err != nil {
-			return nil, err
-		}
-		artifactServer := types.ArtifactServerInfo{}
-		artifactServer.FillInEmptyValues()
-		values.SetState(&types.ZarfState{
-			RegistryInfo:   registryInfo,
-			GitServer:      gitServer,
-			ArtifactServer: artifactServer})
+
 		for _, chart := range component.Charts {
 
 			helmCfg := helm.New(
@@ -160,7 +167,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 				componentPaths.Charts,
 				componentPaths.Values,
 				helm.WithKubeVersion(kubeVersionOverride),
-				helm.WithPackageConfig(p.cfg),
+				helm.WithVariableConfig(p.variableConfig),
 			)
 
 			err = helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
@@ -169,8 +176,8 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 			}
 
 			valuesFilePaths, _ := helpers.RecursiveFileList(componentPaths.Values, nil, false)
-			for _, path := range valuesFilePaths {
-				if err := values.Apply(component, path, false); err != nil {
+			for _, valueFilePath := range valuesFilePaths {
+				if err := p.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
 					return nil, err
 				}
 			}
@@ -237,7 +244,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 					f = newDestination
 				}
 
-				if err := values.Apply(component, f, true); err != nil {
+				if err := p.variableConfig.ReplaceTextTemplate(f); err != nil {
 					return nil, err
 				}
 				// Read the contents of each file
@@ -308,29 +315,31 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 
 		spinner.Success()
 
-		// Handle cosign artifact lookups
-		if len(imagesMap[component.Name]) > 0 {
-			var cosignArtifactList []string
-			spinner := message.NewProgressSpinner("Looking up cosign artifacts for discovered images (0/%d)", len(imagesMap[component.Name]))
-			defer spinner.Stop()
+		if !p.cfg.FindImagesOpts.SkipCosign {
+			// Handle cosign artifact lookups
+			if len(imagesMap[component.Name]) > 0 {
+				var cosignArtifactList []string
+				spinner := message.NewProgressSpinner("Looking up cosign artifacts for discovered images (0/%d)", len(imagesMap[component.Name]))
+				defer spinner.Stop()
 
-			for idx, image := range imagesMap[component.Name] {
-				spinner.Updatef("Looking up cosign artifacts for discovered images (%d/%d)", idx+1, len(imagesMap[component.Name]))
-				cosignArtifacts, err := utils.GetCosignArtifacts(image)
-				if err != nil {
-					message.WarnErrf(err, "Problem looking up cosign artifacts for %s: %s", image, err.Error())
-					erroredCosignLookups = append(erroredCosignLookups, image)
+				for idx, image := range imagesMap[component.Name] {
+					spinner.Updatef("Looking up cosign artifacts for discovered images (%d/%d)", idx+1, len(imagesMap[component.Name]))
+					cosignArtifacts, err := utils.GetCosignArtifacts(image)
+					if err != nil {
+						message.WarnErrf(err, "Problem looking up cosign artifacts for %s: %s", image, err.Error())
+						erroredCosignLookups = append(erroredCosignLookups, image)
+					}
+					cosignArtifactList = append(cosignArtifactList, cosignArtifacts...)
 				}
-				cosignArtifactList = append(cosignArtifactList, cosignArtifacts...)
-			}
 
-			spinner.Success()
+				spinner.Success()
 
-			if len(cosignArtifactList) > 0 {
-				imagesMap[component.Name] = append(imagesMap[component.Name], cosignArtifactList...)
-				componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
-				for _, cosignArtifact := range cosignArtifactList {
-					componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
+				if len(cosignArtifactList) > 0 {
+					imagesMap[component.Name] = append(imagesMap[component.Name], cosignArtifactList...)
+					componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
+					for _, cosignArtifact := range cosignArtifactList {
+						componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
+					}
 				}
 			}
 		}

@@ -9,13 +9,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -91,7 +91,7 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 	}
 
 	for refInfo, img := range refInfoToImage {
-		refTruncated := message.Truncate(refInfo.Reference, 55, true)
+		refTruncated := helpers.Truncate(refInfo.Reference, 55, true)
 		progressBar.UpdateTitle(fmt.Sprintf("Pushing %s", refTruncated))
 
 		// If this is not a no checksum image push it for use with the Zarf agent

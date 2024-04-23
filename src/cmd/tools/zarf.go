@@ -11,17 +11,18 @@ import (
 	"slices"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -138,7 +139,7 @@ var updateCredsCmd = &cobra.Command{
 			}
 
 			// Update Zarf 'init' component Helm releases if present
-			h := helm.NewClusterOnly(&types.PackagerConfig{State: newState}, c)
+			h := helm.NewClusterOnly(&types.PackagerConfig{}, template.GetZarfVariableConfig(), newState, c)
 
 			if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
 				err = h.UpdateZarfRegistryValues()

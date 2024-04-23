@@ -104,11 +104,11 @@ build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI f
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
 docs-and-schema: ## Generate the Zarf Documentation and Schema
-	hack/gen-cli-docs.sh
+	ZARF_CONFIG=hack/empty-config.toml go run main.go internal gen-cli-docs
 	ZARF_CONFIG=hack/empty-config.toml hack/create-zarf-schema.sh
 
 lint-packages-and-examples: build ## Recursively lint all zarf.yaml files in the repo except for those dedicated to tests
-	hack/lint_all_zarf_packages.sh $(ZARF_BIN)
+	hack/lint-all-zarf-packages.sh $(ZARF_BIN)
 
 # INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
 init-package-local-agent:
@@ -219,10 +219,11 @@ test-docs-and-schema:
 
 # INTERNAL: used to test for new CVEs that may have been introduced
 test-cves:
-	go run main.go tools sbom packages . -o json --exclude './docs-website' --exclude './examples' | grype --fail-on low
+	go run main.go tools sbom scan . -o json --exclude './docs-website' --exclude './examples' | grype --fail-on low
 
 cve-report: ## Create a CVE report for the current project (must `brew install grype` first)
-	go run main.go tools sbom packages . -o json --exclude './docs-website' --exclude './examples' | grype -o template -t hack/.templates/grype.tmpl > build/zarf-known-cves.csv
+	@test -d ./build || mkdir ./build
+	go run main.go tools sbom scan . -o json --exclude './docs-website' --exclude './examples' | grype -o template -t hack/.templates/grype.tmpl > build/zarf-known-cves.csv
 
 lint-go: ## Run revive to lint the go code (must `brew install revive` first)
 	revive -config revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...

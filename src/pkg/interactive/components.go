@@ -6,11 +6,8 @@ package interactive
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -18,12 +15,7 @@ import (
 )
 
 // SelectOptionalComponent prompts to confirm optional components
-func SelectOptionalComponent(component types.ZarfComponent) (confirmComponent bool) {
-	// Confirm flag passed, just use defaults
-	if config.CommonOptions.Confirm {
-		return component.Default
-	}
-
+func SelectOptionalComponent(component types.ZarfComponent) (confirm bool, err error) {
 	message.HorizontalRule()
 
 	displayComponent := component
@@ -37,30 +29,12 @@ func SelectOptionalComponent(component types.ZarfComponent) (confirmComponent bo
 		Message: fmt.Sprintf("Deploy the %s component?", component.Name),
 		Default: component.Default,
 	}
-	if err := survey.AskOne(prompt, &confirmComponent); err != nil {
-		message.Fatalf(nil, lang.PkgDeployErrComponentSelectionCanceled, err.Error())
-	}
 
-	return confirmComponent
+	return confirm, survey.AskOne(prompt, &confirm)
 }
 
 // SelectChoiceGroup prompts to select component groups
-func SelectChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent {
-	// Confirm flag passed, just use defaults
-	if config.CommonOptions.Confirm {
-		var componentNames []string
-		for _, component := range componentGroup {
-			// If the component is default, then return it
-			if component.Default {
-				return component
-			}
-			// Add each component name to the list
-			componentNames = append(componentNames, component.Name)
-		}
-		// If no default component was found, give up
-		message.Fatalf(nil, lang.PkgDeployErrNoDefaultOrSelection, strings.Join(componentNames, ","))
-	}
-
+func SelectChoiceGroup(componentGroup []types.ZarfComponent) (types.ZarfComponent, error) {
 	message.HorizontalRule()
 
 	var chosen int
@@ -78,9 +52,5 @@ func SelectChoiceGroup(componentGroup []types.ZarfComponent) types.ZarfComponent
 
 	pterm.Println()
 
-	if err := survey.AskOne(prompt, &chosen); err != nil {
-		message.Fatalf(nil, lang.PkgDeployErrComponentSelectionCanceled, err.Error())
-	}
-
-	return componentGroup[chosen]
+	return componentGroup[chosen], survey.AskOne(prompt, &chosen)
 }

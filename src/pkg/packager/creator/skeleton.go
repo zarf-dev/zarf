@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
@@ -18,7 +20,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
@@ -42,18 +43,20 @@ func NewSkeletonCreator(createOpts types.ZarfCreateOptions, publishOpts types.Za
 
 // LoadPackageDefinition loads and configure a zarf.yaml file when creating and publishing a skeleton package.
 func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
-	pkg, warnings, err = dst.ReadZarfYAML(layout.ZarfYAML)
+	pkg, warnings, err = dst.ReadZarfYAML()
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
 
-	pkg.Metadata.Architecture = zoci.SkeletonArch
+	pkg.Metadata.Architecture = config.GetArch()
 
 	// Compose components into a single zarf.yaml file
 	pkg, composeWarnings, err := ComposeComponents(pkg, sc.createOpts.Flavor)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
+
+	pkg.Metadata.Architecture = zoci.SkeletonArch
 
 	warnings = append(warnings, composeWarnings...)
 
@@ -114,14 +117,7 @@ func (sc *SkeletonCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPacka
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
 	}
 
-	// Sign the package if a key has been provided
-	if sc.publishOpts.SigningKeyPath != "" {
-		if err := dst.SignPackage(sc.publishOpts.SigningKeyPath, sc.publishOpts.SigningKeyPassword); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return dst.SignPackage(sc.publishOpts.SigningKeyPath, sc.publishOpts.SigningKeyPassword, !config.CommonOptions.Confirm)
 }
 
 func (sc *SkeletonCreator) processExtensions(components []types.ZarfComponent, layout *layout.PackagePaths) (processedComponents []types.ZarfComponent, err error) {

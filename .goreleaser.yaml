@@ -54,7 +54,7 @@ sboms:
 snapshot:
   name_template: "{{ incpatch .Version }}-snapshot"
 
-# Use the auto-generated changlog github provides
+# Use the auto-generated changelog github provides
 changelog:
   use: github-native
 
@@ -76,10 +76,15 @@ brews:
       owner: defenseunicorns
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+      branch: "{{ .ProjectName }}-{{ .Tag }}"
       pull_request:
         enabled: true
+        base:
+          branch: main
+          owner: defenseunicorns
+          name: homebrew-tap
 
-    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    commit_msg_template: "build(release): upgrade {{ .ProjectName }} to {{ .Tag }}"
     homepage: "https://zarf.dev/"
     description: "DevSecOps for Air Gap"
 
@@ -90,7 +95,14 @@ brews:
       owner: defenseunicorns
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    commit_msg_template: "Brew formula update for {{ .ProjectName }} versioned release {{ .Tag }}"
+      branch: "{{ .ProjectName }}-{{ .Tag }}"
+      pull_request:
+        enabled: true
+        base:
+          branch: main
+          owner: defenseunicorns
+          name: homebrew-tap
+    commit_msg_template: "build(release): {{ .ProjectName }}@{{ .Tag }}"
     homepage: "https://zarf.dev/"
     description: "DevSecOps for Air Gap"
 

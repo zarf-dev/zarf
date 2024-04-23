@@ -8,16 +8,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime"
 
 	"slices"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	corev1 "k8s.io/api/core/v1"
@@ -36,16 +38,10 @@ func (p *Packager) Remove() (err error) {
 
 	// we do not want to allow removal of signed packages without a signature if there are remove actions
 	// as this is arbitrary code execution from an untrusted source
-	if err = p.source.LoadPackageMetadata(p.layout, false, false); err != nil {
-		return err
-	}
-
-	p.cfg.Pkg, p.warnings, err = p.layout.ReadZarfYAML(p.layout.ZarfYAML)
+	p.cfg.Pkg, p.warnings, err = p.source.LoadPackageMetadata(p.layout, false, false)
 	if err != nil {
 		return err
 	}
-
-	p.filterComponents()
 	packageName = p.cfg.Pkg.Metadata.Name
 
 	// Build a list of components to remove and determine if we need a cluster connection
@@ -53,15 +49,22 @@ func (p *Packager) Remove() (err error) {
 	packageRequiresCluster := false
 
 	// If components were provided; just remove the things we were asked to remove
-	p.forIncludedComponents(func(component types.ZarfComponent) error {
+	filter := filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
+	)
+	included, err := filter.Apply(p.cfg.Pkg)
+	if err != nil {
+		return err
+	}
+
+	for _, component := range included {
 		componentsToRemove = append(componentsToRemove, component.Name)
 
-		if requiresCluster(component) {
+		if component.RequiresCluster() {
 			packageRequiresCluster = true
 		}
-
-		return nil
-	})
+	}
 
 	// Get or build the secret for the deployed package
 	deployedPackage := &types.DeployedPackage{}
@@ -128,12 +131,12 @@ func (p *Packager) removeComponent(deployedPackage *types.DeployedPackage, deplo
 
 	onRemove := c.Actions.OnRemove
 	onFailure := func() {
-		if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
+		if err := actions.Run(onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
 			message.Debugf("Unable to run the failure action: %s", err)
 		}
 	}
 
-	if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.Before, nil); err != nil {
+	if err := actions.Run(onRemove.Defaults, onRemove.Before, nil); err != nil {
 		onFailure()
 		return nil, fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
 	}
@@ -141,7 +144,7 @@ func (p *Packager) removeComponent(deployedPackage *types.DeployedPackage, deplo
 	for _, chart := range helpers.Reverse(deployedComponent.InstalledCharts) {
 		spinner.Updatef("Uninstalling chart '%s' from the '%s' component", chart.ChartName, deployedComponent.Name)
 
-		helmCfg := helm.NewClusterOnly(p.cfg, p.cluster)
+		helmCfg := helm.NewClusterOnly(p.cfg, p.variableConfig, p.state, p.cluster)
 		if err := helmCfg.RemoveChart(chart.Namespace, chart.ChartName, spinner); err != nil {
 			if !errors.Is(err, driver.ErrReleaseNotFound) {
 				onFailure()
@@ -162,12 +165,12 @@ func (p *Packager) removeComponent(deployedPackage *types.DeployedPackage, deplo
 		p.updatePackageSecret(*deployedPackage)
 	}
 
-	if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.After, nil); err != nil {
+	if err := actions.Run(onRemove.Defaults, onRemove.After, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the after action: %w", err)
 	}
 
-	if err := actions.Run(p.cfg, onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
+	if err := actions.Run(onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the success action: %w", err)
 	}

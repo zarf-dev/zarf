@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/stretchr/testify/require"
 )
 
@@ -125,7 +125,7 @@ func TestUseCLI(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf("package", "create", "packages/distros/eks", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
-		path := "zarf-package-distro-eks-multi-0.0.3.tar.zst"
+		path := fmt.Sprintf("zarf-package-distro-eks-%s-0.0.3.tar.zst", e2e.Arch)
 		stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
@@ -213,4 +213,24 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, tlsKey)
 	})
 
+	t.Run("zarf tools yq should function appropriately across different uses", func(t *testing.T) {
+		t.Parallel()
+
+		file := "src/test/packages/00-yq-checks/file1.yaml"
+		otherFile := "src/test/packages/00-yq-checks/file2.yaml"
+
+		// Test that yq can eval properly
+		_, stdErr, err := e2e.Zarf("tools", "yq", "eval", "-i", `.items[1].name = "renamed-item"`, file)
+		require.NoError(t, err, stdErr)
+		stdOut, stdErr, err := e2e.Zarf("tools", "yq", ".items[1].name", file)
+		require.Contains(t, stdOut, "renamed-item")
+
+		// Test that yq ea can be used properly
+		_, stdErr, err = e2e.Zarf("tools", "yq", "eval-all", "-i", `. as $doc ireduce ({}; .items += $doc.items)`, file, otherFile)
+		require.NoError(t, err, stdErr)
+		stdOut, stdErr, err = e2e.Zarf("tools", "yq", "e", ".items | length", file)
+		require.Equal(t, "4\n", stdOut)
+
+	})
 }
+

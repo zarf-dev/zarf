@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
 // RoundUp rounds a float64 to the given number of decimal places.

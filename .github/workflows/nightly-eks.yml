@@ -48,7 +48,7 @@ jobs:
 
       - name: Deploy the eks package
         run: |
-          ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.3.tar.zst \
+          ./build/zarf package deploy build/zarf-package-distro-eks-amd64-0.0.3.tar.zst \
             --components=deploy-eks-cluster \
             --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
             --set=EKS_INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} \
@@ -60,7 +60,7 @@ jobs:
       - name: Teardown the cluster
         if: always()
         run: |
-          ./build/zarf package deploy build/zarf-package-distro-eks-multi-0.0.3.tar.zst \
+          ./build/zarf package deploy build/zarf-package-distro-eks-amd64-0.0.3.tar.zst \
             --components=teardown-eks-cluster \
             --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
             --confirm

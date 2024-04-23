@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
 // WebhookStatus defines the status of a Component Webhook operating on a Zarf package secret.

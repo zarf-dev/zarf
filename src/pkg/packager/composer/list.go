@@ -10,11 +10,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -25,8 +26,8 @@ type Node struct {
 
 	index int
 
-	vars   []types.ZarfPackageVariable
-	consts []types.ZarfPackageConstant
+	vars   []variables.InteractiveVariable
+	consts []variables.Constant
 
 	relativeToHead      string
 	originalPackageName string
@@ -35,17 +36,17 @@ type Node struct {
 	next *Node
 }
 
-// GetIndex returns the .components index location for this node's source `zarf.yaml`
-func (n *Node) GetIndex() int {
+// Index returns the .components index location for this node's source `zarf.yaml`
+func (n *Node) Index() int {
 	return n.index
 }
 
-// GetOriginalPackageName returns the .metadata.name of the zarf package the component originated from
-func (n *Node) GetOriginalPackageName() string {
+// OriginalPackageName returns the .metadata.name for this node's source `zarf.yaml`
+func (n *Node) OriginalPackageName() string {
 	return n.originalPackageName
 }
 
-// ImportLocation gets the path from the base zarf file to the imported zarf file
+// ImportLocation gets the path from the base `zarf.yaml` to the imported `zarf.yaml`
 func (n *Node) ImportLocation() string {
 	if n.prev != nil {
 		if n.prev.ZarfComponent.Import.URL != "" {
@@ -95,7 +96,7 @@ func (ic *ImportChain) Tail() *Node {
 }
 
 func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageName string,
-	relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
+	relativeToHead string, vars []variables.InteractiveVariable, consts []variables.Constant) {
 	node := &Node{
 		ZarfComponent:       c,
 		index:               index,
@@ -265,7 +266,7 @@ func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 		node = node.next
 	}
 	if len(warnings) > 0 {
-		final := fmt.Sprintf("migrations were performed on the import chain of: %q", ic.head.Name)
+		final := fmt.Sprintf("Migrations were performed on the import chain of: %q", ic.head.Name)
 		warnings = append(warnings, final)
 	}
 	return warnings
@@ -312,8 +313,8 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 }
 
 // MergeVariables merges variables from the import chain
-func (ic *ImportChain) MergeVariables(existing []types.ZarfPackageVariable) (merged []types.ZarfPackageVariable) {
-	exists := func(v1 types.ZarfPackageVariable, v2 types.ZarfPackageVariable) bool {
+func (ic *ImportChain) MergeVariables(existing []variables.InteractiveVariable) (merged []variables.InteractiveVariable) {
+	exists := func(v1 variables.InteractiveVariable, v2 variables.InteractiveVariable) bool {
 		return v1.Name == v2.Name
 	}
 
@@ -329,8 +330,8 @@ func (ic *ImportChain) MergeVariables(existing []types.ZarfPackageVariable) (mer
 }
 
 // MergeConstants merges constants from the import chain
-func (ic *ImportChain) MergeConstants(existing []types.ZarfPackageConstant) (merged []types.ZarfPackageConstant) {
-	exists := func(c1 types.ZarfPackageConstant, c2 types.ZarfPackageConstant) bool {
+func (ic *ImportChain) MergeConstants(existing []variables.Constant) (merged []variables.Constant) {
+	exists := func(c1 variables.Constant, c2 variables.Constant) bool {
 		return c1.Name == c2.Name
 	}
 
@@ -347,9 +348,6 @@ func (ic *ImportChain) MergeConstants(existing []types.ZarfPackageConstant) (mer
 
 // CompatibleComponent determines if this component is compatible with the given create options
 func CompatibleComponent(c types.ZarfComponent, arch, flavor string) bool {
-	if arch == zoci.SkeletonArch {
-		return true
-	}
 	satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
 	satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor
 	return satisfiesArch && satisfiesFlavor

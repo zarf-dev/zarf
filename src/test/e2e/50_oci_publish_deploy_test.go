@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"

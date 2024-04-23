@@ -10,13 +10,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -376,7 +376,7 @@ func (h *Helm) listAvailableChartsAndVersions(pull *action.Pull) error {
 			versions += entry.Version + separator
 		}
 
-		versions = message.Truncate(versions, 75, false)
+		versions = helpers.Truncate(versions, 75, false)
 		chartData = append(chartData, []string{name, versions})
 	}
 

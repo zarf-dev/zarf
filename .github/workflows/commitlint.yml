@@ -1,0 +1,32 @@
+name: PR Title Check
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  title_check:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+
+      - name: Install commitlint
+        run: npm install --save-dev @commitlint/{config-conventional,cli}
+
+      - name: Lint PR title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: echo "$PR_TITLE" | npx commitlint

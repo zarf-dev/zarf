@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/fatih/color"
 	"github.com/pterm/pterm"
@@ -44,17 +45,11 @@ var NoProgress bool
 // RuleLine creates a line of ━ as wide as the terminal
 var RuleLine = strings.Repeat("━", TermWidth)
 
-// LogWriter is the stream to write logs to.
-var LogWriter io.Writer = os.Stderr
-
 // logLevel holds the pterm compatible log level integer
 var logLevel = InfoLevel
 
 // logFile acts as a buffer for logFile generation
-var logFile *os.File
-
-// useLogFile controls whether to use the log file or not
-var useLogFile bool
+var logFile *pausableLogFile
 
 // DebugWriter represents a writer interface that writes to message.Debug
 type DebugWriter struct{}
@@ -83,27 +78,29 @@ func init() {
 }
 
 // UseLogFile writes output to stderr and a logFile.
-func UseLogFile() {
+func UseLogFile(dir string) (io.Writer, error) {
 	// Prepend the log filename with a timestamp.
 	ts := time.Now().Format("2006-01-02-15-04-05")
 
-	var err error
-	if logFile != nil {
-		// Use the existing log file if logFile is set
-		LogWriter = io.MultiWriter(os.Stderr, logFile)
-		pterm.SetDefaultOutput(LogWriter)
-	} else {
-		// Try to create a temp log file if one hasn't been made already
-		if logFile, err = os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts)); err != nil {
-			WarnErr(err, "Error saving a log file to a temporary directory")
-		} else {
-			useLogFile = true
-			LogWriter = io.MultiWriter(os.Stderr, logFile)
-			pterm.SetDefaultOutput(LogWriter)
-			message := fmt.Sprintf("Saving log file to %s", logFile.Name())
-			Note(message)
-		}
+	f, err := os.CreateTemp(dir, fmt.Sprintf("zarf-%s-*.log", ts))
+	if err != nil {
+		return nil, err
 	}
+
+	logFile = &pausableLogFile{
+		wr: f,
+		f:  f,
+	}
+
+	return logFile, nil
+}
+
+// LogFileLocation returns the location of the log file.
+func LogFileLocation() string {
+	if logFile == nil {
+		return ""
+	}
+	return logFile.f.Name()
 }
 
 // SetLogLevel sets the log level.
@@ -223,8 +220,8 @@ func Question(text string) {
 
 // Questionf prints a user prompt description message with a given format.
 func Questionf(format string, a ...any) {
-	pterm.Println()
 	message := Paragraph(format, a...)
+	pterm.Println()
 	pterm.FgLightGreen.Println(message)
 }
 
@@ -235,7 +232,6 @@ func Note(text string) {
 
 // Notef prints a note message  with a given format.
 func Notef(format string, a ...any) {
-	pterm.Println()
 	message := Paragraphn(TermWidth-7, format, a...)
 	notePrefix := pterm.PrefixPrinter{
 		MessageStyle: &pterm.ThemeDefault.InfoMessageStyle,
@@ -244,6 +240,7 @@ func Notef(format string, a ...any) {
 			Text:  "NOTE",
 		},
 	}
+	pterm.Println()
 	notePrefix.Println(message)
 }
 
@@ -256,10 +253,10 @@ func Title(title string, help string) {
 
 // HeaderInfof prints a large header with a formatted message.
 func HeaderInfof(format string, a ...any) {
-	message := Truncate(fmt.Sprintf(format, a...), TermWidth, false)
+	pterm.Println()
+	message := helpers.Truncate(fmt.Sprintf(format, a...), TermWidth, false)
 	// Ensure the text is consistent for the header width
 	padding := TermWidth - len(message)
-	pterm.Println()
 	pterm.DefaultHeader.
 		WithBackgroundStyle(pterm.NewStyle(pterm.BgDarkGray)).
 		WithTextStyle(pterm.NewStyle(pterm.FgLightWhite)).
@@ -301,23 +298,6 @@ func PrintDiff(textA, textB string) {
 	diffs = dmp.DiffCleanupSemantic(diffs)
 
 	pterm.Println(dmp.DiffPrettyText(diffs))
-}
-
-// Truncate truncates provided text to the requested length
-func Truncate(text string, length int, invert bool) string {
-	// Remove newlines and replace with semicolons
-	textEscaped := strings.ReplaceAll(text, "\n", "; ")
-	// Truncate the text if it is longer than length so it isn't too long.
-	if len(textEscaped) > length {
-		if invert {
-			start := len(textEscaped) - length + 3
-			textEscaped = "..." + textEscaped[start:]
-		} else {
-			end := length - 3
-			textEscaped = textEscaped[:end] + "..."
-		}
-	}
-	return textEscaped
 }
 
 // Table prints a padded table containing the specified header and data
@@ -366,7 +346,7 @@ func debugPrinter(offset int, a ...any) {
 	printer.Println(a...)
 
 	// Always write to the log file
-	if useLogFile {
+	if logFile != nil {
 		pterm.Debug.
 			WithShowLineNumber(true).
 			WithLineNumberOffset(offset).

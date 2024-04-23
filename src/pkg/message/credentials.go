@@ -6,7 +6,6 @@ package message
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -31,8 +30,11 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 		componentsToDeploy = []types.DeployedComponent{{Name: "logging"}, {Name: "git-server"}}
 	}
 
-	// Set output to os.Stderr to avoid creds being printed in logs
-	pterm.SetDefaultOutput(os.Stderr)
+	// Pause the logfile's output to avoid credentials being printed to the log file
+	if logFile != nil {
+		logFile.pause()
+		defer logFile.resume()
+	}
 
 	loginData := [][]string{}
 	if state.RegistryInfo.InternalRegistry {
@@ -60,11 +62,6 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 	if len(loginData) > 0 {
 		header := []string{"Application", "Username", "Password", "Connect", "Get-Creds Key"}
 		Table(header, loginData)
-	}
-
-	// Restore the log file if it was specified
-	if !config.SkipLogFile {
-		UseLogFile()
 	}
 }
 
@@ -96,8 +93,11 @@ func PrintComponentCredential(state *types.ZarfState, componentName string) {
 
 // PrintCredentialUpdates displays credentials that will be updated
 func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState, services []string) {
-	// Set output to os.Stderr to avoid creds being printed in logs
-	pterm.SetDefaultOutput(os.Stderr)
+	// Pause the logfile's output to avoid credentials being printed to the log file
+	if logFile != nil {
+		logFile.pause()
+		defer logFile.resume()
+	}
 
 	for _, service := range services {
 
@@ -144,11 +144,6 @@ func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState
 	}
 
 	pterm.Println()
-
-	// Restore the log file if it was specified
-	if !config.SkipLogFile {
-		UseLogFile()
-	}
 }
 
 func compareStrings(old string, new string, secret bool) string {

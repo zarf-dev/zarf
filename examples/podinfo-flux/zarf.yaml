@@ -94,3 +94,12 @@ components:
                 name: app=podinfo
                 namespace: podinfo-oci
                 condition: ready
+
+# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
+# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
+x-mdx: |
+  This example demonstrates how to use flux with Zarf to deploy the `stefanprodan/podinfo` app using GitOps.
+
+  It uses a vanilla configuration of flux with upstream containers.
+
+  To learn more about how Zarf handles `git` repositories, see the [Git Repositories section](/ref/components/#git-repositories) of the package components documentation.

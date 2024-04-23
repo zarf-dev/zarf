@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
@@ -24,12 +26,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
@@ -43,24 +43,24 @@ var (
 // PackageCreator provides methods for creating normal (not skeleton) Zarf packages.
 type PackageCreator struct {
 	createOpts types.ZarfCreateOptions
+}
 
-	// TODO: (@lucasrod16) remove PackagerConfig once actions do not depend on it: https://github.com/defenseunicorns/zarf/pull/2276
-	cfg *types.PackagerConfig
+func updateRelativeDifferentialPackagePath(path string, cwd string) string {
+	if path != "" && !filepath.IsAbs(path) && !helpers.IsURL(path) {
+		return filepath.Join(cwd, path)
+	}
+	return path
 }
 
 // NewPackageCreator returns a new PackageCreator.
-func NewPackageCreator(createOpts types.ZarfCreateOptions, cfg *types.PackagerConfig, cwd string) *PackageCreator {
-	// differentials are relative to the current working directory
-	if createOpts.DifferentialPackagePath != "" {
-		createOpts.DifferentialPackagePath = filepath.Join(cwd, createOpts.DifferentialPackagePath)
-	}
-
-	return &PackageCreator{createOpts, cfg}
+func NewPackageCreator(createOpts types.ZarfCreateOptions, cwd string) *PackageCreator {
+	createOpts.DifferentialPackagePath = updateRelativeDifferentialPackagePath(createOpts.DifferentialPackagePath, cwd)
+	return &PackageCreator{createOpts}
 }
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
 func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
-	pkg, warnings, err = dst.ReadZarfYAML(layout.ZarfYAML)
+	pkg, warnings, err = dst.ReadZarfYAML()
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
@@ -130,7 +130,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 		onCreate := component.Actions.OnCreate
 
 		onFailure := func() {
-			if err := actions.Run(pc.cfg, onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
+			if err := actions.Run(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -140,7 +140,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
 		}
 
-		if err := actions.Run(pc.cfg, onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
+		if err := actions.Run(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -254,10 +254,8 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackag
 	}
 
 	// Sign the package if a key has been provided
-	if pc.createOpts.SigningKeyPath != "" {
-		if err := dst.SignPackage(pc.createOpts.SigningKeyPath, pc.createOpts.SigningKeyPassword); err != nil {
-			return err
-		}
+	if err := dst.SignPackage(pc.createOpts.SigningKeyPath, pc.createOpts.SigningKeyPassword, !config.CommonOptions.Confirm); err != nil {
+		return err
 	}
 
 	// Create a remote ref + client for the package (if output is OCI)
@@ -354,7 +352,7 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 	}
 
 	onCreate := component.Actions.OnCreate
-	if err := actions.Run(pc.cfg, onCreate.Defaults, onCreate.Before, nil); err != nil {
+	if err := actions.Run(onCreate.Defaults, onCreate.Before, nil); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -518,7 +516,7 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 		spinner.Success()
 	}
 
-	if err := actions.Run(pc.cfg, onCreate.Defaults, onCreate.After, nil); err != nil {
+	if err := actions.Run(onCreate.Defaults, onCreate.After, nil); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 

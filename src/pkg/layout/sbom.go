@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/mholt/archiver/v3"
 )
 
@@ -69,15 +69,16 @@ func (s *SBOMs) Archive() (err error) {
 }
 
 // StageSBOMViewFiles copies SBOM viewer HTML files to the Zarf SBOM directory.
-func (s *SBOMs) StageSBOMViewFiles() (warnings []string, err error) {
+func (s *SBOMs) StageSBOMViewFiles() (sbomViewFiles, warnings []string, err error) {
 	if s.IsTarball() {
-		return nil, fmt.Errorf("unable to process the SBOM files for this package: %s is a tarball", s.Path)
+		return nil, nil, fmt.Errorf("unable to process the SBOM files for this package: %s is a tarball", s.Path)
 	}
 
 	// If SBOMs were loaded, temporarily place them in the deploy directory
 	if !helpers.InvalidPath(s.Path) {
-		if _, err := filepath.Glob(filepath.Join(s.Path, "sbom-viewer-*")); err != nil {
-			return nil, err
+		sbomViewFiles, err = filepath.Glob(filepath.Join(s.Path, "sbom-viewer-*"))
+		if err != nil {
+			return nil, nil, err
 		}
 
 		if _, err := s.OutputSBOMFiles(SBOMDir, ""); err != nil {
@@ -87,7 +88,7 @@ func (s *SBOMs) StageSBOMViewFiles() (warnings []string, err error) {
 		}
 	}
 
-	return warnings, nil
+	return sbomViewFiles, warnings, nil
 }
 
 // OutputSBOMFiles outputs SBOM files into outputDir.

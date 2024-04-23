@@ -1,0 +1,75 @@
+---
+const { item, include, invert, unwrap } = Astro.props;
+
+const includesElement = (key: string) => {
+  if (!include) {
+    return true;
+  } else if (invert) {
+    return !include.includes(key);
+  } else {
+    return include.includes(key);
+  }
+};
+
+const json = await import("../assets/zarf.schema.json");
+
+// @ts-expect-error - We don't import a TS type for the schema, but we know it's structured correctly
+const itemSchema = json.definitions[item];
+
+if (unwrap) {
+  unwrap.forEach((wrapped: string) => {
+    if (itemSchema.properties[wrapped]) {
+      // @ts-expect-error - We don't import a TS type for the schema, but we know it's structured correctly
+      const wrappedSchema = json.definitions[wrapped];
+
+      delete itemSchema.properties[wrapped]
+      itemSchema.required = itemSchema.required.filter((elem: string) => elem != wrapped)
+
+      itemSchema.properties = {...wrappedSchema.properties, ...itemSchema.properties}
+      itemSchema.required = [...wrappedSchema.required, ...itemSchema.required]
+    }
+  });
+}
+
+const properties = Object.keys(itemSchema.properties)
+  .filter(includesElement)
+  .sort()
+  .sort((key) => (itemSchema.required && itemSchema.required.includes(key) ? -1 : 1));
+---
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    {
+      properties.map((key) => {
+        return (
+          <tr>
+            <td style="min-width: 10rem;">
+              <code>{key}</code>
+              {itemSchema.required && itemSchema.required.includes(key) && <em>*</em>}
+            </td>
+            <td>
+              <em>{itemSchema.properties[key].type ?? "object"}</em>
+            </td>
+            <td>{itemSchema.properties[key].description}</td>
+          </tr>
+        );
+      })
+    }
+  </tbody>
+</table>
+{
+  itemSchema && itemSchema.required && itemSchema.required.some(includesElement) && (
+    <small>
+      <em>* Required field</em>
+      <br />
+      &nbsp;
+    </small>
+  )
+}

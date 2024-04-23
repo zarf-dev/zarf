@@ -8,13 +8,12 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"slices"
 
+	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2/content/file"
@@ -75,10 +74,9 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 }
 
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.
-// It also retrieves the descriptors for all image layers that are required by the components.
 //
-// It also respects the `required` flag on components, and will retrieve all necessary layers for required components.
-func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []string) (layers []ocispec.Descriptor, err error) {
+// It also retrieves the descriptors for all image layers that are required by the components.
+func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []types.ZarfComponent) (layers []ocispec.Descriptor, err error) {
 	root, err := r.FetchRoot(ctx)
 	if err != nil {
 		return nil, err
@@ -89,23 +87,18 @@ func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 		return nil, err
 	}
 	tarballFormat := "%s.tar"
-	for _, name := range requestedComponents {
+	images := map[string]bool{}
+	for _, rc := range requestedComponents {
 		component := helpers.Find(pkg.Components, func(component types.ZarfComponent) bool {
-			return component.Name == name
+			return component.Name == rc.Name
 		})
 		if component.Name == "" {
-			return nil, fmt.Errorf("component %s does not exist in this package", name)
+			return nil, fmt.Errorf("component %s does not exist in this package", rc.Name)
 		}
-	}
-	images := map[string]bool{}
-	for _, component := range pkg.Components {
-		// If we requested this component, or it is required, we need to pull its images and tarball
-		if slices.Contains(requestedComponents, component.Name) || component.Required {
-			for _, image := range component.Images {
-				images[image] = true
-			}
-			layers = append(layers, root.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
+		for _, image := range component.Images {
+			images[image] = true
 		}
+		layers = append(layers, root.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
 	}
 	// Append the sboms.tar layer if it exists
 	//

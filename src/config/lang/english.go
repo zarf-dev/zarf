@@ -401,13 +401,14 @@ $ zarf prepare patch oci 127.0.0.1:31999 ./manifest.yaml
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 	CmdDevGenerateConfigErr = "Unable to write the config file %s, make sure the file doesn't already exist"
 
-	CmdDevFlagExtractPath        = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
-	CmdDevFlagSet                = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
-	CmdDevFlagRepoChartPath      = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
-	CmdDevFlagGitAccount         = "User or organization name for the git account that the repos are created under."
-	CmdDevFlagKubeVersion        = "Override the default helm template KubeVersion when performing a package chart template"
-	CmdDevFlagFindImagesRegistry = "Override the ###ZARF_REGISTRY### value"
-	CmdDevFlagFindImagesWhy      = "Prints the source manifest for the specified image"
+	CmdDevFlagExtractPath          = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
+	CmdDevFlagSet                  = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
+	CmdDevFlagRepoChartPath        = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
+	CmdDevFlagGitAccount           = "User or organization name for the git account that the repos are created under."
+	CmdDevFlagKubeVersion          = "Override the default helm template KubeVersion when performing a package chart template"
+	CmdDevFlagFindImagesRegistry   = "Override the ###ZARF_REGISTRY### value"
+	CmdDevFlagFindImagesWhy        = "Prints the source manifest for the specified image"
+	CmdDevFlagFindImagesSkipCosign = "Skip searching for cosign artifacts related to discovered images"
 
 	CmdDevLintShort = "Lints the given package for valid schema and recommended practices"
 	CmdDevLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
@@ -493,7 +494,50 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	CmdToolsGetGitPasswdShort       = "[Deprecated] Returns the push user's password for the Git server"
 	CmdToolsGetGitPasswdLong        = "[Deprecated] Reads the password for a user with push access to the configured Git server in Zarf State. Note that this command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
 	CmdToolsGetGitPasswdDeprecation = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
+	CmdToolsYqExample               = `
+# yq defaults to 'eval' command if no command is specified. See "zarf tools yq eval --help" for more examples.
 
+# read the "stuff" node from "myfile.yml"
+zarf tools yq '.stuff' < myfile.yml
+
+# update myfile.yml in place
+zarf tools yq -i '.stuff = "foo"' myfile.yml
+
+# print contents of sample.json as idiomatic YAML
+zarf tools yq -P sample.json
+`
+	CmdToolsYqEvalAllExample = `
+# Merge f2.yml into f1.yml (inplace)
+zarf tools yq eval-all --inplace 'select(fileIndex == 0) * select(fileIndex == 1)' f1.yml f2.yml
+## the same command and expression using shortened names:
+zarf tools yq ea -i 'select(fi == 0) * select(fi == 1)' f1.yml f2.yml
+
+
+# Merge all given files
+zarf tools yq ea '. as $item ireduce ({}; . * $item )' file1.yml file2.yml ...
+
+# Pipe from STDIN
+## use '-' as a filename to pipe from STDIN
+cat file2.yml | zarf tools yq ea '.a.b' file1.yml - file3.yml
+`
+	CmdToolsYqEvalExample = `
+# Reads field under the given path for each file
+zarf tools yq e '.a.b' f1.yml f2.yml
+
+# Prints out the file
+zarf tools yq e sample.yaml
+
+# Pipe from STDIN
+## use '-' as a filename to pipe from STDIN
+cat file2.yml | zarf tools yq e '.a.b' file1.yml - file3.yml
+
+# Creates a new yaml document
+## Note that editing an empty file does not work.
+zarf tools yq e -n '.a.b.c = "cat"'
+
+# Update a file inplace
+zarf tools yq e '.a.b = "cool"' -i file.yaml
+`
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
 
 	CmdToolsHelmShort = "Subset of the Helm CLI included with Zarf to help manage helm charts."
@@ -657,14 +701,6 @@ const (
 	PkgCreateErrDifferentialNoVersion   = "unable to create differential package. Please ensure both package versions are set"
 )
 
-// Package deploy
-const (
-	PkgDeployErrMultipleComponentsSameGroup        = "You cannot specify multiple components (%q, %q) within the same group (%q) when using the --components flag."
-	PkgDeployErrNoDefaultOrSelection               = "You must make a selection from %q with the --components flag as there is no default in their group."
-	PkgDeployErrNoCompatibleComponentsForSelection = "No compatible components found that matched %q. Please check spelling and try again."
-	PkgDeployErrComponentSelectionCanceled         = "Component selection canceled: %s"
-)
-
 // Package validate
 const (
 	PkgValidateTemplateDeprecation        = "Package template %q is using the deprecated syntax ###ZARF_PKG_VAR_%s###. This will be removed in Zarf v1.0.0. Please update to ###ZARF_PKG_TMPL_%s###."
@@ -681,6 +717,7 @@ const (
 	PkgValidateErrChartURLOrPath          = "chart %q must have either a url or localPath"
 	PkgValidateErrChartVersion            = "chart %q must include a chart version"
 	PkgValidateErrComponentName           = "component name %q must be all lowercase and contain no special characters except '-' and cannot start with a '-'"
+	PkgValidateErrComponentLocalOS        = "component %q contains a localOS value that is not supported: %s (supported: %s)"
 	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
 	PkgValidateErrComponent               = "invalid component %q: %w"
 	PkgValidateErrComponentReqDefault     = "component %q cannot be both required and default"
