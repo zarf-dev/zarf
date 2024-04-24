@@ -1,4 +1,6 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
+
+set -euo pipefail
 
 if [ -z "$(git status -s ./site/src/content/docs/commands/ ./zarf.schema.json)" ]; then
     echo "Success!"
