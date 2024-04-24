@@ -82,7 +82,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		}
 
 		if err != nil {
-			return fmt.Errorf("unable to complete the helm chart install/upgrade: %w", err)
+			return err
 		}
 
 		message.Debug(output.Info.Description)
@@ -92,7 +92,6 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 
 	err = helpers.Retry(tryHelm, h.retries, 5*time.Second, message.Warnf)
 	if err != nil {
-		// Try to rollback any deployed releases
 		releases, _ := histClient.Run(h.chart.ReleaseName)
 		previouslyDeployedVersion := 0
 
@@ -103,19 +102,21 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 			}
 		}
 
-		// On total failure try to rollback (if there was a previously deployed version) or uninstall.
-		if previouslyDeployedVersion > 0 {
-			spinner.Updatef("Performing chart rollback")
+		removeMsg := "if you need to remove the failed chart, use `zarf package remove`"
 
-			err = h.rollbackChart(h.chart.ReleaseName, previouslyDeployedVersion)
-			if err != nil {
-				return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts and unable to rollback: %w", h.retries, err)
-			}
-
-			return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts", h.retries)
+		// No prior releases means this was an initial install.
+		if previouslyDeployedVersion == 0 {
+			return nil, "", fmt.Errorf("unable to install chart after %d attempts: %w: %s", h.retries, err, removeMsg)
 		}
 
-		return nil, "", fmt.Errorf("unable to install chart after %d attempts", h.retries)
+		// Attempt to rollback on a failed upgrade.
+		spinner.Updatef("Performing chart rollback")
+		err = h.rollbackChart(h.chart.ReleaseName, previouslyDeployedVersion)
+		if err != nil {
+			return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts and unable to rollback: %w: %s", h.retries, err, removeMsg)
+		}
+
+		return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts: %w: %s", h.retries, err, removeMsg)
 	}
 
 	// return any collected connect strings for zarf connect.
