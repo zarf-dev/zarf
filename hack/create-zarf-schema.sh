@@ -1,4 +1,6 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
+
+set -euo pipefail
 
 # Create the json schema for the zarf.yaml
 go run main.go internal gen-config-schema > zarf.schema.json

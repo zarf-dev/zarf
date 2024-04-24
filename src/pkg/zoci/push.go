@@ -33,7 +33,7 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 	// Get all of the layers in the package
 	var descs []ocispec.Descriptor
 	for name, path := range paths.Files() {
-		spinner.Updatef("Preparing layer %s", helpers.First30last30(name))
+		spinner.Updatef("Preparing layer %s", helpers.First30Last30(name))
 
 		mediaType := ZarfLayerMediaTypeBlob
 
