@@ -115,8 +115,6 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		if err != nil {
 			return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts and unable to rollback: %w: %s", h.retries, err, removeMsg)
 		}
-
-		return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts: %w: %s", h.retries, err, removeMsg)
 	}
 
 	// return any collected connect strings for zarf connect.

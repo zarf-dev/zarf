@@ -29,5 +29,5 @@ func TestRetries(t *testing.T) {
 	require.Error(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Retrying (1/2) in 5s:")
 	require.Contains(t, stdErr, "Retrying (2/2) in 10s:")
-	require.Contains(t, stdErr, "unable to install chart after 2 attempts")
+	require.Contains(t, e2e.StripMessageFormatting(stdErr), "unable to install chart after 2 attempts")
 }
