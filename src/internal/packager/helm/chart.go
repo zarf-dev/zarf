@@ -106,15 +106,17 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 
 		// No prior releases means this was an initial install.
 		if previouslyDeployedVersion == 0 {
-			return nil, "", fmt.Errorf("unable to install chart after %d attempts: %w: %s", h.retries, err, removeMsg)
+			return nil, "", fmt.Errorf("unable to install chart after %d attempts: %s", h.retries, removeMsg)
 		}
 
 		// Attempt to rollback on a failed upgrade.
 		spinner.Updatef("Performing chart rollback")
 		err = h.rollbackChart(h.chart.ReleaseName, previouslyDeployedVersion)
 		if err != nil {
-			return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts and unable to rollback: %w: %s", h.retries, err, removeMsg)
+			return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts and unable to rollback: %s", h.retries, removeMsg)
 		}
+
+		return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts: %s", h.retries, removeMsg)
 	}
 
 	// return any collected connect strings for zarf connect.
