@@ -64,7 +64,7 @@ graph TD
 
 ## Package Templates
 
-Templates can be used during `zarf package create` to configure the `zarf.yaml` file. Templates are baked into the Zarf package meaning they cannot be changed post create.
+Package configuration templates can be used during `zarf package create` to configure the `zarf.yaml` file. Templates are baked into the Zarf package so they cannot be changed post create.
 
 :::caution
 
@@ -72,8 +72,9 @@ Templates can be used during `zarf package create` to configure the `zarf.yaml` 
 
 :::
 
-You can specify `zarf.yaml` package configuration templates at package create time by including `###_ZARF_PKG_TMPL_*###` as the value for any string-type data in your package definition. These values are discovered during `zarf package create` and will always be prompted for if not using `--confirm` or not already pre-set. Templates be pre-set using [config files](/ref/config-files/) or the `--set` flag. An example of a package using templates is below:
+You can specify `zarf.yaml` templates at package create time by including `###_ZARF_PKG_TMPL_*###` as the value for any string-type data in your package definition. Template values can be defined using [config files](/ref/config-files/) or the `--set` flag. If a template doesn't have a value on `zarf package create` if will always be prompted for unless `--confirm` is used.
 
+An example of templates if below:
 ```yaml
 kind: ZarfPackageConfig
 metadata:
