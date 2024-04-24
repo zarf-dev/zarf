@@ -1,7 +1,7 @@
-//go:build !alt_language
-
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+//go:build !alt_language
 
 // Package lang contains the language strings for english used by Zarf
 // Alternative languages can be created by duplicating this file and changing the build tag to "//go:build alt_language && <language>".
@@ -506,10 +506,10 @@ cat file2.yml | zarf tools yq ea '.a.b' file1.yml - file3.yml
 `
 	CmdToolsYqEvalExample = `
 # Reads field under the given path for each file
-zarf tools yq e '.a.b' f1.yml f2.yml 
+zarf tools yq e '.a.b' f1.yml f2.yml
 
 # Prints out the file
-zarf tools yq e sample.yaml 
+zarf tools yq e sample.yaml
 
 # Pipe from STDIN
 ## use '-' as a filename to pipe from STDIN
@@ -517,10 +517,10 @@ cat file2.yml | zarf tools yq e '.a.b' file1.yml - file3.yml
 
 # Creates a new yaml document
 ## Note that editing an empty file does not work.
-zarf tools yq e -n '.a.b.c = "cat"' 
+zarf tools yq e -n '.a.b.c = "cat"'
 
 # Update a file inplace
-zarf tools yq e '.a.b = "cool"' -i file.yaml 
+zarf tools yq e '.a.b = "cool"' -i file.yaml
 `
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
 

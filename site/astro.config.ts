@@ -7,7 +7,7 @@ import remarkGemoji from "remark-gemoji";
 // https://astro.build/config
 export default defineConfig({
   redirects: {
-    '/docs/zarf-overview': '/'
+    "/docs/zarf-overview": "/",
   },
   markdown: {
     remarkPlugins: [remarkGemoji],
@@ -37,7 +37,10 @@ export default defineConfig({
         src: "./src/assets/zarf-logo-header.svg",
         replacesTitle: true,
       },
-      customCss: ["./src/styles/custom.css"],
+      customCss: [
+        "./src/styles/custom.css",
+        "@fontsource/source-code-pro/400.css",
+      ],
       lastUpdated: true,
       sidebar: [
         {
