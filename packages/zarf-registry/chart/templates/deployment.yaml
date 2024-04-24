@@ -26,6 +26,7 @@ spec:
       annotations:
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
+      serviceAccountName: {{ include "docker-registry.serviceAccountName" . }}
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
 {{ toYaml .Values.imagePullSecrets | indent 8 }}
@@ -83,7 +84,11 @@ spec:
               subPath: ca-certificates.crt
               readOnly: true
 {{- end }}
+{{- if .Values.affinity.enabled }}
       affinity:
+{{- if .Values.affinity.custom }}
+{{ toYaml .Values.affinity.custom | indent 8 }}
+{{- else }}
 {{- if (eq "ReadWriteMany" .Values.persistence.accessMode) }}
         podAntiAffinity:
 {{- else }}
@@ -99,6 +104,12 @@ spec:
                       values:
                         - {{ template "docker-registry.name" . }}
                 topologyKey: kubernetes.io/hostname
+{{- end }}
+{{- end }}
+{{- if .Values.tolerations}}
+      tolerations:
+{{ toYaml .Values.tolerations | indent 8 }}
+{{- end }}
       volumes:
         - name: config
           secret:
