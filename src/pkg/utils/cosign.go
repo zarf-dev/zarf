@@ -1,4 +1,3 @@
-// Forked from https://github.com/sigstore/cosign/blob/v1.7.1/pkg/sget/sget.go
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
@@ -37,6 +36,8 @@ import (
 )
 
 // Sget performs a cosign signature verification on a given image using the specified public key.
+//
+// Forked from https://github.com/sigstore/cosign/blob/v1.7.1/pkg/sget/sget.go
 func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	message.Warnf(lang.WarnSGetDeprecation)
 

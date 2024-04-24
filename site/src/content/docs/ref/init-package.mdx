@@ -104,6 +104,36 @@ The `registry:2` image and the Zarf Agent image can be configured with a custom 
 
 :::
 
+## Making the Registry Highly-Available
+
+By default, the registry included in the init package creates a ReadWriteOnce PVC and is only scheduled to run on one node at a time. This setup is usually enough for smaller and simpler deployments. However, for larger deployments or those where nodes are frequently restarted or updated, you may want to make the registry highly-available.
+
+This approach requires certain prerequisites, such as a storage class that supports ReadWriteMany, or being in an environment that allows you to configure the registry to use an S3-compatible backend. Additionally, you must provide custom configuration to the registry to ensure it is distributed across all nodes and has the appropriate number of replicas. Below is an example [configuration file](/ref/config-files/) using a ReadWriteMany storage class:
+
+```yaml
+# zarf-config.yaml
+package:
+  deploy:
+    set:
+      REGISTRY_PVC_ENABLED: "true"
+      REGISTRY_PVC_ACCESS_MODE: "ReadWriteMany"
+      REGISTRY_HPA_AUTO_SIZE: "true"
+      REGISTRY_AFFINITY_CUSTOM: |
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - docker-registry
+                topologyKey: kubernetes.io/hostname
+```
+
+Notably, the `REGISTRY_AFFINITY_CUSTOM` variable overrides the default pod anti-affinity, and `REGISTRY_HPA_AUTO_SIZE` automatically adjusts the minimum and maximum replicas for the registry based on the number of nodes in the cluster. If you prefer to manually set the minimum and maximum replicas, you can use `REGISTRY_HPA_MIN` and `REGISTRY_HPA_MAX` to specify the desired values.
+
 ## The `zarf init` Lifecycle
 
 The `zarf init` lifecycle is _very similar_ to the [`zarf package deploy` lifecycle](/ref/deploy/) except that it sets up resources specific to Zarf such as the `zarf-state` and performs special actions such as the injection procedure.
