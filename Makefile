@@ -107,7 +107,7 @@ docs-and-schema: ## Generate the Zarf Documentation and Schema
 	ZARF_CONFIG=hack/empty-config.toml hack/create-zarf-schema.sh
 
 lint-packages-and-examples: build ## Recursively lint all zarf.yaml files in the repo except for those dedicated to tests
-	hack/lint-all-zarf-packages.sh $(ZARF_BIN) true
+	hack/lint-all-zarf-packages.sh $(ZARF_BIN) false
 
 # INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
 init-package-local-agent:
