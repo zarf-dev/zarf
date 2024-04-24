@@ -3,7 +3,7 @@ image:
   tag: 2.8.3
   pullPolicy: IfNotPresent
 imagePullSecrets:
-    - name: private-registry
+  - name: private-registry
 
 service:
   name: registry
