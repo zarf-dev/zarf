@@ -1,3 +1,4 @@
+
 # zarf-injector
 
 A tiny (<1MiB) binary statically-linked with musl in order to fit as a configmap
@@ -16,6 +17,27 @@ sudo apt install build-essential -y
 rustup target add x86_64-unknown-linux-musl
 cargo build --target x86_64-unknown-linux-musl --release
 ```
+
+## Building on Apple Silicon 
+
+* Install Cross
+* Install Docker & have it running
+* Rust must be installed via Rustup (Check `which rustc` if you're unsure)
+
+```
+cargo install cross --git https://github.com/cross-rs/cross
+```
+
+Whichever arch. of `musl` used, add to toolchain
+```
+rustup toolchain install --force-non-host stable-x86_64-unknown-linux-musl
+```
+```
+cross build --target x86_64-unknown-linux-musl --release
+```
+
+
+
 
 ## Checking Binary Size
 

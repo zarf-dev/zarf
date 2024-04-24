@@ -230,27 +230,3 @@ async fn main() {
     println!("Usage: {} <sha256sum>", args[1]);
 
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use axum::{
-        body::Body,
-        extract::connect_info::MockConnectInfo,
-        http::{self, Request, StatusCode},
-    };
-
-    #[tokio::test]
-    async fn test_https() {
-
-        let listener = tokio::net::TcpListener::bind("0.0.0.0:5000")
-        .await
-        .unwrap();
-
-        axum::serve(listener,start_seed_registry())
-        .await
-        .unwrap();
-
-    http::Request
-    }
-}
