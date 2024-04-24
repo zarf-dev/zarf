@@ -72,7 +72,7 @@ Package configuration templates can be used during `zarf package create` to conf
 
 :::
 
-You can specify `zarf.yaml` templates at package create time by including `###_ZARF_PKG_TMPL_*###` as the value for any string-type data in your package definition. Template values can be defined using [config files](/ref/config-files/) or the `--set` flag. If a template doesn't have a value on `zarf package create` if will always be prompted for unless `--confirm` is used.
+You can specify `zarf.yaml` templates at package create time by including `###_ZARF_PKG_TMPL_*###` as the value for any string-type data in your package definition. Template values can be defined using [config files](/ref/config-files/) or the `--set` flag. If a template is undefined during `zarf package create` if will always be prompted for unless `--confirm` is used.
 
 An example of templates if below:
 ```yaml
