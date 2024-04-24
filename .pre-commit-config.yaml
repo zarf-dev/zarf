@@ -11,9 +11,11 @@ repos:
       - id: detect-private-key
         exclude: "src/test/e2e/30_config_file_test.go"
       - id: end-of-file-fixer
+        exclude: site/src/content/docs/commands/.*
       - id: fix-byte-order-marker
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
+        exclude: site/src/content/docs/commands/.*
   - repo: https://github.com/sirosen/texthooks
     rev: 0.6.4
     hooks:
@@ -33,6 +35,17 @@ repos:
         args:
           - -l
           - -w
+        language: system
+        pass_filenames: true
+      - id: lint
+        name: revive go lint
+        entry: revive
+        args:
+          - "-config"
+          - "hack/revive.toml"
+          - "-exclude"
+          - "src/cmd/viper.go"
+        files: .go$
         language: system
         pass_filenames: true
   - repo: https://github.com/python-jsonschema/check-jsonschema
