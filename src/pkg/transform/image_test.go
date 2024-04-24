@@ -20,6 +20,7 @@ var imageRefs = []string{
 	"ghcr.io/stefanprodan/podinfo:6.3.3",
 	"registry1.dso.mil/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0",
 	"gitlab.com/project/gitea/gitea:1.19.3-rootless-zarf-3431384023",
+	"oci://10.43.130.183:5000/stefanprodan/manifests/podinfo",
 }
 
 var badImageRefs = []string{
@@ -39,6 +40,7 @@ func TestImageTransformHost(t *testing.T) {
 		"gitlab.com/project/stefanprodan/podinfo:6.3.3-zarf-2985051089",
 		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0-zarf-2003217571",
 		"gitlab.com/project/gitea/gitea:1.19.3-rootless-zarf-3431384023",
+		"gitlab.com/project/stefanprodan/manifests/podinfo:latest-zarf-531355090",
 	}
 
 	for idx, ref := range imageRefs {
@@ -63,6 +65,7 @@ func TestImageTransformHostWithoutChecksum(t *testing.T) {
 		"gitlab.com/project/stefanprodan/podinfo:6.3.3",
 		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0",
 		"gitlab.com/project/gitea/gitea:1.19.3-rootless-zarf-3431384023",
+		"gitlab.com/project/stefanprodan/manifests/podinfo:latest",
 	}
 
 	for idx, ref := range imageRefs {
@@ -121,6 +124,7 @@ func TestParseImageRef(t *testing.T) {
 		{"ghcr.io/", "stefanprodan/podinfo", "6.3.3", ""},
 		{"registry1.dso.mil/", "ironbank/opensource/defenseunicorns/zarf/zarf-agent", "v0.25.0", ""},
 		{"gitlab.com/", "project/gitea/gitea", "1.19.3-rootless-zarf-3431384023", ""},
+		{"10.43.130.183:5000/", "stefanprodan/manifests/podinfo", "latest", ""},
 	}
 
 	for idx, ref := range imageRefs {
