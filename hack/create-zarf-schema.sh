@@ -9,7 +9,7 @@ go run main.go internal gen-config-schema > zarf.schema.json
 jq '
   def addPatternProperties:
     . +
-    if type == "object" and has("properties") then
+    if has("properties") then
       {"patternProperties": {"^x-": {}}}
     else
       {}
