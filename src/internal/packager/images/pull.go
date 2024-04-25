@@ -6,6 +6,7 @@ package images
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -72,7 +73,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 
 	var mu sync.Mutex
 	totalBytes := int64(0)
-	processed := make(map[string]bool)
+	processing := make(map[string]bool)
 	opts := append(config.GetCraneOptions(i.Insecure, i.Architectures...), crane.WithContext(ctx))
 
 	// retry := func(cb func() error) func() error {
@@ -99,12 +100,12 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 			if strings.HasSuffix(ref, ".tar") || strings.HasSuffix(ref, ".tar.gz") || strings.HasSuffix(ref, ".tgz") {
 				img, err = crane.Load(ref, opts...)
 				if err != nil {
-					return fmt.Errorf("unable to load image %s: %w", refInfo.Reference, err)
+					return fmt.Errorf("unable to load %s: %w", refInfo.Reference, err)
 				}
 			} else {
 				reference, err := name.ParseReference(ref)
 				if err != nil {
-					return fmt.Errorf("failed to parse image reference: %w", err)
+					return fmt.Errorf("failed to parse reference: %w", err)
 				}
 				_, err = crane.Head(ref, opts...)
 				if err != nil {
@@ -113,7 +114,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 						return fmt.Errorf("rate limited by registry: %w", err)
 					}
 
-					message.Notef("Falling back to local 'docker' images, failed to find the manifest on a remote: %s", err.Error())
+					message.Notef("Falling back to local 'docker', failed to find the manifest on a remote: %s", err.Error())
 
 					// Attempt to connect to the local docker daemon.
 					cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -129,7 +130,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 							cancel()
 						}
 
-						return fmt.Errorf("failed to inspect image via docker: %w", err)
+						return fmt.Errorf("failed to inspect via docker: %w", err)
 					}
 
 					// Warn the user if the image is large.
@@ -143,7 +144,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 					// This will also take forever to load large images.
 					img, err = daemon.Image(reference, daemon.WithUnbufferedOpener(), daemon.WithContext(ctx))
 					if err != nil {
-						return fmt.Errorf("failed to load image from docker daemon: %w", err)
+						return fmt.Errorf("failed to load from docker daemon: %w", err)
 					}
 				} else {
 					img, err = crane.Pull(ref, opts...)
@@ -157,13 +158,13 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 
 			manifest, err := img.Manifest()
 			if err != nil {
-				return fmt.Errorf("unable to get manifest for image %s: %w", refInfo.Reference, err)
+				return fmt.Errorf("unable to get manifest for %s: %w", refInfo.Reference, err)
 			}
 			totalBytes += manifest.Config.Size
 
 			layers, err := img.Layers()
 			if err != nil {
-				return fmt.Errorf("unable to get layers for image %s: %w", refInfo.Reference, err)
+				return fmt.Errorf("unable to get layers for %s: %w", refInfo.Reference, err)
 			}
 
 			for _, layer := range layers {
@@ -172,9 +173,9 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 					return fmt.Errorf("unable to get digest for image layer: %w", err)
 				}
 
-				if _, ok := processed[digest.Hex]; !ok {
+				if _, ok := processing[digest.Hex]; !ok {
 					mu.Lock()
-					processed[digest.Hex] = true
+					processing[digest.Hex] = true
 					mu.Unlock()
 					size, err := layer.Size()
 					if err != nil {
@@ -189,6 +190,8 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 		})
 	}
 
+	clear(processing)
+
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
@@ -202,25 +205,68 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 	eg, _ = errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 
-	// Spawn a goroutine for each image to write it's config and manifest to disk using crane
+	layerInProgress := errors.New("layer already inprogress")
+
+	markAsProcessing := func(layers []v1.Layer) error {
+		mu.Lock()
+		defer mu.Unlock()
+		for _, layer := range layers {
+			digest, err := layer.Digest()
+			if err != nil {
+				return err
+			}
+
+			if _, ok := processing[digest.Hex]; ok {
+				return layerInProgress
+			}
+			processing[digest.Hex] = true
+		}
+		return nil
+	}
+
+	unmarkAsProcessing := func(layers []v1.Layer) error {
+		mu.Lock()
+		defer mu.Unlock()
+		for _, layer := range layers {
+			digest, err := layer.Digest()
+			if err != nil {
+				return err
+			}
+			delete(processing, digest.Hex)
+		}
+		return nil
+	}
+
 	for _, info := range list {
-		// Create a closure so that we can pass the refInfo and img into the goroutine
 		refInfo, img := info.RefInfo, info.Img
 		eg.Go(func() error {
+
+			layers, err := img.Layers()
+			if err != nil {
+				return fmt.Errorf("unable to get layers for %s: %w", refInfo.Reference, err)
+			}
+
+			for {
+				if err := markAsProcessing(layers); err != nil {
+					if errors.Is(err, layerInProgress) {
+						continue
+					}
+					return err
+				}
+				break
+			}
+
+			message.Debug("Pulling image %s", refInfo.Reference)
 			annotations := map[string]string{
 				ocispec.AnnotationBaseImageName: refInfo.Reference,
 			}
 
 			// also have clayout.WithPlatform() as a future option to use
 			if err := cranePath.AppendImage(img, clayout.WithAnnotations(annotations)); err != nil {
-				// Check if the cache has been invalidated, and warn the user if so
-				if strings.HasPrefix(err.Error(), "error writing layer: expected blob size") {
-					message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
-				}
-				return fmt.Errorf("error when trying to save the img (%s): %w", refInfo.Reference, err)
+				return fmt.Errorf("error when trying to save %s: %w", refInfo.Reference, err)
 			}
 
-			return nil
+			return unmarkAsProcessing(layers)
 		})
 	}
 
