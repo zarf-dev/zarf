@@ -1,0 +1,9 @@
+kind: ZarfPackageConfig
+metadata:
+  name: manifest-list
+
+components:
+  - name: baseline
+    required: true
+    images:
+      - defenseunicorns/zarf-game@sha256:0b694ca1c33afae97b7471488e07968599f1d2470c629f76af67145ca64428af

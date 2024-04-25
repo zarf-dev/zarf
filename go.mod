@@ -13,7 +13,7 @@ require (
 	github.com/anchore/clio v0.0.0-20240307182142-fb5fc4c9db3c
 	github.com/anchore/stereoscope v0.0.1
 	github.com/anchore/syft v0.100.0
-	github.com/defenseunicorns/pkg/helpers v1.0.0
+	github.com/defenseunicorns/pkg/helpers v1.1.1
 	github.com/defenseunicorns/pkg/oci v0.0.1
 	github.com/derailed/k9s v0.31.7
 	github.com/distribution/reference v0.5.0
@@ -377,7 +377,7 @@ require (
 	github.com/opencontainers/selinux v1.11.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/openvex/go-vex v0.2.5 // indirect
-	github.com/otiai10/copy v1.14.0 // indirect
+	github.com/otiai10/copy v1.14.0
 	github.com/owenrumney/go-sarif v1.1.2-0.20231003122901-1000f5e05554 // indirect
 	github.com/package-url/packageurl-go v0.1.1 // indirect
 	github.com/pborman/indent v1.2.1 // indirect
