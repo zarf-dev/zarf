@@ -73,11 +73,9 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 
-	// refInfoToImage := make(map[transform.Image]v1.Image)
-	refInfoToImage := make(map[transform.Image]v1.Image)
 	var mu sync.Mutex
 	totalBytes := int64(0)
-	processed := make(map[string]v1.Layer)
+	processed := make(map[string]bool)
 	opts := append(config.GetCraneOptions(i.Insecure, i.Architectures...), crane.WithContext(ctx))
 
 	for idx, refInfo := range i.ImageList {
@@ -85,23 +83,27 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 		eg.Go(func() error {
 			spinner.Updatef("Fetching image info (%d of %d)", idx+1, len(i.ImageList))
 
-			actual := refInfo.Reference
+			ref := refInfo.Reference
 			for k, v := range i.RegistryOverrides {
 				if strings.HasPrefix(refInfo.Reference, k) {
-					actual = strings.Replace(refInfo.Reference, k, v, 1)
+					ref = strings.Replace(refInfo.Reference, k, v, 1)
 				}
 			}
 
 			var img v1.Image
 
 			// load from local fs if it's a tarball
-			if strings.HasSuffix(actual, ".tar") || strings.HasSuffix(actual, ".tar.gz") || strings.HasSuffix(actual, ".tgz") {
-				img, err = crane.Load(actual, opts...)
+			if strings.HasSuffix(ref, ".tar") || strings.HasSuffix(ref, ".tar.gz") || strings.HasSuffix(ref, ".tgz") {
+				img, err = crane.Load(ref, opts...)
 				if err != nil {
 					return fmt.Errorf("unable to load image %s: %w", refInfo.Reference, err)
 				}
 			} else {
-				_, err = crane.Head(actual, opts...)
+				reference, err := name.ParseReference(ref)
+				if err != nil {
+					return fmt.Errorf("failed to parse image reference: %w", err)
+				}
+				_, err = crane.Head(ref, opts...)
 				if err != nil {
 					if errors.Is(err, context.Canceled) {
 						return err
@@ -114,11 +116,6 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 
 					message.Notef("Falling back to local 'docker' images, failed to find the manifest on a remote: %s", err.Error())
 
-					reference, err := name.ParseReference(actual)
-					if err != nil {
-						return fmt.Errorf("failed to parse image reference: %w", err)
-					}
-
 					// Attempt to connect to the local docker daemon.
 					cli, err := client.NewClientWithOpts(client.FromEnv)
 					if err != nil {
@@ -127,7 +124,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 					cli.NegotiateAPIVersion(ectx)
 
 					// Inspect the image to get the size.
-					rawImg, _, err := cli.ImageInspectWithRaw(ectx, actual)
+					rawImg, _, err := cli.ImageInspectWithRaw(ectx, ref)
 					if err != nil {
 						if errdefs.IsNotFound(err) {
 							cancel()
@@ -140,7 +137,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 					if rawImg.Size > 750*1000*1000 {
 						message.Warnf("%s is %s and may take a very long time to load via docker. "+
 							"See https://docs.zarf.dev/faq for suggestions on how to improve large local image loading operations.",
-							actual, utils.ByteFormat(float64(rawImg.Size), 2))
+							ref, utils.ByteFormat(float64(rawImg.Size), 2))
 					}
 
 					// Use unbuffered opener to avoid OOM Kill issues https://github.com/defenseunicorns/zarf/issues/1214.
@@ -150,7 +147,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 						return fmt.Errorf("failed to load image from docker daemon: %w", err)
 					}
 				} else {
-					img, err = crane.Pull(actual, opts...)
+					img, err = crane.Pull(ref, opts...)
 					if err != nil {
 						return fmt.Errorf("unable to pull image %s: %w", refInfo.Reference, err)
 					}
@@ -177,7 +174,9 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 				}
 
 				if _, ok := processed[digest.Hex]; !ok {
-					processed[digest.Hex] = layer
+					mu.Lock()
+					processed[digest.Hex] = true
+					mu.Unlock()
 					size, err := layer.Size()
 					if err != nil {
 						return fmt.Errorf("unable to get size for image layer: %w", err)
@@ -186,9 +185,6 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 				}
 			}
 
-			mu.Lock()
-			refInfoToImage[refInfo] = img
-			mu.Unlock()
 			list = append(list, ImgInfo{RefInfo: refInfo, Img: img})
 			return nil
 		})
@@ -197,8 +193,9 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
+
 	spinner.Success()
-	// Create a thread to update a progress bar as we save the image files to disk
+
 	doneSaving := make(chan error)
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
 	go utils.RenderProgressBarForLocalDirWrite(dst.Base, totalBytes, doneSaving, updateText, updateText)
@@ -207,9 +204,9 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 	eg.SetLimit(10)
 
 	// Spawn a goroutine for each image to write it's config and manifest to disk using crane
-	for refInfo, img := range refInfoToImage {
+	for _, info := range list {
 		// Create a closure so that we can pass the refInfo and img into the goroutine
-		refInfo, img := refInfo, img
+		refInfo, img := info.RefInfo, info.Img
 		eg.Go(func() error {
 			annotations := map[string]string{
 				ocispec.AnnotationBaseImageName: refInfo.Reference,
