@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -218,6 +217,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 			}
 
 			if _, ok := processing[digest.Hex]; ok {
+				message.Debug(helpers.Truncate(digest.Hex, 12, false), "in progress, skipping.")
 				return layerInProgress
 			}
 			processing[digest.Hex] = true
@@ -250,7 +250,8 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 			for {
 				if err := markAsProcessing(layers); err != nil {
 					if errors.Is(err, layerInProgress) {
-						time.Sleep(1 * time.Second)
+						// message.Debug(processing)
+						// time.Sleep(1 * time.Second)
 						continue
 					}
 					return err
@@ -258,7 +259,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 				break
 			}
 
-			message.Debug("Pulling image %s", refInfo.Reference)
+			message.Debugf("Pulling image %s", refInfo.Reference)
 			annotations := map[string]string{
 				ocispec.AnnotationBaseImageName: refInfo.Reference,
 			}
