@@ -179,14 +179,13 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 
 		doPull := func() error {
 			imgConfig := images.ImageConfig{
-				ImagesPath:        dst.Images.Base,
 				ImageList:         imageList,
 				Insecure:          config.CommonOptions.Insecure,
 				Architectures:     []string{arch},
 				RegistryOverrides: pc.createOpts.RegistryOverrides,
 			}
 
-			pulled, err = imgConfig.PullAll()
+			pulled, err = imgConfig.PullAll(dst.Images)
 			return err
 		}
 
@@ -198,7 +197,11 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 			if err := dst.Images.AddV1Image(imgInfo.Img); err != nil {
 				return err
 			}
-			if imgInfo.HasImageLayers {
+			ok, err := utils.HasImageLayers(imgInfo.Img)
+			if err != nil {
+				return fmt.Errorf("failed to validate %s is an image and not an artifact: %w", imgInfo, err)
+			}
+			if ok {
 				sbomImageList = append(sbomImageList, imgInfo.RefInfo)
 			}
 		}
