@@ -90,13 +90,13 @@ func TestPackageFiles(t *testing.T) {
 			"checksums.txt": normalizePath("test/checksums.txt"),
 		}
 		require.Equal(t, expected, files)
-		
+
 		pp.SBOMs.Path = normalizePath("test/sboms.tar")
 		files = pp.Files()
 		expected = map[string]string{
 			"zarf.yaml":     normalizePath("test/zarf.yaml"),
 			"checksums.txt": normalizePath("test/checksums.txt"),
-			"sboms.tar": normalizePath("test/sboms.tar"),
+			"sboms.tar":     normalizePath("test/sboms.tar"),
 		}
 		require.Equal(t, expected, files)
 	})

@@ -50,7 +50,7 @@ graph TD
     B12(prompt to confirm components)-->B13
     B13(prompt to choose components in '.group')-->B14
 
-    subgraph  
+    subgraph  ""
     B14(deploy each component)-->B14
     B14 --> B15(run each '.actions.onDeploy.before'):::action-->B15
     B15 --> B16(copy '.files')-->B17
