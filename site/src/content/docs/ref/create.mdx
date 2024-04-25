@@ -27,7 +27,7 @@ graph TD
     A11 -->|Yes| A12(add seed image)-->A13
     A11 -->|No| A13
 
-    subgraph  
+    subgraph  ""
     A13(add each component)-->A13
     A13 --> A14(run each '.actions.onCreate.before'):::action-->A14
     A14 --> A15(load '.charts')-->A16
@@ -61,38 +61,47 @@ graph TD
 `}/>
 </Details>
 
-## Types of Zarf Packages
 
-There are two types of Zarf Packages, the `ZarfInitConfig` and the `ZarfPackageConfig`, which are distinguished by the `kind:` field and specified in the `zarf.yaml` file.
+## Package Templates
 
-Throughout the rest of the documentation, we will refer to the `ZarfInitConfig` as an `init config` package or `init` package, and to the `ZarfPackageConfig` as simply a "package".
+Package configuration templates can be used during `zarf package create` to configure the `zarf.yaml` file. Templates are baked into the Zarf package so they cannot be changed post create.
 
-### ZarfInitConfig
+:::caution
 
-The init package is used to initialize a cluster, making it ready for deployment of other Zarf Packages. It must be executed once on each cluster that you want to deploy another package onto, even if multiple clusters share the same host. For additional information on the init package, we provide detailed documentation on the Zarf ['init' package page](/ref/init-package/).
-
-If there is no running cluster, the init package can be used to create one. It has a deployable K3s cluster component that can be optionally deployed on your machine. Usually, an init package is the first Zarf Package to be deployed on a cluster as other packages often depend on the services installed or configured by the init package. If you want to install a K8s cluster with Zarf, but you don't want to use K3s as your cluster, you will need to create or find another Zarf Package that will stand up your cluster before you run the zarf init command.
-
-:::note
-
-To clarify, in most cases, the first Zarf Package you deploy onto a cluster should be the init package since other packages often depend on the services it installs onto your cluster. However, if you don't want to use the K3s distribution included in the init package or if you already have a preferred K8s distribution, you can deploy the distribution package first, followed by the init package, and then any other packages you want. This only applies if you don't have a K8s cluster yet.
+`zarf package create` templates only template `###ZARF_PKG_TMPL_*###` entries the `zarf.yaml` file while `zarf package deploy` only templates other `manifests`, `charts`, `files`, and `actions`.  To learn more about using deployment values see the [Deployment Values](/ref/values) page.
 
 :::
 
-During the initialization process, Zarf will seed your cluster with a container registry to store images that other packages may require. Additionally, the init package has the option to deploy other features to your cluster, such as a Git server to manage your repositories or a PLG logging stack that allows you to monitor the applications running on your cluster.
+You can specify `zarf.yaml` templates at package create time by including `###_ZARF_PKG_TMPL_*###` as the value for any string-type data in your package definition. Template values can be defined using [config files](/ref/config-files/) or the `--set` flag. If a template is undefined during `zarf package create` if will always be prompted for unless `--confirm` is used.
 
-#### Using the init-package
+An example of templates is below:
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: 'pkg-variables'
+  description: 'Prompt for a variables during package create'
 
-To initialize your cluster, you need to run the command `zarf init`. This command will search for a file with the specific naming convention: `zarf-init-{ARCHITECTURE}-{VERSION}.tar.zst`. The architecture must match that of the cluster you are deploying to. If you are deploying to a cluster with a different architecture, you will need to specify the name of the architecture you are deploying on with the `-a` flag. For example, if you are on an arm64 machine but are deploying on an amd64 machine, you will run `zarf init -a amd64`.
+constants:
+  - name: PROMPT_IMAGE
+    value: '###ZARF_PKG_TMPL_PROMPT_ON_CREATE###'
 
-Init packages can also be run with `zarf package deploy zarf-init-{ARCHITECTURE}-{VERSION}.tar.zst`.
+components:
+  - name: zarf-prompt-image
+    required: true
+    images:
+      - '###ZARF_PKG_TMPL_PROMPT_ON_CREATE###'
+```
 
-You do not need to create init configs by yourself unless you want to customize how your cluster is installed/configured. For example, if you want to use the init process to install a specifically configured K3s cluster onto your host machine, you can create a specific package to do that before running the init package.
+:::caution
 
-### ZarfPackageConfig
+It is not recommended to use package configuration templates for any `sensitive` data as this will be baked into the package as plain text.  Please use a deploy-time variable with the `sensitive` key set instead.
 
-`ZarfPackageConfig` refers to any package that is not an init package and is used to define specific capabilities that you want to deploy onto your initialized cluster.
+:::
 
-To deploy a Zarf Package, you can use the command `zarf package deploy`. This will prompt you to select from all of the files in your current directory that match the name `zarf-package-*.tar.zst`. Alternatively, if you already know which package you want to deploy, you can simply use the command `zarf package deploy {PACKAGE_NAME}`.
+:::note
 
-During the deployment process, Zarf will leverage the infrastructure created during the 'init' process (such as the Docker registry and Git server) to push all the necessary images and repositories required for the package to operate.
+You can only template string values in this way as non-string values will not marshal/unmarshal properly through the yaml.
+
+Additionally, you cannot template the component import path using package configuration templates
+
+:::

@@ -6,6 +6,7 @@ package migrations
 import (
 	"fmt"
 
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -59,7 +60,7 @@ func (SetVariableToSetVariables) Run(c types.ZarfComponent) (types.ZarfComponent
 		for i := range actions {
 			if actions[i].DeprecatedSetVariable != "" && len(actions[i].SetVariables) < 1 {
 				hasSetVariable = true
-				actions[i].SetVariables = []types.ZarfComponentActionSetVariable{
+				actions[i].SetVariables = []variables.Variable{
 					{
 						Name:      actions[i].DeprecatedSetVariable,
 						Sensitive: false,

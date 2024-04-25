@@ -1,0 +1,3 @@
+# This is here so it can be used during certain Zarf commands
+# such as `internal gen-cli-docs` where we prefer an empty config
+# as opposed to the init package config at the base of the repo

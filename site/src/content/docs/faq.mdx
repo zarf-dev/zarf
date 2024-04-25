@@ -38,9 +38,9 @@ The Agent does not need to create any secrets in the cluster. Instead, during `z
 
 Resources can be excluded at the namespace or resources level by adding the `zarf.dev/agent: ignore` label.
 
-## What happens to resources that exist in the cluster before [`zarf init`](/commands/zarf_init/)?
+## What happens to resources that exist in the cluster before `zarf init`?
 
-During the `zarf init` operation, the Zarf Agent will patch any existing namespaces with the `zarf.dev/agent: ignore` label to prevent the Agent from modifying any resources in that namespace. This is done because there is no way to guarantee the images used by pods in existing namespaces are available in the Zarf Registry.
+During the [`zarf init`](/commands/zarf_init) operation, the Zarf Agent will patch any existing namespaces with the `zarf.dev/agent: ignore` label to prevent the Agent from modifying any resources in that namespace. This is done because there is no way to guarantee the images used by pods in existing namespaces are available in the Zarf Registry.
 
 If you would like to adopt pre-existing resources into a Zarf deployment you can use the `--adopt-existing-resources` flag on [`zarf package deploy`](/commands/zarf_package_deploy/) to adopt those resources into the Helm Releases that Zarf manages (including namespaces). This will add the requisite annotations and labels to those resources and drop the `zarf.dev/agent: ignore` label from any namespaces specified by those resources.
 
@@ -144,4 +144,4 @@ Typically you should not deploy a Zarf package in YOLO mode if the cluster has a
 
 A `skeleton` package is a bare-bones Zarf package definition alongside its associated local files and manifests that has been published to an OCI registry. These packages are intended for use with [component composability](/ref/components) to provide versioned imports for components that you wish to mix and match or modify with merge-overrides across multiple separate packages.
 
-Skeleton packages have not been run through the `zarf package create` process yet, and thus do not have any remote resources included (no images, repos, or remote manifests and files) thereby retaining any [create-time package configuration templates](/ref/variables) as they were defined in the original `zarf.yaml` (i.e. untemplated).
+Skeleton packages have not been run through the `zarf package create` process yet, and thus do not have any remote resources included (no images, repos, or remote manifests and files) thereby retaining any [create-time package configuration templates](/ref/values) as they were defined in the original `zarf.yaml` (i.e. untemplated).

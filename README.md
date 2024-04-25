@@ -4,7 +4,7 @@
 [![Go version](https://img.shields.io/github/go-mod/go-version/defenseunicorns/zarf?filename=go.mod)](https://go.dev/)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/defenseunicorns/zarf/release.yml)](https://github.com/defenseunicorns/zarf/actions/workflows/release.yml)
 [![Zarf Documentation Status](https://api.netlify.com/api/v1/badges/fe846ae4-25fb-4274-9968-90782640ee9f/deploy-status)](https://app.netlify.com/sites/zarf-docs/deploys)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/zarf/badge)](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/zarf)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/zarf/badge)](https://securityscorecards.dev/viewer/?uri=github.com/defenseunicorns/zarf)
 
 <img align="right" alt="zarf logo" src="site/src/assets/zarf-logo.png"  height="256" />
 
@@ -31,7 +31,7 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 
 - Automate Kubernetes deployments in disconnected environments
 - Automate [Software Bill of Materials (SBOM)](https://docs.zarf.dev/ref/sboms/) generation
-- Build and [publish packages as OCI image artifacts](https://docs.zarf.dev/tutorials/publish-and-deploy)
+- Build and [publish packages as OCI image artifacts](https://docs.zarf.dev/tutorials/7-publish-and-deploy/)
 - Provide a [web dashboard](https://docs.zarf.dev/ref/sboms/#the-sbom-viewer) for viewing SBOM output
 - Create and verify package signatures with [cosign](https://github.com/sigstore/cosign)
 - [Publish](https://docs.zarf.dev/commands/zarf_package_publish), [pull](https://docs.zarf.dev/commands/zarf_package_pull), and [deploy](https://docs.zarf.dev/commands/zarf_package_deploy) packages from an [OCI registry](https://opencontainers.org/)
@@ -47,7 +47,7 @@ Zarf eliminates the [complexity of air gap software delivery](https://www.itopst
 
 ## 🛠️ Configurable Features
 
-- Customizable [variables and package templates](https://docs.zarf.dev/ref/variables/) with defaults and user prompting
+- Customizable [variables and package templates](https://docs.zarf.dev/ref/values/) with defaults and user prompting
 - [Composable packages](https://docs.zarf.dev/ref/components/#component-imports) to include multiple sub-packages/components
 - Component-level OS/architecture filtering
 
@@ -67,7 +67,7 @@ To discover more about Zarf and explore its features, please visit [docs.zarf.de
 - [packages](https://docs.zarf.dev/ref/packages)
 - [components](https://docs.zarf.dev/ref/components)
 - [actions](https://docs.zarf.dev/ref/actions)
-- [variables](https://docs.zarf.dev/ref/variables)
+- [variables](https://docs.zarf.dev/ref/values)
 - [SBOMs](https://docs.zarf.dev/ref/sboms)
 - and more!
 
@@ -87,10 +87,10 @@ Made with [contrib.rocks](https://contrib.rocks).
 
 ## 💻 Contributing
 
-Check out our [Contributor Guide](https://docs.zarf.dev/contribute-to-zarf/contributor-guide) to learn more about how to set up your development environment and begin contributing.
+Check out our [Contributor Guide](https://docs.zarf.dev/contribute/contributor-guide/) to learn more about how to set up your development environment and begin contributing.
 We also recommend checking out our architectural diagram.
 
-To dive deeper into the tech, you can read the [Nerd Notes](https://docs.zarf.dev/contribute-to-zarf/nerd-notes) in our Docs.
+To dive deeper into the tech, you can read the [Nerd Notes](https://docs.zarf.dev/contribute/nerd-notes/) in our Docs.
 
 ![Architecture Diagram](./site/public/architecture.drawio.svg)
 

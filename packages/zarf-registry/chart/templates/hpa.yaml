@@ -13,8 +13,13 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ template "docker-registry.fullname" . }}
+{{- if .Values.autoscaling.mapReplicasToNodes }}
+  minReplicas: {{ len (lookup "v1" "Node" "" "") }}
+  maxReplicas: {{ add (len (lookup "v1" "Node" "" "")) 4 }}
+{{- else }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+{{- end }}
   metrics:
     - type: Resource
       resource:

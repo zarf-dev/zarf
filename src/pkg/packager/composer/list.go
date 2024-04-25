@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/migrations"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -25,8 +26,8 @@ type Node struct {
 
 	index int
 
-	vars   []types.ZarfPackageVariable
-	consts []types.ZarfPackageConstant
+	vars   []variables.InteractiveVariable
+	consts []variables.Constant
 
 	relativeToHead      string
 	originalPackageName string
@@ -95,7 +96,7 @@ func (ic *ImportChain) Tail() *Node {
 }
 
 func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageName string,
-	relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
+	relativeToHead string, vars []variables.InteractiveVariable, consts []variables.Constant) {
 	node := &Node{
 		ZarfComponent:       c,
 		index:               index,
@@ -326,8 +327,8 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 }
 
 // MergeVariables merges variables from the import chain
-func (ic *ImportChain) MergeVariables(existing []types.ZarfPackageVariable) (merged []types.ZarfPackageVariable) {
-	exists := func(v1 types.ZarfPackageVariable, v2 types.ZarfPackageVariable) bool {
+func (ic *ImportChain) MergeVariables(existing []variables.InteractiveVariable) (merged []variables.InteractiveVariable) {
+	exists := func(v1 variables.InteractiveVariable, v2 variables.InteractiveVariable) bool {
 		return v1.Name == v2.Name
 	}
 
@@ -343,8 +344,8 @@ func (ic *ImportChain) MergeVariables(existing []types.ZarfPackageVariable) (mer
 }
 
 // MergeConstants merges constants from the import chain
-func (ic *ImportChain) MergeConstants(existing []types.ZarfPackageConstant) (merged []types.ZarfPackageConstant) {
-	exists := func(c1 types.ZarfPackageConstant, c2 types.ZarfPackageConstant) bool {
+func (ic *ImportChain) MergeConstants(existing []variables.Constant) (merged []variables.Constant) {
+	exists := func(c1 variables.Constant, c2 variables.Constant) bool {
 		return c1.Name == c2.Name
 	}
 

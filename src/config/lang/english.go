@@ -1,7 +1,7 @@
-//go:build !alt_language
-
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+//go:build !alt_language
 
 // Package lang contains the language strings for english used by Zarf
 // Alternative languages can be created by duplicating this file and changing the build tag to "//go:build alt_language && <language>".
