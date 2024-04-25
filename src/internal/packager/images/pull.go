@@ -6,7 +6,6 @@ package images
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -39,7 +38,7 @@ type ImgInfo struct {
 }
 
 // PullAll pulls all of the images in the provided tag map.
-func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []ImgInfo, err error) {
+func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, dst layout.Images) (list []ImgInfo, err error) {
 
 	var longer string
 	imageCount := len(i.ImageList)
@@ -68,15 +67,19 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	eg, ectx := errgroup.WithContext(ctx)
+	eg, _ := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 
 	var mu sync.Mutex
 	totalBytes := int64(0)
 	processed := make(map[string]bool)
 	opts := append(config.GetCraneOptions(i.Insecure, i.Architectures...), crane.WithContext(ctx))
+
+	// retry := func(cb func() error) func() error {
+	// 	return func() error {
+	// 		return helpers.Retry(cb, 3, 5*time.Second, message.Warnf)
+	// 	}
+	// }
 
 	for idx, refInfo := range i.ImageList {
 		refInfo, idx := refInfo, idx
@@ -105,10 +108,6 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 				}
 				_, err = crane.Head(ref, opts...)
 				if err != nil {
-					if errors.Is(err, context.Canceled) {
-						return err
-					}
-
 					if strings.Contains(err.Error(), "unexpected status code 429 Too Many Requests") {
 						cancel()
 						return fmt.Errorf("rate limited by registry: %w", err)
@@ -121,10 +120,10 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 					if err != nil {
 						return fmt.Errorf("docker not available: %w", err)
 					}
-					cli.NegotiateAPIVersion(ectx)
+					cli.NegotiateAPIVersion(ctx)
 
 					// Inspect the image to get the size.
-					rawImg, _, err := cli.ImageInspectWithRaw(ectx, ref)
+					rawImg, _, err := cli.ImageInspectWithRaw(ctx, ref)
 					if err != nil {
 						if errdefs.IsNotFound(err) {
 							cancel()
@@ -142,7 +141,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 
 					// Use unbuffered opener to avoid OOM Kill issues https://github.com/defenseunicorns/zarf/issues/1214.
 					// This will also take forever to load large images.
-					img, err = daemon.Image(reference, daemon.WithUnbufferedOpener(), daemon.WithContext(ectx))
+					img, err = daemon.Image(reference, daemon.WithUnbufferedOpener(), daemon.WithContext(ctx))
 					if err != nil {
 						return fmt.Errorf("failed to load image from docker daemon: %w", err)
 					}
@@ -194,13 +193,13 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 		return nil, err
 	}
 
-	spinner.Success()
+	spinner.Successf("Fetched info for %d images", imageCount)
 
 	doneSaving := make(chan error)
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
 	go utils.RenderProgressBarForLocalDirWrite(dst.Base, totalBytes, doneSaving, updateText, updateText)
 
-	eg, ectx = errgroup.WithContext(ctx)
+	eg, _ = errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 
 	// Spawn a goroutine for each image to write it's config and manifest to disk using crane

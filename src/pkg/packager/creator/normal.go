@@ -173,7 +173,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 
 		dst.AddImages()
 
-		ctx := context.TODO()
+		ctx, cancel := context.WithCancel(context.TODO())
 
 		imgConfig := images.ImageConfig{
 			ImageList:         imageList,
@@ -182,7 +182,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 			RegistryOverrides: pc.createOpts.RegistryOverrides,
 		}
 
-		pulled, err := imgConfig.PullAll(ctx, dst.Images)
+		pulled, err := imgConfig.PullAll(ctx, cancel, dst.Images)
 		if err != nil {
 			return err
 		}
