@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -38,7 +39,7 @@ type ImgInfo struct {
 }
 
 // PullAll pulls all of the images in the provided tag map.
-func (i *ImageConfig) PullAll(dst layout.Images) (list []ImgInfo, err error) {
+func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []ImgInfo, err error) {
 
 	var longer string
 	imageCount := len(i.ImageList)
@@ -61,19 +62,20 @@ func (i *ImageConfig) PullAll(dst layout.Images) (list []ImgInfo, err error) {
 		}
 	}
 
-	spinner := message.NewProgressSpinner("Fetching %d images. %s", imageCount, longer)
+	spinner := message.NewProgressSpinner("Fetching info for %d images. %s", imageCount, longer)
 	defer spinner.Stop()
 
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
-	ctx := context.TODO()
 	ctx, cancel := context.WithCancel(ctx)
 	eg, ectx := errgroup.WithContext(ctx)
 	defer cancel()
 	eg.SetLimit(10)
 
+	// refInfoToImage := make(map[transform.Image]v1.Image)
 	refInfoToImage := make(map[transform.Image]v1.Image)
+	var mu sync.Mutex
 	totalBytes := int64(0)
 	processed := make(map[string]v1.Layer)
 	opts := append(config.GetCraneOptions(i.Insecure, i.Architectures...), crane.WithContext(ctx))
@@ -81,7 +83,7 @@ func (i *ImageConfig) PullAll(dst layout.Images) (list []ImgInfo, err error) {
 	for idx, refInfo := range i.ImageList {
 		refInfo, idx := refInfo, idx
 		eg.Go(func() error {
-			spinner.Updatef("Fetching image (%d of %d)", idx+1, len(i.ImageList))
+			spinner.Updatef("Fetching image info (%d of %d)", idx+1, len(i.ImageList))
 
 			actual := refInfo.Reference
 			for k, v := range i.RegistryOverrides {
@@ -105,6 +107,11 @@ func (i *ImageConfig) PullAll(dst layout.Images) (list []ImgInfo, err error) {
 						return err
 					}
 
+					if strings.Contains(err.Error(), "unexpected status code 429 Too Many Requests") {
+						cancel()
+						return fmt.Errorf("rate limited by registry: %w", err)
+					}
+
 					message.Notef("Falling back to local 'docker' images, failed to find the manifest on a remote: %s", err.Error())
 
 					reference, err := name.ParseReference(actual)
@@ -120,7 +127,7 @@ func (i *ImageConfig) PullAll(dst layout.Images) (list []ImgInfo, err error) {
 					cli.NegotiateAPIVersion(ectx)
 
 					// Inspect the image to get the size.
-					rawImg, _, err := cli.ImageInspectWithRaw(ctx, actual)
+					rawImg, _, err := cli.ImageInspectWithRaw(ectx, actual)
 					if err != nil {
 						if errdefs.IsNotFound(err) {
 							cancel()
@@ -179,7 +186,9 @@ func (i *ImageConfig) PullAll(dst layout.Images) (list []ImgInfo, err error) {
 				}
 			}
 
+			mu.Lock()
 			refInfoToImage[refInfo] = img
+			mu.Unlock()
 			list = append(list, ImgInfo{RefInfo: refInfo, Img: img})
 			return nil
 		})
@@ -191,13 +200,13 @@ func (i *ImageConfig) PullAll(dst layout.Images) (list []ImgInfo, err error) {
 	spinner.Success()
 	// Create a thread to update a progress bar as we save the image files to disk
 	doneSaving := make(chan error)
-	updateText := fmt.Sprintf("Packaging %d images", imageCount)
+	updateText := fmt.Sprintf("Pulling %d images", imageCount)
 	go utils.RenderProgressBarForLocalDirWrite(dst.Base, totalBytes, doneSaving, updateText, updateText)
 
 	referenceToDigest := make(map[string]string)
 
 	eg, ectx = errgroup.WithContext(ctx)
-	eg.SetLimit(3)
+	eg.SetLimit(10)
 
 	// Spawn a goroutine for each image to write it's config and manifest to disk using crane
 	for refInfo, img := range refInfoToImage {
@@ -226,7 +235,9 @@ func (i *ImageConfig) PullAll(dst layout.Images) (list []ImgInfo, err error) {
 				return err
 			}
 
+			mu.Lock()
 			referenceToDigest[refInfo.Reference] = imgDigest.String()
+			mu.Unlock()
 			return nil
 		})
 	}

@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/pkg/oci"
@@ -174,23 +173,18 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 
 		dst.AddImages()
 
-		var pulled []images.ImgInfo
-		var err error
+		ctx := context.TODO()
 
-		doPull := func() error {
-			imgConfig := images.ImageConfig{
-				ImageList:         imageList,
-				Insecure:          config.CommonOptions.Insecure,
-				Architectures:     []string{arch},
-				RegistryOverrides: pc.createOpts.RegistryOverrides,
-			}
-
-			pulled, err = imgConfig.PullAll(dst.Images)
-			return err
+		imgConfig := images.ImageConfig{
+			ImageList:         imageList,
+			Insecure:          config.CommonOptions.Insecure,
+			Architectures:     []string{arch},
+			RegistryOverrides: pc.createOpts.RegistryOverrides,
 		}
 
-		if err := helpers.Retry(doPull, 3, 5*time.Second, message.Warnf); err != nil {
-			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
+		pulled, err := imgConfig.PullAll(ctx, dst.Images)
+		if err != nil {
+			return err
 		}
 
 		for _, imgInfo := range pulled {
