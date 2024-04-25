@@ -119,7 +119,7 @@ fn start_seed_registry() -> Router{
     // The name and reference parameter identify the image
     // The reference may include a tag or digest.
     Router::new()
-    .layer(NormalizePathLayer::trim_trailing_slash()) 
+    .layer(NormalizePathLayer::trim_trailing_slash())
     .route("/v2/:name/manifest/:reference", get(handle_get_manifest))
     .route("/v2/:name/blobs/:tag", get(handle_get_digest))
     .route("/v2", get(|| async { 
@@ -217,6 +217,7 @@ async fn main() {
 
     println!("unpacking: {}", args[1]);
     let payload_sha = &args[1];
+
     unpack(payload_sha);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:5000")
