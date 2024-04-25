@@ -1095,6 +1095,11 @@
           "$ref": "#/definitions/ZarfMetadata",
           "description": "Package metadata"
         },
+        "build": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "$ref": "#/definitions/ZarfBuildData",
+          "description": "Zarf-generated package build data"
+        },
         "components": {
           "items": {
             "$schema": "http://json-schema.org/draft-04/schema#",
