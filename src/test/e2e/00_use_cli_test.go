@@ -234,8 +234,6 @@ func TestUseCLI(t *testing.T) {
 		// Test that yq can eval properly
 		_, stdErr, err := e2e.Zarf("tools", "yq", "eval", "-i", `.items[1].name = "renamed-item"`, file)
 		require.NoError(t, err, stdErr)
-		_, _, err = e2e.Zarf("tools", "yq", ".items[1].name", file)
-		require.NoError(t, err)
 		stdOut, _, err := e2e.Zarf("tools", "yq", ".items[1].name", file)
 		require.NoError(t, err)
 		require.Contains(t, stdOut, "renamed-item")
