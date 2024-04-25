@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -190,11 +191,11 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 		})
 	}
 
-	clear(processing)
-
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
+
+	clear(processing)
 
 	spinner.Successf("Fetched info for %d images", imageCount)
 
@@ -249,6 +250,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 			for {
 				if err := markAsProcessing(layers); err != nil {
 					if errors.Is(err, layerInProgress) {
+						time.Sleep(1 * time.Second)
 						continue
 					}
 					return err
