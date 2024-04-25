@@ -6,7 +6,6 @@ package images
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -73,7 +72,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 
 	var mu sync.Mutex
 	totalBytes := int64(0)
-	processing := make(map[string]bool)
+	shas := make(map[string]bool)
 	opts := append(config.GetCraneOptions(i.Insecure, i.Architectures...), crane.WithContext(ctx))
 
 	// retry := func(cb func() error) func() error {
@@ -173,9 +172,9 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 					return fmt.Errorf("unable to get digest for image layer: %w", err)
 				}
 
-				if _, ok := processing[digest.Hex]; !ok {
+				if _, ok := shas[digest.Hex]; !ok {
 					mu.Lock()
-					processing[digest.Hex] = true
+					shas[digest.Hex] = true
 					mu.Unlock()
 					size, err := layer.Size()
 					if err != nil {
@@ -194,7 +193,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 		return nil, err
 	}
 
-	clear(processing)
+	clear(shas)
 
 	spinner.Successf("Fetched info for %d images", imageCount)
 
@@ -205,58 +204,43 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 	eg, _ = errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 
-	layerInProgress := errors.New("layer already inprogress")
-
-	markAsProcessing := func(layers []v1.Layer) error {
-		mu.Lock()
-		defer mu.Unlock()
-		for _, layer := range layers {
-			digest, err := layer.Digest()
-			if err != nil {
-				return err
-			}
-
-			if _, ok := processing[digest.Hex]; ok {
-				message.Debug(helpers.Truncate(digest.Hex, 12, false), "in progress, skipping.")
-				return layerInProgress
-			}
-			processing[digest.Hex] = true
-		}
-		return nil
-	}
-
-	unmarkAsProcessing := func(layers []v1.Layer) error {
-		mu.Lock()
-		defer mu.Unlock()
-		for _, layer := range layers {
-			digest, err := layer.Digest()
-			if err != nil {
-				return err
-			}
-			delete(processing, digest.Hex)
-		}
-		return nil
-	}
-
+	processing := make(map[string]chan struct{})
 	for _, info := range list {
-		refInfo, img := info.RefInfo, info.Img
+		info := info
+		refInfo := info.RefInfo
+		img := info.Img
 		eg.Go(func() error {
-
 			layers, err := img.Layers()
 			if err != nil {
 				return fmt.Errorf("unable to get layers for %s: %w", refInfo.Reference, err)
 			}
 
-			for {
-				if err := markAsProcessing(layers); err != nil {
-					if errors.Is(err, layerInProgress) {
-						// message.Debug(processing)
-						// time.Sleep(1 * time.Second)
-						continue
-					}
+			layerChans := make([]chan struct{}, len(layers))
+			mu.Lock()
+			for i, layer := range layers {
+				digest, err := layer.Digest()
+				if err != nil {
+					mu.Unlock()
 					return err
 				}
-				break
+
+				if ch, ok := processing[digest.Hex]; !ok {
+					// If no channel exists, create one
+					ch = make(chan struct{})
+					processing[digest.Hex] = ch
+				} else {
+					// If channel exists, prepare to wait on it
+					layerChans[i] = ch
+				}
+			}
+			mu.Unlock()
+
+			// Wait for all required layers to be available
+			for idx, ch := range layerChans {
+				if ch != nil {
+					message.Debug(refInfo.Reference, "waiting for layer to be processed", idx)
+					<-ch // Wait for the channel to be closed
+				}
 			}
 
 			message.Debugf("Pulling image %s", refInfo.Reference)
@@ -269,7 +253,19 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 				return fmt.Errorf("error when trying to save %s: %w", refInfo.Reference, err)
 			}
 
-			return unmarkAsProcessing(layers)
+			// Signal that processing is done by closing channels
+			mu.Lock()
+			for _, layer := range layers {
+				digest, _ := layer.Digest()
+				ch, exists := processing[digest.Hex]
+				if exists {
+					close(ch)
+					delete(processing, digest.Hex) // Remove the channel from the map
+				}
+			}
+			mu.Unlock()
+
+			return nil
 		})
 	}
 

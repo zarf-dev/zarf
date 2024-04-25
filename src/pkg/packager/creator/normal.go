@@ -8,10 +8,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/pkg/oci"
@@ -165,6 +167,9 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 	}
 
 	imageList = helpers.Unique(imageList)
+	rs := rand.NewSource(time.Now().UnixNano())
+	rnd := rand.New(rs)
+	rnd.Shuffle(len(imageList), func(i, j int) { imageList[i], imageList[j] = imageList[j], imageList[i] })
 	var sbomImageList []transform.Image
 
 	// Images are handled separately from other component assets.
