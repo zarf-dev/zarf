@@ -27,8 +27,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
-	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/moby/moby/client"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -69,8 +69,8 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
 	ctx, cancel := context.WithCancel(ctx)
-	eg, ectx := errgroup.WithContext(ctx)
 	defer cancel()
+	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 
 	// refInfoToImage := make(map[transform.Image]v1.Image)
@@ -203,8 +203,6 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
 	go utils.RenderProgressBarForLocalDirWrite(dst.Base, totalBytes, doneSaving, updateText, updateText)
 
-	referenceToDigest := make(map[string]string)
-
 	eg, ectx = errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 
@@ -213,7 +211,12 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 		// Create a closure so that we can pass the refInfo and img into the goroutine
 		refInfo, img := refInfo, img
 		eg.Go(func() error {
-			if err := cranePath.WriteImage(img); err != nil {
+			annotations := map[string]string{
+				ocispec.AnnotationBaseImageName: refInfo.Reference,
+			}
+
+			// also have clayout.WithPlatform() as a future option to use
+			if err := cranePath.AppendImage(img, clayout.WithAnnotations(annotations)); err != nil {
 				// Check if the cache has been invalidated, and warn the user if so
 				if strings.HasPrefix(err.Error(), "error writing layer: expected blob size") {
 					message.Warnf("Potential image cache corruption: %s - try clearing cache with \"zarf tools clear-cache\"", err.Error())
@@ -221,33 +224,12 @@ func (i *ImageConfig) PullAll(ctx context.Context, dst layout.Images) (list []Im
 				return fmt.Errorf("error when trying to save the img (%s): %w", refInfo.Reference, err)
 			}
 
-			desc, err := partial.Descriptor(img)
-			if err != nil {
-				return err
-			}
-
-			if err := cranePath.AppendDescriptor(*desc); err != nil {
-				return err
-			}
-
-			imgDigest, err := img.Digest()
-			if err != nil {
-				return err
-			}
-
-			mu.Lock()
-			referenceToDigest[refInfo.Reference] = imgDigest.String()
-			mu.Unlock()
 			return nil
 		})
 	}
 
 	if err := eg.Wait(); err != nil {
 		return nil, err
-	}
-
-	if err := utils.AddImageNameAnnotation(dst.Base, referenceToDigest); err != nil {
-		return nil, fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 
 	// Send a signal to the progress bar that we're done and wait for the thread to finish
