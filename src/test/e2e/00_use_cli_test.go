@@ -244,6 +244,5 @@ func TestUseCLI(t *testing.T) {
 		stdOut, _, err = e2e.Zarf("tools", "yq", "e", ".items | length", file)
 		require.NoError(t, err)
 		require.Equal(t, "4\n", stdOut)
-
 	})
 }
