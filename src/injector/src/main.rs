@@ -70,11 +70,6 @@ fn collect_binary_data(paths: &Vec<PathBuf>) -> io::Result<Vec<u8>> {
 ///
 /// Inspired by https://medium.com/@nlauchande/rust-coding-up-a-simple-concatenate-files-tool-and-first-impressions-a8cbe680e887
 fn unpack(sha_sum: &String) {
-    
-    if !sha_sum.starts_with("sha256:") {
-    println!("Error: expected sha sum got: {}", sha_sum);
-    std::process::exit(1)
-    }
 
     // get the list of file matches to merge
     let file_partials: Result<Vec<_>, _> = glob("zarf-payload-*")

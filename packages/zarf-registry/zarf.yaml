@@ -91,8 +91,7 @@ components:
         architecture: arm64
     files:
       # Rust Injector Binary
-      - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/injector/###ZARF_PKG_TMPL_INJECTOR_VERSION###/zarf-injector-arm64
-        target: "###ZARF_TEMP###/zarf-injector"
+      - source: ./armzarf-registry
         shasum: "###ZARF_PKG_TMPL_INJECTOR_ARM64_SHASUM###"
         executable: true
 
