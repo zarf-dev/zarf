@@ -78,7 +78,6 @@ components:
       # Rust Injector Binary
       - source: ./zarf-injector
         target: "###ZARF_TEMP###/zarf-injector"
-        shasum: "###ZARF_PKG_TMPL_INJECTOR_AMD64_SHASUM###"
         executable: true
 
   - name: zarf-injector
@@ -92,7 +91,6 @@ components:
     files:
       # Rust Injector Binary
       - source: ./armzarf-registry
-        shasum: "###ZARF_PKG_TMPL_INJECTOR_ARM64_SHASUM###"
         executable: true
 
   - name: zarf-seed-registry

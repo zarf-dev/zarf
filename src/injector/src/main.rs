@@ -100,7 +100,7 @@ fn unpack(sha_sum: &String) {
     let tar: GzDecoder<Cursor<Vec<u8>>> = GzDecoder::new(cursor);
     let mut archive = Archive::new(tar);
     archive
-        .unpack("./zarf-seed")
+        .unpack("/zarf-seed")
         .expect("Unable to unarchive the resulting tarball");
 }
 
