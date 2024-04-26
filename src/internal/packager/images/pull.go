@@ -208,7 +208,6 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 			}
 
 			list = append(list, ImgInfo{RefInfo: refInfo, Img: img})
-			message.Infof("%#v", ImgInfo{RefInfo: refInfo, Img: img})
 			return nil
 		})
 	}
