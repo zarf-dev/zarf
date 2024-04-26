@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 
 use tokio_util::io::ReaderStream;
-use flate2::read::GzDecoder;
+use flate2::write::GzDecoder;
 use glob::glob;
 use hex::ToHex;
 use serde_json::Value;
@@ -27,6 +27,7 @@ use axum::{
 };
 use lazy_static::lazy_static;
 use tower_http::normalize_path::NormalizePathLayer;
+use std::io::Cursor;
 
 
 lazy_static! {
@@ -94,12 +95,13 @@ fn unpack(sha_sum: &String) {
     let result = hasher.finalize();
     let result_string = result.encode_hex::<String>();
     assert_eq!(*sha_sum, result_string);
+    let cursor = Cursor::new(contents[..].to_vec());
 
     // write the merged file to disk and extract it
-    let tar = GzDecoder::new(&contents[..]);
+    let tar: GzDecoder<Cursor<Vec<u8>>> = GzDecoder::new(cursor);
     let mut archive = Archive::new(tar);
     archive
-        .unpack("/zarf-seed")
+        .unpack("./zarf-seed")
         .expect("Unable to unarchive the resulting tarball");
 }
 
