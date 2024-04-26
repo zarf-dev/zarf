@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,7 +47,7 @@ type ImgInfo struct {
 var cacheDir = filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)
 
 // PullAll pulls all of the images in the provided tag map.
-func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, dst layout.Images) (list []ImgInfo, err error) {
+func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, dst layout.Images) (map[transform.Image]v1.Image, error) {
 
 	var longer string
 	imageCount := len(i.ImageList)
@@ -82,6 +83,8 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 	totalBytes := int64(0)
 	shas := make(map[string]bool)
 	opts := append(config.GetCraneOptions(i.Insecure, i.Architectures...), crane.WithContext(ctx))
+
+	var fetched = map[transform.Image]v1.Image{}
 
 	for idx, refInfo := range i.ImageList {
 		refInfo, idx := refInfo, idx
@@ -207,7 +210,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 				}
 			}
 
-			list = append(list, ImgInfo{RefInfo: refInfo, Img: img})
+			fetched[refInfo] = img
 			return nil
 		})
 	}
@@ -224,23 +227,20 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
 	go utils.RenderProgressBarForLocalDirWrite(dst.Base, totalBytes, doneSaving, updateText, updateText)
 
-	toSave := map[string]v1.Image{}
-	for _, info := range list {
-		toSave[info.RefInfo.Reference] = info.Img
-	}
+	toPull := maps.Clone(fetched)
 
 	sc := func() error {
-		saved, err := SaveConcurrent(ctx, cranePath, toSave)
+		saved, err := SaveConcurrent(ctx, cranePath, toPull)
 		for k := range saved {
-			delete(toSave, k)
+			delete(toPull, k)
 		}
 		return err
 	}
 
 	ss := func() error {
-		saved, err := SaveSequential(ctx, cranePath, toSave)
+		saved, err := SaveSequential(ctx, cranePath, toPull)
 		for k := range saved {
-			delete(toSave, k)
+			delete(toPull, k)
 		}
 		return err
 	}
@@ -257,7 +257,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 	doneSaving <- nil
 	<-doneSaving
 
-	return list, nil
+	return fetched, nil
 }
 
 // CleanupInProgressLayers removes incomplete layers from the cache.
@@ -296,12 +296,12 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
 }
 
 // SaveSequential saves images sequentially.
-func SaveSequential(ctx context.Context, cl clayout.Path, m map[string]v1.Image) (map[string]v1.Image, error) {
-	saved := map[string]v1.Image{}
-	for name, img := range m {
-		name, img := name, img
+func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]v1.Image) (map[transform.Image]v1.Image, error) {
+	saved := map[transform.Image]v1.Image{}
+	for info, img := range m {
+		info, img := info, img
 		annotations := map[string]string{
-			ocispec.AnnotationBaseImageName: name,
+			ocispec.AnnotationBaseImageName: info.Reference,
 		}
 		if err := cl.AppendImage(img, clayout.WithAnnotations(annotations)); err != nil {
 			if err = CleanupInProgressLayers(ctx, img); err != nil {
@@ -309,22 +309,22 @@ func SaveSequential(ctx context.Context, cl clayout.Path, m map[string]v1.Image)
 			}
 			return saved, err
 		}
-		saved[name] = img
+		saved[info] = img
 	}
 	return saved, nil
 }
 
 // SaveConcurrent saves images in a concurrent, bounded manner.
-func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[string]v1.Image) (map[string]v1.Image, error) {
-	saved := map[string]v1.Image{}
+func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]v1.Image) (map[transform.Image]v1.Image, error) {
+	saved := map[transform.Image]v1.Image{}
 
 	var mu sync.Mutex
 
 	eg, _ := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 
-	for name, img := range m {
-		name, img := name, img
+	for info, img := range m {
+		info, img := info, img
 		eg.Go(func() error {
 			desc, err := partial.Descriptor(img)
 			if err != nil {
@@ -340,7 +340,7 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[string]v1.Image)
 
 			mu.Lock()
 			annotations := map[string]string{
-				ocispec.AnnotationBaseImageName: name,
+				ocispec.AnnotationBaseImageName: info.Reference,
 			}
 			desc.Annotations = annotations
 			if err := cl.AppendDescriptor(*desc); err != nil {
@@ -348,7 +348,7 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[string]v1.Image)
 			}
 			mu.Unlock()
 
-			saved[name] = img
+			saved[info] = img
 			return nil
 		})
 	}

@@ -192,16 +192,17 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 			return err
 		}
 
-		for _, imgInfo := range pulled {
-			if err := dst.Images.AddV1Image(imgInfo.Img); err != nil {
+		for info, img := range pulled {
+			info, img := info, img
+			if err := dst.Images.AddV1Image(img); err != nil {
 				return err
 			}
-			ok, err := utils.HasImageLayers(imgInfo.Img)
+			ok, err := utils.HasImageLayers(img)
 			if err != nil {
-				return fmt.Errorf("failed to validate %s is an image and not an artifact: %w", imgInfo, err)
+				return fmt.Errorf("failed to validate %s is an image and not an artifact: %w", info, err)
 			}
 			if ok {
-				sbomImageList = append(sbomImageList, imgInfo.RefInfo)
+				sbomImageList = append(sbomImageList, info)
 			}
 		}
 	}
