@@ -26,7 +26,6 @@ use axum::{
     body::Body,
 };
 use lazy_static::lazy_static;
-use tower_http::normalize_path::NormalizePathLayer;
 use std::io::Cursor;
 
 
@@ -116,10 +115,9 @@ fn start_seed_registry() -> Router{
     // The name and reference parameter identify the image
     // The reference may include a tag or digest.
     Router::new()
-    .layer(NormalizePathLayer::trim_trailing_slash())
     .route("/v2/:name/manifest/:reference", get(handle_get_manifest))
     .route("/v2/:name/blobs/:tag", get(handle_get_digest))
-    .route("/v2", get(|| async { 
+    .route("/v2/", get(|| async { 
     Response::builder()
         .status(StatusCode::OK)
         .header("Content-Type", "application/json; charset=utf-8")
@@ -216,6 +214,7 @@ async fn main() {
     let payload_sha = &args[1];
 
     unpack(payload_sha);
+
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:5000")
     .await
