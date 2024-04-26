@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -41,6 +42,8 @@ type ImgInfo struct {
 	RefInfo transform.Image
 	Img     v1.Image
 }
+
+var cacheDir = filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)
 
 // PullAll pulls all of the images in the provided tag map.
 func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, dst layout.Images) (list []ImgInfo, err error) {
@@ -173,7 +176,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 				return fmt.Errorf("%s resolved to an index, please select a specific platform to use", refInfo.Reference)
 			}
 
-			img = cache.Image(img, cache.NewFilesystemCache(filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)))
+			img = cache.Image(img, cache.NewFilesystemCache(cacheDir))
 
 			manifest, err := img.Manifest()
 			if err != nil {
@@ -236,7 +239,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 	}
 
 	ss := func() error {
-		saved, err := SaveSequential(cranePath, toSave)
+		saved, err := SaveSequential(ctx, cranePath, toSave)
 		for k := range saved {
 			delete(toSave, k)
 		}
@@ -258,8 +261,43 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 	return list, nil
 }
 
+// CleanupInProgressLayers removes incomplete layers from the cache.
+func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
+	layers, err := img.Layers()
+	if err != nil {
+		return err
+	}
+	eg, _ := errgroup.WithContext(ctx)
+	eg.SetLimit(10)
+	for _, layer := range layers {
+		layer := layer
+		eg.Go(func() error {
+			digest, err := layer.Digest()
+			if err != nil {
+				return err
+			}
+			size, err := layer.Size()
+			if err != nil {
+				return err
+			}
+			location := filepath.Join(cacheDir, digest.Hex)
+			info, err := os.Stat(location)
+			if err != nil {
+				return err
+			}
+			if info.Size() != size {
+				if err := os.Remove(location); err != nil {
+					return fmt.Errorf("failed to remove incomplete layer %s: %w", digest.Hex, err)
+				}
+			}
+			return nil
+		})
+	}
+	return nil
+}
+
 // SaveSequential saves images sequentially.
-func SaveSequential(cl clayout.Path, m map[string]v1.Image) (map[string]v1.Image, error) {
+func SaveSequential(ctx context.Context, cl clayout.Path, m map[string]v1.Image) (map[string]v1.Image, error) {
 	saved := map[string]v1.Image{}
 	for name, img := range m {
 		name, img := name, img
@@ -267,7 +305,10 @@ func SaveSequential(cl clayout.Path, m map[string]v1.Image) (map[string]v1.Image
 			ocispec.AnnotationBaseImageName: name,
 		}
 		if err := cl.AppendImage(img, clayout.WithAnnotations(annotations)); err != nil {
-			return saved, fmt.Errorf("error when trying to save %s: %w", name, err)
+			if err = CleanupInProgressLayers(ctx, img); err != nil {
+				message.WarnErr(err, "failed to clean up in-progress layers, please remove them manually")
+			}
+			return saved, err
 		}
 		saved[name] = img
 	}
@@ -278,20 +319,7 @@ func SaveSequential(cl clayout.Path, m map[string]v1.Image) (map[string]v1.Image
 func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[string]v1.Image) (map[string]v1.Image, error) {
 	saved := map[string]v1.Image{}
 
-	for name, img := range m {
-		name, img := name, img
-		desc, err := partial.Descriptor(img)
-		if err != nil {
-			return saved, err
-		}
-		annotations := map[string]string{
-			ocispec.AnnotationBaseImageName: name,
-		}
-		desc.Annotations = annotations
-		if err := cl.AppendDescriptor(*desc); err != nil {
-			return saved, err
-		}
-	}
+	var mu sync.Mutex
 
 	eg, _ := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
@@ -299,9 +327,28 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[string]v1.Image)
 	for name, img := range m {
 		name, img := name, img
 		eg.Go(func() error {
-			if err := cl.WriteImage(img); err != nil {
+			desc, err := partial.Descriptor(img)
+			if err != nil {
 				return err
 			}
+
+			if err := cl.WriteImage(img); err != nil {
+				if err = CleanupInProgressLayers(ctx, img); err != nil {
+					message.WarnErr(err, "failed to clean up in-progress layers, please remove them manually")
+				}
+				return err
+			}
+
+			mu.Lock()
+			annotations := map[string]string{
+				ocispec.AnnotationBaseImageName: name,
+			}
+			desc.Annotations = annotations
+			if err := cl.AppendDescriptor(*desc); err != nil {
+				return err
+			}
+			mu.Unlock()
+
 			saved[name] = img
 			return nil
 		})
