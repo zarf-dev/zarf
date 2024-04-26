@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -26,6 +27,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/moby/moby/client"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
@@ -201,76 +203,39 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
 	go utils.RenderProgressBarForLocalDirWrite(dst.Base, totalBytes, doneSaving, updateText, updateText)
 
-	eg, _ = errgroup.WithContext(ctx)
-	eg.SetLimit(10)
-
-	processing := make(map[string]chan struct{})
+	toSave := map[string]v1.Image{}
 	for _, info := range list {
-		info := info
-		refInfo := info.RefInfo
-		img := info.Img
-		eg.Go(func() error {
-			layers, err := img.Layers()
-			if err != nil {
-				return fmt.Errorf("unable to get layers for %s: %w", refInfo.Reference, err)
-			}
-
-			layerChans := make([]chan struct{}, len(layers))
-			mu.Lock()
-			for i, layer := range layers {
-				digest, err := layer.Digest()
-				if err != nil {
-					mu.Unlock()
-					return err
-				}
-
-				if ch, ok := processing[digest.Hex]; !ok {
-					// If no channel exists, create one
-					ch = make(chan struct{})
-					processing[digest.Hex] = ch
-				} else {
-					// If channel exists, prepare to wait on it
-					layerChans[i] = ch
-				}
-			}
-			mu.Unlock()
-
-			// Wait for all required layers to be available
-			for idx, ch := range layerChans {
-				if ch != nil {
-					message.Debug(refInfo.Reference, "waiting for layer to be processed", idx)
-					<-ch // Wait for the channel to be closed
-				}
-			}
-
-			message.Debugf("Pulling image %s", refInfo.Reference)
-			annotations := map[string]string{
-				ocispec.AnnotationBaseImageName: refInfo.Reference,
-			}
-
-			// also have clayout.WithPlatform() as a future option to use
-			if err := cranePath.AppendImage(img, clayout.WithAnnotations(annotations)); err != nil {
-				return fmt.Errorf("error when trying to save %s: %w", refInfo.Reference, err)
-			}
-
-			// Signal that processing is done by closing channels
-			mu.Lock()
-			for _, layer := range layers {
-				digest, _ := layer.Digest()
-				ch, exists := processing[digest.Hex]
-				if exists {
-					close(ch)
-					delete(processing, digest.Hex) // Remove the channel from the map
-				}
-			}
-			mu.Unlock()
-
-			return nil
-		})
+		toSave[info.RefInfo.Reference] = info.Img
 	}
 
-	if err := eg.Wait(); err != nil {
-		return nil, err
+	sc := func() error {
+		saved, err := SaveConcurrent(ctx, cranePath, toSave)
+		if err != nil {
+			return err
+		}
+		for k := range saved {
+			delete(toSave, k)
+		}
+		return nil
+	}
+
+	ss := func() error {
+		saved, err := SaveSequential(cranePath, toSave)
+		if err != nil {
+			return err
+		}
+		for k := range saved {
+			delete(toSave, k)
+		}
+		return nil
+	}
+
+	if err := helpers.Retry(sc, 2, 5*time.Second, message.Warnf); err != nil {
+		message.Warnf("Failed to save images in parallel, falling back to sequential save: %s", err.Error())
+
+		if err := helpers.Retry(ss, 2, 5*time.Second, message.Warnf); err != nil {
+			return nil, err
+		}
 	}
 
 	// Send a signal to the progress bar that we're done and wait for the thread to finish
@@ -278,4 +243,56 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 	<-doneSaving
 
 	return list, nil
+}
+
+// SaveSequential saves images sequentially.
+func SaveSequential(cl clayout.Path, m map[string]v1.Image) (map[string]v1.Image, error) {
+	saved := map[string]v1.Image{}
+	for name, img := range m {
+		name, img := name, img
+		annotations := map[string]string{
+			ocispec.AnnotationBaseImageName: name,
+		}
+		if err := cl.AppendImage(img, clayout.WithAnnotations(annotations)); err != nil {
+			return saved, fmt.Errorf("error when trying to save %s: %w", name, err)
+		}
+		saved[name] = img
+	}
+	return saved, nil
+}
+
+// SaveConcurrent saves images in a concurrent, bounded manner.
+func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[string]v1.Image) (map[string]v1.Image, error) {
+	saved := map[string]v1.Image{}
+
+	for name, img := range m {
+		name, img := name, img
+		desc, err := partial.Descriptor(img)
+		if err != nil {
+			return saved, err
+		}
+		annotations := map[string]string{
+			ocispec.AnnotationBaseImageName: name,
+		}
+		desc.Annotations = annotations
+		if err := cl.AppendDescriptor(*desc); err != nil {
+			return saved, err
+		}
+	}
+
+	eg, _ := errgroup.WithContext(ctx)
+	eg.SetLimit(10)
+
+	for name, img := range m {
+		name, img := name, img
+		eg.Go(func() error {
+			if err := cl.WriteImage(img); err != nil {
+				return err
+			}
+			saved[name] = img
+			return nil
+		})
+	}
+
+	return saved, eg.Wait()
 }
