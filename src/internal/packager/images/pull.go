@@ -29,6 +29,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/moby/moby/client"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
@@ -78,12 +80,6 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 	shas := make(map[string]bool)
 	opts := append(config.GetCraneOptions(i.Insecure, i.Architectures...), crane.WithContext(ctx))
 
-	// retry := func(cb func() error) func() error {
-	// 	return func() error {
-	// 		return helpers.Retry(cb, 3, 5*time.Second, message.Warnf)
-	// 	}
-	// }
-
 	for idx, refInfo := range i.ImageList {
 		refInfo, idx := refInfo, idx
 		eg.Go(func() error {
@@ -97,6 +93,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 			}
 
 			var img v1.Image
+			var desc *remote.Descriptor
 
 			// load from local fs if it's a tarball
 			if strings.HasSuffix(ref, ".tar") || strings.HasSuffix(ref, ".tar.gz") || strings.HasSuffix(ref, ".tgz") {
@@ -109,7 +106,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 				if err != nil {
 					return fmt.Errorf("failed to parse reference: %w", err)
 				}
-				_, err = crane.Head(ref, opts...)
+				desc, err = crane.Get(ref, opts...)
 				if err != nil {
 					if strings.Contains(err.Error(), "unexpected status code 429 Too Many Requests") {
 						cancel()
@@ -156,6 +153,26 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 				}
 			}
 
+			if refInfo.Digest != "" && desc != nil && types.MediaType(desc.MediaType).IsIndex() {
+				message.Warn("Zarf does not currently support direct consumption of OCI image indexes or Docker manifest lists")
+
+				var idx v1.IndexManifest
+				if err := json.Unmarshal(desc.Manifest, &idx); err != nil {
+					return fmt.Errorf("unable to unmarshal index manifest: %w", err)
+				}
+				lines := []string{"The following images are available in the index:"}
+				name := refInfo.Name
+				if refInfo.Tag != "" {
+					name += ":" + refInfo.Tag
+				}
+				for _, desc := range idx.Manifests {
+					lines = append(lines, fmt.Sprintf("\n(%s) %s@%s", desc.Platform, name, desc.Digest))
+				}
+				message.Warn(strings.Join(lines, "\n"))
+				cancel()
+				return fmt.Errorf("%s resolved to an index, please select a specific platform to use", refInfo.Reference)
+			}
+
 			img = cache.Image(img, cache.NewFilesystemCache(filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)))
 
 			manifest, err := img.Manifest()
@@ -163,30 +180,6 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 				return fmt.Errorf("unable to get manifest for %s: %w", refInfo.Reference, err)
 			}
 			totalBytes += manifest.Config.Size
-
-			mt, err := img.MediaType()
-			if err != nil {
-				return fmt.Errorf("unable to get media type for %s: %w", refInfo.Reference, err)
-			}
-
-			if refInfo.Digest != "" && mt.IsIndex() {
-				message.Warn("Zarf does not currently support direct consumption of OCI image indexes or Docker manifest lists")
-
-				var idx v1.IndexManifest
-				b, err := img.RawManifest()
-				if err != nil {
-					return fmt.Errorf("unable to get raw manifest for %s: %w", refInfo.Reference, err)
-				}
-				if err := json.Unmarshal(b, &idx); err != nil {
-					return fmt.Errorf("unable to unmarshal index manifest: %w", err)
-				}
-				message.Warn("The following images are available in the index:")
-				for _, desc := range idx.Manifests {
-					message.Warnf("%s%s for platform %s", refInfo.Name, refInfo.TagOrDigest, desc.Platform)
-				}
-				cancel()
-				return fmt.Errorf("%s resolved to an index, please select a specific platform to use", refInfo.Reference)
-			}
 
 			layers, err := img.Layers()
 			if err != nil {
@@ -212,6 +205,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 			}
 
 			list = append(list, ImgInfo{RefInfo: refInfo, Img: img})
+			message.Infof("%#v", ImgInfo{RefInfo: refInfo, Img: img})
 			return nil
 		})
 	}
