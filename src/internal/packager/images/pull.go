@@ -235,24 +235,18 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 
 	sc := func() error {
 		saved, err := SaveConcurrent(ctx, cranePath, toSave)
-		if err != nil {
-			return err
-		}
 		for k := range saved {
 			delete(toSave, k)
 		}
-		return nil
+		return err
 	}
 
 	ss := func() error {
 		saved, err := SaveSequential(cranePath, toSave)
-		if err != nil {
-			return err
-		}
 		for k := range saved {
 			delete(toSave, k)
 		}
-		return nil
+		return err
 	}
 
 	if err := helpers.Retry(sc, 2, 5*time.Second, message.Warnf); err != nil {
