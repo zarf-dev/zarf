@@ -6,6 +6,7 @@ package images
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -162,6 +163,30 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 				return fmt.Errorf("unable to get manifest for %s: %w", refInfo.Reference, err)
 			}
 			totalBytes += manifest.Config.Size
+
+			mt, err := img.MediaType()
+			if err != nil {
+				return fmt.Errorf("unable to get media type for %s: %w", refInfo.Reference, err)
+			}
+
+			if refInfo.Digest != "" && mt.IsIndex() {
+				message.Warn("Zarf does not currently support direct consumption of OCI image indexes or Docker manifest lists")
+
+				var idx v1.IndexManifest
+				b, err := img.RawManifest()
+				if err != nil {
+					return fmt.Errorf("unable to get raw manifest for %s: %w", refInfo.Reference, err)
+				}
+				if err := json.Unmarshal(b, &idx); err != nil {
+					return fmt.Errorf("unable to unmarshal index manifest: %w", err)
+				}
+				message.Warn("The following images are available in the index:")
+				for _, desc := range idx.Manifests {
+					message.Warnf("%s%s for platform %s", refInfo.Name, refInfo.TagOrDigest, desc.Platform)
+				}
+				cancel()
+				return fmt.Errorf("%s resolved to an index, please select a specific platform to use", refInfo.Reference)
+			}
 
 			layers, err := img.Layers()
 			if err != nil {

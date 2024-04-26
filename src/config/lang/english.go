@@ -519,7 +519,7 @@ cat file2.yml | zarf tools yq e '.a.b' file1.yml - file3.yml
 ## Note that editing an empty file does not work.
 zarf tools yq e -n '.a.b.c = "cat"'
 
-# Update a file inplace
+# Update a file in place
 zarf tools yq e '.a.b = "cool"' -i file.yaml
 `
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
