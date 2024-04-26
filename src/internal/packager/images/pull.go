@@ -44,10 +44,9 @@ type ImgInfo struct {
 	Img     v1.Image
 }
 
-var cacheDir = filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)
-
 // PullAll pulls all of the images in the provided tag map.
 func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, dst layout.Images) (map[transform.Image]v1.Image, error) {
+	cacheDir := filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)
 
 	var longer string
 	imageCount := len(i.ImageList)
@@ -279,6 +278,7 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
 			if err != nil {
 				return err
 			}
+			cacheDir := filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)
 			location := filepath.Join(cacheDir, digest.Hex)
 			info, err := os.Stat(location)
 			if err != nil {
