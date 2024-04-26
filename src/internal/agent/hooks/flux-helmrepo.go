@@ -48,6 +48,7 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 		isCreate = r.Operation == v1.Create
 		isUpdate = r.Operation == v1.Update
 	)
+	fmt.Println("we are in the mutate helm repo")
 
 	// Form the zarfState.GitServer.Address from the zarfState
 	if zarfState, err = state.GetZarfStateFromAgentPod(); err != nil {
@@ -107,7 +108,7 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 	}
 
 	// Patch updates of the repo spec (Flux resource requires oci:// prefix)
-	patches = populateHelmRepoPatchOperations(patchedURL, src.Spec.SecretRef.Name)
+	patches = populateHelmRepoPatchOperations(patchedURL)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -116,18 +117,13 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 }
 
 // Patch updates of the repo spec.
-func populateHelmRepoPatchOperations(repoURL string, secretName string) []operations.PatchOperation {
+func populateHelmRepoPatchOperations(repoURL string) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
-	// Will need to do something like this with /spec/insecure but just always set it to true
-	// If a prior secret exists, replace it
-	if secretName != "" {
-		patches = append(patches, operations.ReplacePatchOperation("/spec/secretRef/name", config.ZarfImagePullSecretName))
-	} else {
-		// Otherwise, add the new secret
-		patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfImagePullSecretName}))
-	}
+	patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
+
+	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfImagePullSecretName}))
 
 	return patches
 }

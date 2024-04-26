@@ -6,6 +6,4 @@ metadata:
 spec:
   type: oci
   interval: 31s
-  # TODO: (@WSTARR) - Make this automatic
-  insecure: true
   url: oci://ghcr.io/stefanprodan/charts

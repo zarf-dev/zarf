@@ -66,8 +66,8 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 		return nil, err
 	}
 
-	message.Debugf("Using the url of (%s) to mutate the flux OCIRepository", registryAddress)
 	// This can be 10.43.36.151:5000 for example
+	message.Debugf("Using the url of (%s) to mutate the flux OCIRepository", registryAddress)
 
 	// Parse into a simple struct to read the OCIRepo url
 	src := &OCIRepo{}
@@ -127,9 +127,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 		message.Debugf("original OCIRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 	}
 
-	// Patch updates of the repo spec (Flux resource requires oci:// prefix)
-	// repoURL := cluster.FetchInternalRegistryKubeDNSName()
-	patches = populateOCIRepoPatchOperations(patchedURL, src.Spec.SecretRef.Name, patchedRef)
+	patches = populateOCIRepoPatchOperations(patchedURL, patchedRef)
 	return &operations.Result{
 		Allowed:  true,
 		PatchOps: patches,
@@ -137,24 +135,19 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 }
 
 // Patch updates of the repo spec.
-func populateOCIRepoPatchOperations(repoURL, secretName string, ref Ref) []operations.PatchOperation {
+func populateOCIRepoPatchOperations(repoURL string, ref Ref) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
-	// If a prior secret exists, replace it
-	if secretName != "" {
-		patches = append(patches, operations.ReplacePatchOperation("/spec/secretRef/name", config.ZarfImagePullSecretName))
-	} else {
-		// Otherwise, add the new secret
-		patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfImagePullSecretName}))
-	}
+	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfImagePullSecretName}))
+
+	patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
 
 	if ref.Tag != "" {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/tag", ref.Tag))
 	} else if ref.Digest != "" {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/digest", ref.Digest))
 	} else {
-		// Otherwise, add the new ref
 		patches = append(patches, operations.AddPatchOperation("/spec/ref", ref))
 	}
 

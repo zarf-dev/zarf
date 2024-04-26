@@ -122,6 +122,12 @@ build-local-agent-image: ## Build the Zarf agent image to be used in a locally b
 	@ if [ "$(ARCH)" = "amd64" ]; then rm build/zarf-linux-amd64; fi
 	@ if [ "$(ARCH)" = "arm64" ]; then rm build/zarf-linux-arm64; fi
 
+redeploy-zarf-agent: build build-local-agent-image
+	docker save ghcr.io/defenseunicorns/zarf/agent:local -o image.tar
+	zarf tools registry push image.tar 127.0.0.1:31999/defenseunicorns/zarf/agent:local
+	kubectl patch deployment -n zarf agent-hook --type=json -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/imagePullPolicy", "value": "Always"}]'
+	kubectl rollout restart deployment -n zarf agent-hook
+
 init-package: ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
 	@test -s $(ZARF_BIN) || $(MAKE) build-cli
 	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm .

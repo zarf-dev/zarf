@@ -6,8 +6,6 @@ metadata:
   namespace: flux-system
 spec:
   interval: 30s
-  # TODO: (@WSTARR) - Make this automatic
-  insecure: true
   url: oci://ghcr.io/stefanprodan/manifests/podinfo
   ref:
     tag: 6.4.0
