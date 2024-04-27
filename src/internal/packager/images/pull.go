@@ -118,7 +118,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 						return fmt.Errorf("rate limited by registry: %w", err)
 					}
 
-					message.Notef("Falling back to local 'docker', failed to find the manifest on a remote: %s", err.Error())
+					message.Warnf("Falling back to local 'docker', failed to find the manifest on a remote: %s", err.Error())
 
 					// Attempt to connect to the local docker daemon.
 					cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -134,7 +134,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 							cancel()
 						}
 
-						return fmt.Errorf("failed to inspect via docker: %w", err)
+						return err
 					}
 
 					// Warn the user if the image is large.
