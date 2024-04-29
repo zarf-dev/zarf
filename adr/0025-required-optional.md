@@ -1,6 +1,6 @@
-# 23. Components can be required by default
+# 25. Components can be required by default + introduction of feature flags
 
-Date: 2024-01-02
+Date: 2024-04-29
 
 ## Status
 
