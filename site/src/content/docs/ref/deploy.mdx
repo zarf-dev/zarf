@@ -154,9 +154,7 @@ Use the `--retries` flag with `zarf init` and `zarf package deploy` to change th
 
 ### Rollback Process
 
-If attempts to upgrade a chart fail, Zarf tries to roll the chart back to its last successful release.
+If attempts to upgrade a chart fail, Zarf tries to roll the chart back to its last successful release. During this rollback process:
 
-Key features of Zarf's `helm rollback` include:
-
-   - Deleting newly created resources if a rollback fails (`helm rollback --cleanup-on-fail`)
-   - Forcing updates by deleting and recreating resources as necessary (`helm rollback --force`)
+  - Any resources created during the failed upgrade attempt are deleted (`helm rollback --cleanup-on-fail`)
+  - Resource updates are forced through delete and recreate if needed (`helm rollback --force`)
