@@ -78,7 +78,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 	eg, _ := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 
-	var mu sync.Mutex
+	var shaLock, fetchedLock sync.Mutex
 	totalBytes := int64(0)
 	shas := make(map[string]bool)
 	opts := append(config.GetCraneOptions(i.Insecure, i.Architectures...), crane.WithContext(ctx))
@@ -197,19 +197,21 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 					return fmt.Errorf("unable to get digest for image layer: %w", err)
 				}
 
+				shaLock.Lock()
 				if _, ok := shas[digest.Hex]; !ok {
-					mu.Lock()
 					shas[digest.Hex] = true
-					mu.Unlock()
 					size, err := layer.Size()
 					if err != nil {
 						return fmt.Errorf("unable to get size for image layer: %w", err)
 					}
 					totalBytes += size
 				}
+				shaLock.Unlock()
 			}
 
+			fetchedLock.Lock()
 			fetched[refInfo] = img
+			fetchedLock.Unlock()
 			return nil
 		})
 	}
