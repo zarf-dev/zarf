@@ -141,6 +141,7 @@ func populateOCIRepoPatchOperations(repoURL string, ref Ref) []operations.PatchO
 
 	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfImagePullSecretName}))
 
+	// Should I always assume that it needs to be set to insecure, what if someone is using an external registry?
 	patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
 
 	if ref.Tag != "" {

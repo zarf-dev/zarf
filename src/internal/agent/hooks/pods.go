@@ -63,6 +63,11 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	if err != nil {
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
+	// What are the possible ways to contact registries?
+	// They could be the actual server with nodeport on localhost
+	// They could be the svc in the cluster, though I'm not sure that works for container images
+	// They could be a different registry info server outside the cluster
+
 	containerRegistryURL := zarfState.RegistryInfo.Address
 
 	// update the image host for each init container
