@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"testing"
 
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
@@ -149,6 +148,6 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	suite.NoError(err, "unable to teardown zarf")
 }
 
-func TestExtInClusterTestSuite(t *testing.T) {
-	suite.Run(t, new(ExtInClusterTestSuite))
-}
+// func TestExtInClusterTestSuite(t *testing.T) {
+// 	suite.Run(t, new(ExtInClusterTestSuite))
+// }

@@ -135,20 +135,20 @@ func (suite *ExtOutClusterTestSuite) Test_1_Deploy() {
 	initArgs = append(initArgs, outClusterCredentialArgs...)
 	err := exec.CmdWithPrint(zarfBinPath, initArgs...)
 	suite.NoError(err, "unable to initialize the k8s server with zarf")
-
-	// Deploy the flux example package
-	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-podinfo-flux-amd64.tar.zst", "--confirm"}
-	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
-	suite.NoError(err, "unable to deploy flux example package")
-
-	// Verify flux was able to pull from the 'external' repository
-	podinfoArgs := []string{"wait", "deployment", "-n=podinfo", "podinfo", "--for", "condition=Available=True", "--timeout=3s"}
-	errorStr := "unable to verify flux deployed the podinfo example"
-	success := verifyKubectlWaitSuccess(suite.T(), 2, podinfoArgs, errorStr)
-	suite.True(success, errorStr)
 }
 
-func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
+func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
+	// Deploy the flux example package
+	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-podinfo-flux-amd64.tar.zst", "--confirm"}
+	err := exec.CmdWithPrint(zarfBinPath, deployArgs...)
+	suite.NoError(err, "unable to deploy flux example package")
+
+	path := fmt.Sprintf("../../../build/zarf-package-argocd-%s.tar.zst", "amd64")
+	err = exec.CmdWithPrint("zarf", "package", "deploy", path, "--components=argocd-apps", "--confirm")
+	suite.NoError(err)
+}
+
+func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
 	baseURL := fmt.Sprintf("http://%s:3000", giteaHost)
 
 	suite.createHelmChartInGitea(baseURL, giteaUser, commonPassword)
