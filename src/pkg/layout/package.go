@@ -80,6 +80,13 @@ func (pp *PackagePaths) ReadZarfYAML() (pkg types.ZarfPackage, warnings []string
 		}
 	}
 
+	for _, component := range pkg.Components {
+		// Show a warning if the component contains a group as that has been deprecated and will be removed.
+		if component.DeprecatedGroup != "" {
+			warnings = append(warnings, fmt.Sprintf("Component %s is using group which has been deprecated and will be removed in v1.0.0.  Please migrate to another solution.", component.Name))
+		}
+	}
+
 	return pkg, warnings, nil
 }
 

@@ -267,11 +267,6 @@ func (ic *ImportChain) Migrate() (warnings []string) {
 				warnings = append(warnings, warning)
 			}
 		}
-
-		// Show a warning if the component contains a group as that has been deprecated and will be removed.
-		if node.DeprecatedGroup != "" {
-			warnings = append(warnings, fmt.Sprintf("Component %s is using group which has been deprecated and will be removed in v1.0.0.  Please migrate to another solution.", node.Name))
-		}
 		node = node.next
 	}
 	if len(warnings) > 0 {
