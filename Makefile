@@ -107,7 +107,7 @@ docs-and-schema: ## Generate the Zarf Documentation and Schema
 	ZARF_CONFIG=hack/empty-config.toml hack/create-zarf-schema.sh
 
 lint-packages-and-examples: build ## Recursively lint all zarf.yaml files in the repo except for those dedicated to tests
-	hack/lint-all-zarf-packages.sh $(ZARF_BIN)
+	hack/lint-all-zarf-packages.sh $(ZARF_BIN) false
 
 # INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
 init-package-local-agent:
@@ -232,4 +232,4 @@ cve-report: ## Create a CVE report for the current project (must `brew install g
 
 lint-go: ## Run revive to lint the go code (must `brew install revive` first)
 	revive -config hack/revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...
-	hack/check-spdx-go.sh src >/dev/null || (echo "SPDX check for go failed, please run 'hack/check-spdx-go.sh src' to see the errors" && exit 1)
+	@hack/check-spdx-go.sh src >/dev/null || (echo "SPDX check for go failed, please run 'hack/check-spdx-go.sh src' to see the errors" && exit 1)
