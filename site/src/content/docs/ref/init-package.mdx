@@ -176,6 +176,12 @@ In most scenarios, Zarf will also deploy an internal registry using the three co
 | zarf-seed-registry      | Adds a temporary container registry so Zarf can bootstrap itself into the cluster.                                              |
 | zarf-registry           | Adds a long-lived container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster. |
 
+```md
+TODO:
+
+-
+```
+
 :::note
 
 Given the registry is a core part of any Kubernetes deployment you MUST either specify an external registry with the `--registry-*` flags or use the injected registry which is why it cannot be selected with `--components` like the components below.
