@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
@@ -78,18 +79,20 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 	eg, _ := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 
-	var shaLock sync.RWMutex
-	var fetchedLock sync.Mutex
+	var fetchedLock, shaLock sync.Mutex
 	totalBytes := int64(0)
 	shas := make(map[string]bool)
 	opts := append(config.GetCraneOptions(i.Insecure, i.Architectures...), crane.WithContext(ctx))
 
 	var fetched = map[transform.Image]v1.Image{}
 
-	for idx, refInfo := range i.ImageList {
-		refInfo, idx := refInfo, idx
+	var counter atomic.Int64
+
+	for _, refInfo := range i.ImageList {
+		refInfo := refInfo
 		eg.Go(func() error {
-			spinner.Updatef("Fetching image info (%d of %d)", idx+1, len(i.ImageList))
+			idx := counter.Add(1)
+			spinner.Updatef("Fetching image info (%d of %d)", idx, len(i.ImageList))
 
 			ref := refInfo.Reference
 			for k, v := range i.RegistryOverrides {
@@ -198,22 +201,16 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 					return fmt.Errorf("unable to get digest for image layer: %w", err)
 				}
 
-				shaLock.RLock()
-				_, ok := shas[digest.Hex]
-				shaLock.RUnlock()
-				if !ok {
-					shaLock.Lock()
-					defer shaLock.Unlock()
-
-					if _, ok := shas[digest.Hex]; !ok {
-						shas[digest.Hex] = true
-						size, err := layer.Size()
-						if err != nil {
-							return fmt.Errorf("unable to get size for image layer: %w", err)
-						}
-						totalBytes += size
+				shaLock.Lock()
+				if _, ok := shas[digest.Hex]; !ok {
+					shas[digest.Hex] = true
+					size, err := layer.Size()
+					if err != nil {
+						return fmt.Errorf("unable to get size for image layer: %w", err)
 					}
+					totalBytes += size
 				}
+				shaLock.Unlock()
 			}
 
 			fetchedLock.Lock()
