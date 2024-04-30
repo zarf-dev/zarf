@@ -80,13 +80,12 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 	eg.SetLimit(10)
 
 	var fetchedLock, shaLock sync.Mutex
-	totalBytes := int64(0)
 	shas := make(map[string]bool)
 	opts := append(config.GetCraneOptions(i.Insecure, i.Architectures...), crane.WithContext(ctx))
 
 	var fetched = map[transform.Image]v1.Image{}
 
-	var counter atomic.Int64
+	var counter, totalBytes atomic.Int64
 
 	for _, refInfo := range i.ImageList {
 		refInfo := refInfo
@@ -188,7 +187,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 			if err != nil {
 				return fmt.Errorf("unable to get manifest for %s: %w", refInfo.Reference, err)
 			}
-			totalBytes += manifest.Config.Size
+			totalBytes.Add(manifest.Config.Size)
 
 			layers, err := img.Layers()
 			if err != nil {
@@ -208,7 +207,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 					if err != nil {
 						return fmt.Errorf("unable to get size for image layer: %w", err)
 					}
-					totalBytes += size
+					totalBytes.Add(size)
 				}
 				shaLock.Unlock()
 			}
@@ -230,7 +229,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 
 	doneSaving := make(chan error)
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
-	go utils.RenderProgressBarForLocalDirWrite(dst.Base, totalBytes, doneSaving, updateText, updateText)
+	go utils.RenderProgressBarForLocalDirWrite(dst.Base, totalBytes.Load(), doneSaving, updateText, updateText)
 
 	toPull := maps.Clone(fetched)
 
@@ -272,7 +271,7 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
 		return err
 	}
 	eg, _ := errgroup.WithContext(ctx)
-	eg.SetLimit(10)
+	eg.SetLimit(-1)
 	for _, layer := range layers {
 		layer := layer
 		eg.Go(func() error {
