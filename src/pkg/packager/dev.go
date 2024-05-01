@@ -165,7 +165,7 @@ func (p *Packager) devDeployLoop(w *fsnotify.Watcher) {
 
 // watchDir adds all subdirectories under the given path to the watcher.
 //
-// This is needed because fsnotify.Watcher does not watch subdirectories: https://github.com/fsnotify/fsnotify/issues/18
+// This is needed because fsnotify.Watcher does not support recursive watch: https://github.com/fsnotify/fsnotify/issues/18
 func watchDir(w *fsnotify.Watcher, path string) error {
 	return filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
