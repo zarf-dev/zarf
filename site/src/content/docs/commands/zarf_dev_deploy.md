@@ -32,6 +32,7 @@ zarf dev deploy [flags]
       --retries int                        Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
       --skip-webhooks                      [alpha] Skip waiting for external webhooks to execute as each package component is deployed
       --timeout duration                   Timeout for Helm operations such as installs and rollbacks (default 15m0s)
+      --watch                              Watch for file changes in the specified directories and hot reload changes to the target cluster
 ```
 
 ### Options inherited from parent commands
