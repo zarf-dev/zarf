@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -80,6 +81,11 @@ func (p *Packager) DevDeploy() error {
 		return err
 	}
 
+	// cd back
+	if err := os.Chdir(cwd); err != nil {
+		return err
+	}
+
 	message.HeaderInfof("📦 PACKAGE DEPLOY %s", p.cfg.Pkg.Metadata.Name)
 
 	p.connectStrings = make(types.ConnectStrings)
@@ -109,8 +115,7 @@ func (p *Packager) DevDeploy() error {
 
 	message.ZarfCommand("package inspect %s", p.cfg.Pkg.Metadata.Name)
 
-	// cd back
-	return os.Chdir(cwd)
+	return nil
 }
 
 // WatchAndReload enables a hot reloading workflow with `zarf dev deploy --watch`.
@@ -141,23 +146,39 @@ func (p *Packager) WatchAndReload(filepaths ...string) error {
 }
 
 func (p *Packager) devDeployLoop(w *fsnotify.Watcher) {
+	var debounceTimer *time.Timer
+	debounceDuration := time.Second
+
 	for {
 		select {
 		case err, ok := <-w.Errors:
 			if !ok {
-				message.Warn(err.Error())
+				message.Warn("Error channel unexpectedly closed")
+				return
 			}
+			message.Warn(err.Error())
+
 		case e, ok := <-w.Events:
 			if !ok {
-				message.Warnf("events channel closed: %s", e)
+				message.Warn("Events channel unexpectedly closed")
+				return
 			}
 
 			if e.Has(fsnotify.Write) {
-				message.Infof("detected WRITE event: %s", e.Name)
-				// if err := p.DevDeploy(); err != nil {
-				// 	message.WarnErrf("error deploying changes made to: %s: %w", e.Name, err)
-				// }
-				// message.Info("Watching files for zarf dev deploy...")
+				message.Infof("Detected Write event: %s", e.Name)
+
+				if debounceTimer != nil {
+					debounceTimer.Stop()
+				}
+
+				debounceTimer = time.AfterFunc(debounceDuration, func() {
+					if err := p.DevDeploy(); err != nil {
+						message.WarnErrf(err, "Error deploying changes made to: %s", e.Name)
+						message.Info("Watching files for further changes...")
+					} else {
+						message.Success("Deployment successful. Watching files for further changes...")
+					}
+				})
 			}
 		}
 	}
