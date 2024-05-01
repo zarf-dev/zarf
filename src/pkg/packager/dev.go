@@ -136,9 +136,8 @@ func (p *Packager) WatchAndReload(filepaths ...string) error {
 	}
 
 	message.Info("Watching files for zarf dev deploy...")
-	<-make(chan struct{})
 
-	return nil
+	select {}
 }
 
 func (p *Packager) devDeployLoop(w *fsnotify.Watcher) {
