@@ -28,7 +28,6 @@ func GetZarfStateFromAgentPod() (state *types.ZarfState, err error) {
 	return state, json.Unmarshal(stateFile, &state)
 }
 
-// How come we can use the state registry for other things but check the nodeport here?
 // GetServiceInfoFromRegistryAddress gets the service info for a registry address if it is a NodePort
 func GetServiceInfoFromRegistryAddress(stateRegistryAddress string) (string, error) {
 	registryAddress := stateRegistryAddress

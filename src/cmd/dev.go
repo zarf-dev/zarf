@@ -88,7 +88,7 @@ var devPatchCmd = &cobra.Command{
 	Long:    lang.CmdDevPatchLong,
 	Example: lang.CmdDevPatchExample,
 	Args:    cobra.ExactArgs(3),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		patchType, host, fileName := args[0], args[1], args[2]
 
 		// Read the contents of the given file
