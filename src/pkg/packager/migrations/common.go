@@ -36,37 +36,34 @@ var breakingChanges = []breakingChange{
 	},
 }
 
-// DeprecatedComponentMigration represents a migration that can be run on a component.
-//
-// DeprecatedComponentMigrations are migrations that seamlessly migrate deprecated component definitions.
-type DeprecatedComponentMigration interface {
+// PackageOrComponent is a type that can be either a ZarfComponent or a ZarfPackage
+type PackageOrComponent interface {
+	types.ZarfComponent | types.ZarfPackage
+}
+
+// Migration represents a migration on types satisfying the PackageOrComponent interface.
+type Migration[T PackageOrComponent] interface {
 	fmt.Stringer
-	// Run runs the migration on the component
-	Run(c types.ZarfComponent) (types.ZarfComponent, string)
-	// Clear clears the deprecated configuration from the component
-	Clear(mc types.ZarfComponent) types.ZarfComponent
+	Run(T) (T, string)
+}
+
+// DeprecatedMigration represents a migration on types satisfying the PackageOrComponent interface.
+type DeprecatedMigration[T PackageOrComponent] interface {
+	Migration[T]
+	Clear(T) T
 }
 
 // DeprecatedComponentMigrations returns a list of all current deprecated component-level migrations.
-func DeprecatedComponentMigrations() []DeprecatedComponentMigration {
-	return []DeprecatedComponentMigration{
+func DeprecatedComponentMigrations() []DeprecatedMigration[types.ZarfComponent] {
+	return []DeprecatedMigration[types.ZarfComponent]{
 		ScriptsToActions{},
 		SetVariableToSetVariables{},
 	}
 }
 
-// FeatureMigration represents a feature migration that can be run on a package.
-//
-// Every migration is mapped to a specific feature, and the feature's identifier is added to the package metadata.
-type FeatureMigration interface {
-	fmt.Stringer
-	// Run runs the feature migration on the package
-	Run(pkg types.ZarfPackage) types.ZarfPackage
-}
-
 // FeatureMigrations returns a list of all current feature migrations.
-func FeatureMigrations() []FeatureMigration {
-	return []FeatureMigration{
+func FeatureMigrations() []Migration[types.ZarfPackage] {
+	return []Migration[types.ZarfPackage]{
 		DefaultRequired{},
 	}
 }

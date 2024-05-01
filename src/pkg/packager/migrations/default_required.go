@@ -4,6 +4,7 @@
 package migrations
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers"
@@ -21,9 +22,9 @@ func (DefaultRequired) String() string {
 // Run sets all components to be required by default
 //
 // and cleanly migrates components explicitly marked as required to be nil
-func (DefaultRequired) Run(pkg types.ZarfPackage) types.ZarfPackage {
+func (DefaultRequired) Run(pkg types.ZarfPackage) (types.ZarfPackage, string) {
 	if slices.Contains(pkg.Metadata.Features, types.DefaultRequired) {
-		return pkg
+		return pkg, fmt.Sprintf("%s feature flag already enabled", types.DefaultRequired)
 	}
 
 	pkg.Metadata.Features = append(pkg.Metadata.Features, types.DefaultRequired)
@@ -37,5 +38,5 @@ func (DefaultRequired) Run(pkg types.ZarfPackage) types.ZarfPackage {
 		}
 	}
 
-	return pkg
+	return pkg, ""
 }

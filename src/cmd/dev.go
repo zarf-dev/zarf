@@ -119,7 +119,10 @@ var devMigrateCmd = &cobra.Command{
 			if !slices.Contains(featureMigrationsToRun, m.String()) {
 				continue
 			}
-			pkgWithFeature := m.Run(pkg)
+			pkgWithFeature, warning := m.Run(pkg)
+			if warning != "" {
+				message.Warn(warning)
+			}
 			if !reflect.DeepEqual(pkgWithFeature, pkg) {
 				data = append(data, []string{
 					m.String(),
