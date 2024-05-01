@@ -357,6 +357,7 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevDeployShort      = "[beta] Creates and deploys a Zarf package from a given directory"
 	CmdDevDeployLong       = "[beta] Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
 	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
+	CmdDevDeployFlagWatch  = "Watch for file changes in the specified directories and hot reload changes to the target cluster"
 	CmdDevDeployErr        = "Failed to dev deploy: %s"
 
 	CmdDevGenerateShort   = "[alpha] Creates a zarf.yaml automatically from a given remote (git) Helm chart"

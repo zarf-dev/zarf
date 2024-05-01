@@ -7,6 +7,7 @@ package packager
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/defenseunicorns/pkg/helpers"
@@ -17,7 +18,13 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/fsnotify/fsnotify"
 )
+
+// DevDeployOpts provides options to configure the behavior of dev deploy.
+type DevDeployOpts struct {
+	Watch bool
+}
 
 // DevDeploy creates + deploys a package in one shot
 func (p *Packager) DevDeploy() error {
@@ -104,4 +111,73 @@ func (p *Packager) DevDeploy() error {
 
 	// cd back
 	return os.Chdir(cwd)
+}
+
+// WatchAndReload enables a hot reloading workflow with `zarf dev deploy --watch`.
+//
+// It watches one or more filepaths and performs a DevDeploy() whenever a change is detected.
+//
+// Note: Watching individual files is not supported because of various issues
+// where files are frequently renamed, such as editors saving them.
+func (p *Packager) WatchAndReload(filepaths ...string) error {
+	w, err := fsnotify.NewWatcher()
+	if err != nil {
+		return fmt.Errorf("creating a new watcher: %w", err)
+	}
+	defer w.Close()
+
+	go p.devDeployLoop(w)
+
+	filepaths = append(filepaths, p.cfg.CreateOpts.BaseDir)
+	for _, path := range filepaths {
+		if err := watchDir(w, path); err != nil {
+			return err
+		}
+	}
+
+	message.Info("Watching files for zarf dev deploy...")
+	<-make(chan struct{})
+
+	return nil
+}
+
+func (p *Packager) devDeployLoop(w *fsnotify.Watcher) {
+	for {
+		select {
+		case err, ok := <-w.Errors:
+			if !ok {
+				message.Warn(err.Error())
+			}
+		case e, ok := <-w.Events:
+			if !ok {
+				message.Warnf("events channel closed: %s", e)
+			}
+
+			if e.Has(fsnotify.Write) {
+				message.Infof("detected WRITE event: %s", e.Name)
+				// if err := p.DevDeploy(); err != nil {
+				// 	message.WarnErrf("error deploying changes made to: %s: %w", e.Name, err)
+				// }
+				// message.Info("Watching files for zarf dev deploy...")
+			}
+		}
+	}
+}
+
+// watchDir adds all subdirectories under the given path to the watcher.
+//
+// This is needed because fsnotify.Watcher does not watch subdirectories: https://github.com/fsnotify/fsnotify/issues/18
+func watchDir(w *fsnotify.Watcher, path string) error {
+	return filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			err = w.Add(p)
+			if err != nil {
+				return fmt.Errorf("adding filepath %q to watcher: %w", p, err)
+			}
+		}
+		return nil
+	})
 }

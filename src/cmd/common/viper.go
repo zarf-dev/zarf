@@ -98,6 +98,7 @@ const (
 	// Dev deploy config keys
 
 	VDevDeployNoYolo = "dev.deploy.no_yolo"
+	VDevDeployWatch  = "dev.deploy.watch"
 )
 
 var (
