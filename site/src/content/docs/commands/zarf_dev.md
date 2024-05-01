@@ -39,3 +39,4 @@ Commands useful for developing packages
 * [zarf dev lint](/commands/zarf_dev_lint/)	 - Lints the given package for valid schema and recommended practices
 * [zarf dev patch](/commands/zarf_dev_patch/)	 - Manually patches files to match Zarf's mutated airgap resource references (not needed when using the Zarf Agent)
 * [zarf dev sha256sum](/commands/zarf_dev_sha256sum/)	 - Generates a SHA256SUM for the given file
+
