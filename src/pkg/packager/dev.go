@@ -20,6 +20,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/fsnotify/fsnotify"
+	"github.com/monochromegane/go-gitignore"
 )
 
 // DevDeployOpts provides options to configure the behavior of dev deploy.
@@ -119,11 +120,13 @@ func (p *Packager) DevDeploy() error {
 }
 
 // WatchAndReload enables a hot reloading workflow with `zarf dev deploy --watch`.
-//
 // It watches one or more filepaths and performs a DevDeploy() whenever a change is detected.
 //
-// Note: Watching individual files is not supported because of various issues
-// where files are frequently renamed, such as editors saving them.
+// TODO:
+//
+// - Improve DX for --watch (especially handling errors and reducing noisy output)
+//
+// - Allow component-level reloads
 func (p *Packager) WatchAndReload(filepaths ...string) error {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -131,21 +134,27 @@ func (p *Packager) WatchAndReload(filepaths ...string) error {
 	}
 	defer w.Close()
 
-	go p.devDeployLoop(w)
+	basePath := p.cfg.CreateOpts.BaseDir
+	gitignorePath := filepath.Join(basePath, ".gitignore")
+	ignoreMatcher, err := gitignore.NewGitIgnore(gitignorePath)
+	if err != nil {
+		return fmt.Errorf("loading .gitignore: %w", err)
+	}
 
-	filepaths = append(filepaths, p.cfg.CreateOpts.BaseDir)
+	filepaths = append(filepaths, basePath)
 	for _, path := range filepaths {
-		if err := seedWatcher(w, path); err != nil {
+		if err := seedWatcher(w, path, ignoreMatcher); err != nil {
 			return err
 		}
 	}
 
 	message.Info("Watching files for zarf dev deploy...")
+	go p.devDeployLoop(w, gitignorePath, ignoreMatcher)
 
 	select {}
 }
 
-func (p *Packager) devDeployLoop(w *fsnotify.Watcher) {
+func (p *Packager) devDeployLoop(w *fsnotify.Watcher, gitignorePath string, ignoreMatcher gitignore.IgnoreMatcher) {
 	var debounceTimer *time.Timer
 	debounceDuration := 2 * time.Second
 
@@ -164,40 +173,76 @@ func (p *Packager) devDeployLoop(w *fsnotify.Watcher) {
 				return
 			}
 
-			if e.Has(fsnotify.Write) {
-				message.Infof("Detected Write event: %s", e.Name)
-
-				if debounceTimer != nil {
-					debounceTimer.Stop()
+			if e.Name == gitignorePath && e.Has(fsnotify.Write) {
+				newIgnoreMatcher, err := gitignore.NewGitIgnore(gitignorePath)
+				if err != nil {
+					message.Warnf("failed to reload .gitignore: %s", err.Error())
+					continue
 				}
-
-				debounceTimer = time.AfterFunc(debounceDuration, func() {
-					if err := p.DevDeploy(); err != nil {
-						message.WarnErrf(err, "Error deploying changes made to: %s", e.Name)
-						message.Info("Watching files for further changes...")
-					} else {
-						message.Success("Deployment successful. Watching files for further changes...")
-					}
-				})
+				ignoreMatcher = newIgnoreMatcher
+				message.Info(".gitignore updated and reloaded")
 			}
+
+			fileInfo, err := os.Stat(e.Name)
+			if err != nil {
+				message.Warn(err.Error())
+				continue
+			}
+
+			if !e.Has(fsnotify.Write) || ignoreMatcher.Match(e.Name, fileInfo.IsDir()) {
+				continue
+			}
+
+			message.Infof("Detected Write event: %s", e.Name)
+			if debounceTimer != nil {
+				debounceTimer.Stop()
+			}
+			debounceTimer = time.AfterFunc(debounceDuration, func() {
+				if err := p.DevDeploy(); err != nil {
+					message.WarnErrf(err, "Error deploying changes made to: %s", e.Name)
+				} else {
+					message.Success("Deployment successful. Watching for further changes...")
+				}
+			})
 		}
 	}
 }
 
-// seedWatcher adds path and all of its subdirectories to the watcher.
+// seedWatcher configures a fsnotify.Watcher to monitor a specified path and all its subdirectories.
+// It adheres to .gitignore rules, excluding any directories that match these patterns.
+// It only adds directories to the watcher, aligning with fsnotify's guidance to avoid
+// watching individual files that may frequently undergo temporary or insignificant changes (e.g., intermediate saves by text editors).
 //
-// This is needed because fsnotify.Watcher does not support recursive watch: https://github.com/fsnotify/fsnotify/issues/18
-func seedWatcher(w *fsnotify.Watcher, path string) error {
-	return filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
+// For more information: https://github.com/fsnotify/fsnotify?tab=readme-ov-file#watching-a-file-doesnt-work-well
+//
+// Note: fsnotify does not natively support recursive directory watching. As a workaround,
+// seedWatcher traverses the directory tree and adds each subdirectory to the watcher.
+//
+// For more information: https://github.com/fsnotify/fsnotify/issues/18
+func seedWatcher(w *fsnotify.Watcher, path string, ignoreMatcher gitignore.IgnoreMatcher) error {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return err
+	}
+
+	return filepath.WalkDir(absPath, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() {
-			err = w.Add(p)
-			if err != nil {
-				return fmt.Errorf("adding filepath %q to watcher: %w", p, err)
-			}
+
+		relPath, err := filepath.Rel(absPath, p)
+		if err != nil {
+			return err
 		}
+
+		if d.IsDir() && ignoreMatcher.Match(relPath, true) {
+			return filepath.SkipDir
+		}
+
+		if d.IsDir() {
+			return w.Add(p)
+		}
+
 		return nil
 	})
 }
