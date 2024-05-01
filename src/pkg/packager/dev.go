@@ -135,7 +135,7 @@ func (p *Packager) WatchAndReload(filepaths ...string) error {
 
 	filepaths = append(filepaths, p.cfg.CreateOpts.BaseDir)
 	for _, path := range filepaths {
-		if err := watchDir(w, path); err != nil {
+		if err := seedWatcher(w, path); err != nil {
 			return err
 		}
 	}
@@ -147,7 +147,7 @@ func (p *Packager) WatchAndReload(filepaths ...string) error {
 
 func (p *Packager) devDeployLoop(w *fsnotify.Watcher) {
 	var debounceTimer *time.Timer
-	debounceDuration := time.Second
+	debounceDuration := 2 * time.Second
 
 	for {
 		select {
@@ -175,19 +175,18 @@ func (p *Packager) devDeployLoop(w *fsnotify.Watcher) {
 					if err := p.DevDeploy(); err != nil {
 						message.WarnErrf(err, "Error deploying changes made to: %s", e.Name)
 						message.Info("Watching files for further changes...")
-					} else {
-						message.Success("Deployment successful. Watching files for further changes...")
 					}
+					message.Success("Deployment successful. Watching files for further changes...")
 				})
 			}
 		}
 	}
 }
 
-// watchDir adds all subdirectories under the given path to the watcher.
+// seedWatcher adds path and all of its subdirectories to the watcher.
 //
 // This is needed because fsnotify.Watcher does not support recursive watch: https://github.com/fsnotify/fsnotify/issues/18
-func watchDir(w *fsnotify.Watcher, path string) error {
+func seedWatcher(w *fsnotify.Watcher, path string) error {
 	return filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
