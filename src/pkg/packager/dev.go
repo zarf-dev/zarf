@@ -175,8 +175,9 @@ func (p *Packager) devDeployLoop(w *fsnotify.Watcher) {
 					if err := p.DevDeploy(); err != nil {
 						message.WarnErrf(err, "Error deploying changes made to: %s", e.Name)
 						message.Info("Watching files for further changes...")
+					} else {
+						message.Success("Deployment successful. Watching files for further changes...")
 					}
-					message.Success("Deployment successful. Watching files for further changes...")
 				})
 			}
 		}
