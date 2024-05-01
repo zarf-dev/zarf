@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Ref contains the tag used to reference am image.
@@ -33,6 +34,7 @@ type OCIRepo struct {
 		SecretRef SecretRef `json:"secretRef,omitempty"`
 		Ref       Ref       `json:"ref,omitempty"`
 	} `json:"spec"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 }
 
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
@@ -49,25 +51,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	var (
 		zarfState *types.ZarfState
 		patches   []operations.PatchOperation
-		isPatched bool
-
-		isCreate = r.Operation == v1.Create
-		isUpdate = r.Operation == v1.Update
 	)
-
-	// Form the zarfState.RegistryServer.Address from the zarfState
-	if zarfState, err = state.GetZarfStateFromAgentPod(); err != nil {
-		return nil, fmt.Errorf(lang.AgentErrGetState, err)
-	}
-
-	// Get the registry service info if this is a NodePort service to use the internal kube-dns
-	registryAddress, err := state.GetServiceInfoFromRegistryAddress(zarfState.RegistryInfo.Address)
-	if err != nil {
-		return nil, err
-	}
-
-	// This can be 10.43.36.151:5000 for example
-	message.Debugf("Using the url of (%s) to mutate the flux OCIRepository", registryAddress)
 
 	// Parse into a simple struct to read the OCIRepo url
 	src := &OCIRepo{}
@@ -81,51 +65,58 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 		message.Warnf(lang.AgentWarnSemVerRef, src.Spec.Ref.Semver)
 	}
 
-	patchedURL := src.Spec.URL
-	patchedRef := src.Spec.Ref
-
-	// Check if this is an update operation and the hostname is different from what we have in the zarfState
-	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
-	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
-	if isUpdate {
-		regHostName := fmt.Sprintf("%s%s", helpers.OCIURLPrefix, registryAddress)
-		isPatched, err = helpers.DoHostnamesMatch(regHostName, src.Spec.URL)
-		if err != nil {
-			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
-		}
+	if src.Labels != nil && src.Labels["zarf-agent"] == "patched" {
+		message.Debugf("helmrepo in this object woohoo %v", src.ObjectMeta)
+		return &operations.Result{
+			Allowed:  true,
+			PatchOps: patches,
+		}, nil
 	}
+
+	// Form the zarfState.RegistryServer.Address from the zarfState
+	if zarfState, err = state.GetZarfStateFromAgentPod(); err != nil {
+		return nil, fmt.Errorf(lang.AgentErrGetState, err)
+	}
+
+	// Get the registry service info if this is a NodePort service to use the internal kube-dns
+	registryAddress, err := state.GetServiceInfoFromRegistryAddress(zarfState.RegistryInfo.Address)
+	if err != nil {
+		return nil, err
+	}
+
+	// For the internal registry this will be the ip & port of the service, it may look like 10.43.36.151:5000
+	message.Debugf("Using the url of (%s) to mutate the flux OCIRepository", registryAddress)
 
 	// Mutate the OCIRepo URL if necessary
-	if isCreate || (isUpdate && !isPatched) {
-		ref := src.Spec.URL
-		if src.Spec.Ref.Digest != "" {
-			ref = fmt.Sprintf("%s@%s", ref, src.Spec.Ref.Digest)
-		} else {
-			ref = fmt.Sprintf("%s:%s", ref, src.Spec.Ref.Tag)
-		}
-
-		patchedSrc, err := transform.ImageTransformHost(registryAddress, ref)
-		if err != nil {
-			message.Warnf("Unable to transform the OCIRepo URL, using the original url we have: %s", src.Spec.URL)
-			return &operations.Result{Allowed: true}, nil
-		}
-
-		patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
-		if err != nil {
-			message.Warnf("Unable to parse the transformed OCIRepo URL, using the original url we have: %s", src.Spec.URL)
-			return &operations.Result{Allowed: true}, nil
-		}
-
-		patchedURL = helpers.OCIURLPrefix + patchedRefInfo.Name
-
-		if patchedRefInfo.Digest != "" {
-			patchedRef.Digest = patchedRefInfo.Digest
-		} else {
-			patchedRef.Tag = patchedRefInfo.Tag
-		}
-
-		message.Debugf("original OCIRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
+	ref := src.Spec.URL
+	if src.Spec.Ref.Digest != "" {
+		ref = fmt.Sprintf("%s@%s", ref, src.Spec.Ref.Digest)
+	} else {
+		ref = fmt.Sprintf("%s:%s", ref, src.Spec.Ref.Tag)
 	}
+
+	patchedSrc, err := transform.ImageTransformHost(registryAddress, ref)
+	if err != nil {
+		message.Warnf("Unable to transform the OCIRepo URL, using the original url we have: %s", src.Spec.URL)
+		return &operations.Result{Allowed: true}, nil
+	}
+
+	patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
+	if err != nil {
+		message.Warnf("Unable to parse the transformed OCIRepo URL, using the original url we have: %s", src.Spec.URL)
+		return &operations.Result{Allowed: true}, nil
+	}
+	patchedRef := src.Spec.Ref
+
+	patchedURL := helpers.OCIURLPrefix + patchedRefInfo.Name
+
+	if patchedRefInfo.Digest != "" {
+		patchedRef.Digest = patchedRefInfo.Digest
+	} else {
+		patchedRef.Tag = patchedRefInfo.Tag
+	}
+
+	message.Debugf("original OCIRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 
 	patches = populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry, patchedRef)
 	return &operations.Result{
@@ -144,6 +135,8 @@ func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref Ref) []
 	if isInternal {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
 	}
+
+	patches = append(patches, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
 
 	if ref.Tag != "" {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/tag", ref.Tag))
