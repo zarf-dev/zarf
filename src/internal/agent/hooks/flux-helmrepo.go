@@ -108,7 +108,7 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 	}
 
 	// Patch updates of the repo spec (Flux resource requires oci:// prefix)
-	patches = populateHelmRepoPatchOperations(patchedURL)
+	patches = populateHelmRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -117,11 +117,13 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 }
 
 // Patch updates of the repo spec.
-func populateHelmRepoPatchOperations(repoURL string) []operations.PatchOperation {
+func populateHelmRepoPatchOperations(repoURL string, isInternal bool) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
-	patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
+	if isInternal {
+		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
+	}
 
 	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfImagePullSecretName}))
 

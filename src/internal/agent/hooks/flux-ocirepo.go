@@ -127,7 +127,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 		message.Debugf("original OCIRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 	}
 
-	patches = populateOCIRepoPatchOperations(patchedURL, patchedRef)
+	patches = populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry, patchedRef)
 	return &operations.Result{
 		Allowed:  true,
 		PatchOps: patches,
@@ -135,14 +135,15 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 }
 
 // Patch updates of the repo spec.
-func populateOCIRepoPatchOperations(repoURL string, ref Ref) []operations.PatchOperation {
+func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref Ref) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
 	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfImagePullSecretName}))
 
-	// Should I always assume that it needs to be set to insecure, what if someone is using an external registry?
-	patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
+	if isInternal {
+		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
+	}
 
 	if ref.Tag != "" {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/tag", ref.Tag))

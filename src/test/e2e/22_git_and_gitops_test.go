@@ -140,15 +140,12 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	require.Equal(t, expectedMutatedRepoURL, stdOut)
 	stdOut, stdErr, err = e2e.Kubectl("get", "helmrelease", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.chart.spec.version}")
 	require.NoError(t, err, stdOut, stdErr)
-	// expectedMutatedRepoTag := "6.4.0-zarf-1339621772"
-	// TODO add CRC
 	expectedMutatedRepoTag := "6.4.0"
 	require.Equal(t, expectedMutatedRepoTag, stdOut)
 
 	// Tests the URL mutation for OCIRepository CRD for Flux.
 	stdOut, stdErr, err = e2e.Kubectl("get", "ocirepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
 	require.NoError(t, err, stdOut, stdErr)
-	// state.GetServiceInfoFromRegistryAddress(state.stateRegistryAddress)
 	expectedMutatedRepoURL = fmt.Sprintf("oci://%s/stefanprodan/manifests/podinfo", registryAddress)
 	require.Equal(t, expectedMutatedRepoURL, stdOut)
 	stdOut, stdErr, err = e2e.Kubectl("get", "ocirepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.ref.tag}")
