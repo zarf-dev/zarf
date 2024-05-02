@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 
 use tokio_util::io::ReaderStream;
-use flate2::write::GzDecoder;
+use flate2::read::GzDecoder;
 use glob::glob;
 use hex::ToHex;
 use serde_json::Value;
@@ -26,8 +26,6 @@ use axum::{
     body::Body,
 };
 use lazy_static::lazy_static;
-use std::io::Cursor;
-
 
 lazy_static! {
     static ref ROOT_DIR: PathBuf = PathBuf::from("/zarf-seed");
@@ -70,19 +68,24 @@ fn collect_binary_data(paths: &Vec<PathBuf>) -> io::Result<Vec<u8>> {
 ///
 /// Inspired by https://medium.com/@nlauchande/rust-coding-up-a-simple-concatenate-files-tool-and-first-impressions-a8cbe680e887
 fn unpack(sha_sum: &String) {
-
     // get the list of file matches to merge
     let file_partials: Result<Vec<_>, _> = glob("zarf-payload-*")
         .expect("Failed to read glob pattern")
         .collect();
 
-    let mut file_partials = file_partials.unwrap();
+    let mut file_partials = match file_partials {
+        Ok(partials) => partials,
+        Err(err) => panic!("Failed to collect partial files: {}", err),
+    };
 
     // ensure a default sort-order
     file_partials.sort();
 
     // get a buffer of the final merged file contents
-    let contents = collect_binary_data(&file_partials).unwrap();
+    let contents = match collect_binary_data(&file_partials) {
+        Ok(data) => data,
+        Err(err) => panic!("Failed to collect binary data: {}", err),
+    };
 
     // create a Sha256 object
     let mut hasher = Sha256::new();
@@ -94,14 +97,15 @@ fn unpack(sha_sum: &String) {
     let result = hasher.finalize();
     let result_string = result.encode_hex::<String>();
     assert_eq!(*sha_sum, result_string);
-    let cursor = Cursor::new(contents[..].to_vec());
 
     // write the merged file to disk and extract it
-    let tar: GzDecoder<Cursor<Vec<u8>>> = GzDecoder::new(cursor);
+    let tar = GzDecoder::new(&contents[..]);
     let mut archive = Archive::new(tar);
-    archive
-        .unpack("/zarf-seed")
-        .expect("Unable to unarchive the resulting tarball");
+
+    // Attempt to unpack the archive
+    if let Err(err) = archive.unpack("/zarf-seed") {
+        panic!("Unable to unarchive the resulting tarball: {}", err);
+    }
 }
 
 /// Starts a static docker compliant registry server that only serves the single image from the CWD
@@ -219,7 +223,6 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind("0.0.0.0:5000")
     .await
     .unwrap();
-
     println!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener,start_seed_registry())
         .await
