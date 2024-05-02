@@ -51,19 +51,21 @@ func Push(cfg PushConfig) error {
 		registryURL = cfg.RegInfo.Address
 	)
 
-	c, _ := cluster.NewCluster()
-	if c != nil {
-		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(cfg.RegInfo)
-		if err != nil {
-			return err
-		}
-		defer tunnel.Close()
-	}
-
 	progress := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
 	defer progress.Stop()
 
 	if err := helpers.Retry(func() error {
+		c, _ := cluster.NewCluster()
+		if c != nil {
+			registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(cfg.RegInfo)
+			if err != nil {
+				return err
+			}
+			if tunnel != nil {
+				defer tunnel.Close()
+			}
+		}
+
 		progress = message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
 		pushOptions := createPushOpts(cfg, progress)
 
