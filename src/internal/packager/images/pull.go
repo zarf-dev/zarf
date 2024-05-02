@@ -45,12 +45,10 @@ type ImgInfo struct {
 	Img     v1.Image
 }
 
-// PullAll pulls all of the images in the provided tag map.
-func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, dst layout.Images) (map[transform.Image]v1.Image, error) {
-	cacheDir := filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)
-
+// Pull pulls all of the images from the given config.
+func Pull(ctx context.Context, cancel context.CancelFunc, cfg PullConfig) (map[transform.Image]v1.Image, error) {
 	var longer string
-	imageCount := len(i.ImageList)
+	imageCount := len(cfg.References)
 	// Give some additional user feedback on larger image sets
 	if imageCount > 15 {
 		longer = "This step may take a couple of minutes to complete."
@@ -58,13 +56,13 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 		longer = "This step may take several seconds to complete."
 	}
 
-	if err := helpers.CreateDirectory(dst.Base, helpers.ReadExecuteAllWriteUser); err != nil {
-		return nil, fmt.Errorf("failed to create image path %s: %w", dst.Base, err)
+	if err := helpers.CreateDirectory(cfg.DestinationDirectory, helpers.ReadExecuteAllWriteUser); err != nil {
+		return nil, fmt.Errorf("failed to create image path %s: %w", cfg.DestinationDirectory, err)
 	}
 
-	cranePath, err := clayout.FromPath(dst.Base)
+	cranePath, err := clayout.FromPath(cfg.DestinationDirectory)
 	if err != nil {
-		cranePath, err = clayout.Write(dst.Base, empty.Index)
+		cranePath, err = clayout.Write(cfg.DestinationDirectory, empty.Index)
 		if err != nil {
 			return nil, err
 		}
@@ -81,20 +79,20 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 
 	var fetchedLock, shaLock sync.Mutex
 	shas := make(map[string]bool)
-	opts := append(config.GetCraneOptions(i.Insecure, i.Architectures...), crane.WithContext(ctx))
+	opts := append(CommonOpts(cfg.Arch), crane.WithContext(ctx))
 
 	var fetched = map[transform.Image]v1.Image{}
 
 	var counter, totalBytes atomic.Int64
 
-	for _, refInfo := range i.ImageList {
+	for _, refInfo := range cfg.References {
 		refInfo := refInfo
 		eg.Go(func() error {
 			idx := counter.Add(1)
-			spinner.Updatef("Fetching image info (%d of %d)", idx, len(i.ImageList))
+			spinner.Updatef("Fetching image info (%d of %d)", idx, imageCount)
 
 			ref := refInfo.Reference
-			for k, v := range i.RegistryOverrides {
+			for k, v := range cfg.RegistryOverrides {
 				if strings.HasPrefix(refInfo.Reference, k) {
 					ref = strings.Replace(refInfo.Reference, k, v, 1)
 				}
@@ -181,7 +179,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 				return fmt.Errorf("%s resolved to an index, please select a specific platform to use", refInfo.Reference)
 			}
 
-			img = cache.Image(img, cache.NewFilesystemCache(cacheDir))
+			img = cache.Image(img, cache.NewFilesystemCache(cfg.CacheDirectory))
 
 			manifest, err := img.Manifest()
 			if err != nil {
@@ -229,7 +227,7 @@ func (i *ImageConfig) PullAll(ctx context.Context, cancel context.CancelFunc, ds
 
 	doneSaving := make(chan error)
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
-	go utils.RenderProgressBarForLocalDirWrite(dst.Base, totalBytes.Load(), doneSaving, updateText, updateText)
+	go utils.RenderProgressBarForLocalDirWrite(cfg.DestinationDirectory, totalBytes.Load(), doneSaving, updateText, updateText)
 
 	toPull := maps.Clone(fetched)
 

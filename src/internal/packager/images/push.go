@@ -6,11 +6,9 @@ package images
 
 import (
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -21,23 +19,20 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-// PushToZarfRegistry pushes a provided image into the configured Zarf registry
-// This function will optionally shorten the image name while appending a checksum of the original image name.
-func (i *ImageConfig) PushToZarfRegistry() error {
-	message.Debug("images.PushToZarfRegistry()")
-
+// Push pushes images to a registry.
+func Push(cfg PushConfig) error {
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
-	refInfoToImage := map[transform.Image]v1.Image{}
+	toPush := map[transform.Image]v1.Image{}
 	var totalSize int64
 	// Build an image list from the references
-	for _, refInfo := range i.ImageList {
-		img, err := utils.LoadOCIImage(i.ImagesPath, refInfo)
+	for _, refInfo := range cfg.ImageList {
+		img, err := utils.LoadOCIImage(cfg.SourceDirectory, refInfo)
 		if err != nil {
 			return err
 		}
-		refInfoToImage[refInfo] = img
+		toPush[refInfo] = img
 		imgSize, err := calcImgSize(img)
 		if err != nil {
 			return err
@@ -46,42 +41,29 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 	}
 
 	// If this is not a no checksum image push we will be pushing two images (the second will go faster as it checks the same layers)
-	if !i.NoChecksum {
+	if !cfg.NoChecksum {
 		totalSize = totalSize * 2
 	}
 
-	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
-	httpTransport.TLSClientConfig.InsecureSkipVerify = i.Insecure
-	// TODO (@WSTARR) This is set to match the TLSHandshakeTimeout to potentially mitigate effects of https://github.com/defenseunicorns/zarf/issues/1444
-	httpTransport.ResponseHeaderTimeout = 10 * time.Second
-	progressBar := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images to the zarf registry", len(i.ImageList)))
-	defer progressBar.Stop()
-	craneTransport := helpers.NewTransport(httpTransport, progressBar)
-
-	pushOptions := config.GetCraneOptions(i.Insecure, i.Architectures...)
-	pushOptions = append(pushOptions, config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword))
-	pushOptions = append(pushOptions, crane.WithTransport(craneTransport))
+	progress := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(cfg.ImageList)))
+	defer progress.Stop()
 
 	var (
 		err         error
 		tunnel      *k8s.Tunnel
-		registryURL string
+		registryURL = cfg.RegInfo.Address
 	)
-
-	registryURL = i.RegInfo.Address
 
 	c, _ := cluster.NewCluster()
 	if c != nil {
-		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(i.RegInfo)
+		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(cfg.RegInfo)
 		if err != nil {
 			return err
 		}
-	}
-
-	if tunnel != nil {
 		defer tunnel.Close()
 	}
 
+	pushOptions := createPushOpts(cfg, progress)
 	pushImage := func(img v1.Image, name string) error {
 		if tunnel != nil {
 			return tunnel.Wrap(func() error { return crane.Push(img, name, pushOptions...) })
@@ -90,41 +72,52 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 		return crane.Push(img, name, pushOptions...)
 	}
 
-	for refInfo, img := range refInfoToImage {
-		refTruncated := helpers.Truncate(refInfo.Reference, 55, true)
-		progressBar.UpdateTitle(fmt.Sprintf("Pushing %s", refTruncated))
+	if err := helpers.Retry(func() error {
+		pushed := []transform.Image{}
+		defer func() {
+			for _, refInfo := range pushed {
+				delete(toPush, refInfo)
+			}
+		}()
+		for refInfo, img := range toPush {
+			refTruncated := helpers.Truncate(refInfo.Reference, 55, true)
+			progress.UpdateTitle(fmt.Sprintf("Pushing %s", refTruncated))
 
-		// If this is not a no checksum image push it for use with the Zarf agent
-		if !i.NoChecksum {
-			offlineNameCRC, err := transform.ImageTransformHost(registryURL, refInfo.Reference)
+			// If this is not a no checksum image push it for use with the Zarf agent
+			if !cfg.NoChecksum {
+				offlineNameCRC, err := transform.ImageTransformHost(registryURL, refInfo.Reference)
+				if err != nil {
+					return err
+				}
+
+				message.Debugf("push %s -> %s)", refInfo.Reference, offlineNameCRC)
+
+				if err = pushImage(img, offlineNameCRC); err != nil {
+					return err
+				}
+			}
+
+			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
+			// (this may result in collisions but this is acceptable for this use case)
+			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, refInfo.Reference)
 			if err != nil {
 				return err
 			}
 
-			message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, refInfo.Reference, offlineNameCRC)
+			message.Debugf("push %s -> %s)", refInfo.Reference, offlineName)
 
-			err = pushImage(img, offlineNameCRC)
-			if err != nil {
+			if err = pushImage(img, offlineName); err != nil {
 				return err
 			}
-		}
 
-		// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
-		// (this may result in collisions but this is acceptable for this use case)
-		offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, refInfo.Reference)
-		if err != nil {
-			return err
+			pushed = append(pushed, refInfo)
 		}
-
-		message.Debugf("crane.Push() %s:%s -> %s)", i.ImagesPath, refInfo.Reference, offlineName)
-
-		err = pushImage(img, offlineName)
-		if err != nil {
-			return err
-		}
+		return nil
+	}, cfg.Retries, 5*time.Second, message.Warnf); err != nil {
+		return err
 	}
 
-	progressBar.Successf("Pushed %d images to the zarf registry", len(i.ImageList))
+	progress.Successf("Pushed %d images", len(cfg.ImageList))
 
 	return nil
 }

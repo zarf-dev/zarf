@@ -180,14 +180,15 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 
 		ctx, cancel := context.WithCancel(context.TODO())
 
-		imgConfig := images.ImageConfig{
-			ImageList:         imageList,
-			Insecure:          config.CommonOptions.Insecure,
-			Architectures:     []string{arch},
-			RegistryOverrides: pc.createOpts.RegistryOverrides,
+		pullCfg := images.PullConfig{
+			DestinationDirectory: dst.Images.Base,
+			References:           imageList,
+			Arch:                 arch,
+			RegistryOverrides:    pc.createOpts.RegistryOverrides,
+			CacheDirectory:       filepath.Join(config.GetAbsCachePath(), layout.ImagesDir),
 		}
 
-		pulled, err := imgConfig.PullAll(ctx, cancel, dst.Images)
+		pulled, err := images.Pull(ctx, cancel, pullCfg)
 		if err != nil {
 			return err
 		}
