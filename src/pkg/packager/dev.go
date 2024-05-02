@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
@@ -155,8 +156,8 @@ func (p *Packager) WatchAndReload(filepaths ...string) error {
 }
 
 func (p *Packager) devDeployLoop(w *fsnotify.Watcher, gitignorePath string, ignoreMatcher gitignore.IgnoreMatcher) {
+	mu := sync.Mutex{}
 	var debounceTimer *time.Timer
-	debounceDuration := 2 * time.Second
 
 	for {
 		select {
@@ -180,29 +181,34 @@ func (p *Packager) devDeployLoop(w *fsnotify.Watcher, gitignorePath string, igno
 					continue
 				}
 				ignoreMatcher = newIgnoreMatcher
-				message.Info(".gitignore updated and reloaded")
+				message.Info(".gitignore reloaded")
 			}
 
-			fileInfo, err := os.Stat(e.Name)
-			if err != nil {
-				message.Warn(err.Error())
+			if !e.Has(fsnotify.Write) || ignoreMatcher.Match(e.Name, false) {
 				continue
 			}
 
-			if !e.Has(fsnotify.Write) || ignoreMatcher.Match(e.Name, fileInfo.IsDir()) {
-				continue
-			}
-
+			latestEvent := &e
 			message.Infof("Detected Write event: %s", e.Name)
+
 			if debounceTimer != nil {
 				debounceTimer.Stop()
 			}
-			debounceTimer = time.AfterFunc(debounceDuration, func() {
+			debounceTimer = time.AfterFunc(1*time.Second, func() {
+				if latestEvent == nil {
+					return
+				}
+
+				mu.Lock()
+				defer mu.Unlock()
+
 				if err := p.DevDeploy(); err != nil {
-					message.WarnErrf(err, "Error deploying changes made to: %s", e.Name)
+					message.WarnErrf(err, "Error deploying changes made to: %s", latestEvent.Name)
 				} else {
 					message.Success("Deployment successful. Watching for further changes...")
 				}
+
+				latestEvent = nil
 			})
 		}
 	}
