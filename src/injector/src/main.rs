@@ -28,7 +28,7 @@ use axum::{
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref ROOT_DIR: PathBuf = PathBuf::from("/zarf-seed");
+    static ref ROOT_DIR: PathBuf = PathBuf::from("./zarf-seed");
 }
 
 const DOCKER_MIME_TYPE: &str = "application/vnd.docker.distribution.manifest.v2+json";
@@ -46,6 +46,7 @@ fn get_file(path: &PathBuf) -> io::Result<Vec<u8>> {
         Err(e) => Err(e),
     }
 }
+
 
 // Merges all given files into one buffer
 fn collect_binary_data(paths: &Vec<PathBuf>) -> io::Result<Vec<u8>> {
@@ -73,19 +74,13 @@ fn unpack(sha_sum: &String) {
         .expect("Failed to read glob pattern")
         .collect();
 
-    let mut file_partials = match file_partials {
-        Ok(partials) => partials,
-        Err(err) => panic!("Failed to collect partial files: {}", err),
-    };
+    let mut file_partials = file_partials.unwrap();
 
     // ensure a default sort-order
     file_partials.sort();
 
     // get a buffer of the final merged file contents
-    let contents = match collect_binary_data(&file_partials) {
-        Ok(data) => data,
-        Err(err) => panic!("Failed to collect binary data: {}", err),
-    };
+    let contents = collect_binary_data(&file_partials).unwrap();
 
     // create a Sha256 object
     let mut hasher = Sha256::new();
@@ -101,12 +96,11 @@ fn unpack(sha_sum: &String) {
     // write the merged file to disk and extract it
     let tar = GzDecoder::new(&contents[..]);
     let mut archive = Archive::new(tar);
-
-    // Attempt to unpack the archive
-    if let Err(err) = archive.unpack("/zarf-seed") {
-        panic!("Unable to unarchive the resulting tarball: {}", err);
-    }
+    archive
+        .unpack("/zarf-seed")
+        .expect("Unable to unarchive the resulting tarball");
 }
+
 
 /// Starts a static docker compliant registry server that only serves the single image from the CWD
 ///
@@ -120,7 +114,9 @@ fn start_seed_registry() -> Router{
     // The reference may include a tag or digest.
     Router::new()
     .route("/v2/:name/manifest/:reference", get(handle_get_manifest))
+    .route("/v2/:name/manifest/:reference/", get(handle_get_manifest))
     .route("/v2/:name/blobs/:tag", get(handle_get_digest))
+    .route("/v2/:name/blobs/:tag/", get(handle_get_digest))
     .route("/v2/", get(|| async { 
     Response::builder()
         .status(StatusCode::OK)
@@ -130,6 +126,15 @@ fn start_seed_registry() -> Router{
         .body(Body::empty())
         .unwrap()
     }))
+    .route("/v2", get(|| async { 
+        Response::builder()
+            .status(StatusCode::OK)
+            .header("Content-Type", "application/json; charset=utf-8")
+            .header("Docker-Distribution-Api-Version", "registry/2.0")
+            .header("X-Content-Type-Options", "nosniff")
+            .body(Body::empty())
+            .unwrap()
+        }))
 }
 
 
