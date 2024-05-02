@@ -45,9 +45,6 @@ func Push(cfg PushConfig) error {
 		totalSize = totalSize * 2
 	}
 
-	progress := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(cfg.ImageList)))
-	defer progress.Stop()
-
 	var (
 		err         error
 		tunnel      *k8s.Tunnel
@@ -63,16 +60,21 @@ func Push(cfg PushConfig) error {
 		defer tunnel.Close()
 	}
 
-	pushOptions := createPushOpts(cfg, progress)
-	pushImage := func(img v1.Image, name string) error {
-		if tunnel != nil {
-			return tunnel.Wrap(func() error { return crane.Push(img, name, pushOptions...) })
-		}
-
-		return crane.Push(img, name, pushOptions...)
-	}
+	progress := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
+	defer progress.Stop()
 
 	if err := helpers.Retry(func() error {
+		progress = message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
+		pushOptions := createPushOpts(cfg, progress)
+
+		pushImage := func(img v1.Image, name string) error {
+			if tunnel != nil {
+				return tunnel.Wrap(func() error { return crane.Push(img, name, pushOptions...) })
+			}
+
+			return crane.Push(img, name, pushOptions...)
+		}
+
 		pushed := []transform.Image{}
 		defer func() {
 			for _, refInfo := range pushed {
@@ -82,6 +84,11 @@ func Push(cfg PushConfig) error {
 		for refInfo, img := range toPush {
 			refTruncated := helpers.Truncate(refInfo.Reference, 55, true)
 			progress.UpdateTitle(fmt.Sprintf("Pushing %s", refTruncated))
+
+			size, err := calcImgSize(img)
+			if err != nil {
+				return err
+			}
 
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
@@ -95,6 +102,8 @@ func Push(cfg PushConfig) error {
 				if err = pushImage(img, offlineNameCRC); err != nil {
 					return err
 				}
+
+				totalSize -= size
 			}
 
 			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
@@ -111,6 +120,7 @@ func Push(cfg PushConfig) error {
 			}
 
 			pushed = append(pushed, refInfo)
+			totalSize -= size
 		}
 		return nil
 	}, cfg.Retries, 5*time.Second, message.Warnf); err != nil {
