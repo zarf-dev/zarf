@@ -7,18 +7,32 @@ package external
 import (
 	"context"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/test"
+	"github.com/otiai10/copy"
+	"github.com/stretchr/testify/require"
 )
 
 var zarfBinPath = path.Join("../../../build", test.GetCLIName())
 
 func verifyKubectlWaitSuccess(t *testing.T, timeoutMinutes time.Duration, args []string, onTimeout string) bool {
 	return verifyWaitSuccess(t, timeoutMinutes, "kubectl", args, "condition met", onTimeout)
+}
+
+func createPodInfoPackageWithInsecureSources(t *testing.T, temp string) {
+	copy.Copy("../../../examples/podinfo-flux", temp)
+	// This is done because while .spec.insecure is auto set to true for internal registries by the agent
+	// it is not for external registries, however since we are using an insecure external registry, we still need it
+	err := exec.CmdWithPrint(zarfBinPath, "tools", "yq", "eval", ".spec.insecure = true", "-i", filepath.Join(temp, "helm", "podinfo-source.yaml"))
+	require.NoError(t, err, "unable to yq edit helm source")
+	err = exec.CmdWithPrint(zarfBinPath, "tools", "yq", "eval", ".spec.insecure = true", "-i", filepath.Join(temp, "oci", "podinfo-source.yaml"))
+	require.NoError(t, err, "unable to yq edit oci source")
+	exec.CmdWithPrint(zarfBinPath, "package", "create", temp, "--confirm", "--output", temp)
 }
 
 func verifyWaitSuccess(t *testing.T, timeoutMinutes time.Duration, cmd string, args []string, condition string, onTimeout string) bool {

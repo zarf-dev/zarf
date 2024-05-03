@@ -18,7 +18,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"helm.sh/helm/v3/pkg/repo"
@@ -45,6 +44,8 @@ var outClusterCredentialArgs = []string{
 	"--git-url=http://" + giteaHost + ":3000",
 	"--registry-push-username=" + registryUser,
 	"--registry-push-password=" + commonPassword,
+	// TODO @AustinAbro321 once flux updates to a version of helm using ORAS v1.2.5 or greater we can switch back
+	// to using the registry host rather than creating an IP https://github.com/helm/helm/pull/12998
 	"--registry-url=" + registryIP + ":5000"}
 
 type ExtOutClusterTestSuite struct {
@@ -147,17 +148,10 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	// Deploy the flux example package
 	temp := suite.T().TempDir()
 	defer os.Remove(temp)
-	copy.Copy("../../../examples/podinfo-flux", temp)
-	// This is done because while .spec.insecure is auto set to true for internal registries by the agent
-	// it is not for external registries, however since we are using an insecure external registry, we still need it
-	err := exec.CmdWithPrint(zarfBinPath, "tools", "yq", "eval", ".spec.insecure = true", "-i", filepath.Join(temp, "helm", "podinfo-source.yaml"))
-	suite.NoError(err, "unable to yq edit helm source")
-	err = exec.CmdWithPrint(zarfBinPath, "tools", "yq", "eval", ".spec.insecure = true", "-i", filepath.Join(temp, "oci", "podinfo-source.yaml"))
-	suite.NoError(err, "unable to yq edit oci source")
-	exec.CmdWithPrint(zarfBinPath, "package", "create", temp, "--confirm", "--output", temp)
+	createPodInfoPackageWithInsecureSources(suite.T(), temp)
 
 	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--confirm"}
-	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
+	err := exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 
 	path := fmt.Sprintf("../../../build/zarf-package-argocd-%s.tar.zst", "amd64")

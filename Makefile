@@ -129,7 +129,7 @@ redeploy-zarf-agent: build build-local-agent-image
 	kubectl rollout restart deployment -n zarf agent-hook
 
 init-package: ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	@test -s $(ZARF_BIN) || $(MAKE) build
 	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm .
 
 init-package-with-agent: build build-local-agent-image init-package
@@ -140,7 +140,7 @@ release-init-package:
 
 # INTERNAL: used to build an iron bank version of the init package with an ib version of the registry image
 ib-init-package:
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	@test -s $(ZARF_BIN) || $(MAKE) build
 	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm . \
 		--set REGISTRY_IMAGE_DOMAIN="registry1.dso.mil/" \
 		--set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
@@ -152,7 +152,7 @@ publish-init-package:
 	$(ZARF_BIN) package publish . oci://$(REPOSITORY_URL)
 
 build-examples: ## Build all of the example packages
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	@test -s $(ZARF_BIN) || $(MAKE) build
 
 	@test -s ./build/zarf-package-dos-games-$(ARCH)-1.0.0.tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
 
@@ -198,7 +198,7 @@ test-e2e-without-cluster: build-examples ## Run all of the core Zarf CLI E2E tes
 ## NOTE: Requires an existing cluster
 .PHONY: test-external
 test-external: ## Run the Zarf CLI E2E tests for an external registry and cluster
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	@test -s $(ZARF_BIN) || $(MAKE) build
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH) --confirm
 	@test -s ./build/zarf-package-argocd-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/argocd -o build -a $(ARCH) --confirm
@@ -207,7 +207,7 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 ## NOTE: Requires an existing cluster and
 .PHONY: test-upgrade
 test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	@test -s $(ZARF_BIN) || $(MAKE) build
 	[ -n "$(shell zarf version)" ] || (echo "Zarf must be installed prior to the upgrade test" && exit 1)
 	[ -n "$(shell zarf package list 2>&1 | grep test-upgrade-package)" ] || (echo "Zarf must be initialized and have the 6.3.3 upgrade-test package installed prior to the upgrade test" && exit 1)
 	@test -s "zarf-package-test-upgrade-package-amd64-6.3.4.tar.zst" || zarf package create src/test/upgrade/ --set PODINFO_VERSION=6.3.4 --confirm

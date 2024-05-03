@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
@@ -121,9 +123,12 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	initArgs = append(initArgs, inClusterCredentialArgs...)
 	err := exec.CmdWithPrint(zarfBinPath, initArgs...)
 	suite.NoError(err, "unable to initialize the k8s server with zarf")
+	temp := suite.T().TempDir()
+	defer os.Remove(temp)
+	createPodInfoPackageWithInsecureSources(suite.T(), temp)
 
 	// Deploy the flux example package
-	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-podinfo-flux-amd64.tar.zst", "--confirm"}
+	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 
