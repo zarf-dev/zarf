@@ -7,6 +7,3 @@ spec:
   type: oci
   interval: 31s
   url: oci://ghcr.io/stefanprodan/charts
-  insecure: true
-
-#yq e '.spec.insecure = true' -i examples/podinfo-flux/helm/podinfo-source.yaml
