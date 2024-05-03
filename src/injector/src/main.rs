@@ -17,7 +17,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use tar::Archive;
 
-const DOCKER_MIME_TYPE: &str = "application/vnd.docker.distribution.manifest.v2+json";
+const DOCKER_MIME_TYPE: &str = "application/vnd.oci.image.manifest.v1+json";
 
 // Reads the binary contents of a file
 fn get_file(path: &PathBuf) -> io::Result<Vec<u8>> {
