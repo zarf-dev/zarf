@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -50,18 +51,19 @@ var devDeployCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		// Create the package
-		if err := pkgClient.DevDeploy(); err != nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		if err := pkgClient.DevDeploy(ctx); err != nil {
 			message.Fatalf(err, lang.CmdDevDeployErr, err.Error())
 		}
 
 		if devDeployOpts.Watch {
 			if err := pkgClient.WatchAndReload(); err != nil {
-				message.Fatal(err, "WatchAndReload()")
+				message.Fatalf(err, "%s", err.Error())
 			}
 		}
 	},

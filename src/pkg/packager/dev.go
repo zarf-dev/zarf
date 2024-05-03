@@ -5,11 +5,14 @@
 package packager
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
@@ -30,7 +33,11 @@ type DevDeployOpts struct {
 }
 
 // DevDeploy creates + deploys a package in one shot
-func (p *Packager) DevDeploy() error {
+func (p *Packager) DevDeploy(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	config.CommonOptions.Confirm = true
 	p.cfg.CreateOpts.SkipSBOM = !p.cfg.CreateOpts.NoYOLO
 
@@ -137,9 +144,15 @@ func (p *Packager) WatchAndReload(filepaths ...string) error {
 
 	basePath := p.cfg.CreateOpts.BaseDir
 	gitignorePath := filepath.Join(basePath, ".gitignore")
+
 	ignoreMatcher, err := gitignore.NewGitIgnore(gitignorePath)
 	if err != nil {
-		return fmt.Errorf("loading .gitignore: %w", err)
+		if errors.Is(err, fs.ErrNotExist) {
+			ignoreMatcher = gitignore.NewGitIgnoreFromReader("", strings.NewReader(""))
+			message.Info("No .gitignore file found; watching without ignoring any files...")
+		} else {
+			return fmt.Errorf("loading .gitignore: %w", err)
+		}
 	}
 
 	filepaths = append(filepaths, basePath)
@@ -156,7 +169,9 @@ func (p *Packager) WatchAndReload(filepaths ...string) error {
 }
 
 func (p *Packager) devDeployLoop(w *fsnotify.Watcher, gitignorePath string, ignoreMatcher gitignore.IgnoreMatcher) {
-	mu := sync.Mutex{}
+	debounceDuration := 1 * time.Second
+	var currentCtx context.Context
+	var cancel context.CancelFunc = func() {}
 	var debounceTimer *time.Timer
 
 	for {
@@ -164,6 +179,7 @@ func (p *Packager) devDeployLoop(w *fsnotify.Watcher, gitignorePath string, igno
 		case err, ok := <-w.Errors:
 			if !ok {
 				message.Warn("Error channel unexpectedly closed")
+				cancel()
 				return
 			}
 			message.Warn(err.Error())
@@ -171,13 +187,14 @@ func (p *Packager) devDeployLoop(w *fsnotify.Watcher, gitignorePath string, igno
 		case e, ok := <-w.Events:
 			if !ok {
 				message.Warn("Events channel unexpectedly closed")
+				cancel()
 				return
 			}
 
 			if e.Name == gitignorePath && e.Has(fsnotify.Write) {
 				newIgnoreMatcher, err := gitignore.NewGitIgnore(gitignorePath)
 				if err != nil {
-					message.Warnf("failed to reload .gitignore: %s", err.Error())
+					message.Warnf("Failed to reload .gitignore: %s", err.Error())
 					continue
 				}
 				ignoreMatcher = newIgnoreMatcher
@@ -188,27 +205,20 @@ func (p *Packager) devDeployLoop(w *fsnotify.Watcher, gitignorePath string, igno
 				continue
 			}
 
-			latestEvent := &e
 			message.Infof("Detected Write event: %s", e.Name)
-
 			if debounceTimer != nil {
 				debounceTimer.Stop()
 			}
-			debounceTimer = time.AfterFunc(1*time.Second, func() {
-				if latestEvent == nil {
-					return
-				}
 
-				mu.Lock()
-				defer mu.Unlock()
+			cancel()
+			currentCtx, cancel = context.WithCancel(context.Background())
 
-				if err := p.DevDeploy(); err != nil {
-					message.WarnErrf(err, "Error deploying changes made to: %s", latestEvent.Name)
+			debounceTimer = time.AfterFunc(debounceDuration, func() {
+				if err := p.DevDeploy(currentCtx); err != nil {
+					message.Warn(err.Error())
 				} else {
 					message.Success("Deployment successful. Watching for further changes...")
 				}
-
-				latestEvent = nil
 			})
 		}
 	}
