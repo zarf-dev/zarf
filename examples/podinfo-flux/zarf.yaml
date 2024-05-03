@@ -57,7 +57,6 @@ components:
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
       # NOTE: Zarf only supports `oci://` urls within Flux HelmRepository definitions
-      # (@AustinAbro321): This feels a bit weird to me, though it's still likely better than introducing another key. Want to discuss options internally
       - oci://ghcr.io/stefanprodan/charts/podinfo:6.4.0
     actions:
       onDeploy:

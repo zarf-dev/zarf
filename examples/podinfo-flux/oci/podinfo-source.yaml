@@ -9,3 +9,6 @@ spec:
   url: oci://ghcr.io/stefanprodan/manifests/podinfo
   ref:
     tag: 6.4.0
+  insecure: true
+
+# yq e '.spec.insecure = true' -i examples/podinfo-flux/helm/podinfo-source.yaml
