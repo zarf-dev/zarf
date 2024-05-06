@@ -1,6 +1,8 @@
 module github.com/defenseunicorns/zarf
 
-go 1.21.8
+go 1.22.0
+
+toolchain go1.22.2
 
 // TODO (@AABRO): Pending merge into github.com/gojsonschema/gojsonschema (https://github.com/gojsonschema/gojsonschema/pull/5)
 replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
@@ -20,7 +22,7 @@ require (
 	github.com/fairwindsops/pluto/v5 v5.18.4
 	github.com/fatih/color v1.16.0
 	github.com/fluxcd/helm-controller/api v0.37.4
-	github.com/fluxcd/source-controller/api v1.2.4
+	github.com/fluxcd/source-controller/api v1.3.0
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/go-logr/logr v1.4.1
 	github.com/goccy/go-yaml v1.11.3
@@ -45,13 +47,13 @@ require (
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.9.0
 	github.com/xeipuuv/gojsonschema v1.2.0
-	golang.org/x/crypto v0.21.0
+	golang.org/x/crypto v0.22.0
 	golang.org/x/term v0.19.0
 	helm.sh/helm/v3 v3.14.2
-	k8s.io/api v0.29.1
-	k8s.io/apimachinery v0.29.1
-	k8s.io/client-go v0.29.1
-	k8s.io/component-base v0.29.1
+	k8s.io/api v0.30.0
+	k8s.io/apimachinery v0.30.0
+	k8s.io/client-go v0.30.0
+	k8s.io/component-base v0.30.0
 	k8s.io/klog/v2 v2.120.1
 	k8s.io/kubectl v0.29.1
 	oras.land/oras-go/v2 v2.5.0
@@ -222,9 +224,9 @@ require (
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/felixge/fgprof v0.9.3 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/fluxcd/pkg/apis/acl v0.1.0 // indirect
+	github.com/fluxcd/pkg/apis/acl v0.3.0 // indirect
 	github.com/fluxcd/pkg/apis/kustomize v1.3.0 // indirect
-	github.com/fluxcd/pkg/apis/meta v1.3.0 // indirect
+	github.com/fluxcd/pkg/apis/meta v1.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fvbommel/sortorder v1.1.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
@@ -259,7 +261,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/certificate-transparency-go v1.1.7 // indirect
@@ -471,14 +473,14 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/exp v0.0.0-20231108232855-2478ac86f678 // indirect
-	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/net v0.22.0 // indirect
+	golang.org/x/mod v0.15.0 // indirect
+	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/oauth2 v0.17.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.16.1 // indirect
+	golang.org/x/tools v0.18.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	google.golang.org/api v0.166.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
@@ -496,11 +498,11 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/gorm v1.25.5 // indirect
-	k8s.io/apiextensions-apiserver v0.29.0 // indirect
-	k8s.io/apiserver v0.29.0 // indirect
+	k8s.io/apiextensions-apiserver v0.30.0 // indirect
+	k8s.io/apiserver v0.30.0 // indirect
 	k8s.io/cli-runtime v0.29.1 // indirect
 	k8s.io/component-helpers v0.29.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
+	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	k8s.io/metrics v0.29.1 // indirect
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661 // indirect
 	modernc.org/libc v1.29.0 // indirect
@@ -508,7 +510,7 @@ require (
 	modernc.org/memory v1.7.2 // indirect
 	modernc.org/sqlite v1.28.0 // indirect
 	oras.land/oras-go v1.2.4 // indirect
-	sigs.k8s.io/controller-runtime v0.16.3 // indirect
+	sigs.k8s.io/controller-runtime v0.18.1 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kustomize/kustomize/v5 v5.0.4-0.20230601165947-6ce0bf390ce3 // indirect
 	sigs.k8s.io/release-utils v0.7.7 // indirect

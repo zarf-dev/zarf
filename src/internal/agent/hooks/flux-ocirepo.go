@@ -16,8 +16,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/fluxcd/pkg/apis/meta"
+	flux "github.com/fluxcd/source-controller/api/v1beta2"
 	v1 "k8s.io/api/admission/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Ref contains the tag used to reference am image.
@@ -25,16 +26,6 @@ type Ref struct {
 	Tag    string `json:"tag,omitempty"`
 	Digest string `json:"digest,omitempty"`
 	Semver string `json:"semver,omitempty"`
-}
-
-// OCIRepo contains the URL of a git repo and the secret that corresponds to it for use with Flux.
-type OCIRepo struct {
-	Spec struct {
-		URL       string    `json:"url"`
-		SecretRef SecretRef `json:"secretRef,omitempty"`
-		Ref       Ref       `json:"ref,omitempty"`
-	} `json:"spec"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
 }
 
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
@@ -54,15 +45,15 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	)
 
 	// Parse into a simple struct to read the OCIRepo url
-	src := &OCIRepo{}
+	src := &flux.OCIRepository{}
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
 	// If we have a semver we want to continue since we wil still have the upstream tag
 	// but should warn that we can't guarantee there won't be collisions
-	if src.Spec.Ref.Semver != "" {
-		message.Warnf(lang.AgentWarnSemVerRef, src.Spec.Ref.Semver)
+	if src.Spec.Reference.SemVer != "" {
+		message.Warnf(lang.AgentWarnSemVerRef, src.Spec.Reference.SemVer)
 	}
 
 	if src.Labels != nil && src.Labels["zarf-agent"] == "patched" {
@@ -89,10 +80,10 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	// Mutate the OCIRepo URL if necessary
 	ref := src.Spec.URL
-	if src.Spec.Ref.Digest != "" {
-		ref = fmt.Sprintf("%s@%s", ref, src.Spec.Ref.Digest)
+	if src.Spec.Reference.Digest != "" {
+		ref = fmt.Sprintf("%s@%s", ref, src.Spec.Reference.Digest)
 	} else {
-		ref = fmt.Sprintf("%s:%s", ref, src.Spec.Ref.Tag)
+		ref = fmt.Sprintf("%s:%s", ref, src.Spec.Reference.Tag)
 	}
 
 	patchedSrc, err := transform.ImageTransformHost(registryAddress, ref)
@@ -106,7 +97,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 		message.Warnf("Unable to parse the transformed OCIRepo URL, using the original url we have: %s", src.Spec.URL)
 		return &operations.Result{Allowed: true}, nil
 	}
-	patchedRef := src.Spec.Ref
+	patchedRef := src.Spec.Reference
 
 	patchedURL := helpers.OCIURLPrefix + patchedRefInfo.Name
 
@@ -126,11 +117,11 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 }
 
 // Patch updates of the repo spec.
-func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref Ref) []operations.PatchOperation {
+func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.OCIRepositoryRef) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
-	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfImagePullSecretName}))
+	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", meta.LocalObjectReference{Name: config.ZarfImagePullSecretName}))
 
 	if isInternal {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))

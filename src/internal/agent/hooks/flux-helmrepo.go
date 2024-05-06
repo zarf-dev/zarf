@@ -17,19 +17,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/fluxcd/pkg/apis/meta"
+	flux "github.com/fluxcd/source-controller/api/v1"
 	v1 "k8s.io/api/admission/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// HelmRepo contains the URL of a helm repo and the secret that corresponds to it for use with Flux.
-type HelmRepo struct {
-	Spec struct {
-		Type      string    `json:"type"`
-		URL       string    `json:"url"`
-		SecretRef SecretRef `json:"secretRef,omitempty"`
-	} `json:"spec"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-}
 
 // NewHelmRepositoryMutationHook creates a new instance of the helm repo mutation hook.
 func NewHelmRepositoryMutationHook() operations.Hook {
@@ -48,7 +39,7 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 	)
 
 	// Parse into a simple struct to read the HelmRepo url
-	src := &HelmRepo{}
+	src := &flux.HelmRepository{}
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
@@ -116,7 +107,7 @@ func populateHelmRepoPatchOperations(repoURL string, isInternal bool) []operatio
 
 	patches = append(patches, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
 
-	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfImagePullSecretName}))
+	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", meta.LocalObjectReference{Name: config.ZarfImagePullSecretName}))
 
 	return patches
 }

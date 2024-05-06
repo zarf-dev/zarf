@@ -16,21 +16,10 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/fluxcd/pkg/apis/meta"
+	flux "github.com/fluxcd/source-controller/api/v1"
 	v1 "k8s.io/api/admission/v1"
 )
-
-// SecretRef contains the name used to reference a git repository secret.
-type SecretRef struct {
-	Name string `json:"name"`
-}
-
-// GenericGitRepo contains the URL of a git repo and the secret that corresponds to it for use with Flux.
-type GenericGitRepo struct {
-	Spec struct {
-		URL       string    `json:"url"`
-		SecretRef SecretRef `json:"secretRef,omitempty"`
-	} `json:"spec"`
-}
 
 // NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
 func NewGitRepositoryMutationHook() operations.Hook {
@@ -61,7 +50,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	message.Debugf("Using the url of (%s) to mutate the flux GitRepository", zarfState.GitServer.Address)
 
 	// Parse into a simple struct to read the GitRepo URL
-	src := &GenericGitRepo{}
+	src := &flux.GitRepository{}
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
@@ -89,7 +78,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	}
 
 	// Patch updates of the repo spec
-	patches = populateGitRepoPatchOperations(patchedURL, src.Spec.SecretRef.Name)
+	patches = populateGitRepoPatchOperations(patchedURL)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -98,19 +87,14 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 }
 
 // Patch updates of the repo spec.
-func populateGitRepoPatchOperations(repoURL, secretName string) []operations.PatchOperation {
+func populateGitRepoPatchOperations(repoURL string) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
 	patches = append(patches, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
 
-	// If a prior secret exists, replace it
-	if secretName != "" {
-		patches = append(patches, operations.ReplacePatchOperation("/spec/secretRef/name", config.ZarfGitServerSecretName))
-	} else {
-		// Otherwise, add the new secret
-		patches = append(patches, operations.AddPatchOperation("/spec/secretRef", SecretRef{Name: config.ZarfGitServerSecretName}))
-	}
+	// TODO, need to test that I don't need to check if the secret is already there
+	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", meta.LocalObjectReference{Name: config.ZarfGitServerSecretName}))
 
 	return patches
 }
