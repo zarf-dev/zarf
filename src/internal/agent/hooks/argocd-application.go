@@ -84,6 +84,8 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 		}
 	}
 
+	patches = append(patches, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
+
 	return &operations.Result{
 		Allowed:  true,
 		PatchOps: patches,

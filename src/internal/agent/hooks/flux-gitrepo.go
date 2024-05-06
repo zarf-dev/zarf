@@ -102,6 +102,8 @@ func populateGitRepoPatchOperations(repoURL, secretName string) []operations.Pat
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
+	patches = append(patches, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
+
 	// If a prior secret exists, replace it
 	if secretName != "" {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/secretRef/name", config.ZarfGitServerSecretName))

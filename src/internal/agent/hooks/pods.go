@@ -103,7 +103,6 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
 	}
 
-	// Add a label noting the zarf mutation
 	patchOperations = append(patchOperations, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
 
 	return &operations.Result{
