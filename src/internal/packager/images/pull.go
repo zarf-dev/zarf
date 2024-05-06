@@ -24,7 +24,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/docker/docker/errdefs"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -48,7 +47,7 @@ type ImgInfo struct {
 }
 
 // Pull pulls all of the images from the given config.
-func Pull(ctx context.Context, cancel context.CancelFunc, cfg PullConfig) (map[transform.Image]v1.Image, error) {
+func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, error) {
 	var longer string
 	imageCount := len(cfg.References)
 	// Give some additional user feedback on larger image sets
@@ -119,7 +118,6 @@ func Pull(ctx context.Context, cancel context.CancelFunc, cfg PullConfig) (map[t
 				desc, err = crane.Get(ref, opts...)
 				if err != nil {
 					if strings.Contains(err.Error(), "unexpected status code 429 Too Many Requests") {
-						cancel()
 						return fmt.Errorf("rate limited by registry: %w", err)
 					}
 
@@ -135,10 +133,6 @@ func Pull(ctx context.Context, cancel context.CancelFunc, cfg PullConfig) (map[t
 					// Inspect the image to get the size.
 					rawImg, _, err := cli.ImageInspectWithRaw(ctx, ref)
 					if err != nil {
-						if errdefs.IsNotFound(err) {
-							cancel()
-						}
-
 						return err
 					}
 
@@ -179,7 +173,6 @@ func Pull(ctx context.Context, cancel context.CancelFunc, cfg PullConfig) (map[t
 					lines = append(lines, fmt.Sprintf("\n(%s) %s@%s", desc.Platform, name, desc.Digest))
 				}
 				message.Warn(strings.Join(lines, "\n"))
-				cancel()
 				return fmt.Errorf("%s resolved to an index, please select a specific platform to use", refInfo.Reference)
 			}
 
@@ -224,8 +217,6 @@ func Pull(ctx context.Context, cancel context.CancelFunc, cfg PullConfig) (map[t
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
-
-	clear(shas)
 
 	spinner.Successf("Fetched info for %d images", imageCount)
 
@@ -273,7 +264,6 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
 		return err
 	}
 	eg, _ := errgroup.WithContext(ctx)
-	eg.SetLimit(-1)
 	for _, layer := range layers {
 		layer := layer
 		eg.Go(func() error {

@@ -178,7 +178,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 
 		dst.AddImages()
 
-		ctx, cancel := context.WithCancel(context.TODO())
+		ctx := context.TODO()
 
 		pullCfg := images.PullConfig{
 			DestinationDirectory: dst.Images.Base,
@@ -188,7 +188,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 			CacheDirectory:       filepath.Join(config.GetAbsCachePath(), layout.ImagesDir),
 		}
 
-		pulled, err := images.Pull(ctx, cancel, pullCfg)
+		pulled, err := images.Pull(ctx, pullCfg)
 		if err != nil {
 			return err
 		}
