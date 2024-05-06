@@ -341,7 +341,7 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 
 	if hasCharts || hasManifests {
 		if charts, err = p.installChartAndManifests(componentPath, component); err != nil {
-			return charts, fmt.Errorf("unable to install helm chart(s): %w", err)
+			return charts, err
 		}
 	}
 
