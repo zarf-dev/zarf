@@ -481,10 +481,6 @@ func (p *Packager) populatePackageVariableConfig() error {
 
 // Push all of the components images to the configured container registry.
 func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum bool) error {
-	if len(componentImages) == 0 {
-		return nil
-	}
-
 	var combinedImageList []transform.Image
 	for _, src := range componentImages {
 		ref, err := transform.ParseImageRef(src)
