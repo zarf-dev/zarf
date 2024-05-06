@@ -203,6 +203,7 @@ func Pull(ctx context.Context, cancel context.CancelFunc, cfg PullConfig) (map[t
 				}
 
 				shaLock.Lock()
+				defer shaLock.Unlock()
 				if _, ok := shas[digest.Hex]; !ok {
 					shas[digest.Hex] = true
 					size, err := layer.Size()
@@ -211,7 +212,6 @@ func Pull(ctx context.Context, cancel context.CancelFunc, cfg PullConfig) (map[t
 					}
 					totalBytes.Add(size)
 				}
-				shaLock.Unlock()
 			}
 
 			fetchedLock.Lock()
@@ -346,6 +346,7 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 			}
 
 			mu.Lock()
+			defer mu.Unlock()
 			annotations := map[string]string{
 				ocispec.AnnotationBaseImageName: info.Reference,
 			}
@@ -353,7 +354,6 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 			if err := cl.AppendDescriptor(*desc); err != nil {
 				return err
 			}
-			mu.Unlock()
 
 			saved[info] = img
 			return nil
