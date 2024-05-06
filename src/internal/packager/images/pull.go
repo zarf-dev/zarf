@@ -78,7 +78,7 @@ func Pull(ctx context.Context, cancel context.CancelFunc, cfg PullConfig) (map[t
 	eg.SetLimit(10)
 
 	var fetchedLock, shaLock sync.Mutex
-	shas := make(map[string]bool)
+	shas := map[string]bool{}
 	opts := append(CommonOpts(cfg.Arch), crane.WithContext(ctx))
 
 	fetched := map[transform.Image]v1.Image{}
