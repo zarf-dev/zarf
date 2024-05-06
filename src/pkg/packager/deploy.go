@@ -340,7 +340,7 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	if hasCharts || hasManifests {
 		if charts, err = p.installChartAndManifests(componentPath, component); err != nil {
-			return charts, fmt.Errorf("unable to install helm chart(s): %w", err)
+			return charts, err
 		}
 	}
 
