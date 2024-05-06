@@ -120,3 +120,41 @@ $ zarf connect [service name]
 You can also specify a package locally, or via oci such as `zarf package deploy oci://defenseunicorns/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub`
 
 :::
+
+## Installing, Upgrading, and Rolling Back with Helm
+
+Zarf deploys resources in Kubernetes using [Helm's Go SDK](https://helm.sh/docs/topics/advanced/#go-sdk), and converts manifests into Helm charts for installation.
+
+If no existing Helm releases match a given chart in the cluster, Zarf executes a `helm install`.
+
+Should matching releases exist, a `helm upgrade` is performed.
+
+### Handling CustomResourceDefinitions (CRDs)
+
+   - CRDs are _included_ during `helm install` to support Kubernetes Operator deployments
+   - CRDs are _excluded_ during `helm upgrade` due to [Helm's lack of support for upgrading CRDs](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#some-caveats-and-explanations)
+
+### Waiting for Resource Readiness
+
+By default, Zarf waits for all resources to deploy successfully during install, upgrade, and rollback operations.
+
+You can override this behavior during install and upgrade by setting the `noWait: true` key under the `charts` and `manifests` fields.
+
+### Timeout Settings
+
+The default timeout for Helm operations in Zarf is 15 minutes.
+
+Use the `--timeout` flag with `zarf init` and `zarf package deploy` to modify the timeout duration.
+
+### Retry Policy
+
+Zarf retries install and upgrade operations up to three times by default if an error occurs.
+
+Use the `--retries` flag with `zarf init` and `zarf package deploy` to change the number of retry attempts.
+
+### Rollback Process
+
+If attempts to upgrade a chart fail, Zarf tries to roll the chart back to its last successful release. During this rollback process:
+
+  - Any resources created during the failed upgrade attempt are deleted (`helm rollback --cleanup-on-fail`)
+  - Resource updates are forced through delete and recreate if needed (`helm rollback --force`)
