@@ -2,12 +2,15 @@
 
 We strive to create clear guidelines on communication to the Zarf team to provide a good community experience.
 
+## Questions
+For guidance on using Zarf, [the documentation](https://docs.zarf.dev/) should cover most use cases.
+For all questions documentation may not cover, we suggest utilizing [Github Discussions](https://github.com/defenseunicorns/zarf/discussions).
 
 ## Standard Process
-All questions, and code issues should be a [Github Issue](https://github.com/defenseunicorns/zarf/issues/new/choose) that follows the issue template. 
+All code issues should be a [Github Issue](https://github.com/defenseunicorns/zarf/issues/new/choose) that follows the issue template. 
 
 Following the templates provides the Zarf community a foundation of understanding to be able to assist quickly.
-After an issue is made, this issue can be brought into other chanels such as the [Kubernetes Slack #Zarf](https://zarf.dev/slack) channel or the [bi-weekly Zarf Community Meeting](zarf.dev/???).
+After an issue is made, this issue can be brought into other chanels such as the [Kubernetes Slack #Zarf](https://zarf.dev/slack) channel or the [bi-weekly Zarf Community Meeting](https://docs.zarf.dev/contribute/contributor-guide/).
 
                 Github Issue 
                 /          \
@@ -16,7 +19,7 @@ After an issue is made, this issue can be brought into other chanels such as the
 
 
 ## Sensitive Information Process
-For issues from those who are unable to post on Github, you may send an email using the following issue template filled out to zarf-private@googlegroups.com](zarf-dev-private@googlegroups.com).
+For issues from those who are unable to post on Github, you may send an email using the following issue template filled out to [zarf-dev-private@googlegroups.com](zarf-dev-private@googlegroups.com)
 
 The response time to emails may be delayed  as they are not able to receive community help, so we encourage participation into Github Issues as much as possible.
 
