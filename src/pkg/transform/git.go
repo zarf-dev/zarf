@@ -24,7 +24,7 @@ func MutateGitURLsInText(logger Log, targetBaseURL, text, pushUser string) strin
 	result := fuzzyGitURLRegex.ReplaceAllStringFunc(text, func(match string) string {
 		output, err := GitURL(targetBaseURL, match, pushUser)
 		if err != nil {
-			logger("Unable to transform the git url, using the original url %q: %s", match, err.Error())
+			logger("Unable to transform the git url, using the original url %q: %w", match, err)
 			return match
 		}
 		return output.String()

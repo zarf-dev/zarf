@@ -33,13 +33,13 @@ func MutateOCIURLsInText(logger Log, targetBaseURL, text string) string {
 	result := fuzzyOCIURLRegex.ReplaceAllStringFunc(text, func(match string) string {
 		rawSrc, err := parseImageRefRaw(match)
 		if err != nil {
-			logger("Unable to parse the found url, using the original url %q: %s", match, err.Error())
+			logger("Unable to parse the found url, using the original url %q: %w", match, err)
 			return match
 		}
 
 		output, err := ImageTransformHost(targetBaseURL, match)
 		if err != nil {
-			logger("Unable to transform the OCI url, using the original url %q: %s", match, err.Error())
+			logger("Unable to transform the OCI url, using the original url %q: %w", match, err)
 			return match
 		}
 
@@ -47,7 +47,7 @@ func MutateOCIURLsInText(logger Log, targetBaseURL, text string) string {
 		if rawSrc.TagOrDigest == "" {
 			outputRef, err := ParseImageRef(output)
 			if err != nil {
-				logger("Unable to parse the transformed url, using the original url %q: %s", match, err.Error())
+				logger("Unable to parse the transformed url, using the original url %q: %w", match, err)
 				return match
 			}
 
