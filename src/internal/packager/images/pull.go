@@ -81,7 +81,7 @@ func Pull(ctx context.Context, cancel context.CancelFunc, cfg PullConfig) (map[t
 	shas := make(map[string]bool)
 	opts := append(CommonOpts(cfg.Arch), crane.WithContext(ctx))
 
-	var fetched = map[transform.Image]v1.Image{}
+	fetched := map[transform.Image]v1.Image{}
 
 	var counter, totalBytes atomic.Int64
 
