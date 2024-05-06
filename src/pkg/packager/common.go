@@ -153,6 +153,11 @@ func (p *Packager) ClearTempPaths() {
 	_ = os.RemoveAll(layout.SBOMDir)
 }
 
+// GetVariableConfig returns the variable configuration for the packager.
+func (p *Packager) GetVariableConfig() *variables.VariableConfig {
+	return p.variableConfig
+}
+
 // connectToCluster attempts to connect to a cluster if a connection is not already established
 func (p *Packager) connectToCluster(timeout time.Duration) (err error) {
 	if p.isConnectedToCluster() {
