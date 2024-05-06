@@ -43,18 +43,19 @@ var (
 // PackageCreator provides methods for creating normal (not skeleton) Zarf packages.
 type PackageCreator struct {
 	createOpts types.ZarfCreateOptions
+}
 
-	// TODO: (@lucasrod16) remove PackagerConfig once actions do not depend on it: https://github.com/defenseunicorns/zarf/pull/2276
-	cfg *types.PackagerConfig
+func updateRelativeDifferentialPackagePath(path string, cwd string) string {
+	if path != "" && !filepath.IsAbs(path) && !helpers.IsURL(path) {
+		return filepath.Join(cwd, path)
+	}
+	return path
 }
 
 // NewPackageCreator returns a new PackageCreator.
-func NewPackageCreator(createOpts types.ZarfCreateOptions, cfg *types.PackagerConfig, cwd string) *PackageCreator {
-	if createOpts.DifferentialPackagePath != "" && !filepath.IsAbs(createOpts.DifferentialPackagePath) {
-		createOpts.DifferentialPackagePath = filepath.Join(cwd, createOpts.DifferentialPackagePath)
-	}
-
-	return &PackageCreator{createOpts, cfg}
+func NewPackageCreator(createOpts types.ZarfCreateOptions, cwd string) *PackageCreator {
+	createOpts.DifferentialPackagePath = updateRelativeDifferentialPackagePath(createOpts.DifferentialPackagePath, cwd)
+	return &PackageCreator{createOpts}
 }
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
@@ -129,7 +130,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 		onCreate := component.Actions.OnCreate
 
 		onFailure := func() {
-			if err := actions.Run(pc.cfg, onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
+			if err := actions.Run(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -139,7 +140,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
 		}
 
-		if err := actions.Run(pc.cfg, onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
+		if err := actions.Run(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -176,6 +177,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 		var pulled []images.ImgInfo
 		var err error
 
+		ctx, cancel := context.WithCancel(context.TODO())
 		doPull := func() error {
 			imgConfig := images.ImageConfig{
 				ImagesPath:        dst.Images.Base,
@@ -186,11 +188,15 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 			}
 
 			pulled, err = imgConfig.PullAll()
+			if errors.Is(err, lang.ErrUnsupportedImageType) {
+				cancel()
+			}
+
 			return err
 		}
 
-		if err := helpers.Retry(doPull, 3, 5*time.Second, message.Warnf); err != nil {
-			return fmt.Errorf("unable to pull images after 3 attempts: %w", err)
+		if err := helpers.RetryWithContext(ctx, doPull, 3, 5*time.Second, message.Warnf); err != nil {
+			return fmt.Errorf("unable to pull images: %w", err)
 		}
 
 		for _, imgInfo := range pulled {
@@ -351,7 +357,7 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 	}
 
 	onCreate := component.Actions.OnCreate
-	if err := actions.Run(pc.cfg, onCreate.Defaults, onCreate.Before, nil); err != nil {
+	if err := actions.Run(onCreate.Defaults, onCreate.Before, nil); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -515,7 +521,7 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 		spinner.Success()
 	}
 
-	if err := actions.Run(pc.cfg, onCreate.Defaults, onCreate.After, nil); err != nil {
+	if err := actions.Run(onCreate.Defaults, onCreate.After, nil); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 

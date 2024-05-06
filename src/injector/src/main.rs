@@ -31,7 +31,7 @@ lazy_static! {
     static ref ROOT_DIR: PathBuf = PathBuf::from("./zarf-seed");
 }
 
-const DOCKER_MIME_TYPE: &str = "application/vnd.docker.distribution.manifest.v2+json";
+const OCI_MIME_TYPE: &str = "application/vnd.oci.image.manifest.v1+json";
 
 // Reads the binary contents of a file
 fn get_file(path: &PathBuf) -> io::Result<Vec<u8>> {
@@ -157,8 +157,7 @@ async fn handler(Path(path): Path<String>) -> Response {
         .body(format!("Not Found"))
         .unwrap()
         .into_response()
-    }
-
+  }
 }
 
 /// Handles the GET request for the manifest (only returns a OCI manifest regardless of Accept header)
@@ -208,7 +207,6 @@ async fn handle_get_manifest(name: String, reference: String) -> Response {
             .unwrap()
             .into_response()
     }
-
             } 
 
  else {

@@ -3,7 +3,6 @@
 
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
-KEY ?= ""
 ######################################################################################
 
 # Figure out which Zarf binary we should use based on the operating system we are on
@@ -108,7 +107,7 @@ docs-and-schema: ## Generate the Zarf Documentation and Schema
 	ZARF_CONFIG=hack/empty-config.toml hack/create-zarf-schema.sh
 
 lint-packages-and-examples: build ## Recursively lint all zarf.yaml files in the repo except for those dedicated to tests
-	hack/lint-all-zarf-packages.sh $(ZARF_BIN)
+	hack/lint-all-zarf-packages.sh $(ZARF_BIN) false
 
 # INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
 init-package-local-agent:
@@ -219,11 +218,12 @@ test-docs-and-schema:
 
 # INTERNAL: used to test for new CVEs that may have been introduced
 test-cves:
-	go run main.go tools sbom scan . -o json --exclude './docs-website' --exclude './examples' | grype --fail-on low
+	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype --fail-on low
 
 cve-report: ## Create a CVE report for the current project (must `brew install grype` first)
 	@test -d ./build || mkdir ./build
-	go run main.go tools sbom scan . -o json --exclude './docs-website' --exclude './examples' | grype -o template -t hack/.templates/grype.tmpl > build/zarf-known-cves.csv
+	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
 
 lint-go: ## Run revive to lint the go code (must `brew install revive` first)
-	revive -config revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...
+	revive -config hack/revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...
+	@hack/check-spdx-go.sh src >/dev/null || (echo "SPDX check for go failed, please run 'hack/check-spdx-go.sh src' to see the errors" && exit 1)

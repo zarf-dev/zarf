@@ -1,11 +1,8 @@
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
-  "$ref": "#/definitions/ZarfPackage",
-  "definitions": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/defenseunicorns/zarf/src/types/zarf-package",
+  "$defs": {
     "BigBang": {
-      "required": [
-        "version"
-      ],
       "properties": {
         "version": {
           "type": "string",
@@ -36,6 +33,43 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "required": [
+        "version"
+      ],
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
+    "Constant": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Z0-9_]+$",
+          "description": "The name to be used for the constant"
+        },
+        "value": {
+          "type": "string",
+          "description": "The value to set for the constant during deploy"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the constant to explain its purpose on package create or deploy confirmation prompts"
+        },
+        "autoIndent": {
+          "type": "boolean",
+          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_CONST_."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "An optional regex pattern that a constant value must match before a package can be created."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name",
+        "value"
+      ],
       "patternProperties": {
         "^x-": {}
       }
@@ -78,6 +112,55 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
+    "InteractiveVariable": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Z0-9_]+$",
+          "description": "The name to be used for the variable"
+        },
+        "sensitive": {
+          "type": "boolean",
+          "description": "Whether to mark this variable as sensitive to not print it in the log"
+        },
+        "autoIndent": {
+          "type": "boolean",
+          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "An optional regex pattern that a variable value must match before a package deployment can continue."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "raw",
+            "file"
+          ],
+          "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the variable to be used when prompting the user a value"
+        },
+        "default": {
+          "type": "string",
+          "description": "The default value to use for the variable"
+        },
+        "prompt": {
+          "type": "boolean",
+          "description": "Whether to prompt the user for input for this variable"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name"
+      ],
       "patternProperties": {
         "^x-": {}
       }
@@ -125,14 +208,44 @@
         "^x-": {}
       }
     },
-    "ZarfBuildData": {
+    "Variable": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Z0-9_]+$",
+          "description": "The name to be used for the variable"
+        },
+        "sensitive": {
+          "type": "boolean",
+          "description": "Whether to mark this variable as sensitive to not print it in the log"
+        },
+        "autoIndent": {
+          "type": "boolean",
+          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "An optional regex pattern that a variable value must match before a package deployment can continue."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "raw",
+            "file"
+          ],
+          "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
       "required": [
-        "terminal",
-        "user",
-        "architecture",
-        "timestamp",
-        "version"
+        "name"
       ],
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
+    "ZarfBuildData": {
       "properties": {
         "terminal": {
           "type": "string",
@@ -162,10 +275,8 @@
           "description": "Any migrations that have been run on this package"
         },
         "registryOverrides": {
-          "patternProperties": {
-            ".*": {
-              "type": "string"
-            }
+          "additionalProperties": {
+            "type": "string"
           },
           "type": "object",
           "description": "Any registry domains that were overridden on package create when pulling images"
@@ -196,15 +307,18 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "required": [
+        "terminal",
+        "user",
+        "architecture",
+        "timestamp",
+        "version"
+      ],
       "patternProperties": {
         "^x-": {}
       }
     },
     "ZarfChart": {
-      "required": [
-        "name",
-        "namespace"
-      ],
       "properties": {
         "name": {
           "type": "string",
@@ -259,8 +373,7 @@
         },
         "variables": {
           "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfChartVariable"
+            "$ref": "#/$defs/ZarfChartVariable"
           },
           "type": "array",
           "description": "[alpha] List of variables to set in the Helm chart"
@@ -268,20 +381,19 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "required": [
+        "name",
+        "namespace"
+      ],
       "patternProperties": {
         "^x-": {}
       }
     },
     "ZarfChartVariable": {
-      "required": [
-        "name",
-        "description",
-        "path"
-      ],
       "properties": {
         "name": {
-          "pattern": "^[A-Z0-9_]+$",
           "type": "string",
+          "pattern": "^[A-Z0-9_]+$",
           "description": "The name of the variable"
         },
         "description": {
@@ -295,18 +407,20 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "required": [
+        "name",
+        "description",
+        "path"
+      ],
       "patternProperties": {
         "^x-": {}
       }
     },
     "ZarfComponent": {
-      "required": [
-        "name"
-      ],
       "properties": {
         "name": {
-          "pattern": "^[a-z0-9\\-]*[a-z0-9]$",
           "type": "string",
+          "pattern": "^[a-z0-9\\-]*[a-z0-9]$",
           "description": "The name of the component"
         },
         "description": {
@@ -322,8 +436,7 @@
           "description": "Do not prompt user to install this component"
         },
         "only": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentOnlyTarget",
+          "$ref": "#/$defs/ZarfComponentOnlyTarget",
           "description": "Filter when this component is included in package creation or deployment"
         },
         "group": {
@@ -335,38 +448,33 @@
           "description": "[Deprecated] Specify a path to a public key to validate signed online resources. This will be removed in Zarf v1.0.0."
         },
         "import": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentImport",
+          "$ref": "#/$defs/ZarfComponentImport",
           "description": "Import a component from another Zarf package"
         },
         "manifests": {
           "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfManifest"
+            "$ref": "#/$defs/ZarfManifest"
           },
           "type": "array",
           "description": "Kubernetes manifests to be included in a generated Helm chart on package deploy"
         },
         "charts": {
           "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfChart"
+            "$ref": "#/$defs/ZarfChart"
           },
           "type": "array",
           "description": "Helm charts to install during package deploy"
         },
         "dataInjections": {
           "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfDataInjection"
+            "$ref": "#/$defs/ZarfDataInjection"
           },
           "type": "array",
           "description": "Datasets to inject into a container in the target cluster"
         },
         "files": {
           "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfFile"
+            "$ref": "#/$defs/ZarfFile"
           },
           "type": "array",
           "description": "Files or folders to place on disk during package deployment"
@@ -386,23 +494,23 @@
           "description": "List of git repos to include in the package"
         },
         "extensions": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentExtensions",
+          "$ref": "#/$defs/ZarfComponentExtensions",
           "description": "Extend component functionality with additional features"
         },
         "scripts": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/DeprecatedZarfComponentScripts",
+          "$ref": "#/$defs/DeprecatedZarfComponentScripts",
           "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0."
         },
         "actions": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentActions",
+          "$ref": "#/$defs/ZarfComponentActions",
           "description": "Custom commands to run at various stages of a package lifecycle"
         }
       },
       "additionalProperties": false,
       "type": "object",
+      "required": [
+        "name"
+      ],
       "patternProperties": {
         "^x-": {}
       }
@@ -437,18 +545,17 @@
           "description": "The command to run. Must specify either cmd or wait for the action to do anything."
         },
         "shell": {
-          "$ref": "#/definitions/Shell",
+          "$ref": "#/$defs/Shell",
           "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
         },
         "setVariable": {
-          "pattern": "^[A-Z0-9_]+$",
           "type": "string",
+          "pattern": "^[A-Z0-9_]+$",
           "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0"
         },
         "setVariables": {
           "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfComponentActionSetVariable"
+            "$ref": "#/$defs/Variable"
           },
           "type": "array",
           "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -458,8 +565,7 @@
           "description": "Description of the action to be displayed during package execution instead of the command"
         },
         "wait": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentActionWait",
+          "$ref": "#/$defs/ZarfComponentActionWait",
           "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
         }
       },
@@ -495,8 +601,7 @@
           "description": "Additional environment variables for commands"
         },
         "shell": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/Shell",
+          "$ref": "#/$defs/Shell",
           "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
         }
       },
@@ -509,35 +614,33 @@
     "ZarfComponentActionSet": {
       "properties": {
         "defaults": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentActionDefaults",
+          "$ref": "#/$defs/ZarfComponentActionDefaults",
           "description": "Default configuration for all actions in this set"
         },
         "before": {
           "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfComponentAction"
+            "$ref": "#/$defs/ZarfComponentAction"
           },
           "type": "array",
           "description": "Actions to run at the start of an operation"
         },
         "after": {
           "items": {
-            "$ref": "#/definitions/ZarfComponentAction"
+            "$ref": "#/$defs/ZarfComponentAction"
           },
           "type": "array",
           "description": "Actions to run at the end of an operation"
         },
         "onSuccess": {
           "items": {
-            "$ref": "#/definitions/ZarfComponentAction"
+            "$ref": "#/$defs/ZarfComponentAction"
           },
           "type": "array",
           "description": "Actions to run if all operations succeed"
         },
         "onFailure": {
           "items": {
-            "$ref": "#/definitions/ZarfComponentAction"
+            "$ref": "#/$defs/ZarfComponentAction"
           },
           "type": "array",
           "description": "Actions to run if all operations fail"
@@ -549,53 +652,14 @@
         "^x-": {}
       }
     },
-    "ZarfComponentActionSetVariable": {
-      "required": [
-        "name"
-      ],
-      "properties": {
-        "name": {
-          "pattern": "^[A-Z0-9_]+$",
-          "type": "string",
-          "description": "The name to be used for the variable"
-        },
-        "type": {
-          "enum": [
-            "raw",
-            "file"
-          ],
-          "type": "string",
-          "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)"
-        },
-        "pattern": {
-          "type": "string",
-          "description": "An optional regex pattern that a variable value must match before a package deployment can continue."
-        },
-        "sensitive": {
-          "type": "boolean",
-          "description": "Whether to mark this variable as sensitive to not print it in the Zarf log"
-        },
-        "autoIndent": {
-          "type": "boolean",
-          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
     "ZarfComponentActionWait": {
       "properties": {
         "cluster": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentActionWaitCluster",
+          "$ref": "#/$defs/ZarfComponentActionWaitCluster",
           "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
         },
         "network": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentActionWaitNetwork",
+          "$ref": "#/$defs/ZarfComponentActionWaitNetwork",
           "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
         }
       },
@@ -606,10 +670,6 @@
       }
     },
     "ZarfComponentActionWaitCluster": {
-      "required": [
-        "kind",
-        "name"
-      ],
       "properties": {
         "kind": {
           "type": "string",
@@ -642,23 +702,23 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "required": [
+        "kind",
+        "name"
+      ],
       "patternProperties": {
         "^x-": {}
       }
     },
     "ZarfComponentActionWaitNetwork": {
-      "required": [
-        "protocol",
-        "address"
-      ],
       "properties": {
         "protocol": {
+          "type": "string",
           "enum": [
             "tcp",
             "http",
             "https"
           ],
-          "type": "string",
           "description": "The protocol to wait for"
         },
         "address": {
@@ -680,6 +740,10 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "required": [
+        "protocol",
+        "address"
+      ],
       "patternProperties": {
         "^x-": {}
       }
@@ -687,16 +751,15 @@
     "ZarfComponentActions": {
       "properties": {
         "onCreate": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentActionSet",
+          "$ref": "#/$defs/ZarfComponentActionSet",
           "description": "Actions to run during package creation"
         },
         "onDeploy": {
-          "$ref": "#/definitions/ZarfComponentActionSet",
+          "$ref": "#/$defs/ZarfComponentActionSet",
           "description": "Actions to run during package deployment"
         },
         "onRemove": {
-          "$ref": "#/definitions/ZarfComponentActionSet",
+          "$ref": "#/$defs/ZarfComponentActionSet",
           "description": "Actions to run during package removal"
         }
       },
@@ -709,8 +772,7 @@
     "ZarfComponentExtensions": {
       "properties": {
         "bigbang": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/BigBang",
+          "$ref": "#/$defs/BigBang",
           "description": "Configurations for installing Big Bang and Flux in the cluster"
         }
       },
@@ -731,8 +793,8 @@
           "description": "The relative path to a directory containing a zarf.yaml to import from"
         },
         "url": {
-          "pattern": "^oci://.*$",
           "type": "string",
+          "pattern": "^oci://.*$",
           "description": "[beta] The URL to a Zarf package to import via OCI"
         }
       },
@@ -745,16 +807,20 @@
     "ZarfComponentOnlyCluster": {
       "properties": {
         "architecture": {
+          "type": "string",
           "enum": [
             "amd64",
             "arm64"
           ],
-          "type": "string",
           "description": "Only create and deploy to clusters of the given architecture"
         },
         "distros": {
           "items": {
-            "type": "string"
+            "type": "string",
+            "examples": [
+              "k3s",
+              "eks"
+            ]
           },
           "type": "array",
           "description": "A list of kubernetes distros this package works with (Reserved for future use)"
@@ -769,17 +835,16 @@
     "ZarfComponentOnlyTarget": {
       "properties": {
         "localOS": {
+          "type": "string",
           "enum": [
             "linux",
             "darwin",
             "windows"
           ],
-          "type": "string",
           "description": "Only deploy component to specified OS"
         },
         "cluster": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfComponentOnlyCluster",
+          "$ref": "#/$defs/ZarfComponentOnlyCluster",
           "description": "Only deploy component to specified clusters"
         },
         "flavor": {
@@ -794,12 +859,6 @@
       }
     },
     "ZarfContainerTarget": {
-      "required": [
-        "namespace",
-        "selector",
-        "container",
-        "path"
-      ],
       "properties": {
         "namespace": {
           "type": "string",
@@ -823,23 +882,24 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "required": [
+        "namespace",
+        "selector",
+        "container",
+        "path"
+      ],
       "patternProperties": {
         "^x-": {}
       }
     },
     "ZarfDataInjection": {
-      "required": [
-        "source",
-        "target"
-      ],
       "properties": {
         "source": {
           "type": "string",
           "description": "Either a path to a local folder/file or a remote URL of a file to inject into the given target pod + container"
         },
         "target": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfContainerTarget",
+          "$ref": "#/$defs/ZarfContainerTarget",
           "description": "The target pod + container to inject the data into"
         },
         "compress": {
@@ -849,15 +909,15 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "required": [
+        "source",
+        "target"
+      ],
       "patternProperties": {
         "^x-": {}
       }
     },
     "ZarfFile": {
-      "required": [
-        "source",
-        "target"
-      ],
       "properties": {
         "source": {
           "type": "string",
@@ -889,14 +949,15 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "required": [
+        "source",
+        "target"
+      ],
       "patternProperties": {
         "^x-": {}
       }
     },
     "ZarfManifest": {
-      "required": [
-        "name"
-      ],
       "properties": {
         "name": {
           "type": "string",
@@ -931,18 +992,18 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "required": [
+        "name"
+      ],
       "patternProperties": {
         "^x-": {}
       }
     },
     "ZarfMetadata": {
-      "required": [
-        "name"
-      ],
       "properties": {
         "name": {
-          "pattern": "^[a-z0-9\\-]*[a-z0-9]$",
           "type": "string",
+          "pattern": "^[a-z0-9\\-]*[a-z0-9]$",
           "description": "Name to identify this Zarf package"
         },
         "description": {
@@ -1003,148 +1064,61 @@
       },
       "additionalProperties": false,
       "type": "object",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
-    "ZarfPackage": {
-      "required": [
-        "kind",
-        "components"
-      ],
-      "properties": {
-        "kind": {
-          "enum": [
-            "ZarfInitConfig",
-            "ZarfPackageConfig"
-          ],
-          "type": "string",
-          "description": "The kind of Zarf package",
-          "default": "ZarfPackageConfig"
-        },
-        "metadata": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfMetadata",
-          "description": "Package metadata"
-        },
-        "build": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "$ref": "#/definitions/ZarfBuildData",
-          "description": "Zarf-generated package build data"
-        },
-        "components": {
-          "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfComponent"
-          },
-          "type": "array",
-          "description": "List of components to deploy in this package"
-        },
-        "constants": {
-          "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfPackageConstant"
-          },
-          "type": "array",
-          "description": "Constant template values applied on deploy for K8s resources"
-        },
-        "variables": {
-          "items": {
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "$ref": "#/definitions/ZarfPackageVariable"
-          },
-          "type": "array",
-          "description": "Variable template values applied on deploy for K8s resources"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
-    "ZarfPackageConstant": {
-      "required": [
-        "name",
-        "value"
-      ],
-      "properties": {
-        "name": {
-          "pattern": "^[A-Z0-9_]+$",
-          "type": "string",
-          "description": "The name to be used for the constant"
-        },
-        "value": {
-          "type": "string",
-          "description": "The value to set for the constant during deploy"
-        },
-        "description": {
-          "type": "string",
-          "description": "A description of the constant to explain its purpose on package create or deploy confirmation prompts"
-        },
-        "autoIndent": {
-          "type": "boolean",
-          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_CONST_."
-        },
-        "pattern": {
-          "type": "string",
-          "description": "An optional regex pattern that a constant value must match before a package can be created."
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
-    "ZarfPackageVariable": {
       "required": [
         "name"
       ],
-      "properties": {
-        "name": {
-          "pattern": "^[A-Z0-9_]+$",
-          "type": "string",
-          "description": "The name to be used for the variable"
-        },
-        "description": {
-          "type": "string",
-          "description": "A description of the variable to be used when prompting the user a value"
-        },
-        "default": {
-          "type": "string",
-          "description": "The default value to use for the variable"
-        },
-        "prompt": {
-          "type": "boolean",
-          "description": "Whether to prompt the user for input for this variable"
-        },
-        "sensitive": {
-          "type": "boolean",
-          "description": "Whether to mark this variable as sensitive to not print it in the Zarf log"
-        },
-        "autoIndent": {
-          "type": "boolean",
-          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_."
-        },
-        "pattern": {
-          "type": "string",
-          "description": "An optional regex pattern that a variable value must match before a package can be deployed."
-        },
-        "type": {
-          "enum": [
-            "raw",
-            "file"
-          ],
-          "type": "string",
-          "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
       "patternProperties": {
         "^x-": {}
       }
     }
+  },
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "ZarfInitConfig",
+        "ZarfPackageConfig"
+      ],
+      "description": "The kind of Zarf package",
+      "default": "ZarfPackageConfig"
+    },
+    "metadata": {
+      "$ref": "#/$defs/ZarfMetadata",
+      "description": "Package metadata"
+    },
+    "build": {
+      "$ref": "#/$defs/ZarfBuildData",
+      "description": "Zarf-generated package build data"
+    },
+    "components": {
+      "items": {
+        "$ref": "#/$defs/ZarfComponent"
+      },
+      "type": "array",
+      "description": "List of components to deploy in this package"
+    },
+    "constants": {
+      "items": {
+        "$ref": "#/$defs/Constant"
+      },
+      "type": "array",
+      "description": "Constant template values applied on deploy for K8s resources"
+    },
+    "variables": {
+      "items": {
+        "$ref": "#/$defs/InteractiveVariable"
+      },
+      "type": "array",
+      "description": "Variable template values applied on deploy for K8s resources"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "kind",
+    "components"
+  ],
+  "patternProperties": {
+    "^x-": {}
   }
 }

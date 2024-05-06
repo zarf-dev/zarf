@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/alecthomas/jsonschema"
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -20,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/invopop/jsonschema"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 	"github.com/spf13/pflag"
@@ -102,7 +102,7 @@ var genCLIDocs = &cobra.Command{
 					if toolCmd.Use == "monitor" {
 						resetStringFlags(toolCmd)
 					}
-					
+
 					if toolCmd.Use == "yq" {
 						for _, subCmd := range toolCmd.Commands() {
 							if subCmd.Name() == "shell-completion" {
@@ -160,7 +160,8 @@ var genConfigSchemaCmd = &cobra.Command{
 	Aliases: []string{"gc"},
 	Short:   lang.CmdInternalConfigSchemaShort,
 	Run: func(_ *cobra.Command, _ []string) {
-		schema := jsonschema.Reflect(&types.ZarfPackage{})
+		reflector := jsonschema.Reflector(jsonschema.Reflector{ExpandedStruct: true})
+		schema := reflector.Reflect(&types.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
 			message.Fatal(err, lang.CmdInternalConfigSchemaErr)

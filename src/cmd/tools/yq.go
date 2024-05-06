@@ -7,7 +7,6 @@ package tools
 import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	yq "github.com/mikefarah/yq/v4/cmd"
-
 )
 
 func init() {
@@ -16,10 +15,10 @@ func init() {
 	yqCmd.Example = lang.CmdToolsYqExample
 	yqCmd.Use = "yq"
 	for _, subCmd := range yqCmd.Commands() {
-		if subCmd.Name() == "eval" {		
+		if subCmd.Name() == "eval" {
 			subCmd.Example = lang.CmdToolsYqEvalExample
 		}
-		if subCmd.Name() == "eval-all" {	
+		if subCmd.Name() == "eval-all" {
 			subCmd.Example = lang.CmdToolsYqEvalAllExample
 		}
 	}

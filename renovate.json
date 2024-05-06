@@ -82,6 +82,16 @@
         "https:\\/\\/github.com\\/(?<depName>[\\w\\/\\-\\.\\+\\%]+?)\\/releases\\/download\\/(?<currentValue>[\\w\\/\\-\\.\\+\\%]+?)\\/"
       ],
       "datasourceTemplate": "github-releases"
+    },
+    {
+      "fileMatch": [
+        "\\.*\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=github-tags depName=anchore/grype versioning=semver\n\\s*VERSION: (?<currentValue>v[\\d.]+)"
+      ],
+      "datasourceTemplate": "github-tags",
+      "depNameTemplate": "anchore/grype"
     }
   ]
 }
