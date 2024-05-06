@@ -132,7 +132,7 @@ fn start_seed_registry() -> Router{
 async fn handler(Path(path): Path<String>) -> Response {
     println!("request: {}", path);
     let path = &path;
-    let manifest = Regex::new("(.+)/manifest/(.+)").unwrap();
+    let manifest = Regex::new("(.+)/manifests/(.+)").unwrap();
     let blob = Regex::new(".+/([^/]+)").unwrap();
 
     if manifest.is_match(path){
@@ -241,7 +241,7 @@ async fn main() {
 
     unpack(payload_sha);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:5000")
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:5000")
     .await
     .unwrap();
     println!("listening on {}", listener.local_addr().unwrap());
