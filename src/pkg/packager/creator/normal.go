@@ -194,7 +194,6 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 		}
 
 		for info, img := range pulled {
-			info, img := info, img
 			if err := dst.Images.AddV1Image(img); err != nil {
 				return err
 			}
