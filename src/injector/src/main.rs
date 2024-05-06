@@ -9,7 +9,7 @@ use std::io::Read;
 use std::io::Write;
 use std::path::PathBuf;
 
-use regex::Regex;
+use regex_lite::Regex;
 use tokio_util::io::ReaderStream;
 use flate2::read::GzDecoder;
 use glob::glob;
@@ -25,11 +25,6 @@ use axum::{
     response::{Response, IntoResponse},
     body::Body,
 };
-use lazy_static::lazy_static;
-
-lazy_static! {
-    static ref ROOT_DIR: PathBuf = PathBuf::from("./zarf-seed");
-}
 
 const OCI_MIME_TYPE: &str = "application/vnd.oci.image.manifest.v1+json";
 
@@ -163,7 +158,7 @@ async fn handler(Path(path): Path<String>) -> Response {
 /// Handles the GET request for the manifest (only returns a OCI manifest regardless of Accept header)
 async fn handle_get_manifest(name: String, reference: String) -> Response {
     println!("name {}, reference {}", name, reference);
-    let index = fs::read_to_string(ROOT_DIR.join("index.json")).expect("read index.json");
+    let index = fs::read_to_string(PathBuf::from("./zarf-seed").join("index.json")).expect("read index.json");
     let json: Value = serde_json::from_str(&index).expect("unable to parse index.json");
     
     let mut sha_manifest: String = "".to_owned();
@@ -187,13 +182,13 @@ async fn handle_get_manifest(name: String, reference: String) -> Response {
         }
     }
     if !sha_manifest.is_empty() {
-        let file_path = ROOT_DIR.to_owned().join( "/blobs/").join( &sha_manifest);
+        let file_path = PathBuf::from("./zarf-seed").to_owned().join( "/blobs/").join( &sha_manifest);
         match tokio::fs::File::open(&file_path).await {
             Ok(file) => {
                 let stream = ReaderStream::new(file);
                 Response::builder()
                     .status(StatusCode::OK)
-                    .header("Accept:", DOCKER_MIME_TYPE)
+                    .header("Accept:", OCI_MIME_TYPE)
                     .header("Docker-Content-Digest", sha_manifest.clone())
                     .header("Etag", format!("sha256:{}", sha_manifest))
                     .header("Docker-Distribution-Api-Version", "registry/2.0")
@@ -221,7 +216,7 @@ async fn handle_get_manifest(name: String, reference: String) -> Response {
 
 /// Handles the GET request for a blob
 async fn handle_get_digest(tag: String) -> Response {
-    let blob_root = ROOT_DIR.join("blobs").join("sha256");
+    let blob_root = PathBuf::from("./zarf-seed").join("blobs").join("sha256");
     let path = blob_root.join(tag.strip_prefix("sha256:").unwrap());
 
     let data = fs::read_to_string(path).expect("read index.json");
@@ -237,7 +232,7 @@ async fn handle_get_digest(tag: String) -> Response {
         .unwrap()
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -245,8 +240,6 @@ async fn main() {
     let payload_sha = &args[1];
 
     unpack(payload_sha);
-
-
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:5000")
     .await
