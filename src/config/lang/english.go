@@ -308,9 +308,10 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageMirrorFlagNoChecksum = "Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images."
 
-	CmdPackageInspectFlagSbom    = "View SBOM contents while inspecting the package"
-	CmdPackageInspectFlagSbomOut = "Specify an output directory for the SBOMs from the inspected Zarf package"
-	CmdPackageInspectErr         = "Failed to inspect package: %s"
+	CmdPackageInspectFlagSbom       = "View SBOM contents while inspecting the package"
+	CmdPackageInspectFlagSbomOut    = "Specify an output directory for the SBOMs from the inspected Zarf package"
+	CmdPackageInspectFlagListImages = "List images in the package (prints to stdout)"
+	CmdPackageInspectErr            = "Failed to inspect package: %s"
 
 	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
