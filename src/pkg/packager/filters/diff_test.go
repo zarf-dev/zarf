@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package creator
+package filters
 
 import (
 	"testing"
@@ -10,25 +10,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRemoveCopiesFromComponents(t *testing.T) {
-	components := []types.ZarfComponent{
-		{
-			Images: []string{
-				"example.com/include-image-tag:latest",
-				"example.com/image-with-tag:v1",
-				"example.com/diff-image-with-tag:v1",
-				"example.com/image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-				"example.com/diff-image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-				"example.com/image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-				"example.com/diff-image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-			},
-			Repos: []string{
-				"https://example.com/no-ref.git",
-				"https://example.com/branch.git@refs/heads/main",
-				"https://example.com/tag.git@v1",
-				"https://example.com/diff-tag.git@v1",
-				"https://example.com/commit.git@524980951ff16e19dc25232e9aea8fd693989ba6",
-				"https://example.com/diff-commit.git@524980951ff16e19dc25232e9aea8fd693989ba6",
+func TestCopyFilter(t *testing.T) {
+	pkg := types.ZarfPackage{
+		Components: []types.ZarfComponent{
+			{
+				Images: []string{
+					"example.com/include-image-tag:latest",
+					"example.com/image-with-tag:v1",
+					"example.com/diff-image-with-tag:v1",
+					"example.com/image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+					"example.com/diff-image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+					"example.com/image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+					"example.com/diff-image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+				},
+				Repos: []string{
+					"https://example.com/no-ref.git",
+					"https://example.com/branch.git@refs/heads/main",
+					"https://example.com/tag.git@v1",
+					"https://example.com/diff-tag.git@v1",
+					"https://example.com/commit.git@524980951ff16e19dc25232e9aea8fd693989ba6",
+					"https://example.com/diff-commit.git@524980951ff16e19dc25232e9aea8fd693989ba6",
+				},
 			},
 		},
 	}
@@ -46,7 +48,9 @@ func TestRemoveCopiesFromComponents(t *testing.T) {
 			"https://example.com/diff-commit.git@524980951ff16e19dc25232e9aea8fd693989ba6": true,
 		},
 	}
-	diffComponents, err := removeCopiesFromComponents(components, &loadedDiffData)
+
+	filter := ByDifferentialData(&loadedDiffData)
+	diffComponents, err := filter.Apply(pkg)
 	require.NoError(t, err)
 
 	expectedImages := []string{
