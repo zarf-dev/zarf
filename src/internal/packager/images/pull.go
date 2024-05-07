@@ -77,12 +77,12 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
-	eg, _ := errgroup.WithContext(ctx)
+	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 
 	var fetchedLock, shaLock sync.Mutex
 	shas := map[string]bool{}
-	opts := append(CommonOpts(cfg.Arch), crane.WithContext(ctx))
+	opts := CommonOpts(cfg.Arch)
 
 	fetched := map[transform.Image]v1.Image{}
 
@@ -128,10 +128,10 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 					if err != nil {
 						return fmt.Errorf("docker not available: %w", err)
 					}
-					cli.NegotiateAPIVersion(ctx)
+					cli.NegotiateAPIVersion(ectx)
 
 					// Inspect the image to get the size.
-					rawImg, _, err := cli.ImageInspectWithRaw(ctx, ref)
+					rawImg, _, err := cli.ImageInspectWithRaw(ectx, ref)
 					if err != nil {
 						return err
 					}
@@ -145,7 +145,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 					// Use unbuffered opener to avoid OOM Kill issues https://github.com/defenseunicorns/zarf/issues/1214.
 					// This will also take forever to load large images.
-					img, err = daemon.Image(reference, daemon.WithUnbufferedOpener(), daemon.WithContext(ctx))
+					img, err = daemon.Image(reference, daemon.WithUnbufferedOpener())
 					if err != nil {
 						return fmt.Errorf("failed to load from docker daemon: %w", err)
 					}
@@ -317,7 +317,7 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 
 	var mu sync.Mutex
 
-	eg, _ := errgroup.WithContext(ctx)
+	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 
 	for info, img := range m {
@@ -329,7 +329,7 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 			}
 
 			if err := cl.WriteImage(img); err != nil {
-				if err = CleanupInProgressLayers(ctx, img); err != nil {
+				if err = CleanupInProgressLayers(ectx, img); err != nil {
 					message.WarnErr(err, "failed to clean up in-progress layers, please remove them manually")
 				}
 				return err
