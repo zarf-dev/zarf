@@ -425,6 +425,7 @@ func bindInspectFlags(_ *viper.Viper) {
 	inspectFlags := packageInspectCmd.Flags()
 	inspectFlags.BoolVarP(&pkgConfig.InspectOpts.ViewSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
 	inspectFlags.StringVar(&pkgConfig.InspectOpts.SBOMOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
+	inspectFlags.BoolVar(&pkgConfig.InspectOpts.ListImages, "list-images", false, lang.CmdPackageInspectFlagListImages)
 }
 
 func bindRemoveFlags(v *viper.Viper) {
