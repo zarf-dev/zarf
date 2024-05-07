@@ -5,7 +5,6 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -194,8 +193,8 @@ var createReadOnlyGiteaUser = &cobra.Command{
 	Use:   "create-read-only-gitea-user",
 	Short: lang.CmdInternalCreateReadOnlyGiteaUserShort,
 	Long:  lang.CmdInternalCreateReadOnlyGiteaUserLong,
-	Run: func(_ *cobra.Command, _ []string) {
-		ctx := context.Background()
+	Run: func(cmd *cobra.Command, _ []string) {
+		ctx := cmd.Context()
 
 		// Load the state so we can get the credentials for the admin git user
 		state, err := common.NewClusterOrDie().LoadZarfState(ctx)
@@ -214,9 +213,9 @@ var createPackageRegistryToken = &cobra.Command{
 	Use:   "create-artifact-registry-token",
 	Short: lang.CmdInternalArtifactRegistryGiteaTokenShort,
 	Long:  lang.CmdInternalArtifactRegistryGiteaTokenLong,
-	Run: func(_ *cobra.Command, _ []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		c := common.NewClusterOrDie()
-		ctx := context.Background()
+		ctx := cmd.Context()
 		state, err := c.LoadZarfState(ctx)
 		if err != nil {
 			message.WarnErr(err, lang.ErrLoadState)
@@ -242,8 +241,8 @@ var updateGiteaPVC = &cobra.Command{
 	Use:   "update-gitea-pvc",
 	Short: lang.CmdInternalUpdateGiteaPVCShort,
 	Long:  lang.CmdInternalUpdateGiteaPVCLong,
-	Run: func(_ *cobra.Command, _ []string) {
-		ctx := context.Background()
+	Run: func(cmd *cobra.Command, _ []string) {
+		ctx := cmd.Context()
 
 		// There is a possibility that the pvc does not yet exist and Gitea helm chart should create it
 		helmShouldCreate, err := git.UpdateGiteaPVC(ctx, rollback)

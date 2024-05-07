@@ -5,7 +5,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -41,7 +40,7 @@ var devDeployCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Short: lang.CmdDevDeployShort,
 	Long:  lang.CmdDevDeployLong,
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 
 		v := common.GetViper()
@@ -54,7 +53,7 @@ var devDeployCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 
 		if err := pkgClient.DevDeploy(ctx); err != nil {
 			message.Fatalf(err, lang.CmdDevDeployErr, err.Error())

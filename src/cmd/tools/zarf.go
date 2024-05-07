@@ -5,7 +5,6 @@
 package tools
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -51,8 +50,8 @@ var getCredsCmd = &cobra.Command{
 	Example: lang.CmdToolsGetCredsExample,
 	Aliases: []string{"gc"},
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
-		ctx := context.Background()
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
 		state, err := common.NewClusterOrDie().LoadZarfState(ctx)
 		if err != nil || state.Distro == "" {
 			// If no distro the zarf secret did not load properly
@@ -87,7 +86,7 @@ var updateCredsCmd = &cobra.Command{
 		}
 
 		c := common.NewClusterOrDie()
-		ctx := context.Background()
+		ctx := cmd.Context()
 		oldState, err := c.LoadZarfState(ctx)
 		if err != nil || oldState.Distro == "" {
 			// If no distro the zarf secret did not load properly

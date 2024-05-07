@@ -5,7 +5,6 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -36,7 +35,7 @@ var initCmd = &cobra.Command{
 	Short:   lang.CmdInitShort,
 	Long:    lang.CmdInitLong,
 	Example: lang.CmdInitExample,
-	Run: func(_ *cobra.Command, _ []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		zarfLogo := message.GetLogo()
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 
@@ -66,7 +65,7 @@ var initCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 
 		err = pkgClient.Deploy(ctx)
 		if err != nil {

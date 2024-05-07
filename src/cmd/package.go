@@ -5,7 +5,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -68,7 +67,7 @@ var packageDeployCmd = &cobra.Command{
 	Short:   lang.CmdPackageDeployShort,
 	Long:    lang.CmdPackageDeployLong,
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		v := common.GetViper()
@@ -78,7 +77,7 @@ var packageDeployCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 
 		if err := pkgClient.Deploy(ctx); err != nil {
 			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
@@ -93,13 +92,13 @@ var packageMirrorCmd = &cobra.Command{
 	Long:    lang.CmdPackageMirrorLong,
 	Example: lang.CmdPackageMirrorExample,
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 
 		if err := pkgClient.Mirror(ctx); err != nil {
 			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
@@ -132,8 +131,8 @@ var packageListCmd = &cobra.Command{
 	Use:     "list",
 	Aliases: []string{"l", "ls"},
 	Short:   lang.CmdPackageListShort,
-	Run: func(_ *cobra.Command, _ []string) {
-		ctx := context.Background()
+	Run: func(cmd *cobra.Command, _ []string) {
+		ctx := cmd.Context()
 		deployedZarfPackages, errs := common.NewClusterOrDie().GetDeployedZarfPackages(ctx)
 		if len(errs) > 0 && len(deployedZarfPackages) == 0 {
 			message.Fatalf(errs, lang.CmdPackageListNoPackageWarn)
@@ -169,7 +168,7 @@ var packageRemoveCmd = &cobra.Command{
 	Aliases: []string{"u", "rm"},
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageRemoveShort,
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		src := identifyAndFallbackToClusterSource()
@@ -177,7 +176,7 @@ var packageRemoveCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 
 		if err := pkgClient.Remove(ctx); err != nil {
 			message.Fatalf(err, lang.CmdPackageRemoveErr, err.Error())
@@ -278,7 +277,7 @@ func identifyAndFallbackToClusterSource() (src sources.PackageSource) {
 	return src
 }
 
-func getPackageCompletionArgs(_ *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
+func getPackageCompletionArgs(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	var pkgCandidates []string
 
 	c, err := cluster.NewCluster()
@@ -286,7 +285,7 @@ func getPackageCompletionArgs(_ *cobra.Command, _ []string, _ string) ([]string,
 		return pkgCandidates, cobra.ShellCompDirectiveDefault
 	}
 
-	ctx := context.Background()
+	ctx := cmd.Context()
 
 	deployedZarfPackages, _ := c.GetDeployedZarfPackages(ctx)
 	// Populate list of package names

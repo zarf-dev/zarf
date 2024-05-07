@@ -5,7 +5,6 @@
 package tools
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -124,7 +123,7 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 			return err
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 
 		zarfState, err := c.LoadZarfState(ctx)
 		if err != nil {
@@ -174,7 +173,7 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 
 		message.Note(lang.CmdToolsRegistryZarfState)
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 
 		zarfState, err := c.LoadZarfState(ctx)
 		if err != nil {
@@ -213,14 +212,14 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 	return wrappedCommand
 }
 
-func pruneImages(_ *cobra.Command, _ []string) error {
+func pruneImages(cmd *cobra.Command, _ []string) error {
 	// Try to connect to a Zarf initialized cluster
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return err
 	}
 
-	ctx := context.Background()
+	ctx := cmd.Context()
 
 	zarfState, err := c.LoadZarfState(ctx)
 	if err != nil {
