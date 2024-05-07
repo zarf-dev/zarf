@@ -38,8 +38,12 @@ type ZarfPackageOptions struct {
 
 // ZarfInspectOptions tracks the user-defined preferences during a package inspection.
 type ZarfInspectOptions struct {
-	ViewSBOM      bool   `json:"sbom" jsonschema:"description=View SBOM contents while inspecting the package"`
-	SBOMOutputDir string `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package inspection"`
+	// View SBOM contents while inspecting the package
+	ViewSBOM bool
+	// Location to output an SBOM into after package inspection
+	SBOMOutputDir string
+	// ListImages will list the images in the package
+	ListImages bool
 }
 
 // ZarfFindImagesOptions tracks the user-defined preferences during a prepare find-images search.
