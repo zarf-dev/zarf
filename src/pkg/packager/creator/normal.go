@@ -28,6 +28,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -111,7 +112,8 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg t
 			return types.ZarfPackage{}, nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
 
-		pkg.Components, err = removeCopiesFromComponents(pkg.Components, diffData)
+		filter := filters.ByDifferentialData(diffData)
+		pkg.Components, err = filter.Apply(pkg)
 		if err != nil {
 			return types.ZarfPackage{}, nil, err
 		}

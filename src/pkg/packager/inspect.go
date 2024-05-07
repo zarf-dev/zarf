@@ -5,6 +5,10 @@
 package packager
 
 import (
+	"fmt"
+	"os"
+
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
@@ -18,7 +22,18 @@ func (p *Packager) Inspect() (err error) {
 		return err
 	}
 
-	utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
+	if p.cfg.InspectOpts.ListImages {
+		imageList := []string{}
+		for _, component := range p.cfg.Pkg.Components {
+			imageList = append(imageList, component.Images...)
+		}
+		imageList = helpers.Unique(imageList)
+		for _, image := range imageList {
+			fmt.Fprintln(os.Stdout, "-", image)
+		}
+	} else {
+		utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
+	}
 
 	sbomDir := p.layout.SBOMs.Path
 
