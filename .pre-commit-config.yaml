@@ -48,6 +48,10 @@ repos:
         files: .go$
         language: system
         pass_filenames: true
+      - id: check-go-mod-tidy
+        name: Check for out of sync Go module dependencies
+        entry: make test-go-mod-tidy
+        language: system
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.14.0
     hooks:
