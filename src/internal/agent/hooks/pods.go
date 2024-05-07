@@ -100,7 +100,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	}
 
 	// It will be a breaking change but we would like to switch to annotations over labels at some point
-	patchOperations = append(patchOperations, operations.ReplacePatchOperation("/metadata/annotations/zarf-agent", "patched"))
+	patchOperations = addPatchedAnnotation(patchOperations, pod.Annotations)
 	patchOperations = append(patchOperations, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
 
 	return &operations.Result{

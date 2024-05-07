@@ -33,7 +33,6 @@ type ArgoApplication struct {
 
 var (
 	zarfState *types.ZarfState
-	patches   []operations.PatchOperation
 	isPatched bool
 	isCreate  bool
 	isUpdate  bool
@@ -54,7 +53,7 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 	isCreate = r.Operation == v1.Create
 	isUpdate = r.Operation == v1.Update
 
-	patches = []operations.PatchOperation{}
+	patches := []operations.PatchOperation{}
 
 	// Form the zarfState.GitServer.Address from the zarfState
 	if zarfState, err = state.GetZarfStateFromAgentPod(); err != nil {
