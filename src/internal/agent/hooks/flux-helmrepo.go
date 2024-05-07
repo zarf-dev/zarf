@@ -105,7 +105,7 @@ func populateHelmRepoPatchOperations(repoURL string, isInternal bool) []operatio
 		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
 	}
 
-	patches = append(patches, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
+	patches = append(patches, operations.ReplacePatchOperation("/metadata/annotations/zarf-agent", "patched"))
 
 	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", meta.LocalObjectReference{Name: config.ZarfImagePullSecretName}))
 

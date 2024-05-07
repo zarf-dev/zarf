@@ -18,7 +18,7 @@ components:
       - ghcr.io/fluxcd/image-reflector-controller:v0.31.2
       - ghcr.io/fluxcd/kustomize-controller:v1.2.2
       - ghcr.io/fluxcd/notification-controller:v1.2.4
-      - ghcr.io/fluxcd/source-controller:v1.3.0
+      - ghcr.io/austinabro321/fluxcd/source-controller:main
 
   - name: podinfo-via-flux-git
     description: Example deployment via flux (git) using the famous podinfo example

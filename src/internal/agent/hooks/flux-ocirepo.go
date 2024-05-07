@@ -127,7 +127,7 @@ func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.O
 		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
 	}
 
-	patches = append(patches, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
+	patches = append(patches, operations.ReplacePatchOperation("/metadata/annotations/zarf-agent", "patched"))
 
 	if ref.Tag != "" {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/tag", ref.Tag))

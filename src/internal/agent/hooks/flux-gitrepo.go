@@ -91,7 +91,7 @@ func populateGitRepoPatchOperations(repoURL string) []operations.PatchOperation 
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
-	patches = append(patches, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
+	patches = append(patches, operations.ReplacePatchOperation("/metadata/annotations/zarf-agent", "patched"))
 
 	// TODO, need to test that I don't need to check if the secret is already there
 	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", meta.LocalObjectReference{Name: config.ZarfGitServerSecretName}))

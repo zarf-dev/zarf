@@ -102,7 +102,7 @@ func populateArgoRepositoryPatchOperations(repoURL string, gitServerInfo types.G
 	patches = append(patches, operations.ReplacePatchOperation("/data/url", base64.StdEncoding.EncodeToString([]byte(repoURL))))
 	patches = append(patches, operations.ReplacePatchOperation("/data/username", base64.StdEncoding.EncodeToString([]byte(gitServerInfo.PullUsername))))
 	patches = append(patches, operations.ReplacePatchOperation("/data/password", base64.StdEncoding.EncodeToString([]byte(gitServerInfo.PullPassword))))
-	patches = append(patches, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
+	//patches = append(patches, operations.ReplacePatchOperation("/metadata/annotations/zarf-agent", "patched"))
 
 	return patches
 }
