@@ -78,7 +78,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	}
 
 	// Patch updates of the repo spec
-	patches = populateGitRepoPatchOperations(patchedURL)
+	patches = populateGitRepoPatchOperations(patchedURL, src.ObjectMeta.Annotations)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -87,11 +87,11 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 }
 
 // Patch updates of the repo spec.
-func populateGitRepoPatchOperations(repoURL string) []operations.PatchOperation {
+func populateGitRepoPatchOperations(repoURL string, annotations map[string]string) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
-	patches = append(patches, operations.ReplacePatchOperation("/metadata/annotations/zarf-agent", "patched"))
+	patches = addPatchedAnnotation(patches, annotations)
 
 	// TODO, need to test that I don't need to check if the secret is already there
 	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", meta.LocalObjectReference{Name: config.ZarfGitServerSecretName}))

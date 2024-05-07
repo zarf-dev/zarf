@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Source represents a subset of the Argo Source object needed for Zarf Git URL mutations
@@ -29,6 +30,7 @@ type ArgoApplication struct {
 		Source  Source   `json:"source"`
 		Sources []Source `json:"sources"`
 	} `json:"spec"`
+	metav1.ObjectMeta
 }
 
 var (
@@ -83,7 +85,7 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 		}
 	}
 
-	//patches = append(patches, operations.ReplacePatchOperation("/metadata/annotations/zarf-agent", "patched"))
+	patches = addPatchedAnnotation(patches, src.Annotations)
 
 	return &operations.Result{
 		Allowed:  true,

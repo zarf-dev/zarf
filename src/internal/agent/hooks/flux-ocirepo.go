@@ -57,7 +57,6 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	}
 
 	if src.Labels != nil && src.Labels["zarf-agent"] == "patched" {
-		message.Debugf("helmrepo in this object woohoo %v", src.ObjectMeta)
 		return &operations.Result{
 			Allowed:  true,
 			PatchOps: patches,
@@ -109,7 +108,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	message.Debugf("original OCIRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 
-	patches = populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry, patchedRef)
+	patches = populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry, patchedRef, src.ObjectMeta.Annotations)
 	return &operations.Result{
 		Allowed:  true,
 		PatchOps: patches,
@@ -117,7 +116,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 }
 
 // Patch updates of the repo spec.
-func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.OCIRepositoryRef) []operations.PatchOperation {
+func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.OCIRepositoryRef, annotations map[string]string) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
@@ -127,7 +126,7 @@ func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.O
 		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
 	}
 
-	patches = append(patches, operations.ReplacePatchOperation("/metadata/annotations/zarf-agent", "patched"))
+	patches = addPatchedAnnotation(patches, annotations)
 
 	if ref.Tag != "" {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/tag", ref.Tag))

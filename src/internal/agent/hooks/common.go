@@ -6,14 +6,22 @@ package hooks
 
 import "github.com/defenseunicorns/zarf/src/internal/agent/operations"
 
+func initialPatchMap() map[string]string {
+	return map[string]string{
+		"zarf-agent": "patched",
+	}
+}
+
 func addPatchedAnnotation(patches []operations.PatchOperation, currAnnotations map[string]string) []operations.PatchOperation {
 	if currAnnotations == nil {
-		annotations := map[string]string{
-			"zarf-agent": "patched",
-		}
-		patches = append(patches, operations.ReplacePatchOperation("/metadata/annotations", annotations))
-	} else {
-		patches = append(patches, operations.ReplacePatchOperation("/metadata/annotations/zarf-agent", "patched"))
+		return append(patches, operations.ReplacePatchOperation("/metadata/annotations", initialPatchMap()))
 	}
-	return patches
+	return append(patches, operations.ReplacePatchOperation("/metadata/annotations/zarf-agent", "patched"))
+}
+
+func addPatchedLabel(patches []operations.PatchOperation, currLabels map[string]string) []operations.PatchOperation {
+	if currLabels == nil {
+		return append(patches, operations.ReplacePatchOperation("/metadata/labels", initialPatchMap()))
+	}
+	return append(patches, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ArgoRepository represents a subset of the Argo Repository object needed for Zarf Git URL mutations
@@ -24,6 +25,7 @@ type ArgoRepository struct {
 	Data struct {
 		URL string `json:"url"`
 	}
+	metav1.ObjectMeta
 }
 
 // NewRepositoryMutationHook creates a new instance of the ArgoCD Repository mutation hook.
@@ -88,7 +90,7 @@ func mutateRepository(r *v1.AdmissionRequest) (result *operations.Result, err er
 		message.Debugf("original url of (%s) got mutated to (%s)", src.Data.URL, patchedURL)
 	}
 
-	patches = populateArgoRepositoryPatchOperations(patchedURL, zarfState.GitServer)
+	patches = populateArgoRepositoryPatchOperations(patchedURL, zarfState.GitServer, src.Annotations)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -97,12 +99,12 @@ func mutateRepository(r *v1.AdmissionRequest) (result *operations.Result, err er
 }
 
 // Patch updates of the Argo Repository Secret.
-func populateArgoRepositoryPatchOperations(repoURL string, gitServerInfo types.GitServerInfo) []operations.PatchOperation {
+func populateArgoRepositoryPatchOperations(repoURL string, gitServerInfo types.GitServerInfo, annotations map[string]string) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/data/url", base64.StdEncoding.EncodeToString([]byte(repoURL))))
 	patches = append(patches, operations.ReplacePatchOperation("/data/username", base64.StdEncoding.EncodeToString([]byte(gitServerInfo.PullUsername))))
 	patches = append(patches, operations.ReplacePatchOperation("/data/password", base64.StdEncoding.EncodeToString([]byte(gitServerInfo.PullPassword))))
-	//patches = append(patches, operations.ReplacePatchOperation("/metadata/annotations/zarf-agent", "patched"))
+	patches = addPatchedAnnotation(patches, annotations)
 
 	return patches
 }
