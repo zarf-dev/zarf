@@ -155,7 +155,8 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	suite.NoError(err, "unable to deploy flux example package")
 
 	path := fmt.Sprintf("../../../build/zarf-package-argocd-%s.tar.zst", "amd64")
-	err = exec.CmdWithPrint("zarf", "package", "deploy", path, "--components=argocd-apps", "--confirm")
+	deployArgs = []string{"package", "deploy", path, "--confirm"}
+	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err)
 }
 

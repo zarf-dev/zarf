@@ -2,8 +2,6 @@ module github.com/defenseunicorns/zarf
 
 go 1.22.0
 
-toolchain go1.22.2
-
 // TODO (@AABRO): Pending merge into github.com/gojsonschema/gojsonschema (https://github.com/gojsonschema/gojsonschema/pull/5)
 replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
 
