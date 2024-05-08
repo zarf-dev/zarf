@@ -4,7 +4,7 @@ metadata:
   name: podinfo
   namespace: flux-system
 spec:
-  interval: 30s
+  interval: 5m0s
   releaseName: podinfo
   chart:
     spec:
@@ -13,5 +13,5 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: podinfo
-      interval: 30s
+      interval: 5m0s
   targetNamespace: podinfo-helm

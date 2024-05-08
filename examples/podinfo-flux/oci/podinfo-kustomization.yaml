@@ -5,7 +5,7 @@ metadata:
   name: podinfo-oci
   namespace: flux-system
 spec:
-  interval: 30s
+  interval: 5m0s
   path: ./
   prune: true
   sourceRef:
