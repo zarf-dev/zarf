@@ -78,7 +78,9 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	}
 
 	// Patch updates of the repo spec
-	patches = populateGitRepoPatchOperations(patchedURL, src.ObjectMeta.Annotations)
+	patches = populateGitRepoPatchOperations(patchedURL)
+
+	patches = addPatchedAnnotation(patches, src.ObjectMeta.Annotations)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -87,11 +89,9 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 }
 
 // Patch updates of the repo spec.
-func populateGitRepoPatchOperations(repoURL string, annotations map[string]string) []operations.PatchOperation {
+func populateGitRepoPatchOperations(repoURL string) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
-
-	patches = addPatchedAnnotation(patches, annotations)
 
 	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", meta.LocalObjectReference{Name: config.ZarfGitServerSecretName}))
 

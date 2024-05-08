@@ -50,9 +50,7 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 		return &operations.Result{Allowed: true}, nil
 	}
 
-	// Note: for HelmRepositories we only patch the URL because the tag and Chart version are coupled together.
-	if src.Labels != nil && src.Labels["zarf-agent"] == "patched" {
-		message.Debugf("We are now in this object %v", src.ObjectMeta)
+	if src.Annotations != nil && src.Annotations["zarf-agent"] == "patched" {
 		return &operations.Result{
 			Allowed:  true,
 			PatchOps: patches,
@@ -88,7 +86,9 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 	message.Debugf("original HelmRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 
 	// Patch updates of the repo spec (Flux resource requires oci:// prefix)
-	patches = populateHelmRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry, src.ObjectMeta.Annotations)
+	patches = populateHelmRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry)
+
+	patches = addPatchedAnnotation(patches, src.ObjectMeta.Annotations)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -97,15 +97,13 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 }
 
 // Patch updates of the repo spec.
-func populateHelmRepoPatchOperations(repoURL string, isInternal bool, annotations map[string]string) []operations.PatchOperation {
+func populateHelmRepoPatchOperations(repoURL string, isInternal bool) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
 	if isInternal {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
 	}
-
-	patches = addPatchedAnnotation(patches, annotations)
 
 	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", meta.LocalObjectReference{Name: config.ZarfImagePullSecretName}))
 

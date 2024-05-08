@@ -90,7 +90,8 @@ func mutateRepository(r *v1.AdmissionRequest) (result *operations.Result, err er
 		message.Debugf("original url of (%s) got mutated to (%s)", src.Data.URL, patchedURL)
 	}
 
-	patches = populateArgoRepositoryPatchOperations(patchedURL, zarfState.GitServer, src.Annotations)
+	patches = populateArgoRepositoryPatchOperations(patchedURL, zarfState.GitServer)
+	patches = addPatchedAnnotation(patches, src.Annotations)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -99,12 +100,11 @@ func mutateRepository(r *v1.AdmissionRequest) (result *operations.Result, err er
 }
 
 // Patch updates of the Argo Repository Secret.
-func populateArgoRepositoryPatchOperations(repoURL string, gitServerInfo types.GitServerInfo, annotations map[string]string) []operations.PatchOperation {
+func populateArgoRepositoryPatchOperations(repoURL string, gitServerInfo types.GitServerInfo) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/data/url", base64.StdEncoding.EncodeToString([]byte(repoURL))))
 	patches = append(patches, operations.ReplacePatchOperation("/data/username", base64.StdEncoding.EncodeToString([]byte(gitServerInfo.PullUsername))))
 	patches = append(patches, operations.ReplacePatchOperation("/data/password", base64.StdEncoding.EncodeToString([]byte(gitServerInfo.PullPassword))))
-	patches = addPatchedAnnotation(patches, annotations)
 
 	return patches
 }

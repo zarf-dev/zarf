@@ -21,13 +21,6 @@ import (
 	v1 "k8s.io/api/admission/v1"
 )
 
-// Ref contains the tag used to reference am image.
-type Ref struct {
-	Tag    string `json:"tag,omitempty"`
-	Digest string `json:"digest,omitempty"`
-	Semver string `json:"semver,omitempty"`
-}
-
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
 func NewOCIRepositoryMutationHook() operations.Hook {
 	message.Debug("hooks.NewOCIRepositoryMutationHook()")
@@ -56,7 +49,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 		message.Warnf(lang.AgentWarnSemVerRef, src.Spec.Reference.SemVer)
 	}
 
-	if src.Labels != nil && src.Labels["zarf-agent"] == "patched" {
+	if src.Annotations != nil && src.Annotations["zarf-agent"] == "patched" {
 		return &operations.Result{
 			Allowed:  true,
 			PatchOps: patches,
@@ -108,7 +101,9 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	message.Debugf("original OCIRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 
-	patches = populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry, patchedRef, src.ObjectMeta.Annotations)
+	patches = populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry, patchedRef)
+
+	patches = addPatchedAnnotation(patches, src.ObjectMeta.Annotations)
 	return &operations.Result{
 		Allowed:  true,
 		PatchOps: patches,
@@ -116,7 +111,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 }
 
 // Patch updates of the repo spec.
-func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.OCIRepositoryRef, annotations map[string]string) []operations.PatchOperation {
+func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.OCIRepositoryRef) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
@@ -125,8 +120,6 @@ func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.O
 	if isInternal {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
 	}
-
-	patches = addPatchedAnnotation(patches, annotations)
 
 	if ref.Tag != "" {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/tag", ref.Tag))
