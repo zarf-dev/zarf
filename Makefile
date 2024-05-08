@@ -220,6 +220,10 @@ test-docs-and-schema:
 test-cves:
 	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype --fail-on low
 
+# INTERNAL: used to test that a dev has ran `go mod tidy` in their PR
+test-go-mod-tidy:
+	./hack/check-go-mod-tidy.sh
+
 cve-report: ## Create a CVE report for the current project (must `brew install grype` first)
 	@test -d ./build || mkdir ./build
 	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv

@@ -1,0 +1,26 @@
+name: Validate Go Mod Tidy
+on:
+  pull_request:
+    paths:
+      - "go.mod"
+      - "go.sum"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Check go mod tidy
+        run: make test-go-mod-tidy
+
+      - name: Save logs
+        if: always()
+        uses: ./.github/actions/save-logs
