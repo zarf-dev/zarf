@@ -22,12 +22,11 @@ zarf dev patch TYPE HOST FILE [flags]
 
 ```
 
-# Print all Zarf patch options:
-$ zarf prepare patch
+# Patch git urls with a host:
+$ zarf dev patch git http://zarf-gitea-http.zarf.svc.cluster.local:3000 ./manifest.yaml
 
-# Patch specific resource types with a host:
-$ zarf prepare patch git http://zarf-gitea-http.zarf.svc.cluster.local:3000 ./manifest.yaml
-$ zarf prepare patch oci 127.0.0.1:31999 ./manifest.yaml
+# Patch oci urls with a host:
+$ zarf dev patch oci 127.0.0.1:31999 ./manifest.yaml
 
 ```
 
