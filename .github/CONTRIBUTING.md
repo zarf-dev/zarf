@@ -4,6 +4,11 @@ First off, thanks so much for wanting to help out! :tada:
 
 This document describes the steps and requirements for contributing a bug fix or feature in a Pull Request to Zarf!  If you have any questions about the process or the pull request you are working on feel free to reach out in the [Zarf Dev Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03BP9Z3CMA).
 
+## Community Meetings
+We have biweekly community calls on Wednesdays. The easiest way to join is to add yourself
+to our [Google Group](https://groups.google.com/g/zarf-dev) which will send you a calendar invite.
+
+
 ## Developer Experience
 
 Continuous Delivery is core to our development philosophy. Check out [https://minimumcd.org](https://minimumcd.org/) for a good baseline agreement on what that means.
