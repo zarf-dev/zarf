@@ -67,18 +67,18 @@ func WithGlobalInsecureFlag() []crane.Option {
 	return []crane.Option{NoopOpt}
 }
 
-// WithArchictecture sets the platform option for crane.
+// WithArchitecture sets the platform option for crane.
 //
 // This option is actually a slight mis-use of the platform option, as it is
 // setting the architecture only and hard coding the OS to linux.
-func WithArchictecture(arch string) crane.Option {
+func WithArchitecture(arch string) crane.Option {
 	return crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: arch})
 }
 
 // CommonOpts returns a set of common options for crane under Zarf.
 func CommonOpts(arch string) []crane.Option {
 	opts := WithGlobalInsecureFlag()
-	opts = append(opts, WithArchictecture(arch))
+	opts = append(opts, WithArchitecture(arch))
 
 	opts = append(opts,
 		crane.WithUserAgent("zarf"),

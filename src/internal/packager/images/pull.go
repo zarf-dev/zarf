@@ -7,9 +7,7 @@ package images
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -61,13 +59,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		return nil, fmt.Errorf("failed to create image path %s: %w", cfg.DestinationDirectory, err)
 	}
 
-	cranePath, err := clayout.FromPath(cfg.DestinationDirectory)
-	if errors.Is(err, fs.ErrNotExist) {
-		cranePath, err = clayout.Write(cfg.DestinationDirectory, empty.Index)
-		if err != nil {
-			return nil, err
-		}
-	} else {
+	cranePath, err := clayout.Write(cfg.DestinationDirectory, empty.Index)
+	if err != nil {
 		return nil, err
 	}
 
