@@ -53,6 +53,12 @@ The new k3s.service file would look like:
 ExecStart=/usr/sbin/k3s ###ZARF_CONST_K3S_MODE######ZARF_CONST_K3S_INTERNAL### ###ZARF_VAR_K3S_ARGS###
 ```
 
+If this were the case then adding a new k3s agent would be run as (assuming that we had an init package that only had k3s with both the `k3s` and `k3s-agent` as optional packages and nothing else required:
+
+```shell
+zarf init --components=k3s-agent --confirm --set K3S_ARGS=\"--server=https://1.2.3.4:6443 --token=foo\""
+```
+
 References:
 
 * https://github.com/defenseunicorns/zarf-package-bare-metal
