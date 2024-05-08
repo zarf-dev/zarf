@@ -78,6 +78,7 @@ delete-packages: ## Delete all Zarf package tarballs in the project recursively
 # Note: the path to the main.go file is not used due to https://github.com/golang/go/issues/51831#issuecomment-1074188363
 .PHONY: build
 build: ## Build the Zarf CLI for the machines OS and architecture
+	go mod tidy
 	$(MAKE) $(BUILD_CLI_FOR_SYSTEM)
 
 build-cli-linux-amd: ## Build the Zarf CLI for Linux on AMD64
@@ -221,10 +222,6 @@ test-docs-and-schema:
 # INTERNAL: used to test for new CVEs that may have been introduced
 test-cves:
 	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype --fail-on low
-
-# INTERNAL: used to test that a dev has ran `go mod tidy` in their PR
-test-go-mod-tidy:
-	./hack/check-go-mod-tidy.sh
 
 cve-report: ## Create a CVE report for the current project (must `brew install grype` first)
 	@test -d ./build || mkdir ./build
