@@ -97,9 +97,6 @@ var devPatchCmd = &cobra.Command{
 			message.Fatalf(err, lang.CmdDevPatchFileReadErr, fileName)
 		}
 
-		// Warn user to add creds to the manifests on their own (if applicable)
-		message.Warn(lang.CmdDevPatchCredsMsg)
-
 		// Perform git url transformation via regex
 		text := string(content)
 		var processedText string
@@ -107,10 +104,10 @@ var devPatchCmd = &cobra.Command{
 		switch strings.ToLower(patchType) {
 		case "git":
 			pkgConfig.InitOpts.GitServer.Address = host
-			processedText = transform.MutateGitURLsInText(message.Warnf, pkgConfig.InitOpts.GitServer.Address, text, pkgConfig.InitOpts.GitServer.PushUsername)
+			processedText = transform.MutateGitURLsInText(pkgConfig.InitOpts.GitServer.Address, text, pkgConfig.InitOpts.GitServer.PushUsername)
 		case "oci":
 			pkgConfig.InitOpts.RegistryInfo.Address = host
-			processedText = transform.MutateOCIURLsInText(message.Warnf, pkgConfig.InitOpts.RegistryInfo.Address, text)
+			processedText = transform.MutateOCIURLsInText(pkgConfig.InitOpts.RegistryInfo.Address, text)
 		default:
 			message.Fatalf(nil, lang.CmdDevPatchInvalidFileTypeErr, patchType)
 		}

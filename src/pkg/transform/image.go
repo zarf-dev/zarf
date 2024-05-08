@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/distribution/reference"
 )
 
@@ -25,7 +26,7 @@ type Image struct {
 }
 
 // MutateOCIURLsInText changes the oci url hostname to use the targetBaseURL.
-func MutateOCIURLsInText(logger Log, targetBaseURL, text string) string {
+func MutateOCIURLsInText(targetBaseURL, text string) string {
 	// For further explanation: https://regex101.com/r/UU7Gan/6
 	fuzzyOCIURLRegex := regexp.MustCompile(`oci:\/\/[^\s]+`)
 
@@ -33,13 +34,13 @@ func MutateOCIURLsInText(logger Log, targetBaseURL, text string) string {
 	result := fuzzyOCIURLRegex.ReplaceAllStringFunc(text, func(match string) string {
 		rawSrc, err := parseImageRefRaw(match)
 		if err != nil {
-			logger("Unable to parse the found url, using the original url %q: %w", match, err)
+			message.Warnf("Unable to parse the found url, using the original url %q: %s", match, err.Error())
 			return match
 		}
 
 		output, err := ImageTransformHost(targetBaseURL, match)
 		if err != nil {
-			logger("Unable to transform the OCI url, using the original url %q: %w", match, err)
+			message.Warnf("Unable to transform the OCI url, using the original url %q: %s", match, err.Error())
 			return match
 		}
 
@@ -47,7 +48,7 @@ func MutateOCIURLsInText(logger Log, targetBaseURL, text string) string {
 		if rawSrc.TagOrDigest == "" {
 			outputRef, err := ParseImageRef(output)
 			if err != nil {
-				logger("Unable to parse the transformed url, using the original url %q: %w", match, err)
+				message.Warnf("Unable to parse the transformed url, using the original url %q: %s", match, err.Error())
 				return match
 			}
 

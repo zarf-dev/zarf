@@ -7,7 +7,6 @@ package transform
 import (
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/stretchr/testify/require"
 )
 
@@ -110,7 +109,7 @@ func TestMutateOCIUrlsInText(t *testing.T) {
 	https://www.defenseunicorns.com/
 	`
 
-	resultingText := MutateOCIURLsInText(message.Warnf, "new-replace-url.com", originalText)
+	resultingText := MutateOCIURLsInText("new-replace-url.com", originalText)
 	require.Equal(t, resultingText, expectedText)
 
 }

@@ -360,7 +360,6 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
 	CmdDevDeployErr        = "Failed to dev deploy: %s"
 
-	CmdDevPatchCredsMsg = "Zarf will not automatically add credentials to a manifest, please update the secret references manually as appropriate (i.e. 'private-registry' or 'private-git-server')."
 	CmdDevPatchShort    = "Manually patches files to match Zarf's mutated airgap resource references (not needed when using the Zarf Agent)"
 	CmdDevPatchLong     = "Manually patches files to match Zarf's mutated airgap resource references. Useful when not using the Zarf Agent in your cluster or when you need to see how a given resource will be mutated in the airgap."
 	CmdDevPatchGitShort = "[Deprecated] Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
@@ -376,12 +375,11 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevPatchFlagGitUsername    = "User or organization name for the git account that the repos are created under"
 	CmdDevPatchInvalidFileTypeErr = "Invalid filetype '%s' - valid filetypes are: oci and git"
 	CmdDevPatchExample            = `
-# Print all Zarf patch options:
-$ zarf prepare patch
+# Patch git urls with a host:
+$ zarf dev patch git http://zarf-gitea-http.zarf.svc.cluster.local:3000 ./manifest.yaml
 
-# Patch specific resource types with a host:
-$ zarf prepare patch git http://zarf-gitea-http.zarf.svc.cluster.local:3000 ./manifest.yaml
-$ zarf prepare patch oci 127.0.0.1:31999 ./manifest.yaml
+# Patch oci urls with a host:
+$ zarf dev patch oci 127.0.0.1:31999 ./manifest.yaml
 `
 
 	CmdDevPatchGitDeprecation = "Deprecated: This command has been replaced by 'zarf prepare patch git' and will be removed in Zarf v1.0.0."

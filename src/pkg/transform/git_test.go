@@ -7,7 +7,6 @@ package transform
 import (
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/stretchr/testify/require"
 )
 
@@ -69,7 +68,7 @@ func TestMutateGitURLsInText(t *testing.T) {
 	https://www.defenseunicorns.com/
 	`
 
-	resultingText := MutateGitURLsInText(message.Warnf, "https://gitlab.com", originalText, "repo-owner")
+	resultingText := MutateGitURLsInText("https://gitlab.com", originalText, "repo-owner")
 	require.Equal(t, expectedText, resultingText)
 }
 
