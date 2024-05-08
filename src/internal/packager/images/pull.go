@@ -73,7 +73,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 
-	var fetchedLock, shaLock sync.Mutex
+	var shaLock sync.Mutex
 	shas := map[string]bool{}
 	opts := CommonOpts(cfg.Arch)
 
@@ -182,14 +182,14 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 				return fmt.Errorf("unable to get layers for %s: %w", refInfo.Reference, err)
 			}
 
+			shaLock.Lock()
+			defer shaLock.Unlock()
 			for _, layer := range layers {
 				digest, err := layer.Digest()
 				if err != nil {
 					return fmt.Errorf("unable to get digest for image layer: %w", err)
 				}
 
-				shaLock.Lock()
-				defer shaLock.Unlock()
 				if _, ok := shas[digest.Hex]; !ok {
 					shas[digest.Hex] = true
 					size, err := layer.Size()
@@ -200,9 +200,12 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 				}
 			}
 
-			fetchedLock.Lock()
+			if img == nil {
+				return fmt.Errorf("failed to fetch image %s", refInfo.Reference)
+			}
+
 			fetched[refInfo] = img
-			fetchedLock.Unlock()
+
 			return nil
 		})
 	}
