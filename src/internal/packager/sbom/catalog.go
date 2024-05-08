@@ -23,6 +23,7 @@ import (
 	"github.com/anchore/syft/syft/pkg/cataloger"
 	"github.com/anchore/syft/syft/sbom"
 	"github.com/anchore/syft/syft/source"
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -59,7 +60,7 @@ func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imageList []transf
 	defer builder.spinner.Stop()
 
 	// Ensure the sbom directory exists
-	_ = utils.CreateDirectory(builder.outputDir, 0700)
+	_ = helpers.CreateDirectory(builder.outputDir, helpers.ReadWriteExecuteUser)
 
 	// Generate a list of images and files for the sbom viewer
 	json, err := builder.generateJSONList(componentSBOMs, imageList)
@@ -151,7 +152,7 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 	imageCachePath := filepath.Join(b.cachePath, layout.ImagesDir)
 
 	// Ensure the image cache directory exists.
-	if err := utils.CreateDirectory(imageCachePath, 0700); err != nil {
+	if err := helpers.CreateDirectory(imageCachePath, helpers.ReadWriteExecuteUser); err != nil {
 		return nil, err
 	}
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
 package packager
 
 import (
@@ -85,7 +88,6 @@ func TestValidatePackageArchitecture(t *testing.T) {
 
 			// Create a Packager instance with package architecture set and a mock Kubernetes client.
 			p := &Packager{
-				arch: testCase.pkgArch,
 				cluster: &cluster.Cluster{
 					K8s: &k8s.K8s{
 						Clientset: mockClient,
@@ -94,6 +96,7 @@ func TestValidatePackageArchitecture(t *testing.T) {
 				},
 				cfg: &types.PackagerConfig{
 					Pkg: types.ZarfPackage{
+						Metadata: types.ZarfMetadata{Architecture: testCase.pkgArch},
 						Components: []types.ZarfComponent{
 							{
 								Images: testCase.images,
@@ -104,7 +107,7 @@ func TestValidatePackageArchitecture(t *testing.T) {
 			}
 
 			// Set up test data for fetching cluster architecture.
-			mockClient.Fake.PrependReactor("list", "nodes", func(action k8sTesting.Action) (handled bool, ret runtime.Object, err error) {
+			mockClient.Fake.PrependReactor("list", "nodes", func(_ k8sTesting.Action) (bool, runtime.Object, error) {
 				// Return an error for cases that test this error path.
 				if testCase.getArchError != nil {
 					return true, nil, testCase.getArchError

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -20,7 +21,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -39,8 +40,8 @@ var devDeployCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Short: lang.CmdDevDeployShort,
 	Long:  lang.CmdDevDeployLong,
-	Run: func(cmd *cobra.Command, args []string) {
-		common.SetBaseDirectory(args, &pkgConfig)
+	Run: func(_ *cobra.Command, args []string) {
+		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
@@ -60,12 +61,33 @@ var devDeployCmd = &cobra.Command{
 	},
 }
 
+var devGenerateCmd = &cobra.Command{
+	Use:     "generate NAME",
+	Aliases: []string{"g"},
+	Args:    cobra.ExactArgs(1),
+	Short:   lang.CmdDevGenerateShort,
+	Example: lang.CmdDevGenerateExample,
+	Run: func(_ *cobra.Command, args []string) {
+		pkgConfig.GenerateOpts.Name = args[0]
+
+		pkgConfig.CreateOpts.BaseDir = "."
+		pkgConfig.FindImagesOpts.RepoHelmChartPath = pkgConfig.GenerateOpts.GitPath
+
+		pkgClient := packager.NewOrDie(&pkgConfig)
+		defer pkgClient.ClearTempPaths()
+
+		if err := pkgClient.Generate(); err != nil {
+			message.Fatalf(err, err.Error())
+		}
+	},
+}
+
 var devTransformGitLinksCmd = &cobra.Command{
 	Use:     "patch-git HOST FILE",
 	Aliases: []string{"p"},
 	Short:   lang.CmdDevPatchGitShort,
 	Args:    cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		host, fileName := args[0], args[1]
 
 		// Read the contents of the given file
@@ -94,7 +116,7 @@ var devTransformGitLinksCmd = &cobra.Command{
 
 		if confirm {
 			// Overwrite the file
-			err = os.WriteFile(fileName, []byte(processedText), 0640)
+			err = os.WriteFile(fileName, []byte(processedText), helpers.ReadAllWriteUser)
 			if err != nil {
 				message.Fatal(err, lang.CmdDevPatchGitFileWriteErr)
 			}
@@ -108,7 +130,7 @@ var devSha256SumCmd = &cobra.Command{
 	Aliases: []string{"s"},
 	Short:   lang.CmdDevSha256sumShort,
 	Args:    cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		fileName := args[0]
 
 		var tmp string
@@ -184,14 +206,16 @@ var devFindImagesCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdDevFindImagesShort,
 	Long:    lang.CmdDevFindImagesLong,
-	Run: func(cmd *cobra.Command, args []string) {
-		// If a directory was provided, use that as the base directory
-		common.SetBaseDirectory(args, &pkgConfig)
+	Run: func(_ *cobra.Command, args []string) {
+		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 
 		// Ensure uppercase keys from viper
 		v := common.GetViper()
+
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
+		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
 		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
@@ -210,7 +234,7 @@ var devGenConfigFileCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdDevGenerateConfigShort,
 	Long:    lang.CmdDevGenerateConfigLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		fileName := "zarf-config.toml"
 
 		// If a filename was provided, use that
@@ -231,8 +255,8 @@ var devLintCmd = &cobra.Command{
 	Aliases: []string{"l"},
 	Short:   lang.CmdDevLintShort,
 	Long:    lang.CmdDevLintLong,
-	Run: func(cmd *cobra.Command, args []string) {
-		common.SetBaseDirectory(args, &pkgConfig)
+	Run: func(_ *cobra.Command, args []string) {
+		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
@@ -252,6 +276,7 @@ func init() {
 	rootCmd.AddCommand(devCmd)
 
 	devCmd.AddCommand(devDeployCmd)
+	devCmd.AddCommand(devGenerateCmd)
 	devCmd.AddCommand(devTransformGitLinksCmd)
 	devCmd.AddCommand(devSha256SumCmd)
 	devCmd.AddCommand(devFindImagesCmd)
@@ -259,18 +284,32 @@ func init() {
 	devCmd.AddCommand(devLintCmd)
 
 	bindDevDeployFlags(v)
+	bindDevGenerateFlags(v)
 
 	devSha256SumCmd.Flags().StringVarP(&extractPath, "extract-path", "e", "", lang.CmdDevFlagExtractPath)
 
 	devFindImagesCmd.Flags().StringVarP(&pkgConfig.FindImagesOpts.RepoHelmChartPath, "repo-chart-path", "p", "", lang.CmdDevFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
+
+	devFindImagesCmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
+	devFindImagesCmd.Flags().MarkHidden("set")
+	devFindImagesCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
+	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 	// allow for the override of the default helm KubeVersion
 	devFindImagesCmd.Flags().StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
+	// check which manifests are using this particular image
+	devFindImagesCmd.Flags().StringVar(&pkgConfig.FindImagesOpts.Why, "why", "", lang.CmdDevFlagFindImagesWhy)
+	// skip searching cosign artifacts in find images
+	devFindImagesCmd.Flags().BoolVar(&pkgConfig.FindImagesOpts.SkipCosign, "skip-cosign", false, lang.CmdDevFlagFindImagesSkipCosign)
+
+	defaultRegistry := fmt.Sprintf("%s:%d", helpers.IPV4Localhost, types.ZarfInClusterContainerRegistryNodePort)
+	devFindImagesCmd.Flags().StringVar(&pkgConfig.FindImagesOpts.RegistryURL, "registry-url", defaultRegistry, lang.CmdDevFlagFindImagesRegistry)
 
 	devLintCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
 	devLintCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
-	devTransformGitLinksCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", config.ZarfGitPushUser, lang.CmdDevFlagGitAccount)
+	devTransformGitLinksCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", types.ZarfGitPushUser, lang.CmdDevFlagGitAccount)
 }
 
 func bindDevDeployFlags(v *viper.Viper) {
@@ -282,7 +321,27 @@ func bindDevDeployFlags(v *viper.Viper) {
 
 	devDeployFlags.StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 
+	// Always require adopt-existing-resources flag (no viper)
+	devDeployFlags.BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	devDeployFlags.BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
+	devDeployFlags.DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
+
+	devDeployFlags.IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)
 	devDeployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 
 	devDeployFlags.BoolVar(&pkgConfig.CreateOpts.NoYOLO, "no-yolo", v.GetBool(common.VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
+}
+
+func bindDevGenerateFlags(_ *viper.Viper) {
+	generateFlags := devGenerateCmd.Flags()
+
+	generateFlags.StringVar(&pkgConfig.GenerateOpts.URL, "url", "", "URL to the source git repository")
+	generateFlags.StringVar(&pkgConfig.GenerateOpts.Version, "version", "", "The Version of the chart to use")
+	generateFlags.StringVar(&pkgConfig.GenerateOpts.GitPath, "gitPath", "", "Relative path to the chart in the git repository")
+	generateFlags.StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "", "Output directory for the generated zarf.yaml")
+	generateFlags.StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
+
+	devGenerateCmd.MarkFlagRequired("url")
+	devGenerateCmd.MarkFlagRequired("version")
+	devGenerateCmd.MarkFlagRequired("output-directory")
 }

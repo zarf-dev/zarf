@@ -5,16 +5,18 @@
 package composer
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -24,8 +26,8 @@ type Node struct {
 
 	index int
 
-	vars   []types.ZarfPackageVariable
-	consts []types.ZarfPackageConstant
+	vars   []variables.InteractiveVariable
+	consts []variables.Constant
 
 	relativeToHead      string
 	originalPackageName string
@@ -34,17 +36,17 @@ type Node struct {
 	next *Node
 }
 
-// GetIndex returns the .components index location for this node's source `zarf.yaml`
-func (n *Node) GetIndex() int {
+// Index returns the .components index location for this node's source `zarf.yaml`
+func (n *Node) Index() int {
 	return n.index
 }
 
-// GetOriginalPackageName returns the .metadata.name of the zarf package the component originated from
-func (n *Node) GetOriginalPackageName() string {
+// OriginalPackageName returns the .metadata.name for this node's source `zarf.yaml`
+func (n *Node) OriginalPackageName() string {
 	return n.originalPackageName
 }
 
-// ImportLocation gets the path from the base zarf file to the imported zarf file
+// ImportLocation gets the path from the base `zarf.yaml` to the imported `zarf.yaml`
 func (n *Node) ImportLocation() string {
 	if n.prev != nil {
 		if n.prev.ZarfComponent.Import.URL != "" {
@@ -80,7 +82,7 @@ type ImportChain struct {
 	head *Node
 	tail *Node
 
-	remote *oci.OrasRemote
+	remote *zoci.Remote
 }
 
 // Head returns the first node in the import chain
@@ -94,7 +96,7 @@ func (ic *ImportChain) Tail() *Node {
 }
 
 func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageName string,
-	relativeToHead string, vars []types.ZarfPackageVariable, consts []types.ZarfPackageConstant) {
+	relativeToHead string, vars []variables.InteractiveVariable, consts []variables.Constant) {
 	node := &Node{
 		ZarfComponent:       c,
 		index:               index,
@@ -181,7 +183,7 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 			if err != nil {
 				return ic, err
 			}
-			pkg, err = remote.FetchZarfYAML()
+			pkg, err = remote.FetchZarfYAML(context.TODO())
 			if err != nil {
 				return ic, err
 			}
@@ -190,7 +192,7 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 		name := node.ImportName()
 
 		// 'found' and 'index' are parallel slices. Each element in found[x] corresponds to pkg[index[x]]
-		// found[0] and pkg[index[0]] would be the same componenet for example
+		// found[0] and pkg[index[0]] would be the same component for example
 		found := []types.ZarfComponent{}
 		index := []int{}
 		for i, component := range pkg.Components {
@@ -264,7 +266,7 @@ func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 		node = node.next
 	}
 	if len(warnings) > 0 {
-		final := fmt.Sprintf("migrations were performed on the import chain of: %q", ic.head.Name)
+		final := fmt.Sprintf("Migrations were performed on the import chain of: %q", ic.head.Name)
 		warnings = append(warnings, final)
 	}
 	return warnings
@@ -311,8 +313,8 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 }
 
 // MergeVariables merges variables from the import chain
-func (ic *ImportChain) MergeVariables(existing []types.ZarfPackageVariable) (merged []types.ZarfPackageVariable) {
-	exists := func(v1 types.ZarfPackageVariable, v2 types.ZarfPackageVariable) bool {
+func (ic *ImportChain) MergeVariables(existing []variables.InteractiveVariable) (merged []variables.InteractiveVariable) {
+	exists := func(v1 variables.InteractiveVariable, v2 variables.InteractiveVariable) bool {
 		return v1.Name == v2.Name
 	}
 
@@ -328,8 +330,8 @@ func (ic *ImportChain) MergeVariables(existing []types.ZarfPackageVariable) (mer
 }
 
 // MergeConstants merges constants from the import chain
-func (ic *ImportChain) MergeConstants(existing []types.ZarfPackageConstant) (merged []types.ZarfPackageConstant) {
-	exists := func(c1 types.ZarfPackageConstant, c2 types.ZarfPackageConstant) bool {
+func (ic *ImportChain) MergeConstants(existing []variables.Constant) (merged []variables.Constant) {
+	exists := func(c1 variables.Constant, c2 variables.Constant) bool {
 		return c1.Name == c2.Name
 	}
 

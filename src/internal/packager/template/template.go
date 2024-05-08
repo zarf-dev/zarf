@@ -7,89 +7,53 @@ package template
 import (
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/types"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 )
 
-// Values contains the values to be used in the template.
-type Values struct {
-	config   *types.PackagerConfig
-	registry string
-	htpasswd string
-}
+const (
+	depMarkerOld = "DATA_INJECTON_MARKER"
+	depMarkerNew = "DATA_INJECTION_MARKER"
+)
 
-// Generate returns a Values struct with the values to be used in the template.
-func Generate(cfg *types.PackagerConfig) (*Values, error) {
-	message.Debug("template.Generate()")
-	var generated Values
-
-	if cfg == nil {
-		return nil, fmt.Errorf("config is nil")
-	}
-
-	generated.config = cfg
-
-	if cfg.State == nil {
-		return &generated, nil
-	}
-
-	regInfo := cfg.State.RegistryInfo
-
-	// Only calculate this for internal registries to allow longer external passwords
-	if regInfo.InternalRegistry {
-		pushUser, err := utils.GetHtpasswdString(regInfo.PushUsername, regInfo.PushPassword)
-		if err != nil {
-			return nil, fmt.Errorf("error generating htpasswd string: %w", err)
+// GetZarfVariableConfig gets a variable configuration specific to Zarf
+func GetZarfVariableConfig() *variables.VariableConfig {
+	prompt := func(variable variables.InteractiveVariable) (value string, err error) {
+		if config.CommonOptions.Confirm {
+			return variable.Default, nil
 		}
-
-		pullUser, err := utils.GetHtpasswdString(regInfo.PullUsername, regInfo.PullPassword)
-		if err != nil {
-			return nil, fmt.Errorf("error generating htpasswd string: %w", err)
-		}
-
-		generated.htpasswd = fmt.Sprintf("%s\\n%s", pushUser, pullUser)
+		return interactive.PromptVariable(variable)
 	}
 
-	generated.registry = regInfo.Address
-
-	return &generated, nil
+	return variables.New(
+		"zarf",
+		deprecatedKeys(),
+		prompt,
+		slog.New(message.ZarfHandler{}))
 }
 
-// Ready returns true if the Values struct is ready to be used in the template.
-func (values *Values) Ready() bool {
-	return values.config.State != nil
-}
+// GetZarfTemplates returns the template keys and values to be used for templating.
+func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap map[string]*variables.TextTemplate, err error) {
+	templateMap = make(map[string]*variables.TextTemplate)
 
-// GetRegistry returns the registry address.
-func (values *Values) GetRegistry() string {
-	return values.registry
-}
-
-// GetVariables returns the variables to be used in the template.
-func (values *Values) GetVariables(component types.ZarfComponent) (templateMap map[string]*utils.TextTemplate, deprecations map[string]string) {
-	templateMap = make(map[string]*utils.TextTemplate)
-
-	depMarkerOld := "DATA_INJECTON_MARKER"
-	depMarkerNew := "DATA_INJECTION_MARKER"
-	deprecations = map[string]string{
-		fmt.Sprintf("###ZARF_%s###", depMarkerOld): fmt.Sprintf("###ZARF_%s###", depMarkerNew),
-	}
-
-	if values.config.State != nil {
-		regInfo := values.config.State.RegistryInfo
-		gitInfo := values.config.State.GitServer
+	if state != nil {
+		regInfo := state.RegistryInfo
+		gitInfo := state.GitServer
 
 		builtinMap := map[string]string{
-			"STORAGE_CLASS": values.config.State.StorageClass,
+			"STORAGE_CLASS": state.StorageClass,
 
 			// Registry info
-			"REGISTRY":           values.registry,
+			"REGISTRY":           regInfo.Address,
 			"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
 			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
 			"REGISTRY_AUTH_PULL": regInfo.PullPassword,
@@ -101,34 +65,35 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 			"GIT_AUTH_PULL": gitInfo.PullPassword,
 		}
 
-		// Include the data injection marker template if the component has data injections
-		if len(component.DataInjections) > 0 {
-			// Preserve existing misspelling for backwards compatibility
-			builtinMap[depMarkerOld] = config.GetDataInjectionMarker()
-			builtinMap[depMarkerNew] = config.GetDataInjectionMarker()
-		}
+		// Preserve existing misspelling for backwards compatibility
+		builtinMap[depMarkerOld] = config.GetDataInjectionMarker()
+		builtinMap[depMarkerNew] = config.GetDataInjectionMarker()
 
 		// Don't template component-specific variables for every component
-		switch component.Name {
+		switch componentName {
 		case "zarf-agent":
-			agentTLS := values.config.State.AgentTLS
+			agentTLS := state.AgentTLS
 			builtinMap["AGENT_CRT"] = base64.StdEncoding.EncodeToString(agentTLS.Cert)
 			builtinMap["AGENT_KEY"] = base64.StdEncoding.EncodeToString(agentTLS.Key)
 			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
 
 		case "zarf-seed-registry", "zarf-registry":
 			builtinMap["SEED_REGISTRY"] = fmt.Sprintf("%s:%s", helpers.IPV4Localhost, config.ZarfSeedPort)
-			builtinMap["HTPASSWD"] = values.htpasswd
+			htpasswd, err := generateHtpasswd(&regInfo)
+			if err != nil {
+				return templateMap, err
+			}
+			builtinMap["HTPASSWD"] = htpasswd
 			builtinMap["REGISTRY_SECRET"] = regInfo.Secret
 
 		case "logging":
-			builtinMap["LOGGING_AUTH"] = values.config.State.LoggingSecret
+			builtinMap["LOGGING_AUTH"] = state.LoggingSecret
 		}
 
 		// Iterate over any custom variables and add them to the mappings for templating
 		for key, value := range builtinMap {
 			// Builtin keys are always uppercase in the format ###ZARF_KEY###
-			templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = &utils.TextTemplate{
+			templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = &variables.TextTemplate{
 				Value: value,
 			}
 
@@ -141,44 +106,39 @@ func (values *Values) GetVariables(component types.ZarfComponent) (templateMap m
 		}
 	}
 
-	for key, variable := range values.config.SetVariableMap {
-		// Variable keys are always uppercase in the format ###ZARF_VAR_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_VAR_%s###", key))] = &utils.TextTemplate{
-			Value:      variable.Value,
-			Sensitive:  variable.Sensitive,
-			AutoIndent: variable.AutoIndent,
-			Type:       variable.Type,
-		}
-	}
-
-	for _, constant := range values.config.Pkg.Constants {
-		// Constant keys are always uppercase in the format ###ZARF_CONST_KEY###
-		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_CONST_%s###", constant.Name))] = &utils.TextTemplate{
-			Value:      constant.Value,
-			AutoIndent: constant.AutoIndent,
-		}
-	}
-
 	debugPrintTemplateMap(templateMap)
-	message.Debugf("deprecations = %#v", deprecations)
 
-	return templateMap, deprecations
+	return templateMap, nil
 }
 
-// Apply renders the template and writes the result to the given path.
-func (values *Values) Apply(component types.ZarfComponent, path string, ignoreReady bool) error {
-	// If Apply() is called before all values are loaded, fail unless ignoreReady is true
-	if !values.Ready() && !ignoreReady {
-		return fmt.Errorf("template.Apply() called before template.Generate()")
+// deprecatedKeys returns a map of template keys that are deprecated
+func deprecatedKeys() map[string]string {
+	return map[string]string{
+		fmt.Sprintf("###ZARF_%s###", depMarkerOld): fmt.Sprintf("###ZARF_%s###", depMarkerNew),
+	}
+}
+
+// generateHtpasswd returns an htpasswd string for the current state's RegistryInfo.
+func generateHtpasswd(regInfo *types.RegistryInfo) (string, error) {
+	// Only calculate this for internal registries to allow longer external passwords
+	if regInfo.InternalRegistry {
+		pushUser, err := utils.GetHtpasswdString(regInfo.PushUsername, regInfo.PushPassword)
+		if err != nil {
+			return "", fmt.Errorf("error generating htpasswd string: %w", err)
+		}
+
+		pullUser, err := utils.GetHtpasswdString(regInfo.PullUsername, regInfo.PullPassword)
+		if err != nil {
+			return "", fmt.Errorf("error generating htpasswd string: %w", err)
+		}
+
+		return fmt.Sprintf("%s\\n%s", pushUser, pullUser), nil
 	}
 
-	templateMap, deprecations := values.GetVariables(component)
-	err := utils.ReplaceTextTemplate(path, templateMap, deprecations, "###ZARF_[A-Z0-9_]+###")
-
-	return err
+	return "", nil
 }
 
-func debugPrintTemplateMap(templateMap map[string]*utils.TextTemplate) {
+func debugPrintTemplateMap(templateMap map[string]*variables.TextTemplate) {
 	debugText := "templateMap = { "
 
 	for key, template := range templateMap {

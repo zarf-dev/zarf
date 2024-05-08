@@ -8,23 +8,35 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Create() (err error) {
-
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	if err := p.cdToBaseDir(p.cfg.CreateOpts.BaseDir, cwd); err != nil {
+	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
+		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
+	}
+
+	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
+
+	pc := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
+
+	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
 		return err
 	}
 
-	if err := p.load(); err != nil {
+	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(p.layout)
+	if err != nil {
 		return err
 	}
 
@@ -37,7 +49,7 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("package creation canceled")
 	}
 
-	if err := p.assemble(); err != nil {
+	if err := pc.Assemble(p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
 		return err
 	}
 
@@ -46,5 +58,5 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	return p.output()
+	return pc.Output(p.layout, &p.cfg.Pkg)
 }

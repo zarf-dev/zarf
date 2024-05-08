@@ -34,13 +34,31 @@ fullnameOverride: "zarf-docker-registry"
 podLabels:
   zarf.dev/agent: "ignore"
 
+affinity:
+  enabled: ###ZARF_VAR_REGISTRY_AFFINITY_ENABLE###
+  custom:
+    ###ZARF_VAR_REGISTRY_AFFINITY_CUSTOM###
+
+tolerations:
+  ###ZARF_VAR_REGISTRY_TOLERATIONS###
+
 autoscaling:
   enabled: ###ZARF_VAR_REGISTRY_HPA_ENABLE###
+  mapReplicasToNodes: ###ZARF_VAR_REGISTRY_HPA_AUTO_SIZE###
   minReplicas: "###ZARF_VAR_REGISTRY_HPA_MIN###"
   maxReplicas: "###ZARF_VAR_REGISTRY_HPA_MAX###"
-  targetCPUUtilizationPercentage: 80
+  targetCPUUtilizationPercentage: ###ZARF_VAR_REGISTRY_HPA_TARGET_CPU###
 
-caBundle: ###ZARF_VAR_REGISTRY_CA_BUNDLE###
+caBundle: |
+  ###ZARF_VAR_REGISTRY_CA_BUNDLE###
 
 extraEnvVars:
   ###ZARF_VAR_REGISTRY_EXTRA_ENVS###
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: ###ZARF_VAR_REGISTRY_CREATE_SERVICE_ACCOUNT###
+  # The name of the service account to use. If name not set and create is true, a name is generated using fullname template
+  name: "###ZARF_VAR_REGISTRY_SERVICE_ACCOUNT_NAME###"
+  annotations:
+    ###ZARF_VAR_REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS###

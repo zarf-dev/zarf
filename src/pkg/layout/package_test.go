@@ -5,6 +5,7 @@
 package layout
 
 import (
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -14,128 +15,154 @@ import (
 )
 
 func TestPackageFiles(t *testing.T) {
-	pp := New("test")
+	t.Parallel()
 
-	raw := &PackagePaths{
-		Base:      "test",
-		ZarfYAML:  normalizePath("test/zarf.yaml"),
-		Checksums: normalizePath("test/checksums.txt"),
-		Components: Components{
-			Base: normalizePath("test/components"),
-		},
-	}
+	t.Run("Verify New()", func(t *testing.T) {
+		t.Parallel()
 
-	require.Equal(t, raw, pp)
+		pp := New("test")
 
-	files := pp.Files()
-
-	expected := map[string]string{
-		"zarf.yaml":     normalizePath("test/zarf.yaml"),
-		"checksums.txt": normalizePath("test/checksums.txt"),
-	}
-
-	require.Equal(t, expected, files)
-
-	pp = pp.AddSignature("")
-
-	files = pp.Files()
-
-	// AddSignature will only add the signature if it is not empty
-	require.Equal(t, expected, files)
-
-	pp = pp.AddSignature("key.priv")
-
-	files = pp.Files()
-
-	expected = map[string]string{
-		"zarf.yaml":     normalizePath("test/zarf.yaml"),
-		"checksums.txt": normalizePath("test/checksums.txt"),
-		"zarf.yaml.sig": normalizePath("test/zarf.yaml.sig"),
-	}
-
-	require.Equal(t, expected, files)
-	pp = pp.AddImages()
-
-	files = pp.Files()
-
-	// Note that the map key will always be the forward "Slash" (/) version of the file path (never \)
-	expected = map[string]string{
-		"zarf.yaml":         normalizePath("test/zarf.yaml"),
-		"checksums.txt":     normalizePath("test/checksums.txt"),
-		"zarf.yaml.sig":     normalizePath("test/zarf.yaml.sig"),
-		"images/index.json": normalizePath("test/images/index.json"),
-		"images/oci-layout": normalizePath("test/images/oci-layout"),
-	}
-
-	require.Equal(t, expected, files)
-
-	pp = pp.AddSBOMs()
-
-	files = pp.Files()
-
-	// AddSBOMs adds the SBOMs directory, and files will only cares about files
-	require.Equal(t, expected, files)
-
-	paths := []string{
-		"zarf.yaml",
-		"checksums.txt",
-		"sboms.tar",
-		normalizePath("components/c1.tar"),
-		normalizePath("images/index.json"),
-		normalizePath("images/oci-layout"),
-		normalizePath("images/blobs/sha256/" + strings.Repeat("1", 64)),
-	}
-
-	pp = New("test")
-
-	pp.SetFromPaths(paths)
-
-	files = pp.Files()
-
-	expected = map[string]string{
-		"zarf.yaml":         normalizePath("test/zarf.yaml"),
-		"checksums.txt":     normalizePath("test/checksums.txt"),
-		"sboms.tar":         normalizePath("test/sboms.tar"),
-		"components/c1.tar": normalizePath("test/components/c1.tar"),
-		"images/index.json": normalizePath("test/images/index.json"),
-		"images/oci-layout": normalizePath("test/images/oci-layout"),
-		"images/blobs/sha256/" + strings.Repeat("1", 64): normalizePath("test/images/blobs/sha256/" + strings.Repeat("1", 64)),
-	}
-
-	require.Len(t, pp.Images.Blobs, 1)
-
-	require.Equal(t, expected, files)
-
-	descs := []ocispec.Descriptor{
-		{
-			Annotations: map[string]string{
-				ocispec.AnnotationTitle: "components/c2.tar",
+		raw := &PackagePaths{
+			Base:      "test",
+			ZarfYAML:  normalizePath("test/zarf.yaml"),
+			Checksums: normalizePath("test/checksums.txt"),
+			Components: Components{
+				Base: normalizePath("test/components"),
 			},
-		},
-		{
-			Annotations: map[string]string{
-				ocispec.AnnotationTitle: "images/blobs/sha256/" + strings.Repeat("2", 64),
+		}
+		require.Equal(t, raw, pp)
+	})
+
+	t.Run("Verify Files()", func(t *testing.T) {
+		t.Parallel()
+
+		pp := New("test")
+
+		files := pp.Files()
+		expected := map[string]string{
+			"zarf.yaml":     normalizePath("test/zarf.yaml"),
+			"checksums.txt": normalizePath("test/checksums.txt"),
+		}
+		require.Equal(t, expected, files)
+	})
+
+	t.Run("Verify Files() with signature", func(t *testing.T) {
+		t.Parallel()
+
+		pp := New("test")
+		pp.Signature = filepath.Join(pp.Base, Signature)
+
+		files := pp.Files()
+		expected := map[string]string{
+			"zarf.yaml":     normalizePath("test/zarf.yaml"),
+			"checksums.txt": normalizePath("test/checksums.txt"),
+			"zarf.yaml.sig": normalizePath("test/zarf.yaml.sig"),
+		}
+		require.Equal(t, expected, files)
+	})
+
+	t.Run("Verify Files() with images", func(t *testing.T) {
+		t.Parallel()
+
+		pp := New("test")
+		pp = pp.AddImages()
+
+		files := pp.Files()
+		expected := map[string]string{
+			"zarf.yaml":         normalizePath("test/zarf.yaml"),
+			"checksums.txt":     normalizePath("test/checksums.txt"),
+			"images/index.json": normalizePath("test/images/index.json"),
+			"images/oci-layout": normalizePath("test/images/oci-layout"),
+		}
+		require.Equal(t, expected, files)
+	})
+
+	// AddSBOMs sets the SBOMs path, so Files() should not return new files.
+	t.Run("Verify Files() with SBOMs", func(t *testing.T) {
+		t.Parallel()
+
+		pp := New("test")
+		pp = pp.AddSBOMs()
+
+		files := pp.Files()
+		expected := map[string]string{
+			"zarf.yaml":     normalizePath("test/zarf.yaml"),
+			"checksums.txt": normalizePath("test/checksums.txt"),
+		}
+		require.Equal(t, expected, files)
+
+		pp.SBOMs.Path = normalizePath("test/sboms.tar")
+		files = pp.Files()
+		expected = map[string]string{
+			"zarf.yaml":     normalizePath("test/zarf.yaml"),
+			"checksums.txt": normalizePath("test/checksums.txt"),
+			"sboms.tar":     normalizePath("test/sboms.tar"),
+		}
+		require.Equal(t, expected, files)
+	})
+
+	t.Run("Verify Files() with paths mapped to package paths", func(t *testing.T) {
+		t.Parallel()
+
+		pp := New("test")
+
+		paths := []string{
+			"zarf.yaml",
+			"checksums.txt",
+			"sboms.tar",
+			normalizePath("components/c1.tar"),
+			normalizePath("images/index.json"),
+			normalizePath("images/oci-layout"),
+			normalizePath("images/blobs/sha256/" + strings.Repeat("1", 64)),
+		}
+		pp.SetFromPaths(paths)
+
+		files := pp.Files()
+		expected := map[string]string{
+			"zarf.yaml":         normalizePath("test/zarf.yaml"),
+			"checksums.txt":     normalizePath("test/checksums.txt"),
+			"sboms.tar":         normalizePath("test/sboms.tar"),
+			"components/c1.tar": normalizePath("test/components/c1.tar"),
+			"images/index.json": normalizePath("test/images/index.json"),
+			"images/oci-layout": normalizePath("test/images/oci-layout"),
+			"images/blobs/sha256/" + strings.Repeat("1", 64): normalizePath("test/images/blobs/sha256/" + strings.Repeat("1", 64)),
+		}
+
+		require.Len(t, pp.Images.Blobs, 1)
+		require.Equal(t, expected, files)
+	})
+
+	t.Run("Verify Files() with image layers mapped to package paths", func(t *testing.T) {
+		t.Parallel()
+
+		pp := New("test")
+
+		descs := []ocispec.Descriptor{
+			{
+				Annotations: map[string]string{
+					ocispec.AnnotationTitle: "components/c2.tar",
+				},
 			},
-		},
-	}
+			{
+				Annotations: map[string]string{
+					ocispec.AnnotationTitle: "images/blobs/sha256/" + strings.Repeat("1", 64),
+				},
+			},
+		}
+		pp.AddImages()
+		pp.SetFromLayers(descs)
 
-	pp.SetFromLayers(descs)
-
-	files = pp.Files()
-
-	expected = map[string]string{
-		"zarf.yaml":         normalizePath("test/zarf.yaml"),
-		"checksums.txt":     normalizePath("test/checksums.txt"),
-		"sboms.tar":         normalizePath("test/sboms.tar"),
-		"components/c1.tar": normalizePath("test/components/c1.tar"),
-		"components/c2.tar": normalizePath("test/components/c2.tar"),
-		"images/index.json": normalizePath("test/images/index.json"),
-		"images/oci-layout": normalizePath("test/images/oci-layout"),
-		"images/blobs/sha256/" + strings.Repeat("1", 64): normalizePath("test/images/blobs/sha256/" + strings.Repeat("1", 64)),
-		"images/blobs/sha256/" + strings.Repeat("2", 64): normalizePath("test/images/blobs/sha256/" + strings.Repeat("2", 64)),
-	}
-
-	require.Equal(t, expected, files)
+		files := pp.Files()
+		expected := map[string]string{
+			"zarf.yaml":         normalizePath("test/zarf.yaml"),
+			"checksums.txt":     normalizePath("test/checksums.txt"),
+			"components/c2.tar": normalizePath("test/components/c2.tar"),
+			"images/index.json": normalizePath("test/images/index.json"),
+			"images/oci-layout": normalizePath("test/images/oci-layout"),
+			"images/blobs/sha256/" + strings.Repeat("1", 64): normalizePath("test/images/blobs/sha256/" + strings.Repeat("1", 64)),
+		}
+		require.Equal(t, expected, files)
+	})
 }
 
 // normalizePath ensures that the filepaths being generated are normalized to the host OS.

@@ -58,6 +58,41 @@ variables:
     default: ""
     autoIndent: true
 
+  - name: REGISTRY_CREATE_SERVICE_ACCOUNT
+    description: Toggle the creation of a new service account for the registry
+    default: "false"
+
+  - name: REGISTRY_SERVICE_ACCOUNT_NAME
+    description: The name of the service account to use. If not set and create is true, a name is generated using fullname template
+    default: ""
+
+  - name: REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS
+    description: Map of annotations to add to the created service account
+    default: ""
+    autoIndent: true
+
+  - name: REGISTRY_AFFINITY_ENABLE
+    description: Enable pod affinity for the registry
+    default: "true"
+
+  - name: REGISTRY_AFFINITY_CUSTOM
+    description: Custom pod affinity yaml block for the registry
+    default: ""
+    autoIndent: true
+
+  - name: REGISTRY_TOLERATIONS
+    description: Custom tolerations array for the registry
+    default: ""
+    autoIndent: true
+
+  - name: REGISTRY_HPA_AUTO_SIZE
+    description: Enable to set min and max replicas based on amount of nodes
+    default: "false"
+
+  - name: REGISTRY_HPA_TARGET_CPU
+    description: The target CPU utilization percentage for the registry
+    default: "80"
+
 constants:
   - name: REGISTRY_IMAGE
     value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE###"
@@ -111,15 +146,6 @@ components:
     images:
       # The seed image (or images) that will be injected (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
-    actions:
-      onDeploy:
-        before:
-          - description: Check that the cluster has the specified storage class
-            maxTotalSeconds: 3
-            wait:
-              cluster:
-                kind: storageclass
-                name: "\"${ZARF_STORAGE_CLASS}\""
 
   - name: zarf-registry
     description: |

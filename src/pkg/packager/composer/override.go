@@ -22,7 +22,7 @@ func overrideMetadata(c *types.ZarfComponent, override types.ZarfComponent) erro
 
 	if override.Only.LocalOS != "" {
 		if c.Only.LocalOS != "" {
-			return fmt.Errorf("component %q \"only.localOS\" %q cannot be redefined as %q during compose", c.Name, c.Only.LocalOS, override.Only.LocalOS)
+			return fmt.Errorf("component %q: \"only.localOS\" %q cannot be redefined as %q during compose", c.Name, c.Only.LocalOS, override.Only.LocalOS)
 		}
 
 		c.Only.LocalOS = override.Only.LocalOS
@@ -37,7 +37,7 @@ func overrideDeprecated(c *types.ZarfComponent, override types.ZarfComponent) {
 		c.DeprecatedCosignKeyPath = override.DeprecatedCosignKeyPath
 	}
 
-	c.Group = override.Group
+	c.DeprecatedGroup = override.DeprecatedGroup
 
 	// Merge deprecated scripts for backwards compatibility with older zarf binaries.
 	c.DeprecatedScripts.Before = append(c.DeprecatedScripts.Before, override.DeprecatedScripts.Before...)

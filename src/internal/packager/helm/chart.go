@@ -5,8 +5,11 @@
 package helm
 
 import (
+	"errors"
 	"fmt"
 	"time"
+
+	"github.com/defenseunicorns/pkg/helpers"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -24,9 +27,6 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
-// Set the default number of Helm install/upgrade attempts to 3
-const defaultHelmAttempts = 3
-
 // InstallOrUpgradeChart performs a helm install of the given chart.
 func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 	fromMessage := h.chart.URL
@@ -39,17 +39,9 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		fromMessage)
 	defer spinner.Stop()
 
-	var output *release.Release
-
 	// If no release name is specified, use the chart name.
 	if h.chart.ReleaseName == "" {
 		h.chart.ReleaseName = h.chart.Name
-	}
-
-	// Do not wait for the chart to be ready if data injections are present.
-	if len(h.component.DataInjections) > 0 {
-		spinner.Updatef("Data injections detected, not waiting for chart to be ready")
-		h.chart.NoWait = true
 	}
 
 	// Setup K8s connection.
@@ -63,49 +55,16 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		return nil, "", fmt.Errorf("unable to create helm renderer: %w", err)
 	}
 
-	attempt := 0
-	for {
-		attempt++
+	histClient := action.NewHistory(h.actionConfig)
+	tryHelm := func() error {
+		var err error
+		var output *release.Release
 
-		histClient := action.NewHistory(h.actionConfig)
 		releases, histErr := histClient.Run(h.chart.ReleaseName)
-
-		if attempt > 3 {
-			previouslyDeployedVersion := 0
-
-			// Check for previous releases that successfully deployed
-			for _, release := range releases {
-				if release.Info.Status == "deployed" {
-					previouslyDeployedVersion = release.Version
-				}
-			}
-
-			// On total failure try to rollback (if there was a previously deployed version) or uninstall.
-			if previouslyDeployedVersion > 0 {
-				spinner.Updatef("Performing chart rollback")
-
-				err = h.rollbackChart(h.chart.ReleaseName, previouslyDeployedVersion)
-				if err != nil {
-					return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts and unable to rollback: %w", defaultHelmAttempts, err)
-				}
-
-				return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts", defaultHelmAttempts)
-			}
-
-			spinner.Updatef("Performing chart uninstall")
-			_, err = h.uninstallChart(h.chart.ReleaseName)
-			if err != nil {
-				return nil, "", fmt.Errorf("unable to install chart after %d attempts and unable to uninstall: %w", defaultHelmAttempts, err)
-			}
-
-			return nil, "", fmt.Errorf("unable to install chart after %d attempts", defaultHelmAttempts)
-		}
-
-		spinner.Updatef("Attempt %d of %d to install chart", attempt, defaultHelmAttempts)
 
 		spinner.Updatef("Checking for existing helm deployment")
 
-		if histErr == driver.ErrReleaseNotFound {
+		if errors.Is(histErr, driver.ErrReleaseNotFound) {
 			// No prior release, try to install it.
 			spinner.Updatef("Attempting chart installation")
 
@@ -119,19 +78,45 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 			output, err = h.upgradeChart(lastRelease, postRender)
 		} else {
 			// 😭 things aren't working
-			return nil, "", fmt.Errorf("unable to verify the chart installation status: %w", histErr)
+			return fmt.Errorf("unable to verify the chart installation status: %w", histErr)
 		}
 
 		if err != nil {
-			message.Warnf("Unable to complete helm chart install/upgrade, waiting 10 seconds and trying again: %s", err.Error())
-
-			// Simply wait for dust to settle and try again.
-			time.Sleep(10 * time.Second)
-		} else {
-			message.Debug(output.Info.Description)
-			spinner.Success()
-			break
+			return err
 		}
+
+		message.Debug(output.Info.Description)
+		spinner.Success()
+		return nil
+	}
+
+	err = helpers.Retry(tryHelm, h.retries, 5*time.Second, message.Warnf)
+	if err != nil {
+		releases, _ := histClient.Run(h.chart.ReleaseName)
+		previouslyDeployedVersion := 0
+
+		// Check for previous releases that successfully deployed
+		for _, release := range releases {
+			if release.Info.Status == "deployed" {
+				previouslyDeployedVersion = release.Version
+			}
+		}
+
+		removeMsg := "if you need to remove the failed chart, use `zarf package remove`"
+
+		// No prior releases means this was an initial install.
+		if previouslyDeployedVersion == 0 {
+			return nil, "", fmt.Errorf("unable to install chart after %d attempts: %s", h.retries, removeMsg)
+		}
+
+		// Attempt to rollback on a failed upgrade.
+		spinner.Updatef("Performing chart rollback")
+		err = h.rollbackChart(h.chart.ReleaseName, previouslyDeployedVersion)
+		if err != nil {
+			return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts and unable to rollback: %s", h.retries, removeMsg)
+		}
+
+		return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts: %s", h.retries, removeMsg)
 	}
 
 	// return any collected connect strings for zarf connect.
@@ -139,12 +124,12 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 }
 
 // TemplateChart generates a helm template from a given chart.
-func (h *Helm) TemplateChart() (string, chartutil.Values, error) {
+func (h *Helm) TemplateChart() (manifest string, chartValues chartutil.Values, err error) {
 	message.Debugf("helm.TemplateChart()")
 	spinner := message.NewProgressSpinner("Templating helm chart %s", h.chart.Name)
 	defer spinner.Stop()
 
-	err := h.createActionConfig(h.chart.Namespace, spinner)
+	err = h.createActionConfig(h.chart.Namespace, spinner)
 
 	// Setup K8s connection.
 	if err != nil {
@@ -183,13 +168,18 @@ func (h *Helm) TemplateChart() (string, chartutil.Values, error) {
 		return "", nil, fmt.Errorf("unable to load chart data: %w", err)
 	}
 
+	client.PostRenderer, err = h.newRenderer()
+	if err != nil {
+		return "", nil, fmt.Errorf("unable to create helm renderer: %w", err)
+	}
+
 	// Perform the loadedChart installation.
 	templatedChart, err := client.Run(loadedChart, chartValues)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating helm chart template: %w", err)
 	}
 
-	manifest := templatedChart.Manifest
+	manifest = templatedChart.Manifest
 
 	for _, hook := range templatedChart.Hooks {
 		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest)
@@ -243,7 +233,7 @@ func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
 		// Namespace must be specified.
 		client.Namespace = h.chart.Namespace
 
-		// Post-processing our manifests for reasons....
+		// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 		client.PostRenderer = postRender
 
 		// Set reuse values to only override the values we are explicitly given
@@ -285,7 +275,7 @@ func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 	// Namespace must be specified.
 	client.Namespace = h.chart.Namespace
 
-	// Post-processing our manifests for reasons....
+	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 	client.PostRenderer = postRender
 
 	loadedChart, chartValues, err := h.loadChartData()
@@ -298,10 +288,6 @@ func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 }
 
 func (h *Helm) upgradeChart(lastRelease *release.Release, postRender *renderer) (*release.Release, error) {
-	// Print the postRender object piece by piece to not print the htpasswd
-	message.Debugf("helm.upgradeChart(%#v, %#v, %#v, %#v, %s)", postRender.actionConfig, postRender.connectStrings,
-		postRender.namespaces, postRender.Helm, fmt.Sprintf("values:template.Values{ registry: \"%s\" }", postRender.values.GetRegistry()))
-
 	// Migrate any deprecated APIs (if applicable)
 	err := h.migrateDeprecatedAPIs(lastRelease)
 	if err != nil {
@@ -322,7 +308,7 @@ func (h *Helm) upgradeChart(lastRelease *release.Release, postRender *renderer) 
 	// Namespace must be specified.
 	client.Namespace = h.chart.Namespace
 
-	// Post-processing our manifests for reasons....
+	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 	client.PostRenderer = postRender
 
 	loadedChart, chartValues, err := h.loadChartData()

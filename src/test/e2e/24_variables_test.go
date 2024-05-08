@@ -64,7 +64,7 @@ func TestVariables(t *testing.T) {
 	// Verify that the sensitive variable 'unicorn-land' was not printed to the screen
 	require.NotContains(t, stdErr, "unicorn-land")
 
-	logText := e2e.GetLogFileContents(t, stdErr)
+	logText := e2e.GetLogFileContents(t, e2e.StripMessageFormatting(stdErr))
 	// Verify that the sensitive variable 'unicorn-land' was not included in the log
 	require.NotContains(t, logText, "unicorn-land")
 

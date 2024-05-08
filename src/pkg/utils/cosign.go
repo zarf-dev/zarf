@@ -1,4 +1,3 @@
-// Forked from https://github.com/sigstore/cosign/blob/v1.7.1/pkg/sget/sget.go
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
@@ -12,10 +11,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -37,6 +36,8 @@ import (
 )
 
 // Sget performs a cosign signature verification on a given image using the specified public key.
+//
+// Forked from https://github.com/sigstore/cosign/blob/v1.7.1/pkg/sget/sget.go
 func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	message.Warnf(lang.WarnSGetDeprecation)
 
@@ -140,7 +141,7 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 
 	for _, sig := range sp {
 		if cert, err := sig.Cert(); err == nil && cert != nil {
-			message.Debugf("Certificate subject: %s", sigs.CertSubject(cert))
+			message.Debugf("Certificate subject: %s", cert.Subject)
 
 			ce := cosign.CertExtensions{Cert: cert}
 			if issuerURL := ce.GetIssuer(); issuerURL != "" {

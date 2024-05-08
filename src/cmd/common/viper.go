@@ -84,6 +84,7 @@ const (
 	VPkgDeploySget         = "package.deploy.sget"
 	VPkgDeploySkipWebhooks = "package.deploy.skip_webhooks"
 	VPkgDeployTimeout      = "package.deploy.timeout"
+	VPkgRetries            = "package.deploy.retries"
 
 	// Package publish config keys
 
@@ -184,7 +185,8 @@ func setDefaults() {
 
 	// Package defaults that are non-zero values
 	v.SetDefault(VPkgOCIConcurrency, 3)
+	v.SetDefault(VPkgRetries, config.ZarfDefaultRetries)
 
 	// Deploy opts that are non-zero values
-	v.SetDefault(VPkgDeployTimeout, config.ZarfDefaultHelmTimeout)
+	v.SetDefault(VPkgDeployTimeout, config.ZarfDefaultTimeout)
 }

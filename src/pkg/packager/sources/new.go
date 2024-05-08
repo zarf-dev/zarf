@@ -9,11 +9,13 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -28,10 +30,10 @@ import (
 //	`sources.ValidatePackageSignature` and `sources.ValidatePackageIntegrity` can be leveraged for this purpose.
 type PackageSource interface {
 	// LoadPackage loads a package from a source.
-	LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) error
+	LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error)
 
 	// LoadPackageMetadata loads a package's metadata from a source.
-	LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) error
+	LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error)
 
 	// Collect relocates a package from its source to a tarball in a given destination directory.
 	Collect(destinationDirectory string) (tarball string, err error)
@@ -48,7 +50,7 @@ func Identify(pkgSrc string) string {
 		return "split"
 	}
 
-	if config.IsValidFileExtension(pkgSrc) {
+	if IsValidFileExtension(pkgSrc) {
 		return "tarball"
 	}
 
@@ -67,11 +69,11 @@ func New(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 			pkgSrc = fmt.Sprintf("%s@sha256:%s", pkgSrc, pkgOpts.Shasum)
 		}
 		arch := config.GetArch()
-		remote, err := oci.NewOrasRemote(pkgSrc, oci.PlatformForArch(arch))
+		remote, err := zoci.NewRemote(pkgSrc, oci.PlatformForArch(arch))
 		if err != nil {
 			return nil, err
 		}
-		source = &OCISource{pkgOpts, remote}
+		source = &OCISource{ZarfPackageOptions: pkgOpts, Remote: remote}
 	case "tarball":
 		source = &TarballSource{pkgOpts}
 	case "http", "https", "sget":

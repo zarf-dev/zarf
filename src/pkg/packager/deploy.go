@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
@@ -23,9 +25,9 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -40,39 +42,65 @@ func (p *Packager) resetRegistryHPA() {
 
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy() (err error) {
-	if err = p.source.LoadPackage(p.layout, true); err != nil {
-		return fmt.Errorf("unable to load the package: %w", err)
-	}
 
-	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
-		return err
+	isInteractive := !config.CommonOptions.Confirm
+
+	deployFilter := filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, isInteractive),
+	)
+
+	if isInteractive {
+		filter := filters.Empty()
+
+		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, true)
+		if err != nil {
+			return fmt.Errorf("unable to load the package: %w", err)
+		}
+	} else {
+		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, deployFilter, true)
+		if err != nil {
+			return fmt.Errorf("unable to load the package: %w", err)
+		}
+
+		if err := p.populatePackageVariableConfig(); err != nil {
+			return fmt.Errorf("unable to set the active variables: %w", err)
+		}
 	}
 
 	if err := p.validateLastNonBreakingVersion(); err != nil {
 		return err
 	}
 
-	if err := p.stageSBOMViewFiles(); err != nil {
+	var sbomWarnings []string
+	p.sbomViewFiles, sbomWarnings, err = p.layout.SBOMs.StageSBOMViewFiles()
+	if err != nil {
 		return err
 	}
+
+	p.warnings = append(p.warnings, sbomWarnings...)
 
 	// Confirm the overall package deployment
 	if !p.confirmAction(config.ZarfDeployStage) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
-	// Set variables and prompt if --confirm is not set
-	if err := p.setVariableMapInConfig(); err != nil {
-		return fmt.Errorf("unable to set the active variables: %w", err)
+	if isInteractive {
+		p.cfg.Pkg.Components, err = deployFilter.Apply(p.cfg.Pkg)
+		if err != nil {
+			return err
+		}
+
+		// Set variables and prompt if --confirm is not set
+		if err := p.populatePackageVariableConfig(); err != nil {
+			return fmt.Errorf("unable to set the active variables: %w", err)
+		}
 	}
 
 	p.hpaModified = false
 	p.connectStrings = make(types.ConnectStrings)
 	// Reset registry HPA scale down whether an error occurs or not
 	defer p.resetRegistryHPA()
-
-	// Filter out components that are not compatible with this system
-	p.filterComponents()
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents()
@@ -93,12 +121,6 @@ func (p *Packager) Deploy() (err error) {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents() (deployedComponents []types.DeployedComponent, err error) {
-	componentsToDeploy := p.getSelectedComponents()
-
-	// Generate a value template
-	if p.valueTemplate, err = template.Generate(p.cfg); err != nil {
-		return deployedComponents, fmt.Errorf("unable to generate the value template: %w", err)
-	}
 
 	// Check if this package has been deployed before and grab relevant information about already deployed components
 	if p.generation == 0 {
@@ -106,7 +128,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 	}
 
 	// Process all the components we are deploying
-	for _, component := range componentsToDeploy {
+	for _, component := range p.cfg.Pkg.Components {
 
 		deployedComponent := types.DeployedComponent{
 			Name:               component.Name,
@@ -115,9 +137,9 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		}
 
 		// If this component requires a cluster, connect to one
-		if requiresCluster(component) {
+		if component.RequiresCluster() {
 			timeout := cluster.DefaultTimeout
-			if p.isInitConfig() {
+			if p.cfg.Pkg.IsInitConfig() {
 				timeout = 5 * time.Minute
 			}
 
@@ -147,7 +169,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		// Deploy the component
 		var charts []types.InstalledChart
 		var deployErr error
-		if p.isInitConfig() {
+		if p.cfg.Pkg.IsInitConfig() {
 			charts, deployErr = p.deployInitComponent(component)
 		} else {
 			charts, deployErr = p.deployComponent(component, false /* keep img checksum */, false /* always push images */)
@@ -156,7 +178,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := p.runActions(onDeploy.Defaults, onDeploy.OnFailure, p.valueTemplate); err != nil {
+			if err := actions.Run(onDeploy.Defaults, onDeploy.OnFailure, p.variableConfig); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -184,7 +206,7 @@ func (p *Packager) deployComponents() (deployedComponents []types.DeployedCompon
 			}
 		}
 
-		if err := p.runActions(onDeploy.Defaults, onDeploy.OnSuccess, p.valueTemplate); err != nil {
+		if err := actions.Run(onDeploy.Defaults, onDeploy.OnSuccess, p.variableConfig); err != nil {
 			onFailure()
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -199,9 +221,14 @@ func (p *Packager) deployInitComponent(component types.ZarfComponent) (charts []
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
 	isAgent := component.Name == "zarf-agent"
+	isK3s := component.Name == "k3s"
+
+	if isK3s {
+		p.cfg.InitOpts.ApplianceMode = true
+	}
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
-	if requiresCluster(component) && p.cfg.State == nil {
+	if component.RequiresCluster() && p.state == nil {
 		err = p.cluster.InitZarfState(p.cfg.InitOpts)
 		if err != nil {
 			return charts, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -255,15 +282,17 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	onDeploy := component.Actions.OnDeploy
 
-	if !p.valueTemplate.Ready() && requiresCluster(component) {
-		// Setup the state in the config and get the valuesTemplate
-		p.valueTemplate, err = p.setupStateValuesTemplate()
-		if err != nil {
-			return charts, err
+	if component.RequiresCluster() {
+		// Setup the state in the config
+		if p.state == nil {
+			err = p.setupState()
+			if err != nil {
+				return charts, err
+			}
 		}
 
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
-		if hasImages && !p.hpaModified && p.cfg.State.RegistryInfo.InternalRegistry {
+		if hasImages && !p.hpaModified && p.state.RegistryInfo.InternalRegistry {
 			if err := p.cluster.DisableRegHPAScaleDown(); err != nil {
 				message.Debugf("unable to disable the registry HPA scale down: %s", err.Error())
 			} else {
@@ -272,7 +301,12 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 		}
 	}
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.Before, p.valueTemplate); err != nil {
+	err = p.populateComponentAndStateTemplates(component.Name)
+	if err != nil {
+		return charts, err
+	}
+
+	if err = actions.Run(onDeploy.Defaults, onDeploy.Before, p.variableConfig); err != nil {
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -306,11 +340,11 @@ func (p *Packager) deployComponent(component types.ZarfComponent, noImgChecksum 
 
 	if hasCharts || hasManifests {
 		if charts, err = p.installChartAndManifests(componentPath, component); err != nil {
-			return charts, fmt.Errorf("unable to install helm chart(s): %w", err)
+			return charts, err
 		}
 	}
 
-	if err = p.runActions(onDeploy.Defaults, onDeploy.After, p.valueTemplate); err != nil {
+	if err = actions.Run(onDeploy.Defaults, onDeploy.After, p.variableConfig); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -326,14 +360,14 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		spinner.Updatef("Loading %s", file.Target)
 
 		fileLocation := filepath.Join(pkgLocation, strconv.Itoa(fileIdx), filepath.Base(file.Target))
-		if utils.InvalidPath(fileLocation) {
+		if helpers.InvalidPath(fileLocation) {
 			fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx))
 		}
 
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			if err := utils.SHAsMatch(fileLocation, file.Shasum); err != nil {
+			if err := helpers.SHAsMatch(fileLocation, file.Shasum); err != nil {
 				return err
 			}
 		}
@@ -343,8 +377,8 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 		file.Target = config.GetAbsHomePath(file.Target)
 
 		fileList := []string{}
-		if utils.IsDir(fileLocation) {
-			files, _ := utils.RecursiveFileList(fileLocation, nil, false)
+		if helpers.IsDir(fileLocation) {
+			files, _ := helpers.RecursiveFileList(fileLocation, nil, false)
 			fileList = append(fileList, files...)
 		} else {
 			fileList = append(fileList, fileLocation)
@@ -352,7 +386,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 
 		for _, subFile := range fileList {
 			// Check if the file looks like a text file
-			isText, err := utils.IsTextFile(subFile)
+			isText, err := helpers.IsTextFile(subFile)
 			if err != nil {
 				message.Debugf("unable to determine if file %s is a text file: %s", subFile, err)
 			}
@@ -360,7 +394,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 			// If the file is a text file, template it
 			if isText {
 				spinner.Updatef("Templating %s", file.Target)
-				if err := p.valueTemplate.Apply(component, subFile, true); err != nil {
+				if err := p.variableConfig.ReplaceTextTemplate(subFile); err != nil {
 					return fmt.Errorf("unable to template file %s: %w", subFile, err)
 				}
 			}
@@ -368,7 +402,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
-		err := utils.CreatePathAndCopy(fileLocation, file.Target)
+		err := helpers.CreatePathAndCopy(fileLocation, file.Target)
 		if err != nil {
 			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
 		}
@@ -379,7 +413,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 			// Try to remove the filepath if it exists
 			_ = os.RemoveAll(link)
 			// Make sure the parent directory exists
-			_ = utils.CreateParentDirectory(link)
+			_ = helpers.CreateParentDirectory(link)
 			// Create the symlink
 			err := os.Symlink(file.Target, link)
 			if err != nil {
@@ -396,8 +430,8 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 	return nil
 }
 
-// setupStateValuesTemplate fetched the current ZarfState from the k8s cluster and generate a p.valueTemplate from the state values.
-func (p *Packager) setupStateValuesTemplate() (values *template.Values, err error) {
+// setupState fetches the current ZarfState from the k8s cluster and sets the packager to use it
+func (p *Packager) setupState() (err error) {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
@@ -405,7 +439,7 @@ func (p *Packager) setupStateValuesTemplate() (values *template.Values, err erro
 	state, err := p.cluster.LoadZarfState()
 	// Return on error if we are not in YOLO mode
 	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
-		return nil, fmt.Errorf("%s %w", lang.ErrLoadState, err)
+		return fmt.Errorf("%s %w", lang.ErrLoadState, err)
 	} else if state == nil && p.cfg.Pkg.Metadata.YOLO {
 		state = &types.ZarfState{}
 		// YOLO mode, so minimal state needed
@@ -425,16 +459,24 @@ func (p *Packager) setupStateValuesTemplate() (values *template.Values, err erro
 			"the pod or namespace label `zarf.dev/agent: ignore'.")
 	}
 
-	p.cfg.State = state
-
-	// Continue loading state data if it is valid
-	values, err = template.Generate(p.cfg)
-	if err != nil {
-		return values, err
-	}
+	p.state = state
 
 	spinner.Success()
-	return values, nil
+	return nil
+}
+
+func (p *Packager) populateComponentAndStateTemplates(componentName string) error {
+	applicationTemplates, err := template.GetZarfTemplates(componentName, p.state)
+	if err != nil {
+		return err
+	}
+	p.variableConfig.SetApplicationTemplates(applicationTemplates)
+	return nil
+}
+
+func (p *Packager) populatePackageVariableConfig() error {
+	p.variableConfig.SetConstants(p.cfg.Pkg.Constants)
+	return p.variableConfig.PopulateVariables(p.cfg.Pkg.Variables, p.cfg.PkgOpts.SetVariables)
 }
 
 // Push all of the components images to the configured container registry.
@@ -458,14 +500,14 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 		ImagesPath:    p.layout.Images.Base,
 		ImageList:     imageList,
 		NoChecksum:    noImgChecksum,
-		RegInfo:       p.cfg.State.RegistryInfo,
+		RegInfo:       p.state.RegistryInfo,
 		Insecure:      config.CommonOptions.Insecure,
-		Architectures: []string{p.cfg.Pkg.Metadata.Architecture, p.cfg.Pkg.Build.Architecture},
+		Architectures: []string{p.cfg.Pkg.Build.Architecture},
 	}
 
 	return helpers.Retry(func() error {
 		return imgConfig.PushToZarfRegistry()
-	}, 3, 5*time.Second, message.Warnf)
+	}, p.cfg.PkgOpts.Retries, 5*time.Second, message.Warnf)
 }
 
 // Push all of the components git repos to the configured git server.
@@ -473,7 +515,7 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 	for _, repoURL := range repos {
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
-			gitClient := git.New(p.cfg.State.GitServer)
+			gitClient := git.New(p.state.GitServer)
 			svcInfo, _ := k8s.ServiceInfoFromServiceURL(gitClient.Server.Address)
 
 			var err error
@@ -506,8 +548,8 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 			return gitClient.PushRepo(repoURL, reposPath)
 		}
 
-		// Try repo push up to 3 times
-		if err := helpers.Retry(tryPush, 3, 5*time.Second, message.Warnf); err != nil {
+		// Try repo push up to retry limit
+		if err := helpers.Retry(tryPush, p.cfg.PkgOpts.Retries, 5*time.Second, message.Warnf); err != nil {
 			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}
 	}
@@ -515,24 +557,54 @@ func (p *Packager) pushReposToRepository(reposPath string, repos []string) error
 	return nil
 }
 
+// generateValuesOverrides creates a map containing overrides for chart values based on the chart and component
+// Specifically it merges DeployOpts.ValuesOverridesMap over Zarf `variables` for a given component/chart combination
+func (p *Packager) generateValuesOverrides(chart types.ZarfChart, componentName string) (map[string]any, error) {
+	valuesOverrides := make(map[string]any)
+	chartOverrides := make(map[string]any)
+
+	for _, variable := range chart.Variables {
+		if setVar, ok := p.variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
+			// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
+			if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
+				return nil, fmt.Errorf("unable to merge path and value into map: %w", err)
+			}
+		}
+	}
+
+	// Apply any direct overrides specified in the deployment options for this component and chart
+	if componentOverrides, ok := p.cfg.DeployOpts.ValuesOverridesMap[componentName]; ok {
+		if chartSpecificOverrides, ok := componentOverrides[chart.Name]; ok {
+			valuesOverrides = chartSpecificOverrides
+		}
+	}
+
+	// Merge chartOverrides into valuesOverrides to ensure all overrides are applied.
+	// This corrects the logic to ensure that chartOverrides and valuesOverrides are merged correctly.
+	return helpers.MergeMapRecursive(chartOverrides, valuesOverrides), nil
+}
+
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
 func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
+		// Do not wait for the chart to be ready if data injections are present.
+		if len(component.DataInjections) > 0 {
+			chart.NoWait = true
+		}
 
 		// zarf magic for the value file
 		for idx := range chart.ValuesFiles {
-			chartValueName := fmt.Sprintf("%s-%d", helm.StandardName(componentPaths.Values, chart), idx)
-			if err := p.valueTemplate.Apply(component, chartValueName, false); err != nil {
+			valueFilePath := helm.StandardValuesName(componentPaths.Values, chart, idx)
+			if err := p.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
 				return installedCharts, err
 			}
 		}
 
-		// TODO (@WSTARR): Currently this logic is library-only and is untested while it is in an experimental state - it may eventually get added as shorthand in Zarf Variables though
-		var valuesOverrides map[string]any
-		if componentChartValuesOverrides, ok := p.cfg.DeployOpts.ValuesOverridesMap[component.Name]; ok {
-			if chartValuesOverrides, ok := componentChartValuesOverrides[chart.Name]; ok {
-				valuesOverrides = chartValuesOverrides
-			}
+		// Create a Helm values overrides map from set Zarf `variables` and DeployOpts library inputs
+		// Values overrides are to be applied in order of Helm Chart Defaults -> Zarf `valuesFiles` -> Zarf `variables` -> DeployOpts overrides
+		valuesOverrides, err := p.generateValuesOverrides(chart, component.Name)
+		if err != nil {
+			return installedCharts, err
 		}
 
 		helmCfg := helm.New(
@@ -540,11 +612,13 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 			componentPaths.Charts,
 			componentPaths.Values,
 			helm.WithDeployInfo(
-				component,
 				p.cfg,
+				p.variableConfig,
+				p.state,
 				p.cluster,
 				valuesOverrides,
-				p.cfg.DeployOpts.Timeout),
+				p.cfg.DeployOpts.Timeout,
+				p.cfg.PkgOpts.Retries),
 		)
 
 		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
@@ -561,10 +635,10 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
-			if utils.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
+			if helpers.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
 				// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
 				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
-				if utils.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
+				if helpers.InvalidPath(filepath.Join(componentPaths.Manifests, manifest.Files[idx])) {
 					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
 				}
 			}
@@ -587,11 +661,13 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 			p.cfg.Pkg.Metadata.Name,
 			component.Name,
 			helm.WithDeployInfo(
-				component,
 				p.cfg,
+				p.variableConfig,
+				p.state,
 				p.cluster,
 				nil,
-				p.cfg.DeployOpts.Timeout),
+				p.cfg.DeployOpts.Timeout,
+				p.cfg.PkgOpts.Retries),
 		)
 		if err != nil {
 			return installedCharts, err
@@ -617,14 +693,14 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedComponent) {
 
 	// If not init config, print the application connection table
-	if !p.isInitConfig() {
+	if !p.cfg.Pkg.IsInitConfig() {
 		message.PrintConnectStringTable(p.connectStrings)
 	} else {
 		if p.cluster != nil {
 			// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds
 			freshState, err := p.cluster.LoadZarfState()
 			if err != nil {
-				freshState = p.cfg.State
+				freshState = p.state
 			}
 			// otherwise, print the init config connection and passwords
 			message.PrintCredentialTable(freshState, componentsToDeploy)

@@ -11,27 +11,28 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2/content"
 	ocistore "oras.land/oras-go/v2/content/oci"
 )
 
-func (ic *ImportChain) getRemote(url string) (*oci.OrasRemote, error) {
+func (ic *ImportChain) getRemote(url string) (*zoci.Remote, error) {
 	if ic.remote != nil {
 		return ic.remote, nil
 	}
 	var err error
-	ic.remote, err = oci.NewOrasRemote(url, oci.PlatformForSkeleton())
+	ic.remote, err = zoci.NewRemote(url, zoci.PlatformForSkeleton())
 	if err != nil {
 		return nil, err
 	}
-	_, err = ic.remote.ResolveRoot()
+	_, err = ic.remote.ResolveRoot(context.TODO())
 	if err != nil {
 		return nil, fmt.Errorf("published skeleton package for %q does not exist: %w", url, err)
 	}
@@ -54,7 +55,8 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 		return err
 	}
 
-	manifest, err := remote.FetchRoot()
+	ctx := context.TODO()
+	manifest, err := remote.FetchRoot(ctx)
 	if err != nil {
 		return err
 	}
@@ -64,7 +66,7 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", name)))
 
 	cache := filepath.Join(config.GetAbsCachePath(), "oci")
-	if err := utils.CreateDirectory(cache, 0700); err != nil {
+	if err := helpers.CreateDirectory(cache, helpers.ReadWriteExecuteUser); err != nil {
 		return err
 	}
 
@@ -95,16 +97,20 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 		if err != nil {
 			return err
 		} else if !exists {
-			copyOpts := remote.CopyOpts
-			// TODO (@WSTARR): This overrides the FindSuccessors function to no longer filter nodes when pulling which is necessary when caching - once we implement caching more thoroughly we will need to reevaluate this.
-			copyOpts.FindSuccessors = content.Successors
-			if err := remote.CopyWithProgress([]ocispec.Descriptor{componentDesc}, store, copyOpts, cache); err != nil {
+			doneSaving := make(chan error)
+			successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+remote.Repo().Reference.String())
+			go utils.RenderProgressBarForLocalDirWrite(cache, componentDesc.Size, doneSaving, "Pulling", successText)
+			err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
+			doneSaving <- err
+			<-doneSaving
+			if err != nil {
 				return err
 			}
+
 		}
 	}
 
-	if err := utils.CreateDirectory(dir, 0700); err != nil {
+	if err := helpers.CreateDirectory(dir, helpers.ReadWriteExecuteUser); err != nil {
 		return err
 	}
 

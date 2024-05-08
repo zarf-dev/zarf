@@ -17,10 +17,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ldflags github.com/defenseunicorns/zarf/src/cmd/tools.archiverVersion=x.x.x
+var archiverVersion string
+
 var archiverCmd = &cobra.Command{
 	Use:     "archiver",
 	Aliases: []string{"a"},
 	Short:   lang.CmdToolsArchiverShort,
+	Version: archiverVersion,
 }
 
 var archiverCompressCmd = &cobra.Command{
@@ -28,7 +32,7 @@ var archiverCompressCmd = &cobra.Command{
 	Aliases: []string{"c"},
 	Short:   lang.CmdToolsArchiverCompressShort,
 	Args:    cobra.MinimumNArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		sourceFiles, destinationArchive := args[:len(args)-1], args[len(args)-1]
 		err := archiver.Archive(sourceFiles, destinationArchive)
 		if err != nil {
@@ -44,7 +48,7 @@ var archiverDecompressCmd = &cobra.Command{
 	Aliases: []string{"d"},
 	Short:   lang.CmdToolsArchiverDecompressShort,
 	Args:    cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		sourceArchive, destinationPath := args[0], args[1]
 		err := archiver.Unarchive(sourceArchive, destinationPath)
 		if err != nil {
@@ -85,6 +89,7 @@ func init() {
 
 	archiverCmd.AddCommand(archiverCompressCmd)
 	archiverCmd.AddCommand(archiverDecompressCmd)
+	archiverCmd.AddCommand(newVersionCmd("mholt/archiver", archiverVersion))
 	archiverDecompressCmd.Flags().BoolVar(&unarchiveAll, "decompress-all", false, "Decompress all tarballs in the archive")
 	archiverDecompressCmd.Flags().BoolVar(&unarchiveAll, "unarchive-all", false, "Unarchive all tarballs in the archive")
 	archiverDecompressCmd.MarkFlagsMutuallyExclusive("decompress-all", "unarchive-all")

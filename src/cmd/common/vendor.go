@@ -31,6 +31,7 @@ var vendorCmds = []string{
 	"r",
 	"helm",
 	"h",
+	"yq",
 }
 
 // CheckVendorOnlyFromArgs checks if the command being run is a vendor-only command

@@ -302,18 +302,18 @@ func (g *Git) addReadOnlyUserToRepo(tunnelURL, repo string) error {
 	message.Debugf("git.addReadOnlyUserToRepo()")
 
 	// Add the readonly user to the repo
-	addColabBody := map[string]string{
+	addCollabBody := map[string]string{
 		"permission": "read",
 	}
-	addColabData, err := json.Marshal(addColabBody)
+	addCollabData, err := json.Marshal(addCollabBody)
 	if err != nil {
 		return err
 	}
 
 	// Send API request to add a user as a read-only collaborator to a repo
-	addColabEndpoint := fmt.Sprintf("%s/api/v1/repos/%s/%s/collaborators/%s", tunnelURL, g.Server.PushUsername, repo, g.Server.PullUsername)
-	addColabRequest, _ := netHttp.NewRequest("PUT", addColabEndpoint, bytes.NewBuffer(addColabData))
-	out, _, err := g.DoHTTPThings(addColabRequest, g.Server.PushUsername, g.Server.PushPassword)
-	message.Debugf("PUT %s:\n%s", addColabEndpoint, string(out))
+	addCollabEndpoint := fmt.Sprintf("%s/api/v1/repos/%s/%s/collaborators/%s", tunnelURL, g.Server.PushUsername, repo, g.Server.PullUsername)
+	addCollabRequest, _ := netHttp.NewRequest("PUT", addCollabEndpoint, bytes.NewBuffer(addCollabData))
+	out, _, err := g.DoHTTPThings(addCollabRequest, g.Server.PushUsername, g.Server.PushPassword)
+	message.Debugf("PUT %s:\n%s", addCollabEndpoint, string(out))
 	return err
 }

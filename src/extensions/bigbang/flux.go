@@ -10,9 +10,9 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
@@ -62,7 +62,7 @@ func getFlux(baseDir string, cfg *extensions.BigBang) (manifest types.ZarfManife
 		fluxKustomization.Patches = append(fluxKustomization.Patches, krustytypes.Patch{Path: absFluxPatchPath})
 	}
 
-	if err := utils.WriteYaml(kustomizePath, fluxKustomization, 0600); err != nil {
+	if err := utils.WriteYaml(kustomizePath, fluxKustomization, helpers.ReadWriteUser); err != nil {
 		return manifest, images, fmt.Errorf("unable to write kustomization: %w", err)
 	}
 

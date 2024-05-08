@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -26,7 +26,7 @@ func (p *Packager) confirmAction(stage string) (confirm bool) {
 
 	// Print any potential breaking changes (if this is a Deploy confirm) between this CLI version and the deployed init package
 	if stage == config.ZarfDeployStage {
-		if sbom.IsSBOMAble(p.cfg.Pkg) {
+		if p.cfg.Pkg.IsSBOMAble() {
 			// Print the location that the user can view the package SBOMs from
 			message.HorizontalRule()
 			message.Title("Software Bill of Materials", "an inventory of all software contained in this package")
@@ -93,9 +93,9 @@ func (p *Packager) getPackageYAMLHints(stage string) map[string]string {
 		for _, variable := range p.cfg.Pkg.Variables {
 			value, present := p.cfg.PkgOpts.SetVariables[variable.Name]
 			if !present {
-				value = fmt.Sprintf("'%s' (default)", message.Truncate(variable.Default, 20, false))
+				value = fmt.Sprintf("'%s' (default)", helpers.Truncate(variable.Default, 20, false))
 			} else {
-				value = fmt.Sprintf("'%s'", message.Truncate(value, 20, false))
+				value = fmt.Sprintf("'%s'", helpers.Truncate(value, 20, false))
 			}
 			if variable.Sensitive {
 				value = "'**sanitized**'"
@@ -106,7 +106,7 @@ func (p *Packager) getPackageYAMLHints(stage string) map[string]string {
 
 	hints = utils.AddRootHint(hints, "metadata", "information about this package\n")
 	hints = utils.AddRootHint(hints, "build", "info about the machine, zarf version, and user that created this package\n")
-	hints = utils.AddRootHint(hints, "components", "definition of capabilities this package deploys")
+	hints = utils.AddRootHint(hints, "components", "components selected for this operation")
 	hints = utils.AddRootHint(hints, "constants", "static values set by the package author")
 	hints = utils.AddRootHint(hints, "variables", "deployment-specific values that are set on each package deployment")
 

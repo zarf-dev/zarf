@@ -15,3 +15,6 @@ ignore:
 
   # From k8s.io/apiserver - This is a false positive due to the difference in versioning between the library / binary k8s versioning
   - vulnerability: GHSA-82hx-w2r5-c2wq
+
+  # From helm - This behavior was introduced intentionally, and cannot be removed without breaking backwards compatibility (some users may be relying on these values).
+  - vulnerability: GHSA-jw44-4f3j-q396

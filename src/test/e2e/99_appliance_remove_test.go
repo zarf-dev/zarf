@@ -25,11 +25,24 @@ func TestApplianceRemove(t *testing.T) {
 
 	path := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", e2e.Arch, initPackageVersion)
 
-	// Destroy the cluster to test Zarf cleaning up after itself
+	// Package remove the cluster to test Zarf cleaning up after itself
 	stdOut, stdErr, err := e2e.Zarf("package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Check that the cluster is now gone
+	_, _, err = e2e.Kubectl("get", "nodes")
+	require.Error(t, err)
+
+	// TODO (@WSTARR) - This needs to be refactored to use the remove logic instead of reaching into a magic directory
+	// Re-init the cluster so that we can test if the destroy scripts run
+	stdOut, stdErr, err = e2e.Zarf("init", "--components=k3s", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Destroy the cluster to test Zarf cleaning up after itself
+	stdOut, stdErr, err = e2e.Zarf("destroy", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Check that the cluster gone again
 	_, _, err = e2e.Kubectl("get", "nodes")
 	require.Error(t, err)
 }

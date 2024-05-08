@@ -1,0 +1,31 @@
+kind: ZarfPackageConfig
+metadata:
+  name: find-image-with-variables
+  description: Simple zarf package with variables
+
+variables:
+  - name: BUSYBOX_IMAGE
+    default: "busybox:latest"
+
+constants:
+  - name: SAMPLE_IMAGE
+    value: "nginx:latest"
+
+components:
+- name: simple-var
+  required: true
+  manifests:
+    - name: simple-deployment
+      namespace: zarf
+      files:
+        - deployment.yaml
+- name: chart-with-var
+  required: true
+  charts:
+    - name: simple
+      releaseName: simple
+      localPath: simple-helm
+      namespace: zarf-simple
+      version: 0.1.0
+      valuesFiles:
+        - values.yaml

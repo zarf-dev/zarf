@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -61,15 +62,15 @@ func ValidatePackageSignature(paths *layout.PackagePaths, publicKeyPath string) 
 // ValidatePackageIntegrity validates the integrity of a package by comparing checksums
 func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum string, isPartial bool) error {
 	// ensure checksums.txt and zarf.yaml were loaded
-	if utils.InvalidPath(loaded.Checksums) {
+	if helpers.InvalidPath(loaded.Checksums) {
 		return fmt.Errorf("unable to validate checksums, %s was not loaded", layout.Checksums)
 	}
-	if utils.InvalidPath(loaded.ZarfYAML) {
+	if helpers.InvalidPath(loaded.ZarfYAML) {
 		return fmt.Errorf("unable to validate checksums, %s was not loaded", layout.ZarfYAML)
 	}
 
 	checksumPath := loaded.Checksums
-	if err := utils.SHAsMatch(checksumPath, aggregateChecksum); err != nil {
+	if err := helpers.SHAsMatch(checksumPath, aggregateChecksum); err != nil {
 		return err
 	}
 
@@ -102,7 +103,7 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 		}
 		path := filepath.Join(loaded.Base, rel)
 
-		if utils.InvalidPath(path) {
+		if helpers.InvalidPath(path) {
 			if !isPartial && !checkedMap[path] {
 				return fmt.Errorf("unable to validate checksums - missing file: %s", rel)
 			} else if isPartial {
@@ -116,11 +117,11 @@ func ValidatePackageIntegrity(loaded *layout.PackagePaths, aggregateChecksum str
 					return fmt.Errorf("unable to validate partial checksums - missing file: %s", rel)
 				}
 			}
-			// it's okay if we're doing a partial check and the file isn't there as long as the path wasnt loaded
+			// it's okay if we're doing a partial check and the file isn't there as long as the path wasn't loaded
 			return nil
 		}
 
-		if err := utils.SHAsMatch(path, sha); err != nil {
+		if err := helpers.SHAsMatch(path, sha); err != nil {
 			return err
 		}
 
@@ -157,7 +158,7 @@ func pathCheckMap(dir string) (map[string]bool, error) {
 			return nil
 		}
 		filepathMap[path] = false
-		return nil
+		return err
 	})
 	return filepathMap, err
 }

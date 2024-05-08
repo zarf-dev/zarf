@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -76,7 +77,7 @@ func newRepoAddCmd(out io.Writer) *cobra.Command {
 		Use:   "add [NAME] [URL]",
 		Short: "add a chart repository",
 		Args:  require.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			o.name = args[0]
 			o.url = args[1]
 			o.repoFile = settings.RepositoryConfig
@@ -216,7 +217,7 @@ func (o *repoAddOptions) run(out io.Writer) error {
 
 	f.Update(&c)
 
-	if err := f.WriteFile(o.repoFile, 0600); err != nil {
+	if err := f.WriteFile(o.repoFile, helpers.ReadWriteUser); err != nil {
 		return err
 	}
 	fmt.Fprintf(out, "%q has been added to your repositories\n", o.name)

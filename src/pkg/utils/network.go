@@ -14,9 +14,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 )
 
 func parseChecksum(src string) (string, string, error) {
@@ -48,7 +48,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 		return err
 	}
 
-	err = CreateDirectory(filepath.Dir(dst), 0700)
+	err = helpers.CreateDirectory(filepath.Dir(dst), helpers.ReadWriteExecuteUser)
 	if err != nil {
 		return fmt.Errorf(lang.ErrCreatingDir, filepath.Dir(dst), err.Error())
 	}
@@ -82,7 +82,7 @@ func DownloadToFile(src string, dst string, cosignKeyPath string) (err error) {
 
 	// If the file has a checksum, validate it
 	if len(checksum) > 0 {
-		received, err := GetSHA256OfFile(dst)
+		received, err := helpers.GetSHA256OfFile(dst)
 		if err != nil {
 			return err
 		}

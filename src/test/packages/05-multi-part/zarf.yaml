@@ -6,8 +6,11 @@ metadata:
 components:
   - name: big-ol-file
     required: true
-    description: Single 5 MB file needed to demonstrate a multi-part package
+    description: Include a 50 MB file needed to demonstrate a multi-part package
+    actions:
+      onCreate:
+        before:
+          - cmd: dd if=/dev/urandom of=multi-part-demo.dat bs=1048576 count=50
     files:
-      - source: https://zarf-public.s3-us-gov-west-1.amazonaws.com/examples/multi-part-demo.dat
-        shasum: 22ebd38c2f5e04821c87c924c910be57d2169c292f85b2936d53cae24ebf8055
+      - source: multi-part-demo.dat
         target: multi-part-demo.dat

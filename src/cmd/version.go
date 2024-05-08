@@ -24,12 +24,12 @@ var outputFormat string
 var versionCmd = &cobra.Command{
 	Use:     "version",
 	Aliases: []string{"v"},
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRun: func(_ *cobra.Command, _ []string) {
 		config.SkipLogFile = true
 	},
 	Short: lang.CmdVersionShort,
 	Long:  lang.CmdVersionLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		output := make(map[string]interface{})
 
 		buildInfo, ok := debug.ReadBuildInfo()

@@ -5,15 +5,21 @@
 package layout
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -51,13 +57,36 @@ func New(baseDir string) *PackagePaths {
 	}
 }
 
+// ReadZarfYAML reads a zarf.yaml file into memory,
+// checks if it's using the legacy layout, and migrates deprecated component configs.
+func (pp *PackagePaths) ReadZarfYAML() (pkg types.ZarfPackage, warnings []string, err error) {
+	if err := utils.ReadYaml(pp.ZarfYAML, &pkg); err != nil {
+		return types.ZarfPackage{}, nil, fmt.Errorf("unable to read zarf.yaml: %w", err)
+	}
+
+	if pp.IsLegacyLayout() {
+		warnings = append(warnings, "Detected deprecated package layout, migrating to new layout - support for this package will be dropped in v1.0.0")
+	}
+
+	if len(pkg.Build.Migrations) > 0 {
+		var componentWarnings []string
+		for idx, component := range pkg.Components {
+			// Handle component configuration deprecations
+			pkg.Components[idx], componentWarnings = deprecated.MigrateComponent(pkg.Build, component)
+			warnings = append(warnings, componentWarnings...)
+		}
+	}
+
+	return pkg, warnings, nil
+}
+
 // MigrateLegacy migrates a legacy package layout to the new layout.
 func (pp *PackagePaths) MigrateLegacy() (err error) {
 	var pkg types.ZarfPackage
 	base := pp.Base
 
 	// legacy layout does not contain a checksums file, nor a signature
-	if utils.InvalidPath(pp.Checksums) && pp.Signature == "" {
+	if helpers.InvalidPath(pp.Checksums) && pp.Signature == "" {
 		if err := utils.ReadYaml(pp.ZarfYAML, &pkg); err != nil {
 			return err
 		}
@@ -75,7 +104,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 
 	// Migrate legacy sboms
 	legacySBOMs := filepath.Join(base, "sboms")
-	if !utils.InvalidPath(legacySBOMs) {
+	if !helpers.InvalidPath(legacySBOMs) {
 		pp = pp.AddSBOMs()
 		message.Debugf("Migrating %q to %q", legacySBOMs, pp.SBOMs.Path)
 		if err := os.Rename(legacySBOMs, pp.SBOMs.Path); err != nil {
@@ -85,7 +114,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 
 	// Migrate legacy images
 	legacyImagesTar := filepath.Join(base, "images.tar")
-	if !utils.InvalidPath(legacyImagesTar) {
+	if !helpers.InvalidPath(legacyImagesTar) {
 		pp = pp.AddImages()
 		message.Debugf("Migrating %q to %q", legacyImagesTar, pp.Images.Base)
 		defer os.Remove(legacyImagesTar)
@@ -139,12 +168,94 @@ func (pp *PackagePaths) IsLegacyLayout() bool {
 	return pp.isLegacyLayout
 }
 
-// AddSignature sets the signature path if the keyPath is not empty.
-func (pp *PackagePaths) AddSignature(keyPath string) *PackagePaths {
-	if keyPath != "" {
-		pp.Signature = filepath.Join(pp.Base, Signature)
+// SignPackage signs the zarf.yaml in a Zarf package.
+func (pp *PackagePaths) SignPackage(signingKeyPath, signingKeyPassword string, isInteractive bool) error {
+	if signingKeyPath == "" {
+		return nil
 	}
-	return pp
+
+	pp.Signature = filepath.Join(pp.Base, Signature)
+
+	passwordFunc := func(_ bool) ([]byte, error) {
+		if signingKeyPassword != "" {
+			return []byte(signingKeyPassword), nil
+		}
+		if !isInteractive {
+			return nil, nil
+		}
+		return interactive.PromptSigPassword()
+	}
+	_, err := utils.CosignSignBlob(pp.ZarfYAML, pp.Signature, signingKeyPath, passwordFunc)
+	if err != nil {
+		return fmt.Errorf("unable to sign the package: %w", err)
+	}
+
+	return nil
+}
+
+// GenerateChecksums walks through all of the files starting at the base path and generates a checksum file.
+//
+// Each file within the basePath represents a layer within the Zarf package.
+//
+// Returns a SHA256 checksum of the checksums.txt file.
+func (pp *PackagePaths) GenerateChecksums() (string, error) {
+	var checksumsData = []string{}
+
+	for rel, abs := range pp.Files() {
+		if rel == ZarfYAML || rel == Checksums {
+			continue
+		}
+
+		sum, err := helpers.GetSHA256OfFile(abs)
+		if err != nil {
+			return "", err
+		}
+		checksumsData = append(checksumsData, fmt.Sprintf("%s %s", sum, rel))
+	}
+	slices.Sort(checksumsData)
+
+	// Create the checksums file
+	if err := os.WriteFile(pp.Checksums, []byte(strings.Join(checksumsData, "\n")+"\n"), helpers.ReadWriteUser); err != nil {
+		return "", err
+	}
+
+	// Calculate the checksum of the checksum file
+	return helpers.GetSHA256OfFile(pp.Checksums)
+}
+
+// ArchivePackage creates an archive for a Zarf package.
+func (pp *PackagePaths) ArchivePackage(destinationTarball string, maxPackageSizeMB int) error {
+	spinner := message.NewProgressSpinner("Writing %s to %s", pp.Base, destinationTarball)
+	defer spinner.Stop()
+
+	// Make the archive
+	archiveSrc := []string{pp.Base + string(os.PathSeparator)}
+	if err := archiver.Archive(archiveSrc, destinationTarball); err != nil {
+		return fmt.Errorf("unable to create package: %w", err)
+	}
+	spinner.Updatef("Wrote %s to %s", pp.Base, destinationTarball)
+
+	fi, err := os.Stat(destinationTarball)
+	if err != nil {
+		return fmt.Errorf("unable to read the package archive: %w", err)
+	}
+	spinner.Successf("Package saved to %q", destinationTarball)
+
+	// Convert Megabytes to bytes.
+	chunkSize := maxPackageSizeMB * 1000 * 1000
+
+	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
+	if maxPackageSizeMB > 0 && fi.Size() > int64(chunkSize) {
+		if fi.Size()/int64(chunkSize) > 999 {
+			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
+		}
+		message.Notef("Package is larger than %dMB, splitting into multiple files", maxPackageSizeMB)
+		err := utils.SplitFile(destinationTarball, chunkSize)
+		if err != nil {
+			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
+		}
+	}
+	return nil
 }
 
 // AddImages sets the default image paths.
@@ -187,11 +298,11 @@ func (pp *PackagePaths) SetFromPaths(paths []string) {
 			pp.Checksums = filepath.Join(pp.Base, path)
 		case path == SBOMTar:
 			pp.SBOMs.Path = filepath.Join(pp.Base, path)
-		case path == filepath.Join(ImagesDir, OCILayout):
+		case path == OCILayoutPath:
 			pp.Images.OCILayout = filepath.Join(pp.Base, path)
-		case path == filepath.Join(ImagesDir, IndexJSON):
+		case path == IndexPath:
 			pp.Images.Index = filepath.Join(pp.Base, path)
-		case strings.HasPrefix(path, filepath.Join(ImagesDir, "blobs", "sha256")):
+		case strings.HasPrefix(path, ImagesBlobsDir):
 			if pp.Images.Base == "" {
 				pp.Images.Base = filepath.Join(pp.Base, ImagesDir)
 			}
@@ -242,7 +353,7 @@ func (pp *PackagePaths) Files() map[string]string {
 		add(tarball)
 	}
 
-	if filepath.Ext(pp.SBOMs.Path) == ".tar" {
+	if pp.SBOMs.IsTarball() {
 		add(pp.SBOMs.Path)
 	}
 	return pathMap

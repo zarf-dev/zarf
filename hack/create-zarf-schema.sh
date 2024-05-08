@@ -1,11 +1,21 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
+
+set -euo pipefail
 
 # Create the json schema for the zarf.yaml
 go run main.go internal gen-config-schema > zarf.schema.json
 
 # Adds pattern properties to all definitions to allow for yaml extensions
-jq '.definitions |= map_values(. + {"patternProperties": {"^x-": {}}})' zarf.schema.json > temp_zarf.schema.json
-mv temp_zarf.schema.json zarf.schema.json
+jq '
+  def addPatternProperties:
+    . +
+    if has("properties") then
+      {"patternProperties": {"^x-": {}}}
+    else
+      {}
+    end;
 
-# Create docs from the zarf.yaml JSON schema
-docker run -v $(pwd):/app -w /app --rm python:3.8-alpine /bin/sh -c "pip install json-schema-for-humans && generate-schema-doc --config-file hack/.templates/jsfh-config.json zarf.schema.json docs/3-create-a-zarf-package/4-zarf-schema.md"
+  walk(if type == "object" then addPatternProperties else . end)
+' zarf.schema.json > temp_zarf.schema.json
+
+mv temp_zarf.schema.json zarf.schema.json

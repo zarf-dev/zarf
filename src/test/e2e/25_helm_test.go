@@ -55,7 +55,23 @@ func testHelmChartsExample(t *testing.T) {
 	require.Contains(t, e2e.StripMessageFormatting(stdErr), "chart \"asdf\" version \"6.4.0\" not found")
 	require.Contains(t, e2e.StripMessageFormatting(stdErr), "Available charts and versions from \"https://stefanprodan.github.io/podinfo\":")
 
-	// Create the package (with a registry override to test that as well)
+	// Create a test package (with a registry override (host+subpath to host+subpath) to test that as well)
+	stdOut, stdErr, err = e2e.Zarf("package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io/stefanprodan=docker.io/stefanprodan", "--tmpdir", tmpdir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Create a test package (with a registry override (host to host+subpath) to test that as well)
+	// expect to fail as ghcr.io is overridden and the expected final image doesn't exist but the override works well based on the error message in the output
+	stdOut, stdErr, err = e2e.Zarf("package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io=localhost:555/noway", "--tmpdir", tmpdir, "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+	require.Contains(t, string(stdErr), "localhost:555/noway")
+
+	// Create a test package (with a registry override (host+subpath to host) to test that as well)
+	// works same as the above failing test
+	stdOut, stdErr, err = e2e.Zarf("package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io/stefanprodan=localhost:555", "--tmpdir", tmpdir, "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+	require.Contains(t, string(stdErr), "localhost:555")
+
+	// Create the package (with a registry override (host to host) to test that as well)
 	stdOut, stdErr, err = e2e.Zarf("package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io=docker.io", "--tmpdir", tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
@@ -114,16 +130,19 @@ func testHelmUninstallRollback(t *testing.T) {
 	// This package contains SBOMable things but was created with --skip-sbom
 	require.Contains(t, string(stdErr), "This package does NOT contain an SBOM.")
 
-	// Ensure that this does not leave behind a dos-games chart
+	// Ensure this leaves behind a dos-games chart.
+	// We do not want to uninstall charts that had failed installs/upgrades
+	// to prevent unintentional deletion and/or data loss in production environments.
+	// https://github.com/defenseunicorns/zarf/issues/2455
 	helmOut, err := exec.Command("helm", "list", "-n", "dos-games").Output()
 	require.NoError(t, err)
-	require.NotContains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
+	require.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
 	// Deploy the good package.
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", goodPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Ensure that this does create a dos-games chart
+	// Ensure this upgrades/fixes the dos-games chart.
 	helmOut, err = exec.Command("helm", "list", "-n", "dos-games").Output()
 	require.NoError(t, err)
 	require.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
@@ -135,7 +154,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	// Ensure that we rollback properly
 	helmOut, err = exec.Command("helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1").Output()
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "Rollback to 1")
+	require.Contains(t, string(helmOut), "Rollback to 4")
 
 	// Deploy the evil package (again to ensure we check full history)
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--timeout", "10s", "--confirm")
@@ -144,7 +163,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	// Ensure that we rollback properly
 	helmOut, err = exec.Command("helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1").Output()
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "Rollback to 5")
+	require.Contains(t, string(helmOut), "Rollback to 8")
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")

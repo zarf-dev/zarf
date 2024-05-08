@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -79,7 +78,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 	spinner := message.NewProgressSpinner(existMsg)
 
 	// Get the OS shell to execute commands in
-	shell, shellArgs := exec.GetOSShell(types.ZarfComponentActionShell{Windows: "cmd"})
+	shell, shellArgs := exec.GetOSShell(exec.Shell{Windows: "cmd"})
 
 	defer spinner.Stop()
 
@@ -174,7 +173,7 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 						continue
 					}
 
-					// Success, break out of the swtich statement.
+					// Success, break out of the switch statement.
 					break
 				}
 

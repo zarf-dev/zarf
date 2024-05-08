@@ -7,7 +7,9 @@ package images
 import (
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
@@ -50,9 +52,11 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 	httpTransport.TLSClientConfig.InsecureSkipVerify = i.Insecure
+	// TODO (@WSTARR) This is set to match the TLSHandshakeTimeout to potentially mitigate effects of https://github.com/defenseunicorns/zarf/issues/1444
+	httpTransport.ResponseHeaderTimeout = 10 * time.Second
 	progressBar := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images to the zarf registry", len(i.ImageList)))
 	defer progressBar.Stop()
-	craneTransport := utils.NewTransport(httpTransport, progressBar)
+	craneTransport := helpers.NewTransport(httpTransport, progressBar)
 
 	pushOptions := config.GetCraneOptions(i.Insecure, i.Architectures...)
 	pushOptions = append(pushOptions, config.GetCraneAuthOption(i.RegInfo.PushUsername, i.RegInfo.PushPassword))
@@ -87,7 +91,7 @@ func (i *ImageConfig) PushToZarfRegistry() error {
 	}
 
 	for refInfo, img := range refInfoToImage {
-		refTruncated := message.Truncate(refInfo.Reference, 55, true)
+		refTruncated := helpers.Truncate(refInfo.Reference, 55, true)
 		progressBar.UpdateTitle(fmt.Sprintf("Pushing %s", refTruncated))
 
 		// If this is not a no checksum image push it for use with the Zarf agent

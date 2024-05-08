@@ -1,0 +1,61 @@
+/*
+
+Generated from https://starlight.astro.build/guides/css-and-tailwind/#theming
+Accent- H: 220.909 C: 0.0.87
+Gray- H: 273.019 C: 0.064
+*/
+
+/* Dark mode colors. */
+:root {
+  --sl-color-accent-low: #13282f;
+  --sl-color-accent: #00bbff;
+  --sl-color-accent-high: #70d9ff;
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #e8edff;
+  /* --sl-color-gray-2: #bbc1d7; */
+  --sl-color-gray-2: var(--sl-color-gray-1);
+  --sl-color-gray-3: #7e89b3;
+  --sl-color-gray-4: #4c567c;
+  --sl-color-gray-5: #2d3559;
+  --sl-color-gray-6: #1d2446;
+  --sl-color-black: #131727;
+}
+/* Light mode colors. */
+:root[data-theme="light"] {
+  --sl-color-accent-low: #c8dbe1;
+  --sl-color-accent: #007099;
+  --sl-color-accent-high: #153742;
+  --sl-color-white: #131727;
+  --sl-color-gray-1: #1d2446;
+  --sl-color-gray-2: #2d3559;
+  --sl-color-gray-3: #4c567c;
+  --sl-color-gray-4: #7e89b3;
+  --sl-color-gray-5: #bbc1d7;
+  --sl-color-gray-6: #e8edff;
+  --sl-color-gray-7: #f3f6ff;
+  --sl-color-black: #ffffff;
+}
+
+:root {
+  --transition-speed: 0.2s;
+  --sl-font-mono: "Source Code Pro", monospace;
+  --sl-content-width: 52rem;
+}
+
+/* Heading link styling */
+.heading-link::after {
+  content: "#";
+  padding-inline-start: 0.25em;
+  opacity: 0;
+  transition: var(--transition-speed);
+}
+
+.heading-link:hover::after {
+  color: var(--sl-color-text-accent);
+  opacity: 1;
+}
+
+.heading-link {
+  text-decoration: none;
+  color: var(--sl-color-white) !important;
+}

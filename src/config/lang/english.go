@@ -1,13 +1,15 @@
-//go:build !alt_language
-
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+//go:build !alt_language
 
 // Package lang contains the language strings for english used by Zarf
 // Alternative languages can be created by duplicating this file and changing the build tag to "//go:build alt_language && <language>".
 package lang
 
-import "errors"
+import (
+	"errors"
+)
 
 // All language strings should be in the form of a constant
 // The constants should be grouped by the top level package they are used in (or common)
@@ -232,6 +234,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdPackageShort             = "Zarf package commands for creating, deploying, and inspecting packages"
 	CmdPackageFlagConcurrency   = "Number of concurrent layer operations to perform when interacting with a remote package."
 	CmdPackageFlagFlagPublicKey = "Path to public key file for validating signed packages"
+	CmdPackageFlagRetries       = "Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs"
 
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
 	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.\n" +
@@ -305,9 +308,10 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageMirrorFlagNoChecksum = "Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images."
 
-	CmdPackageInspectFlagSbom    = "View SBOM contents while inspecting the package"
-	CmdPackageInspectFlagSbomOut = "Specify an output directory for the SBOMs from the inspected Zarf package"
-	CmdPackageInspectErr         = "Failed to inspect package: %s"
+	CmdPackageInspectFlagSbom       = "View SBOM contents while inspecting the package"
+	CmdPackageInspectFlagSbomOut    = "Specify an output directory for the SBOMs from the inspected Zarf package"
+	CmdPackageInspectFlagListImages = "List images in the package (prints to stdout)"
+	CmdPackageInspectErr            = "Failed to inspect package: %s"
 
 	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
@@ -356,6 +360,9 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
 	CmdDevDeployErr        = "Failed to dev deploy: %s"
 
+	CmdDevGenerateShort   = "[alpha] Creates a zarf.yaml automatically from a given remote (git) Helm chart"
+	CmdDevGenerateExample = "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo"
+
 	CmdDevPatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
 	CmdDevPatchGitOverwritePrompt = "Overwrite the file %s with these changes?"
@@ -379,11 +386,14 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 	CmdDevGenerateConfigErr = "Unable to write the config file %s, make sure the file doesn't already exist"
 
-	CmdDevFlagExtractPath   = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
-	CmdDevFlagSet           = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
-	CmdDevFlagRepoChartPath = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
-	CmdDevFlagGitAccount    = "User or organization name for the git account that the repos are created under."
-	CmdDevFlagKubeVersion   = "Override the default helm template KubeVersion when performing a package chart template"
+	CmdDevFlagExtractPath          = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
+	CmdDevFlagSet                  = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
+	CmdDevFlagRepoChartPath        = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
+	CmdDevFlagGitAccount           = "User or organization name for the git account that the repos are created under."
+	CmdDevFlagKubeVersion          = "Override the default helm template KubeVersion when performing a package chart template"
+	CmdDevFlagFindImagesRegistry   = "Override the ###ZARF_REGISTRY### value"
+	CmdDevFlagFindImagesWhy        = "Prints the source manifest for the specified image"
+	CmdDevFlagFindImagesSkipCosign = "Skip searching for cosign artifacts related to discovered images"
 
 	CmdDevLintShort = "Lints the given package for valid schema and recommended practices"
 	CmdDevLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
@@ -455,6 +465,10 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	CmdToolsRegistryPruneFlagConfirm = "Confirm the image prune action to prevent accidental deletions"
 	CmdToolsRegistryPruneImageList   = "The following image digests will be pruned from the registry:"
 	CmdToolsRegistryPruneNoImages    = "There are no images to prune"
+	CmdToolsRegistryPruneLookup      = "Looking up images within package definitions"
+	CmdToolsRegistryPruneCatalog     = "Cataloging images in the registry"
+	CmdToolsRegistryPruneCalculate   = "Calculating images to prune"
+	CmdToolsRegistryPruneDelete      = "Deleting unused images"
 
 	CmdToolsRegistryInvalidPlatformErr = "Invalid platform '%s': %s"
 	CmdToolsRegistryFlagVerbose        = "Enable debug logs"
@@ -465,7 +479,50 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	CmdToolsGetGitPasswdShort       = "[Deprecated] Returns the push user's password for the Git server"
 	CmdToolsGetGitPasswdLong        = "[Deprecated] Reads the password for a user with push access to the configured Git server in Zarf State. Note that this command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
 	CmdToolsGetGitPasswdDeprecation = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
+	CmdToolsYqExample               = `
+# yq defaults to 'eval' command if no command is specified. See "zarf tools yq eval --help" for more examples.
 
+# read the "stuff" node from "myfile.yml"
+zarf tools yq '.stuff' < myfile.yml
+
+# update myfile.yml in place
+zarf tools yq -i '.stuff = "foo"' myfile.yml
+
+# print contents of sample.json as idiomatic YAML
+zarf tools yq -P sample.json
+`
+	CmdToolsYqEvalAllExample = `
+# Merge f2.yml into f1.yml (inplace)
+zarf tools yq eval-all --inplace 'select(fileIndex == 0) * select(fileIndex == 1)' f1.yml f2.yml
+## the same command and expression using shortened names:
+zarf tools yq ea -i 'select(fi == 0) * select(fi == 1)' f1.yml f2.yml
+
+
+# Merge all given files
+zarf tools yq ea '. as $item ireduce ({}; . * $item )' file1.yml file2.yml ...
+
+# Pipe from STDIN
+## use '-' as a filename to pipe from STDIN
+cat file2.yml | zarf tools yq ea '.a.b' file1.yml - file3.yml
+`
+	CmdToolsYqEvalExample = `
+# Reads field under the given path for each file
+zarf tools yq e '.a.b' f1.yml f2.yml
+
+# Prints out the file
+zarf tools yq e sample.yaml
+
+# Pipe from STDIN
+## use '-' as a filename to pipe from STDIN
+cat file2.yml | zarf tools yq e '.a.b' file1.yml - file3.yml
+
+# Creates a new yaml document
+## Note that editing an empty file does not work.
+zarf tools yq e -n '.a.b.c = "cat"'
+
+# Update a file in place
+zarf tools yq e '.a.b = "cool"' -i file.yaml
+`
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
 
 	CmdToolsHelmShort = "Subset of the Helm CLI included with Zarf to help manage helm charts."
@@ -589,6 +646,9 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 	CmdVersionShort = "Shows the version of the running Zarf binary"
 	CmdVersionLong  = "Displays the version of the Zarf release that the current binary was built from."
 
+	// tools version
+	CmdToolsVersionShort = "Print the version"
+
 	// cmd viper setup
 	CmdViperErrLoadingConfigFile = "failed to load config file: %s"
 	CmdViperInfoUsingConfigFile  = "Using config file %s"
@@ -618,20 +678,13 @@ const (
 	AgentErrUnableTransform        = "unable to transform the provided request; see zarf http proxy logs for more details"
 )
 
-// src/internal/packager/create
+// Package create
 const (
-	PkgCreateErrDifferentialSameVersion = "unable to create a differential package with the same version as the package you are using as a reference; the package version must be incremented"
+	PkgCreateErrDifferentialSameVersion = "unable to create differential package. Please ensure the differential package version and reference package version are not the same. The package version must be incremented"
+	PkgCreateErrDifferentialNoVersion   = "unable to create differential package. Please ensure both package versions are set"
 )
 
-// src/internal/packager/deploy.
-const (
-	PkgDeployErrMultipleComponentsSameGroup        = "You cannot specify multiple components (%q, %q) within the same group (%q) when using the --components flag."
-	PkgDeployErrNoDefaultOrSelection               = "You must make a selection from %q with the --components flag as there is no default in their group."
-	PkgDeployErrNoCompatibleComponentsForSelection = "No compatible components found that matched %q. Please check spelling and try again."
-	PkgDeployErrComponentSelectionCanceled         = "Component selection canceled: %s"
-)
-
-// src/internal/packager/validate.
+// Package validate
 const (
 	PkgValidateTemplateDeprecation        = "Package template %q is using the deprecated syntax ###ZARF_PKG_VAR_%s###. This will be removed in Zarf v1.0.0. Please update to ###ZARF_PKG_TMPL_%s###."
 	PkgValidateMustBeUppercase            = "variable name %q must be all uppercase and contain no special characters except _"
@@ -647,6 +700,7 @@ const (
 	PkgValidateErrChartURLOrPath          = "chart %q must have either a url or localPath"
 	PkgValidateErrChartVersion            = "chart %q must include a chart version"
 	PkgValidateErrComponentName           = "component name %q must be all lowercase and contain no special characters except '-' and cannot start with a '-'"
+	PkgValidateErrComponentLocalOS        = "component %q contains a localOS value that is not supported: %s (supported: %s)"
 	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
 	PkgValidateErrComponent               = "invalid component %q: %w"
 	PkgValidateErrComponentReqDefault     = "component %q cannot be both required and default"
@@ -675,10 +729,11 @@ const (
 
 // Collection of reusable error messages.
 var (
-	ErrInitNotFound        = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
-	ErrUnableToCheckArch   = errors.New("unable to get the configured cluster's architecture")
-	ErrInterrupt           = errors.New("execution cancelled due to an interrupt")
-	ErrUnableToGetPackages = errors.New("unable to load the Zarf Package data from the cluster")
+	ErrInitNotFound         = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
+	ErrUnableToCheckArch    = errors.New("unable to get the configured cluster's architecture")
+	ErrInterrupt            = errors.New("execution cancelled due to an interrupt")
+	ErrUnableToGetPackages  = errors.New("unable to load the Zarf Package data from the cluster")
+	ErrUnsupportedImageType = errors.New("zarf does not currently support image indexes or docker manifest lists")
 )
 
 // Collection of reusable warn messages.

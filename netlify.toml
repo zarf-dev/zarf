@@ -1,8 +1,28 @@
 [build]
-  base = "docs-website/"
+  base = "site/"
   command = "npm run build"
-  publish = "build/"
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF . ../docs/ ../examples/"
+  publish = "dist/"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF . src/content/ ../examples/"
 
 [build.environment]
-  NODE_VERSION = "18.12.1"
+  NODE_VERSION = "20.11.1"
+
+[[redirects]]
+from = "/docs/the-zarf-cli/cli-commands/*"
+to = "/commands/:splat"
+
+[[redirects]]
+from = "/docs/create-a-zarf-package/*"
+to = "/ref/"
+
+[[redirects]]
+from = "/docs/deploy-a-zarf-package/*"
+to = "/ref/"
+
+[[redirects]]
+from = "/examples/*"
+to = "/ref/examples/:splat"
+
+[[redirects]]
+from = "/docs/:page"
+to = "/:page"

@@ -81,7 +81,7 @@ func TestDeprecatedSetAndPackageVariables(t *testing.T) {
 	// Check that the command still errors out
 	stdOut, stdErr, err := e2e.Zarf("package", "create", testPackageDirPath, outputFlag, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "template 'ECHO' must be '--set'")
+	require.Contains(t, stdErr, "template \"ECHO\" must be '--set'")
 
 	// Check that the command displays a warning on create
 	stdOut, stdErr, err = e2e.Zarf("package", "create", testPackageDirPath, outputFlag, "--confirm", "--set", "ECHO=Zarf-The-Axolotl")

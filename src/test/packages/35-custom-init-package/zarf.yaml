@@ -1,0 +1,8 @@
+kind: ZarfInitConfig
+metadata:
+  name: init
+  description: Used to establish a new Zarf cluster
+
+components:
+  - name: nothing
+

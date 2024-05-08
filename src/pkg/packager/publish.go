@@ -5,21 +5,23 @@
 package packager
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/oci"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2/content"
 )
 
 // Publish publishes the package to a registry
@@ -29,7 +31,7 @@ func (p *Packager) Publish() (err error) {
 		ctx := context.TODO()
 		// oci --> oci is a special case, where we will use oci.CopyPackage so that we can transfer the package
 		// w/o layers touching the filesystem
-		srcRemote := p.source.(*sources.OCISource).OrasRemote
+		srcRemote := p.source.(*sources.OCISource).Remote
 
 		parts := strings.Split(srcRemote.Repo().Reference.Repository, "/")
 		packageName := parts[len(parts)-1]
@@ -37,97 +39,72 @@ func (p *Packager) Publish() (err error) {
 		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
 
 		arch := config.GetArch()
-		dstRemote, err := oci.NewOrasRemote(p.cfg.PublishOpts.PackageDestination, oci.PlatformForArch(arch))
+
+		dstRemote, err := zoci.NewRemote(p.cfg.PublishOpts.PackageDestination, oci.PlatformForArch(arch))
 		if err != nil {
 			return err
 		}
 
-		srcRoot, err := srcRemote.ResolveRoot()
-		if err != nil {
-			return err
-		}
-
-		pkg, err := srcRemote.FetchZarfYAML()
-		if err != nil {
-			return err
-		}
-
-		// ensure cli arch matches package arch
-		if pkg.Build.Architecture != arch {
-			return fmt.Errorf("architecture mismatch (specified: %q, found %q)", arch, pkg.Build.Architecture)
-		}
-
-		if err := oci.CopyPackage(ctx, srcRemote, dstRemote, nil, config.CommonOptions.OCIConcurrency); err != nil {
-			return err
-		}
-
-		srcManifest, err := srcRemote.FetchRoot()
-		if err != nil {
-			return err
-		}
-		b, err := srcManifest.MarshalJSON()
-		if err != nil {
-			return err
-		}
-		expected := content.NewDescriptorFromBytes(ocispec.MediaTypeImageManifest, b)
-
-		if err := dstRemote.Repo().Manifests().PushReference(ctx, expected, bytes.NewReader(b), srcRoot.Digest.String()); err != nil {
-			return err
-		}
-
-		tag := srcRemote.Repo().Reference.Reference
-		if err := dstRemote.UpdateIndex(tag, arch, expected); err != nil {
-			return err
-		}
-		message.Infof("Published %s to %s", srcRemote.Repo().Reference, dstRemote.Repo().Reference)
-		return nil
+		return zoci.CopyPackage(ctx, srcRemote, dstRemote, config.CommonOptions.OCIConcurrency)
 	}
 
 	if p.cfg.CreateOpts.IsSkeleton {
-		cwd, err := os.Getwd()
+		if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
+			return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
+		}
+
+		sc := creator.NewSkeletonCreator(p.cfg.CreateOpts, p.cfg.PublishOpts)
+
+		if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+			return err
+		}
+
+		p.cfg.Pkg, p.warnings, err = sc.LoadPackageDefinition(p.layout)
 		if err != nil {
 			return err
 		}
-		if err := p.cdToBaseDir(p.cfg.CreateOpts.BaseDir, cwd); err != nil {
+
+		if err := sc.Assemble(p.layout, p.cfg.Pkg.Components, ""); err != nil {
 			return err
 		}
-		if err := p.load(); err != nil {
-			return err
-		}
-		if err := p.assembleSkeleton(); err != nil {
+
+		if err := sc.Output(p.layout, &p.cfg.Pkg); err != nil {
 			return err
 		}
 	} else {
-		if err = p.source.LoadPackage(p.layout, false); err != nil {
+		filter := filters.Empty()
+		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, false)
+		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
-		if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
+
+		// Sign the package if a key has been provided
+		if err := p.layout.SignPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword, !config.CommonOptions.Confirm); err != nil {
 			return err
 		}
 	}
 
 	// Get a reference to the registry for this package
-	ref, err := oci.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata, &p.cfg.Pkg.Build)
+	ref, err := zoci.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata, &p.cfg.Pkg.Build)
 	if err != nil {
 		return err
 	}
-
-	remote, err := oci.NewOrasRemote(ref, oci.PlatformForArch(config.GetArch()))
+	var platform ocispec.Platform
+	if p.cfg.CreateOpts.IsSkeleton {
+		platform = zoci.PlatformForSkeleton()
+	} else {
+		platform = oci.PlatformForArch(p.cfg.Pkg.Build.Architecture)
+	}
+	remote, err := zoci.NewRemote(ref, platform)
 	if err != nil {
 		return err
-	}
-
-	// Sign the package if a key has been provided
-	if p.cfg.PublishOpts.SigningKeyPath != "" {
-		if err := p.signPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword); err != nil {
-			return err
-		}
 	}
 
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref)
 
 	// Publish the package/skeleton to the registry
-	if err := remote.PublishPackage(&p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency); err != nil {
+	ctx := context.TODO()
+	if err := remote.PublishPackage(ctx, &p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency); err != nil {
 		return err
 	}
 	if p.cfg.CreateOpts.IsSkeleton {

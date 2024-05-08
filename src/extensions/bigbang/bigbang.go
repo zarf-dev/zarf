@@ -13,11 +13,12 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
@@ -94,6 +95,7 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 		},
 		path.Join(tmpPaths.Temp, bb),
 		path.Join(tmpPaths.Temp, bb, "values"),
+		helm.WithVariableConfig(&variables.VariableConfig{}),
 	)
 
 	// Download the chart from Git and save it to a temporary directory.
@@ -261,7 +263,7 @@ func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.
 		rel := filepath.Join(layout.TempDir, skelName)
 		dst := filepath.Join(tmpPaths.Base, rel)
 
-		if err := utils.CreatePathAndCopy(valuesFile, dst); err != nil {
+		if err := helpers.CreatePathAndCopy(valuesFile, dst); err != nil {
 			return c, err
 		}
 
@@ -281,7 +283,7 @@ func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.
 		rel := filepath.Join(layout.TempDir, skelName)
 		dst := filepath.Join(tmpPaths.Base, rel)
 
-		if err := utils.CreatePathAndCopy(fluxPatchFile, dst); err != nil {
+		if err := helpers.CreatePathAndCopy(fluxPatchFile, dst); err != nil {
 			return c, err
 		}
 
@@ -465,7 +467,7 @@ func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang)
 			return err
 		}
 
-		if err := utils.WriteFile(path, out); err != nil {
+		if err := os.WriteFile(path, out, helpers.ReadWriteUser); err != nil {
 			return err
 		}
 

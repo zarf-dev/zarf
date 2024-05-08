@@ -44,7 +44,7 @@ var badGitURLs = []string{
 }
 
 func TestMutateGitURLsInText(t *testing.T) {
-	dummyLogger := func(content string, args ...any) {}
+	dummyLogger := func(_ string, _ ...any) {}
 	originalText := `
 	# Here we handle invalid URLs (see below comment)
 	# We transform https://*/*.git URLs

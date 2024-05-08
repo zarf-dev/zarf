@@ -15,8 +15,9 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -29,18 +30,20 @@ type Helm struct {
 	chartPath  string
 	valuesPath string
 
-	cfg       *types.PackagerConfig
-	component types.ZarfComponent
-	cluster   *cluster.Cluster
-	timeout   time.Duration
+	cfg     *types.PackagerConfig
+	cluster *cluster.Cluster
+	timeout time.Duration
+	retries int
 
 	kubeVersion string
 
 	chartOverride   *chart.Chart
 	valuesOverrides map[string]any
 
-	settings     *cli.EnvSettings
-	actionConfig *action.Configuration
+	settings       *cli.EnvSettings
+	actionConfig   *action.Configuration
+	variableConfig *variables.VariableConfig
+	state          *types.ZarfState
 }
 
 // Modifier is a function that modifies the Helm config.
@@ -52,7 +55,7 @@ func New(chart types.ZarfChart, chartPath string, valuesPath string, mods ...Mod
 		chart:      chart,
 		chartPath:  chartPath,
 		valuesPath: valuesPath,
-		timeout:    config.ZarfDefaultHelmTimeout,
+		timeout:    config.ZarfDefaultTimeout,
 	}
 
 	for _, mod := range mods {
@@ -63,11 +66,14 @@ func New(chart types.ZarfChart, chartPath string, valuesPath string, mods ...Mod
 }
 
 // NewClusterOnly returns a new Helm config struct geared toward interacting with the cluster (not packages)
-func NewClusterOnly(cfg *types.PackagerConfig, cluster *cluster.Cluster) *Helm {
+func NewClusterOnly(cfg *types.PackagerConfig, variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster) *Helm {
 	return &Helm{
-		cfg:     cfg,
-		cluster: cluster,
-		timeout: config.ZarfDefaultHelmTimeout,
+		cfg:            cfg,
+		variableConfig: variableConfig,
+		state:          state,
+		cluster:        cluster,
+		timeout:        config.ZarfDefaultTimeout,
+		retries:        config.ZarfDefaultRetries,
 	}
 }
 
@@ -118,7 +124,7 @@ func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName,
 			NoWait:      manifest.NoWait,
 		},
 		chartOverride: tmpChart,
-		timeout:       config.ZarfDefaultHelmTimeout,
+		timeout:       config.ZarfDefaultTimeout,
 	}
 
 	for _, mod := range mods {
@@ -131,13 +137,15 @@ func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName,
 }
 
 // WithDeployInfo adds the necessary information to deploy a given chart
-func WithDeployInfo(component types.ZarfComponent, cfg *types.PackagerConfig, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration) Modifier {
+func WithDeployInfo(cfg *types.PackagerConfig, variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration, retries int) Modifier {
 	return func(h *Helm) {
-		h.component = component
 		h.cfg = cfg
+		h.variableConfig = variableConfig
+		h.state = state
 		h.cluster = cluster
 		h.valuesOverrides = valuesOverrides
 		h.timeout = timeout
+		h.retries = retries
 	}
 }
 
@@ -148,7 +156,19 @@ func WithKubeVersion(kubeVersion string) Modifier {
 	}
 }
 
+// WithVariableConfig sets the variable config for the chart
+func WithVariableConfig(variableConfig *variables.VariableConfig) Modifier {
+	return func(h *Helm) {
+		h.variableConfig = variableConfig
+	}
+}
+
 // StandardName generates a predictable full path for a helm chart for Zarf.
 func StandardName(destination string, chart types.ZarfChart) string {
 	return filepath.Join(destination, chart.Name+"-"+chart.Version)
+}
+
+// StandardValuesName generates a predictable full path for the values file for a helm chart for zarf
+func StandardValuesName(destination string, chart types.ZarfChart, idx int) string {
+	return fmt.Sprintf("%s-%d", StandardName(destination, chart), idx)
 }

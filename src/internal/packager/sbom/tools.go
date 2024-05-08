@@ -6,14 +6,11 @@ package sbom
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // ViewSBOMFiles opens a browser to view the SBOM files and pauses for user input.
@@ -39,30 +36,4 @@ func ViewSBOMFiles(directory string) {
 	} else {
 		message.Note("There were no images with software bill-of-materials (SBOM) included.")
 	}
-}
-
-// OutputSBOMFiles outputs the sbom files into a specified directory.
-func OutputSBOMFiles(sourceDir, outputDir, packageName string) (string, error) {
-	packagePath := filepath.Join(outputDir, packageName)
-
-	if err := os.RemoveAll(packagePath); err != nil {
-		return "", err
-	}
-
-	if err := utils.CreateDirectory(packagePath, 0700); err != nil {
-		return "", err
-	}
-
-	return packagePath, utils.CreatePathAndCopy(sourceDir, packagePath)
-}
-
-// IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections)
-func IsSBOMAble(pkg types.ZarfPackage) bool {
-	for _, c := range pkg.Components {
-		if len(c.Images) > 0 || len(c.Files) > 0 || len(c.DataInjections) > 0 {
-			return true
-		}
-	}
-
-	return false
 }

@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: helm-charts-local-tgz
-  description: Example showcasing mutiple ways to deploy helm charts
+  description: Example showcasing multiple ways to deploy helm charts
   version: 0.0.1
 
 components:

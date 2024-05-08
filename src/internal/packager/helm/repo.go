@@ -10,13 +10,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -93,7 +93,7 @@ func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 		saved, err = client.Run(h.chart.LocalPath, nil)
 	} else {
 		saved = filepath.Join(temp, filepath.Base(h.chart.LocalPath))
-		err = utils.CreatePathAndCopy(h.chart.LocalPath, saved)
+		err = helpers.CreatePathAndCopy(h.chart.LocalPath, saved)
 	}
 	defer os.RemoveAll(temp)
 
@@ -204,7 +204,7 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 
 	// Download the file into a temp directory since we don't control what name helm creates here
 	temp := filepath.Join(h.chartPath, "temp")
-	if err = utils.CreateDirectory(temp, 0700); err != nil {
+	if err = helpers.CreateDirectory(temp, helpers.ReadWriteExecuteUser); err != nil {
 		return fmt.Errorf("unable to create helm chart temp directory: %w", err)
 	}
 	defer os.RemoveAll(temp)
@@ -262,14 +262,14 @@ func (h *Helm) finalizeChartPackage(saved, cosignKeyPath string) error {
 
 func (h *Helm) packageValues(cosignKeyPath string) error {
 	for valuesIdx, path := range h.chart.ValuesFiles {
-		dst := fmt.Sprintf("%s-%d", StandardName(h.valuesPath, h.chart), valuesIdx)
+		dst := StandardValuesName(h.valuesPath, h.chart, valuesIdx)
 
 		if helpers.IsURL(path) {
 			if err := utils.DownloadToFile(path, dst, cosignKeyPath); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 			}
 		} else {
-			if err := utils.CreatePathAndCopy(path, dst); err != nil {
+			if err := helpers.CreatePathAndCopy(path, dst); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 			}
 		}
@@ -376,7 +376,7 @@ func (h *Helm) listAvailableChartsAndVersions(pull *action.Pull) error {
 			versions += entry.Version + separator
 		}
 
-		versions = message.Truncate(versions, 75, false)
+		versions = helpers.Truncate(versions, 75, false)
 		chartData = append(chartData, []string{name, versions})
 	}
 

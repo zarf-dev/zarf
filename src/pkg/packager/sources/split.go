@@ -13,14 +13,15 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 var (
-	// veryify that SplitTarballSource implements PackageSource
+	// verify that SplitTarballSource implements PackageSource
 	_ PackageSource = (*SplitTarballSource)(nil)
 )
 
@@ -85,9 +86,14 @@ func (s *SplitTarballSource) Collect(dir string) (string, error) {
 		if _, err = io.Copy(pkgFile, f); err != nil {
 			return "", fmt.Errorf("unable to copy file %s: %w", file, err)
 		}
+
+		// Close the file when done copying
+		if err := f.Close(); err != nil {
+			return "", fmt.Errorf("unable to close file %s: %w", file, err)
+		}
 	}
 
-	if err := utils.SHAsMatch(reassembled, pkgData.Sha256Sum); err != nil {
+	if err := helpers.SHAsMatch(reassembled, pkgData.Sha256Sum); err != nil {
 		return "", fmt.Errorf("package integrity check failed: %w", err)
 	}
 
@@ -103,10 +109,10 @@ func (s *SplitTarballSource) Collect(dir string) (string, error) {
 }
 
 // LoadPackage loads a package from a split tarball.
-func (s *SplitTarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll bool) (err error) {
+func (s *SplitTarballSource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	tb, err := s.Collect(filepath.Dir(s.PackageSource))
 	if err != nil {
-		return err
+		return pkg, nil, err
 	}
 
 	// Update the package source to the reassembled tarball
@@ -117,14 +123,14 @@ func (s *SplitTarballSource) LoadPackage(dst *layout.PackagePaths, unarchiveAll 
 	ts := &TarballSource{
 		s.ZarfPackageOptions,
 	}
-	return ts.LoadPackage(dst, unarchiveAll)
+	return ts.LoadPackage(dst, filter, unarchiveAll)
 }
 
 // LoadPackageMetadata loads a package's metadata from a split tarball.
-func (s *SplitTarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (err error) {
+func (s *SplitTarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	tb, err := s.Collect(filepath.Dir(s.PackageSource))
 	if err != nil {
-		return err
+		return pkg, nil, err
 	}
 
 	// Update the package source to the reassembled tarball

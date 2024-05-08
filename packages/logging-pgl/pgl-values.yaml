@@ -2,7 +2,7 @@ grafana:
   enabled: true
   adminUser: "zarf-admin"
   adminPassword: "###ZARF_LOGGING_AUTH###"
-  # K8s 1.25+ compatibilty until loki stack upgrades the grafana chart to 6.36.1
+  # K8s 1.25+ compatibility until loki stack upgrades the grafana chart to 6.36.1
   rbac:
     pspEnabled: false
   grafana.ini:

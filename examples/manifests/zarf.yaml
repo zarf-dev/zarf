@@ -14,15 +14,15 @@ components:
           - httpd-deployment.yaml
     actions:
       onDeploy:
-      # the following checks were computed by viewing the success state of the package deployment
-      # and creating `wait` actions that match
+        # the following checks were computed by viewing the success state of the package deployment
+        # and creating `wait` actions that match
         after:
           - wait:
               cluster:
                 kind: deployment
                 name: httpd-deployment
                 namespace: httpd
-                condition: '{.status.readyReplicas}=2'
+                condition: "{.status.readyReplicas}=2"
     # image discovery is supported in all manifests and charts using:
     # zarf prepare find-images
     images:
@@ -40,8 +40,8 @@ components:
           # zarf prepare sha256sum https://k8s.io/examples/application/deployment.yaml
     actions:
       onDeploy:
-      # the following checks were computed by viewing the success state of the package deployment
-      # and creating `wait` actions that match
+        # the following checks were computed by viewing the success state of the package deployment
+        # and creating `wait` actions that match
         after:
           - wait:
               cluster:
@@ -66,8 +66,8 @@ components:
           # ensure that the kustomization is not changed in a way that breaks your deployment.
     actions:
       onDeploy:
-      # the following checks were computed by viewing the success state of the package deployment
-      # and creating `wait` actions that match
+        # the following checks were computed by viewing the success state of the package deployment
+        # and creating `wait` actions that match
         after:
           - wait:
               cluster:
@@ -79,3 +79,10 @@ components:
     # zarf prepare find-images
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
+
+# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
+# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
+x-mdx: |
+  This example shows you how to specify Kubernetes resources in a component's `manifests` list.  These files can either be local or remote and under the hood Zarf will wrap them in an auto-generated helm chart to manage their install, rollback, and uninstall logic.
+
+  To learn more about how `manifests` work in Zarf, see the [Kubernetes Manifests section](/ref/components/#kubernetes-manifests) of the package components documentation.

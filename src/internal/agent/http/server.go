@@ -7,6 +7,7 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/agent/hooks"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -34,8 +35,9 @@ func NewAdmissionServer(port string) *http.Server {
 	mux.Handle("/metrics", promhttp.Handler())
 
 	return &http.Server{
-		Addr:    fmt.Sprintf(":%s", port),
-		Handler: mux,
+		Addr:              fmt.Sprintf(":%s", port),
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second, // Set ReadHeaderTimeout to avoid Slowloris attacks
 	}
 }
 
@@ -49,13 +51,14 @@ func NewProxyServer(port string) *http.Server {
 	mux.Handle("/metrics", promhttp.Handler())
 
 	return &http.Server{
-		Addr:    fmt.Sprintf(":%s", port),
-		Handler: mux,
+		Addr:              fmt.Sprintf(":%s", port),
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second, // Set ReadHeaderTimeout to avoid Slowloris attacks
 	}
 }
 
 func healthz() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	}

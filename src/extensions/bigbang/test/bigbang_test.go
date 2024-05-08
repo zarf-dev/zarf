@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
 package main
 
 import (
@@ -30,8 +33,7 @@ func TestMain(m *testing.M) {
 	var err error
 
 	// Change to the build dir
-	err = os.Chdir("../../../../build/")
-	if err != nil {
+	if err := os.Chdir("../../../../build/"); err != nil {
 		panic(err)
 	}
 
@@ -49,15 +51,18 @@ func TestMain(m *testing.M) {
 }
 
 func TestReleases(t *testing.T) {
-	tmpdir := ""
+	CIMount := "/mnt/zarf-tmp"
+	tmpdir := fmt.Sprintf("--tmpdir=%s", t.TempDir())
+	zarfCache := ""
 	// If we are in CI set the temporary directory to /mnt/zarf-tmp to reduce disk pressure
 	if os.Getenv("CI") == "true" {
-		tmpdir = "--tmpdir=/mnt/zarf-tmp"
+		tmpdir = fmt.Sprintf("--tmpdir=%s", CIMount)
+		zarfCache = fmt.Sprintf("--zarf-cache=%s", CIMount)
 	}
 
 	// Initialize the cluster with the Git server and AMD64 architecture
 	arch := "amd64"
-	stdOut, stdErr, err := zarfExec("init", "--components", "git-server", "--architecture", arch, tmpdir, "--confirm")
+	stdOut, stdErr, err := zarfExec("init", "--components", "git-server", "--architecture", arch, tmpdir, "--confirm", zarfCache)
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Remove the init package to free up disk space on the test runner

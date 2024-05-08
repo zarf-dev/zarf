@@ -5,6 +5,10 @@
 package packager
 
 import (
+	"fmt"
+	"os"
+
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
@@ -13,20 +17,28 @@ import (
 func (p *Packager) Inspect() (err error) {
 	wantSBOM := p.cfg.InspectOpts.ViewSBOM || p.cfg.InspectOpts.SBOMOutputDir != ""
 
-	if err = p.source.LoadPackageMetadata(p.layout, wantSBOM, true); err != nil {
+	p.cfg.Pkg, p.warnings, err = p.source.LoadPackageMetadata(p.layout, wantSBOM, true)
+	if err != nil {
 		return err
 	}
 
-	if err = p.readZarfYAML(p.layout.ZarfYAML); err != nil {
-		return err
+	if p.cfg.InspectOpts.ListImages {
+		imageList := []string{}
+		for _, component := range p.cfg.Pkg.Components {
+			imageList = append(imageList, component.Images...)
+		}
+		imageList = helpers.Unique(imageList)
+		for _, image := range imageList {
+			fmt.Fprintln(os.Stdout, "-", image)
+		}
+	} else {
+		utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
 	}
-
-	utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
 
 	sbomDir := p.layout.SBOMs.Path
 
 	if p.cfg.InspectOpts.SBOMOutputDir != "" {
-		out, err := sbom.OutputSBOMFiles(sbomDir, p.cfg.InspectOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name)
+		out, err := p.layout.SBOMs.OutputSBOMFiles(p.cfg.InspectOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name)
 		if err != nil {
 			return err
 		}

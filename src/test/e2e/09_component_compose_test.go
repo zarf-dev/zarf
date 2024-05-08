@@ -25,7 +25,6 @@ var (
 	composeTest           = filepath.Join("src", "test", "packages", "09-composable-packages")
 	composeTestPath       string
 	composeTestBadLocalOS = filepath.Join("src", "test", "packages", "09-composable-packages", "bad-local-os")
-	relCacheDir           string
 )
 
 func (suite *CompositionSuite) SetupSuite() {
@@ -34,10 +33,6 @@ func (suite *CompositionSuite) SetupSuite() {
 	// Setup the package paths after e2e has been initialized
 	composeExamplePath = filepath.Join("build", fmt.Sprintf("zarf-package-composable-packages-%s.tar.zst", e2e.Arch))
 	composeTestPath = filepath.Join("build", fmt.Sprintf("zarf-package-test-compose-package-%s.tar.zst", e2e.Arch))
-
-	// We make the cache dir relative to the working directory to make it work on the Windows Runners
-	// - they use two drives which filepath.Rel cannot cope with.
-	relCacheDir, _ = filepath.Abs(".cache-location")
 }
 
 func (suite *CompositionSuite) TearDownSuite() {
@@ -45,14 +40,12 @@ func (suite *CompositionSuite) TearDownSuite() {
 	suite.NoError(err)
 	err = os.RemoveAll(composeTestPath)
 	suite.NoError(err)
-	err = os.RemoveAll(relCacheDir)
-	suite.NoError(err)
 }
 
 func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 	suite.T().Log("E2E: Package Compose Example")
 
-	_, stdErr, err := e2e.Zarf("package", "create", composeExample, "-o", "build", "--zarf-cache", relCacheDir, "--no-color", "--confirm")
+	_, stdErr, err := e2e.Zarf("package", "create", composeExample, "-o", "build", "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that common names merge
@@ -190,7 +183,7 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 func (suite *CompositionSuite) Test_2_ComposabilityBadLocalOS() {
 	suite.T().Log("E2E: Package Compose Example")
 
-	_, stdErr, err := e2e.Zarf("package", "create", composeTestBadLocalOS, "-o", "build", "--zarf-cache", relCacheDir, "--no-color", "--confirm")
+	_, stdErr, err := e2e.Zarf("package", "create", composeTestBadLocalOS, "-o", "build", "--no-color", "--confirm")
 	suite.Error(err)
 	suite.Contains(stdErr, "\"only.localOS\" \"linux\" cannot be\n             redefined as \"windows\" during compose")
 }

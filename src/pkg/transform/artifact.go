@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/pkg/helpers"
 )
 
 const (

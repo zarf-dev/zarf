@@ -16,12 +16,11 @@ import (
 
 func TestCreateSBOM(t *testing.T) {
 	tmpdir := t.TempDir()
-	cachePath := filepath.Join(tmpdir, ".cache-location")
 	sbomPath := filepath.Join(tmpdir, ".sbom-location")
 
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
 
-	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/dos-games", "--zarf-cache", cachePath, "--sbom-out", sbomPath, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/dos-games", "--sbom-out", sbomPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Creating SBOMs for 1 images and 0 components with files.")
 	// Test that the game package generates the SBOMs we expect (images only)
@@ -42,6 +41,10 @@ func TestCreateSBOM(t *testing.T) {
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "docker.io_defenseunicorns_zarf-game_multi-tile-dark.json"))
 	require.NoError(t, err)
 
+	stdOut, _, err = e2e.Zarf("package", "inspect", pkgName, "--list-images")
+	require.NoError(t, err)
+	require.Equal(t, "- defenseunicorns/zarf-game:multi-tile-dark\n", stdOut)
+
 	// Pull the current zarf binary version to find the corresponding init package
 	version, stdErr, err := e2e.Zarf("version")
 	require.NoError(t, err, version, stdErr)
@@ -54,9 +57,9 @@ func TestCreateSBOM(t *testing.T) {
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-docker.io_defenseunicorns_zarf-game_multi-tile-dark.html"))
 	require.NoError(t, err)
 	// Test that the init package generates the SBOMs we expect (images + component files)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-docker.io_gitea_gitea_1.21.2-rootless.html"))
+	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-docker.io_gitea_gitea_1.21.5-rootless.html"))
 	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "docker.io_gitea_gitea_1.21.2-rootless.json"))
+	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "docker.io_gitea_gitea_1.21.5-rootless.json"))
 	require.NoError(t, err)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-zarf-component-k3s.html"))
 	require.NoError(t, err)

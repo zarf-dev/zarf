@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
 package test
 
 import (
@@ -28,6 +31,7 @@ func TestLint(t *testing.T) {
 		configPath := filepath.Join(testPackagePath, "zarf-config.toml")
 		os.Setenv("ZARF_CONFIG", configPath)
 		_, stderr, err := e2e.Zarf("dev", "lint", testPackagePath, "-f", "good-flavor")
+		os.Unsetenv("ZARF_CONFIG")
 		require.Error(t, err, "Require an exit code since there was warnings / errors")
 		strippedStderr := e2e.StripMessageFormatting(stderr)
 

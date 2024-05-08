@@ -41,6 +41,8 @@ components:
         before:
           - cmd: /opt/zarf/zarf-clean-k3s.sh
             description: Remove 'k3s' from the system
+          - cmd: rm /opt/zarf/zarf-clean-k3s.sh
+            description: Remove the cleanup script
     files:
       # K3s removal script
       - source: zarf-clean-k3s.sh

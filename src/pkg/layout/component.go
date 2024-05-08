@@ -10,8 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 )
@@ -58,14 +58,14 @@ func (c *Components) Archive(component types.ZarfComponent, cleanupTemp bool) (e
 	if cleanupTemp {
 		_ = os.RemoveAll(c.Dirs[name].Temp)
 	}
-	size, err := utils.GetDirSize(base)
+	size, err := helpers.GetDirSize(base)
 	if err != nil {
 		return err
 	}
 	if size > 0 {
 		tb := fmt.Sprintf("%s.tar", base)
 		message.Debugf("Archiving %q", name)
-		if err := utils.CreateReproducibleTarballFromDir(base, name, tb); err != nil {
+		if err := helpers.CreateReproducibleTarballFromDir(base, name, tb); err != nil {
 			return err
 		}
 		if c.Tarballs == nil {
@@ -92,7 +92,7 @@ func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 		}
 	}
 
-	if utils.InvalidPath(tb) {
+	if helpers.InvalidPath(tb) {
 		return &fs.PathError{
 			Op:   "stat",
 			Path: tb,
@@ -131,7 +131,7 @@ func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 	delete(c.Tarballs, name)
 
 	// if the component is already unarchived, skip
-	if !utils.InvalidPath(cs.Base) {
+	if !helpers.InvalidPath(cs.Base) {
 		message.Debugf("Component %q already unarchived", name)
 		return nil
 	}
@@ -156,13 +156,13 @@ func (c *Components) Create(component types.ZarfComponent) (cp *ComponentPaths, 
 		}
 	}
 
-	if err = utils.CreateDirectory(c.Base, 0700); err != nil {
+	if err = helpers.CreateDirectory(c.Base, helpers.ReadWriteExecuteUser); err != nil {
 		return nil, err
 	}
 
 	base := filepath.Join(c.Base, name)
 
-	if err = utils.CreateDirectory(base, 0700); err != nil {
+	if err = helpers.CreateDirectory(base, helpers.ReadWriteExecuteUser); err != nil {
 		return nil, err
 	}
 
@@ -171,26 +171,26 @@ func (c *Components) Create(component types.ZarfComponent) (cp *ComponentPaths, 
 	}
 
 	cp.Temp = filepath.Join(base, TempDir)
-	if err = utils.CreateDirectory(cp.Temp, 0700); err != nil {
+	if err = helpers.CreateDirectory(cp.Temp, helpers.ReadWriteExecuteUser); err != nil {
 		return nil, err
 	}
 
 	if len(component.Files) > 0 {
 		cp.Files = filepath.Join(base, FilesDir)
-		if err = utils.CreateDirectory(cp.Files, 0700); err != nil {
+		if err = helpers.CreateDirectory(cp.Files, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(component.Charts) > 0 {
 		cp.Charts = filepath.Join(base, ChartsDir)
-		if err = utils.CreateDirectory(cp.Charts, 0700); err != nil {
+		if err = helpers.CreateDirectory(cp.Charts, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 		for _, chart := range component.Charts {
 			cp.Values = filepath.Join(base, ValuesDir)
 			if len(chart.ValuesFiles) > 0 {
-				if err = utils.CreateDirectory(cp.Values, 0700); err != nil {
+				if err = helpers.CreateDirectory(cp.Values, helpers.ReadWriteExecuteUser); err != nil {
 					return nil, err
 				}
 				break
@@ -200,21 +200,21 @@ func (c *Components) Create(component types.ZarfComponent) (cp *ComponentPaths, 
 
 	if len(component.Repos) > 0 {
 		cp.Repos = filepath.Join(base, ReposDir)
-		if err = utils.CreateDirectory(cp.Repos, 0700); err != nil {
+		if err = helpers.CreateDirectory(cp.Repos, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(component.Manifests) > 0 {
 		cp.Manifests = filepath.Join(base, ManifestsDir)
-		if err = utils.CreateDirectory(cp.Manifests, 0700); err != nil {
+		if err = helpers.CreateDirectory(cp.Manifests, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(component.DataInjections) > 0 {
 		cp.DataInjections = filepath.Join(base, DataInjectionsDir)
-		if err = utils.CreateDirectory(cp.DataInjections, 0700); err != nil {
+		if err = helpers.CreateDirectory(cp.DataInjections, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 	}

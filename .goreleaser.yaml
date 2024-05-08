@@ -23,6 +23,11 @@ builds:
       - -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMinor={{.Env.K8S_MODULES_MINOR_VER}}
       - -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMajor={{.Env.K8S_MODULES_MAJOR_VER}}
       - -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor={{.Env.K8S_MODULES_MINOR_VER}}
+      - -X github.com/derailed/k9s/cmd.version={{.Env.K9S_VERSION}}
+      - -X github.com/google/go-containerregistry/cmd/crane/cmd.Version={{.Env.CRANE_VERSION}}
+      - -X github.com/defenseunicorns/zarf/src/cmd/tools.syftVersion={{.Env.SYFT_VERSION}}
+      - -X github.com/defenseunicorns/zarf/src/cmd/tools.archiverVersion={{.Env.ARCHIVER_VERSION}}
+      - -X github.com/defenseunicorns/zarf/src/cmd/tools.helmVersion={{.Env.HELM_VERSION}}
     goarch:
       - amd64
       - arm64
@@ -49,7 +54,7 @@ sboms:
 snapshot:
   name_template: "{{ incpatch .Version }}-snapshot"
 
-# Use the auto-generated changlog github provides
+# Use the auto-generated changelog github provides
 changelog:
   use: github-native
 
@@ -71,7 +76,15 @@ brews:
       owner: defenseunicorns
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+      branch: "{{ .ProjectName }}-{{ .Tag }}"
+      pull_request:
+        enabled: true
+        base:
+          branch: main
+          owner: defenseunicorns
+          name: homebrew-tap
+
+    commit_msg_template: "build(release): upgrade {{ .ProjectName }} to {{ .Tag }}"
     homepage: "https://zarf.dev/"
     description: "DevSecOps for Air Gap"
 
@@ -82,7 +95,14 @@ brews:
       owner: defenseunicorns
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    commit_msg_template: "Brew formula update for {{ .ProjectName }} versioned release {{ .Tag }}"
+      branch: "{{ .ProjectName }}-{{ .Tag }}"
+      pull_request:
+        enabled: true
+        base:
+          branch: main
+          owner: defenseunicorns
+          name: homebrew-tap
+    commit_msg_template: "build(release): {{ .ProjectName }}@{{ .Tag }}"
     homepage: "https://zarf.dev/"
     description: "DevSecOps for Air Gap"
 

@@ -33,12 +33,9 @@ type PackagerConfig struct {
 	// FindImagesOpts tracks user-defined options used to find images
 	FindImagesOpts ZarfFindImagesOptions
 
+	// GenerateOpts tracks user-defined values for package generation.
+	GenerateOpts ZarfGenerateOptions
+
 	// The package data
 	Pkg ZarfPackage
-
-	// The active zarf state
-	State *ZarfState
-
-	// Variables set by the user
-	SetVariableMap map[string]*ZarfSetVariable
 }

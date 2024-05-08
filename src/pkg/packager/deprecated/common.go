@@ -69,7 +69,7 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 	}
 
 	// Show a warning if the component contains a group as that has been deprecated and will be removed.
-	if component.Group != "" {
+	if component.DeprecatedGroup != "" {
 		warnings = append(warnings, fmt.Sprintf("Component %s is using group which has been deprecated and will be removed in v1.0.0.  Please migrate to another solution.", component.Name))
 	}
 

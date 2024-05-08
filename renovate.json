@@ -45,8 +45,21 @@
       ],
       "matchStringsStrategy": "recursive",
       "matchStrings": [
-        "charts:(.|\n)*?(^\\s{4}[\\w:]+|\n$|^\\s{2}-)",
-        "- name: (?<depName>.+)(.|\n)*?url: (?<registryUrl>.+)(.|\n)*?version: (?<currentValue>.+)"
+        "(?m)charts:(.|\\n)*?(^\\s{4}[\\w:]+|\\n$|^\\s{2}-)",
+        "(?m)name:(.|\\n)+?(^\\s{4}[\\w\\-:]+|\\n$|^\\s{2}-)",
+        "(?m)name: (?<depName>.+)(.|\\n)*?url: (?<registryUrl>.+)(.|\\n)*?version: (?<currentValue>.+)"
+      ],
+      "datasourceTemplate": "helm"
+    },
+    {
+      "fileMatch": [
+        "(^|/)zarf.yaml$"
+      ],
+      "matchStringsStrategy": "recursive",
+      "matchStrings": [
+        "(?m)charts:(.|\\n)*?(^\\s{4}[\\w:]+|\\n$|^\\s{2}-)",
+        "(?m)name:(.|\\n)+?(^\\s{4}[\\w\\-:]+|\\n$|^\\s{2}-)",
+        "(?m)name: (?<depName>.+)(.|\\n)*?version: (?<currentValue>.+)(.|\\n)*?url: (?<registryUrl>.+)"
       ],
       "datasourceTemplate": "helm"
     },
@@ -69,6 +82,16 @@
         "https:\\/\\/github.com\\/(?<depName>[\\w\\/\\-\\.\\+\\%]+?)\\/releases\\/download\\/(?<currentValue>[\\w\\/\\-\\.\\+\\%]+?)\\/"
       ],
       "datasourceTemplate": "github-releases"
+    },
+    {
+      "fileMatch": [
+        "\\.*\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=github-tags depName=anchore/grype versioning=semver\n\\s*VERSION: (?<currentValue>v[\\d.]+)"
+      ],
+      "datasourceTemplate": "github-tags",
+      "depNameTemplate": "anchore/grype"
     }
   ]
 }

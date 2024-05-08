@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,7 +32,7 @@ func TestUseCLI(t *testing.T) {
 			e2e.CleanFiles(shasumTestFilePath)
 		})
 
-		err := os.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), 0600)
+		err := os.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), helpers.ReadWriteUser)
 		require.NoError(t, err)
 
 		stdOut, stdErr, err := e2e.Zarf("prepare", "sha256sum", shasumTestFilePath)
@@ -67,37 +69,6 @@ func TestUseCLI(t *testing.T) {
 		require.NoError(t, err)
 		yamlVersion := fmt.Sprintf("version: %s", version)
 		require.Contains(t, stdOut, yamlVersion, "Zarf version should be the same in all formats")
-	})
-
-	t.Run("zarf prepare find-images", func(t *testing.T) {
-		t.Parallel()
-		// Test `zarf prepare find-images` for a remote asset
-		stdOut, stdErr, err := e2e.Zarf("prepare", "find-images", "examples/helm-charts", "--kube-version=v1.23.0")
-		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdOut, "ghcr.io/stefanprodan/podinfo:6.4.0", "The chart image should be found by Zarf")
-		// Test `zarf prepare find-images` with a chart that uses helm annotations
-		stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "src/test/packages/00-helm-annotations")
-		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdOut, "registry1.dso.mil/ironbank/opensource/istio/pilot:1.17.2", "The pilot image should be found by Zarf")
-	})
-
-	t.Run("zarf prepare find-images --kube-version", func(t *testing.T) {
-		t.Parallel()
-		controllerImageWithTag := "quay.io/jetstack/cert-manager-controller:v1.11.1"
-		controlImageWithSignature := "quay.io/jetstack/cert-manager-controller:sha256-4f1782c8316f34aae6b9ab823c3e6b7e6e4d92ec5dac21de6a17c3da44c364f1.sig"
-
-		// Test `zarf prepare find-images` on a chart that has a `kubeVersion` declaration greater than the Helm default (v1.20.0)
-		// This should pass because we build Zarf specifying the kubeVersion value from the kubernetes client-go library instead
-		stdOut, stdErr, err := e2e.Zarf("prepare", "find-images", "src/test/packages/00-kube-version-override")
-		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdOut, controllerImageWithTag, "The chart image should be found by Zarf")
-		require.Contains(t, stdOut, controlImageWithSignature, "The image signature should be found by Zarf")
-
-		// Test `zarf prepare find-images` with `--kube-version` specified and less than than the declared minimum (v1.21.0)
-		stdOut, stdErr, err = e2e.Zarf("prepare", "find-images", "--kube-version=v1.20.0", "src/test/packages/00-kube-version-override")
-		require.Error(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "Problem rendering the helm template for https://charts.jetstack.io/", "The kubeVersion declaration should prevent this from templating")
-		require.Contains(t, stdErr, "following charts had errors: [https://charts.jetstack.io/]", "Zarf should print an ending error message")
 	})
 
 	t.Run("zarf deploy should fail when given a bad component input", func(t *testing.T) {
@@ -155,7 +126,7 @@ func TestUseCLI(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf("package", "create", "packages/distros/eks", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
-		path := "zarf-package-distro-eks-multi-0.0.3.tar.zst"
+		path := fmt.Sprintf("zarf-package-distro-eks-%s-0.0.3.tar.zst", e2e.Arch)
 		stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
@@ -163,7 +134,7 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, "binaries/eksctl_Darwin_arm64")
 		require.FileExists(t, "binaries/eksctl_Linux_x86_64")
 
-		e2e.CleanFiles("binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", path)
+		e2e.CleanFiles("binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", path, "eks.yaml")
 	})
 
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {
@@ -241,5 +212,37 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, tlsCert)
 
 		require.FileExists(t, tlsKey)
+	})
+
+	t.Run("zarf tools yq should function appropriately across different uses", func(t *testing.T) {
+		t.Parallel()
+
+		tmpdir := t.TempDir()
+		originalPath := "src/test/packages/00-yq-checks"
+
+		originalFile := filepath.Join(originalPath, "file1.yaml")
+		originalOtherFile := filepath.Join(originalPath, "file2.yaml")
+
+		file := filepath.Join(tmpdir, "file1.yaml")
+		otherFile := filepath.Join(tmpdir, "file2.yaml")
+
+		err := copy.Copy(originalFile, file)
+		require.NoError(t, err)
+		err = copy.Copy(originalOtherFile, otherFile)
+		require.NoError(t, err)
+
+		// Test that yq can eval properly
+		_, stdErr, err := e2e.Zarf("tools", "yq", "eval", "-i", `.items[1].name = "renamed-item"`, file)
+		require.NoError(t, err, stdErr)
+		stdOut, _, err := e2e.Zarf("tools", "yq", ".items[1].name", file)
+		require.NoError(t, err)
+		require.Contains(t, stdOut, "renamed-item")
+
+		// Test that yq ea can be used properly
+		_, _, err = e2e.Zarf("tools", "yq", "eval-all", "-i", `. as $doc ireduce ({}; .items += $doc.items)`, file, otherFile)
+		require.NoError(t, err)
+		stdOut, _, err = e2e.Zarf("tools", "yq", "e", ".items | length", file)
+		require.NoError(t, err)
+		require.Equal(t, "4\n", stdOut)
 	})
 }

@@ -3,7 +3,6 @@
 
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
-KEY ?= ""
 ######################################################################################
 
 # Figure out which Zarf binary we should use based on the operating system we are on
@@ -36,12 +35,22 @@ K8S_MODULES_VER=$(subst ., ,$(subst v,,$(shell go list -f '{{.Version}}' -m k8s.
 K8S_MODULES_MAJOR_VER=$(shell echo $$(($(firstword $(K8S_MODULES_VER)) + 1)))
 K8S_MODULES_MINOR_VER=$(word 2,$(K8S_MODULES_VER))
 K8S_MODULES_PATCH_VER=$(word 3,$(K8S_MODULES_VER))
+K9S_VERSION=$(shell go list -f '{{.Version}}' -m github.com/derailed/k9s)
+CRANE_VERSION=$(shell go list -f '{{.Version}}' -m github.com/google/go-containerregistry)
+SYFT_VERSION=$(shell go list -f '{{.Version}}' -m github.com/anchore/syft)
+ARCHIVER_VERSION=$(shell go list -f '{{.Version}}' -m github.com/mholt/archiver/v3)
+HELM_VERSION=$(shell go list -f '{{.Version}}' -m helm.sh/helm/v3)
 
 BUILD_ARGS += -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
 BUILD_ARGS += -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMinor=$(K8S_MODULES_MINOR_VER)
 BUILD_ARGS += -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
 BUILD_ARGS += -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor=$(K8S_MODULES_MINOR_VER)
 BUILD_ARGS += -X k8s.io/component-base/version.gitVersion=v$(K8S_MODULES_MAJOR_VER).$(K8S_MODULES_MINOR_VER).$(K8S_MODULES_PATCH_VER)
+BUILD_ARGS += -X github.com/derailed/k9s/cmd.version=$(K9S_VERSION)
+BUILD_ARGS += -X github.com/google/go-containerregistry/cmd/crane/cmd.Version=$(CRANE_VERSION)
+BUILD_ARGS += -X github.com/defenseunicorns/zarf/src/cmd/tools.syftVersion=$(SYFT_VERSION)
+BUILD_ARGS += -X github.com/defenseunicorns/zarf/src/cmd/tools.archiverVersion=$(ARCHIVER_VERSION)
+BUILD_ARGS += -X github.com/defenseunicorns/zarf/src/cmd/tools.helmVersion=$(HELM_VERSION)
 
 GIT_SHA := $(if $(shell git rev-parse HEAD),$(shell git rev-parse HEAD),"")
 BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
@@ -69,6 +78,7 @@ delete-packages: ## Delete all Zarf package tarballs in the project recursively
 # Note: the path to the main.go file is not used due to https://github.com/golang/go/issues/51831#issuecomment-1074188363
 .PHONY: build
 build: ## Build the Zarf CLI for the machines OS and architecture
+	go mod tidy
 	$(MAKE) $(BUILD_CLI_FOR_SYSTEM)
 
 build-cli-linux-amd: ## Build the Zarf CLI for Linux on AMD64
@@ -94,11 +104,11 @@ build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI f
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
 docs-and-schema: ## Generate the Zarf Documentation and Schema
-	hack/gen-cli-docs.sh
+	ZARF_CONFIG=hack/empty-config.toml go run main.go internal gen-cli-docs
 	ZARF_CONFIG=hack/empty-config.toml hack/create-zarf-schema.sh
 
 lint-packages-and-examples: build ## Recursively lint all zarf.yaml files in the repo except for those dedicated to tests
-	hack/lint_all_zarf_packages.sh $(ZARF_BIN)
+	hack/lint-all-zarf-packages.sh $(ZARF_BIN) false
 
 # INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
 init-package-local-agent:
@@ -209,10 +219,12 @@ test-docs-and-schema:
 
 # INTERNAL: used to test for new CVEs that may have been introduced
 test-cves:
-	go run main.go tools sbom packages . -o json --exclude './docs-website' --exclude './examples' | grype --fail-on low
+	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype --fail-on low
 
 cve-report: ## Create a CVE report for the current project (must `brew install grype` first)
-	go run main.go tools sbom packages . -o json --exclude './docs-website' --exclude './examples' | grype -o template -t hack/.templates/grype.tmpl > build/zarf-known-cves.csv
+	@test -d ./build || mkdir ./build
+	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
 
 lint-go: ## Run revive to lint the go code (must `brew install revive` first)
-	revive -config revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...
+	revive -config hack/revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...
+	@hack/check-spdx-go.sh src >/dev/null || (echo "SPDX check for go failed, please run 'hack/check-spdx-go.sh src' to see the errors" && exit 1)

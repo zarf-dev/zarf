@@ -22,7 +22,7 @@ func init() {
 	// Kubectl stub command.
 	kubectlCmd := &cobra.Command{
 		Short: lang.CmdToolsKubectlDocs,
-		Run:   func(cmd *cobra.Command, args []string) {},
+		Run:   func(_ *cobra.Command, _ []string) {},
 	}
 
 	// Only load this command if it is being called directly.

@@ -5,6 +5,8 @@
 package message
 
 import (
+	"os"
+
 	"github.com/pterm/pterm"
 )
 
@@ -28,6 +30,7 @@ func NewProgressBar(total int64, text string) *ProgressBar {
 			WithTitle(padding + text).
 			WithRemoveWhenDone(true).
 			WithMaxWidth(TermWidth).
+			WithWriter(os.Stderr).
 			Start()
 	}
 
@@ -95,4 +98,12 @@ func (p *ProgressBar) Stop() {
 func (p *ProgressBar) Errorf(err error, format string, a ...any) {
 	p.Stop()
 	WarnErrf(err, format, a...)
+}
+
+// GetCurrent returns the current total
+func (p *ProgressBar) GetCurrent() int {
+	if p.progress != nil {
+		return p.progress.Current
+	}
+	return -1
 }

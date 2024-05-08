@@ -1,0 +1,160 @@
+---
+title: Deploy a Package
+sidebar:
+  order: 80
+---
+
+import Mermaid from "@components/Mermaid.astro";
+import Details from "@components/Details.astro";
+
+![Zarf CLI + Zarf Init + Zarf Package](../../../assets/zarf-bubbles.svg)
+
+A typical Zarf deployment is made up of three parts:
+
+1. The [`zarf` binary](/getting-started/install/):
+   - Is a statically compiled Go binary that can be run on any machine, server, or operating system with or without connectivity.
+   - Creates packages combining numerous types of software/updates into a single distributable package (while on a network capable of accessing them).
+   - Declaratively deploys package contents "into place" for use on production systems (while on an isolated network).
+2. A [Zarf init package](/ref/init-package/):
+   - A compressed tarball package that contains the configuration needed to instantiate an environment without connectivity.
+   - Automatically seeds your cluster with a container registry or wires up a pre-existing one
+   - Provides additional capabilities such as logging, git server support, and/or a K8s cluster.
+3. A [Zarf Package](/ref/packages/):
+   - A compressed tarball package that contains all of the files, manifests, source repositories, and images needed to deploy your infrastructure, application, and resources in a disconnected environment.
+
+Zarf Packages are designed to be easily deployable on a variety of systems, including air-gapped systems. All of the necessary dependencies are included within the package, eliminating the need for outbound internet connectivity. When deploying the package onto a cluster, the dependencies contained in each component are automatically pushed into a Docker registry and/or Git server created by or known to Zarf on the air-gapped system.
+
+Once the Zarf package has arrived in your target environment, run the `zarf package deploy` command to deploy the package onto your [Zarf initialized](/tutorials/1-initializing-a-k8s-cluster/) cluster. This command deploys the package's capabilities into the target environment, including all external resources required for the package. The `zarf.yaml` file included in the package will be used to orchestrate the deployment of the application according to the instructions provided.
+
+:::tip
+
+For a comprehensive tutorial of deploying a Zarf Package, see the [Deploying Zarf Packages tutorial](/tutorials/2-deploying-zarf-packages).
+
+:::
+
+The following diagram shows the order of operations for the `zarf package deploy` command and the hook locations for [actions](/ref/examples/component-actions/).
+
+<Details label="Lifecycle Diagram">
+<Mermaid diagram={`
+graph TD
+    B1(load package archive)-->B2
+    B2(handle multipart package)-->B3
+    B3(extract archive to temp dir)-->B4
+    B4(validate package checksums and signature)-->B5
+    B5(filter components by architecture & OS)-->B6
+    B6(save SBOM files to current dir)-->B7
+    B7(handle deprecations and breaking changes)-->B9
+    B9(confirm package deploy):::prompt-->B10
+    B10(process deploy-time variables)-->B11
+    B11(prompt for missing variables)-->B12
+    B12(prompt to confirm components)-->B13
+    B13(prompt to choose components in '.group')-->B14
+
+    subgraph  ""
+    B14(deploy each component)-->B14
+    B14 --> B15(run each '.actions.onDeploy.before'):::action-->B15
+    B15 --> B16(copy '.files')-->B17
+    B17(load Zarf State)-->B18
+    B18(push '.images')-->B19
+    B19(push '.repos')-->B20
+    B20(process '.dataInjections')-->B21
+    B21(install '.charts')-->B22
+    B22(apply '.manifests')-->B23
+    B23(run each '.actions.onDeploy.after'):::action-->B23
+    B23-->B24{Success?}
+    B24-->|Yes|B25(run each\n'.actions.onDeploy.success'):::action-->B25
+    B24-->|No|B26(run each\n'.actions.onDeploy.failure'):::action-->B26-->B999
+
+    B999[Abort]:::fail
+    end
+
+    B25-->B27(print Zarf connect table)
+    B27-->B28(save package data to cluster)
+
+
+    classDef prompt fill:#4adede,color:#000000
+    classDef action fill:#bd93f9,color:#000000
+    classDef fail fill:#aa0000
+`}/>
+</Details>
+
+## Deployment Options
+
+Zarf provides a few options that can provide control over how a deployment of a Zarf Package proceeds in a given environment.  These are baked into a Zarf Package by a package creator and include:
+
+- **Package Variables** - Templates resources with environment specific values such as domain names or secrets.
+- **Optional Components** -  Allows for components to be optionally chosen when they are needed for a subset of environments.
+- **Components Groups** - Provides a choice of one component from a defined set of components in the same component group.
+
+## Additional Deployment-modes
+
+Zarf normally expects to operate against a Kubernetes cluster that has been [Zarf initialized](/tutorials/1-initializing-a-k8s-cluster/), but there are additional modes that can be configured by package creators including:
+
+- **YOLO Mode** - Yaml-OnLy Online mode allows for a faster deployment without requiring the `zarf init` command to be run beforehand. It can be useful for testing or for environments that manage their own registries and Git servers completely outside of Zarf.  Given this mode does not use the [Zarf Agent](/faq#what-is-the-zarf-agent) any resources specified will need to be manually modified for the environment.
+
+- **Cluster-less** - Zarf normally interacts with clusters and kubernetes resources, but it is possible to have Zarf perform actions before a cluster exists (including [deploying the cluster itself](/tutorials/5-creating-a-k8s-cluster-with-zarf)).  These packages generally have more dependencies on the host or environment that they run within.
+
+## Typical Deployment Workflow
+
+The general flow of a Zarf package deployment on an existing initialized cluster is as follows:
+
+```shell
+# To deploy a package run the following:
+$ zarf package deploy
+# - Find and select the package using tab (shows packages from the local system)
+# - Review Supply Chain and other pre-deploy information (clicking on the link to view SBOMs)
+# - Type "y" to confirm package deployment or "N" to cancel
+# - Enter any variables that have not yet been defined
+# - Select any optional components that you want to add to the deployment
+# - Select any component groups for this deployment
+
+# Once the deployment finishes you can interact with the package
+$ zarf connect [service name]
+# - Your browser window should open to the service you selected
+# - Not all packages define `zarf connect` services
+# - You can list those that are available with `zarf connect list`
+```
+
+:::note
+
+You can also specify a package locally, or via oci such as `zarf package deploy oci://defenseunicorns/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub`
+
+:::
+
+## Installing, Upgrading, and Rolling Back with Helm
+
+Zarf deploys resources in Kubernetes using [Helm's Go SDK](https://helm.sh/docs/topics/advanced/#go-sdk), and converts manifests into Helm charts for installation.
+
+If no existing Helm releases match a given chart in the cluster, Zarf executes a `helm install`.
+
+Should matching releases exist, a `helm upgrade` is performed.
+
+### Handling CustomResourceDefinitions (CRDs)
+
+   - CRDs are _included_ during `helm install` to support Kubernetes Operator deployments
+   - CRDs are _excluded_ during `helm upgrade` due to [Helm's lack of support for upgrading CRDs](https://helm.sh/docs/chart_best_practices/custom_resource_definitions/#some-caveats-and-explanations)
+
+### Waiting for Resource Readiness
+
+By default, Zarf waits for all resources to deploy successfully during install, upgrade, and rollback operations.
+
+You can override this behavior during install and upgrade by setting the `noWait: true` key under the `charts` and `manifests` fields.
+
+### Timeout Settings
+
+The default timeout for Helm operations in Zarf is 15 minutes.
+
+Use the `--timeout` flag with `zarf init` and `zarf package deploy` to modify the timeout duration.
+
+### Retry Policy
+
+Zarf retries install and upgrade operations up to three times by default if an error occurs.
+
+Use the `--retries` flag with `zarf init` and `zarf package deploy` to change the number of retry attempts.
+
+### Rollback Process
+
+If attempts to upgrade a chart fail, Zarf tries to roll the chart back to its last successful release. During this rollback process:
+
+  - Any resources created during the failed upgrade attempt are deleted (`helm rollback --cleanup-on-fail`)
+  - Resource updates are forced through delete and recreate if needed (`helm rollback --force`)

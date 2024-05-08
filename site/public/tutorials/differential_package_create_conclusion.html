@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style type="text/css">
+body {background-color: black;}
+pre {
+	font-weight: normal;
+	color: #bbb;
+	white-space: -moz-pre-wrap;
+	white-space: -o-pre-wrap;
+	white-space: -pre-wrap;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+}
+b {font-weight: normal}
+b.BOLD {color: #fff}
+b.ITA {font-style: italic}
+b.UND {text-decoration: underline}
+b.STR {text-decoration: line-through}
+b.UNDSTR {text-decoration: underline line-through}
+b.BLK {color: #000000}
+b.RED {color: #aa0000}
+b.GRN {color: #00aa00}
+b.YEL {color: #aa5500}
+b.BLU {color: #0000aa}
+b.MAG {color: #aa00aa}
+b.CYN {color: #00aaaa}
+b.WHI {color: #aaaaaa}
+b.HIK {color: #555555}
+b.HIR {color: #ff5555}
+b.HIG {color: #55ff55}
+b.HIY {color: #ffff55}
+b.HIB {color: #5555ff}
+b.HIM {color: #ff55ff}
+b.HIC {color: #55ffff}
+b.HIW {color: #ffffff}
+b.BBLK {background-color: #000000}
+b.BRED {background-color: #aa0000}
+b.BGRN {background-color: #00aa00}
+b.BYEL {background-color: #aa5500}
+b.BBLU {background-color: #0000aa}
+b.BMAG {background-color: #aa00aa}
+b.BCYN {background-color: #00aaaa}
+b.BWHI {background-color: #aaaaaa}
+</style>
+</head>
+<body>
+<pre>
+<b class="WHI">
+$ zarf package create . --confirm
+
+</b>
+<b class=YEL>Saving log file to</b>
+<b class=YEL>/var/folders/bk/rz1xx2sd5zn134c0_j1s2n5r0000gp/T/zarf-2023-05-19-10-06-38-4201820931.log</b>
+<b class=YEL></b>
+<b class=YEL>Using build directory .</b>
+<b class=YEL></b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b style="color:#55ffff;">kind</b>:<b style="color:#ff55ff;"> ZarfPackageConfig</b>
+<b style="color:#ff55ff;"></b><b style="color:#55ffff;">metadata</b>:<b style="color:#55ffff;"></b>
+<b style="color:#55ffff;">  name</b>:<b style="color:#ff55ff;"> longhorn</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Example package for Longhorn cloud native distributed block storage for Kubernetes</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 1.4.2</b>
+<b style="color:#ff55ff;"></b><b style="color:#55ffff;">components</b>:
+-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> longhorn-environment-check</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">required</b>:<b style="color:#ffffff;"> true</b>
+<b style="color:#ffffff;">  </b><b style="color:#55ffff;">actions</b>:<b style="color:#55ffff;"></b>
+<b style="color:#55ffff;">    onDeploy</b>:<b style="color:#55ffff;"></b>
+<b style="color:#55ffff;">      after</b>:
+      -<b style="color:#55ffff;"> cmd</b>: |
+<b style="color:#ff55ff;">          export PATH=$PATH:./</b>
+<b style="color:#ff55ff;">          awk '{gsub(/kubectl /, "./zarf tools kubectl ")} 1' ./environment_check.sh &gt; tmp &amp;&amp; mv tmp ./environment_check.sh</b>
+<b style="color:#ff55ff;">          awk '{gsub(/"kubectl" /, "")} 1' ./environment_check.sh &gt; tmp &amp;&amp; mv tmp ./environment_check.sh</b>
+<b style="color:#ff55ff;">          chmod +x ./environment_check.sh</b>
+<b style="color:#ff55ff;">          ./environment_check.sh</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">files</b>:
+  -<b style="color:#55ffff;"> source</b>:<b style="color:#ff55ff;"> https://raw.githubusercontent.com/longhorn/longhorn/v1.4.2/scripts/environment_check.sh</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> environment_check.sh</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">executable</b>:<b style="color:#ffffff;"> true</b>
+<b style="color:#ffffff;">  </b>-<b style="color:#55ffff;"> source</b>:<b style="color:#ff55ff;"> https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">target</b>:<b style="color:#ff55ff;"> jq</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">executable</b>:<b style="color:#ffffff;"> true</b>
+<b style="color:#ffffff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> longhorn</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>:<b style="color:#ff55ff;"> Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">required</b>:<b style="color:#ffffff;"> true</b>
+<b style="color:#ffffff;">  </b><b style="color:#55ffff;">actions</b>:<b style="color:#55ffff;"></b>
+<b style="color:#55ffff;">    onRemove</b>:<b style="color:#55ffff;"></b>
+<b style="color:#55ffff;">      before</b>:
+      -<b style="color:#55ffff;"> cmd</b>:<b style="color:#ff55ff;"> "./zarf tools kubectl -n longhorn-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"</b><b style="color:#55ffff;"></b>
+<b style="color:#55ffff;">  charts</b>:
+  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> longhorn</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">url</b>:<b style="color:#ff55ff;"> https://charts.longhorn.io</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 1.4.2</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> longhorn-system</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">valuesFiles</b>:
+    -<b style="color:#ff55ff;"> values.yaml</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">manifests</b>:
+  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> longhorn-connect</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> longhorn-system</b>
+<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">files</b>:
+    -<b style="color:#ff55ff;"> connect.yaml</b>
+<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">images</b>:
+  -<b style="color:#ff55ff;"> longhornio/csi-attacher:v3.4.0</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/csi-provisioner:v2.1.2</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/csi-resizer:v1.3.0</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/csi-snapshotter:v5.0.1</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/csi-node-driver-registrar:v2.5.0</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/livenessprobe:v2.8.0</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/backing-image-manager:v1.4.2</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/longhorn-engine:v1.4.2</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/longhorn-instance-manager:v1.4.2</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/longhorn-manager:v1.4.2</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/longhorn-share-manager:v1.4.2</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/longhorn-ui:v1.4.2</b>
+<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> longhornio/support-bundle-kit:v0.0.17</b>
+<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Create Zarf package confirmed</b>
+
+<div style="background-color:#555555">
+<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 LONGHORN-ENVIRONMENT-CHECK COMPONENT                                       </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
+<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
+<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+</div>
+
+  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Downloading environment_check.sh</b>
+<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Downloaded https://raw.githubusercontent.com/longhorn/longhorn/v1.4.2/scripts/environment_check.sh</b>
+  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Downloading jq-linux64</b>
+<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Downloaded https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64</b>
+
+<div style="background-color:#555555">
+<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 LONGHORN COMPONENT                                                         </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
+<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
+<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+</div>
+
+  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart longhorn:1.4.2 from repo https://charts.longhorn.io</b>
+  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Processing helm chart longhorn:1.4.2 from repo https://charts.longhorn.io</b>
+  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading 1 K8s manifests</b>
+  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading 1 K8s manifests</b>
+
+<div style="background-color:#555555">
+<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">  📦 COMPONENT IMAGES                                                           </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
+<b style="background-color:#555555"></b><b style="background-color:#555555"></b><b style="color:#ffffff;background-color:#555555"></b><b style="color:#ffffff;background-color:#555555">                                                                                </b><b style="background-color:#555555"></b><b style="background-color:#555555"></b>
+<b style="background-color:#555555"></b><b style="background-color:#555555">                                                                                </b>
+</div>
+
+  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading metadata for 13 images. This step may take several seconds to complete.</b>
+  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Loading metadata for 13 images. This step may take several seconds to complete.</b>
+  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Pulling Zarf package data (0.00 Byte of 786.07 MBs)</b>
+<b style="color:#55ff55;"></b><b style="color:#55ff55;">  ✔ </b> <b style="color:#55ff55;"></b><b style="color:#55ff55;">Pulling 13 images (786.07 MBs)</b>
+  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Creating SBOMs for 13 images and 1 components with files.</b>
+  •  <b style="color:#55ffff;"></b><b style="color:#55ffff;">Creating SBOMs for 13 images and 1 components with files.</b>
+
+<b class="WHI">
+$ ls -alh *.tar.zst
+
+-rw-r--r--  1 jason  staff   582M May 19 10:06 zarf-package-longhorn-arm64-1.4.0-differential-1.4.2.tar.zst
+-rw-r--r--  1 jason  staff   759M May 19 09:18 zarf-package-longhorn-arm64-1.4.0.tar.zst
+-rw-r--r--  1 jason  staff   760M May 19 10:07 zarf-package-longhorn-arm64-1.4.2.tar.zst
+</b>
+</pre>
+</body>
+</html>

@@ -5,9 +5,9 @@ agent_image = 'defenseunicorns/zarf/agent'
 agent_image_tag = 'local'
 
 # Tag for the zarf injector binary to use
-injector_version = '2023-08-02'
-injector_amd64_shasum = '91de0768855ee2606a4f85a92bb480ff3a14ca205fd8d05eb397c18e15aa0247'
-injector_arm64_shasum = '663df681deea957b0ec53538eab221691a83de8e95d86b8a29008af711934bee'
+injector_version = '2024-05-03'
+injector_amd64_shasum = 'e5a3d380bac4bf6c68ba18275d6a92bb002e86c116eb364f960d393fd2f44da8'
+injector_arm64_shasum = '866b5b1911dd920618be55164c4f95abe05753932ac6d0f2270d26e569d797a2'
 
 # The image reference to use for the registry that Zarf deploys into the cluster
 registry_image_domain = ''
@@ -15,4 +15,4 @@ registry_image = 'library/registry'
 registry_image_tag = '2.8.3'
 
 # The image reference to use for the optional git-server Zarf deploys
-gitea_image = 'gitea/gitea:1.21.2-rootless'
+gitea_image = 'gitea/gitea:1.21.5-rootless'

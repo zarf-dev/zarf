@@ -1,1 +1,0 @@
-This folder contains the type-bindings for all official extensions. The extension should import the type-bindings from this folder whether the extension is in the Zarf repo or in another repo as a WASM module.

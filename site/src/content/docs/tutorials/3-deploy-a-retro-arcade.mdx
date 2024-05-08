@@ -1,0 +1,107 @@
+---
+title: Deploying a Retro Arcade
+sidebar:
+  order: 3
+---
+
+## Introduction
+
+In previous tutorials, we learned how to [create a package](/tutorials/0-creating-a-zarf-package/), [initialize a cluster](/tutorials/1-initializing-a-k8s-cluster/), and [deploy a package](/tutorials/2-deploying-zarf-packages/). In this tutorial, we will leverage all that past work and deploy a fun application onto your cluster.
+
+## System Requirements
+
+- You'll need an internet connection to grab the Zarf Package for the games example.
+
+## Prerequisites
+
+Before beginning this tutorial you will need the following:
+
+- The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
+- Zarf binary installed on your $PATH: ([Installing Zarf](/getting-started/install/))
+- [An initialized cluster](/tutorials/1-initializing-a-k8s-cluster/)
+
+## Deploying the Arcade
+
+1. The `dos-games` package is easily deployable via `oci://` by running `zarf package deploy oci://defenseunicorns/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub`.
+
+:::tip
+
+You can publish your own packages for deployment too via `oci://`.  See the [Store and Deploy Packages with OCI](/tutorials/7-publish-and-deploy/) tutorial for more information.
+
+:::
+
+<iframe src="/tutorials/package_deploy_deploy.html" width="100%" height="595px"></iframe>
+
+2. If you did not use the `--confirm` flag to automatically confirm that you want to deploy this package, press `y` for yes.  Then hit the `enter` key.
+
+<iframe src="/tutorials/package_deploy_deploy_bottom.html" width="100%" height="400px"></iframe>
+
+### Connecting to the Games
+
+When the games package finishes deploying, you should get an output that lists a couple of new commands that you can use to connect to the games. These new commands were defined by the creators of the games package to make it easier to access the games. By typing the new command, your browser should automatically open up and connect to the application we just deployed into the cluster, using the `zarf connect` command.
+
+<iframe src="/tutorials/package_deploy_connect.html" width="100%"></iframe>
+
+![Connected to the Games](../../../assets/tutorials/games_connected.png)
+
+:::note
+If your browser doesn't automatically open up, you can manually go to your browser and copy the IP address that the command printed out into the URL bar.
+:::
+
+:::note
+The `zarf connect games` will continue running in the background until you close the connection by pressing the `ctrl + c` (`control + c` on a mac) in your terminal to terminate the process.
+:::
+
+## Removal
+
+1. Use the `zarf package list` command to get a list of the installed packages.  This will give you the name of the games package to remove it.
+
+<iframe src="/tutorials/package_deploy_list.html" height="120px" width="100%"></iframe>
+
+2. Use the `zarf package remove` command to remove the `dos-games` package.  Don't forget the `--confirm` flag.  Otherwise you'll receive an error.
+
+<iframe src="/tutorials/package_deploy_remove_no_confirm.html" width="100%" height="425px"></iframe>
+
+3. You can also use the `zarf package remove` command with the zarf package file, to remove the package.  Again don't forget the `--confirm` flag.
+
+<iframe src="/tutorials/package_deploy_remove_by_file.html" height="100px" width="100%"></iframe>
+
+The dos-games package has now been removed from your cluster.
+
+## Troubleshooting
+
+### Unable to connect to the Kubernetes cluster
+
+<iframe src="/tutorials/troubleshoot_unreachable.html" width="100%" height="200px"></iframe>
+
+:::note[Remediation]
+
+If you receive this error, either you don't have a Kubernetes cluster, your cluster is down, or your cluster is unreachable.
+
+1. Check your kubectl configuration, then try again.  For more information about kubectl configuration see [Configure Access to Multiple Clusters](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) from the Kubernetes documentation.
+
+If you need to setup a cluster, you can perform the following.
+
+1. Deploy a Kubernetes cluster with the [Creating a K8s Cluster with Zarf](/tutorials/5-creating-a-k8s-cluster-with-zarf/) tutorial.
+2. Perform the [Initialize a cluster](/tutorials/1-initializing-a-k8s-cluster/) tutorial.
+
+After that you can try deploying the package again.
+
+:::
+
+### Secrets "zarf-state" not found
+
+<iframe src="/tutorials/troubleshoot_uninitialized.html" width="100%" height="250px"></iframe>
+
+:::note[Remediation]
+
+If you receive this error when zarf is attempting to deploy the `BASELINE COMPONENT`, this means you have not initialized the kubernetes cluster.  This is one of the prerequisites for this tutorial.  Perform the [Initialize a cluster](/tutorials/1-initializing-a-k8s-cluster/) tutorial, then try again.
+
+:::
+
+## Credits
+
+:sparkles: Special thanks to these fine references! :sparkles:
+
+- [reddit.com/r/programming/comments/nap4pt/dos_gaming_in_docker](https://www.reddit.com/r/programming/comments/nap4pt/dos_gaming_in_docker/)
+- [earthly.dev/blog/dos-gaming-in-docker](https://earthly.dev/blog/dos-gaming-in-docker/)

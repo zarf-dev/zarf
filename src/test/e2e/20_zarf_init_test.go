@@ -12,7 +12,6 @@ import (
 
 	"encoding/json"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 )
@@ -50,8 +49,6 @@ func TestZarfInit(t *testing.T) {
 		require.Contains(t, stdErr, expectedErrorMessage)
 	}
 
-	initWithoutStorageClass(t)
-
 	if !e2e.ApplianceMode {
 		// throw a pending pod into the cluster to ensure we can properly ignore them when selecting images
 		_, _, err := e2e.Kubectl("apply", "-f", "https://raw.githubusercontent.com/kubernetes/website/main/content/en/examples/pods/pod-with-node-affinity.yaml")
@@ -72,8 +69,9 @@ func TestZarfInit(t *testing.T) {
 	_, initStdErr, err := e2e.Zarf("init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace", "--confirm")
 	require.NoError(t, err)
 	require.Contains(t, initStdErr, "an inventory of all software contained in this package")
+	require.NotContains(t, initStdErr, "This package does NOT contain an SBOM. If you require an SBOM, please contact the creator of this package to request a version that includes an SBOM.")
 
-	logText := e2e.GetLogFileContents(t, initStdErr)
+	logText := e2e.GetLogFileContents(t, e2e.StripMessageFormatting(initStdErr))
 
 	// Verify that any state secrets were not included in the log
 	state := types.ZarfState{}
@@ -107,12 +105,19 @@ func TestZarfInit(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "Min")
 
+	verifyZarfNamespaceLabels(t)
+	verifyZarfSecretLabels(t)
+	verifyZarfPodLabels(t)
+	verifyZarfServiceLabels(t)
+
 	// Special sizing-hacking for reducing resources where Kind + CI eats a lot of free cycles (ignore errors)
 	_, _, _ = e2e.Kubectl("scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1")
 	_, _, _ = e2e.Kubectl("scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")
 }
 
 func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.ZarfState) {
+	t.Helper()
+
 	require.NotContains(t, logText, zarfState.AgentTLS.CA)
 	require.NotContains(t, logText, string(zarfState.AgentTLS.CA))
 	require.NotContains(t, logText, zarfState.AgentTLS.Cert)
@@ -128,42 +133,104 @@ func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.Zar
 	require.NotContains(t, logText, zarfState.LoggingSecret)
 }
 
-// Verify `zarf init` produces an error when there is no storage class in cluster.
-func initWithoutStorageClass(t *testing.T) {
-	/*
-		Exit early if testing with Zarf-deployed k3s cluster.
-		This is a chicken-egg problem because we can't interact with a cluster that Zarf hasn't created yet.
-		Zarf deploys k3s with the Rancher local-path storage class out of the box,
-		so we don't expect any problems with no storage class in this case.
-	*/
-	if e2e.ApplianceMode {
-		return
-	}
+func verifyZarfNamespaceLabels(t *testing.T) {
+	t.Helper()
 
-	jsonPathQuery := `{range .items[?(@.metadata.annotations.storageclass\.kubernetes\.io/is-default-class=="true")]}{.metadata.name}{end}`
-	defaultStorageClassName, _, err := e2e.Kubectl("get", "storageclass", "-o=jsonpath="+jsonPathQuery)
+	expectedLabels := `'{"app.kubernetes.io/managed-by":"zarf","kubernetes.io/metadata.name":"zarf"}'`
+	actualLabels, _, err := e2e.Kubectl("get", "ns", "zarf", "-o=jsonpath='{.metadata.labels}'")
 	require.NoError(t, err)
-	require.NotEmpty(t, defaultStorageClassName)
+	require.Equal(t, expectedLabels, actualLabels)
+}
 
-	storageClassYaml, _, err := e2e.Kubectl("get", "storageclass", defaultStorageClassName, "-o=yaml")
+func verifyZarfSecretLabels(t *testing.T) {
+	t.Helper()
+
+	// zarf state
+	expectedLabels := `'{"app.kubernetes.io/managed-by":"zarf"}'`
+	actualLabels, _, err := e2e.Kubectl("get", "-n=zarf", "secret", "zarf-state", "-o=jsonpath='{.metadata.labels}'")
 	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
 
-	storageClassFileName := "storage-class.yaml"
-
-	err = utils.WriteFile(storageClassFileName, []byte(storageClassYaml))
+	// init package secret
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"zarf","package-deploy-info":"init"}'`
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "secret", "zarf-package-init", "-o=jsonpath='{.metadata.labels}'")
 	require.NoError(t, err)
-	defer e2e.CleanFiles(storageClassFileName)
+	require.Equal(t, expectedLabels, actualLabels)
 
-	_, _, err = e2e.Kubectl("delete", "storageclass", defaultStorageClassName)
+	// registry
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"zarf"}'`
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "secret", "private-registry", "-o=jsonpath='{.metadata.labels}'")
 	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
 
-	_, stdErr, err := e2e.Zarf("init", "--confirm")
-	require.Error(t, err, stdErr)
-	require.Contains(t, stdErr, "unable to run component before action: command \"Check that the cluster has the specified storage class\"")
-
-	_, _, err = e2e.Zarf("destroy", "--confirm")
+	// agent hook TLS
+	//
+	// this secret does not have the managed by zarf label
+	// because it is deployed as a helm chart rather than generated in Go code.
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"Helm"}'`
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "secret", "agent-hook-tls", "-o=jsonpath='{.metadata.labels}'")
 	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
 
-	_, _, err = e2e.Kubectl("apply", "-f", storageClassFileName)
+	// git server
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"zarf"}'`
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "secret", "private-git-server", "-o=jsonpath='{.metadata.labels}'")
 	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+}
+
+func verifyZarfPodLabels(t *testing.T) {
+	t.Helper()
+
+	// registry
+	podHash, _, err := e2e.Kubectl("get", "-n=zarf", "--selector=app=docker-registry", "pods", `-o=jsonpath="{.items[0].metadata.labels['pod-template-hash']}"`)
+	require.NoError(t, err)
+	expectedLabels := fmt.Sprintf(`'{"app":"docker-registry","pod-template-hash":%s,"release":"zarf-docker-registry","zarf.dev/agent":"ignore"}'`, podHash)
+	actualLabels, _, err := e2e.Kubectl("get", "-n=zarf", "--selector=app=docker-registry", "pods", "-o=jsonpath='{.items[0].metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+
+	// agent
+	podHash, _, err = e2e.Kubectl("get", "-n=zarf", "--selector=app=agent-hook", "pods", `-o=jsonpath="{.items[0].metadata.labels['pod-template-hash']}"`)
+	require.NoError(t, err)
+	expectedLabels = fmt.Sprintf(`'{"app":"agent-hook","pod-template-hash":%s,"zarf.dev/agent":"ignore"}'`, podHash)
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "--selector=app=agent-hook", "pods", "-o=jsonpath='{.items[0].metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+
+	// logging and git server pods should have the `zarf-agent=patched` label
+	// since they should have been mutated by the agent
+	patchedLabel := `"zarf-agent":"patched"`
+
+	// logging
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "--selector=app.kubernetes.io/instance=zarf-loki-stack", "pods", "-o=jsonpath='{.items[0].metadata.labels}'")
+	require.NoError(t, err)
+	require.Contains(t, actualLabels, patchedLabel)
+
+	// git server
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "--selector=app.kubernetes.io/instance=zarf-gitea  ", "pods", "-o=jsonpath='{.items[0].metadata.labels}'")
+	require.NoError(t, err)
+	require.Contains(t, actualLabels, patchedLabel)
+}
+
+func verifyZarfServiceLabels(t *testing.T) {
+	t.Helper()
+
+	// registry
+	expectedLabels := `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/connect-name":"registry"}'`
+	actualLabels, _, err := e2e.Kubectl("get", "-n=zarf", "service", "zarf-connect-registry", "-o=jsonpath='{.metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+
+	// logging
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/connect-name":"logging"}'`
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "service", "zarf-connect-logging", "-o=jsonpath='{.metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
+
+	// git server
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/connect-name":"git"}'`
+	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "service", "zarf-connect-git", "-o=jsonpath='{.metadata.labels}'")
+	require.NoError(t, err)
+	require.Equal(t, expectedLabels, actualLabels)
 }

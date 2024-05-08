@@ -12,13 +12,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	corev1 "k8s.io/api/core/v1"
 	"oras.land/oras-go/v2/registry"
 )
 
@@ -71,6 +72,11 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
+	composable := filepath.Join("src", "test", "packages", "09-composable-packages")
+	_, stdErr, err = e2e.Zarf("package", "publish", composable, "oci://"+ref, "--insecure")
+	suite.NoError(err)
+	suite.Contains(stdErr, "Published "+ref)
+
 	_, stdErr, err = e2e.Zarf("package", "publish", importEverything, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
@@ -85,6 +91,9 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.NoError(err)
 
 	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/big-bang-min:2.10.0", "-o", "build", "--insecure", "-a", "skeleton")
+	suite.NoError(err)
+
+	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/test-compose-package:0.0.1", "-o", "build", "--insecure", "-a", "skeleton")
 	suite.NoError(err)
 }
 
@@ -122,6 +131,7 @@ func (suite *SkeletonSuite) Test_2_FilePaths() {
 		filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch)),
 		filepath.Join("build", "zarf-package-helm-charts-skeleton-0.0.1.tar.zst"),
 		filepath.Join("build", "zarf-package-big-bang-min-skeleton-2.10.0.tar.zst"),
+		filepath.Join("build", "zarf-package-test-compose-package-skeleton-0.0.1.tar.zst"),
 	}
 
 	for _, pkgTar := range pkgTars {
@@ -133,6 +143,24 @@ func (suite *SkeletonSuite) Test_2_FilePaths() {
 		_, _, err := e2e.Zarf("tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
 		suite.NoError(err)
 		suite.DirExists(unpacked)
+
+		// Verify skeleton contains kustomize-generated manifests.
+		if strings.HasSuffix(pkgTar, "zarf-package-test-compose-package-skeleton-0.0.1.tar.zst") {
+			kustomizeGeneratedManifests := []string{
+				"kustomization-connect-service-0.yaml",
+				"kustomization-connect-service-1.yaml",
+				"kustomization-connect-service-two-0.yaml",
+			}
+			manifestDir := filepath.Join(unpacked, "components", "test-compose-package", "manifests")
+			for _, manifest := range kustomizeGeneratedManifests {
+				manifestPath := filepath.Join(manifestDir, manifest)
+				suite.FileExists(manifestPath, "expected to find kustomize-generated manifest: %q", manifestPath)
+				var configMap corev1.ConfigMap
+				err := utils.ReadYaml(manifestPath, &configMap)
+				suite.NoError(err)
+				suite.Equal("ConfigMap", configMap.Kind, "expected manifest %q to be of kind ConfigMap", manifestPath)
+			}
+		}
 
 		err = utils.ReadYaml(filepath.Join(unpacked, layout.ZarfYAML), &pkg)
 		suite.NoError(err)
@@ -150,7 +178,7 @@ func (suite *SkeletonSuite) Test_2_FilePaths() {
 }
 
 func (suite *SkeletonSuite) DirOrFileExists(path string) {
-	invalid := utils.InvalidPath(path)
+	invalid := helpers.InvalidPath(path)
 	suite.Falsef(invalid, "path specified does not exist: %s", path)
 }
 

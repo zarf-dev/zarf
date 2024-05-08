@@ -20,9 +20,12 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// cannot import config.ZarfManagedByLabel due to import cycle
+const zarfManagedByLabel = "app.kubernetes.io/managed-by"
+
 // New creates a new K8s client.
 func New(logger Log, defaultLabels Labels) (*K8s, error) {
-	klog.SetLogger(funcr.New(func(prefix, args string) {
+	klog.SetLogger(funcr.New(func(_, args string) {
 		logger(args)
 	}, funcr.Options{}))
 

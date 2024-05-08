@@ -30,7 +30,7 @@ func ProxyHandler() http.HandlerFunc {
 			return
 		}
 
-		proxy := &httputil.ReverseProxy{Director: func(r *http.Request) {}, ModifyResponse: proxyResponseTransform}
+		proxy := &httputil.ReverseProxy{Director: func(_ *http.Request) {}, ModifyResponse: proxyResponseTransform}
 		proxy.ServeHTTP(w, r)
 	}
 }

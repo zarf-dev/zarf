@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/pkg/helpers"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -46,11 +46,9 @@ func (k *K8s) GenerateService(namespace, name string) *corev1.Service {
 			Name:        name,
 			Namespace:   namespace,
 			Annotations: make(Labels),
+			Labels:      make(Labels),
 		},
 	}
-
-	// Merge in common labels so that later modifications to the service can't mutate them
-	service.ObjectMeta.Labels = helpers.MergeMap[string](k.Labels, service.ObjectMeta.Labels)
 
 	return service
 }
@@ -78,7 +76,7 @@ func (k *K8s) GetServices(namespace string) (*corev1.ServiceList, error) {
 
 // GetServicesByLabel returns a list of matched services given a label and value.  To search all namespaces, pass "" in the namespace arg.
 func (k *K8s) GetServicesByLabel(namespace, label, value string) (*corev1.ServiceList, error) {
-	// Creat the selector and add the requirement
+	// Create the selector and add the requirement
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: Labels{
 			label: value,
@@ -91,7 +89,7 @@ func (k *K8s) GetServicesByLabel(namespace, label, value string) (*corev1.Servic
 
 // GetServicesByLabelExists returns a list of matched services given a label.  To search all namespaces, pass "" in the namespace arg.
 func (k *K8s) GetServicesByLabelExists(namespace, label string) (*corev1.ServiceList, error) {
-	// Creat the selector and add the requirement
+	// Create the selector and add the requirement
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{{
 			Key:      label,

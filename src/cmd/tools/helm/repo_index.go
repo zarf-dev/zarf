@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -58,7 +59,7 @@ func newRepoIndexCmd(out io.Writer) *cobra.Command {
 		Short: "generate an index file given a directory containing packaged charts",
 		Long:  repoIndexDesc,
 		Args:  require.ExactArgs(1),
-		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		ValidArgsFunction: func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 			if len(args) == 0 {
 				// Allow file completion when completing the argument for the directory
 				return nil, cobra.ShellCompDirectiveDefault
@@ -66,7 +67,7 @@ func newRepoIndexCmd(out io.Writer) *cobra.Command {
 			// No more completions, so disable file completion
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			o.dir = args[0]
 			return o.run(out)
 		},
@@ -100,7 +101,7 @@ func index(dir, url, mergeTo string) error {
 		var i2 *repo.IndexFile
 		if _, err := os.Stat(mergeTo); os.IsNotExist(err) {
 			i2 = repo.NewIndexFile()
-			i2.WriteFile(mergeTo, 0644)
+			i2.WriteFile(mergeTo, helpers.ReadAllWriteUser)
 		} else {
 			i2, err = repo.LoadIndexFile(mergeTo)
 			if err != nil {
@@ -110,5 +111,5 @@ func index(dir, url, mergeTo string) error {
 		i.Merge(i2)
 	}
 	i.SortEntries()
-	return i.WriteFile(out, 0644)
+	return i.WriteFile(out, helpers.ReadAllWriteUser)
 }

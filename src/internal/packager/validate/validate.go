@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"slices"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/helpers"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -22,7 +24,19 @@ var (
 	// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
 	// https://regex101.com/r/tfsEuZ/1
 	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
+	// Define allowed OS, an empty string means it is allowed on all operating systems
+	// same as enums on ZarfComponentOnlyTarget
+	supportedOS = []string{"linux", "darwin", "windows", ""}
 )
+
+// SupportedOS returns the supported operating systems.
+//
+// The supported operating systems are: linux, darwin, windows.
+//
+// An empty string signifies no OS restrictions.
+func SupportedOS() []string {
+	return supportedOS
+}
 
 // Run performs config validations.
 func Run(pkg types.ZarfPackage) error {
@@ -62,14 +76,14 @@ func Run(pkg types.ZarfPackage) error {
 		}
 
 		// ensure groups don't have multiple defaults or only one component
-		if component.Group != "" {
+		if component.DeprecatedGroup != "" {
 			if component.Default {
-				if _, ok := groupDefault[component.Group]; ok {
-					return fmt.Errorf(lang.PkgValidateErrGroupMultipleDefaults, component.Group, groupDefault[component.Group], component.Name)
+				if _, ok := groupDefault[component.DeprecatedGroup]; ok {
+					return fmt.Errorf(lang.PkgValidateErrGroupMultipleDefaults, component.DeprecatedGroup, groupDefault[component.DeprecatedGroup], component.Name)
 				}
-				groupDefault[component.Group] = component.Name
+				groupDefault[component.DeprecatedGroup] = component.Name
 			}
-			groupedComponents[component.Group] = append(groupedComponents[component.Group], component.Name)
+			groupedComponents[component.DeprecatedGroup] = append(groupedComponents[component.DeprecatedGroup], component.Name)
 		}
 	}
 
@@ -129,11 +143,15 @@ func validateComponent(pkg types.ZarfPackage, component types.ZarfComponent) err
 		return fmt.Errorf(lang.PkgValidateErrComponentName, component.Name)
 	}
 
-	if component.Required {
+	if !slices.Contains(supportedOS, component.Only.LocalOS) {
+		return fmt.Errorf(lang.PkgValidateErrComponentLocalOS, component.Name, component.Only.LocalOS, supportedOS)
+	}
+
+	if component.Required != nil && *component.Required {
 		if component.Default {
 			return fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name)
 		}
-		if component.Group != "" {
+		if component.DeprecatedGroup != "" {
 			return fmt.Errorf(lang.PkgValidateErrComponentReqGrouped, component.Name)
 		}
 	}
@@ -279,7 +297,7 @@ func validatePackageName(subject string) error {
 	return nil
 }
 
-func validatePackageVariable(subject types.ZarfPackageVariable) error {
+func validatePackageVariable(subject variables.InteractiveVariable) error {
 	// ensure the variable name is only capitals and underscores
 	if !IsUppercaseNumberUnderscore(subject.Name) {
 		return fmt.Errorf(lang.PkgValidateMustBeUppercase, subject.Name)
@@ -288,7 +306,7 @@ func validatePackageVariable(subject types.ZarfPackageVariable) error {
 	return nil
 }
 
-func validatePackageConstant(subject types.ZarfPackageConstant) error {
+func validatePackageConstant(subject variables.Constant) error {
 	// ensure the constant name is only capitals and underscores
 	if !IsUppercaseNumberUnderscore(subject.Name) {
 		return fmt.Errorf(lang.PkgValidateErrPkgConstantName, subject.Name)

@@ -8,20 +8,23 @@ components:
     required: true
     charts:
       - name: argo-cd
-        version: 5.46.5
+        version: 5.54.0
         namespace: argocd
         url: https://argoproj.github.io/argo-helm
         releaseName: argocd-baseline
         valuesFiles:
           - baseline/values.yaml
     images:
-      - public.ecr.aws/docker/library/redis:7.0.11-alpine
-      - quay.io/argoproj/argocd:v2.8.4
+      - docker.io/library/redis:7.0.15-alpine
+      - quay.io/argoproj/argocd:v2.9.6
+      # Cosign artifacts for images - argocd - argocd-helm-chart
+      - quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.sig
+      - quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.att
   - name: argocd-apps
     required: true
     charts:
       - name: argocd-apps
-        version: 1.4.1
+        version: 1.6.1
         namespace: podinfo
         url: https://argoproj.github.io/argo-helm
         releaseName: argocd-apps
@@ -42,3 +45,12 @@ components:
                 name: app.kubernetes.io/name=apps-podinfo
                 namespace: podinfo
                 condition: ready
+
+# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
+# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
+x-mdx: |
+  This example demonstrates how to use ArgoCD with Zarf to deploy the `stefanprodan/podinfo` app using GitOps.
+
+  It uses a vanilla configuration of ArgoCD with upstream containers.
+
+  To learn more about how Zarf handles `git` repositories, see the [Git Repositories section](/ref/components/#git-repositories) of the package components documentation.
