@@ -5,5 +5,5 @@ metadata:
   namespace: flux-system
 spec:
   type: oci
-  interval: 31s
+  interval: 30s
   url: oci://ghcr.io/stefanprodan/charts
