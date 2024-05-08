@@ -33,7 +33,7 @@ func GetServiceInfoFromRegistryAddress(stateRegistryAddress string) (string, err
 	registryAddress := stateRegistryAddress
 	c, err := cluster.NewCluster()
 	if err != nil {
-		return "", fmt.Errorf("unable to get service information for the registry %q", stateRegistryAddress)
+		return "", fmt.Errorf("unable to get service information for the registry %q: %w", stateRegistryAddress, err)
 	}
 
 	// If this is an internal service then we need to look it up and
