@@ -10,7 +10,7 @@
     "dev": "astro dev",
     "start": "astro dev",
     "prebuild": "cp ../zarf.schema.json ./src/assets/zarf.schema.json && node hack/copy-examples.js",
-    "build": "astro check && astro build",
+    "build": "rm -rf dist && astro check && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
