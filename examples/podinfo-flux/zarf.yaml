@@ -36,7 +36,6 @@ components:
     actions:
       onDeploy:
         after:
-          # This will use a wait action to wait for the podinfo pod to be ready
           - description: Podinfo pods to be ready via wait action
             wait:
               cluster:
@@ -61,7 +60,6 @@ components:
     actions:
       onDeploy:
         after:
-          # This will use a wait action to wait for the podinfo pod to be ready
           - description: Podinfo pods to be ready via wait action
             wait:
               cluster:
