@@ -138,33 +138,24 @@ func (k *K8s) WaitForPodsAndContainers(ctx context.Context, target PodLookup, in
 				// Handle container targeting
 				if target.Container != "" {
 					k.Log("Testing pod %q for container %q", pod.Name, target.Container)
-					var matchedContainer bool
 
 					// Check the status of initContainers for a running match
 					for _, initContainer := range pod.Status.InitContainerStatuses {
 						isRunning := initContainer.State.Running != nil
 						if initContainer.Name == target.Container && isRunning {
 							// On running match in initContainer break this loop
-							matchedContainer = true
 							readyPods = append(readyPods, pod)
 							break
 						}
-					}
-					if matchedContainer {
-						break
 					}
 
 					// Check the status of regular containers for a running match
 					for _, container := range pod.Status.ContainerStatuses {
 						isRunning := container.State.Running != nil
 						if container.Name == target.Container && isRunning {
-							matchedContainer = true
 							readyPods = append(readyPods, pod)
 							break
 						}
-					}
-					if matchedContainer {
-						break
 					}
 				} else {
 					status := pod.Status.Phase
@@ -179,7 +170,6 @@ func (k *K8s) WaitForPodsAndContainers(ctx context.Context, target PodLookup, in
 			if len(readyPods) > 0 {
 				return readyPods
 			}
-
 			timer.Reset(3 * time.Second)
 		}
 	}
