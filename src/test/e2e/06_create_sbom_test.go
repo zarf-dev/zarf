@@ -41,6 +41,10 @@ func TestCreateSBOM(t *testing.T) {
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "docker.io_defenseunicorns_zarf-game_multi-tile-dark.json"))
 	require.NoError(t, err)
 
+	stdOut, _, err = e2e.Zarf("package", "inspect", pkgName, "--list-images")
+	require.NoError(t, err)
+	require.Equal(t, "- defenseunicorns/zarf-game:multi-tile-dark\n", stdOut)
+
 	// Pull the current zarf binary version to find the corresponding init package
 	version, stdErr, err := e2e.Zarf("version")
 	require.NoError(t, err, version, stdErr)

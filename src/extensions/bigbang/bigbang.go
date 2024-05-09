@@ -18,6 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
@@ -94,7 +95,7 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 		},
 		path.Join(tmpPaths.Temp, bb),
 		path.Join(tmpPaths.Temp, bb, "values"),
-		helm.WithPackageConfig(&types.PackagerConfig{}),
+		helm.WithVariableConfig(&variables.VariableConfig{}),
 	)
 
 	// Download the chart from Git and save it to a temporary directory.

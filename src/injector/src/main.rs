@@ -17,7 +17,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use tar::Archive;
 
-const DOCKER_MIME_TYPE: &str = "application/vnd.docker.distribution.manifest.v2+json";
+const OCI_MIME_TYPE: &str = "application/vnd.oci.image.manifest.v1+json";
 
 // Reads the binary contents of a file
 fn get_file(path: &PathBuf) -> io::Result<Vec<u8>> {
@@ -140,7 +140,7 @@ fn handle_request(root: &Path, request: &Request) -> Response {
                 // on Content-Length, we respond the same as a GET
                 return accept!(
                     request,
-                    DOCKER_MIME_TYPE => {
+                    OCI_MIME_TYPE => {
                         handle_get_manifest(&root, &namespaced_name, &tag_or_digest)
                     },
                     "*/*" => Response::empty_406()
@@ -183,7 +183,7 @@ fn handle_get_manifest(root: &Path, name: &String, tag: &String) -> Response {
 
     if sha_manifest != "" {
         let file = File::open(&root.join("blobs").join("sha256").join(&sha_manifest)).unwrap();
-        Response::from_file(DOCKER_MIME_TYPE, file)
+        Response::from_file(OCI_MIME_TYPE, file)
             .with_additional_header(
                 "Docker-Content-Digest",
                 format!("sha256:{}", sha_manifest.to_owned()),

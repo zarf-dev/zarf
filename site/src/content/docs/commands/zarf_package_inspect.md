@@ -22,6 +22,7 @@ zarf package inspect [ PACKAGE_SOURCE ] [flags]
 
 ```
   -h, --help              help for inspect
+      --list-images       List images in the package (prints to stdout)
   -s, --sbom              View SBOM contents while inspecting the package
       --sbom-out string   Specify an output directory for the SBOMs from the inspected Zarf package
 ```

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package types contains all the types used by Zarf.
 package types
 
 import (
@@ -22,9 +23,6 @@ var (
 	// IsLowercaseNumberHyphenNoStartHyphen is a regex for lowercase, numbers and hyphens that cannot start with a hyphen.
 	// https://regex101.com/r/FLdG9G/2
 	IsLowercaseNumberHyphenNoStartHyphen = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*$`).MatchString
-	// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
-	// https://regex101.com/r/tfsEuZ/1
-	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
 	// Define allowed OS, an empty string means it is allowed on all operating systems
 	// same as enums on ZarfComponentOnlyTarget
 	supportedOS = []string{"linux", "darwin", "windows", ""}
@@ -255,8 +253,8 @@ func (as ZarfComponentActionSet) Validate() error {
 func (action ZarfComponentAction) Validate() error {
 	// Validate SetVariable
 	for _, variable := range action.SetVariables {
-		if !IsUppercaseNumberUnderscore(variable.Name) {
-			return fmt.Errorf(lang.PkgValidateMustBeUppercase, variable.Name)
+		if err := variable.Validate(); err != nil {
+			return err
 		}
 	}
 
@@ -275,29 +273,6 @@ func (action ZarfComponentAction) Validate() error {
 		if action.Wait.Cluster == nil && action.Wait.Network == nil {
 			return fmt.Errorf(lang.PkgValidateErrActionClusterNetwork)
 		}
-	}
-
-	return nil
-}
-
-// Validate runs all validation checks on a package variable.
-func (variable ZarfPackageVariable) Validate() error {
-	if !IsUppercaseNumberUnderscore(variable.Name) {
-		return fmt.Errorf(lang.PkgValidateMustBeUppercase, variable.Name)
-	}
-
-	return nil
-}
-
-// Validate runs all validation checks on a package constant.
-func (constant ZarfPackageConstant) Validate() error {
-	// ensure the constant name is only capitals and underscores
-	if !IsUppercaseNumberUnderscore(constant.Name) {
-		return fmt.Errorf(lang.PkgValidateErrPkgConstantName, constant.Name)
-	}
-
-	if !regexp.MustCompile(constant.Pattern).MatchString(constant.Value) {
-		return fmt.Errorf(lang.PkgValidateErrPkgConstantPattern, constant.Name, constant.Pattern)
 	}
 
 	return nil

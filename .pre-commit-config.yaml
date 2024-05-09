@@ -9,25 +9,16 @@ repos:
         args:
           - "--allow-missing-credentials"
       - id: detect-private-key
-        exclude: |
-          (?x)^(
-            examples/big-bang/kustomization/values.yaml|
-            examples/istio-with-separate-cert/files/bigbangdev.key
-          )$
       - id: end-of-file-fixer
-        exclude: "^examples/big-bang/template/bigbang/vendor/.*$"
+        exclude: site/src/content/docs/commands/.*
       - id: fix-byte-order-marker
       - id: trailing-whitespace
-        exclude: "^examples/big-bang/template/bigbang/vendor/.*$"
         args: [--markdown-linebreak-ext=md]
-  - repo: https://github.com/sirosen/fix-smartquotes
-    rev: 0.2.0
+        exclude: site/src/content/docs/commands/.*
+  - repo: https://github.com/sirosen/texthooks
+    rev: 0.6.4
     hooks:
       - id: fix-smartquotes
-  - repo: https://github.com/dnephin/pre-commit-golang
-    rev: v0.4.0
-    hooks:
-      - id: go-fmt
   - repo: local
     hooks:
       - id: check-docs-and-schema
@@ -36,9 +27,26 @@ repos:
         files: "src/types/types.go"
         types: [go]
         language: script
-        description:
-          "Checks if there have been changes
-          made to the docs and schema"
+      - id: goimports
+        name: goimports
+        entry: goimports
+        files: .go$
+        args:
+          - -l
+          - -w
+        language: system
+        pass_filenames: true
+      - id: lint
+        name: revive go lint
+        entry: revive
+        args:
+          - "-config"
+          - "hack/revive.toml"
+          - "-exclude"
+          - "src/cmd/viper.go"
+        files: .go$
+        language: system
+        pass_filenames: true
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.14.0
     hooks:

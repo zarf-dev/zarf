@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -30,10 +31,11 @@ import (
 // Packager is the main struct for managing packages.
 type Packager struct {
 	cfg            *types.PackagerConfig
+	variableConfig *variables.VariableConfig
+	state          *types.ZarfState
 	cluster        *cluster.Cluster
 	layout         *layout.PackagePaths
 	warnings       []string
-	valueTemplate  *template.Values
 	hpaModified    bool
 	connectStrings types.ConnectStrings
 	sbomViewFiles  []string
@@ -77,16 +79,14 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 		return nil, fmt.Errorf("no config provided")
 	}
 
-	if cfg.SetVariableMap == nil {
-		cfg.SetVariableMap = make(map[string]*types.ZarfSetVariable)
-	}
-
 	var (
 		err  error
 		pkgr = &Packager{
 			cfg: cfg,
 		}
 	)
+
+	pkgr.variableConfig = template.GetZarfVariableConfig()
 
 	if config.CommonOptions.TempDirectory != "" {
 		// If the cache directory is within the temp directory, warn the user
@@ -151,6 +151,11 @@ func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
 	_ = os.RemoveAll(p.layout.Base)
 	_ = os.RemoveAll(layout.SBOMDir)
+}
+
+// GetVariableConfig returns the variable configuration for the packager.
+func (p *Packager) GetVariableConfig() *variables.VariableConfig {
+	return p.variableConfig
 }
 
 // connectToCluster attempts to connect to a cluster if a connection is not already established

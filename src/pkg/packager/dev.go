@@ -15,7 +15,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -33,7 +32,7 @@ func (p *Packager) DevDeploy() error {
 		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
 
-	pc := creator.NewPackageCreator(p.cfg.CreateOpts, p.cfg, cwd)
+	pc := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
 
 	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
 		return err
@@ -57,8 +56,8 @@ func (p *Packager) DevDeploy() error {
 		return fmt.Errorf("unable to validate package: %w", err)
 	}
 
-	if err := variables.SetVariableMapInConfig(p.cfg); err != nil {
-		return err
+	if err := p.populatePackageVariableConfig(); err != nil {
+		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
 	// If building in yolo mode, strip out all images and repos

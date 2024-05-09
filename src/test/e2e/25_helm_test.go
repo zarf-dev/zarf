@@ -130,16 +130,19 @@ func testHelmUninstallRollback(t *testing.T) {
 	// This package contains SBOMable things but was created with --skip-sbom
 	require.Contains(t, string(stdErr), "This package does NOT contain an SBOM.")
 
-	// Ensure that this does not leave behind a dos-games chart
+	// Ensure this leaves behind a dos-games chart.
+	// We do not want to uninstall charts that had failed installs/upgrades
+	// to prevent unintentional deletion and/or data loss in production environments.
+	// https://github.com/defenseunicorns/zarf/issues/2455
 	helmOut, err := exec.Command("helm", "list", "-n", "dos-games").Output()
 	require.NoError(t, err)
-	require.NotContains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
+	require.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
 	// Deploy the good package.
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", goodPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Ensure that this does create a dos-games chart
+	// Ensure this upgrades/fixes the dos-games chart.
 	helmOut, err = exec.Command("helm", "list", "-n", "dos-games").Output()
 	require.NoError(t, err)
 	require.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
@@ -151,7 +154,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	// Ensure that we rollback properly
 	helmOut, err = exec.Command("helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1").Output()
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "Rollback to 1")
+	require.Contains(t, string(helmOut), "Rollback to 4")
 
 	// Deploy the evil package (again to ensure we check full history)
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", evilPath, "--timeout", "10s", "--confirm")
@@ -160,7 +163,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	// Ensure that we rollback properly
 	helmOut, err = exec.Command("helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1").Output()
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "Rollback to 5")
+	require.Contains(t, string(helmOut), "Rollback to 8")
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")
