@@ -28,7 +28,7 @@ func TestConnectAndCreds(t *testing.T) {
 	prevAgentSecretData, _, err := e2e.Kubectl("get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
 
-	ctx := context.TODO()
+	ctx := context.Background()
 
 	connectToZarfServices(ctx, t)
 
@@ -71,7 +71,7 @@ func TestMetrics(t *testing.T) {
 
 	tunnel, err := c.NewTunnel("zarf", "svc", "agent-hook", "", 8888, 8443)
 	require.NoError(t, err)
-	_, err = tunnel.Connect(context.TODO())
+	_, err = tunnel.Connect(context.Background())
 	require.NoError(t, err)
 	defer tunnel.Close()
 

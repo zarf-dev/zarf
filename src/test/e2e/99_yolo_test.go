@@ -36,7 +36,7 @@ func TestYOLOMode(t *testing.T) {
 
 	c, err := cluster.NewCluster()
 	require.NoError(t, err)
-	tunnel, err := c.Connect(context.TODO(), "doom")
+	tunnel, err := c.Connect(context.Background(), "doom")
 	require.NoError(t, err)
 	defer tunnel.Close()
 

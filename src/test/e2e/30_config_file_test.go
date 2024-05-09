@@ -6,7 +6,6 @@ package test
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -26,8 +25,7 @@ func TestConfigFile(t *testing.T) {
 	e2e.CleanFiles(path)
 
 	// Test the config file environment variable
-	os.Setenv("ZARF_CONFIG", filepath.Join(dir, config))
-	defer os.Unsetenv("ZARF_CONFIG")
+	t.Setenv("ZARF_CONFIG", filepath.Join(dir, config))
 	configFileTests(t, dir, path)
 
 	configFileDefaultTests(t)
@@ -139,8 +137,7 @@ func configFileDefaultTests(t *testing.T) {
 	}
 
 	// Test remaining default initializers
-	os.Setenv("ZARF_CONFIG", filepath.Join("src", "test", "zarf-config-test.toml"))
-	defer os.Unsetenv("ZARF_CONFIG")
+	t.Setenv("ZARF_CONFIG", filepath.Join("src", "test", "zarf-config-test.toml"))
 
 	// Test global flags
 	stdOut, _, _ := e2e.Zarf("--help")
