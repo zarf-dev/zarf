@@ -5,10 +5,11 @@ sidebar:
 ---
 
 import Mermaid from "@components/Mermaid.astro";
+import Details from "@components/Details.astro";
 
 In a traditional Kubernetes deployment, clusters pull resources (e.g. cluster images, OCI artifacts, Git repos) from external sources.
 
-However, in an air-gapped environment, these external providers are not available, or exist at different locations to their definitions within Kubernetes manifests.
+However, in an air-gapped environment, these external providers are not available, or exist at different locations to their references within Kubernetes manifests.
 
 Zarf solves this problem with its 'init' package, a special Zarf Package (traditionally deployed first) that provides the necessary mechanisms to enable air-gapped Kubernetes, and deliver DevSecOps across air-gaps.
 
@@ -23,110 +24,60 @@ zarf init --confirm
 
 Want to see a guided `zarf init`? Check out the [Zarf Init tutorial](/tutorials/1-initializing-a-k8s-cluster/).
 
+View all init options w/ [`zarf init --help`](/commands/zarf_init/).
+
 :::
 
 {/* The 'init' package initializes a cluster with the requisite air gap services, allowing future Zarf Packages to store any required resources (i.e. container images, OCI artifacts, and git repositories) so that they can be accessed by the cluster. */}
 
-## `zarf.yaml`
+## Components
 
-The package definition 'init' is similar to writing any other Zarf Package, but with a few key differences:
+An 'init' package requires a series of specially named, and configured components to ensure the cluster is correctly initialized. These components are:
 
-Starting with `kind` and `metadata`:
+- [`zarf-injector`](#zarf-injector)
+- [`zarf-seed-registry`](#zarf-seed-registry)
+- [`zarf-registry`](#zarf-registry)
+- [`zarf-agent`](#zarf-agent)
 
-```yaml {3, 6, 8}
-# zarf.yaml
-# kind must be ZarfInitConfig
-kind: ZarfInitConfig
-metadata:
-  # name *can* be anything, but it is generally recommended to end with 'init'
-  name: init
-  # version will be overwritten by the version of the Zarf CLI that creates the package
-  # version: 0.1.0
-...
-```
+### `zarf-injector` and `zarf-seed-registry`
 
-Continuing with `components`:
+One of the most challenging aspects of deploying into an air-gapped environment is the initial bootstrapping of the cluster.
 
-In order for Zarf to operate correctly, the following components
+A cluster needs a registry to pull images from, but spinning up a registry requires an image to be pulled from a registry - chiken, meet egg.
 
-- must be defined and named **exactly** as shown below
-- must have the `required` field set to `true`
+To ensure that our approach is distro-agnostic, we developed a unique solution to seed the container registry into the cluster.
 
-```yaml {4, 9, 14, 19}
-# zarf.yaml
-components:
-  # This package moves the injector & registries binaries
-  - name: zarf-injector
-    required: true
-    ...
+Shoving random data into a cluster is generally a bad idea, and an antipattern overall to containerization. However in the case of Zarf, and air-gapped environments, certain liberties must be taken.
 
-  # Creates the temporary seed-registry
-  - name: zarf-seed-registry
-    required: true
-    ...
+While there is no distro-agnostic to inject images into a cluster, every cluster has support for `configmaps`. However, the size of a `configmap` is limited to 1MB (technically only limited by whatever is configured in `etcd`, the default is 1MB), and the `registry:2` image is around 10MB (as of this writing). So we split the `registry:2` into chunks and inject them into the cluster as `configmaps`.
 
-  # Creates the permanent registry
-  - name: zarf-registry
-    required: true
-    ...
+But then we have another problem of how to reassemble the image on the other side, as we don't have any consistent image that exists in the cluster that would have such utilities. This is where the `zarf-injector` Rust binary comes in.
 
-  # Creates the pod+git mutating webhook
-  - name: zarf-agent
-    required: true
-    ...
-```
+> For compiling the `zarf-injector` binary, refer to its [README.md](https://github.com/defenseunicorns/zarf/tree/main/src/injector/README.md).
 
-A minimal `zarf.yaml` for the 'init' package would look like this:
+The `zarf-injector` binary is statically compiled and injected into the cluster as a `configmap` along with the chunks of the `registry:2` image. During the `zarf-seed-registry`'s deployment, the `zarf-injector` binary is run in a pod that has access to the `configmaps` and reassembles the `registry:2` image. It then hosts a temporary, pull-only Docker registry implemented in Rust so that a real registry can be deployed into the cluster from the hosted `registry:2` image.
+
+> While the `zarf-injector` component *must* be defined and deployed *before* the `zarf-seed-registry` component, the magic doesn't start until `zarf-seed-registry` is deployed. The `zarf-injector` component for the most part just copies the `zarf-injector` Rust binary (more on that later) to `###ZARF_TEMP###/zarf-injector`.
+
+When `zarf init` starts deploying the `zarf-seed-registry` component, the following happens:
+
+1. Zarf injects the `zarf-injector` binary and the `registry:2` image chunks into the cluster.
+2. Zarf connects to the cluster and grabs a pod that is running an image that is already present in the cluster.
+3. Zarf spins up a pod using the existing image, mounts the `configmaps` that contain the `zarf-injector` binary and the `registry:2` image chunks and runs the `zarf-injector` binary.
+4. The `zarf-injector` binary reassembles the `registry:2` image and hosts a temporary registry that the cluster can pull from.
+{/* TODO: FINISH ME */}
 
 :::note
 
-In order to reproduce this example, you will need to have the Zarf repository cloned locally.
-
-```bash
-git clone https://github.com/defenseunicorns/zarf.git
-cd zarf
-mv zarf.yaml zarf.yaml.bak
-cat <<EOF > zarf.yaml
-...
-EOF
-```
-
-You can learn more about creating a custom init package in the [Creating a Custom 'init' Package Tutorial](/tutorials/8-custom-init-packages).
+The `registry:2` image and the Zarf Agent image can be configured with a custom init package using the `registry_image_*` and `agent_image_*` templates defined in the Zarf repo's [zarf-config.toml](https://github.com/defenseunicorns/zarf/blob/main/zarf-config.toml).  This allows you to swap them for enterprise provided / hardened versions if desired such as those provided by [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
 
 :::
 
-```yaml
-# zarf.yaml
-kind: ZarfInitConfig
-metadata:
+> complete me
 
-components:
-  - name: zarf-injector
-    required: true
-    import:
-      path: packages/zarf-registry
+### zarf-registry
 
-  - name: zarf-seed-registry
-    required: true
-    import:
-      path: packages/zarf-registry
-
-  - name: zarf-registry
-    required: true
-    import:
-      path: packages/zarf-registry
-
-  - name: zarf-agent
-    required: true
-    import:
-      path: packages/zarf-agent
-```
-
-But _what_ are these components? Let's take a closer look.
-
-## Components
-
-### `zarf-agent`
+### zarf-agent
 
 {/* TODO: document and flesh out how the mutations operate for the agent */}
 
@@ -148,39 +99,31 @@ If you would like to adopt pre-existing resources into a Zarf deployment you can
 
 :::
 
-:::danger
-
-Zarf will refuse to adopt the Kubernetes [initial namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces). It is recommended that you do not deploy resources into the `default` or `kube-*` namespaces with Zarf.
-
-Additionally, when adopting resources, you should ensure that the namespaces you are adopting are dedicated to Zarf, or that you go back and manually add the `zarf.dev/agent: ignore` label to any non-Zarf managed resources in those namespaces (and ensure that updates to those resources do not strip that label) otherwise you may see [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) errors.
-
-:::
-
 #### Excluding Resources from `zarf-agent`
 
 Resources can be excluded at the namespace or resources level by adding the `zarf.dev/agent: ignore` label.
 
+Zarf will refuse to adopt the Kubernetes [initial namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces) (`default`, `kube-*`, etc...). This is because these namespaces are critical to the operation of the cluster and should not be managed by Zarf.
+
+Additionally, when adopting resources, ensure that the namespaces specified are dedicated to Zarf, or add the `zarf.dev/agent: ignore` label to any non-Zarf managed resources in those namespaces (and ensure that updates to those resources do not strip that label) otherwise [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) errors may occur.
+
 {/* TODO: should prob make sure there is a tech-debt issue to make Flux ns creation better */}
 
-The Agent does not need to create any secrets in the cluster. Instead, during `zarf init` and `zarf package deploy`, secrets are automatically created as [Helm Postrender Hook](https://helm.sh/docs/topics/advanced/#post-rendering) for any namespaces Zarf sees. If you have resources managed by [Flux](https://fluxcd.io/) that are not in a namespace managed by Zarf, you can either create the secrets manually or include a manifest to create the namespace in your package and let Zarf create the secrets for you.
+The Agent does not need to create any secrets in the cluster. Instead, during `zarf init` and `zarf package deploy`, secrets are automatically created in a [Helm Postrender Hook](https://helm.sh/docs/topics/advanced/#post-rendering) for any namespaces Zarf sees. If you have resources managed by [Flux](https://fluxcd.io/) that are not in a namespace managed by Zarf, you can either create the secrets manually or include a manifest to create the namespace in your package and let Zarf create the secrets for you.
+
+#### Using External Registries
+
+{/* TODO: finish this section */}
+
+Zarf can be configured to use an already existing registry with the `--registry-*` flags when running `zarf init` (detailed information on all `zarf init` command flags can be found in the [zarf init CLI](/commands/zarf_init/) section). This option skips the injector and seed process, and will not deploy a registry inside of the cluster. Instead, it uploads any images to the externally configured registry.
 
 ## Core Components
-
-In addition to the required `zarf-agent` component, Zarf also offers components that provide additional functionality and can be enabled as needed based on your desired end-state.
-
-In most scenarios, Zarf will also deploy an internal registry using the three components described below. However, Zarf can be configured to use an already existing registry with the `--registry-*` flags when running `zarf init` (detailed information on all `zarf init` command flags can be found in the [zarf init CLI](/commands/zarf_init/) section). This option skips the injector and seed process, and will not deploy a registry inside of the cluster. Instead, it uploads any images to the externally configured registry.
 
 | Components              | Description                                                                                                                     |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | zarf-injector           | Adds a Rust binary to the working directory to be injected into the cluster during registry bootstrapping.                      |
 | zarf-seed-registry      | Adds a temporary container registry so Zarf can bootstrap itself into the cluster.                                              |
-| zarf-registry           | Adds a long-lived container registry service&mdash;[docker registry](https://docs.docker.com/registry/)&mdash;into the cluster. |
-
-```md
-TODO:
-
--
-```
+| zarf-registry           | Adds a long-lived container registry service [docker registry](https://docs.docker.com/registry/) into the cluster. |
 
 :::note
 
@@ -198,19 +141,19 @@ The Zarf Registry is initially injected as a series of config maps that bootstra
 
 You can further customize how the registry behaves by setting variables such as `REGISTRY_PVC_SIZE` with a [config file](/ref/config-files/) or `--set` on `zarf init`.
 
-To see a full list of `variables` you can view the [zarf.yaml that defines the registry](https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-registry/zarf.yaml).
+To see a full list of `variables` you can view the [`zarf.yaml` that defines the registry](https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-registry/zarf.yaml).
 
 :::
 
 ### Optional Components
 
-The Zarf team also maintains some optional components, included in the default 'init' package.
+The Zarf team maintains some optional components in the default 'init' package.
 
 | Components   | Description                                                                                                                                                       |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| k3s          | REQUIRES ROOT (not sudo). Installs a lightweight Kubernetes Cluster on the local host&mdash;[K3s](https://k3s.io/)&mdash;and configures it to start up on boot.   |
-| logging      | Adds a log monitoring stack&mdash;[promtail/loki/grafana (aka PLG)](https://github.com/grafana/loki)&mdash;into the cluster.                                      |
-| git-server   | Adds a [GitOps](https://about.gitlab.com/topics/gitops/)-compatible source control service&mdash;[Gitea](https://gitea.io/en-us/)&mdash;into the cluster. |
+| k3s          | REQUIRES ROOT (not sudo). Installs a lightweight Kubernetes Cluster on the local host [K3s](https://k3s.io/) and configures it to start up on boot.   |
+| logging      | Adds a log monitoring stack [promtail/loki/grafana (aka PLG)](https://github.com/grafana/loki) into the cluster.                                      |
+| git-server   | Adds a [GitOps](https://about.gitlab.com/topics/gitops/)-compatible source control service [Gitea](https://gitea.io/en-us/) into the cluster. |
 
 There are two ways to deploy these optional components. First, you can provide a comma-separated list of components to the `--components` flag, such as `zarf init --components k3s,git-server --confirm`, or, you can choose to exclude the `--components` and `--confirm` flags and respond with a yes (`y`) or no (`n`) for each optional component when interactively prompted.
 
@@ -238,21 +181,7 @@ To see a full list of `variables` you can view the [zarf.yaml that defines the g
 
 :::
 
-## What Makes the Init Package Special
-
-Deploying into air gapped environments is a hard problem, particularly when the K8s environment doesn't have a container registry for you to store images in already.
-This results in a dilemma where the container registry image must be introduced to the cluster, but there is no container registry to push it to as the image is not yet in the cluster - chicken, meet egg.
-To ensure that our approach is distro-agnostic, we developed a unique solution to seed the container registry into the cluster.
-
-This is done with the `zarf-injector` [component](https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-injector/zarf.yaml) which injects a single rust binary (statically compiled) and a series of configmap chunks of a `registry:2` image into an ephemeral pod that is based on an existing image in the cluster.  This gives us a running registry to bootstrap from and deploy the rest of the 'init' package and any other packages down the line.
-
-:::note
-
-The `registry:2` image and the Zarf Agent image can be configured with a custom init package using the `registry_image_*` and `agent_image_*` templates defined in the Zarf repo's [zarf-config.toml](https://github.com/defenseunicorns/zarf/blob/main/zarf-config.toml).  This allows you to swap them for enterprise provided / hardened versions if desired such as those provided by [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
-
-:::
-
-## Making the Registry Highly-Available
+#### Making the Registry Highly-Available
 
 By default, the registry included in the init package creates a ReadWriteOnce PVC and is only scheduled to run on one node at a time. This setup is usually enough for smaller and simpler deployments. However, for larger deployments or those where nodes are frequently restarted or updated, you may want to make the registry highly-available.
 
@@ -282,10 +211,102 @@ package:
 
 Notably, the `REGISTRY_AFFINITY_CUSTOM` variable overrides the default pod anti-affinity, and `REGISTRY_HPA_AUTO_SIZE` automatically adjusts the minimum and maximum replicas for the registry based on the number of nodes in the cluster. If you prefer to manually set the minimum and maximum replicas, you can use `REGISTRY_HPA_MIN` and `REGISTRY_HPA_MAX` to specify the desired values.
 
+## Putting it All Together
+
+The package definition 'init' is similar to writing any other Zarf Package, but with a few key differences:
+
+Starting with `kind` and `metadata`:
+
+```yaml {3, 6, 8}
+# zarf.yaml
+# kind must be ZarfInitConfig
+kind: ZarfInitConfig
+metadata:
+  # name *can* be anything, but it is generally recommended to end with 'init'
+  name: init
+  # version will be overwritten by the version of the Zarf CLI that creates the package
+  # version: 0.1.0
+...
+```
+
+In order for Zarf to operate correctly, the following `components`:
+
+- must be defined, ordered, and named **exactly** as shown below
+- must have the `required` field set to `true`
+
+```yaml {3, 7, 11, 15}
+# zarf.yaml
+components:
+  - name: zarf-injector
+    required: true
+    ...
+
+  - name: zarf-seed-registry
+    required: true
+    ...
+
+  - name: zarf-registry
+    required: true
+    ...
+
+  - name: zarf-agent
+    required: true
+    ...
+```
+
+:::note
+
+In order to reproduce the following example, you will need to have the Zarf repository cloned locally.
+
+```bash
+git clone https://github.com/defenseunicorns/zarf.git
+cd zarf
+mv zarf.yaml zarf.yaml.bak
+cat <<EOF > zarf.yaml
+...
+EOF
+```
+
+You can learn more about creating a custom init package in the [Creating a Custom 'init' Package Tutorial](/tutorials/8-custom-init-packages).
+
+:::
+
+A minimal `zarf.yaml` for the 'init' package looks something like:
+
+```yaml
+# zarf.yaml
+kind: ZarfInitConfig
+metadata:
+
+components:
+  - name: zarf-injector
+    required: true
+    import:
+      path: packages/zarf-registry
+
+  - name: zarf-seed-registry
+    required: true
+    import:
+      path: packages/zarf-registry
+
+  - name: zarf-registry
+    required: true
+    import:
+      path: packages/zarf-registry
+
+  - name: zarf-agent
+    required: true
+    import:
+      path: packages/zarf-agent
+```
+
+{/* technically the most minimal you can go is just `zarf-agent` and using an external registry / git server but idk if it's worth documenting that */}
+
 ## The `zarf init` Lifecycle
 
 The `zarf init` lifecycle is _very similar_ to the [`zarf package deploy` lifecycle](/ref/deploy/) except that it sets up resources specific to Zarf such as the `zarf-state` and performs special actions such as the injection procedure.
 
+<Details label="Lifecycle Diagram">
 <Mermaid diagram={`
 graph TD
     B1(load package archive)-->B2
@@ -331,9 +352,4 @@ graph TD
     classDef action fill:#bd93f9,color:#000000
     classDef fail fill:#aa0000
 `}/>
-
-:::tip
-
-Given that these flows are so similar you actually can `zarf package deploy` the init package.  This is similar to accepting the defaults for any init-specific command flags and is useful when trying to deploy packages in a more generic way.
-
-:::
+</Details>
