@@ -156,7 +156,7 @@ func NewRootCmd(actionConfig *action.Configuration, out io.Writer, args []string
 	// This call is required to gather configuration information prior to
 	// execution.
 	flags.ParseErrorsWhitelist.UnknownFlags = true
-	_ = flags.Parse(args)
+	flags.Parse(args)
 
 	registryClient, err := newDefaultRegistryClient()
 	if err != nil {
