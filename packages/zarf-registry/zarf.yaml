@@ -125,7 +125,8 @@ components:
         architecture: arm64
     files:
       # Rust Injector Binary
-      - source: ./armzarf-registry
+      - source: ./armregistry-zarf
+        target: "###ZARF_TEMP###/zarf-injector"
         executable: true
 
   - name: zarf-seed-registry

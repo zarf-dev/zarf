@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+rustflags = ["-C", "relocation-model=static", "-C", "strip=symbols"]
+
+
 [profile.release]
 opt-level = "z"   # Optimize for size.
 lto = true

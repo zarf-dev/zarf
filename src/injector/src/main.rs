@@ -97,6 +97,7 @@ fn unpack(sha_sum: &String) {
 }
 
 
+
 /// Starts a static docker compliant registry server that only serves the single image from the CWD
 ///
 /// (which is a OCI image layout):
@@ -158,7 +159,7 @@ async fn handler(Path(path): Path<String>) -> Response {
 /// Handles the GET request for the manifest (only returns a OCI manifest regardless of Accept header)
 async fn handle_get_manifest(name: String, reference: String) -> Response {
     println!("name {}, reference {}", name, reference);
-    let index = fs::read_to_string(PathBuf::from("./zarf-seed").join("index.json")).expect("read index.json");
+    let index = fs::read_to_string(PathBuf::from("/zarf-seed").join("index.json")).expect("read index.json");
     let json: Value = serde_json::from_str(&index).expect("unable to parse index.json");
     
     let mut sha_manifest: String = "".to_owned();
@@ -182,7 +183,7 @@ async fn handle_get_manifest(name: String, reference: String) -> Response {
         }
     }
     if !sha_manifest.is_empty() {
-        let file_path = PathBuf::from("./zarf-seed").to_owned().join( "/blobs/").join( &sha_manifest);
+        let file_path = PathBuf::from("/zarf-seed").to_owned().join( "/blobs/").join( &sha_manifest);
         match tokio::fs::File::open(&file_path).await {
             Ok(file) => {
                 let stream = ReaderStream::new(file);
@@ -216,7 +217,7 @@ async fn handle_get_manifest(name: String, reference: String) -> Response {
 
 /// Handles the GET request for a blob
 async fn handle_get_digest(tag: String) -> Response {
-    let blob_root = PathBuf::from("./zarf-seed").join("blobs").join("sha256");
+    let blob_root = PathBuf::from("/zarf-seed").join("blobs").join("sha256");
     let path = blob_root.join(tag.strip_prefix("sha256:").unwrap());
 
     let data = fs::read_to_string(path).expect("read index.json");
@@ -241,7 +242,7 @@ async fn main() {
 
     unpack(payload_sha);
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:5000")
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:5000")
     .await
     .unwrap();
     println!("listening on {}", listener.local_addr().unwrap());

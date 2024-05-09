@@ -24,6 +24,11 @@ cargo build --target x86_64-unknown-linux-musl --release
 * Install Docker & have it running
 * Rust must be installed via Rustup (Check `which rustc` if you're unsure)
 
+Add this to your ~/.cargo/config.toml
+```
+rustflags = ["-C", "relocation-model=static", "-C", "strip=symbols"]
+```
+
 ```
 cargo install cross --git https://github.com/cross-rs/cross
 ```
@@ -34,6 +39,8 @@ rustup toolchain install --force-non-host stable-x86_64-unknown-linux-musl
 ```
 ```
 cross build --target x86_64-unknown-linux-musl --release
+
+cross build --target aarch64-unknown-linux-musl --release
 ```
 
 
