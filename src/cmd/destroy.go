@@ -29,8 +29,8 @@ var destroyCmd = &cobra.Command{
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
 	Run: func(cmd *cobra.Command, _ []string) {
-		c := common.NewClusterOrDie()
 		ctx := cmd.Context()
+		c := common.NewClusterOrDie(ctx)
 
 		// NOTE: If 'zarf init' failed to deploy the k3s component (or if we're looking at the wrong kubeconfig)
 		//       there will be no zarf-state to load and the struct will be empty. In these cases, if we can find

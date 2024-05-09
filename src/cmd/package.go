@@ -133,7 +133,7 @@ var packageListCmd = &cobra.Command{
 	Short:   lang.CmdPackageListShort,
 	Run: func(cmd *cobra.Command, _ []string) {
 		ctx := cmd.Context()
-		deployedZarfPackages, errs := common.NewClusterOrDie().GetDeployedZarfPackages(ctx)
+		deployedZarfPackages, errs := common.NewClusterOrDie(ctx).GetDeployedZarfPackages(ctx)
 		if len(errs) > 0 && len(deployedZarfPackages) == 0 {
 			message.Fatalf(errs, lang.CmdPackageListNoPackageWarn)
 		}

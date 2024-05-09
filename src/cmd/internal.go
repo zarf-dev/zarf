@@ -197,7 +197,7 @@ var createReadOnlyGiteaUser = &cobra.Command{
 		ctx := cmd.Context()
 
 		// Load the state so we can get the credentials for the admin git user
-		state, err := common.NewClusterOrDie().LoadZarfState(ctx)
+		state, err := common.NewClusterOrDie(ctx).LoadZarfState(ctx)
 		if err != nil {
 			message.WarnErr(err, lang.ErrLoadState)
 		}
@@ -214,8 +214,8 @@ var createPackageRegistryToken = &cobra.Command{
 	Short: lang.CmdInternalArtifactRegistryGiteaTokenShort,
 	Long:  lang.CmdInternalArtifactRegistryGiteaTokenLong,
 	Run: func(cmd *cobra.Command, _ []string) {
-		c := common.NewClusterOrDie()
 		ctx := cmd.Context()
+		c := common.NewClusterOrDie(ctx)
 		state, err := c.LoadZarfState(ctx)
 		if err != nil {
 			message.WarnErr(err, lang.ErrLoadState)

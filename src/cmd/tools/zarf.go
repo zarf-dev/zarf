@@ -52,7 +52,7 @@ var getCredsCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
-		state, err := common.NewClusterOrDie().LoadZarfState(ctx)
+		state, err := common.NewClusterOrDie(ctx).LoadZarfState(ctx)
 		if err != nil || state.Distro == "" {
 			// If no distro the zarf secret did not load properly
 			message.Fatalf(nil, lang.ErrLoadState)
@@ -85,8 +85,8 @@ var updateCredsCmd = &cobra.Command{
 			}
 		}
 
-		c := common.NewClusterOrDie()
 		ctx := cmd.Context()
+		c := common.NewClusterOrDie(ctx)
 		oldState, err := c.LoadZarfState(ctx)
 		if err != nil || oldState.Distro == "" {
 			// If no distro the zarf secret did not load properly

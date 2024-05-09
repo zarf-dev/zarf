@@ -94,7 +94,7 @@ var (
 		Short:   lang.CmdConnectListShort,
 		Run: func(cmd *cobra.Command, _ []string) {
 			ctx := cmd.Context()
-			if err := common.NewClusterOrDie().PrintConnectTable(ctx); err != nil {
+			if err := common.NewClusterOrDie(ctx).PrintConnectTable(ctx); err != nil {
 				message.Fatal(err, err.Error())
 			}
 		},

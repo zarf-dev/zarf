@@ -39,10 +39,10 @@ func ExitOnInterrupt() {
 }
 
 // NewClusterOrDie creates a new Cluster instance and waits for the cluster to be ready or throws a fatal error.
-func NewClusterOrDie() *cluster.Cluster {
-	ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+func NewClusterOrDie(ctx context.Context) *cluster.Cluster {
+	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
-	c, err := cluster.NewClusterWithWait(ctx)
+	c, err := cluster.NewClusterWithWait(timeoutCtx)
 	if err != nil {
 		message.Fatalf(err, "Failed to connect to cluster")
 	}
