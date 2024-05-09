@@ -121,7 +121,7 @@ func TestReleases(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Test connectivity to Twistlock
-	testConnection(context.TODO(), t)
+	testConnection(ctx, t)
 }
 
 func testConnection(ctx context.Context, t *testing.T) {
