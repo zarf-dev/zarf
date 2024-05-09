@@ -107,7 +107,7 @@ func (k *K8s) WaitForPodsAndContainers(ctx context.Context, target PodLookup, in
 	for {
 		select {
 		case <-waitCtx.Done():
-			k.Log("Pod lookup failed: %w", ctx.Err())
+			k.Log("Pod lookup failed: %v", ctx.Err())
 			return nil
 		case <-timer.C:
 			pods, err := k.GetPods(ctx, target.Namespace, metav1.ListOptions{
@@ -143,7 +143,7 @@ func (k *K8s) WaitForPodsAndContainers(ctx context.Context, target PodLookup, in
 					// Check the status of initContainers for a running match
 					for _, initContainer := range pod.Status.InitContainerStatuses {
 						isRunning := initContainer.State.Running != nil
-						if isRunning && initContainer.Name == target.Container {
+						if initContainer.Name == target.Container && isRunning {
 							// On running match in initContainer break this loop
 							matchedContainer = true
 							readyPods = append(readyPods, pod)
@@ -157,7 +157,7 @@ func (k *K8s) WaitForPodsAndContainers(ctx context.Context, target PodLookup, in
 					// Check the status of regular containers for a running match
 					for _, container := range pod.Status.ContainerStatuses {
 						isRunning := container.State.Running != nil
-						if isRunning && container.Name == target.Container {
+						if container.Name == target.Container && isRunning {
 							matchedContainer = true
 							readyPods = append(readyPods, pod)
 							break
