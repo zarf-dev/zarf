@@ -9,6 +9,7 @@ injector_version = '2023-08-02'
 injector_amd64_shasum = '61aa3e15b76b70615e2731dfe1f8429fec86d1b435907cd9e2957d97eca72f0e'
 injector_arm64_shasum = '663df681deea957b0ec53538eab221691a83de8e95d86b8a29008af711934bee'
 
+
 # The image reference to use for the registry that Zarf deploys into the cluster
 registry_image_domain = ''
 registry_image = 'library/registry'
