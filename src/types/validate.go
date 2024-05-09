@@ -231,9 +231,10 @@ func (as ZarfComponentActionSet) HasSetVariables() bool {
 func (as ZarfComponentActionSet) Validate() error {
 	validate := func(actions []ZarfComponentAction) error {
 		for _, action := range actions {
-			return action.Validate()
+			if err := action.Validate(); err != nil {
+				return err
+			}
 		}
-
 		return nil
 	}
 
