@@ -133,7 +133,7 @@ func TestValidatePackageArchitecture(t *testing.T) {
 				return true, nodeList, nil
 			})
 
-			err := p.validatePackageArchitecture(context.TODO())
+			err := p.validatePackageArchitecture(context.Background())
 
 			require.Equal(t, testCase.expectedError, err)
 		})
