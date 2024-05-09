@@ -39,11 +39,11 @@ func (c category) String() string {
 	return ""
 }
 
-func (vm validatorMessage) String() string {
+func (vm validatorMessage) itemizedDescription() string {
 	if vm.item != "" {
-		vm.item = fmt.Sprintf(" - %s", vm.item)
+		return fmt.Sprintf("%s - %s", vm.description, vm.item)
 	}
-	return fmt.Sprintf("%s%s", vm.description, vm.item)
+	return vm.description
 }
 
 // Validator holds the warnings/errors and messaging that we get from validation
@@ -95,7 +95,7 @@ func (v Validator) printValidationTable() {
 	for packageRelPath, findings := range mapOfFindingsByPath {
 		lintData := [][]string{}
 		for _, finding := range findings {
-			lintData = append(lintData, []string{finding.category.String(), finding.getPath(), finding.String()})
+			lintData = append(lintData, []string{finding.category.String(), finding.getPath(), finding.itemizedDescription()})
 		}
 		message.Notef("Linting package %q at %s", findings[0].packageName, v.packageRelPathToUser(findings[0]))
 		message.Table(header, lintData)

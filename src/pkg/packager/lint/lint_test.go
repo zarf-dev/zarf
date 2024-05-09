@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
 	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
@@ -21,8 +20,11 @@ import (
 const badZarfPackage = `
 kind: ZarfInitConfig
 metadata:
-  name: init
+  name: -starting-dash
   description: Testing bad yaml
+
+variables:
+- name: lowercase
 
 components:
 - name: first-test-component
@@ -31,6 +33,7 @@ components:
 - name: import-test
   import:
     path: 123123
+
 `
 
 const goodZarfPackage = `
@@ -81,9 +84,33 @@ func TestValidateSchema(t *testing.T) {
 		validator := Validator{untypedZarfPackage: unmarshalledYaml, jsonSchema: getZarfSchema(t)}
 		err := validateSchema(&validator)
 		require.NoError(t, err)
-		config.NoColor = true
-		require.Equal(t, "Additional property not-path is not allowed", validator.findings[0].String())
-		require.Equal(t, "Invalid type. Expected: string, given: integer", validator.findings[1].String())
+		expectedFindings := []validatorMessage{
+			{
+				yqPath:         ".components.[0].import",
+				description:    "Additional property not-path is not allowed",
+				packageRelPath: ".",
+				category:       categoryError,
+			},
+			{
+				yqPath:         ".components.[1].import.path",
+				description:    "Invalid type. Expected: string, given: integer",
+				packageRelPath: ".",
+				category:       categoryError,
+			},
+			{
+				yqPath:         ".metadata.name",
+				description:    "Does not match pattern '^[a-z0-9][a-z0-9\\-]*$'",
+				packageRelPath: ".",
+				category:       categoryError,
+			},
+			{
+				yqPath:         ".variables.[0].name",
+				description:    "Does not match pattern '^[A-Z0-9_]+$'",
+				packageRelPath: ".",
+				category:       categoryError,
+			},
+		}
+		require.ElementsMatch(t, expectedFindings, validator.findings)
 	})
 
 	t.Run("Template in component import success", func(t *testing.T) {

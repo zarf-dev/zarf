@@ -43,10 +43,6 @@ func (pkg ZarfPackage) Validate() error {
 		return fmt.Errorf(lang.PkgValidateErrInitNoYOLO)
 	}
 
-	if !IsLowercaseNumberHyphenNoStartHyphen(pkg.Metadata.Name) {
-		return fmt.Errorf(lang.PkgValidateErrPkgName, pkg.Metadata.Name)
-	}
-
 	for _, variable := range pkg.Variables {
 		if err := variable.Validate(); err != nil {
 			return fmt.Errorf(lang.PkgValidateErrVariable, err)
