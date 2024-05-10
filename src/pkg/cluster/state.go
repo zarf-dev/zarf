@@ -91,7 +91,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 				namespace.Labels = make(map[string]string)
 			}
 			// This label will tell the Zarf Agent to ignore this namespace.
-			namespace.Labels[agentLabel] = "ignore"
+			namespace.Labels[k8s.AgentLabel] = "ignore"
 			namespaceCopy := namespace
 			if _, err = c.UpdateNamespace(&namespaceCopy); err != nil {
 				// This is not a hard failure, but we should log it.
@@ -101,7 +101,7 @@ func (c *Cluster) InitZarfState(initOptions types.ZarfInitOptions) error {
 
 		// Try to create the zarf namespace.
 		spinner.Updatef("Creating the Zarf namespace")
-		zarfNamespace := c.NewZarfManagedNamespace(ZarfNamespaceName)
+		zarfNamespace := k8s.NewZarfManagedNamespace(ZarfNamespaceName)
 		if _, err := c.CreateNamespace(zarfNamespace); err != nil {
 			return fmt.Errorf("unable to create the zarf namespace: %w", err)
 		}
@@ -241,7 +241,7 @@ func (c *Cluster) SaveZarfState(state *types.ZarfState) error {
 			Name:      ZarfStateSecretName,
 			Namespace: ZarfNamespaceName,
 			Labels: map[string]string{
-				config.ZarfManagedByLabel: "zarf",
+				k8s.ZarfManagedByLabel: "zarf",
 			},
 		},
 		Type: corev1.SecretTypeOpaque,

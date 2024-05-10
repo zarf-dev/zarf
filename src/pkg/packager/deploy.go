@@ -447,7 +447,7 @@ func (p *Packager) setupState() (err error) {
 
 		// Try to create the zarf namespace
 		spinner.Updatef("Creating the Zarf namespace")
-		zarfNamespace := p.cluster.NewZarfManagedNamespace(cluster.ZarfNamespaceName)
+		zarfNamespace := k8s.NewZarfManagedNamespace(cluster.ZarfNamespaceName)
 		if _, err := p.cluster.CreateNamespace(zarfNamespace); err != nil {
 			spinner.Fatalf(err, "Unable to create the zarf namespace")
 		}

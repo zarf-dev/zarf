@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	autoscalingV2 "k8s.io/api/autoscaling/v2"
@@ -69,16 +70,16 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 
 	deleteOptions := metav1.DeleteOptions{}
 	listOptions := metav1.ListOptions{
-		LabelSelector: config.ZarfManagedByLabel + "=zarf",
+		LabelSelector: k8s.ZarfManagedByLabel + "=zarf",
 	}
 
 	if namespaces, err := c.GetNamespaces(); err != nil {
 		spinner.Errorf(err, "Unable to get k8s namespaces")
 	} else {
 		for _, namespace := range namespaces.Items {
-			if _, ok := namespace.Labels[agentLabel]; ok {
+			if _, ok := namespace.Labels[k8s.AgentLabel]; ok {
 				spinner.Updatef("Removing Zarf Agent label for namespace %s", namespace.Name)
-				delete(namespace.Labels, agentLabel)
+				delete(namespace.Labels, k8s.AgentLabel)
 				namespaceCopy := namespace
 				if _, err = c.UpdateNamespace(&namespaceCopy); err != nil {
 					// This is not a hard failure, but we should log it

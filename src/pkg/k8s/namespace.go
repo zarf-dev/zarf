@@ -20,6 +20,12 @@ func (k *K8s) GetNamespaces() (*corev1.NamespaceList, error) {
 	return k.Clientset.CoreV1().Namespaces().List(context.TODO(), metaOptions)
 }
 
+// GetNamespace gets a namespace by name
+func (k *K8s) GetNamespace(name string) (*corev1.Namespace, error) {
+	getOptions := metav1.GetOptions{}
+	return k.Clientset.CoreV1().Namespaces().Get(context.TODO(), name, getOptions)
+}
+
 // UpdateNamespace updates the given namespace in the cluster.
 func (k *K8s) UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	updateOptions := metav1.UpdateOptions{}
@@ -62,19 +68,28 @@ func (k *K8s) DeleteNamespace(ctx context.Context, name string) error {
 }
 
 // NewZarfManagedNamespace returns a corev1.Namespace with Zarf-managed labels
-func (k *K8s) NewZarfManagedNamespace(name string) *corev1.Namespace {
-	return &corev1.Namespace{
+func NewZarfManagedNamespace(name string) *corev1.Namespace {
+	namespace := &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Namespace",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
-			Labels: map[string]string{
-				zarfManagedByLabel: "zarf",
-			},
 		},
 	}
+	namespace = UpdateNamespaceToBeZarfManaged(namespace)
+	return namespace
+}
+
+// UpdateNamespaceToBeZarfManaged adds & deletes labels to a namespace go object which will signal Zarf to manage it
+func UpdateNamespaceToBeZarfManaged(namespace *corev1.Namespace) *corev1.Namespace {
+	if namespace.Labels == nil {
+		namespace.Labels = make(map[string]string)
+	}
+	namespace.Labels[ZarfManagedByLabel] = "zarf"
+	delete(namespace.Labels, AgentLabel)
+	return namespace
 }
 
 // IsInitialNamespace returns true if the given namespace name is an initial k8s namespace: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces

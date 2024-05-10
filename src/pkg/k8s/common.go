@@ -20,11 +20,15 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// cannot import config.ZarfManagedByLabel due to import cycle
-const zarfManagedByLabel = "app.kubernetes.io/managed-by"
+const (
+	//ZarfManagedByLabel is used to denote Zarf manages the lifecycle of a resource
+	ZarfManagedByLabel = "app.kubernetes.io/managed-by"
+	//AgentLabel is used to give instructions to the Zarf agent
+	AgentLabel = "zarf.dev/agent"
+)
 
 // New creates a new K8s client.
-func New(logger Log, defaultLabels Labels) (*K8s, error) {
+func New(logger Log) (*K8s, error) {
 	klog.SetLogger(funcr.New(func(_, args string) {
 		logger(args)
 	}, funcr.Options{}))
@@ -38,13 +42,12 @@ func New(logger Log, defaultLabels Labels) (*K8s, error) {
 		RestConfig: config,
 		Clientset:  clientset,
 		Log:        logger,
-		Labels:     defaultLabels,
 	}, nil
 }
 
 // NewWithWait is a convenience function that creates a new K8s client and waits for the cluster to be healthy.
-func NewWithWait(logger Log, defaultLabels Labels, timeout time.Duration) (*K8s, error) {
-	k, err := New(logger, defaultLabels)
+func NewWithWait(logger Log, timeout time.Duration) (*K8s, error) {
+	k, err := New(logger)
 	if err != nil {
 		return nil, err
 	}

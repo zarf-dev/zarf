@@ -36,7 +36,7 @@ func (k *K8s) GenerateSecret(namespace, name string, secretType corev1.SecretTyp
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				zarfManagedByLabel: "zarf",
+				ZarfManagedByLabel: "zarf",
 			},
 		},
 		Type: secretType,

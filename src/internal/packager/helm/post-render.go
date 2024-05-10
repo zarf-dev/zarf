@@ -13,6 +13,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -20,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -35,7 +37,16 @@ func (h *Helm) newRenderer() (*renderer, error) {
 
 	namespaces := make(map[string]*corev1.Namespace)
 	if h.cluster != nil {
-		namespaces[h.chart.Namespace] = h.cluster.NewZarfManagedNamespace(h.chart.Namespace)
+		namespace, err := h.cluster.K8s.GetNamespace(h.chart.Namespace)
+		if err != nil && !errors.IsNotFound(err) {
+			return nil, fmt.Errorf("unable to check for existing namespace %q in cluster: %s", h.chart.Namespace, err)
+		}
+		if h.cfg.DeployOpts.AdoptExistingResources && !errors.IsNotFound(err) {
+			namespaces[h.chart.Namespace] = k8s.UpdateNamespaceToBeZarfManaged(namespace)
+		} else {
+			namespaces[h.chart.Namespace] = k8s.NewZarfManagedNamespace(h.chart.Namespace)
+		}
+
 	}
 
 	return &renderer{
@@ -167,22 +178,16 @@ func (r *renderer) editHelmResources(resources []releaseutil.Manifest, finalMani
 
 		switch rawData.GetKind() {
 		case "Namespace":
-			var namespace corev1.Namespace
+			namespace := new(corev1.Namespace)
 			// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shenanigans
-			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), &namespace); err != nil {
+			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), namespace); err != nil {
 				message.WarnErrf(err, "could not parse namespace %s", rawData.GetName())
 			} else {
 				message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
-				if namespace.Labels == nil {
-					// Ensure label map exists to avoid nil panic
-					namespace.Labels = make(map[string]string)
-				}
-				// Now track this namespace by zarf
-				namespace.Labels[config.ZarfManagedByLabel] = "zarf"
-				namespace.Labels["zarf-helm-release"] = r.chart.ReleaseName
+				namespace = k8s.UpdateNamespaceToBeZarfManaged(namespace)
 
 				// Add it to the stack
-				r.namespaces[namespace.Name] = &namespace
+				r.namespaces[namespace.Name] = namespace
 			}
 			// skip so we can strip namespaces from helm's brain
 			continue
@@ -207,7 +212,7 @@ func (r *renderer) editHelmResources(resources []releaseutil.Manifest, finalMani
 		namespace := rawData.GetNamespace()
 		if _, exists := r.namespaces[namespace]; !exists && namespace != "" {
 			// if this is the first time seeing this ns, we need to track that to create it as well
-			r.namespaces[namespace] = r.cluster.NewZarfManagedNamespace(namespace)
+			r.namespaces[namespace] = k8s.NewZarfManagedNamespace(namespace)
 		}
 
 		// If we have been asked to adopt existing resources, process those now as well
