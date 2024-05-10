@@ -28,8 +28,6 @@ View all init options w/ [`zarf init --help`](/commands/zarf_init/).
 
 :::
 
-{/* The 'init' package initializes a cluster with the requisite air gap services, allowing future Zarf Packages to store any required resources (i.e. container images, OCI artifacts, and git repositories) so that they can be accessed by the cluster. */}
-
 ## Core Components
 
 An 'init' package requires a series of specially named, and configured components to ensure the cluster is correctly initialized. These components are:
@@ -98,8 +96,6 @@ To see a full list of `variables` you can view the [`zarf.yaml` that defines the
 :::
 
 #### Using External Registries
-
-{/* TODO: finish this section, and provide an example? */}
 
 Zarf can be configured to use an already existing registry with the `--registry-*` flags when running [`zarf init`](/commands/zarf_init/).
 
@@ -174,8 +170,6 @@ Resources can be excluded at the namespace or resources level by adding the `zar
 Zarf will refuse to adopt the Kubernetes [initial namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces) (`default`, `kube-*`, etc...). This is because these namespaces are critical to the operation of the cluster and should not be managed by Zarf.
 
 Additionally, when adopting resources, ensure that the namespaces specified are dedicated to Zarf, or add the `zarf.dev/agent: ignore` label to any non-Zarf managed resources in those namespaces (and ensure that updates to those resources do not strip that label) otherwise [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) errors may occur.
-
-{/* TODO: should prob make sure there is a tech-debt issue to make Flux ns creation better */}
 
 The Agent does not need to create any secrets in the cluster. Instead, during `zarf init` and `zarf package deploy`, secrets are automatically created in a [Helm Postrender Hook](https://helm.sh/docs/topics/advanced/#post-rendering) for any namespaces Zarf sees. If you have resources managed by [Flux](https://fluxcd.io/) that are not in a namespace managed by Zarf, you can either create the secrets manually or include a manifest to create the namespace in your package and let Zarf create the secrets for you.
 
