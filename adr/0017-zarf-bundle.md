@@ -14,6 +14,7 @@ Currently there is no official way to enable the deployment, publishing, pulling
 
 ```yaml
 - name: init
+  required: true
   files:
     - source: zarf-init-amd64-v0.27.0.tar.zst
       target: zarf-init-amd64-v0.27.0.tar.zst

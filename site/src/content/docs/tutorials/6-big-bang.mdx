@@ -17,6 +17,7 @@ The current version of this extension requires Big Bang version `1.54.0` or late
 ```yaml
 components:
   - name: bigbang
+    required: true
     images:
       - registry1.dso.mil/ironbank/gitlab/gitlab/gitlab-exporter:15.9.2
     extensions:
@@ -91,6 +92,7 @@ Within the `examples/big-bang` folder you will see a `zarf.yaml` that has the fo
 ```yaml
 components:
   - name: bigbang
+    required: true
     extensions:
       bigbang:
         version: 1.54.0
