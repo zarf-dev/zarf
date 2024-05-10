@@ -9,6 +9,10 @@ codegen-units = 1
 panic = "abort"
 strip = true
 
+[build]
+rustflags = ["-C", "relocation-model=static", "-C", "strip=symbols"]
+
+
 [package]
 name = "zarf-injector"
 version = "0.5.0"

@@ -107,7 +107,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 		// Make sure the pod is not there first
 		err = c.DeletePod(ZarfNamespaceName, "injector")
 		if err != nil {
-			message.Debug("could not delete pod injector: %w", err)
+			message.Debug("could not delete pod injector: ", err)
 		}
 
 		// Update the podspec image path and use the first node found
@@ -115,7 +115,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 		pod, err := c.buildInjectionPod(node[0], image, payloadConfigmaps, sha256sum)
 		if err != nil {
 			// Just debug log the output because failures just result in trying the next image
-			message.Debug("error making injection pod %w", err)
+			message.Debug("error making injection pod: ", err)
 			continue
 		}
 
@@ -123,7 +123,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 		pod, err = c.CreatePod(pod)
 		if err != nil {
 			// Just debug log the output because failures just result in trying the next image
-			message.Debug("error creating pod: %w, in cluster: %w", pod, err)
+			message.Debug("error creating pod in cluster:", pod, err)
 			continue
 		}
 
