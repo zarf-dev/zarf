@@ -47,7 +47,7 @@ To ensure that our approach is distro-agnostic, the Zarf team developed a unique
 
 Shoving random data into a cluster is generally a bad idea, and an antipattern overall to containerization. However in the case of Zarf, and air-gapped environments, certain liberties must be taken.
 
-While there is no distro-agnostic to inject images into a cluster, every cluster has support for `configmaps`. However, the size of a `configmap` is limited to 1MB (technically only limited by whatever is configured in `etcd`, the default is 1MB), and the `registry:2` image is around 10MB (as of this writing). So we split the `registry:2` into chunks and inject them into the cluster as `configmaps`.
+While there is no distro-agnostic to inject images into a cluster, every cluster has support for `configmaps`. However, the size of a `configmap` is limited to 1MB (technically only limited by whatever is configured in `etcd`, the default is 1MB), and the `registry:2` image is around 10MB (as of this writing). So we split the `registry:2` image into chunks and inject them into the cluster as `configmaps`.
 
 But then we have another problem of how to reassemble the image on the other side, as we don't have any consistent image that exists in the cluster that would have such utilities. This is where the `zarf-injector` Rust binary comes in.
 
