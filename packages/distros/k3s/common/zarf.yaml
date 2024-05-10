@@ -3,11 +3,11 @@ metadata:
   name: distro-k3s
 
 variables:
+  - name: K3S_CMD
+    default: server --write-kubeconfig-mode=700 --write-kubeconfig /root/.kube/config
   - name: K3S_ARGS
     description: Arguments to pass to K3s
     default: --disable traefik
-  - name: K3S_CMD
-    default: server --write-kubeconfig-mode=700 --write-kubeconfig /root/.kube/config
 
 components:
   - name: k3s
