@@ -63,7 +63,11 @@ When `zarf init` deploys the `zarf-seed-registry` component, the following happe
 2. Zarf connects to the cluster and grabs a pod that is running an image that is already present in the cluster.
 3. Zarf spins up a pod using the existing image, mounts the `configmaps` that contain the `zarf-injector` binary and the `registry:2` image chunks and runs the `zarf-injector` binary.
 
-> Doing this keeps Zarf cluster agnostic however does require that the kubelet be able to reach out to a cluster NodePort service which may require changes to firewall configurations like allowing UDP traffic between nodes if using something like VXLAN tunneling.
+:::note
+
+Doing this keeps Zarf cluster agnostic, however does require that the kubelet be able to reach out to a cluster NodePort service, which may require changes to firewall configurations like allowing UDP traffic between nodes if using something like VXLAN tunneling.
+
+:::
 
 4. The `zarf-injector` binary reassembles the `registry:2` image and hosts a temporary registry that the cluster can pull from.
 5. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed, with its `image.repository` set to the temporary registry that the `zarf-injector` binary is hosting (consumed as the `###ZARF_SEED_REGISTRY###` built-in variable set at runtime).
