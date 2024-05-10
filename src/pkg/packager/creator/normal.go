@@ -184,7 +184,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 
 		pullCfg := images.PullConfig{
 			DestinationDirectory: dst.Images.Base,
-			References:           imageList,
+			ImageList:            imageList,
 			Arch:                 arch,
 			RegistryOverrides:    pc.createOpts.RegistryOverrides,
 			CacheDirectory:       filepath.Join(config.GetAbsCachePath(), layout.ImagesDir),

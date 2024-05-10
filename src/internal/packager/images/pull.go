@@ -38,16 +38,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// ImgInfo wraps references/information about an image
-type ImgInfo struct {
-	RefInfo transform.Image
-	Img     v1.Image
-}
-
 // Pull pulls all of the images from the given config.
 func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, error) {
 	var longer string
-	imageCount := len(cfg.References)
+	imageCount := len(cfg.ImageList)
 	// Give some additional user feedback on larger image sets
 	if imageCount > 15 {
 		longer = "This step may take a couple of minutes to complete."
@@ -81,7 +75,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 	var counter, totalBytes atomic.Int64
 
-	for _, refInfo := range cfg.References {
+	for _, refInfo := range cfg.ImageList {
 		refInfo := refInfo
 		eg.Go(func() error {
 			idx := counter.Add(1)

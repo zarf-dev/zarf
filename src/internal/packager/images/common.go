@@ -22,7 +22,7 @@ import (
 type PullConfig struct {
 	DestinationDirectory string
 
-	References []transform.Image
+	ImageList []transform.Image
 
 	Arch string
 
@@ -52,16 +52,8 @@ func NoopOpt(*crane.Options) {}
 // WithGlobalInsecureFlag returns an option for crane that configures insecure
 // based upon Zarf's global --insecure flag.
 func WithGlobalInsecureFlag() []crane.Option {
-	opts := []crane.Option{}
 	if config.CommonOptions.Insecure {
-		opts = append(opts, crane.Insecure)
-
-		// TODO: lets see what happens when we comment this guy out
-		// roundTripper := http.DefaultTransport.(*http.Transport).Clone()
-		// roundTripper.TLSClientConfig.InsecureSkipVerify = true
-
-		// opts = append(opts, crane.WithTransport(roundTripper))
-		return opts
+		return []crane.Option{crane.Insecure}
 	}
 	// passing a nil option will cause panic
 	return []crane.Option{NoopOpt}
