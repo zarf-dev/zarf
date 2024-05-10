@@ -24,10 +24,16 @@ jobs:
 
       - name: Install tools
         uses: ./.github/actions/install-tools
+      
+      - name: Install musl-tools on Linux
+        run: sudo apt-get update --yes && sudo apt-get install --yes musl-tools
+
+      - name: Install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
 
       - name: "Build Rust Binary for x86_64 and arm64"
         run: |
-          make build-injector-linux
+          make cross-injector-linux
           cd src/injector/target
           mkdir -p ../dist
           cp x86_64-unknown-linux-musl/release/zarf-injector ../dist/zarf-injector-amd64

@@ -10,6 +10,29 @@ help: ## Display this help information
 clean: ## Clean the build directory
 	rm -rf target
 
+cross-injector-linux: cross-injector-amd cross-injector-arm
+
+cross-injector-amd: 
+	rustup target add x86_64-unknown-linux-musl
+	test -s x86_64-linux-musl-cross || curl https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/x86_64-linux-musl-cross.tgz | tar -xz
+	export PATH="$$PWD/x86_64-linux-musl-cross/bin:$$PATH"
+	export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-musl-cc
+
+	cargo install cross --git https://github.com/cross-rs/cross
+
+	cross build --target x86_64-unknown-linux-musl --release
+
+
+cross-injector-arm:
+	rustup target add aarch64-unknown-linux-musl
+	test -s aarch64-linux-musl-cross || curl https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/aarch64-linux-musl-cross.tgz | tar -xz
+	export PATH="$$PWD/aarch64-linux-musl-cross/bin:$$PATH"
+	export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-cc
+
+	cross build --target aarch64-unknown-linux-musl --release
+
+
+
 build-injector-linux: build-injector-linux-amd build-injector-linux-arm ## Build the Zarf injector for AMD64 and ARM64
 
 build-injector-linux-amd: ## Build the Zarf injector for AMD64
