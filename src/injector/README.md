@@ -1,20 +1,21 @@
 # zarf-injector
 
-A tiny (<1MiB) binary statically-linked with musl in order to fit as a configmap
+A tiny (<1MiB) binary statically-linked with musl in order to fit as a configmap.
 
-## Building on Ubuntu
+See how it gets used during the [`zarf-init`](https://docs.zarf.dev/commands/zarf_init/) process in the ['init' package reference documentation](https://docs.zarf.dev/ref/init-package/).
+
+## Building in Docker (recommended)
 
 ```bash
-# install rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
-source $HOME/.cargo/env
+make build-with-docker
+```
 
-# install build-essential
-sudo apt install build-essential -y
+## Building on Debian-based Systems
 
-# build w/ musl
-rustup target add x86_64-unknown-linux-musl
-cargo build --target x86_64-unknown-linux-musl --release
+Install [Rust](https://rustup.rs/) and `build-essential`.
+
+```bash
+make build-injector-linux list-sizes
 ```
 
 ## Checking Binary Size
@@ -22,12 +23,15 @@ cargo build --target x86_64-unknown-linux-musl --release
 Due to the ConfigMap size limit (1MiB for binary data), we need to make sure the binary is small enough to fit.
 
 ```bash
-cargo build --target x86_64-unknown-linux-musl --release
+make list-sizes
+```
 
-cargo build --target aarch64-unknown-linux-musl --release
+```sh
+$ make build-with-docker
+...
 
-size_linux=$(du --si target/x86_64-unknown-linux-musl/release/zarf-injector | cut -f1)
-echo "Linux binary size: $size_linux"
-size_aarch64=$(du --si target/aarch64-unknown-linux-musl/release/zarf-injector | cut -f1)
-echo "aarch64 binary size: $size_aarch64"
+Size of Zarf injector binaries:
+
+840k    target/x86_64-unknown-linux-musl/release/zarf-injector
+713k    target/aarch64-unknown-linux-musl/release/zarf-injector
 ```
