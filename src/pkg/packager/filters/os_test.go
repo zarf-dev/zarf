@@ -7,7 +7,6 @@ package filters
 import (
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 )
@@ -15,7 +14,7 @@ import (
 func TestLocalOSFilter(t *testing.T) {
 
 	pkg := types.ZarfPackage{}
-	for _, os := range validate.SupportedOS() {
+	for _, os := range types.SupportedOS() {
 		pkg.Components = append(pkg.Components, types.ZarfComponent{
 			Only: types.ZarfComponentOnlyTarget{
 				LocalOS: os,
@@ -23,7 +22,7 @@ func TestLocalOSFilter(t *testing.T) {
 		})
 	}
 
-	for _, os := range validate.SupportedOS() {
+	for _, os := range types.SupportedOS() {
 		filter := ByLocalOS(os)
 		result, err := filter.Apply(pkg)
 		if os == "" {
