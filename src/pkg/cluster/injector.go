@@ -105,13 +105,17 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 		spinner.Updatef("Attempting to bootstrap with the %s/%s", node, image)
 
 		// Make sure the pod is not there first
-		_ = c.DeletePod(ZarfNamespaceName, "injector")
+		err = c.DeletePod(ZarfNamespaceName, "injector")
+		if err != nil {
+			message.Debug("could not delete pod injector: ", err)
+		}
 
 		// Update the podspec image path and use the first node found
+
 		pod, err := c.buildInjectionPod(node[0], image, payloadConfigmaps, sha256sum)
 		if err != nil {
 			// Just debug log the output because failures just result in trying the next image
-			message.Debug(err)
+			message.Debug("error making injection pod: ", err)
 			continue
 		}
 
@@ -119,7 +123,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 		pod, err = c.CreatePod(pod)
 		if err != nil {
 			// Just debug log the output because failures just result in trying the next image
-			message.Debug(pod, err)
+			message.Debug("error creating pod in cluster:", pod, err)
 			continue
 		}
 
@@ -261,6 +265,7 @@ func (c *Cluster) injectorIsReady(seedImages []transform.Image, spinner *message
 		var resp *http.Response
 		var err error
 		err = tunnel.Wrap(func() error {
+			message.Debug("getting seed registry %v", seedRegistry)
 			resp, err = http.Get(seedRegistry)
 			return err
 		})
