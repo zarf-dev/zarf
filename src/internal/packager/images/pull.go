@@ -286,7 +286,6 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
 func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]v1.Image) (map[transform.Image]v1.Image, error) {
 	saved := map[transform.Image]v1.Image{}
 	for info, img := range m {
-		info, img := info, img
 		annotations := map[string]string{
 			ocispec.AnnotationBaseImageName: info.Reference,
 		}
