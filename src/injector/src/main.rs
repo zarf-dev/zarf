@@ -25,7 +25,6 @@ use axum::{
     response::{Response, IntoResponse},
     body::Body,
 };
-
 const OCI_MIME_TYPE: &str = "application/vnd.oci.image.manifest.v1+json";
 
 // Reads the binary contents of a file
@@ -145,7 +144,7 @@ async fn handler(Path(path): Path<String>) -> Response {
 
     }else if blob.is_match(&path) {
         let caps = blob.captures(path).unwrap();
-        let tag = caps.get(0).unwrap().as_str().to_string();
+        let tag = caps.get(1).unwrap().as_str().to_string();
         handle_get_digest(tag).await
     } else {
         Response::builder()
@@ -183,13 +182,13 @@ async fn handle_get_manifest(name: String, reference: String) -> Response {
         }
     }
     if !sha_manifest.is_empty() {
-        let file_path = PathBuf::from("/zarf-seed").to_owned().join( "/blobs/").join( &sha_manifest);
+        let file_path = PathBuf::from("/zarf-seed").to_owned().join( "blobs").join( &sha_manifest);
         match tokio::fs::File::open(&file_path).await {
             Ok(file) => {
                 let stream = ReaderStream::new(file);
                 Response::builder()
                     .status(StatusCode::OK)
-                    .header("Accept:", OCI_MIME_TYPE)
+                    .header("Content-Type", OCI_MIME_TYPE)
                     .header("Docker-Content-Digest", sha_manifest.clone())
                     .header("Etag", format!("sha256:{}", sha_manifest))
                     .header("Docker-Distribution-Api-Version", "registry/2.0")
@@ -202,14 +201,13 @@ async fn handle_get_manifest(name: String, reference: String) -> Response {
             .body(format!("File not found: {}", err))
             .unwrap()
             .into_response()
-    }
-            } 
-
- else {
+            }
+    }else {
     Response::builder()
     .status(StatusCode::NOT_FOUND)
     .body(format!("Not Found"))
     .unwrap()
+
     .into_response()
     }
 }
