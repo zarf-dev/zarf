@@ -81,6 +81,15 @@ func (c ZarfComponent) RequiresCluster() bool {
 	return false
 }
 
+// IsRequired returns if the component is required or not.
+func (c ZarfComponent) IsRequired() bool {
+	if c.Required != nil {
+		return *c.Required
+	}
+
+	return false
+}
+
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
 type ZarfComponentOnlyTarget struct {
 	LocalOS string                   `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`

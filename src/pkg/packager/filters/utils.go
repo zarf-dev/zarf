@@ -7,8 +7,6 @@ package filters
 import (
 	"path"
 	"strings"
-
-	"github.com/defenseunicorns/zarf/src/types"
 )
 
 type selectState int
@@ -41,15 +39,4 @@ func includedOrExcluded(componentName string, requestedComponentNames []string) 
 
 	// All other cases we don't know if we should include or exclude yet
 	return unknown, ""
-}
-
-// isRequired returns if the component is required or not.
-func isRequired(c types.ZarfComponent) bool {
-	requiredExists := c.Required != nil
-	required := requiredExists && *c.Required
-
-	if requiredExists {
-		return required
-	}
-	return false
 }
