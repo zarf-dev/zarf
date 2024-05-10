@@ -279,7 +279,7 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
 			return nil
 		})
 	}
-	return nil
+	return eg.Wait()
 }
 
 // SaveSequential saves images sequentially.
