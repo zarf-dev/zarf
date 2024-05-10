@@ -321,7 +321,7 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 	pod.Labels["app"] = "zarf-injector"
 
 	// Ensure zarf agent doesn't break the injector on future runs
-	pod.Labels[k8s.ZarfManagedByLabel] = "ignore"
+	pod.Labels[k8s.AgentLabel] = "ignore"
 
 	// Bind the pod to the node the image was found on
 	pod.Spec.NodeName = node

@@ -21,9 +21,9 @@ import (
 )
 
 const (
-	//ZarfManagedByLabel is used to denote Zarf manages the lifecycle of a resource
+	// ZarfManagedByLabel is used to denote Zarf manages the lifecycle of a resource
 	ZarfManagedByLabel = "app.kubernetes.io/managed-by"
-	//AgentLabel is used to give instructions to the Zarf agent
+	// AgentLabel is used to give instructions to the Zarf agent
 	AgentLabel = "zarf.dev/agent"
 )
 
