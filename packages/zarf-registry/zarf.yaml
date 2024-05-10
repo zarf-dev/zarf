@@ -1,6 +1,11 @@
 kind: ZarfPackageConfig
 metadata:
-  name: init-package-zarf-registry
+  name: zarf-registry
+  description: |
+    Initializes the Zarf Registry by bootstrapping a Kubernetes cluster with a running pod and hosting the registry image.
+    The Zarf Registry is then updated to use the self-hosted registry image.
+
+    This package is NOT meant to be used as a standalone package. It is meant to be used as a dependency of an 'init' package.
 
 variables:
   - name: REGISTRY_EXISTING_PVC
@@ -105,7 +110,6 @@ components:
     description: |
       Bootstraps a Kubernetes cluster by cloning a running pod in the cluster and hosting the registry image.
       Removed and destroyed after the Zarf Registry is self-hosting the registry image.
-    required: true
     only:
       cluster:
         architecture: amd64
@@ -120,7 +124,6 @@ components:
     description: |
       Bootstraps a Kubernetes cluster by cloning a running pod in the cluster and hosting the registry image.
       Removed and destroyed after the Zarf Registry is self-hosting the registry image.
-    required: true
     only:
       cluster:
         architecture: arm64

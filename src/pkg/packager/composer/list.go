@@ -296,10 +296,11 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 	// start overriding with the tail node
 	node := ic.tail
 	for node != nil {
-		// if prev.required is nil, and node.required is != nil, then error
-		// if node.prev != nil && node.prev.Required == nil && node.Required != nil {
-		// 	return nil, fmt.Errorf("component %q: required cannot be unset during composition from %q to %q", node.ImportName(), node.ImportLocation(), node.prev.ImportLocation())
-		// }
+		// required can go from explicit X --> explicit Y
+		// but cannot go from explicit X --> implicit Y
+		if node.prev != nil && node.prev.Required == nil && node.Required != nil {
+			return nil, fmt.Errorf("component %q: required cannot be unset during composition from %q to %q", node.ImportName(), node.ImportLocation(), node.prev.ImportLocation())
+		}
 
 		fixPaths(&node.ZarfComponent, node.relativeToHead)
 

@@ -1,7 +1,10 @@
 kind: ZarfInitConfig
 metadata:
   name: distro-k3s
-  description: Used to establish a new Zarf cluster
+  description: |
+    Used to establish a new Zarf cluster
+
+    This package is NOT meant to be used as a standalone package. It is meant to be used as a dependency of an 'init' package.
 
 components:
   # AMD-64 version of the K3s stack

@@ -1,6 +1,10 @@
 kind: ZarfPackageConfig
 metadata:
-  name: init-package-logging
+  name: logging
+  description: |
+    Deploys the Promtail Grafana & Loki (PGL) stack.
+
+    This package is NOT meant to be used as a standalone package. It is meant to be used as a dependency of an 'init' package.
 
 components:
   - name: logging

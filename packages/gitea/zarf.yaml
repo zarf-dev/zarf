@@ -1,6 +1,8 @@
 kind: ZarfPackageConfig
 metadata:
-  name: init-package-git-server
+  name: git-server
+  description: |
+    This package is NOT meant to be used as a standalone package. It is meant to be used as a dependency of an 'init' package.
 
 variables:
   - name: GIT_SERVER_EXISTING_PVC
