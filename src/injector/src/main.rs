@@ -182,7 +182,7 @@ async fn handle_get_manifest(name: String, reference: String) -> Response {
         }
     }
     if !sha_manifest.is_empty() {
-        let file_path = PathBuf::from("/zarf-seed").to_owned().join( "blobs").join( &sha_manifest);
+        let file_path = PathBuf::from("/zarf-seed").to_owned().join( "blobs").join("sha256").join( &sha_manifest);
         match tokio::fs::File::open(&file_path).await {
             Ok(file) => {
                 let stream = ReaderStream::new(file);
@@ -218,8 +218,9 @@ async fn handle_get_digest(tag: String) -> Response {
     let blob_root = PathBuf::from("/zarf-seed").join("blobs").join("sha256");
     let path = blob_root.join(tag.strip_prefix("sha256:").unwrap());
 
-    let data = fs::read_to_string(path).expect("read index.json");
-
+    match tokio::fs::File::open(&path).await {
+    Ok(file) => {
+    let stream = ReaderStream::new(file);
     Response::builder()
         .status(StatusCode::OK)
         .header("Content-Type", "application/octet-stream")
@@ -227,8 +228,17 @@ async fn handle_get_digest(tag: String) -> Response {
         .header("Etag", tag.to_owned())
         .header("Docker-Distribution-Api-Version", "registry/2.0")
         .header("Cache-Control", "max-age=31536000")
-        .body(Body::from(data))
+        .body(Body::from_stream(stream))
         .unwrap()
+    }
+    Err(err) => 
+            Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(format!("File not found: {}", err))
+            .unwrap()
+            .into_response()
+    }
+
 }
 
 #[tokio::main(flavor = "current_thread")]
