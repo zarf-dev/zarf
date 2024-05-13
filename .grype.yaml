@@ -1,20 +1,6 @@
-# Ignore file for false positives from protobuf, see the following for more information:
-#   https://github.com/anchore/grype/issues/558
 ignore:
-  # This vulnerability does not affect Zarf as we do not instantiate a rekor client
-  - vulnerability: GHSA-2h5h-59f5-c5x9
-
-  # This vulnerability does not affect Zarf as we do not instantiate a rekor client
-  - vulnerability: GHSA-frqx-jfcm-6jjr
-
   # From rouille - The Zarf injector does not expose endpoints that use multipart form data
   - vulnerability: GHSA-mc8h-8q98-g5hr
-
-  # From semver - This comes through nodemon which is only used for development
-  - vulnerability: GHSA-c2qf-rxjj-qqgw
-
-  # From k8s.io/apiserver - This is a false positive due to the difference in versioning between the library / binary k8s versioning
-  - vulnerability: GHSA-82hx-w2r5-c2wq
 
   # From helm - This behavior was introduced intentionally, and cannot be removed without breaking backwards compatibility (some users may be relying on these values).
   - vulnerability: GHSA-jw44-4f3j-q396
