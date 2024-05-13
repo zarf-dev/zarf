@@ -178,7 +178,7 @@ func (r *renderer) editHelmResources(resources []releaseutil.Manifest, finalMani
 
 		switch rawData.GetKind() {
 		case "Namespace":
-			namespace := new(corev1.Namespace)
+			namespace := &corev1.Namespace{}
 			// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shenanigans
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), namespace); err != nil {
 				message.WarnErrf(err, "could not parse namespace %s", rawData.GetName())
