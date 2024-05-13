@@ -157,7 +157,7 @@ This allows the cluster to pull images from the Zarf Registry instead of the int
 
 The `zarf-agent` also modifies [Flux GitRepository](https://fluxcd.io/docs/components/source/gitrepositories/) objects to point to the local Git Server.
 
-> Support for mutating `Application` and `Repository` objects in ArgoCD is in [`beta`](/roadmap#beta) and can be tested on non-production clusters.
+> Support for mutating `Application` and `Repository` objects in ArgoCD is in [`beta`](/roadmap#beta) and should tested on non-production clusters before being deployed to production clusters.
 
 :::note
 
@@ -263,15 +263,12 @@ components:
 
 :::note
 
-In order to reproduce the following example, you will need to have the Zarf repository cloned locally.
+In order to reproduce / build the following example, you will need to have the Zarf repository cloned locally.
 
 ```bash
 git clone https://github.com/defenseunicorns/zarf.git
 cd zarf
 mv zarf.yaml zarf.yaml.bak
-cat <<EOF > zarf.yaml
-...
-EOF
 ```
 
 You can learn more about creating a custom init package in the [Creating a Custom 'init' Package Tutorial](/tutorials/8-custom-init-packages).
@@ -284,6 +281,7 @@ A minimal `zarf.yaml` for the 'init' package looks something like:
 # zarf.yaml
 kind: ZarfInitConfig
 metadata:
+  name: init
 
 components:
   - name: zarf-injector
