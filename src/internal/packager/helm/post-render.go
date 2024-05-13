@@ -183,10 +183,8 @@ func (r *renderer) editHelmResources(resources []releaseutil.Manifest, finalMani
 				message.WarnErrf(err, "could not parse namespace %s", rawData.GetName())
 			} else {
 				message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
-				namespace = k8s.UpdateNamespaceToBeZarfManaged(namespace)
-
 				// Add it to the stack
-				r.namespaces[namespace.Name] = namespace
+				r.namespaces[namespace.Name] = k8s.UpdateNamespaceToBeZarfManaged(namespace)
 			}
 			// skip so we can strip namespaces from helm's brain
 			continue
