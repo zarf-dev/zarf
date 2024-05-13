@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -13,10 +14,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
+	"sigs.k8s.io/cli-utils/pkg/object"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 )
 
 // isJSONPathWaitType checks if the condition is a JSONPath or condition.
@@ -26,6 +34,49 @@ func isJSONPathWaitType(condition string) bool {
 	}
 
 	return true
+}
+
+func ExecuteWaitResource(ctx context.Context, gk schema.GroupKind, namespace, name string) error {
+	cfg, err := config.GetConfig()
+	if err != nil {
+		return err
+	}
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{})
+	if err != nil {
+		return err
+	}
+	identifiers := []object.ObjMetadata{
+		{
+			GroupKind: gk,
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
+	poller := polling.NewStatusPoller(mgr.GetClient(), mgr.GetRESTMapper(), polling.Options{})
+	events := poller.Poll(ctx, identifiers, polling.PollOptions{PollInterval: 5 * time.Second})
+
+	spinnerMsg := fmt.Sprintf("Waiting for %s to be ready.", path.Join(gk.String(), name))
+	spinner := message.NewProgressSpinner(spinnerMsg)
+	defer spinner.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case e := <-events:
+			if e.Type == event.ErrorEvent {
+				return e.Error
+			}
+			switch e.Resource.Status {
+			case status.CurrentStatus:
+				spinner.Successf(e.Resource.Message)
+				return nil
+			case status.InProgressStatus:
+				spinner.Updatef(e.Resource.Message)
+			default:
+				message.Debug(e.Resource.Message)
+			}
+		}
+	}
 }
 
 // ExecuteWait executes the wait-for command.
