@@ -21,7 +21,7 @@ func TestDataInjection(t *testing.T) {
 	t.Log("E2E: Data injection")
 	e2e.SetupWithCluster(t)
 
-	ctx := context.Background()
+	ctx := context.TODO()
 
 	path := fmt.Sprintf("build/zarf-package-kiwix-%s-3.5.0.tar", e2e.Arch)
 

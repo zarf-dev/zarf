@@ -37,7 +37,7 @@ func TestGit(t *testing.T) {
 
 	c, err := cluster.NewCluster()
 	require.NoError(t, err)
-	ctx := context.Background()
+	ctx := context.TODO()
 	tunnelGit, err := c.Connect(ctx, cluster.ZarfGit)
 	require.NoError(t, err)
 	defer tunnelGit.Close()

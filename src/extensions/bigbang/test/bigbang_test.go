@@ -60,7 +60,7 @@ func TestReleases(t *testing.T) {
 		zarfCache = fmt.Sprintf("--zarf-cache=%s", CIMount)
 	}
 
-	ctx := context.Background()
+	ctx := context.TODO()
 
 	// Initialize the cluster with the Git server and AMD64 architecture
 	arch := "amd64"

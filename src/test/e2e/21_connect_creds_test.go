@@ -28,7 +28,7 @@ func TestConnectAndCreds(t *testing.T) {
 	prevAgentSecretData, _, err := e2e.Kubectl("get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := context.TODO()
 
 	connectToZarfServices(ctx, t)
 
