@@ -79,13 +79,13 @@ func newRepoAddCmd(out io.Writer) *cobra.Command {
 		Use:   "add [NAME] [URL]",
 		Short: "add a chart repository",
 		Args:  require.ExactArgs(2),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			o.name = args[0]
 			o.url = args[1]
 			o.repoFile = settings.RepositoryConfig
 			o.repoCache = settings.RepositoryCache
 
-			return o.run(out)
+			return o.run(cmd.Context(), out)
 		},
 	}
 
@@ -105,7 +105,7 @@ func newRepoAddCmd(out io.Writer) *cobra.Command {
 	return cmd
 }
 
-func (o *repoAddOptions) run(out io.Writer) error {
+func (o *repoAddOptions) run(ctx context.Context, out io.Writer) error {
 	// Block deprecated repos
 	if !o.allowDeprecatedRepos {
 		for oldURL, newURL := range deprecatedRepos {
@@ -130,7 +130,7 @@ func (o *repoAddOptions) run(out io.Writer) error {
 		lockPath = o.repoFile + ".lock"
 	}
 	fileLock := flock.New(lockPath)
-	lockCtx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+	lockCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
 	locked, err := fileLock.TryLockContext(lockCtx, time.Second)
 	if err == nil && locked {

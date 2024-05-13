@@ -53,9 +53,7 @@ var devDeployCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		ctx := cmd.Context()
-
-		if err := pkgClient.DevDeploy(ctx); err != nil {
+		if err := pkgClient.DevDeploy(cmd.Context()); err != nil {
 			message.Fatalf(err, lang.CmdDevDeployErr, err.Error())
 		}
 	},
