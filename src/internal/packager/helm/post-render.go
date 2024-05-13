@@ -50,7 +50,8 @@ func (h *Helm) newRenderer() (*renderer, error) {
 	if errors.IsNotFound(err) {
 		rend.namespaces[h.chart.Namespace] = k8s.NewZarfManagedNamespace(h.chart.Namespace)
 	} else if h.cfg.DeployOpts.AdoptExistingResources {
-		rend.namespaces[h.chart.Namespace] = k8s.UpdateNamespaceToBeZarfManaged(namespace)
+		namespace.Labels = k8s.AdoptZarfManagedLabels(namespace.Labels)
+		rend.namespaces[h.chart.Namespace] = namespace
 	}
 
 	return rend, nil
@@ -184,8 +185,9 @@ func (r *renderer) editHelmResources(resources []releaseutil.Manifest, finalMani
 				message.WarnErrf(err, "could not parse namespace %s", rawData.GetName())
 			} else {
 				message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
+				namespace.Labels = k8s.AdoptZarfManagedLabels(namespace.Labels)
 				// Add it to the stack
-				r.namespaces[namespace.Name] = k8s.UpdateNamespaceToBeZarfManaged(namespace)
+				r.namespaces[namespace.Name] = namespace
 			}
 			// skip so we can strip namespaces from helm's brain
 			continue

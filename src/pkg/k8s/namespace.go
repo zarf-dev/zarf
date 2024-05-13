@@ -78,18 +78,18 @@ func NewZarfManagedNamespace(name string) *corev1.Namespace {
 			Name: name,
 		},
 	}
-	namespace = UpdateNamespaceToBeZarfManaged(namespace)
+	namespace.Labels = AdoptZarfManagedLabels(namespace.Labels)
 	return namespace
 }
 
-// UpdateNamespaceToBeZarfManaged adds & deletes labels to a namespace go object which will signal Zarf to manage it
-func UpdateNamespaceToBeZarfManaged(namespace *corev1.Namespace) *corev1.Namespace {
-	if namespace.Labels == nil {
-		namespace.Labels = make(map[string]string)
+// AdoptZarfManagedLabels adds & deletes the necessary labels that signal to Zarf it should manage a namespace
+func AdoptZarfManagedLabels(labels map[string]string) map[string]string {
+	if labels == nil {
+		labels = make(map[string]string)
 	}
-	namespace.Labels[ZarfManagedByLabel] = "zarf"
-	delete(namespace.Labels, AgentLabel)
-	return namespace
+	labels[ZarfManagedByLabel] = "zarf"
+	delete(labels, AgentLabel)
+	return labels
 }
 
 // IsInitialNamespace returns true if the given namespace name is an initial k8s namespace: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
