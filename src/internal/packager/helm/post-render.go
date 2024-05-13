@@ -47,11 +47,12 @@ func (h *Helm) newRenderer() (*renderer, error) {
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, fmt.Errorf("unable to check for existing namespace %q in cluster: %w", h.chart.Namespace, err)
 	}
-	if h.cfg.DeployOpts.AdoptExistingResources && !errors.IsNotFound(err) {
-		rend.namespaces[h.chart.Namespace] = k8s.UpdateNamespaceToBeZarfManaged(namespace)
-	} else {
+	if errors.IsNotFound(err) {
 		rend.namespaces[h.chart.Namespace] = k8s.NewZarfManagedNamespace(h.chart.Namespace)
+	} else if h.cfg.DeployOpts.AdoptExistingResources {
+		rend.namespaces[h.chart.Namespace] = k8s.UpdateNamespaceToBeZarfManaged(namespace)
 	}
+
 	return rend, nil
 }
 
