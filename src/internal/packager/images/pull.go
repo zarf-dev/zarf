@@ -7,7 +7,9 @@ package images
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -268,6 +270,9 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
 			cacheDir := filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)
 			location := filepath.Join(cacheDir, digest.String())
 			info, err := os.Stat(location)
+			if errors.Is(err, fs.ErrNotExist) {
+				return nil
+			}
 			if err != nil {
 				return err
 			}
@@ -290,8 +295,8 @@ func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]
 			ocispec.AnnotationBaseImageName: info.Reference,
 		}
 		if err := cl.AppendImage(img, clayout.WithAnnotations(annotations)); err != nil {
-			if err = CleanupInProgressLayers(ctx, img); err != nil {
-				message.WarnErr(err, "failed to clean up in-progress layers, please remove them manually")
+			if err := CleanupInProgressLayers(ctx, img); err != nil {
+				message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
 			}
 			return saved, err
 		}
@@ -318,8 +323,8 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 			}
 
 			if err := cl.WriteImage(img); err != nil {
-				if err = CleanupInProgressLayers(ectx, img); err != nil {
-					message.WarnErr(err, "failed to clean up in-progress layers, please remove them manually")
+				if err := CleanupInProgressLayers(ectx, img); err != nil {
+					message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
 				}
 				return err
 			}
