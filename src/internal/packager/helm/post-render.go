@@ -43,7 +43,7 @@ func (h *Helm) newRenderer() (*renderer, error) {
 	if h.cluster == nil {
 		return rend, nil
 	}
-	namespace, err := h.cluster.K8s.GetNamespace(h.chart.Namespace)
+	namespace, err := h.cluster.GetNamespace(h.chart.Namespace)
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, fmt.Errorf("unable to check for existing namespace %q in cluster: %w", h.chart.Namespace, err)
 	}
