@@ -71,7 +71,7 @@ func TestMetrics(t *testing.T) {
 
 	tunnel, err := c.NewTunnel("zarf", "svc", "agent-hook", "", 8888, 8443)
 	require.NoError(t, err)
-	_, err = tunnel.Connect(context.Background())
+	_, err = tunnel.Connect(context.TODO())
 	require.NoError(t, err)
 	defer tunnel.Close()
 
