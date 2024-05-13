@@ -35,25 +35,24 @@ type renderer struct {
 func (h *Helm) newRenderer() (*renderer, error) {
 	message.Debugf("helm.NewRenderer()")
 
-	namespaces := make(map[string]*corev1.Namespace)
-	if h.cluster != nil {
-		namespace, err := h.cluster.K8s.GetNamespace(h.chart.Namespace)
-		if err != nil && !errors.IsNotFound(err) {
-			return nil, fmt.Errorf("unable to check for existing namespace %q in cluster: %w", h.chart.Namespace, err)
-		}
-		if h.cfg.DeployOpts.AdoptExistingResources && !errors.IsNotFound(err) {
-			namespaces[h.chart.Namespace] = k8s.UpdateNamespaceToBeZarfManaged(namespace)
-		} else {
-			namespaces[h.chart.Namespace] = k8s.NewZarfManagedNamespace(h.chart.Namespace)
-		}
-
-	}
-
-	return &renderer{
+	rend := &renderer{
 		Helm:           h,
-		connectStrings: make(types.ConnectStrings),
-		namespaces:     namespaces,
-	}, nil
+		connectStrings: types.ConnectStrings{},
+		namespaces:     map[string]*corev1.Namespace{},
+	}
+	if h.cluster == nil {
+		return rend, nil
+	}
+	namespace, err := h.cluster.K8s.GetNamespace(h.chart.Namespace)
+	if err != nil && !errors.IsNotFound(err) {
+		return nil, fmt.Errorf("unable to check for existing namespace %q in cluster: %w", h.chart.Namespace, err)
+	}
+	if h.cfg.DeployOpts.AdoptExistingResources && !errors.IsNotFound(err) {
+		rend.namespaces[h.chart.Namespace] = k8s.UpdateNamespaceToBeZarfManaged(namespace)
+	} else {
+		rend.namespaces[h.chart.Namespace] = k8s.NewZarfManagedNamespace(h.chart.Namespace)
+	}
+	return rend, nil
 }
 
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
