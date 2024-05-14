@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -168,6 +169,9 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 	}
 
 	imageList = helpers.Unique(imageList)
+	rs := rand.NewSource(time.Now().UnixNano())
+	rnd := rand.New(rs)
+	rnd.Shuffle(len(imageList), func(i, j int) { imageList[i], imageList[j] = imageList[j], imageList[i] })
 	var sbomImageList []transform.Image
 
 	// Images are handled separately from other component assets.
@@ -176,37 +180,31 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 
 		dst.AddImages()
 
-		var pulled []images.ImgInfo
-		var err error
+		ctx := context.TODO()
 
-		ctx, cancel := context.WithCancel(context.TODO())
-		doPull := func() error {
-			imgConfig := images.ImageConfig{
-				ImagesPath:        dst.Images.Base,
-				ImageList:         imageList,
-				Insecure:          config.CommonOptions.Insecure,
-				Architectures:     []string{arch},
-				RegistryOverrides: pc.createOpts.RegistryOverrides,
-			}
+		pullCfg := images.PullConfig{
+			DestinationDirectory: dst.Images.Base,
+			ImageList:            imageList,
+			Arch:                 arch,
+			RegistryOverrides:    pc.createOpts.RegistryOverrides,
+			CacheDirectory:       filepath.Join(config.GetAbsCachePath(), layout.ImagesDir),
+		}
 
-			pulled, err = imgConfig.PullAll()
-			if errors.Is(err, lang.ErrUnsupportedImageType) {
-				cancel()
-			}
-
+		pulled, err := images.Pull(ctx, pullCfg)
+		if err != nil {
 			return err
 		}
 
-		if err := helpers.RetryWithContext(ctx, doPull, 3, 5*time.Second, message.Warnf); err != nil {
-			return fmt.Errorf("unable to pull images: %w", err)
-		}
-
-		for _, imgInfo := range pulled {
-			if err := dst.Images.AddV1Image(imgInfo.Img); err != nil {
+		for info, img := range pulled {
+			if err := dst.Images.AddV1Image(img); err != nil {
 				return err
 			}
-			if imgInfo.HasImageLayers {
-				sbomImageList = append(sbomImageList, imgInfo.RefInfo)
+			ok, err := utils.HasImageLayers(img)
+			if err != nil {
+				return fmt.Errorf("failed to validate %s is an image and not an artifact: %w", info, err)
+			}
+			if ok {
+				sbomImageList = append(sbomImageList, info)
 			}
 		}
 	}

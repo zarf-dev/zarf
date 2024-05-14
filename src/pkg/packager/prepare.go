@@ -15,9 +15,9 @@ import (
 	"github.com/goccy/go-yaml"
 
 	"github.com/defenseunicorns/pkg/helpers"
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -294,7 +294,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 		if sortedImages := sortImages(maybeImages, matchedImages); len(sortedImages) > 0 {
 			var validImages []string
 			for _, image := range sortedImages {
-				if descriptor, err := crane.Head(image, config.GetCraneOptions(config.CommonOptions.Insecure)...); err != nil {
+				if descriptor, err := crane.Head(image, images.WithGlobalInsecureFlag()...); err != nil {
 					// Test if this is a real image, if not just quiet log to debug, this is normal
 					message.Debugf("Suspected image does not appear to be valid: %#v", err)
 				} else {

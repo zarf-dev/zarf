@@ -481,10 +481,6 @@ func (p *Packager) populatePackageVariableConfig() error {
 
 // Push all of the components images to the configured container registry.
 func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum bool) error {
-	if len(componentImages) == 0 {
-		return nil
-	}
-
 	var combinedImageList []transform.Image
 	for _, src := range componentImages {
 		ref, err := transform.ParseImageRef(src)
@@ -496,18 +492,16 @@ func (p *Packager) pushImagesToRegistry(componentImages []string, noImgChecksum 
 
 	imageList := helpers.Unique(combinedImageList)
 
-	imgConfig := images.ImageConfig{
-		ImagesPath:    p.layout.Images.Base,
-		ImageList:     imageList,
-		NoChecksum:    noImgChecksum,
-		RegInfo:       p.state.RegistryInfo,
-		Insecure:      config.CommonOptions.Insecure,
-		Architectures: []string{p.cfg.Pkg.Build.Architecture},
+	pushCfg := images.PushConfig{
+		SourceDirectory: p.layout.Images.Base,
+		ImageList:       imageList,
+		RegInfo:         p.state.RegistryInfo,
+		NoChecksum:      noImgChecksum,
+		Arch:            p.cfg.Pkg.Build.Architecture,
+		Retries:         p.cfg.PkgOpts.Retries,
 	}
 
-	return helpers.Retry(func() error {
-		return imgConfig.PushToZarfRegistry()
-	}, p.cfg.PkgOpts.Retries, 5*time.Second, message.Warnf)
+	return images.Push(pushCfg)
 }
 
 // Push all of the components git repos to the configured git server.
