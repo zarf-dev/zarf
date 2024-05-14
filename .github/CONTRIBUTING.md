@@ -23,9 +23,6 @@ We use [pre-commit](https://pre-commit.com/) to manage our pre-commit hooks. Thi
 # install hooks
 pre-commit install
 
-# install goimports
-go install golang.org/x/tools/cmd/goimports@latest
-
 # install golang-ci-lint
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 ```

@@ -1,5 +1,5 @@
 run:
-  timeout: 5m
+  timeout: 3m
 linters:
   disable-all: true
   enable:
@@ -12,6 +12,14 @@ linters:
     - goimports
     - nolintlint
 linters-settings:
+  govet:
+    enable-all: true
+    disable:
+      - shadow
+      - fieldalignment
+      - unusedwrite
+  nolintlint:
+    require-specific: true
   goheader:
     template: |-
       SPDX-License-Identifier: Apache-2.0
