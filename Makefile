@@ -172,7 +172,7 @@ build-examples: ## Build all of the example packages
 	@test -s ./build/zarf-package-component-webhooks-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/component-webhooks -o build -a $(ARCH) --confirm
 
 build-injector-linux: ## Build the Zarf injector for AMD64 and ARM64
-	docker run --rm --user "$(id -u)":"$(id -g)" -v $$PWD/src/injector:/usr/src/zarf-injector -w /usr/src/zarf-injector rust:1.71.0-bookworm make build-injector-linux
+	docker run --rm --user "$(id -u)":"$(id -g)" -v $$PWD/src/injector:/usr/src/zarf-injector -w /usr/src/zarf-injector rust:1.71.0-bookworm make build-injector-linux list-sizes
 
 ## NOTE: Requires an existing cluster or the env var APPLIANCE_MODE=true
 .PHONY: test-e2e

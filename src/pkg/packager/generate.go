@@ -12,7 +12,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -73,7 +72,7 @@ func (p *Packager) Generate() (err error) {
 		p.cfg.Pkg.Components[i].Images = images[name]
 	}
 
-	if err := validate.Run(p.cfg.Pkg); err != nil {
+	if err := p.cfg.Pkg.Validate(); err != nil {
 		return err
 	}
 

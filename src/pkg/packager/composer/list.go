@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers"
-	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/migrations"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -142,7 +141,7 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 		}
 
 		// TODO: stuff like this should also happen in linting
-		if err := validate.ImportDefinition(&node.ZarfComponent); err != nil {
+		if err := node.ZarfComponent.ValidateImportDefinition(); err != nil {
 			return ic, err
 		}
 
