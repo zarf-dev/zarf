@@ -38,8 +38,8 @@ repos:
         language: system
         pass_filenames: true
       - id: lint
-        name: golang-ci-lint go lint
-        entry: golang-ci-lint
+        name: golangci-lint go lint
+        entry: golangci-lint
         args:
           - "run"
         files: .go$
