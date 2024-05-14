@@ -87,6 +87,7 @@ func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 				return
 			}
 			w.WriteHeader(http.StatusInternalServerError)
+			//nolint:errcheck // ignore
 			w.Write(jsonResponse)
 			return
 		}
@@ -124,6 +125,7 @@ func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 
 		message.Infof(lang.AgentInfoWebhookAllowed, r.URL.Path, review.Request.Operation, result.Allowed)
 		w.WriteHeader(http.StatusOK)
+		//nolint: errcheck // ignore
 		w.Write(jsonResponse)
 	}
 }

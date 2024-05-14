@@ -68,6 +68,7 @@ func NewProxyServer(port string) *http.Server {
 func healthz() http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
+		//nolint: errcheck // ignore
 		w.Write([]byte("ok"))
 	}
 }

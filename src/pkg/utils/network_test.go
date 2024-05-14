@@ -83,6 +83,7 @@ func TestDownloadToFile(t *testing.T) {
 			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
+		//nolint:errcheck // ignore
 		rw.Write([]byte(content))
 	}))
 	t.Cleanup(func() { srv.Close() })
