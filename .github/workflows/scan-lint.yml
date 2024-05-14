@@ -10,12 +10,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-
-      - name: Run Revive Action by pulling pre-built image
-        uses: docker://morphy/revive-action:v2.5.7@sha256:087d4e61077087755711ab7e9fae3cc899b7bb07ff8f6a30c3dfb240b1620ae8
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
         with:
-          config: hack/revive.toml
-          # Exclude patterns, separated by semicolons (optional)
-          exclude: "src/cmd/viper.go"
-          # Path pattern (default: ./...)
-          path: "./src/..."
+          version: v1.58.1

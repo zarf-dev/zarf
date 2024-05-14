@@ -38,13 +38,10 @@ repos:
         language: system
         pass_filenames: true
       - id: lint
-        name: revive go lint
-        entry: revive
+        name: golang-ci-lint go lint
+        entry: golang-ci-lint
         args:
-          - "-config"
-          - "hack/revive.toml"
-          - "-exclude"
-          - "src/cmd/viper.go"
+          - "run"
         files: .go$
         language: system
         pass_filenames: true

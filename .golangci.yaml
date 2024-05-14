@@ -1,0 +1,20 @@
+run:
+  timeout: 5m
+linters:
+  disable-all: true
+  enable:
+    - gosimple
+    - govet
+    - staticcheck
+    - unused
+    - revive
+    - goheader
+    - goimports
+linters-settings:
+  goheader:
+    template: |-
+      SPDX-License-Identifier: Apache-2.0
+      SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+issues:
+  exclude-dirs:
+    - "src/cmd/tools/helm"
