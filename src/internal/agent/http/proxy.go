@@ -27,6 +27,7 @@ func ProxyHandler() http.HandlerFunc {
 		if err != nil {
 			message.Debugf("%#v", err)
 			w.WriteHeader(http.StatusInternalServerError)
+			// nolint: errcheck // ignore
 			w.Write([]byte(lang.AgentErrUnableTransform))
 			return
 		}
