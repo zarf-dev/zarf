@@ -24,34 +24,6 @@ No, the Zarf binary and init package can be downloaded from the [Releases Page](
 
 Zarf is statically compiled and written in [Go](https://golang.org/) and [Rust](https://www.rust-lang.org/), so it has no external dependencies. For Linux, Zarf can bring a Kubernetes cluster using [K3s](https://k3s.io/). For Mac and Windows, Zarf can leverage any available local or remote cluster the user has access to. Currently, the K3s installation Zarf performs does require a [Systemd](https://en.wikipedia.org/wiki/Systemd) based system and `root` (not just `sudo`) access.
 
-## What is the Zarf Agent?
-
-The Zarf Agent is a [Kubernetes Mutating Webhook](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#mutatingadmissionwebhook) that is installed into the cluster during `zarf init`. The Agent is responsible for modifying [Kubernetes PodSpec](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec) objects [Image](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#Container.Image) fields to point to the Zarf Registry. This allows the cluster to pull images from the Zarf Registry instead of the internet without having to modify the original image references. The Agent also modifies [Flux GitRepository](https://fluxcd.io/docs/components/source/gitrepositories/) objects to point to the local Git Server.
-
-## Why doesn't the Zarf Agent create secrets it needs in the cluster?
-
-During early discussions and [subsequent decision](https://github.com/defenseunicorns/zarf/blob/main/adr/0005-mutating-webhook.md) to use a Mutating Webhook, we decided to not have the Agent create any secrets in the cluster. This is to avoid the Agent having to have more privileges than it needs as well as to avoid collisions with Helm. The Agent today simply responds to requests to patch PodSpec and GitRepository objects.
-
-The Agent does not need to create any secrets in the cluster. Instead, during `zarf init` and `zarf package deploy`, secrets are automatically created as [Helm Postrender Hook](https://helm.sh/docs/topics/advanced/#post-rendering) for any namespaces Zarf sees. If you have resources managed by [Flux](https://fluxcd.io/) that are not in a namespace managed by Zarf, you can either create the secrets manually or include a manifest to create the namespace in your package and let Zarf create the secrets for you.
-
-## How can a Kubernetes resource be excluded from the Zarf Agent?
-
-Resources can be excluded at the namespace or resources level by adding the `zarf.dev/agent: ignore` label.
-
-## What happens to resources that exist in the cluster before `zarf init`?
-
-During the [`zarf init`](/commands/zarf_init) operation, the Zarf Agent will patch any existing namespaces with the `zarf.dev/agent: ignore` label to prevent the Agent from modifying any resources in that namespace. This is done because there is no way to guarantee the images used by pods in existing namespaces are available in the Zarf Registry.
-
-If you would like to adopt pre-existing resources into a Zarf deployment you can use the `--adopt-existing-resources` flag on [`zarf package deploy`](/commands/zarf_package_deploy/) to adopt those resources into the Helm Releases that Zarf manages (including namespaces). This will add the requisite annotations and labels to those resources and drop the `zarf.dev/agent: ignore` label from any namespaces specified by those resources.
-
-:::note
-
-Zarf will refuse to adopt the Kubernetes [initial namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces). It is recommended that you do not deploy resources into the `default` or `kube-*` namespaces with Zarf.
-
-Additionally, when adopting resources, you should ensure that the namespaces you are adopting are dedicated to Zarf, or that you go back and manually add the `zarf.dev/agent: ignore` label to any non-Zarf managed resources in those namespaces (and ensure that updates to those resources do not strip that label) otherwise you may see [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) errors.
-
-:::
-
 ## How can I improve the speed of loading large images from Docker on `zarf package create`?
 
 Due to some limitations with how Docker provides access to local image layers, `zarf package create` has to rely on `docker save` under the hood which is [very slow overall](https://github.com/defenseunicorns/zarf/issues/1214) and also takes a long time to report progress. We experimented with many ways to improve this, but for now recommend leveraging a local docker registry to speed up the process.
