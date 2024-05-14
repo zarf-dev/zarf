@@ -14,41 +14,42 @@ import (
 	"github.com/fatih/color"
 )
 
-type category int
+type Category int
 
 const (
-	categoryError   category = 1
-	categoryWarning category = 2
+	CategoryError   Category = 1
+	CategoryWarning Category = 2
 )
 
-type validatorMessage struct {
-	yqPath         string
-	description    string
-	item           string
-	packageRelPath string
-	packageName    string
-	category       category
+// ValidatorMessage is used to denote a finding
+type ValidatorMessage struct {
+	YqPath         string
+	Description    string
+	Item           string
+	PackageRelPath string
+	PackageName    string
+	Category       Category
 }
 
-func (c category) String() string {
-	if c == categoryError {
+func (c Category) String() string {
+	if c == CategoryError {
 		return message.ColorWrap("Error", color.FgRed)
-	} else if c == categoryWarning {
+	} else if c == CategoryWarning {
 		return message.ColorWrap("Warning", color.FgYellow)
 	}
 	return ""
 }
 
-func (vm validatorMessage) itemizedDescription() string {
-	if vm.item != "" {
-		return fmt.Sprintf("%s - %s", vm.description, vm.item)
+func (vm ValidatorMessage) itemizedDescription() string {
+	if vm.Item != "" {
+		return fmt.Sprintf("%s - %s", vm.Description, vm.Item)
 	}
-	return vm.description
+	return vm.Description
 }
 
 // Validator holds the warnings/errors and messaging that we get from validation
 type Validator struct {
-	findings           []validatorMessage
+	findings           []ValidatorMessage
 	jsonSchema         []byte
 	typedZarfPackage   types.ZarfPackage
 	untypedZarfPackage interface{}
@@ -63,21 +64,30 @@ func (v Validator) DisplayFormattedMessage() {
 	v.printValidationTable()
 }
 
+func DisplayFormattedMessage(findings []ValidatorMessage) {
+	v := Validator{}
+	v.findings = findings
+	if !v.hasFindings() {
+		message.Successf("0 findings for %q", v.typedZarfPackage.Metadata.Name)
+	}
+	v.printValidationTable()
+}
+
 // IsSuccess returns true if there are not any errors
 func (v Validator) IsSuccess() bool {
 	for _, finding := range v.findings {
-		if finding.category == categoryError {
+		if finding.Category == CategoryError {
 			return false
 		}
 	}
 	return true
 }
 
-func (v Validator) packageRelPathToUser(vm validatorMessage) string {
-	if helpers.IsOCIURL(vm.packageRelPath) {
-		return vm.packageRelPath
+func (v Validator) packageRelPathToUser(vm ValidatorMessage) string {
+	if helpers.IsOCIURL(vm.PackageRelPath) {
+		return vm.PackageRelPath
 	}
-	return filepath.Join(v.baseDir, vm.packageRelPath)
+	return filepath.Join(v.baseDir, vm.PackageRelPath)
 }
 
 func (v Validator) printValidationTable() {
@@ -85,9 +95,9 @@ func (v Validator) printValidationTable() {
 		return
 	}
 
-	mapOfFindingsByPath := make(map[string][]validatorMessage)
+	mapOfFindingsByPath := make(map[string][]ValidatorMessage)
 	for _, finding := range v.findings {
-		mapOfFindingsByPath[finding.packageRelPath] = append(mapOfFindingsByPath[finding.packageRelPath], finding)
+		mapOfFindingsByPath[finding.PackageRelPath] = append(mapOfFindingsByPath[finding.PackageRelPath], finding)
 	}
 
 	header := []string{"Type", "Path", "Message"}
@@ -95,11 +105,11 @@ func (v Validator) printValidationTable() {
 	for packageRelPath, findings := range mapOfFindingsByPath {
 		lintData := [][]string{}
 		for _, finding := range findings {
-			lintData = append(lintData, []string{finding.category.String(), finding.getPath(), finding.itemizedDescription()})
+			lintData = append(lintData, []string{finding.Category.String(), finding.getPath(), finding.itemizedDescription()})
 		}
-		message.Notef("Linting package %q at %s", findings[0].packageName, v.packageRelPathToUser(findings[0]))
+		message.Notef("Linting package %q at %s", findings[0].PackageName, v.packageRelPathToUser(findings[0]))
 		message.Table(header, lintData)
-		message.Info(v.getFormattedFindingCount(packageRelPath, findings[0].packageName))
+		message.Info(v.getFormattedFindingCount(packageRelPath, findings[0].PackageName))
 	}
 }
 
@@ -107,13 +117,13 @@ func (v Validator) getFormattedFindingCount(relPath string, packageName string) 
 	warningCount := 0
 	errorCount := 0
 	for _, finding := range v.findings {
-		if finding.packageRelPath != relPath {
+		if finding.PackageRelPath != relPath {
 			continue
 		}
-		if finding.category == categoryWarning {
+		if finding.Category == CategoryWarning {
 			warningCount++
 		}
-		if finding.category == categoryError {
+		if finding.Category == CategoryError {
 			errorCount++
 		}
 	}
@@ -129,23 +139,18 @@ func (v Validator) getFormattedFindingCount(relPath string, packageName string) 
 		warningCount, wordWarning, errorCount, wordError, packageName)
 }
 
-func (vm validatorMessage) getPath() string {
-	if vm.yqPath == "" {
+func (vm ValidatorMessage) getPath() string {
+	if vm.YqPath == "" {
 		return ""
 	}
-	return message.ColorWrap(vm.yqPath, color.FgCyan)
+	return message.ColorWrap(vm.YqPath, color.FgCyan)
 }
 
 func (v Validator) hasFindings() bool {
 	return len(v.findings) > 0
 }
 
-func (v *Validator) addWarning(vmessage validatorMessage) {
-	vmessage.category = categoryWarning
-	v.findings = helpers.Unique(append(v.findings, vmessage))
-}
-
-func (v *Validator) addError(vMessage validatorMessage) {
-	vMessage.category = categoryError
+func (v *Validator) addError(vMessage ValidatorMessage) {
+	vMessage.Category = CategoryError
 	v.findings = helpers.Unique(append(v.findings, vMessage))
 }

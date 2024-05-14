@@ -7,11 +7,12 @@ package creator
 import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // ComposeComponents composes components and their dependencies into a single Zarf package using an import chain.
-func ComposeComponents(pkg types.ZarfPackage, flavor string) (types.ZarfPackage, []string, error) {
+func ComposeComponents(pkg types.ZarfPackage, flavor string) (types.ZarfPackage, []lint.ValidatorMessage, error) {
 	components := []types.ZarfComponent{}
 	warnings := []string{}
 
@@ -19,6 +20,7 @@ func ComposeComponents(pkg types.ZarfPackage, flavor string) (types.ZarfPackage,
 	pkgConsts := pkg.Constants
 
 	arch := pkg.Metadata.Architecture
+	findings := []lint.ValidatorMessage{}
 
 	for i, component := range pkg.Components {
 		// filter by architecture and flavor
@@ -35,11 +37,13 @@ func ComposeComponents(pkg types.ZarfPackage, flavor string) (types.ZarfPackage,
 		if err != nil {
 			return types.ZarfPackage{}, nil, err
 		}
+		findings = chain.LintChain()
 		message.Debugf("%s", chain)
 
 		// migrate any deprecated component configurations now
 		warning := chain.Migrate(pkg.Build)
 		warnings = append(warnings, warning...)
+		message.Debug(warnings)
 
 		// get the composed component
 		composed, err := chain.Compose()
@@ -59,5 +63,5 @@ func ComposeComponents(pkg types.ZarfPackage, flavor string) (types.ZarfPackage,
 	pkg.Variables = pkgVars
 	pkg.Constants = pkgConsts
 
-	return pkg, warnings, nil
+	return pkg, findings, nil
 }

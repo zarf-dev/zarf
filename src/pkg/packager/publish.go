@@ -59,7 +59,7 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 
-		p.cfg.Pkg, p.warnings, err = sc.LoadPackageDefinition(p.layout)
+		p.cfg.Pkg, p.findings, err = sc.LoadPackageDefinition(p.layout)
 		if err != nil {
 			return err
 		}

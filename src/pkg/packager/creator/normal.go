@@ -28,6 +28,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -60,8 +61,9 @@ func NewPackageCreator(createOpts types.ZarfCreateOptions, cwd string) *PackageC
 }
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
-func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
-	pkg, warnings, err = dst.ReadZarfYAML()
+func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg types.ZarfPackage, findings []lint.ValidatorMessage, err error) {
+	//TODO
+	pkg, _, err = dst.ReadZarfYAML()
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
@@ -69,20 +71,21 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg t
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 
 	// Compose components into a single zarf.yaml file
-	pkg, composeWarnings, err := ComposeComponents(pkg, pc.createOpts.Flavor)
+	pkg, findings, err = ComposeComponents(pkg, pc.createOpts.Flavor)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
 
-	warnings = append(warnings, composeWarnings...)
+	findings = append(findings, findings...)
 
 	// After components are composed, template the active package.
-	pkg, templateWarnings, err := FillActiveTemplate(pkg, pc.createOpts.SetVariables)
+	// TODO this will take care of the fill active warnings
+	pkg, _, err = FillActiveTemplate(pkg, pc.createOpts.SetVariables)
 	if err != nil {
 		return types.ZarfPackage{}, nil, fmt.Errorf("unable to fill values in template: %w", err)
 	}
 
-	warnings = append(warnings, templateWarnings...)
+	//warnings = append(warnings, templateWarnings...)
 
 	// After templates are filled process any create extensions
 	pkg.Components, err = pc.processExtensions(pkg.Components, dst, pkg.Metadata.YOLO)
@@ -118,7 +121,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg t
 		}
 	}
 
-	return pkg, warnings, nil
+	return pkg, findings, nil
 }
 
 // Assemble assembles all of the package assets into Zarf's tmp directory layout.

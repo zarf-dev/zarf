@@ -43,12 +43,6 @@ func (pkg ZarfPackage) Validate() error {
 		return fmt.Errorf(lang.PkgValidateErrInitNoYOLO)
 	}
 
-	for _, variable := range pkg.Variables {
-		if err := variable.Validate(); err != nil {
-			return fmt.Errorf(lang.PkgValidateErrVariable, err)
-		}
-	}
-
 	for _, constant := range pkg.Constants {
 		if err := constant.Validate(); err != nil {
 			return fmt.Errorf(lang.PkgValidateErrConstant, err)
@@ -86,10 +80,7 @@ func (pkg ZarfPackage) Validate() error {
 		}
 		uniqueComponentNames[component.Name] = true
 
-		if !IsLowercaseNumberHyphenNoStartHyphen(component.Name) {
-			return fmt.Errorf(lang.PkgValidateErrComponentName, component.Name)
-		}
-
+		// TODO validate by schema
 		if !slices.Contains(supportedOS, component.Only.LocalOS) {
 			return fmt.Errorf(lang.PkgValidateErrComponentLocalOS, component.Name, component.Only.LocalOS, supportedOS)
 		}
@@ -249,11 +240,6 @@ func (as ZarfComponentActionSet) Validate() error {
 // Validate runs all validation checks on an action.
 func (action ZarfComponentAction) Validate() error {
 	// Validate SetVariable
-	for _, variable := range action.SetVariables {
-		if err := variable.Validate(); err != nil {
-			return err
-		}
-	}
 
 	if action.Wait != nil {
 		// Validate only cmd or wait, not both

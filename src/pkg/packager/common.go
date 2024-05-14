@@ -24,6 +24,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
@@ -36,6 +37,7 @@ type Packager struct {
 	cluster        *cluster.Cluster
 	layout         *layout.PackagePaths
 	warnings       []string
+	findings       []lint.ValidatorMessage
 	hpaModified    bool
 	connectStrings types.ConnectStrings
 	sbomViewFiles  []string

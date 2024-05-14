@@ -34,7 +34,7 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(p.layout)
+	p.cfg.Pkg, p.findings, err = pc.LoadPackageDefinition(p.layout)
 	if err != nil {
 		return err
 	}

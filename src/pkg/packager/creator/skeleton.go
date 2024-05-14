@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -42,8 +43,9 @@ func NewSkeletonCreator(createOpts types.ZarfCreateOptions, publishOpts types.Za
 }
 
 // LoadPackageDefinition loads and configure a zarf.yaml file when creating and publishing a skeleton package.
-func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
-	pkg, warnings, err = dst.ReadZarfYAML()
+func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg types.ZarfPackage, findings []lint.ValidatorMessage, err error) {
+	// TODO
+	pkg, _, err = dst.ReadZarfYAML()
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
@@ -51,25 +53,26 @@ func (sc *SkeletonCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg 
 	pkg.Metadata.Architecture = config.GetArch()
 
 	// Compose components into a single zarf.yaml file
-	pkg, composeWarnings, err := ComposeComponents(pkg, sc.createOpts.Flavor)
+	pkg, findings, err = ComposeComponents(pkg, sc.createOpts.Flavor)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
 
 	pkg.Metadata.Architecture = zoci.SkeletonArch
 
-	warnings = append(warnings, composeWarnings...)
+	//warnings = append(warnings, composeWarnings...)
 
 	pkg.Components, err = sc.processExtensions(pkg.Components, dst)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
 
-	for _, warning := range warnings {
-		message.Warn(warning)
-	}
+	// TODO
+	// for _, warning := range warnings {
+	// 	message.Warn(warning)
+	// }
 
-	return pkg, warnings, nil
+	return pkg, findings, nil
 }
 
 // Assemble updates all components of the loaded Zarf package with necessary modifications for package assembly.

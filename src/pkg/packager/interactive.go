@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/pterm/pterm"
 )
@@ -54,13 +55,15 @@ func (p *Packager) confirmAction(stage string) (confirm bool) {
 		}
 	}
 
-	if len(p.warnings) > 0 {
-		message.HorizontalRule()
-		message.Title("Package Warnings", "the following warnings were flagged while reading the package")
-		for _, warning := range p.warnings {
-			message.Warn(warning)
-		}
-	}
+	// if len(p.warnings) > 0 {
+	// message.HorizontalRule()
+	// message.Title("Package Warnings", "the following warnings were flagged while reading the package")
+
+	// for _, warning := range p.warnings {
+	// 	message.Warn(warning)
+	// }
+	lint.DisplayFormattedMessage(p.findings)
+	// }
 
 	message.HorizontalRule()
 
