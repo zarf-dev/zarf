@@ -98,7 +98,7 @@ func (pkg ZarfPackage) Validate() error {
 			return fmt.Errorf(lang.PkgValidateErrComponentLocalOS, component.Name, component.Only.LocalOS, supportedOS)
 		}
 
-		if component.IsRequired() {
+		if component.IsRequired(pkg.Metadata.Features) {
 			if component.Default {
 				return fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name)
 			}
