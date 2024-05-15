@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -31,6 +32,7 @@ type renderer struct {
 	*Helm
 	connectStrings types.ConnectStrings
 	namespaces     map[string]*corev1.Namespace
+	ctx            context.Context
 }
 
 func (h *Helm) newRenderer() (*renderer, error) {
@@ -40,11 +42,13 @@ func (h *Helm) newRenderer() (*renderer, error) {
 		Helm:           h,
 		connectStrings: types.ConnectStrings{},
 		namespaces:     map[string]*corev1.Namespace{},
+		ctx:            context.Background(),
 	}
 	if h.cluster == nil {
 		return rend, nil
 	}
-	namespace, err := h.cluster.GetNamespace(h.chart.Namespace)
+
+	namespace, err := h.cluster.Clientset.CoreV1().Namespaces().Get(rend.ctx, h.chart.Namespace, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return nil, fmt.Errorf("unable to check for existing namespace %q in cluster: %w", h.chart.Namespace, err)
 	}
@@ -94,13 +98,12 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	finalManifestsOutput := bytes.NewBuffer(nil)
 
 	if r.cluster != nil {
-		ctx := context.Background()
 
-		if err := r.editHelmResources(ctx, resources, finalManifestsOutput); err != nil {
+		if err := r.editHelmResources(r.ctx, resources, finalManifestsOutput); err != nil {
 			return nil, err
 		}
 
-		if err := r.adoptAndUpdateNamespaces(ctx); err != nil {
+		if err := r.adoptAndUpdateNamespaces(r.ctx); err != nil {
 			return nil, err
 		}
 	} else {
