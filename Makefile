@@ -225,6 +225,5 @@ cve-report: ## Create a CVE report for the current project (must `brew install g
 	@test -d ./build || mkdir ./build
 	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
 
-lint-go: ## Run revive to lint the go code (must `brew install revive` first)
-	revive -config hack/revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...
-	@hack/check-spdx-go.sh src >/dev/null || (echo "SPDX check for go failed, please run 'hack/check-spdx-go.sh src' to see the errors" && exit 1)
+lint-go: ## Run golang-ci-lint to lint the go code (must `brew install golang-ci-lint` first)
+	golangci-lint run

@@ -7,7 +7,6 @@ package cluster
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -24,11 +23,11 @@ import (
 // GetDeployedZarfPackages gets metadata information about packages that have been deployed to the cluster.
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
 // Returns a list of DeployedPackage structs and a list of errors.
-func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, []error) {
+func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.DeployedPackage, []error) {
 	var deployedPackages = []types.DeployedPackage{}
 	var errorList []error
 	// Get the secrets that describe the deployed packages
-	secrets, err := c.GetSecretsWithLabel(ZarfNamespaceName, ZarfPackageInfoLabel)
+	secrets, err := c.GetSecretsWithLabel(ctx, ZarfNamespaceName, ZarfPackageInfoLabel)
 	if err != nil {
 		return deployedPackages, append(errorList, err)
 	}
@@ -53,9 +52,9 @@ func (c *Cluster) GetDeployedZarfPackages() ([]types.DeployedPackage, []error) {
 
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
-func (c *Cluster) GetDeployedPackage(packageName string) (deployedPackage *types.DeployedPackage, err error) {
+func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string) (deployedPackage *types.DeployedPackage, err error) {
 	// Get the secret that describes the deployed package
-	secret, err := c.GetSecret(ZarfNamespaceName, config.ZarfPackagePrefix+packageName)
+	secret, err := c.GetSecret(ctx, ZarfNamespaceName, config.ZarfPackagePrefix+packageName)
 	if err != nil {
 		return deployedPackage, err
 	}
@@ -64,7 +63,7 @@ func (c *Cluster) GetDeployedPackage(packageName string) (deployedPackage *types
 }
 
 // StripZarfLabelsAndSecretsFromNamespaces removes metadata and secrets from existing namespaces no longer manged by Zarf.
-func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
+func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 	spinner := message.NewProgressSpinner("Removing zarf metadata & secrets from existing namespaces not managed by Zarf")
 	defer spinner.Stop()
 
@@ -73,7 +72,7 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 		LabelSelector: k8s.ZarfManagedByLabel + "=zarf",
 	}
 
-	if namespaces, err := c.GetNamespaces(); err != nil {
+	if namespaces, err := c.GetNamespaces(ctx); err != nil {
 		spinner.Errorf(err, "Unable to get k8s namespaces")
 	} else {
 		for _, namespace := range namespaces.Items {
@@ -81,7 +80,7 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 				spinner.Updatef("Removing Zarf Agent label for namespace %s", namespace.Name)
 				delete(namespace.Labels, k8s.AgentLabel)
 				namespaceCopy := namespace
-				if _, err = c.UpdateNamespace(&namespaceCopy); err != nil {
+				if _, err = c.UpdateNamespace(ctx, &namespaceCopy); err != nil {
 					// This is not a hard failure, but we should log it
 					spinner.Errorf(err, "Unable to update the namespace labels for %s", namespace.Name)
 				}
@@ -90,7 +89,7 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces() {
 			spinner.Updatef("Removing Zarf secrets for namespace %s", namespace.Name)
 			err := c.Clientset.CoreV1().
 				Secrets(namespace.Name).
-				DeleteCollection(context.TODO(), deleteOptions, listOptions)
+				DeleteCollection(ctx, deleteOptions, listOptions)
 			if err != nil {
 				spinner.Errorf(err, "Unable to delete secrets from namespace %s", namespace.Name)
 			}
@@ -126,9 +125,8 @@ func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage,
 }
 
 // RecordPackageDeploymentAndWait records the deployment of a package to the cluster and waits for any webhooks to complete.
-func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int, component types.ZarfComponent, skipWebhooks bool) (deployedPackage *types.DeployedPackage, err error) {
-
-	deployedPackage, err = c.RecordPackageDeployment(pkg, components, connectStrings, generation)
+func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int, component types.ZarfComponent, skipWebhooks bool) (deployedPackage *types.DeployedPackage, err error) {
+	deployedPackage, err = c.RecordPackageDeployment(ctx, pkg, components, connectStrings, generation)
 	if err != nil {
 		return nil, err
 	}
@@ -136,41 +134,46 @@ func (c *Cluster) RecordPackageDeploymentAndWait(pkg types.ZarfPackage, componen
 	packageNeedsWait, waitSeconds, hookName := c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
 	// If no webhooks need to complete, we can return immediately.
 	if !packageNeedsWait {
-		return nil, nil
+		return deployedPackage, nil
 	}
 
-	// Timebox the amount of time we wait for a webhook to complete before erroring
 	waitDuration := types.DefaultWebhookWaitDuration
 	if waitSeconds > 0 {
 		waitDuration = time.Duration(waitSeconds) * time.Second
 	}
-	timeout := time.After(waitDuration)
 
-	// We need to wait for this package to finish having webhooks run, create a spinner and keep checking until it's ready
-	spinner := message.NewProgressSpinner("Waiting for webhook '%s' to complete for component '%s'", hookName, component.Name)
+	waitCtx, cancel := context.WithTimeout(ctx, waitDuration)
+	defer cancel()
+
+	spinner := message.NewProgressSpinner("Waiting for webhook %q to complete for component %q", hookName, component.Name)
 	defer spinner.Stop()
-	for packageNeedsWait {
+
+	timer := time.NewTimer(0)
+	defer timer.Stop()
+
+	for {
 		select {
-		// On timeout, abort and return an error.
-		case <-timeout:
-			return nil, errors.New("timed out waiting for package deployment to complete")
-		default:
-			// Wait for 1 second before checking the secret again
-			time.Sleep(1 * time.Second)
-			deployedPackage, err = c.GetDeployedPackage(deployedPackage.Name)
+		case <-waitCtx.Done():
+			return nil, fmt.Errorf("error waiting for webhook %q to complete for component %q: %w", hookName, component.Name, waitCtx.Err())
+		case <-timer.C:
+			deployedPackage, err = c.GetDeployedPackage(ctx, deployedPackage.Name)
 			if err != nil {
 				return nil, err
 			}
+
 			packageNeedsWait, _, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
+			if !packageNeedsWait {
+				spinner.Success()
+				return deployedPackage, nil
+			}
+
+			timer.Reset(1 * time.Second)
 		}
 	}
-
-	spinner.Success()
-	return deployedPackage, nil
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int) (deployedPackage *types.DeployedPackage, err error) {
+func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int) (deployedPackage *types.DeployedPackage, err error) {
 	packageName := pkg.Metadata.Name
 
 	// Generate a secret that describes the package that is being deployed
@@ -180,7 +183,7 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 
 	// Attempt to load information about webhooks for the package
 	var componentWebhooks map[string]map[string]types.Webhook
-	existingPackageSecret, err := c.GetDeployedPackage(packageName)
+	existingPackageSecret, err := c.GetDeployedPackage(ctx, packageName)
 	if err != nil {
 		message.Debugf("Unable to fetch existing secret for package '%s': %s", packageName, err.Error())
 	}
@@ -206,7 +209,7 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 	// Update the package secret
 	deployedPackageSecret.Data = map[string][]byte{"data": packageData}
 	var updatedSecret *corev1.Secret
-	if updatedSecret, err = c.CreateOrUpdateSecret(deployedPackageSecret); err != nil {
+	if updatedSecret, err = c.CreateOrUpdateSecret(ctx, deployedPackageSecret); err != nil {
 		return nil, fmt.Errorf("failed to record package deployment in secret '%s'", deployedPackageSecret.Name)
 	}
 
@@ -218,8 +221,8 @@ func (c *Cluster) RecordPackageDeployment(pkg types.ZarfPackage, components []ty
 }
 
 // EnableRegHPAScaleDown enables the HPA scale down for the Zarf Registry.
-func (c *Cluster) EnableRegHPAScaleDown() error {
-	hpa, err := c.GetHPA(ZarfNamespaceName, "zarf-docker-registry")
+func (c *Cluster) EnableRegHPAScaleDown(ctx context.Context) error {
+	hpa, err := c.GetHPA(ctx, ZarfNamespaceName, "zarf-docker-registry")
 	if err != nil {
 		return err
 	}
@@ -229,7 +232,7 @@ func (c *Cluster) EnableRegHPAScaleDown() error {
 	hpa.Spec.Behavior.ScaleDown.SelectPolicy = &policy
 
 	// Save the HPA changes.
-	if _, err = c.UpdateHPA(hpa); err != nil {
+	if _, err = c.UpdateHPA(ctx, hpa); err != nil {
 		return err
 	}
 
@@ -237,8 +240,8 @@ func (c *Cluster) EnableRegHPAScaleDown() error {
 }
 
 // DisableRegHPAScaleDown disables the HPA scale down for the Zarf Registry.
-func (c *Cluster) DisableRegHPAScaleDown() error {
-	hpa, err := c.GetHPA(ZarfNamespaceName, "zarf-docker-registry")
+func (c *Cluster) DisableRegHPAScaleDown(ctx context.Context) error {
+	hpa, err := c.GetHPA(ctx, ZarfNamespaceName, "zarf-docker-registry")
 	if err != nil {
 		return err
 	}
@@ -248,7 +251,7 @@ func (c *Cluster) DisableRegHPAScaleDown() error {
 	hpa.Spec.Behavior.ScaleDown.SelectPolicy = &policy
 
 	// Save the HPA changes.
-	if _, err = c.UpdateHPA(hpa); err != nil {
+	if _, err = c.UpdateHPA(ctx, hpa); err != nil {
 		return err
 	}
 
@@ -256,8 +259,8 @@ func (c *Cluster) DisableRegHPAScaleDown() error {
 }
 
 // GetInstalledChartsForComponent returns any installed Helm Charts for the provided package component.
-func (c *Cluster) GetInstalledChartsForComponent(packageName string, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
-	deployedPackage, err := c.GetDeployedPackage(packageName)
+func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+	deployedPackage, err := c.GetDeployedPackage(ctx, packageName)
 	if err != nil {
 		return installedCharts, err
 	}

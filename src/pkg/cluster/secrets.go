@@ -5,6 +5,7 @@
 package cluster
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"reflect"
@@ -74,16 +75,16 @@ func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo typ
 }
 
 // UpdateZarfManagedImageSecrets updates all Zarf-managed image secrets in all namespaces based on state
-func (c *Cluster) UpdateZarfManagedImageSecrets(state *types.ZarfState) {
+func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *types.ZarfState) {
 	spinner := message.NewProgressSpinner("Updating existing Zarf-managed image secrets")
 	defer spinner.Stop()
 
-	if namespaces, err := c.GetNamespaces(); err != nil {
+	if namespaces, err := c.GetNamespaces(ctx); err != nil {
 		spinner.Errorf(err, "Unable to get k8s namespaces")
 	} else {
 		// Update all image pull secrets
 		for _, namespace := range namespaces.Items {
-			currentRegistrySecret, err := c.GetSecret(namespace.Name, config.ZarfImagePullSecretName)
+			currentRegistrySecret, err := c.GetSecret(ctx, namespace.Name, config.ZarfImagePullSecretName)
 			if err != nil {
 				continue
 			}
@@ -97,7 +98,7 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(state *types.ZarfState) {
 				newRegistrySecret := c.GenerateRegistryPullCreds(namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
 				if !reflect.DeepEqual(currentRegistrySecret.Data, newRegistrySecret.Data) {
 					// Create or update the zarf registry secret
-					if _, err := c.CreateOrUpdateSecret(newRegistrySecret); err != nil {
+					if _, err := c.CreateOrUpdateSecret(ctx, newRegistrySecret); err != nil {
 						message.WarnErrf(err, "Problem creating registry secret for the %s namespace", namespace.Name)
 					}
 				}
@@ -108,16 +109,16 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(state *types.ZarfState) {
 }
 
 // UpdateZarfManagedGitSecrets updates all Zarf-managed git secrets in all namespaces based on state
-func (c *Cluster) UpdateZarfManagedGitSecrets(state *types.ZarfState) {
+func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.ZarfState) {
 	spinner := message.NewProgressSpinner("Updating existing Zarf-managed git secrets")
 	defer spinner.Stop()
 
-	if namespaces, err := c.GetNamespaces(); err != nil {
+	if namespaces, err := c.GetNamespaces(ctx); err != nil {
 		spinner.Errorf(err, "Unable to get k8s namespaces")
 	} else {
 		// Update all git pull secrets
 		for _, namespace := range namespaces.Items {
-			currentGitSecret, err := c.GetSecret(namespace.Name, config.ZarfGitServerSecretName)
+			currentGitSecret, err := c.GetSecret(ctx, namespace.Name, config.ZarfGitServerSecretName)
 			if err != nil {
 				continue
 			}
@@ -131,7 +132,7 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(state *types.ZarfState) {
 				newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, state.GitServer)
 				if !reflect.DeepEqual(currentGitSecret.StringData, newGitSecret.StringData) {
 					// Create or update the zarf git secret
-					if _, err := c.CreateOrUpdateSecret(newGitSecret); err != nil {
+					if _, err := c.CreateOrUpdateSecret(ctx, newGitSecret); err != nil {
 						message.WarnErrf(err, "Problem creating git server secret for the %s namespace", namespace.Name)
 					}
 				}

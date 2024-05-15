@@ -5,6 +5,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -45,35 +46,29 @@ func New(logger Log) (*K8s, error) {
 	}, nil
 }
 
-// NewWithWait is a convenience function that creates a new K8s client and waits for the cluster to be healthy.
-func NewWithWait(logger Log, timeout time.Duration) (*K8s, error) {
-	k, err := New(logger)
-	if err != nil {
-		return nil, err
-	}
-
-	return k, k.WaitForHealthyCluster(timeout)
-}
-
 // WaitForHealthyCluster checks for an available K8s cluster every second until timeout.
-func (k *K8s) WaitForHealthyCluster(timeout time.Duration) error {
-	var err error
-	var nodes *v1.NodeList
-	var pods *v1.PodList
-	expired := time.After(timeout)
+func (k *K8s) WaitForHealthyCluster(ctx context.Context) error {
+	var (
+		err   error
+		nodes *v1.NodeList
+		pods  *v1.PodList
+	)
+
+	const waitDuration = 1 * time.Second
+
+	timer := time.NewTimer(0)
+	defer timer.Stop()
 
 	for {
 		select {
-		// on timeout abort
-		case <-expired:
-			return fmt.Errorf("timed out waiting for cluster to report healthy")
-
-		// after delay, try running
-		default:
+		case <-ctx.Done():
+			return fmt.Errorf("error waiting for cluster to report healthy: %w", ctx.Err())
+		case <-timer.C:
 			if k.RestConfig == nil || k.Clientset == nil {
 				config, clientset, err := connect()
 				if err != nil {
 					k.Log("Cluster connection not available yet: %w", err)
+					timer.Reset(waitDuration)
 					continue
 				}
 
@@ -82,31 +77,30 @@ func (k *K8s) WaitForHealthyCluster(timeout time.Duration) error {
 			}
 
 			// Make sure there is at least one running Node
-			nodes, err = k.GetNodes()
+			nodes, err = k.GetNodes(ctx)
 			if err != nil || len(nodes.Items) < 1 {
-				k.Log("No nodes reporting healthy yet: %#v\n", err)
+				k.Log("No nodes reporting healthy yet: %v\n", err)
+				timer.Reset(waitDuration)
 				continue
 			}
 
 			// Get the cluster pod list
-			if pods, err = k.GetAllPods(); err != nil {
+			if pods, err = k.GetAllPods(ctx); err != nil {
 				k.Log("Could not get the pod list: %w", err)
+				timer.Reset(waitDuration)
 				continue
 			}
 
 			// Check that at least one pod is in the 'succeeded' or 'running' state
 			for _, pod := range pods.Items {
-				// If a valid pod is found, return no error
 				if pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodRunning {
 					return nil
 				}
 			}
 
 			k.Log("No pods reported 'succeeded' or 'running' state yet.")
+			timer.Reset(waitDuration)
 		}
-
-		// delay check 1 seconds
-		time.Sleep(1 * time.Second)
 	}
 }
 

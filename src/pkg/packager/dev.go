@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"runtime"
@@ -19,7 +20,7 @@ import (
 )
 
 // DevDeploy creates + deploys a package in one shot
-func (p *Packager) DevDeploy() error {
+func (p *Packager) DevDeploy(ctx context.Context) error {
 	config.CommonOptions.Confirm = true
 	p.cfg.CreateOpts.SkipSBOM = !p.cfg.CreateOpts.NoYOLO
 
@@ -81,11 +82,11 @@ func (p *Packager) DevDeploy() error {
 	} else {
 		p.hpaModified = false
 		// Reset registry HPA scale down whether an error occurs or not
-		defer p.resetRegistryHPA()
+		defer p.resetRegistryHPA(ctx)
 	}
 
 	// Get a list of all the components we are deploying and actually deploy them
-	deployedComponents, err := p.deployComponents()
+	deployedComponents, err := p.deployComponents(ctx)
 	if err != nil {
 		return err
 	}

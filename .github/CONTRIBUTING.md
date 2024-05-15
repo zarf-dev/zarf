@@ -23,11 +23,8 @@ We use [pre-commit](https://pre-commit.com/) to manage our pre-commit hooks. Thi
 # install hooks
 pre-commit install
 
-# install goimports
-go install golang.org/x/tools/cmd/goimports@latest
-
-# install revive
-go install github.com/mgechev/revive@latest
+# install golang-ci-lint
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 ```
 
 Now every time you commit, the hooks will run and format your code, linting can be called via `make lint-go`.
