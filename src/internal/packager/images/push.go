@@ -5,6 +5,7 @@
 package images
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -20,7 +21,7 @@ import (
 )
 
 // Push pushes images to a registry.
-func Push(cfg PushConfig) error {
+func Push(ctx context.Context, cfg PushConfig) error {
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
@@ -57,7 +58,7 @@ func Push(cfg PushConfig) error {
 	if err := helpers.Retry(func() error {
 		c, _ := cluster.NewCluster()
 		if c != nil {
-			registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(cfg.RegInfo)
+			registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegInfo)
 			if err != nil {
 				return err
 			}

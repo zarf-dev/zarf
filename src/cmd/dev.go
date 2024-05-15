@@ -40,7 +40,7 @@ var devDeployCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Short: lang.CmdDevDeployShort,
 	Long:  lang.CmdDevDeployLong,
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 
 		v := common.GetViper()
@@ -50,12 +50,10 @@ var devDeployCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		// Create the package
-		if err := pkgClient.DevDeploy(); err != nil {
+		if err := pkgClient.DevDeploy(cmd.Context()); err != nil {
 			message.Fatalf(err, lang.CmdDevDeployErr, err.Error())
 		}
 	},
@@ -209,19 +207,15 @@ var devFindImagesCmd = &cobra.Command{
 	Run: func(_ *cobra.Command, args []string) {
 		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 
-		// Ensure uppercase keys from viper
 		v := common.GetViper()
 
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
-
-		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		// Find all the images the package might need
 		if _, err := pkgClient.FindImages(); err != nil {
 			message.Fatalf(err, lang.CmdDevFindImagesErr, err.Error())
 		}
@@ -292,8 +286,14 @@ func init() {
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
 
-	devFindImagesCmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
-	devFindImagesCmd.Flags().MarkHidden("set")
+	err := devFindImagesCmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
+	err = devFindImagesCmd.Flags().MarkHidden("set")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
 	devFindImagesCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
@@ -341,7 +341,16 @@ func bindDevGenerateFlags(_ *viper.Viper) {
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "", "Output directory for the generated zarf.yaml")
 	generateFlags.StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
-	devGenerateCmd.MarkFlagRequired("url")
-	devGenerateCmd.MarkFlagRequired("version")
-	devGenerateCmd.MarkFlagRequired("output-directory")
+	err := devGenerateCmd.MarkFlagRequired("url")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
+	err = devGenerateCmd.MarkFlagRequired("version")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
+	err = devGenerateCmd.MarkFlagRequired("output-directory")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
 }

@@ -16,7 +16,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/invopop/jsonschema"
@@ -194,15 +193,17 @@ var createReadOnlyGiteaUser = &cobra.Command{
 	Use:   "create-read-only-gitea-user",
 	Short: lang.CmdInternalCreateReadOnlyGiteaUserShort,
 	Long:  lang.CmdInternalCreateReadOnlyGiteaUserLong,
-	Run: func(_ *cobra.Command, _ []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
+		ctx := cmd.Context()
+
 		// Load the state so we can get the credentials for the admin git user
-		state, err := cluster.NewClusterOrDie().LoadZarfState()
+		state, err := common.NewClusterOrDie(ctx).LoadZarfState(ctx)
 		if err != nil {
 			message.WarnErr(err, lang.ErrLoadState)
 		}
 
 		// Create the non-admin user
-		if err = git.New(state.GitServer).CreateReadOnlyUser(); err != nil {
+		if err = git.New(state.GitServer).CreateReadOnlyUser(ctx); err != nil {
 			message.WarnErr(err, lang.CmdInternalCreateReadOnlyGiteaUserErr)
 		}
 	},
@@ -212,24 +213,26 @@ var createPackageRegistryToken = &cobra.Command{
 	Use:   "create-artifact-registry-token",
 	Short: lang.CmdInternalArtifactRegistryGiteaTokenShort,
 	Long:  lang.CmdInternalArtifactRegistryGiteaTokenLong,
-	Run: func(_ *cobra.Command, _ []string) {
-		// Load the state so we can get the credentials for the admin git user
-		c := cluster.NewClusterOrDie()
-		state, err := c.LoadZarfState()
+	Run: func(cmd *cobra.Command, _ []string) {
+		ctx := cmd.Context()
+		c := common.NewClusterOrDie(ctx)
+		state, err := c.LoadZarfState(ctx)
 		if err != nil {
 			message.WarnErr(err, lang.ErrLoadState)
 		}
 
 		// If we are setup to use an internal artifact server, create the artifact registry token
 		if state.ArtifactServer.InternalServer {
-			token, err := git.New(state.GitServer).CreatePackageRegistryToken()
+			token, err := git.New(state.GitServer).CreatePackageRegistryToken(ctx)
 			if err != nil {
 				message.WarnErr(err, lang.CmdInternalArtifactRegistryGiteaTokenErr)
 			}
 
 			state.ArtifactServer.PushToken = token.Sha1
 
-			c.SaveZarfState(state)
+			if err := c.SaveZarfState(ctx, state); err != nil {
+				message.Fatal(err, err.Error())
+			}
 		}
 	},
 }
@@ -238,10 +241,11 @@ var updateGiteaPVC = &cobra.Command{
 	Use:   "update-gitea-pvc",
 	Short: lang.CmdInternalUpdateGiteaPVCShort,
 	Long:  lang.CmdInternalUpdateGiteaPVCLong,
-	Run: func(_ *cobra.Command, _ []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
+		ctx := cmd.Context()
 
 		// There is a possibility that the pvc does not yet exist and Gitea helm chart should create it
-		helmShouldCreate, err := git.UpdateGiteaPVC(rollback)
+		helmShouldCreate, err := git.UpdateGiteaPVC(ctx, rollback)
 		if err != nil {
 			message.WarnErr(err, lang.CmdInternalUpdateGiteaPVCErr)
 		}
@@ -294,6 +298,9 @@ func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {
 	if cmd.PersistentFlags().Lookup(flagDummy) == nil {
 		var dummyStr string
 		cmd.PersistentFlags().StringVar(&dummyStr, flagDummy, "", "")
-		cmd.PersistentFlags().MarkHidden(flagDummy)
+		err := cmd.PersistentFlags().MarkHidden(flagDummy)
+		if err != nil {
+			message.Fatal(err, err.Error())
+		}
 	}
 }

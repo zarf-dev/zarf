@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -36,6 +37,10 @@ var rootCmd = &cobra.Command{
 		if cmd.Parent() == nil {
 			config.SkipLogFile = true
 		}
+
+		// Set the global context for the root command and all child commands
+		ctx := context.Background()
+		cmd.SetContext(ctx)
 
 		common.SetupCLI()
 	},

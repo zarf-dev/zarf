@@ -35,7 +35,7 @@ var initCmd = &cobra.Command{
 	Short:   lang.CmdInitShort,
 	Long:    lang.CmdInitLong,
 	Example: lang.CmdInitExample,
-	Run: func(_ *cobra.Command, _ []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		zarfLogo := message.GetLogo()
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 
@@ -58,17 +58,16 @@ var initCmd = &cobra.Command{
 			message.Fatal(err, err.Error())
 		}
 
-		// Ensure uppercase keys from viper
 		v := common.GetViper()
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		// Configure the packager
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
-		// Deploy everything
-		err = pkgClient.Deploy()
+		ctx := cmd.Context()
+
+		err = pkgClient.Deploy(ctx)
 		if err != nil {
 			message.Fatal(err, err.Error())
 		}

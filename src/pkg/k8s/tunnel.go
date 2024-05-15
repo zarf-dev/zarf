@@ -7,6 +7,7 @@ package k8s
 // Forked from https://github.com/gruntwork-io/terratest/blob/v0.38.8/modules/k8s/tunnel.go
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -79,24 +80,36 @@ func (tunnel *Tunnel) Wrap(function func() error) error {
 }
 
 // Connect will establish a tunnel to the specified target.
-func (tunnel *Tunnel) Connect() (string, error) {
-	url, err := tunnel.establish()
+func (tunnel *Tunnel) Connect(ctx context.Context) (string, error) {
+	url, err := tunnel.establish(ctx)
 
 	// Try to establish the tunnel up to 3 times.
 	if err != nil {
 		tunnel.attempt++
+
 		// If we have exceeded the number of attempts, exit with an error.
 		if tunnel.attempt > 3 {
 			return "", fmt.Errorf("unable to establish tunnel after 3 attempts: %w", err)
 		}
+
 		// Otherwise, retry the connection but delay increasing intervals between attempts.
 		delay := tunnel.attempt * 10
 		tunnel.kube.Log("%s", err.Error())
 		tunnel.kube.Log("Delay creating tunnel, waiting %d seconds...", delay)
-		time.Sleep(time.Duration(delay) * time.Second)
-		url, err = tunnel.Connect()
-		if err != nil {
-			return "", err
+
+		timer := time.NewTimer(0)
+		defer timer.Stop()
+
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-timer.C:
+			url, err = tunnel.Connect(ctx)
+			if err != nil {
+				return "", err
+			}
+
+			timer.Reset(time.Duration(delay) * time.Second)
 		}
 	}
 
@@ -129,7 +142,7 @@ func (tunnel *Tunnel) Close() {
 }
 
 // establish opens a tunnel to a kubernetes resource, as specified by the provided tunnel struct.
-func (tunnel *Tunnel) establish() (string, error) {
+func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 	var err error
 
 	// Track this locally as we may need to retry if the tunnel fails.
@@ -163,7 +176,7 @@ func (tunnel *Tunnel) establish() (string, error) {
 	tunnel.kube.Log(message)
 
 	// Find the pod to port forward to
-	podName, err := tunnel.getAttachablePodForResource()
+	podName, err := tunnel.getAttachablePodForResource(ctx)
 	if err != nil {
 		return "", fmt.Errorf("unable to find pod attached to given resource: %w", err)
 	}
@@ -222,29 +235,33 @@ func (tunnel *Tunnel) establish() (string, error) {
 
 // getAttachablePodForResource will find a pod that can be port forwarded to the provided resource type and return
 // the name.
-func (tunnel *Tunnel) getAttachablePodForResource() (string, error) {
+func (tunnel *Tunnel) getAttachablePodForResource(ctx context.Context) (string, error) {
 	switch tunnel.resourceType {
 	case PodResource:
 		return tunnel.resourceName, nil
 	case SvcResource:
-		return tunnel.getAttachablePodForService()
+		return tunnel.getAttachablePodForService(ctx)
 	default:
 		return "", fmt.Errorf("unknown resource type: %s", tunnel.resourceType)
 	}
 }
 
 // getAttachablePodForService will find an active pod associated with the Service and return the pod name.
-func (tunnel *Tunnel) getAttachablePodForService() (string, error) {
-	service, err := tunnel.kube.GetService(tunnel.namespace, tunnel.resourceName)
+func (tunnel *Tunnel) getAttachablePodForService(ctx context.Context) (string, error) {
+	service, err := tunnel.kube.GetService(ctx, tunnel.namespace, tunnel.resourceName)
 	if err != nil {
 		return "", fmt.Errorf("unable to find the service: %w", err)
 	}
 	selectorLabelsOfPods := MakeLabels(service.Spec.Selector)
 
-	servicePods := tunnel.kube.WaitForPodsAndContainers(PodLookup{
-		Namespace: tunnel.namespace,
-		Selector:  selectorLabelsOfPods,
-	}, nil)
+	servicePods := tunnel.kube.WaitForPodsAndContainers(
+		ctx,
+		PodLookup{
+			Namespace: tunnel.namespace,
+			Selector:  selectorLabelsOfPods,
+		},
+		nil,
+	)
 
 	if len(servicePods) < 1 {
 		return "", fmt.Errorf("no pods found for service %s", tunnel.resourceName)

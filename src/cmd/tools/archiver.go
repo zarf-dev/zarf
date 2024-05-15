@@ -93,5 +93,8 @@ func init() {
 	archiverDecompressCmd.Flags().BoolVar(&unarchiveAll, "decompress-all", false, "Decompress all tarballs in the archive")
 	archiverDecompressCmd.Flags().BoolVar(&unarchiveAll, "unarchive-all", false, "Unarchive all tarballs in the archive")
 	archiverDecompressCmd.MarkFlagsMutuallyExclusive("decompress-all", "unarchive-all")
-	archiverDecompressCmd.Flags().MarkHidden("decompress-all")
+	err := archiverDecompressCmd.Flags().MarkHidden("decompress-all")
+	if err != nil {
+		message.Fatal(err, err.Error())
+	}
 }

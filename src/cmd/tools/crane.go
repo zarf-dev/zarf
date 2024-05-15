@@ -124,13 +124,14 @@ func zarfCraneCatalog(cranePlatformOptions []crane.Option) *cobra.Command {
 			return err
 		}
 
-		// Load Zarf state
-		zarfState, err := c.LoadZarfState()
+		ctx := cmd.Context()
+
+		zarfState, err := c.LoadZarfState(ctx)
 		if err != nil {
 			return err
 		}
 
-		registryEndpoint, tunnel, err := c.ConnectToZarfRegistryEndpoint(zarfState.RegistryInfo)
+		registryEndpoint, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, zarfState.RegistryInfo)
 		if err != nil {
 			return err
 		}
@@ -173,8 +174,9 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 
 		message.Note(lang.CmdToolsRegistryZarfState)
 
-		// Load the state (if able)
-		zarfState, err := c.LoadZarfState()
+		ctx := cmd.Context()
+
+		zarfState, err := c.LoadZarfState(ctx)
 		if err != nil {
 			message.Warnf(lang.CmdToolsCraneConnectedButBadStateErr, err.Error())
 			return originalListFn(cmd, args)
@@ -185,7 +187,7 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 			return originalListFn(cmd, args)
 		}
 
-		_, tunnel, err := c.ConnectToZarfRegistryEndpoint(zarfState.RegistryInfo)
+		_, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, zarfState.RegistryInfo)
 		if err != nil {
 			return err
 		}
@@ -211,27 +213,27 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 	return wrappedCommand
 }
 
-func pruneImages(_ *cobra.Command, _ []string) error {
+func pruneImages(cmd *cobra.Command, _ []string) error {
 	// Try to connect to a Zarf initialized cluster
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return err
 	}
 
-	// Load the state
-	zarfState, err := c.LoadZarfState()
+	ctx := cmd.Context()
+
+	zarfState, err := c.LoadZarfState(ctx)
 	if err != nil {
 		return err
 	}
 
-	// Load the currently deployed packages
-	zarfPackages, errs := c.GetDeployedZarfPackages()
+	zarfPackages, errs := c.GetDeployedZarfPackages(ctx)
 	if len(errs) > 0 {
 		return lang.ErrUnableToGetPackages
 	}
 
 	// Set up a tunnel to the registry if applicable
-	registryEndpoint, tunnel, err := c.ConnectToZarfRegistryEndpoint(zarfState.RegistryInfo)
+	registryEndpoint, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, zarfState.RegistryInfo)
 	if err != nil {
 		return err
 	}
