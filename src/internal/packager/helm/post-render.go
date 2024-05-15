@@ -14,7 +14,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -49,9 +49,9 @@ func (h *Helm) newRenderer() (*renderer, error) {
 		return nil, fmt.Errorf("unable to check for existing namespace %q in cluster: %w", h.chart.Namespace, err)
 	}
 	if errors.IsNotFound(err) {
-		rend.namespaces[h.chart.Namespace] = k8s.NewZarfManagedNamespace(h.chart.Namespace)
+		rend.namespaces[h.chart.Namespace] = cluster.NewZarfManagedNamespace(h.chart.Namespace)
 	} else if h.cfg.DeployOpts.AdoptExistingResources {
-		namespace.Labels = k8s.AdoptZarfManagedLabels(namespace.Labels)
+		namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
 		rend.namespaces[h.chart.Namespace] = namespace
 	}
 
@@ -187,7 +187,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 				message.WarnErrf(err, "could not parse namespace %s", rawData.GetName())
 			} else {
 				message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
-				namespace.Labels = k8s.AdoptZarfManagedLabels(namespace.Labels)
+				namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
 				// Add it to the stack
 				r.namespaces[namespace.Name] = namespace
 			}
@@ -214,7 +214,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 		namespace := rawData.GetNamespace()
 		if _, exists := r.namespaces[namespace]; !exists && namespace != "" {
 			// if this is the first time seeing this ns, we need to track that to create it as well
-			r.namespaces[namespace] = k8s.NewZarfManagedNamespace(namespace)
+			r.namespaces[namespace] = cluster.NewZarfManagedNamespace(namespace)
 		}
 
 		// If we have been asked to adopt existing resources, process those now as well
