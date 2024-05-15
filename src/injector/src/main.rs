@@ -7,16 +7,28 @@ use std::fs::File;
 use std::io;
 use std::io::Read;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
+use axum::{
+    body::Body,
+    extract::Path,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::get,
+    Router,
+};
 use flate2::read::GzDecoder;
 use glob::glob;
 use hex::ToHex;
-use rouille::{accept, router, Request, Response};
+use regex_lite::Regex;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use tar::Archive;
+<<<<<<< HEAD
 
+=======
+use tokio_util::io::ReaderStream;
+>>>>>>> c0b58b2b (bug: fix rust injector)
 const OCI_MIME_TYPE: &str = "application/vnd.oci.image.manifest.v1+json";
 
 // Reads the binary contents of a file
@@ -93,33 +105,44 @@ fn unpack(sha_sum: &String) {
 /// index.json - the image index
 /// blobs/sha256/<sha256sum> - the image layers
 /// oci-layout - the OCI image layout
-fn start_seed_registry() {
-    let root = PathBuf::from("/zarf-seed");
-    println!("Starting seed registry at {} on port 5000", root.display());
-    rouille::start_server("0.0.0.0:5000", move |request| {
-        rouille::log(request, io::stdout(), || {
-            router!(request,
-                (GET) (/v2/) => {
-                    // returns empty json w/ Docker-Distribution-Api-Version header set
-                    Response::text("{}")
-                        .with_unique_header("Content-Type", "application/json; charset=utf-8")
-                        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
-                        .with_additional_header("X-Content-Type-Options", "nosniff")
-                },
-
-                _ => {
-                    handle_request(&root, &request)
-                }
-            )
-        })
-    });
+fn start_seed_registry() -> Router {
+    // The name and reference parameter identify the image
+    // The reference may include a tag or digest.
+    Router::new()
+        .route("/v2/*path", get(handler))
+        .route(
+            "/v2/",
+            get(|| async {
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .header("Content-Type", "application/json; charset=utf-8")
+                    .header("Docker-Distribution-Api-Version", "registry/2.0")
+                    .header("X-Content-Type-Options", "nosniff")
+                    .body(Body::empty())
+                    .unwrap()
+            }),
+        )
+        .route(
+            "/v2",
+            get(|| async {
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .header("Content-Type", "application/json; charset=utf-8")
+                    .header("Docker-Distribution-Api-Version", "registry/2.0")
+                    .header("X-Content-Type-Options", "nosniff")
+                    .body(Body::empty())
+                    .unwrap()
+            }),
+        )
 }
 
-fn handle_request(root: &Path, request: &Request) -> Response {
-    let url = request.url();
-    let url_segments: Vec<_> = url.split("/").collect();
-    let url_seg_len = url_segments.len();
+async fn handler(Path(path): Path<String>) -> Response {
+    println!("request: {}", path);
+    let path = &path;
+    let manifest = Regex::new("(.+)/manifests/(.+)").unwrap();
+    let blob = Regex::new(".+/([^/]+)").unwrap();
 
+<<<<<<< HEAD
     if url_seg_len >= 4 && url_segments[1] == "v2" {
         let tag_index = url_seg_len - 1;
         let object_index = url_seg_len - 2;
@@ -151,25 +174,42 @@ fn handle_request(root: &Path, request: &Request) -> Response {
             let digest = url_segments[tag_index].to_owned();
             return handle_get_digest(&root, &digest);
         }
+=======
+    if manifest.is_match(path) {
+        let caps = manifest.captures(path).unwrap();
+        let name = caps.get(1).unwrap().as_str().to_string();
+        let reference = caps.get(2).unwrap().as_str().to_string();
+        handle_get_manifest(name, reference).await
+    } else if blob.is_match(&path) {
+        let caps = blob.captures(path).unwrap();
+        let tag = caps.get(1).unwrap().as_str().to_string();
+        handle_get_digest(tag).await
+    } else {
+        Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(format!("Not Found"))
+            .unwrap()
+            .into_response()
+>>>>>>> c0b58b2b (bug: fix rust injector)
     }
-
-    Response::empty_404()
 }
 
 /// Handles the GET request for the manifest (only returns a OCI manifest regardless of Accept header)
-fn handle_get_manifest(root: &Path, name: &String, tag: &String) -> Response {
-    let index = fs::read_to_string(root.join("index.json")).expect("read index.json");
+async fn handle_get_manifest(name: String, reference: String) -> Response {
+    let index = fs::read_to_string(PathBuf::from("/zarf-seed").join("index.json"))
+        .expect("index.json is read");
     let json: Value = serde_json::from_str(&index).expect("unable to parse index.json");
-    let mut sha_manifest = "".to_owned();
 
-    if tag.starts_with("sha256:") {
-        sha_manifest = tag.strip_prefix("sha256:").unwrap().to_owned();
+    let mut sha_manifest: String = "".to_owned();
+
+    if reference.starts_with("sha256:") {
+        sha_manifest = reference.strip_prefix("sha256:").unwrap().to_owned();
     } else {
         for manifest in json["manifests"].as_array().unwrap() {
             let image_base_name = manifest["annotations"]["org.opencontainers.image.base.name"]
                 .as_str()
                 .unwrap();
-            let requested_reference = name.to_owned() + ":" + tag;
+            let requested_reference = name.to_owned() + ":" + &reference;
             if requested_reference == image_base_name {
                 sha_manifest = manifest["digest"]
                     .as_str()
@@ -180,6 +220,7 @@ fn handle_get_manifest(root: &Path, name: &String, tag: &String) -> Response {
             }
         }
     }
+<<<<<<< HEAD
 
     if sha_manifest != "" {
         let file = File::open(&root.join("blobs").join("sha256").join(&sha_manifest)).unwrap();
@@ -190,36 +231,91 @@ fn handle_get_manifest(root: &Path, name: &String, tag: &String) -> Response {
             )
             .with_additional_header("Etag", format!("sha256:{}", sha_manifest))
             .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
+=======
+    if sha_manifest.is_empty() {
+        Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(format!("Not Found"))
+            .unwrap()
+            .into_response()
+>>>>>>> c0b58b2b (bug: fix rust injector)
     } else {
-        Response::empty_404()
+        let file_path = PathBuf::from("/zarf-seed")
+            .to_owned()
+            .join("blobs")
+            .join("sha256")
+            .join(&sha_manifest);
+        match tokio::fs::File::open(&file_path).await {
+            Ok(file) => {
+                let metadata = match file.metadata().await {
+                    Ok(meta) => meta,
+                    Err(_) => {
+                        return Response::builder()
+                            .status(StatusCode::INTERNAL_SERVER_ERROR)
+                            .body("Failed to get file metadata".into())
+                            .unwrap()
+                    }
+                };
+                let stream = ReaderStream::new(file);
+                Response::builder()
+                    .status(StatusCode::OK)
+                    .header("Content-Type", OCI_MIME_TYPE)
+                    .header("Content-Length", metadata.len())
+                    .header(
+                        "Docker-Content-Digest",
+                        format!("sha256:{}", sha_manifest.clone()),
+                    )
+                    .header("Etag", format!("sha256:{}", sha_manifest))
+                    .header("Docker-Distribution-Api-Version", "registry/2.0")
+                    .body(Body::from_stream(stream))
+                    .unwrap()
+            }
+            Err(err) => Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(format!("File not found: {}", err))
+                .unwrap()
+                .into_response(),
+        }
     }
 }
 
 /// Handles the GET request for a blob
-fn handle_get_digest(root: &Path, digest: &String) -> Response {
-    let blob_root = root.join("blobs").join("sha256");
-    let path = blob_root.join(digest.strip_prefix("sha256:").unwrap());
+async fn handle_get_digest(tag: String) -> Response {
+    let blob_root = PathBuf::from("/zarf-seed").join("blobs").join("sha256");
+    let path = blob_root.join(tag.strip_prefix("sha256:").unwrap());
 
-    let file = File::open(&path).unwrap();
-    Response::from_file("application/octet-stream", file)
-        .with_additional_header("Docker-Content-Digest", digest.to_owned())
-        .with_additional_header("Etag", digest.to_owned())
-        .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
-        .with_additional_header("Cache-Control", "max-age=31536000")
+    match tokio::fs::File::open(&path).await {
+        Ok(file) => {
+            let stream = ReaderStream::new(file);
+            Response::builder()
+                .status(StatusCode::OK)
+                .header("Content-Type", "application/octet-stream")
+                .header("Docker-Content-Digest", tag.to_owned())
+                .header("Etag", tag.to_owned())
+                .header("Docker-Distribution-Api-Version", "registry/2.0")
+                .header("Cache-Control", "max-age=31536000")
+                .body(Body::from_stream(stream))
+                .unwrap()
+        }
+        Err(err) => Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(format!("File not found: {}", err))
+            .unwrap()
+            .into_response(),
+    }
 }
 
-fn main() {
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
     let args: Vec<String> = env::args().collect();
 
-    match args.len() {
-        2 => {
-            let payload_sha = &args[1];
-            unpack(payload_sha);
+    println!("unpacking: {}", args[1]);
+    let payload_sha = &args[1];
 
-            start_seed_registry();
-        }
-        _ => {
-            println!("Usage: {} <sha256sum>", args[0]);
-        }
-    }
+    unpack(payload_sha);
+
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:5000").await.unwrap();
+    println!("listening on {}", listener.local_addr().unwrap());
+    axum::serve(listener, start_seed_registry()).await.unwrap();
+    println!("Usage: {} <sha256sum>", args[1]);
 }

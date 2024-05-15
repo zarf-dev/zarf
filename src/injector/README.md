@@ -1,3 +1,4 @@
+
 # zarf-injector
 
 > If using VSCode w/ the official Rust extension, make sure to open a new window in the `src/injector` directory to make `rust-analyzer` happy.
@@ -37,6 +38,38 @@ Install [Rust](https://rustup.rs/) and `build-essential`.
 make build-injector-linux list-sizes
 ```
 
+## Building on Debian-based Systems
+
+Install [Rust](https://rustup.rs/) and `build-essential`.
+
+```bash
+make build-injector-linux list-sizes
+```
+
+## Building on Apple Silicon 
+
+* Install Cross
+* Install Docker & have it running
+* Rust must be installed via Rustup (Check `which rustc` if you're unsure)
+
+```
+cargo install cross --git https://github.com/cross-rs/cross
+```
+
+Whichever arch. of `musl` used, add to toolchain
+```
+rustup toolchain install --force-non-host stable-x86_64-unknown-linux-musl
+```
+```
+cross build --target x86_64-unknown-linux-musl --release
+
+cross build --target aarch64-unknown-linux-musl --release
+```
+
+This will build into `target/*--unknown-linux-musl/release`
+
+
+
 ## Checking Binary Size
 
 Due to the ConfigMap size limit (1MiB for binary data), we need to make sure the binary is small enough to fit.
@@ -54,3 +87,56 @@ Size of Zarf injector binaries:
 840k    target/x86_64-unknown-linux-musl/release/zarf-injector
 713k    target/aarch64-unknown-linux-musl/release/zarf-injector
 ```
+
+```sh
+$ make build-with-docker
+...
+
+Size of Zarf injector binaries:
+
+840k    target/x86_64-unknown-linux-musl/release/zarf-injector
+713k    target/aarch64-unknown-linux-musl/release/zarf-injector
+```
+
+## Testing your injector
+
+Build your injector by following the steps above, or running one of the following:
+```
+make build-injector-linux
+
+## OR 
+## works on apple silicon 
+make cross-injector-linux 
+
+```
+
+Point the [zarf-registry/zarf.yaml](../../packages/zarf-registry/zarf.yaml) to
+the locally built injector image.
+
+```
+    files:
+      # Rust Injector Binary
+      - source: ../../src/injector/target/x86_64-unknown-linux-musl/release/zarf-injector
+        target: "###ZARF_TEMP###/zarf-injector"
+        <!-- shasum: "###ZARF_PKG_TMPL_INJECTOR_AMD64_SHASUM###" -->
+        executable: true
+
+    files:
+      # Rust Injector Binary
+      - source: ../../src/injector/target/aarch64-unknown-linux-musl/release/zarf-injector
+        target: "###ZARF_TEMP###/zarf-injector"
+        <!-- shasum: "###ZARF_PKG_TMPL_INJECTOR_ARM64_SHASUM###" -->
+        executable: true
+```
+
+In Zarf Root Directory, run:
+```
+zarf tools clear-cache
+make clean
+make && make init-package
+```
+
+If you are running on an Apple Silicon, add the `ARCH` flag:  `make init-package ARCH=arm64`
+
+This builds all artifacts within the `/build` directory. Running `zarf init` would look like:
+`.build/zarf-mac-apple init --components git-server -l trace`
