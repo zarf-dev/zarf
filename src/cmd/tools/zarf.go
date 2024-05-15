@@ -19,7 +19,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
@@ -51,8 +50,9 @@ var getCredsCmd = &cobra.Command{
 	Example: lang.CmdToolsGetCredsExample,
 	Aliases: []string{"gc"},
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
-		state, err := cluster.NewClusterOrDie().LoadZarfState()
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
+		state, err := common.NewClusterOrDie(ctx).LoadZarfState(ctx)
 		if err != nil || state.Distro == "" {
 			// If no distro the zarf secret did not load properly
 			message.Fatalf(nil, lang.ErrLoadState)
@@ -85,8 +85,9 @@ var updateCredsCmd = &cobra.Command{
 			}
 		}
 
-		c := cluster.NewClusterOrDie()
-		oldState, err := c.LoadZarfState()
+		ctx := cmd.Context()
+		c := common.NewClusterOrDie(ctx)
+		oldState, err := c.LoadZarfState(ctx)
 		if err != nil || oldState.Distro == "" {
 			// If no distro the zarf secret did not load properly
 			message.Fatalf(nil, lang.ErrLoadState)
@@ -114,16 +115,16 @@ var updateCredsCmd = &cobra.Command{
 		if confirm {
 			// Update registry and git pull secrets
 			if slices.Contains(args, message.RegistryKey) {
-				c.UpdateZarfManagedImageSecrets(newState)
+				c.UpdateZarfManagedImageSecrets(ctx, newState)
 			}
 			if slices.Contains(args, message.GitKey) {
-				c.UpdateZarfManagedGitSecrets(newState)
+				c.UpdateZarfManagedGitSecrets(ctx, newState)
 			}
 
 			// Update artifact token (if internal)
 			if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.InternalServer {
 				g := git.New(oldState.GitServer)
-				tokenResponse, err := g.CreatePackageRegistryToken()
+				tokenResponse, err := g.CreatePackageRegistryToken(ctx)
 				if err != nil {
 					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableCreateToken, err.Error())
@@ -133,7 +134,7 @@ var updateCredsCmd = &cobra.Command{
 			}
 
 			// Save the final Zarf State
-			err = c.SaveZarfState(newState)
+			err = c.SaveZarfState(ctx, newState)
 			if err != nil {
 				message.Fatalf(err, lang.ErrSaveState)
 			}
@@ -150,14 +151,14 @@ var updateCredsCmd = &cobra.Command{
 			}
 			if slices.Contains(args, message.GitKey) && newState.GitServer.InternalServer {
 				g := git.New(newState.GitServer)
-				err = g.UpdateZarfGiteaUsers(oldState)
+				err = g.UpdateZarfGiteaUsers(ctx, oldState)
 				if err != nil {
 					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateGit, err.Error())
 				}
 			}
 			if slices.Contains(args, message.AgentKey) {
-				err = h.UpdateZarfAgentValues()
+				err = h.UpdateZarfAgentValues(ctx)
 				if err != nil {
 					// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateAgent, err.Error())

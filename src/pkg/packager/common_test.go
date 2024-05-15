@@ -4,6 +4,7 @@
 package packager
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -132,7 +133,7 @@ func TestValidatePackageArchitecture(t *testing.T) {
 				return true, nodeList, nil
 			})
 
-			err := p.validatePackageArchitecture()
+			err := p.validatePackageArchitecture(context.TODO())
 
 			require.Equal(t, testCase.expectedError, err)
 		})

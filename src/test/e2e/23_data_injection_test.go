@@ -21,6 +21,8 @@ func TestDataInjection(t *testing.T) {
 	t.Log("E2E: Data injection")
 	e2e.SetupWithCluster(t)
 
+	ctx := context.Background()
+
 	path := fmt.Sprintf("build/zarf-package-kiwix-%s-3.5.0.tar", e2e.Arch)
 
 	tmpdir := t.TempDir()
@@ -28,7 +30,7 @@ func TestDataInjection(t *testing.T) {
 
 	// Repeat the injection action 3 times to ensure the data injection is idempotent and doesn't fail to perform an upgrade
 	for i := 0; i < 3; i++ {
-		runDataInjection(t, path)
+		runDataInjection(ctx, t, path)
 	}
 
 	// Verify the file and injection marker were created
@@ -42,7 +44,7 @@ func TestDataInjection(t *testing.T) {
 	// need target to equal svc that we are trying to connect to call checkForZarfConnectLabel
 	c, err := cluster.NewCluster()
 	require.NoError(t, err)
-	tunnel, err := c.Connect("kiwix")
+	tunnel, err := c.Connect(ctx, "kiwix")
 	require.NoError(t, err)
 	defer tunnel.Close()
 
@@ -64,9 +66,9 @@ func TestDataInjection(t *testing.T) {
 	require.FileExists(t, filepath.Join(sbomPath, "kiwix", "zarf-component-kiwix-serve.json"), "The data-injection component should have an SBOM json")
 }
 
-func runDataInjection(t *testing.T, path string) {
+func runDataInjection(ctx context.Context, t *testing.T, path string) {
 	// Limit this deploy to 5 minutes
-	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
 	// Deploy the data injection example

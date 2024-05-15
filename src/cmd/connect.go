@@ -32,7 +32,7 @@ var (
 		Aliases: []string{"c"},
 		Short:   lang.CmdConnectShort,
 		Long:    lang.CmdConnectLong,
-		Run: func(_ *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			var target string
 			if len(args) > 0 {
 				target = args[0]
@@ -43,12 +43,14 @@ var (
 				spinner.Fatalf(err, lang.CmdConnectErrCluster, err.Error())
 			}
 
+			ctx := cmd.Context()
+
 			var tunnel *k8s.Tunnel
 			if connectResourceName != "" {
 				zt := cluster.NewTunnelInfo(connectNamespace, connectResourceType, connectResourceName, "", connectLocalPort, connectRemotePort)
-				tunnel, err = c.ConnectTunnelInfo(zt)
+				tunnel, err = c.ConnectTunnelInfo(ctx, zt)
 			} else {
-				tunnel, err = c.Connect(target)
+				tunnel, err = c.Connect(ctx, target)
 			}
 			if err != nil {
 				spinner.Fatalf(err, lang.CmdConnectErrService, err.Error())
@@ -90,8 +92,11 @@ var (
 		Use:     "list",
 		Aliases: []string{"l"},
 		Short:   lang.CmdConnectListShort,
-		Run: func(_ *cobra.Command, _ []string) {
-			cluster.NewClusterOrDie().PrintConnectTable()
+		Run: func(cmd *cobra.Command, _ []string) {
+			ctx := cmd.Context()
+			if err := common.NewClusterOrDie(ctx).PrintConnectTable(ctx); err != nil {
+				message.Fatal(err, err.Error())
+			}
 		},
 	}
 )

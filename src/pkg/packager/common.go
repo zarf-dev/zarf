@@ -5,11 +5,11 @@
 package packager
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"slices"
 
@@ -159,17 +159,17 @@ func (p *Packager) GetVariableConfig() *variables.VariableConfig {
 }
 
 // connectToCluster attempts to connect to a cluster if a connection is not already established
-func (p *Packager) connectToCluster(timeout time.Duration) (err error) {
+func (p *Packager) connectToCluster(ctx context.Context) (err error) {
 	if p.isConnectedToCluster() {
 		return nil
 	}
 
-	p.cluster, err = cluster.NewClusterWithWait(timeout)
+	p.cluster, err = cluster.NewClusterWithWait(ctx)
 	if err != nil {
 		return err
 	}
 
-	return p.attemptClusterChecks()
+	return p.attemptClusterChecks(ctx)
 }
 
 // isConnectedToCluster returns whether the current packager instance is connected to a cluster
@@ -189,19 +189,19 @@ func (p *Packager) hasImages() bool {
 
 // attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
 // NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
-func (p *Packager) attemptClusterChecks() (err error) {
+func (p *Packager) attemptClusterChecks(ctx context.Context) (err error) {
 
 	spinner := message.NewProgressSpinner("Gathering additional cluster information (if available)")
 	defer spinner.Stop()
 
 	// Check if the package has already been deployed and get its generation
-	if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
+	if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(ctx, p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
 		// If this package has been deployed before, increment the package generation within the secret
 		p.generation = existingDeployedPackage.Generation + 1
 	}
 
 	// Check the clusters architecture matches the package spec
-	if err := p.validatePackageArchitecture(); err != nil {
+	if err := p.validatePackageArchitecture(ctx); err != nil {
 		if errors.Is(err, lang.ErrUnableToCheckArch) {
 			message.Warnf("Unable to validate package architecture: %s", err.Error())
 		} else {
@@ -210,7 +210,7 @@ func (p *Packager) attemptClusterChecks() (err error) {
 	}
 
 	// Check for any breaking changes between the initialized Zarf version and this CLI
-	if existingInitPackage, _ := p.cluster.GetDeployedPackage("init"); existingInitPackage != nil {
+	if existingInitPackage, _ := p.cluster.GetDeployedPackage(ctx, "init"); existingInitPackage != nil {
 		// Use the build version instead of the metadata since this will support older Zarf versions
 		migrations.PrintBreakingChanges(existingInitPackage.Data.Build.Version)
 	}
@@ -221,13 +221,13 @@ func (p *Packager) attemptClusterChecks() (err error) {
 }
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
-func (p *Packager) validatePackageArchitecture() error {
+func (p *Packager) validatePackageArchitecture(ctx context.Context) error {
 	// Ignore this check if we don't have a cluster connection, or the package contains no images
 	if !p.isConnectedToCluster() || !p.hasImages() {
 		return nil
 	}
 
-	clusterArchitectures, err := p.cluster.GetArchitectures()
+	clusterArchitectures, err := p.cluster.GetArchitectures(ctx)
 	if err != nil {
 		return lang.ErrUnableToCheckArch
 	}

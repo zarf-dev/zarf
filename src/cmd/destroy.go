@@ -10,10 +10,10 @@ import (
 	"regexp"
 
 	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 
@@ -28,16 +28,14 @@ var destroyCmd = &cobra.Command{
 	Aliases: []string{"d"},
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
-	Run: func(_ *cobra.Command, _ []string) {
-		c, err := cluster.NewClusterWithWait(cluster.DefaultTimeout)
-		if err != nil {
-			message.Fatalf(err, lang.ErrNoClusterConnection)
-		}
+	Run: func(cmd *cobra.Command, _ []string) {
+		ctx := cmd.Context()
+		c := common.NewClusterOrDie(ctx)
 
 		// NOTE: If 'zarf init' failed to deploy the k3s component (or if we're looking at the wrong kubeconfig)
 		//       there will be no zarf-state to load and the struct will be empty. In these cases, if we can find
 		//       the scripts to remove k3s, we will still try to remove a locally installed k3s cluster
-		state, err := c.LoadZarfState()
+		state, err := c.LoadZarfState(ctx)
 		if err != nil {
 			message.WarnErr(err, lang.ErrLoadState)
 		}
@@ -74,10 +72,12 @@ var destroyCmd = &cobra.Command{
 			helm.Destroy(removeComponents)
 
 			// If Zarf didn't deploy the cluster, only delete the ZarfNamespace
-			c.DeleteZarfNamespace()
+			if err := c.DeleteZarfNamespace(ctx); err != nil {
+				message.Fatal(err, err.Error())
+			}
 
 			// Remove zarf agent labels and secrets from namespaces Zarf doesn't manage
-			c.StripZarfLabelsAndSecretsFromNamespaces()
+			c.StripZarfLabelsAndSecretsFromNamespaces(ctx)
 		}
 	},
 }

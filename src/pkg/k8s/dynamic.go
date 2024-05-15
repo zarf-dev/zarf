@@ -15,17 +15,17 @@ import (
 )
 
 // AddLabelsAndAnnotations adds the provided labels and annotations to the specified K8s resource
-func (k *K8s) AddLabelsAndAnnotations(resourceNamespace string, resourceName string, groupKind schema.GroupKind, labels map[string]string, annotations map[string]string) error {
-	return k.updateLabelsAndAnnotations(resourceNamespace, resourceName, groupKind, labels, annotations, false)
+func (k *K8s) AddLabelsAndAnnotations(ctx context.Context, resourceNamespace, resourceName string, groupKind schema.GroupKind, labels, annotations map[string]string) error {
+	return k.updateLabelsAndAnnotations(ctx, resourceNamespace, resourceName, groupKind, labels, annotations, false)
 }
 
 // RemoveLabelsAndAnnotations removes the provided labels and annotations to the specified K8s resource
-func (k *K8s) RemoveLabelsAndAnnotations(resourceNamespace string, resourceName string, groupKind schema.GroupKind, labels map[string]string, annotations map[string]string) error {
-	return k.updateLabelsAndAnnotations(resourceNamespace, resourceName, groupKind, labels, annotations, true)
+func (k *K8s) RemoveLabelsAndAnnotations(ctx context.Context, resourceNamespace, resourceName string, groupKind schema.GroupKind, labels, annotations map[string]string) error {
+	return k.updateLabelsAndAnnotations(ctx, resourceNamespace, resourceName, groupKind, labels, annotations, true)
 }
 
 // updateLabelsAndAnnotations updates the provided labels and annotations to the specified K8s resource
-func (k *K8s) updateLabelsAndAnnotations(resourceNamespace string, resourceName string, groupKind schema.GroupKind, labels map[string]string, annotations map[string]string, isRemove bool) error {
+func (k *K8s) updateLabelsAndAnnotations(ctx context.Context, resourceNamespace, resourceName string, groupKind schema.GroupKind, labels, annotations map[string]string, isRemove bool) error {
 	dynamicClient := dynamic.NewForConfigOrDie(k.RestConfig)
 
 	discoveryClient := discovery.NewDiscoveryClientForConfigOrDie(k.RestConfig)
@@ -41,7 +41,7 @@ func (k *K8s) updateLabelsAndAnnotations(resourceNamespace string, resourceName 
 		return err
 	}
 
-	deployedResource, err := dynamicClient.Resource(mapping.Resource).Namespace(resourceNamespace).Get(context.TODO(), resourceName, metav1.GetOptions{})
+	deployedResource, err := dynamicClient.Resource(mapping.Resource).Namespace(resourceNamespace).Get(ctx, resourceName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -78,6 +78,6 @@ func (k *K8s) updateLabelsAndAnnotations(resourceNamespace string, resourceName 
 
 	deployedResource.SetAnnotations(deployedAnnotations)
 
-	_, err = dynamicClient.Resource(mapping.Resource).Namespace(resourceNamespace).Update(context.TODO(), deployedResource, metav1.UpdateOptions{})
+	_, err = dynamicClient.Resource(mapping.Resource).Namespace(resourceNamespace).Update(ctx, deployedResource, metav1.UpdateOptions{})
 	return err
 }
