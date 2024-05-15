@@ -30,20 +30,18 @@ func GetZarfStateFromAgentPod() (state *types.ZarfState, err error) {
 }
 
 // GetServiceInfoFromRegistryAddress gets the service info for a registry address if it is a NodePort
-func GetServiceInfoFromRegistryAddress(stateRegistryAddress string) (string, error) {
-	registryAddress := stateRegistryAddress
+func GetServiceInfoFromRegistryAddress(ctx context.Context, stateRegistryAddress string) (string, error) {
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return "", fmt.Errorf("unable to get service information for the registry %q: %w", stateRegistryAddress, err)
 	}
 
 	// If this is an internal service then we need to look it up and
-	registryServiceInfo, err := c.ServiceInfoFromNodePortURL(context.TODO(), stateRegistryAddress)
+	registryServiceInfo, err := c.ServiceInfoFromNodePortURL(ctx, stateRegistryAddress)
 	if err != nil {
 		message.Debugf("registry appears to not be a nodeport service, using original address %q", stateRegistryAddress)
-	} else {
-		registryAddress = fmt.Sprintf("%s:%d", registryServiceInfo.ClusterIP, registryServiceInfo.Port)
+		return stateRegistryAddress, nil
 	}
 
-	return registryAddress, nil
+	return fmt.Sprintf("%s:%d", registryServiceInfo.ClusterIP, registryServiceInfo.Port), nil
 }

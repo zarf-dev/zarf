@@ -5,6 +5,7 @@
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -62,8 +63,10 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
 
+	ctx := context.Background()
+
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
-	registryAddress, err := state.GetServiceInfoFromRegistryAddress(zarfState.RegistryInfo.Address)
+	registryAddress, err := state.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo.Address)
 	if err != nil {
 		return nil, err
 	}

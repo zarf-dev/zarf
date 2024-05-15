@@ -124,7 +124,7 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	ctx := context.Background()
 	zarfState, err := common.NewClusterOrDie(ctx).LoadZarfState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
-	registryAddress, err := state.GetServiceInfoFromRegistryAddress(zarfState.RegistryInfo.Address)
+	registryAddress, err := state.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo.Address)
 	require.NoError(t, err)
 	// Deploy the flux example and verify that it works
 	path := fmt.Sprintf("build/zarf-package-podinfo-flux-%s.tar.zst", e2e.Arch)
