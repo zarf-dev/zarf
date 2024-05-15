@@ -30,24 +30,16 @@ repos:
         language: script
       - id: goimports
         name: goimports
-        entry: goimports
-        files: .go$
-        args:
-          - -l
-          - -w
-        language: system
+        entry: golangci-lint run --enable-only goimports --fix
+        types: [go]
+        language: golang
         pass_filenames: true
       - id: lint
-        name: revive go lint
-        entry: revive
-        args:
-          - "-config"
-          - "hack/revive.toml"
-          - "-exclude"
-          - "src/cmd/viper.go"
-        files: .go$
-        language: system
-        pass_filenames: true
+        name: golangci-lint go lint
+        entry: golangci-lint run
+        types: [go]
+        language: golang
+        pass_filenames: false
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.14.0
     hooks:
