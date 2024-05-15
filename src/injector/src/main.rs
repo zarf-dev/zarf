@@ -24,11 +24,7 @@ use regex_lite::Regex;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use tar::Archive;
-<<<<<<< HEAD
-
-=======
 use tokio_util::io::ReaderStream;
->>>>>>> c0b58b2b (bug: fix rust injector)
 const OCI_MIME_TYPE: &str = "application/vnd.oci.image.manifest.v1+json";
 
 // Reads the binary contents of a file
@@ -142,39 +138,6 @@ async fn handler(Path(path): Path<String>) -> Response {
     let manifest = Regex::new("(.+)/manifests/(.+)").unwrap();
     let blob = Regex::new(".+/([^/]+)").unwrap();
 
-<<<<<<< HEAD
-    if url_seg_len >= 4 && url_segments[1] == "v2" {
-        let tag_index = url_seg_len - 1;
-        let object_index = url_seg_len - 2;
-
-        let object_type = url_segments[object_index];
-
-        if object_type == "manifests" {
-            let tag_or_digest = url_segments[tag_index].to_owned();
-
-            let namespaced_name = url_segments[2..object_index].join("/");
-
-            // this route handles (GET) (/v2/**/manifests/<tag>)
-            if request.method() == "GET" {
-                return handle_get_manifest(&root, &namespaced_name, &tag_or_digest);
-            // this route handles (HEAD) (/v2/**/manifests/<tag>)
-            } else if request.method() == "HEAD" {
-                // a normal HEAD response has an empty body, but due to rouille not allowing for an override
-                // on Content-Length, we respond the same as a GET
-                return accept!(
-                    request,
-                    OCI_MIME_TYPE => {
-                        handle_get_manifest(&root, &namespaced_name, &tag_or_digest)
-                    },
-                    "*/*" => Response::empty_406()
-                );
-            }
-        // this route handles (GET) (/v2/**/blobs/<digest>)
-        } else if object_type == "blobs" && request.method() == "GET" {
-            let digest = url_segments[tag_index].to_owned();
-            return handle_get_digest(&root, &digest);
-        }
-=======
     if manifest.is_match(path) {
         let caps = manifest.captures(path).unwrap();
         let name = caps.get(1).unwrap().as_str().to_string();
@@ -190,7 +153,6 @@ async fn handler(Path(path): Path<String>) -> Response {
             .body(format!("Not Found"))
             .unwrap()
             .into_response()
->>>>>>> c0b58b2b (bug: fix rust injector)
     }
 }
 
@@ -220,25 +182,12 @@ async fn handle_get_manifest(name: String, reference: String) -> Response {
             }
         }
     }
-<<<<<<< HEAD
-
-    if sha_manifest != "" {
-        let file = File::open(&root.join("blobs").join("sha256").join(&sha_manifest)).unwrap();
-        Response::from_file(OCI_MIME_TYPE, file)
-            .with_additional_header(
-                "Docker-Content-Digest",
-                format!("sha256:{}", sha_manifest.to_owned()),
-            )
-            .with_additional_header("Etag", format!("sha256:{}", sha_manifest))
-            .with_additional_header("Docker-Distribution-Api-Version", "registry/2.0")
-=======
     if sha_manifest.is_empty() {
         Response::builder()
             .status(StatusCode::NOT_FOUND)
             .body(format!("Not Found"))
             .unwrap()
             .into_response()
->>>>>>> c0b58b2b (bug: fix rust injector)
     } else {
         let file_path = PathBuf::from("/zarf-seed")
             .to_owned()
