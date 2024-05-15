@@ -174,7 +174,7 @@ build-examples: ## Build all of the example packages
 	@test -s ./build/zarf-package-component-webhooks-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/component-webhooks -o build -a $(ARCH) --confirm
 
 build-injector-linux: ## Build the Zarf injector for AMD64 and ARM64
-	docker run --rm --user "$(id -u)":"$(id -g)" -v $$PWD/src/injector:/usr/src/zarf-injector -w /usr/src/zarf-injector rust:1.71.0-bookworm make build-injector-linux
+	docker run --rm --user "$(id -u)":"$(id -g)" -v $$PWD/src/injector:/usr/src/zarf-injector -w /usr/src/zarf-injector rust:1.71.0-bookworm make build-injector-linux list-sizes
 
 ## NOTE: Requires an existing cluster or the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
@@ -227,6 +227,5 @@ cve-report: ## Create a CVE report for the current project (must `brew install g
 	@test -d ./build || mkdir ./build
 	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
 
-lint-go: ## Run revive to lint the go code (must `brew install revive` first)
-	revive -config hack/revive.toml -exclude src/cmd/viper.go -formatter stylish ./src/...
-	@hack/check-spdx-go.sh src >/dev/null || (echo "SPDX check for go failed, please run 'hack/check-spdx-go.sh src' to see the errors" && exit 1)
+lint-go: ## Run golang-ci-lint to lint the go code (must `brew install golang-ci-lint` first)
+	golangci-lint run

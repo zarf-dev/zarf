@@ -5,6 +5,7 @@
 package state
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -37,7 +38,7 @@ func GetServiceInfoFromRegistryAddress(stateRegistryAddress string) (string, err
 	}
 
 	// If this is an internal service then we need to look it up and
-	registryServiceInfo, err := c.ServiceInfoFromNodePortURL(stateRegistryAddress)
+	registryServiceInfo, err := c.ServiceInfoFromNodePortURL(context.TODO(), stateRegistryAddress)
 	if err != nil {
 		message.Debugf("registry appears to not be a nodeport service, using original address %q", stateRegistryAddress)
 	} else {

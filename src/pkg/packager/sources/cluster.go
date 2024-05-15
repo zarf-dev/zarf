@@ -5,10 +5,10 @@
 package sources
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers"
-	"github.com/defenseunicorns/zarf/src/internal/packager/validate"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
@@ -23,10 +23,14 @@ var (
 
 // NewClusterSource creates a new cluster source.
 func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
-	if !validate.IsLowercaseNumberHyphenNoStartHyphen(pkgOpts.PackageSource) {
+	if !types.IsLowercaseNumberHyphenNoStartHyphen(pkgOpts.PackageSource) {
 		return nil, fmt.Errorf("invalid package name %q", pkgOpts.PackageSource)
 	}
-	cluster, err := cluster.NewClusterWithWait(cluster.DefaultTimeout)
+
+	ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
+	defer cancel()
+
+	cluster, err := cluster.NewClusterWithWait(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +59,9 @@ func (s *ClusterSource) Collect(_ string) (string, error) {
 
 // LoadPackageMetadata loads package metadata from a cluster.
 func (s *ClusterSource) LoadPackageMetadata(dst *layout.PackagePaths, _ bool, _ bool) (types.ZarfPackage, []string, error) {
-	dpkg, err := s.GetDeployedPackage(s.PackageSource)
+	ctx := context.Background()
+
+	dpkg, err := s.GetDeployedPackage(ctx, s.PackageSource)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}

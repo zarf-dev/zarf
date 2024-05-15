@@ -5,10 +5,8 @@
 package config
 
 import (
-	"crypto/tls"
 	"embed"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -16,9 +14,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/crane"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
 // Zarf Global Configuration Constants.
@@ -119,43 +114,6 @@ func GetStartTime() int64 {
 // GetDataInjectionMarker returns the data injection marker based on the current CLI start time.
 func GetDataInjectionMarker() string {
 	return fmt.Sprintf(dataInjectionMarker, operationStartTime)
-}
-
-// GetCraneOptions returns a crane option object with the correct options & platform.
-func GetCraneOptions(insecure bool, archs ...string) []crane.Option {
-	var options []crane.Option
-
-	// Handle insecure registry option
-	if insecure {
-		roundTripper := http.DefaultTransport.(*http.Transport).Clone()
-		roundTripper.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true,
-		}
-		options = append(options, crane.Insecure, crane.WithTransport(roundTripper))
-	}
-
-	if archs != nil {
-		options = append(options, crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: GetArch(archs...)}))
-	}
-
-	options = append(options,
-		crane.WithUserAgent("zarf"),
-		crane.WithNoClobber(true),
-		// TODO: (@WSTARR) this is set to limit pushes to registry pods and reduce the likelihood that crane will get stuck.
-		// We should investigate this further in the future to dig into more of what is happening (see https://github.com/defenseunicorns/zarf/issues/1568)
-		crane.WithJobs(1),
-	)
-
-	return options
-}
-
-// GetCraneAuthOption returns a crane auth option with the provided credentials.
-func GetCraneAuthOption(username string, secret string) crane.Option {
-	return crane.WithAuth(
-		authn.FromConfig(authn.AuthConfig{
-			Username: username,
-			Password: secret,
-		}))
 }
 
 // GetAbsCachePath gets the absolute cache path for images and git repos.

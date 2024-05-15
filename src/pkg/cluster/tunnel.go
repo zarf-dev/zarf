@@ -5,6 +5,7 @@
 package cluster
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -54,8 +55,8 @@ func NewTunnelInfo(namespace, resourceType, resourceName, urlSuffix string, loca
 }
 
 // PrintConnectTable will print a table of all Zarf connect matches found in the cluster.
-func (c *Cluster) PrintConnectTable() error {
-	list, err := c.GetServicesByLabelExists(v1.NamespaceAll, config.ZarfConnectLabelName)
+func (c *Cluster) PrintConnectTable(ctx context.Context) error {
+	list, err := c.GetServicesByLabelExists(ctx, v1.NamespaceAll, config.ZarfConnectLabelName)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,7 @@ func (c *Cluster) PrintConnectTable() error {
 }
 
 // Connect will establish a tunnel to the specified target.
-func (c *Cluster) Connect(target string) (*k8s.Tunnel, error) {
+func (c *Cluster) Connect(ctx context.Context, target string) (*k8s.Tunnel, error) {
 	var err error
 	zt := TunnelInfo{
 		namespace:    ZarfNamespaceName,
@@ -107,7 +108,7 @@ func (c *Cluster) Connect(target string) (*k8s.Tunnel, error) {
 
 	default:
 		if target != "" {
-			if zt, err = c.checkForZarfConnectLabel(target); err != nil {
+			if zt, err = c.checkForZarfConnectLabel(ctx, target); err != nil {
 				return nil, fmt.Errorf("problem looking for a zarf connect label in the cluster: %s", err.Error())
 			}
 		}
@@ -120,17 +121,17 @@ func (c *Cluster) Connect(target string) (*k8s.Tunnel, error) {
 		}
 	}
 
-	return c.ConnectTunnelInfo(zt)
+	return c.ConnectTunnelInfo(ctx, zt)
 }
 
 // ConnectTunnelInfo connects to the cluster with the provided TunnelInfo
-func (c *Cluster) ConnectTunnelInfo(zt TunnelInfo) (*k8s.Tunnel, error) {
+func (c *Cluster) ConnectTunnelInfo(ctx context.Context, zt TunnelInfo) (*k8s.Tunnel, error) {
 	tunnel, err := c.NewTunnel(zt.namespace, zt.resourceType, zt.resourceName, zt.urlSuffix, zt.localPort, zt.remotePort)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = tunnel.Connect()
+	_, err = tunnel.Connect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +140,7 @@ func (c *Cluster) ConnectTunnelInfo(zt TunnelInfo) (*k8s.Tunnel, error) {
 }
 
 // ConnectToZarfRegistryEndpoint determines if a registry endpoint is in cluster, and if so opens a tunnel to connect to it
-func (c *Cluster) ConnectToZarfRegistryEndpoint(registryInfo types.RegistryInfo) (string, *k8s.Tunnel, error) {
+func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInfo types.RegistryInfo) (string, *k8s.Tunnel, error) {
 	registryEndpoint := registryInfo.Address
 
 	var err error
@@ -150,7 +151,7 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(registryInfo types.RegistryInfo)
 			return "", tunnel, err
 		}
 	} else {
-		svcInfo, err := c.ServiceInfoFromNodePortURL(registryInfo.Address)
+		svcInfo, err := c.ServiceInfoFromNodePortURL(ctx, registryInfo.Address)
 
 		// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
 		if err == nil {
@@ -161,7 +162,7 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(registryInfo types.RegistryInfo)
 	}
 
 	if tunnel != nil {
-		_, err = tunnel.Connect()
+		_, err = tunnel.Connect(ctx)
 		if err != nil {
 			return "", tunnel, err
 		}
@@ -172,13 +173,13 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(registryInfo types.RegistryInfo)
 }
 
 // checkForZarfConnectLabel looks in the cluster for a connect name that matches the target
-func (c *Cluster) checkForZarfConnectLabel(name string) (TunnelInfo, error) {
+func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (TunnelInfo, error) {
 	var err error
 	var zt TunnelInfo
 
 	message.Debugf("Looking for a Zarf Connect Label in the cluster")
 
-	matches, err := c.GetServicesByLabel("", config.ZarfConnectLabelName, name)
+	matches, err := c.GetServicesByLabel(ctx, "", config.ZarfConnectLabelName, name)
 	if err != nil {
 		return zt, fmt.Errorf("unable to lookup the service: %w", err)
 	}
@@ -195,7 +196,7 @@ func (c *Cluster) checkForZarfConnectLabel(name string) (TunnelInfo, error) {
 		zt.remotePort = svc.Spec.Ports[0].TargetPort.IntValue()
 		// if targetPort == 0, look for Port (which is required)
 		if zt.remotePort == 0 {
-			zt.remotePort = c.FindPodContainerPort(svc)
+			zt.remotePort = c.FindPodContainerPort(ctx, svc)
 		}
 
 		// Add the url suffix too.

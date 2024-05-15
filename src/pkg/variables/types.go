@@ -4,6 +4,13 @@
 // Package variables contains functions for interacting with variables
 package variables
 
+import (
+	"fmt"
+	"regexp"
+
+	"github.com/defenseunicorns/zarf/src/config/lang"
+)
+
 // VariableType represents a type of a Zarf package variable
 type VariableType string
 
@@ -12,6 +19,12 @@ const (
 	RawVariableType VariableType = "raw"
 	// FileVariableType is a type for a Zarf package variable that loads its contents from a file
 	FileVariableType VariableType = "file"
+)
+
+var (
+	// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
+	// https://regex101.com/r/tfsEuZ/1
+	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
 )
 
 // Variable represents a variable that has a value set programmatically
@@ -45,4 +58,26 @@ type Constant struct {
 type SetVariable struct {
 	Variable `json:",inline"`
 	Value    string `json:"value" jsonschema:"description=The value the variable is currently set with"`
+}
+
+// Validate runs all validation checks on a package variable.
+func (v Variable) Validate() error {
+	if !IsUppercaseNumberUnderscore(v.Name) {
+		return fmt.Errorf(lang.PkgValidateMustBeUppercase, v.Name)
+	}
+	return nil
+}
+
+// Validate runs all validation checks on a package constant.
+func (c Constant) Validate() error {
+	// ensure the constant name is only capitals and underscores
+	if !IsUppercaseNumberUnderscore(c.Name) {
+		return fmt.Errorf(lang.PkgValidateErrPkgConstantName, c.Name)
+	}
+
+	if !regexp.MustCompile(c.Pattern).MatchString(c.Value) {
+		return fmt.Errorf(lang.PkgValidateErrPkgConstantPattern, c.Name, c.Pattern)
+	}
+
+	return nil
 }

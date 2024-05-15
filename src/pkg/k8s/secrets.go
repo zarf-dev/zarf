@@ -15,14 +15,14 @@ import (
 )
 
 // GetSecret returns a Kubernetes secret.
-func (k *K8s) GetSecret(namespace, name string) (*corev1.Secret, error) {
-	return k.Clientset.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+func (k *K8s) GetSecret(ctx context.Context, namespace, name string) (*corev1.Secret, error) {
+	return k.Clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
 // GetSecretsWithLabel returns a list of Kubernetes secrets with the given label.
-func (k *K8s) GetSecretsWithLabel(namespace, labelSelector string) (*corev1.SecretList, error) {
+func (k *K8s) GetSecretsWithLabel(ctx context.Context, namespace, labelSelector string) (*corev1.SecretList, error) {
 	listOptions := metav1.ListOptions{LabelSelector: labelSelector}
-	return k.Clientset.CoreV1().Secrets(namespace).List(context.TODO(), listOptions)
+	return k.Clientset.CoreV1().Secrets(namespace).List(ctx, listOptions)
 }
 
 // GenerateSecret returns a Kubernetes secret object without applying it to the cluster.
@@ -58,20 +58,20 @@ func (k *K8s) GenerateTLSSecret(namespace, name string, conf GeneratedPKI) (*cor
 }
 
 // CreateOrUpdateTLSSecret creates or updates a Kubernetes secret with a new TLS secret.
-func (k *K8s) CreateOrUpdateTLSSecret(namespace, name string, conf GeneratedPKI) (*corev1.Secret, error) {
+func (k *K8s) CreateOrUpdateTLSSecret(ctx context.Context, namespace, name string, conf GeneratedPKI) (*corev1.Secret, error) {
 	secret, err := k.GenerateTLSSecret(namespace, name, conf)
 	if err != nil {
 		return secret, err
 	}
 
-	return k.CreateOrUpdateSecret(secret)
+	return k.CreateOrUpdateSecret(ctx, secret)
 }
 
 // DeleteSecret deletes a Kubernetes secret.
-func (k *K8s) DeleteSecret(secret *corev1.Secret) error {
+func (k *K8s) DeleteSecret(ctx context.Context, secret *corev1.Secret) error {
 	namespaceSecrets := k.Clientset.CoreV1().Secrets(secret.Namespace)
 
-	err := namespaceSecrets.Delete(context.TODO(), secret.Name, metav1.DeleteOptions{})
+	err := namespaceSecrets.Delete(ctx, secret.Name, metav1.DeleteOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error deleting the secret: %w", err)
 	}
@@ -80,18 +80,18 @@ func (k *K8s) DeleteSecret(secret *corev1.Secret) error {
 }
 
 // CreateOrUpdateSecret creates or updates a Kubernetes secret.
-func (k *K8s) CreateOrUpdateSecret(secret *corev1.Secret) (createdSecret *corev1.Secret, err error) {
+func (k *K8s) CreateOrUpdateSecret(ctx context.Context, secret *corev1.Secret) (createdSecret *corev1.Secret, err error) {
 
 	namespaceSecrets := k.Clientset.CoreV1().Secrets(secret.Namespace)
 
-	if _, err = k.GetSecret(secret.Namespace, secret.Name); err != nil {
+	if _, err = k.GetSecret(ctx, secret.Namespace, secret.Name); err != nil {
 		// create the given secret
-		if createdSecret, err = namespaceSecrets.Create(context.TODO(), secret, metav1.CreateOptions{}); err != nil {
+		if createdSecret, err = namespaceSecrets.Create(ctx, secret, metav1.CreateOptions{}); err != nil {
 			return createdSecret, fmt.Errorf("unable to create the secret: %w", err)
 		}
 	} else {
 		// update the given secret
-		if createdSecret, err = namespaceSecrets.Update(context.TODO(), secret, metav1.UpdateOptions{}); err != nil {
+		if createdSecret, err = namespaceSecrets.Update(ctx, secret, metav1.UpdateOptions{}); err != nil {
 			return createdSecret, fmt.Errorf("unable to update the secret: %w", err)
 		}
 	}

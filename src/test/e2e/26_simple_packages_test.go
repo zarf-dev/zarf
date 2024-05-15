@@ -5,6 +5,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -26,7 +27,7 @@ func TestDosGames(t *testing.T) {
 
 	c, err := cluster.NewCluster()
 	require.NoError(t, err)
-	tunnel, err := c.Connect("doom")
+	tunnel, err := c.Connect(context.Background(), "doom")
 	require.NoError(t, err)
 	defer tunnel.Close()
 

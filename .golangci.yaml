@@ -1,0 +1,62 @@
+run:
+  timeout: 5m
+linters:
+  disable-all: true
+  enable:
+    - gosimple
+    - govet
+    - staticcheck
+    - unused
+    - revive
+    - goheader
+    - goimports
+    - nolintlint
+linters-settings:
+  govet:
+    enable-all: true
+    disable:
+      - shadow
+      - fieldalignment
+      - unusedwrite
+  nolintlint:
+    require-specific: true
+  goheader:
+    template: |-
+      SPDX-License-Identifier: Apache-2.0
+      SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+      - name: redefines-builtin-id
+issues:
+  # Revive rules that are disabled by default.
+  include:
+    - EXC0012
+    - EXC0013
+    - EXC0014
+    - EXC0015
+  # Exclude linting code copied from Helm.
+  exclude-dirs:
+    - "src/cmd/tools/helm"

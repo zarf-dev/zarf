@@ -5,6 +5,7 @@
 package test
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/internal/agent/state"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
@@ -36,13 +38,14 @@ func TestGit(t *testing.T) {
 
 	c, err := cluster.NewCluster()
 	require.NoError(t, err)
-	tunnelGit, err := c.Connect(cluster.ZarfGit)
+	ctx := context.Background()
+	tunnelGit, err := c.Connect(ctx, cluster.ZarfGit)
 	require.NoError(t, err)
 	defer tunnelGit.Close()
 
 	testGitServerConnect(t, tunnelGit.HTTPEndpoint())
-	testGitServerReadOnly(t, tunnelGit.HTTPEndpoint())
-	testGitServerTagAndHash(t, tunnelGit.HTTPEndpoint())
+	testGitServerReadOnly(ctx, t, tunnelGit.HTTPEndpoint())
+	testGitServerTagAndHash(ctx, t, tunnelGit.HTTPEndpoint())
 }
 
 func TestGitOpsFlux(t *testing.T) {
@@ -66,9 +69,9 @@ func testGitServerConnect(t *testing.T, gitURL string) {
 	require.Equal(t, 200, resp.StatusCode)
 }
 
-func testGitServerReadOnly(t *testing.T, gitURL string) {
-	// Init the zarfState variable
-	zarfState, err := cluster.NewClusterOrDie().LoadZarfState()
+func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
+	// Init the state variable
+	zarfState, err := common.NewClusterOrDie(ctx).LoadZarfState(ctx)
 	require.NoError(t, err)
 
 	gitCfg := git.New(zarfState.GitServer)
@@ -89,9 +92,9 @@ func testGitServerReadOnly(t *testing.T, gitURL string) {
 	require.True(t, permissionsMap["pull"].(bool))
 }
 
-func testGitServerTagAndHash(t *testing.T, gitURL string) {
-	// Init the zarfState variable
-	zarfState, err := cluster.NewClusterOrDie().LoadZarfState()
+func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
+	// Init the state variable
+	zarfState, err := common.NewClusterOrDie(ctx).LoadZarfState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
 	repoName := "zarf-public-test-2469062884"
 
@@ -118,7 +121,8 @@ func testGitServerTagAndHash(t *testing.T, gitURL string) {
 }
 
 func waitFluxPodInfoDeployment(t *testing.T) {
-	zarfState, err := cluster.NewClusterOrDie().LoadZarfState()
+	ctx := context.Background()
+	zarfState, err := common.NewClusterOrDie(ctx).LoadZarfState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
 	registryAddress, err := state.GetServiceInfoFromRegistryAddress(zarfState.RegistryInfo.Address)
 	require.NoError(t, err)

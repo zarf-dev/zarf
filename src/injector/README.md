@@ -1,20 +1,40 @@
 # zarf-injector
 
-A tiny (<1MiB) binary statically-linked with musl in order to fit as a configmap
+> If using VSCode w/ the official Rust extension, make sure to open a new window in the `src/injector` directory to make `rust-analyzer` happy.
+>
+> ```bash
+> code src/injector
+> ```
 
-## Building on Ubuntu
+A tiny (<1MiB) binary statically-linked with musl in order to fit as a configmap.
+
+See how it gets used during the [`zarf-init`](https://docs.zarf.dev/commands/zarf_init/) process in the ['init' package reference documentation](https://docs.zarf.dev/ref/init-package/).
+
+## What does it do?
+
+```sh
+zarf-injector <SHA256>
+```
+
+The `zarf-injector` binary serves 2 purposes during 'init'.
+
+1. It re-assembles a multi-part tarball that was split into multiple ConfigMap entries (located at `./zarf-payload-*`) back into `payload.tar.gz`, then extracts it to the `/zarf-seed` directory. It also checks that the SHA256 hash of the re-assembled tarball matches the first (and only) argument provided to the binary.
+2. It runs a pull-only, insecure, HTTP OCI compliant registry server on port 5000 that serves the contents of the `/zarf-seed` directory (which is of the OCI layout format).
+
+This enables a distro-agnostic way to inject real `registry:2` image into a running cluster, thereby enabling air-gapped deployments.
+
+## Building in Docker (recommended)
 
 ```bash
-# install rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
-source $HOME/.cargo/env
+make build-with-docker
+```
 
-# install build-essential
-sudo apt install build-essential -y
+## Building on Debian-based Systems
 
-# build w/ musl
-rustup target add x86_64-unknown-linux-musl
-cargo build --target x86_64-unknown-linux-musl --release
+Install [Rust](https://rustup.rs/) and `build-essential`.
+
+```bash
+make build-injector-linux list-sizes
 ```
 
 ## Checking Binary Size
@@ -22,12 +42,15 @@ cargo build --target x86_64-unknown-linux-musl --release
 Due to the ConfigMap size limit (1MiB for binary data), we need to make sure the binary is small enough to fit.
 
 ```bash
-cargo build --target x86_64-unknown-linux-musl --release
+make list-sizes
+```
 
-cargo build --target aarch64-unknown-linux-musl --release
+```sh
+$ make build-with-docker
+...
 
-size_linux=$(du --si target/x86_64-unknown-linux-musl/release/zarf-injector | cut -f1)
-echo "Linux binary size: $size_linux"
-size_aarch64=$(du --si target/aarch64-unknown-linux-musl/release/zarf-injector | cut -f1)
-echo "aarch64 binary size: $size_aarch64"
+Size of Zarf injector binaries:
+
+840k    target/x86_64-unknown-linux-musl/release/zarf-injector
+713k    target/aarch64-unknown-linux-musl/release/zarf-injector
 ```
