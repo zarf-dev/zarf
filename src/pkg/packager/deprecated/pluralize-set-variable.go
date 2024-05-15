@@ -5,19 +5,14 @@
 package deprecated
 
 import (
-	"fmt"
-
 	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func migrateSetVariableToSetVariables(c types.ZarfComponent) (types.ZarfComponent, string) {
-	hasSetVariable := false
-
+func migrateSetVariableToSetVariables(c types.ZarfComponent) types.ZarfComponent {
 	migrate := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
 		for i := range actions {
 			if actions[i].DeprecatedSetVariable != "" && len(actions[i].SetVariables) < 1 {
-				hasSetVariable = true
 				actions[i].SetVariables = []variables.Variable{
 					{
 						Name:      actions[i].DeprecatedSetVariable,
@@ -48,12 +43,7 @@ func migrateSetVariableToSetVariables(c types.ZarfComponent) (types.ZarfComponen
 	c.Actions.OnRemove.OnSuccess = migrate(c.Actions.OnRemove.OnSuccess)
 	c.Actions.OnRemove.OnFailure = migrate(c.Actions.OnRemove.OnFailure)
 
-	// Leave deprecated setVariable in place, but warn users
-	if hasSetVariable {
-		return c, fmt.Sprintf("Component '%s' is using setVariable in actions which will be removed in Zarf v1.0.0. Please migrate to the list form of setVariables.", c.Name)
-	}
-
-	return c, ""
+	return c
 }
 
 func clearSetVariables(c types.ZarfComponent) types.ZarfComponent {

@@ -7,12 +7,8 @@ package lint
 import (
 	"embed"
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/xeipuuv/gojsonschema"
 )
@@ -26,33 +22,32 @@ func getSchemaFile() ([]byte, error) {
 
 // Validate validates a zarf file against the zarf schema, returns *validator with warnings or errors if they exist
 // along with an error if the validation itself failed
-func Validate(createOpts types.ZarfCreateOptions) (*Validator, error) {
+func Validate(_ types.ZarfCreateOptions) (*Validator, error) {
 	validator := Validator{}
-	var err error
 
-	if err := utils.ReadYaml(filepath.Join(createOpts.BaseDir, layout.ZarfYAML), &validator.typedZarfPackage); err != nil {
-		return nil, err
-	}
+	// if err := utils.ReadYaml(filepath.Join(createOpts.BaseDir, layout.ZarfYAML), &validator.typedZarfPackage); err != nil {
+	// 	return nil, err
+	// }
 
-	if err := utils.ReadYaml(filepath.Join(createOpts.BaseDir, layout.ZarfYAML), &validator.untypedZarfPackage); err != nil {
-		return nil, err
-	}
+	// if err := utils.ReadYaml(filepath.Join(createOpts.BaseDir, layout.ZarfYAML), &validator.untypedZarfPackage); err != nil {
+	// 	return nil, err
+	// }
 
-	if err := os.Chdir(createOpts.BaseDir); err != nil {
-		return nil, fmt.Errorf("unable to access directory '%s': %w", createOpts.BaseDir, err)
-	}
+	// if err := os.Chdir(createOpts.BaseDir); err != nil {
+	// 	return nil, fmt.Errorf("unable to access directory '%s': %w", createOpts.BaseDir, err)
+	// }
 
-	validator.baseDir = createOpts.BaseDir
+	// validator.baseDir = createOpts.BaseDir
 
-	// lintComponents(&validator, &createOpts)
+	// // lintComponents(&validator, &createOpts)
 
-	if validator.jsonSchema, err = getSchemaFile(); err != nil {
-		return nil, err
-	}
+	// if validator.jsonSchema, err = getSchemaFile(); err != nil {
+	// 	return nil, err
+	// }
 
-	if err = validateSchema(&validator); err != nil {
-		return nil, err
-	}
+	// if err = validateSchema(&validator); err != nil {
+	// 	return nil, err
+	// }
 
 	return &validator, nil
 }

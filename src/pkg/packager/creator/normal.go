@@ -71,21 +71,21 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg t
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 
 	// Compose components into a single zarf.yaml file
-	pkg, findings, err = ComposeComponents(pkg, pc.createOpts.Flavor)
+	pkg, componentFindings, err := ComposeComponents(pkg, pc.createOpts.Flavor)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
 
-	findings = append(findings, findings...)
+	findings = append(findings, componentFindings...)
 
 	// After components are composed, template the active package.
 	// TODO this will take care of the fill active warnings
-	pkg, _, err = FillActiveTemplate(pkg, pc.createOpts.SetVariables)
+	pkg, templateFindings, err := FillActiveTemplate(pkg, pc.createOpts.SetVariables)
 	if err != nil {
 		return types.ZarfPackage{}, nil, fmt.Errorf("unable to fill values in template: %w", err)
 	}
 
-	//warnings = append(warnings, templateWarnings...)
+	findings = append(findings, templateFindings...)
 
 	// After templates are filled process any create extensions
 	pkg.Components, err = pc.processExtensions(pkg.Components, dst, pkg.Metadata.YOLO)

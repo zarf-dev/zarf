@@ -51,21 +51,14 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 		migratedComponent.DeprecatedScripts = types.DeprecatedZarfComponentScripts{}
 	} else {
 		// Otherwise, run the migration.
-		var warning string
-		if migratedComponent, warning = migrateScriptsToActions(migratedComponent); warning != "" {
-			warnings = append(warnings, warning)
-		}
+		migratedComponent = migrateScriptsToActions(migratedComponent)
 	}
 
 	// If the component has already been migrated, clear the setVariable definitions.
 	if slices.Contains(build.Migrations, PluralizeSetVariable) {
 		migratedComponent = clearSetVariables(migratedComponent)
 	} else {
-		// Otherwise, run the migration.
-		var warning string
-		if migratedComponent, warning = migrateSetVariableToSetVariables(migratedComponent); warning != "" {
-			warnings = append(warnings, warning)
-		}
+		migratedComponent = migrateSetVariableToSetVariables(migratedComponent)
 	}
 
 	// Show a warning if the component contains a group as that has been deprecated and will be removed.

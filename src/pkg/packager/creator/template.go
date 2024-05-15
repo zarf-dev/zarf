@@ -10,15 +10,16 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // FillActiveTemplate merges user-specified variables into the configuration templates of a zarf.yaml.
-func FillActiveTemplate(pkg types.ZarfPackage, setVariables map[string]string) (types.ZarfPackage, []string, error) {
+func FillActiveTemplate(pkg types.ZarfPackage, setVariables map[string]string) (types.ZarfPackage, []lint.ValidatorMessage, error) {
 	templateMap := map[string]string{}
-	warnings := []string{}
+	findings := []lint.ValidatorMessage{}
 
 	promptAndSetTemplate := func(templatePrefix string, deprecated bool) error {
 		yamlTemplates, err := utils.FindYamlTemplates(&pkg, templatePrefix, "###")
@@ -28,7 +29,13 @@ func FillActiveTemplate(pkg types.ZarfPackage, setVariables map[string]string) (
 
 		for key := range yamlTemplates {
 			if deprecated {
-				warnings = append(warnings, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
+				findings = append(findings, lint.ValidatorMessage{
+					// TODO test deprecated works here if we're assuming empty path
+					Description:    fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key),
+					PackageRelPath: ".",
+					PackageName:    pkg.Metadata.Name,
+					Category:       lint.CategoryWarning,
+				})
 			}
 
 			_, present := setVariables[key]
@@ -72,7 +79,7 @@ func FillActiveTemplate(pkg types.ZarfPackage, setVariables map[string]string) (
 		return types.ZarfPackage{}, nil, err
 	}
 
-	return pkg, warnings, nil
+	return pkg, findings, nil
 }
 
 // ReloadComponentTemplate appends ###ZARF_COMPONENT_NAME### for the component, assigns value, and reloads
