@@ -137,7 +137,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		}
 
 		// Create the secret
-		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
+		validRegistrySecret := c.GenerateRegistryPullCreds(ctx, name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
 
 		// Try to get a valid existing secret
 		currentRegistrySecret, _ := c.GetSecret(ctx, name, config.ZarfImagePullSecretName)

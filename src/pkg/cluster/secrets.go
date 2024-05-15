@@ -32,7 +32,7 @@ type DockerConfigEntryWithAuth struct {
 }
 
 // GenerateRegistryPullCreds generates a secret containing the registry credentials.
-func (c *Cluster) GenerateRegistryPullCreds(namespace, name string, registryInfo types.RegistryInfo) *corev1.Secret {
+func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name string, registryInfo types.RegistryInfo) *corev1.Secret {
 	secretDockerConfig := c.GenerateSecret(namespace, name, corev1.SecretTypeDockerConfigJson)
 
 	// Auth field must be username:password and base64 encoded
@@ -44,7 +44,7 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string, registryInfo
 	var dockerConfigJSON DockerConfig
 
 	// Build zarf-docker-registry service address string
-	registryServiceInfo, err := c.ServiceInfoFromNodePortURL(context.TODO(), registry)
+	registryServiceInfo, err := c.ServiceInfoFromNodePortURL(ctx, registry)
 	if err != nil {
 		dockerConfigJSON = DockerConfig{
 			Auths: DockerConfigEntry{
@@ -116,7 +116,7 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 				spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
 
 				// Create the secret
-				newRegistrySecret := c.GenerateRegistryPullCreds(namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
+				newRegistrySecret := c.GenerateRegistryPullCreds(ctx, namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
 				if !reflect.DeepEqual(currentRegistrySecret.Data, newRegistrySecret.Data) {
 					// Create or update the zarf registry secret
 					if _, err := c.CreateOrUpdateSecret(ctx, newRegistrySecret); err != nil {
