@@ -110,7 +110,7 @@ func TestMutateOCIUrlsInText(t *testing.T) {
 	`
 
 	resultingText := MutateOCIURLsInText("new-replace-url.com", originalText)
-	require.Equal(t, resultingText, expectedText)
+	require.Equal(t, expectedText, resultingText)
 
 }
 func TestParseImageRef(t *testing.T) {
