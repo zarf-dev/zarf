@@ -7,15 +7,21 @@ package packager
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/defenseunicorns/pkg/helpers"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
@@ -23,14 +29,13 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/defenseunicorns/zarf/src/pkg/tunnel"
 	"github.com/defenseunicorns/zarf/src/types"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func (p *Packager) resetRegistryHPA(ctx context.Context) {
@@ -449,7 +454,9 @@ func (p *Packager) setupState(ctx context.Context) (err error) {
 		// Try to create the zarf namespace
 		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := p.cluster.NewZarfManagedNamespace(cluster.ZarfNamespaceName)
-		if _, err := p.cluster.CreateNamespace(ctx, zarfNamespace); err != nil {
+		// TODO: The old implementation was actually a create or update?!?
+		_, err := p.cluster.Clientset.CoreV1().Namespaces().Create(ctx, zarfNamespace, metav1.CreateOptions{})
+		if err != nil {
 			spinner.Fatalf(err, "Unable to create the zarf namespace")
 		}
 	}
@@ -511,10 +518,11 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
 			gitClient := git.New(p.state.GitServer)
-			svcInfo, _ := k8s.ServiceInfoFromServiceURL(gitClient.Server.Address)
+			// TODO: Ignoring the error is not the right method to check if not found
+			svcInfo, _ := serviceInfoFromServiceURL(gitClient.Server.Address)
 
 			var err error
-			var tunnel *k8s.Tunnel
+			var tun *tunnel.Tunnel
 
 			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
 			if svcInfo != nil {
@@ -527,19 +535,15 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 					}
 				}
 
-				tunnel, err = p.cluster.NewTunnel(svcInfo.Namespace, k8s.SvcResource, svcInfo.Name, "", 0, svcInfo.Port)
+				tun = p.cluster.CreateTunnel(svcInfo.Namespace, tunnel.SvcResource, svcInfo.Name, "", 0, svcInfo.Port)
+				_, err = tun.Connect(ctx)
 				if err != nil {
 					return err
 				}
+				defer tun.Close()
+				gitClient.Server.Address = tun.HTTPEndpoint()
 
-				_, err = tunnel.Connect(ctx)
-				if err != nil {
-					return err
-				}
-				defer tunnel.Close()
-				gitClient.Server.Address = tunnel.HTTPEndpoint()
-
-				return tunnel.Wrap(func() error { return gitClient.PushRepo(repoURL, reposPath) })
+				return tun.Wrap(func() error { return gitClient.PushRepo(repoURL, reposPath) })
 			}
 
 			return gitClient.PushRepo(repoURL, reposPath)
@@ -552,6 +556,39 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 	}
 
 	return nil
+}
+
+// ServiceInfoFromServiceURL takes a serviceURL and parses it to find the service info for connecting to the cluster. The string is expected to follow the following format:
+// Example serviceURL: http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}.
+// TODO: Place this in tunnel package?
+func serviceInfoFromServiceURL(serviceURL string) (*tunnel.ServiceInfo, error) {
+	parsedURL, err := url.Parse(serviceURL)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the remote port from the serviceURL.
+	remotePort, err := strconv.Atoi(parsedURL.Port())
+	if err != nil {
+		return nil, err
+	}
+
+	// Match hostname against local cluster service format.
+	// TODO: Dont use must compile!
+	// See https://regex101.com/r/OWVfAO/1.
+	pattern := regexp.MustCompile(`^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`)
+	get, err := helpers.MatchRegex(pattern, parsedURL.Hostname())
+
+	// If incomplete match, return an error.
+	if err != nil {
+		return nil, err
+	}
+
+	return &tunnel.ServiceInfo{
+		Namespace: get("namespace"),
+		Name:      get("name"),
+		Port:      remotePort,
+	}, nil
 }
 
 // generateValuesOverrides creates a map containing overrides for chart values based on the chart and component

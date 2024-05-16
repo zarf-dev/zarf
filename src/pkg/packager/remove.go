@@ -13,7 +13,13 @@ import (
 
 	"slices"
 
+	"helm.sh/helm/v3/pkg/storage/driver"
+	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/defenseunicorns/pkg/helpers"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
@@ -22,8 +28,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/types"
-	"helm.sh/helm/v3/pkg/storage/driver"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
@@ -187,14 +191,16 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 		secretName := config.ZarfPackagePrefix + deployedPackage.Name
 
 		// All the installed components were deleted, therefore this package is no longer actually deployed
-		packageSecret, err := p.cluster.GetSecret(ctx, cluster.ZarfNamespaceName, secretName)
+		packageSecret, err := p.cluster.Clientset.CoreV1().Secrets(cluster.ZarfNamespaceName).Get(ctx, secretName, metav1.GetOptions{})
 
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
+			// TODO: Shoudl be replaced with a delete ignore not found error
 			message.Warnf("Unable to delete the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
 		} else {
-			err = p.cluster.DeleteSecret(ctx, packageSecret)
-			if err != nil {
+			// NOTE: original implementation ignores not found errors
+			err = p.cluster.Clientset.CoreV1().Secrets(packageSecret.Namespace).Delete(ctx, packageSecret.Name, metav1.DeleteOptions{})
+			if err != nil && !kerrors.IsNotFound(err) {
 				message.Warnf("Unable to delete the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
 			}
 		}

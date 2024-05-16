@@ -128,8 +128,7 @@ func testConnection(ctx context.Context, t *testing.T) {
 	// Establish the tunnel config
 	c, err := cluster.NewCluster()
 	require.NoError(t, err)
-	tunnel, err := c.NewTunnel("twistlock", "svc", "twistlock-console", "", 0, 8081)
-	require.NoError(t, err)
+	tunnel := c.CreateTunnel("twistlock", "svc", "twistlock-console", "", 0, 8081)
 
 	// Establish the tunnel connection
 	_, err = tunnel.Connect(ctx)

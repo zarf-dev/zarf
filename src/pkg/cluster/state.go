@@ -7,22 +7,24 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"regexp"
+	"slices"
 	"time"
 
-	"slices"
+	"github.com/fatih/color"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+
+	"github.com/defenseunicorns/pkg/helpers"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/fatih/color"
-
-	"github.com/defenseunicorns/pkg/helpers"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Zarf Cluster Constants.
@@ -56,18 +58,18 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 
 		// If the K3s component is being deployed, skip distro detection.
 		if initOptions.ApplianceMode {
-			distro = k8s.DistroIsK3s
+			distro = DistroIsK3s
 			state.ZarfAppliance = true
 		} else {
 			// Otherwise, trying to detect the K8s distro type.
-			distro, err = c.DetectDistro(ctx)
+			distro, err = detectDistro(ctx, c.Clientset)
 			if err != nil {
 				// This is a basic failure right now but likely could be polished to provide user guidance to resolve.
 				return fmt.Errorf("unable to connect to the cluster to verify the distro: %w", err)
 			}
 		}
 
-		if distro != k8s.DistroIsUnknown {
+		if distro != DistroIsUnknown {
 			spinner.Updatef("Detected K8s distro %s", distro)
 		}
 
@@ -80,12 +82,12 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		// Setup zarf agent PKI
 		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
 
-		namespaces, err := c.GetNamespaces(ctx)
+		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
 		}
 		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
-		for _, namespace := range namespaces.Items {
+		for _, namespace := range namespaceList.Items {
 			spinner.Updatef("Marking existing namespace %s as ignored by Zarf Agent", namespace.Name)
 			if namespace.Labels == nil {
 				// Ensure label map exists to avoid nil panic
@@ -93,8 +95,9 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 			}
 			// This label will tell the Zarf Agent to ignore this namespace.
 			namespace.Labels[agentLabel] = "ignore"
-			namespaceCopy := namespace
-			if _, err = c.UpdateNamespace(ctx, &namespaceCopy); err != nil {
+			_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespace, metav1.UpdateOptions{})
+			if err != nil {
+				// TODO: Why is this not a hard failure?
 				// This is not a hard failure, but we should log it.
 				message.WarnErrf(err, "Unable to mark the namespace %s as ignored by Zarf Agent", namespace.Name)
 			}
@@ -102,11 +105,15 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 
 		// Try to create the zarf namespace.
 		spinner.Updatef("Creating the Zarf namespace")
+
+		// TODO: The old implementation was actually a create or update?!?
 		zarfNamespace := c.NewZarfManagedNamespace(ZarfNamespaceName)
-		if _, err := c.CreateNamespace(ctx, zarfNamespace); err != nil {
+		_, err = c.Clientset.CoreV1().Namespaces().Create(ctx, zarfNamespace, metav1.CreateOptions{})
+		if err != nil {
 			return fmt.Errorf("unable to create the zarf namespace: %w", err)
 		}
 
+		// TODO: Explore if this is still an issue?
 		// Wait up to 2 minutes for the default service account to be created.
 		// Some clusters seem to take a while to create this, see https://github.com/kubernetes/kubernetes/issues/66689.
 		// The default SA is required for pods to start properly.
@@ -144,13 +151,13 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 	}
 
 	switch state.Distro {
-	case k8s.DistroIsK3s, k8s.DistroIsK3d:
+	case DistroIsK3s, DistroIsK3d:
 		state.StorageClass = "local-path"
 
-	case k8s.DistroIsKind, k8s.DistroIsGKE:
+	case DistroIsKind, DistroIsGKE:
 		state.StorageClass = "standard"
 
-	case k8s.DistroIsDockerDesktop:
+	case DistroIsDockerDesktop:
 		state.StorageClass = "hostpath"
 	}
 
@@ -171,7 +178,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.
 func (c *Cluster) LoadZarfState(ctx context.Context) (state *types.ZarfState, err error) {
 	// Set up the API connection
-	secret, err := c.GetSecret(ctx, ZarfNamespaceName, ZarfStateSecretName)
+	secret, err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).Get(ctx, ZarfStateSecretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("%w. %s", err, message.ColorWrap("Did you remember to zarf init?", color.Bold))
 	}
@@ -236,10 +243,6 @@ func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) err
 
 	// The secret object.
 	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Secret",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ZarfStateSecretName,
 			Namespace: ZarfNamespaceName,
@@ -252,8 +255,21 @@ func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) err
 	}
 
 	// Attempt to create or update the secret and return.
-	if _, err := c.CreateOrUpdateSecret(ctx, secret); err != nil {
-		return fmt.Errorf("unable to create the zarf state secret")
+	// TODO: Refactor this
+	// NOTE: Kept the original error message even if it is not wrapping the original error
+	_, err = c.Clientset.CoreV1().Secrets(secret.Namespace).Get(ctx, secret.Name, metav1.GetOptions{})
+	if err != nil {
+		_, err = c.Clientset.CoreV1().Secrets(secret.Namespace).Create(ctx, secret, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("unable to create the zarf state secret")
+		}
+
+	} else {
+		_, err = c.Clientset.CoreV1().Secrets(secret.Namespace).Update(ctx, secret, metav1.UpdateOptions{})
+		if err != nil {
+
+			return fmt.Errorf("unable to create the zarf state secret")
+		}
 	}
 
 	return nil
@@ -326,4 +342,109 @@ func (c *Cluster) MergeZarfState(oldState *types.ZarfState, initOptions types.Za
 	}
 
 	return &newState, nil
+}
+
+// TODO: Move to a better place
+// TODO: This needs a unit test
+
+// List of supported distros via distro detection.
+const (
+	DistroIsUnknown       = "unknown"
+	DistroIsK3s           = "k3s"
+	DistroIsK3d           = "k3d"
+	DistroIsKind          = "kind"
+	DistroIsMicroK8s      = "microk8s"
+	DistroIsEKS           = "eks"
+	DistroIsEKSAnywhere   = "eksanywhere"
+	DistroIsDockerDesktop = "dockerdesktop"
+	DistroIsGKE           = "gke"
+	DistroIsAKS           = "aks"
+	DistroIsRKE2          = "rke2"
+	DistroIsTKG           = "tkg"
+)
+
+// DetectDistro returns the matching distro or unknown if not found.
+func detectDistro(ctx context.Context, client kubernetes.Interface) (string, error) {
+	kindNodeRegex := regexp.MustCompile(`^kind://`)
+	k3dNodeRegex := regexp.MustCompile(`^k3s://k3d-`)
+	eksNodeRegex := regexp.MustCompile(`^aws:///`)
+	gkeNodeRegex := regexp.MustCompile(`^gce://`)
+	aksNodeRegex := regexp.MustCompile(`^azure:///subscriptions`)
+	rke2Regex := regexp.MustCompile(`^rancher/rancher-agent:v2`)
+	tkgRegex := regexp.MustCompile(`^projects\.registry\.vmware\.com/tkg/tanzu_core/`)
+
+	nodeList, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return DistroIsUnknown, errors.New("error getting cluster nodes")
+	}
+
+	// All nodes should be the same for what we are looking for
+	node := nodeList.Items[0]
+
+	// Regex explanation: https://regex101.com/r/TIUQVe/1
+	// https://github.com/rancher/k3d/blob/v5.2.2/cmd/node/nodeCreate.go#L187
+	if k3dNodeRegex.MatchString(node.Spec.ProviderID) {
+		return DistroIsK3d, nil
+	}
+
+	// Regex explanation: https://regex101.com/r/le7PRB/1
+	// https://github.com/kubernetes-sigs/kind/pull/1805
+	if kindNodeRegex.MatchString(node.Spec.ProviderID) {
+		return DistroIsKind, nil
+	}
+
+	// https://github.com/kubernetes/cloud-provider-aws/blob/454ed784c33b974c873c7d762f9d30e7c4caf935/pkg/providers/v2/instances.go#L234
+	if eksNodeRegex.MatchString(node.Spec.ProviderID) {
+		return DistroIsEKS, nil
+	}
+
+	if gkeNodeRegex.MatchString(node.Spec.ProviderID) {
+		return DistroIsGKE, nil
+	}
+
+	// https://github.com/kubernetes/kubernetes/blob/v1.23.4/staging/src/k8s.io/legacy-cloud-providers/azure/azure_wrap.go#L46
+	if aksNodeRegex.MatchString(node.Spec.ProviderID) {
+		return DistroIsAKS, nil
+	}
+
+	labels := node.GetLabels()
+	for _, label := range labels {
+		// kubectl get nodes --selector node.kubernetes.io/instance-type=k3s for K3s
+		if label == "node.kubernetes.io/instance-type=k3s" {
+			return DistroIsK3s, nil
+		}
+		// kubectl get nodes --selector microk8s.io/cluster=true for MicroK8s
+		if label == "microk8s.io/cluster=true" {
+			return DistroIsMicroK8s, nil
+		}
+	}
+
+	if node.GetName() == "docker-desktop" {
+		return DistroIsDockerDesktop, nil
+	}
+
+	for _, images := range node.Status.Images {
+		for _, image := range images.Names {
+			if rke2Regex.MatchString(image) {
+				return DistroIsRKE2, nil
+			}
+			if tkgRegex.MatchString(image) {
+				return DistroIsTKG, nil
+			}
+		}
+	}
+
+	namespaceList, err := client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return DistroIsUnknown, errors.New("error getting namespace list")
+	}
+
+	// kubectl get ns eksa-system for EKS Anywhere
+	for _, namespace := range namespaceList.Items {
+		if namespace.Name == "eksa-system" {
+			return DistroIsEKSAnywhere, nil
+		}
+	}
+
+	return DistroIsUnknown, nil
 }

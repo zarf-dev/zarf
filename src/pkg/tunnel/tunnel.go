@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 // Package k8s provides a client for interacting with a Kubernetes cluster.
-package k8s
+package tunnel
 
 // Forked from https://github.com/gruntwork-io/terratest/blob/v0.38.8/modules/k8s/tunnel.go
 
@@ -14,9 +14,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
+
+	"github.com/defenseunicorns/pkg/helpers"
 )
 
 // Global lock to synchronize port selections.
@@ -28,9 +31,17 @@ const (
 	SvcResource = "svc"
 )
 
+// ServiceInfo contains information necessary for connecting to a cluster service.
+type ServiceInfo struct {
+	Namespace string
+	Name      string
+	Port      int
+}
+
 // Tunnel is the main struct that configures and manages port forwarding tunnels to Kubernetes resources.
 type Tunnel struct {
-	kube         *K8s
+	client       kubernetes.Interface
+	restConfig   *rest.Config
 	out          io.Writer
 	localPort    int
 	remotePort   int
@@ -47,8 +58,10 @@ type Tunnel struct {
 // NewTunnel will create a new Tunnel struct.
 // Note that if you use 0 for the local port, an open port on the host system
 // will be selected automatically, and the Tunnel struct will be updated with the selected port.
-func (k *K8s) NewTunnel(namespace, resourceType, resourceName, urlSuffix string, local, remote int) (*Tunnel, error) {
+func NewTunnel(client kubernetes.Interface, restConfig *rest.Config, namespace, resourceType, resourceName, urlSuffix string, local, remote int) *Tunnel {
 	return &Tunnel{
+		client:       client,
+		restConfig:   restConfig,
 		out:          io.Discard,
 		localPort:    local,
 		remotePort:   remote,
@@ -58,8 +71,7 @@ func (k *K8s) NewTunnel(namespace, resourceType, resourceName, urlSuffix string,
 		urlSuffix:    urlSuffix,
 		stopChan:     make(chan struct{}, 1),
 		readyChan:    make(chan struct{}, 1),
-		kube:         k,
-	}, nil
+	}
 }
 
 // Wrap takes a function that returns an error and wraps it to check for tunnel errors as well.
@@ -94,8 +106,8 @@ func (tunnel *Tunnel) Connect(ctx context.Context) (string, error) {
 
 		// Otherwise, retry the connection but delay increasing intervals between attempts.
 		delay := tunnel.attempt * 10
-		tunnel.kube.Log("%s", err.Error())
-		tunnel.kube.Log("Delay creating tunnel, waiting %d seconds...", delay)
+		// tunnel.kube.Log("%s", err.Error())
+		// tunnel.kube.Log("Delay creating tunnel, waiting %d seconds...", delay)
 
 		timer := time.NewTimer(0)
 		defer timer.Stop()
@@ -155,36 +167,36 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 	// since there is a brief moment between `GetAvailablePort` and `forwarder.ForwardPorts` where the selected port
 	// is available for selection again.
 	if localPort == 0 {
-		tunnel.kube.Log("Requested local port is 0. Selecting an open port on host system")
+		// tunnel.kube.Log("Requested local port is 0. Selecting an open port on host system")
 		localPort, err = helpers.GetAvailablePort()
 		if err != nil {
 			return "", fmt.Errorf("unable to find an available port: %w", err)
 		}
-		tunnel.kube.Log("Selected port %d", localPort)
+		// tunnel.kube.Log("Selected port %d", localPort)
 		globalMutex.Lock()
 		defer globalMutex.Unlock()
 	}
 
-	message := fmt.Sprintf("Opening tunnel %d -> %d for %s/%s in namespace %s",
-		localPort,
-		tunnel.remotePort,
-		tunnel.resourceType,
-		tunnel.resourceName,
-		tunnel.namespace,
-	)
+	// message := fmt.Sprintf("Opening tunnel %d -> %d for %s/%s in namespace %s",
+	// 	localPort,
+	// 	tunnel.remotePort,
+	// 	tunnel.resourceType,
+	// 	tunnel.resourceName,
+	// 	tunnel.namespace,
+	// )
 
-	tunnel.kube.Log(message)
+	// tunnel.kube.Log(message)
 
 	// Find the pod to port forward to
 	podName, err := tunnel.getAttachablePodForResource(ctx)
 	if err != nil {
 		return "", fmt.Errorf("unable to find pod attached to given resource: %w", err)
 	}
-	tunnel.kube.Log("Selected pod %s to open port forward to", podName)
+	// tunnel.kube.Log("Selected pod %s to open port forward to", podName)
 
 	// Build url to the port forward endpoint.
 	// Example: http://localhost:8080/api/v1/namespaces/helm/pods/tiller-deploy-9itlq/portforward.
-	postEndpoint := tunnel.kube.Clientset.CoreV1().RESTClient().Post()
+	postEndpoint := tunnel.client.CoreV1().RESTClient().Post()
 	namespace := tunnel.namespace
 	portForwardCreateURL := postEndpoint.
 		Resource("pods").
@@ -193,10 +205,10 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 		SubResource("portforward").
 		URL()
 
-	tunnel.kube.Log("Using URL %s to create portforward", portForwardCreateURL)
+	// tunnel.kube.Log("Using URL %s to create portforward", portForwardCreateURL)
 
 	// Construct the spdy client required by the client-go portforward library.
-	transport, upgrader, err := spdy.RoundTripperFor(tunnel.kube.RestConfig)
+	transport, upgrader, err := spdy.RoundTripperFor(tunnel.restConfig)
 	if err != nil {
 		return "", fmt.Errorf("unable to create the spdy client %w", err)
 	}
@@ -228,7 +240,7 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 		// Store the error channel to listen for errors
 		tunnel.errChan = errChan
 
-		tunnel.kube.Log("Creating port forwarding tunnel at %s", url)
+		// tunnel.kube.Log("Creating port forwarding tunnel at %s", url)
 		return url, nil
 	}
 }
@@ -248,23 +260,23 @@ func (tunnel *Tunnel) getAttachablePodForResource(ctx context.Context) (string, 
 
 // getAttachablePodForService will find an active pod associated with the Service and return the pod name.
 func (tunnel *Tunnel) getAttachablePodForService(ctx context.Context) (string, error) {
-	service, err := tunnel.kube.GetService(ctx, tunnel.namespace, tunnel.resourceName)
-	if err != nil {
-		return "", fmt.Errorf("unable to find the service: %w", err)
-	}
-	selectorLabelsOfPods := MakeLabels(service.Spec.Selector)
-
-	servicePods := tunnel.kube.WaitForPodsAndContainers(
-		ctx,
-		PodLookup{
-			Namespace: tunnel.namespace,
-			Selector:  selectorLabelsOfPods,
-		},
-		nil,
-	)
-
-	if len(servicePods) < 1 {
-		return "", fmt.Errorf("no pods found for service %s", tunnel.resourceName)
-	}
-	return servicePods[0].Name, nil
+	// TODO: Fix this before merging
+	// service, err := tunnel.client.CoreV1().Services(tunnel.namespace).Get(ctx, tunnel.resourceName, metav1.GetOptions{})
+	// if err != nil {
+	// 	return "", fmt.Errorf("unable to find the service: %w", err)
+	// }
+	// selectorLabelsOfPods := MakeLabels(service.Spec.Selector)
+	// servicePods := tunnel.kube.WaitForPodsAndContainers(
+	// 	ctx,
+	// 	PodLookup{
+	// 		Namespace: tunnel.namespace,
+	// 		Selector:  selectorLabelsOfPods,
+	// 	},
+	// 	nil,
+	// )
+	// if len(servicePods) < 1 {
+	// 	return "", fmt.Errorf("no pods found for service %s", tunnel.resourceName)
+	// }
+	// return servicePods[0].Name, nil
+	return "", nil
 }

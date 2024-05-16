@@ -8,15 +8,16 @@ import (
 	"context"
 	"fmt"
 
+	"helm.sh/helm/v3/pkg/action"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
-	"helm.sh/helm/v3/pkg/action"
 )
 
 // UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
@@ -63,7 +64,7 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 	// Get the current agent image from one of its pods.
 	pods := h.cluster.WaitForPodsAndContainers(
 		ctx,
-		k8s.PodLookup{
+		cluster.PodLookup{
 			Namespace: cluster.ZarfNamespaceName,
 			Selector:  "app=agent-hook",
 		},
@@ -124,13 +125,17 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 	defer spinner.Stop()
 
 	// Force pods to be recreated to get the updated secret.
-	err = h.cluster.DeletePods(
-		ctx,
-		k8s.PodLookup{
-			Namespace: cluster.ZarfNamespaceName,
-			Selector:  "app=agent-hook",
-		},
-	)
+	// TODO: Are the delete options actually needed, if so why?
+	deleteGracePeriod := int64(0)
+	deletePolicy := metav1.DeletePropagationForeground
+	deleteOpt := metav1.DeleteOptions{
+		GracePeriodSeconds: &deleteGracePeriod,
+		PropagationPolicy:  &deletePolicy,
+	}
+	listOpt := metav1.ListOptions{
+		LabelSelector: "app=agent-hook",
+	}
+	err = h.cluster.Clientset.CoreV1().Pods(cluster.ZarfNamespaceName).DeleteCollection(ctx, deleteOpt, listOpt)
 	if err != nil {
 		return fmt.Errorf("error recycling pods for the Zarf Agent: %w", err)
 	}

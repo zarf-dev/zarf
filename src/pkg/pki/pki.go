@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Based off of https://github.com/dmcgowan/quicktls/blob/master/main.go
@@ -29,8 +29,8 @@ const org = "Zarf Cluster"
 const validFor = time.Hour * 24 * 375
 
 // GeneratePKI create a CA and signed server keypair.
-func GeneratePKI(host string, dnsNames ...string) k8s.GeneratedPKI {
-	results := k8s.GeneratedPKI{}
+func GeneratePKI(host string, dnsNames ...string) types.GeneratedPKI {
+	results := types.GeneratedPKI{}
 
 	ca, caKey, err := generateCA(validFor)
 	if err != nil {

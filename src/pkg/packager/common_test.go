@@ -9,16 +9,16 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	k8sTesting "k8s.io/client-go/testing"
+
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // TestValidatePackageArchitecture verifies that Zarf validates package architecture against cluster architecture correctly.
@@ -85,15 +85,12 @@ func TestValidatePackageArchitecture(t *testing.T) {
 			t.Parallel()
 
 			mockClient := fake.NewSimpleClientset()
-			logger := func(string, ...interface{}) {}
+			// logger := func(string, ...interface{}) {}
 
 			// Create a Packager instance with package architecture set and a mock Kubernetes client.
 			p := &Packager{
 				cluster: &cluster.Cluster{
-					K8s: &k8s.K8s{
-						Clientset: mockClient,
-						Log:       logger,
-					},
+					Clientset: mockClient,
 				},
 				cfg: &types.PackagerConfig{
 					Pkg: types.ZarfPackage{

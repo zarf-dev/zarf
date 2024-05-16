@@ -11,6 +11,7 @@ import (
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -32,14 +33,9 @@ type DockerConfigEntryWithAuth struct {
 
 // GenerateRegistryPullCreds generates a secret containing the registry credentials.
 func (c *Cluster) GenerateRegistryPullCreds(namespace, name string, registryInfo types.RegistryInfo) *corev1.Secret {
-	secretDockerConfig := c.GenerateSecret(namespace, name, corev1.SecretTypeDockerConfigJson)
-
-	// Auth field must be username:password and base64 encoded
 	fieldValue := registryInfo.PullUsername + ":" + registryInfo.PullPassword
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
-
 	registry := registryInfo.Address
-	// Create the expected structure for the dockerconfigjson
 	dockerConfigJSON := DockerConfig{
 		Auths: DockerConfigEntry{
 			registry: DockerConfigEntryWithAuth{
@@ -47,29 +43,46 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string, registryInfo
 			},
 		},
 	}
-
-	// Convert to JSON
 	dockerConfigData, err := json.Marshal(dockerConfigJSON)
+	// TODO: Return an error here
 	if err != nil {
 		message.WarnErrf(err, "Unable to marshal the .dockerconfigjson secret data for the image pull secret")
 	}
 
-	// Add to the secret data
-	secretDockerConfig.Data[".dockerconfigjson"] = dockerConfigData
-
+	secretDockerConfig := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				config.ZarfManagedByLabel: "zarf",
+			},
+		},
+		Type: corev1.SecretTypeDockerConfigJson,
+		Data: map[string][]byte{
+			".dockerconfigjson": dockerConfigData,
+		},
+	}
 	return secretDockerConfig
 }
 
 // GenerateGitPullCreds generates a secret containing the git credentials.
 func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo types.GitServerInfo) *corev1.Secret {
 	message.Debugf("k8s.GenerateGitPullCreds(%s, %s, gitServerInfo)", namespace, name)
-
-	gitServerSecret := c.GenerateSecret(namespace, name, corev1.SecretTypeOpaque)
-	gitServerSecret.StringData = map[string]string{
-		"username": gitServerInfo.PullUsername,
-		"password": gitServerInfo.PullPassword,
+	gitServerSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				config.ZarfManagedByLabel: "zarf",
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{},
+		StringData: map[string]string{
+			"username": gitServerInfo.PullUsername,
+			"password": gitServerInfo.PullPassword,
+		},
 	}
-
 	return gitServerSecret
 }
 
@@ -78,33 +91,47 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 	spinner := message.NewProgressSpinner("Updating existing Zarf-managed image secrets")
 	defer spinner.Stop()
 
-	if namespaces, err := c.GetNamespaces(ctx); err != nil {
+	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
 		spinner.Errorf(err, "Unable to get k8s namespaces")
-	} else {
-		// Update all image pull secrets
-		for _, namespace := range namespaces.Items {
-			currentRegistrySecret, err := c.GetSecret(ctx, namespace.Name, config.ZarfImagePullSecretName)
-			if err != nil {
-				continue
-			}
+		return
+	}
 
-			// Check if this is a Zarf managed secret or is in a namespace the Zarf agent will take action in
-			if currentRegistrySecret.Labels[config.ZarfManagedByLabel] == "zarf" ||
-				(namespace.Labels[agentLabel] != "skip" && namespace.Labels[agentLabel] != "ignore") {
-				spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
+	// Update all image pull secrets
+	for _, namespace := range namespaceList.Items {
+		currentRegistrySecret, err := c.Clientset.CoreV1().Secrets(namespace.Name).Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
+		if err != nil {
+			continue
+		}
 
-				// Create the secret
-				newRegistrySecret := c.GenerateRegistryPullCreds(namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
-				if !reflect.DeepEqual(currentRegistrySecret.Data, newRegistrySecret.Data) {
-					// Create or update the zarf registry secret
-					if _, err := c.CreateOrUpdateSecret(ctx, newRegistrySecret); err != nil {
+		// Check if this is a Zarf managed secret or is in a namespace the Zarf agent will take action in
+		if currentRegistrySecret.Labels[config.ZarfManagedByLabel] == "zarf" ||
+			(namespace.Labels[agentLabel] != "skip" && namespace.Labels[agentLabel] != "ignore") {
+			spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
+
+			// Create the secret
+			newRegistrySecret := c.GenerateRegistryPullCreds(namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
+			// TODO: Avoid using reflections, there is probably a better way to do this
+			if !reflect.DeepEqual(currentRegistrySecret.Data, newRegistrySecret.Data) {
+				// Create or update the zarf registry secret
+				// TODO: Refactor this
+				// TODO: An error should actually be returned here, not a warning
+				_, err = c.Clientset.CoreV1().Secrets(newRegistrySecret.Namespace).Get(ctx, newRegistrySecret.Name, metav1.GetOptions{})
+				if err != nil {
+					_, err = c.Clientset.CoreV1().Secrets(newRegistrySecret.Namespace).Create(ctx, newRegistrySecret, metav1.CreateOptions{})
+					if err != nil {
+						message.WarnErrf(err, "Problem creating registry secret for the %s namespace", namespace.Name)
+					}
+				} else {
+					_, err = c.Clientset.CoreV1().Secrets(newRegistrySecret.Namespace).Update(ctx, newRegistrySecret, metav1.UpdateOptions{})
+					if err != nil {
 						message.WarnErrf(err, "Problem creating registry secret for the %s namespace", namespace.Name)
 					}
 				}
 			}
 		}
-		spinner.Success()
 	}
+	spinner.Success()
 }
 
 // UpdateZarfManagedGitSecrets updates all Zarf-managed git secrets in all namespaces based on state
@@ -112,31 +139,44 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 	spinner := message.NewProgressSpinner("Updating existing Zarf-managed git secrets")
 	defer spinner.Stop()
 
-	if namespaces, err := c.GetNamespaces(ctx); err != nil {
+	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
 		spinner.Errorf(err, "Unable to get k8s namespaces")
-	} else {
-		// Update all git pull secrets
-		for _, namespace := range namespaces.Items {
-			currentGitSecret, err := c.GetSecret(ctx, namespace.Name, config.ZarfGitServerSecretName)
-			if err != nil {
-				continue
-			}
+		return
+	}
 
-			// Check if this is a Zarf managed secret or is in a namespace the Zarf agent will take action in
-			if currentGitSecret.Labels[config.ZarfManagedByLabel] == "zarf" ||
-				(namespace.Labels[agentLabel] != "skip" && namespace.Labels[agentLabel] != "ignore") {
-				spinner.Updatef("Updating existing Zarf-managed git secret for namespace: '%s'", namespace.Name)
+	// Update all git pull secrets
+	for _, namespace := range namespaceList.Items {
+		currentGitSecret, err := c.Clientset.CoreV1().Secrets(namespace.Name).Get(ctx, config.ZarfGitServerSecretName, metav1.GetOptions{})
+		if err != nil {
+			continue
+		}
 
-				// Create the secret
-				newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, state.GitServer)
-				if !reflect.DeepEqual(currentGitSecret.StringData, newGitSecret.StringData) {
-					// Create or update the zarf git secret
-					if _, err := c.CreateOrUpdateSecret(ctx, newGitSecret); err != nil {
+		// Check if this is a Zarf managed secret or is in a namespace the Zarf agent will take action in
+		if currentGitSecret.Labels[config.ZarfManagedByLabel] == "zarf" ||
+			(namespace.Labels[agentLabel] != "skip" && namespace.Labels[agentLabel] != "ignore") {
+			spinner.Updatef("Updating existing Zarf-managed git secret for namespace: '%s'", namespace.Name)
+
+			// Create the secret
+			newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, state.GitServer)
+			if !reflect.DeepEqual(currentGitSecret.StringData, newGitSecret.StringData) {
+				// Create or update the zarf git secret
+				// TODO: Refactor this
+				// TODO: An error should actually be returned here, not a warning
+				_, err = c.Clientset.CoreV1().Secrets(newGitSecret.Namespace).Get(ctx, newGitSecret.Name, metav1.GetOptions{})
+				if err != nil {
+					_, err = c.Clientset.CoreV1().Secrets(newGitSecret.Namespace).Create(ctx, newGitSecret, metav1.CreateOptions{})
+					if err != nil {
+						message.WarnErrf(err, "Problem creating git server secret for the %s namespace", namespace.Name)
+					}
+				} else {
+					_, err = c.Clientset.CoreV1().Secrets(newGitSecret.Namespace).Update(ctx, newGitSecret, metav1.UpdateOptions{})
+					if err != nil {
 						message.WarnErrf(err, "Problem creating git server secret for the %s namespace", namespace.Name)
 					}
 				}
 			}
 		}
-		spinner.Success()
 	}
+	spinner.Success()
 }

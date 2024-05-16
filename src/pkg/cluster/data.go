@@ -15,7 +15,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -68,7 +67,7 @@ iterator:
 			}
 		}
 
-		target := k8s.PodLookup{
+		target := PodLookup{
 			Namespace: data.Target.Namespace,
 			Selector:  data.Target.Selector,
 			Container: data.Target.Container,
@@ -132,7 +131,7 @@ iterator:
 		}
 
 		// Do not look for a specific container after injection in case they are running an init container
-		podOnlyTarget := k8s.PodLookup{
+		podOnlyTarget := PodLookup{
 			Namespace: data.Target.Namespace,
 			Selector:  data.Target.Selector,
 		}

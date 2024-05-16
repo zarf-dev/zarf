@@ -11,9 +11,9 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/defenseunicorns/zarf/src/pkg/tunnel"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
@@ -48,7 +48,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 	var (
 		err         error
-		tunnel      *k8s.Tunnel
+		tun         *tunnel.Tunnel
 		registryURL = cfg.RegInfo.Address
 	)
 
@@ -58,12 +58,12 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	if err := helpers.Retry(func() error {
 		c, _ := cluster.NewCluster()
 		if c != nil {
-			registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegInfo)
+			registryURL, tun, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegInfo)
 			if err != nil {
 				return err
 			}
-			if tunnel != nil {
-				defer tunnel.Close()
+			if tun != nil {
+				defer tun.Close()
 			}
 		}
 
@@ -71,8 +71,8 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		pushOptions := createPushOpts(cfg, progress)
 
 		pushImage := func(img v1.Image, name string) error {
-			if tunnel != nil {
-				return tunnel.Wrap(func() error { return crane.Push(img, name, pushOptions...) })
+			if tun != nil {
+				return tun.Wrap(func() error { return crane.Push(img, name, pushOptions...) })
 			}
 
 			return crane.Push(img, name, pushOptions...)
