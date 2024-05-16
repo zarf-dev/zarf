@@ -51,7 +51,7 @@ func TestMultiPartPackage(t *testing.T) {
 	require.NoError(t, err)
 	err = json.Unmarshal(part0File, &pkgData)
 	require.NoError(t, err)
-	require.Equal(t, pkgData.Count, 3)
+	require.Equal(t, 3, pkgData.Count)
 	fmt.Printf("%#v", pkgData)
 
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", deployPath, "--confirm")
