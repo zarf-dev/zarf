@@ -119,7 +119,7 @@ func TestValidateSchema(t *testing.T) {
 			"https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1"}}
 		checkForUnpinnedRepos(&validator, &composer.Node{ZarfComponent: component})
 		require.Equal(t, unpinnedRepo, validator.findings[0].item)
-		require.Equal(t, len(validator.findings), 1)
+		require.Len(t, validator.findings, 1)
 	})
 
 	t.Run("Unpinnned image warning", func(t *testing.T) {
@@ -133,8 +133,7 @@ func TestValidateSchema(t *testing.T) {
 		checkForUnpinnedImages(&validator, &composer.Node{ZarfComponent: component})
 		require.Equal(t, unpinnedImage, validator.findings[0].item)
 		require.Equal(t, badImage, validator.findings[1].item)
-		require.Equal(t, 2, len(validator.findings))
-
+		require.Len(t, validator.findings, 2)
 	})
 
 	t.Run("Unpinnned file warning", func(t *testing.T) {
@@ -156,7 +155,7 @@ func TestValidateSchema(t *testing.T) {
 		component := types.ZarfComponent{Files: zarfFiles}
 		checkForUnpinnedFiles(&validator, &composer.Node{ZarfComponent: component})
 		require.Equal(t, fileURL, validator.findings[0].item)
-		require.Equal(t, 1, len(validator.findings))
+		require.Len(t, validator.findings, 1)
 	})
 
 	t.Run("Wrap standalone numbers in bracket", func(t *testing.T) {

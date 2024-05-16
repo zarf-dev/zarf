@@ -55,7 +55,7 @@ func TestUseCLI(t *testing.T) {
 		// Test `zarf version`
 		version, _, err := e2e.Zarf("version")
 		require.NoError(t, err)
-		require.NotEqual(t, len(version), 0, "Zarf version should not be an empty string")
+		require.NotEmpty(t, version, "Zarf version should not be an empty string")
 		version = strings.Trim(version, "\n")
 
 		// test `zarf version --output=json`

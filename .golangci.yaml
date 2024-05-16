@@ -11,6 +11,7 @@ linters:
     - goheader
     - goimports
     - nolintlint
+    - testifylint
 linters-settings:
   govet:
     enable-all: true
@@ -50,6 +51,8 @@ linters-settings:
       - name: unused-parameter
       - name: unreachable-code
       - name: redefines-builtin-id
+  testifylint:
+    enable-all: true
 issues:
   # Revive rules that are disabled by default.
   include:

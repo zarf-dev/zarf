@@ -198,6 +198,8 @@ func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
 }
 
 func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, username string, password string) {
+	suite.T().Helper()
+
 	tempDir := suite.T().TempDir()
 	podInfoVersion := "6.4.0"
 	podinfoChartPath := filepath.Join("..", "..", "..", "examples", "helm-charts", "chart")
@@ -235,6 +237,8 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 }
 
 func (suite *ExtOutClusterTestSuite) makeGiteaUserPrivate(baseURL string, username string, password string) {
+	suite.T().Helper()
+
 	url := fmt.Sprintf("%s/api/v1/admin/users/%s", baseURL, username)
 
 	userOption := map[string]interface{}{
