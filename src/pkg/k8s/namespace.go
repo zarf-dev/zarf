@@ -20,12 +20,6 @@ func (k *K8s) GetNamespaces(ctx context.Context) (*corev1.NamespaceList, error) 
 	return k.Clientset.CoreV1().Namespaces().List(ctx, metaOptions)
 }
 
-// GetNamespace gets a namespace by name
-func (k *K8s) GetNamespace(name string) (*corev1.Namespace, error) {
-	getOptions := metav1.GetOptions{}
-	return k.Clientset.CoreV1().Namespaces().Get(context.TODO(), name, getOptions)
-}
-
 // UpdateNamespace updates the given namespace in the cluster.
 func (k *K8s) UpdateNamespace(ctx context.Context, namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	updateOptions := metav1.UpdateOptions{}
