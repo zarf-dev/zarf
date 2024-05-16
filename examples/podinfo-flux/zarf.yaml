@@ -55,8 +55,8 @@ components:
           - helm/podinfo-helmrelease.yaml
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
-      # Note: Zarf only supports `oci://` urls within Flux HelmRepository definitions
-      - oci://ghcr.io/stefanprodan/charts/podinfo:6.4.0
+      # Note: this is a helm OCI artifact rather than a container image
+      - ghcr.io/stefanprodan/charts/podinfo:6.4.0
     actions:
       onDeploy:
         after:
@@ -79,7 +79,8 @@ components:
           - oci/podinfo-kustomization.yaml
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
-      - oci://ghcr.io/stefanprodan/manifests/podinfo:6.4.0
+      # Note: this is a flux kustomize OCI artifact rather than a container image
+      - ghcr.io/stefanprodan/manifests/podinfo:6.4.0
     actions:
       onDeploy:
         after:
@@ -107,6 +108,6 @@ x-mdx: |
 
   The Zarf agent will only automatically add the `insecure` key if the internal registry is used. If you are using a http registry outside of the cluster you will need to manually add this key.
 
-  Due to a bug in helm, the URL to an insecure registry must be an IP address instead of a hostname. This is not an issue when using the internal registry as the URL will be mutated to an IP address, however this means helmrepositories are not supported when using an external http registry not pointed to an IP address. See [this PR](https://github.com/helm/helm/pull/12998) for more detail
+  Due to a bug in helm, HelmRepositories with an insecure registry must use IP address instead of a hostname. This is not an issue with the internal Zarf registry, which is always an IP address, but will cause Flux HelmRepositories to break if Zarf is using an external http registry. See [this PR](https://github.com/helm/helm/pull/12998) for more detail
 
   :::
