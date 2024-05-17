@@ -15,9 +15,9 @@ func addAgentLabel(labels map[string]string) map[string]string {
 }
 
 func getAnnotationPatch(currAnnotations map[string]string) operations.PatchOperation {
-	return operations.ReplacePatchOperation("/metadata/annotations/", addAgentLabel(currAnnotations))
+	return operations.ReplacePatchOperation("/metadata/annotations", addAgentLabel(currAnnotations))
 }
 
 func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
-	return operations.ReplacePatchOperation("/metadata/labels/", addAgentLabel(currLabels))
+	return operations.ReplacePatchOperation("/metadata/labels", addAgentLabel(currLabels))
 }
