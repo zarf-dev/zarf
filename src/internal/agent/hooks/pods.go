@@ -100,7 +100,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 
 	// Add a label noting the zarf mutation
 	if pod.Labels == nil {
-		// If the labels path does not exist - create with nap[string]string value
+		// If the labels path does not exist - create with map[string]string value
 		patchOperations = append(patchOperations, operations.AddPatchOperation("/metadata/labels",
 			map[string]string{
 				"zarf-agent": "patched",
