@@ -27,12 +27,12 @@ type ServiceInfo struct {
 }
 
 // ReplaceService deletes and re-creates a service.
-func (k *K8s) ReplaceService(service *corev1.Service) (*corev1.Service, error) {
-	if err := k.DeleteService(service.Namespace, service.Name); err != nil {
+func (k *K8s) ReplaceService(ctx context.Context, service *corev1.Service) (*corev1.Service, error) {
+	if err := k.DeleteService(ctx, service.Namespace, service.Name); err != nil {
 		return nil, err
 	}
 
-	return k.CreateService(service)
+	return k.CreateService(ctx, service)
 }
 
 // GenerateService returns a K8s service struct without writing to the cluster.
@@ -54,28 +54,28 @@ func (k *K8s) GenerateService(namespace, name string) *corev1.Service {
 }
 
 // DeleteService removes a service from the cluster by namespace and name.
-func (k *K8s) DeleteService(namespace, name string) error {
-	return k.Clientset.CoreV1().Services(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+func (k *K8s) DeleteService(ctx context.Context, namespace, name string) error {
+	return k.Clientset.CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }
 
 // CreateService creates the given service in the cluster.
-func (k *K8s) CreateService(service *corev1.Service) (*corev1.Service, error) {
+func (k *K8s) CreateService(ctx context.Context, service *corev1.Service) (*corev1.Service, error) {
 	createOptions := metav1.CreateOptions{}
-	return k.Clientset.CoreV1().Services(service.Namespace).Create(context.TODO(), service, createOptions)
+	return k.Clientset.CoreV1().Services(service.Namespace).Create(ctx, service, createOptions)
 }
 
 // GetService returns a Kubernetes service resource in the provided namespace with the given name.
-func (k *K8s) GetService(namespace, serviceName string) (*corev1.Service, error) {
-	return k.Clientset.CoreV1().Services(namespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
+func (k *K8s) GetService(ctx context.Context, namespace, serviceName string) (*corev1.Service, error) {
+	return k.Clientset.CoreV1().Services(namespace).Get(ctx, serviceName, metav1.GetOptions{})
 }
 
 // GetServices returns a list of services in the provided namespace.  To search all namespaces, pass "" in the namespace arg.
-func (k *K8s) GetServices(namespace string) (*corev1.ServiceList, error) {
-	return k.Clientset.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{})
+func (k *K8s) GetServices(ctx context.Context, namespace string) (*corev1.ServiceList, error) {
+	return k.Clientset.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{})
 }
 
 // GetServicesByLabel returns a list of matched services given a label and value.  To search all namespaces, pass "" in the namespace arg.
-func (k *K8s) GetServicesByLabel(namespace, label, value string) (*corev1.ServiceList, error) {
+func (k *K8s) GetServicesByLabel(ctx context.Context, namespace, label, value string) (*corev1.ServiceList, error) {
 	// Create the selector and add the requirement
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: Labels{
@@ -84,11 +84,11 @@ func (k *K8s) GetServicesByLabel(namespace, label, value string) (*corev1.Servic
 	})
 
 	// Run the query with the selector and return as a ServiceList
-	return k.Clientset.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector.String()})
+	return k.Clientset.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector.String()})
 }
 
 // GetServicesByLabelExists returns a list of matched services given a label.  To search all namespaces, pass "" in the namespace arg.
-func (k *K8s) GetServicesByLabelExists(namespace, label string) (*corev1.ServiceList, error) {
+func (k *K8s) GetServicesByLabelExists(ctx context.Context, namespace, label string) (*corev1.ServiceList, error) {
 	// Create the selector and add the requirement
 	labelSelector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{{
@@ -98,12 +98,12 @@ func (k *K8s) GetServicesByLabelExists(namespace, label string) (*corev1.Service
 	})
 
 	// Run the query with the selector and return as a ServiceList
-	return k.Clientset.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector.String()})
+	return k.Clientset.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector.String()})
 }
 
 // ServiceInfoFromNodePortURL takes a nodePortURL and parses it to find the service info for connecting to the cluster. The string is expected to follow the following format:
 // Example nodePortURL: 127.0.0.1:{PORT}.
-func (k *K8s) ServiceInfoFromNodePortURL(nodePortURL string) (*ServiceInfo, error) {
+func (k *K8s) ServiceInfoFromNodePortURL(ctx context.Context, nodePortURL string) (*ServiceInfo, error) {
 	// Attempt to parse as normal, if this fails add a scheme to the URL (docker registries don't use schemes)
 	parsedURL, err := url.Parse(nodePortURL)
 	if err != nil {
@@ -128,7 +128,7 @@ func (k *K8s) ServiceInfoFromNodePortURL(nodePortURL string) (*ServiceInfo, erro
 		return nil, fmt.Errorf("node port services should use the port range 30000-32767")
 	}
 
-	services, err := k.GetServices("")
+	services, err := k.GetServices(ctx, "")
 	if err != nil {
 		return nil, err
 	}

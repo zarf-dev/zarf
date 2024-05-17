@@ -174,7 +174,8 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 		URL:      chartURL,
 	}
 	repoFile.Add(entry)
-	utils.WriteYaml(repoPath, repoFile, helpers.ReadWriteUser)
+	err = utils.WriteYaml(repoPath, repoFile, helpers.ReadWriteUser)
+	suite.NoError(err)
 
 	err = exec.CmdWithPrint(zarfBinPath, findImageArgs...)
 	suite.NoError(err, "Unable to find images, helm auth likely failed")
@@ -185,6 +186,8 @@ func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
 }
 
 func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, username string, password string) {
+	suite.T().Helper()
+
 	tempDir := suite.T().TempDir()
 	podInfoVersion := "6.4.0"
 	podinfoChartPath := filepath.Join("..", "..", "..", "examples", "helm-charts", "chart")
@@ -192,7 +195,8 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 	podinfoTarballPath := filepath.Join(tempDir, fmt.Sprintf("podinfo-%s.tgz", podInfoVersion))
 	suite.NoError(err, "Unable to package chart")
 
-	utils.DownloadToFile(fmt.Sprintf("https://stefanprodan.github.io/podinfo/podinfo-%s.tgz", podInfoVersion), podinfoTarballPath, "")
+	err = utils.DownloadToFile(fmt.Sprintf("https://stefanprodan.github.io/podinfo/podinfo-%s.tgz", podInfoVersion), podinfoTarballPath, "")
+	suite.NoError(err)
 	url := fmt.Sprintf("%s/api/packages/%s/helm/api/charts", baseURL, username)
 
 	file, err := os.Open(podinfoTarballPath)
@@ -221,6 +225,8 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 }
 
 func (suite *ExtOutClusterTestSuite) makeGiteaUserPrivate(baseURL string, username string, password string) {
+	suite.T().Helper()
+
 	url := fmt.Sprintf("%s/api/v1/admin/users/%s", baseURL, username)
 
 	userOption := map[string]interface{}{

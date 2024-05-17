@@ -729,11 +729,10 @@ const (
 
 // Collection of reusable error messages.
 var (
-	ErrInitNotFound         = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
-	ErrUnableToCheckArch    = errors.New("unable to get the configured cluster's architecture")
-	ErrInterrupt            = errors.New("execution cancelled due to an interrupt")
-	ErrUnableToGetPackages  = errors.New("unable to load the Zarf Package data from the cluster")
-	ErrUnsupportedImageType = errors.New("zarf does not currently support image indexes or docker manifest lists")
+	ErrInitNotFound        = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
+	ErrUnableToCheckArch   = errors.New("unable to get the configured cluster's architecture")
+	ErrInterrupt           = errors.New("execution cancelled due to an interrupt")
+	ErrUnableToGetPackages = errors.New("unable to load the Zarf Package data from the cluster")
 )
 
 // Collection of reusable warn messages.

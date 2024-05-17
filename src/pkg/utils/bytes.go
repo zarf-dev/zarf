@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
 // forked from https://www.socketloop.com/tutorials/golang-byte-format-example
 
 // Package utils provides generic utility functions.

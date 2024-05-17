@@ -6,6 +6,7 @@ package git
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,7 +32,7 @@ type CreateTokenResponse struct {
 }
 
 // CreateReadOnlyUser uses the Gitea API to create a non-admin Zarf user.
-func (g *Git) CreateReadOnlyUser() error {
+func (g *Git) CreateReadOnlyUser(ctx context.Context) error {
 	message.Debugf("git.CreateReadOnlyUser()")
 
 	c, err := cluster.NewCluster()
@@ -44,7 +45,7 @@ func (g *Git) CreateReadOnlyUser() error {
 	if err != nil {
 		return err
 	}
-	_, err = tunnel.Connect()
+	_, err = tunnel.Connect(ctx)
 	if err != nil {
 		return err
 	}
@@ -102,16 +103,16 @@ func (g *Git) CreateReadOnlyUser() error {
 }
 
 // UpdateZarfGiteaUsers updates Zarf gitea users
-func (g *Git) UpdateZarfGiteaUsers(oldState *types.ZarfState) error {
+func (g *Git) UpdateZarfGiteaUsers(ctx context.Context, oldState *types.ZarfState) error {
 
 	//Update git read only user password
-	err := g.UpdateGitUser(oldState.GitServer.PushPassword, g.Server.PullUsername, g.Server.PullPassword)
+	err := g.UpdateGitUser(ctx, oldState.GitServer.PushPassword, g.Server.PullUsername, g.Server.PullPassword)
 	if err != nil {
 		return fmt.Errorf("unable to update gitea read only user password: %w", err)
 	}
 
 	// Update Git admin password
-	err = g.UpdateGitUser(oldState.GitServer.PushPassword, g.Server.PushUsername, g.Server.PushPassword)
+	err = g.UpdateGitUser(ctx, oldState.GitServer.PushPassword, g.Server.PushUsername, g.Server.PushPassword)
 	if err != nil {
 		return fmt.Errorf("unable to update gitea admin user password: %w", err)
 	}
@@ -119,7 +120,7 @@ func (g *Git) UpdateZarfGiteaUsers(oldState *types.ZarfState) error {
 }
 
 // UpdateGitUser updates Zarf git server users
-func (g *Git) UpdateGitUser(oldAdminPass string, username string, userpass string) error {
+func (g *Git) UpdateGitUser(ctx context.Context, oldAdminPass string, username string, userpass string) error {
 	message.Debugf("git.UpdateGitUser()")
 
 	c, err := cluster.NewCluster()
@@ -131,7 +132,7 @@ func (g *Git) UpdateGitUser(oldAdminPass string, username string, userpass strin
 	if err != nil {
 		return err
 	}
-	_, err = tunnel.Connect()
+	_, err = tunnel.Connect(ctx)
 	if err != nil {
 		return err
 	}
@@ -157,7 +158,7 @@ func (g *Git) UpdateGitUser(oldAdminPass string, username string, userpass strin
 }
 
 // CreatePackageRegistryToken uses the Gitea API to create a package registry token.
-func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
+func (g *Git) CreatePackageRegistryToken(ctx context.Context) (CreateTokenResponse, error) {
 	message.Debugf("git.CreatePackageRegistryToken()")
 
 	c, err := cluster.NewCluster()
@@ -170,7 +171,7 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 	if err != nil {
 		return CreateTokenResponse{}, err
 	}
-	_, err = tunnel.Connect()
+	_, err = tunnel.Connect(ctx)
 	if err != nil {
 		return CreateTokenResponse{}, err
 	}
@@ -245,7 +246,7 @@ func (g *Git) CreatePackageRegistryToken() (CreateTokenResponse, error) {
 }
 
 // UpdateGiteaPVC updates the existing Gitea persistent volume claim and tells Gitea whether to create or not.
-func UpdateGiteaPVC(shouldRollBack bool) (string, error) {
+func UpdateGiteaPVC(ctx context.Context, shouldRollBack bool) (string, error) {
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return "false", err
@@ -260,12 +261,12 @@ func UpdateGiteaPVC(shouldRollBack bool) (string, error) {
 	annotations := map[string]string{"meta.helm.sh/release-name": "zarf-gitea", "meta.helm.sh/release-namespace": "zarf"}
 
 	if shouldRollBack {
-		err = c.K8s.RemoveLabelsAndAnnotations(cluster.ZarfNamespaceName, pvcName, groupKind, labels, annotations)
+		err = c.K8s.RemoveLabelsAndAnnotations(ctx, cluster.ZarfNamespaceName, pvcName, groupKind, labels, annotations)
 		return "false", err
 	}
 
 	if pvcName == "data-zarf-gitea-0" {
-		err = c.K8s.AddLabelsAndAnnotations(cluster.ZarfNamespaceName, pvcName, groupKind, labels, annotations)
+		err = c.K8s.AddLabelsAndAnnotations(ctx, cluster.ZarfNamespaceName, pvcName, groupKind, labels, annotations)
 		return "true", err
 	}
 

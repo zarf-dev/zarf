@@ -15,26 +15,26 @@ import (
 )
 
 // GetNamespaces returns a list of namespaces in the cluster.
-func (k *K8s) GetNamespaces() (*corev1.NamespaceList, error) {
+func (k *K8s) GetNamespaces(ctx context.Context) (*corev1.NamespaceList, error) {
 	metaOptions := metav1.ListOptions{}
-	return k.Clientset.CoreV1().Namespaces().List(context.TODO(), metaOptions)
+	return k.Clientset.CoreV1().Namespaces().List(ctx, metaOptions)
 }
 
 // UpdateNamespace updates the given namespace in the cluster.
-func (k *K8s) UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
+func (k *K8s) UpdateNamespace(ctx context.Context, namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	updateOptions := metav1.UpdateOptions{}
-	return k.Clientset.CoreV1().Namespaces().Update(context.TODO(), namespace, updateOptions)
+	return k.Clientset.CoreV1().Namespaces().Update(ctx, namespace, updateOptions)
 }
 
 // CreateNamespace creates the given namespace or returns it if it already exists in the cluster.
-func (k *K8s) CreateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
+func (k *K8s) CreateNamespace(ctx context.Context, namespace *corev1.Namespace) (*corev1.Namespace, error) {
 	metaOptions := metav1.GetOptions{}
 	createOptions := metav1.CreateOptions{}
 
-	match, err := k.Clientset.CoreV1().Namespaces().Get(context.TODO(), namespace.Name, metaOptions)
+	match, err := k.Clientset.CoreV1().Namespaces().Get(ctx, namespace.Name, metaOptions)
 
 	if err != nil || match.Name != namespace.Name {
-		return k.Clientset.CoreV1().Namespaces().Create(context.TODO(), namespace, createOptions)
+		return k.Clientset.CoreV1().Namespaces().Create(ctx, namespace, createOptions)
 	}
 
 	return match, err
@@ -45,19 +45,25 @@ func (k *K8s) DeleteNamespace(ctx context.Context, name string) error {
 	// Attempt to delete the namespace immediately
 	gracePeriod := int64(0)
 	err := k.Clientset.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{GracePeriodSeconds: &gracePeriod})
-	// If an error besides "not found" is returned, return it
 	if err != nil && !errors.IsNotFound(err) {
 		return err
 	}
 
-	// Indefinitely wait for the namespace to be deleted, use context.WithTimeout to limit this
+	timer := time.NewTimer(0)
+	defer timer.Stop()
+
 	for {
-		// Keep checking for the namespace to be deleted
-		_, err := k.Clientset.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
-		if errors.IsNotFound(err) {
-			return nil
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timer.C:
+			_, err := k.Clientset.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+			if errors.IsNotFound(err) {
+				return nil
+			}
+
+			timer.Reset(1 * time.Second)
 		}
-		time.Sleep(1 * time.Second)
 	}
 }
 

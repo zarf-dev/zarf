@@ -5,6 +5,7 @@
 package test
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -27,7 +28,9 @@ func TestConnectAndCreds(t *testing.T) {
 	prevAgentSecretData, _, err := e2e.Kubectl("get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
 
-	connectToZarfServices(t)
+	ctx := context.Background()
+
+	connectToZarfServices(ctx, t)
 
 	stdOut, stdErr, err := e2e.Zarf("tools", "update-creds", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
@@ -36,7 +39,7 @@ func TestConnectAndCreds(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, prevAgentSecretData, newAgentSecretData, "agent secrets should not be the same")
 
-	connectToZarfServices(t)
+	connectToZarfServices(ctx, t)
 
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "init", "--components=logging", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
@@ -50,13 +53,13 @@ func TestConnectAndCreds(t *testing.T) {
 	require.Contains(t, stdOut, "2.8.3")
 	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/grafana/promtail")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Equal(t, stdOut, "")
+	require.Empty(t, stdOut)
 	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/grafana/grafana")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Equal(t, stdOut, "")
+	require.Empty(t, stdOut)
 	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/grafana/loki")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Equal(t, stdOut, "")
+	require.Empty(t, stdOut)
 }
 
 func TestMetrics(t *testing.T) {
@@ -68,7 +71,7 @@ func TestMetrics(t *testing.T) {
 
 	tunnel, err := c.NewTunnel("zarf", "svc", "agent-hook", "", 8888, 8443)
 	require.NoError(t, err)
-	_, err = tunnel.Connect()
+	_, err = tunnel.Connect(context.Background())
 	require.NoError(t, err)
 	defer tunnel.Close()
 
@@ -93,12 +96,12 @@ func TestMetrics(t *testing.T) {
 	}
 
 	desiredString := "go_gc_duration_seconds_count"
-	require.Equal(t, true, strings.Contains(string(body), desiredString))
+	require.Contains(t, string(body), desiredString)
 	require.NoError(t, err, resp)
 	require.Equal(t, 200, resp.StatusCode)
 }
 
-func connectToZarfServices(t *testing.T) {
+func connectToZarfServices(ctx context.Context, t *testing.T) {
 	// Make the Registry contains the images we expect
 	stdOut, stdErr, err := e2e.Zarf("tools", "registry", "catalog")
 	require.NoError(t, err, stdOut, stdErr)
@@ -129,7 +132,7 @@ func connectToZarfServices(t *testing.T) {
 	// Connect to Gitea
 	c, err := cluster.NewCluster()
 	require.NoError(t, err)
-	tunnelGit, err := c.Connect(cluster.ZarfGit)
+	tunnelGit, err := c.Connect(ctx, cluster.ZarfGit)
 	require.NoError(t, err)
 	defer tunnelGit.Close()
 
@@ -150,7 +153,7 @@ func connectToZarfServices(t *testing.T) {
 	// Connect to the Logging Stack
 	c, err = cluster.NewCluster()
 	require.NoError(t, err)
-	tunnelLog, err := c.Connect(cluster.ZarfLogging)
+	tunnelLog, err := c.Connect(ctx, cluster.ZarfLogging)
 	require.NoError(t, err)
 	defer tunnelLog.Close()
 

@@ -5,6 +5,7 @@
 package cluster
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -41,7 +42,7 @@ var (
 type imageNodeMap map[string][]string
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injectorSeedSrcs []string) {
+func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imagesDir string, injectorSeedSrcs []string) {
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer spinner.Stop()
 
@@ -64,19 +65,20 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 	var seedImages []transform.Image
 
 	// Get all the images from the cluster
-	timeout := 5 * time.Minute
-	spinner.Updatef("Getting the list of existing cluster images (%s timeout)", timeout.String())
-	if images, err = c.getImagesAndNodesForInjection(timeout); err != nil {
+	spinner.Updatef("Getting the list of existing cluster images")
+	findImagesCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+	if images, err = c.getImagesAndNodesForInjection(findImagesCtx); err != nil {
 		spinner.Fatalf(err, "Unable to generate a list of candidate images to perform the registry injection")
 	}
 
 	spinner.Updatef("Creating the injector configmap")
-	if err = c.createInjectorConfigmap(tmp.InjectionBinary); err != nil {
+	if err = c.createInjectorConfigmap(ctx, tmp.InjectionBinary); err != nil {
 		spinner.Fatalf(err, "Unable to create the injector configmap")
 	}
 
 	spinner.Updatef("Creating the injector service")
-	if service, err := c.createService(); err != nil {
+	if service, err := c.createService(ctx); err != nil {
 		spinner.Fatalf(err, "Unable to create the injector service")
 	} else {
 		config.ZarfSeedPort = fmt.Sprintf("%d", service.Spec.Ports[0].NodePort)
@@ -88,7 +90,7 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 	}
 
 	spinner.Updatef("Loading the seed registry configmaps")
-	if payloadConfigmaps, sha256sum, err = c.createPayloadConfigmaps(tmp.SeedImagesDir, tmp.InjectorPayloadTarGz, spinner); err != nil {
+	if payloadConfigmaps, sha256sum, err = c.createPayloadConfigmaps(ctx, tmp.SeedImagesDir, tmp.InjectorPayloadTarGz, spinner); err != nil {
 		spinner.Fatalf(err, "Unable to generate the injector payload configmaps")
 	}
 
@@ -105,26 +107,30 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 		spinner.Updatef("Attempting to bootstrap with the %s/%s", node, image)
 
 		// Make sure the pod is not there first
-		_ = c.DeletePod(ZarfNamespaceName, "injector")
+		err = c.DeletePod(ctx, ZarfNamespaceName, "injector")
+		if err != nil {
+			message.Debug("could not delete pod injector:", err)
+		}
 
 		// Update the podspec image path and use the first node found
+
 		pod, err := c.buildInjectionPod(node[0], image, payloadConfigmaps, sha256sum)
 		if err != nil {
 			// Just debug log the output because failures just result in trying the next image
-			message.Debug(err)
+			message.Debug("error making injection pod:", err)
 			continue
 		}
 
 		// Create the pod in the cluster
-		pod, err = c.CreatePod(pod)
+		pod, err = c.CreatePod(ctx, pod)
 		if err != nil {
 			// Just debug log the output because failures just result in trying the next image
-			message.Debug(pod, err)
+			message.Debug("error creating pod in cluster:", pod, err)
 			continue
 		}
 
 		// if no error, try and wait for a seed image to be present, return if successful
-		if c.injectorIsReady(seedImages, spinner) {
+		if c.injectorIsReady(ctx, seedImages, spinner) {
 			spinner.Success()
 			return
 		}
@@ -137,20 +143,20 @@ func (c *Cluster) StartInjectionMadness(tmpDir string, imagesDir string, injecto
 }
 
 // StopInjectionMadness handles cleanup once the seed registry is up.
-func (c *Cluster) StopInjectionMadness() error {
+func (c *Cluster) StopInjectionMadness(ctx context.Context) error {
 	// Try to kill the injector pod now
-	if err := c.DeletePod(ZarfNamespaceName, "injector"); err != nil {
+	if err := c.DeletePod(ctx, ZarfNamespaceName, "injector"); err != nil {
 		return err
 	}
 
 	// Remove the configmaps
 	labelMatch := map[string]string{"zarf-injector": "payload"}
-	if err := c.DeleteConfigMapsByLabel(ZarfNamespaceName, labelMatch); err != nil {
+	if err := c.DeleteConfigMapsByLabel(ctx, ZarfNamespaceName, labelMatch); err != nil {
 		return err
 	}
 
 	// Remove the injector service
-	return c.DeleteService(ZarfNamespaceName, "zarf-injector")
+	return c.DeleteService(ctx, ZarfNamespaceName, "zarf-injector")
 }
 
 func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSrcs []string, spinner *message.Spinner) ([]transform.Image, error) {
@@ -162,34 +168,36 @@ func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSr
 		spinner.Updatef("Loading the seed image '%s' from the package", src)
 		ref, err := transform.ParseImageRef(src)
 		if err != nil {
-			return seedImages, fmt.Errorf("failed to create ref for image %s: %w", src, err)
+			return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
 		}
 		img, err := utils.LoadOCIImage(imagesDir, ref)
 		if err != nil {
-			return seedImages, err
+			return nil, err
 		}
 
-		crane.SaveOCI(img, seedImagesDir)
+		if err := crane.SaveOCI(img, seedImagesDir); err != nil {
+			return nil, err
+		}
 
 		seedImages = append(seedImages, ref)
 
 		// Get the image digest so we can set an annotation in the image.json later
 		imgDigest, err := img.Digest()
 		if err != nil {
-			return seedImages, err
+			return nil, err
 		}
 		// This is done _without_ the domain (different from pull.go) since the injector only handles local images
 		localReferenceToDigest[ref.Path+ref.TagOrDigest] = imgDigest.String()
 	}
 
 	if err := utils.AddImageNameAnnotation(seedImagesDir, localReferenceToDigest); err != nil {
-		return seedImages, fmt.Errorf("unable to format OCI layout: %w", err)
+		return nil, fmt.Errorf("unable to format OCI layout: %w", err)
 	}
 
 	return seedImages, nil
 }
 
-func (c *Cluster) createPayloadConfigmaps(seedImagesDir, tarPath string, spinner *message.Spinner) ([]string, string, error) {
+func (c *Cluster) createPayloadConfigmaps(ctx context.Context, seedImagesDir, tarPath string, spinner *message.Spinner) ([]string, string, error) {
 	var configMaps []string
 
 	// Chunk size has to accommodate base64 encoding & etcd 1MB limit
@@ -226,7 +234,7 @@ func (c *Cluster) createPayloadConfigmaps(seedImagesDir, tarPath string, spinner
 		spinner.Updatef("Adding archive binary configmap %d of %d to the cluster", idx+1, chunkCount)
 
 		// Attempt to create the configmap in the cluster
-		if _, err = c.ReplaceConfigmap(ZarfNamespaceName, fileName, configData); err != nil {
+		if _, err = c.ReplaceConfigmap(ctx, ZarfNamespaceName, fileName, configData); err != nil {
 			return configMaps, "", err
 		}
 
@@ -241,13 +249,13 @@ func (c *Cluster) createPayloadConfigmaps(seedImagesDir, tarPath string, spinner
 }
 
 // Test for pod readiness and seed image presence.
-func (c *Cluster) injectorIsReady(seedImages []transform.Image, spinner *message.Spinner) bool {
+func (c *Cluster) injectorIsReady(ctx context.Context, seedImages []transform.Image, spinner *message.Spinner) bool {
 	tunnel, err := c.NewTunnel(ZarfNamespaceName, k8s.SvcResource, ZarfInjectorName, "", 0, ZarfInjectorPort)
 	if err != nil {
 		return false
 	}
 
-	_, err = tunnel.Connect()
+	_, err = tunnel.Connect(ctx)
 	if err != nil {
 		return false
 	}
@@ -261,6 +269,7 @@ func (c *Cluster) injectorIsReady(seedImages []transform.Image, spinner *message
 		var resp *http.Response
 		var err error
 		err = tunnel.Wrap(func() error {
+			message.Debug("getting seed registry %v", seedRegistry)
 			resp, err = http.Get(seedRegistry)
 			return err
 		})
@@ -276,7 +285,7 @@ func (c *Cluster) injectorIsReady(seedImages []transform.Image, spinner *message
 	return true
 }
 
-func (c *Cluster) createInjectorConfigmap(binaryPath string) error {
+func (c *Cluster) createInjectorConfigmap(ctx context.Context, binaryPath string) error {
 	var err error
 	configData := make(map[string][]byte)
 
@@ -286,17 +295,17 @@ func (c *Cluster) createInjectorConfigmap(binaryPath string) error {
 	}
 
 	// Try to delete configmap silently
-	_ = c.DeleteConfigmap(ZarfNamespaceName, "rust-binary")
+	_ = c.DeleteConfigmap(ctx, ZarfNamespaceName, "rust-binary")
 
 	// Attempt to create the configmap in the cluster
-	if _, err = c.CreateConfigmap(ZarfNamespaceName, "rust-binary", configData); err != nil {
+	if _, err = c.CreateConfigmap(ctx, ZarfNamespaceName, "rust-binary", configData); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c *Cluster) createService() (*corev1.Service, error) {
+func (c *Cluster) createService(ctx context.Context) (*corev1.Service, error) {
 	service := c.GenerateService(ZarfNamespaceName, "zarf-injector")
 
 	service.Spec.Type = corev1.ServiceTypeNodePort
@@ -308,9 +317,9 @@ func (c *Cluster) createService() (*corev1.Service, error) {
 	}
 
 	// Attempt to purse the service silently
-	_ = c.DeleteService(ZarfNamespaceName, "zarf-injector")
+	_ = c.DeleteService(ctx, ZarfNamespaceName, "zarf-injector")
 
-	return c.CreateService(service)
+	return c.CreateService(ctx, service)
 }
 
 // buildInjectionPod return a pod for injection with the appropriate containers to perform the injection.
@@ -432,66 +441,61 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 	return pod, nil
 }
 
-// GetImagesFromAvailableNodes checks for images on schedulable nodes within a cluster and returns
-func (c *Cluster) getImagesAndNodesForInjection(timeoutDuration time.Duration) (imageNodeMap, error) {
-	timeout := time.After(timeoutDuration)
+// getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
+func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeMap, error) {
 	result := make(imageNodeMap)
+
+	timer := time.NewTimer(0)
+	defer timer.Stop()
 
 	for {
 		select {
-
-		// On timeout abort
-		case <-timeout:
-			return nil, fmt.Errorf("get image list timed-out")
-
-		// After delay, try running
-		default:
-			pods, err := c.GetPods(corev1.NamespaceAll, metav1.ListOptions{
+		case <-ctx.Done():
+			return nil, fmt.Errorf("get image list timed-out: %w", ctx.Err())
+		case <-timer.C:
+			pods, err := c.GetPods(ctx, corev1.NamespaceAll, metav1.ListOptions{
 				FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
 			})
 			if err != nil {
 				return nil, fmt.Errorf("unable to get the list of %q pods in the cluster: %w", corev1.PodRunning, err)
 			}
 
-		findImages:
 			for _, pod := range pods.Items {
 				nodeName := pod.Spec.NodeName
 
-				nodeDetails, err := c.GetNode(nodeName)
+				nodeDetails, err := c.GetNode(ctx, nodeName)
 				if err != nil {
 					return nil, fmt.Errorf("unable to get the node %q: %w", nodeName, err)
 				}
 
 				if nodeDetails.Status.Allocatable.Cpu().Cmp(injectorRequestedCPU) < 0 ||
 					nodeDetails.Status.Allocatable.Memory().Cmp(injectorRequestedMemory) < 0 {
-					continue findImages
+					continue
 				}
 
 				for _, taint := range nodeDetails.Spec.Taints {
 					if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
-						continue findImages
+						continue
 					}
 				}
 
 				for _, container := range pod.Spec.InitContainers {
 					result[container.Image] = append(result[container.Image], nodeName)
 				}
-
 				for _, container := range pod.Spec.Containers {
 					result[container.Image] = append(result[container.Image], nodeName)
 				}
-
 				for _, container := range pod.Spec.EphemeralContainers {
 					result[container.Image] = append(result[container.Image], nodeName)
 				}
 			}
-		}
 
-		if len(result) < 1 {
-			c.Log("no images found: %w")
-			time.Sleep(2 * time.Second)
-		} else {
-			return result, nil
+			if len(result) > 0 {
+				return result, nil
+			}
+
+			c.Log("No images found on any node. Retrying...")
+			timer.Reset(2 * time.Second)
 		}
 	}
 }

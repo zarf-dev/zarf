@@ -178,6 +178,8 @@ func (suite *SkeletonSuite) Test_2_FilePaths() {
 }
 
 func (suite *SkeletonSuite) DirOrFileExists(path string) {
+	suite.T().Helper()
+
 	invalid := helpers.InvalidPath(path)
 	suite.Falsef(invalid, "path specified does not exist: %s", path)
 }
