@@ -6,22 +6,18 @@ package hooks
 
 import "github.com/defenseunicorns/zarf/src/internal/agent/operations"
 
-func initialPatchMap() map[string]string {
-	return map[string]string{
-		"zarf-agent": "patched",
+func addAgentLabel(labels map[string]string) map[string]string {
+	if labels == nil {
+		labels = make(map[string]string)
 	}
+	labels["zarf-agent"] = "patched"
+	return labels
 }
 
-func addPatchedAnnotation(patches []operations.PatchOperation, currAnnotations map[string]string) []operations.PatchOperation {
-	if currAnnotations == nil {
-		return append(patches, operations.ReplacePatchOperation("/metadata/annotations", initialPatchMap()))
-	}
-	return append(patches, operations.ReplacePatchOperation("/metadata/annotations/zarf-agent", "patched"))
+func getAnnotationPatch(currAnnotations map[string]string) operations.PatchOperation {
+	return operations.ReplacePatchOperation("/metadata/annotations/", addAgentLabel(currAnnotations))
 }
 
-func addPatchedLabel(patches []operations.PatchOperation, currLabels map[string]string) []operations.PatchOperation {
-	if currLabels == nil {
-		return append(patches, operations.ReplacePatchOperation("/metadata/labels", initialPatchMap()))
-	}
-	return append(patches, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
+func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
+	return operations.ReplacePatchOperation("/metadata/labels/", addAgentLabel(currLabels))
 }

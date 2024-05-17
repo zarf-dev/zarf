@@ -91,7 +91,7 @@ func mutateRepository(r *v1.AdmissionRequest) (result *operations.Result, err er
 	}
 
 	patches = populateArgoRepositoryPatchOperations(patchedURL, zarfState.GitServer)
-	patches = addPatchedAnnotation(patches, src.Annotations)
+	patches = append(patches, getAnnotationPatch(src.Annotations))
 
 	return &operations.Result{
 		Allowed:  true,

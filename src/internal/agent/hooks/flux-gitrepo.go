@@ -49,7 +49,6 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	message.Debugf("Using the url of (%s) to mutate the flux GitRepository", zarfState.GitServer.Address)
 
-	// Parse into a simple struct to read the GitRepo URL
 	src := &flux.GitRepository{}
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
@@ -80,7 +79,7 @@ func mutateGitRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	// Patch updates of the repo spec
 	patches = populateGitRepoPatchOperations(patchedURL)
 
-	patches = addPatchedAnnotation(patches, src.ObjectMeta.Annotations)
+	patches = append(patches, getAnnotationPatch(src.Annotations))
 
 	return &operations.Result{
 		Allowed:  true,

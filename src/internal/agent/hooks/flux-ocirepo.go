@@ -35,7 +35,6 @@ func NewOCIRepositoryMutationHook() operations.Hook {
 func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error) {
 	var (
 		zarfState *types.ZarfState
-		patches   []operations.PatchOperation
 	)
 
 	// Parse into a simple struct to read the OCIRepo url
@@ -53,7 +52,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	if src.Annotations != nil && src.Annotations["zarf-agent"] == "patched" {
 		return &operations.Result{
 			Allowed:  true,
-			PatchOps: patches,
+			PatchOps: []operations.PatchOperation{},
 		}, nil
 	}
 
@@ -104,9 +103,9 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	message.Debugf("original OCIRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 
-	patches = populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry, patchedRef)
+	patches := populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry, patchedRef)
 
-	patches = addPatchedAnnotation(patches, src.ObjectMeta.Annotations)
+	patches = append(patches, getAnnotationPatch(src.Annotations))
 	return &operations.Result{
 		Allowed:  true,
 		PatchOps: patches,

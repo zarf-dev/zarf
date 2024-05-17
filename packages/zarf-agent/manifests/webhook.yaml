@@ -125,8 +125,8 @@ webhooks:
         apiGroups:
           - "source.toolkit.fluxcd.io"
         apiVersions:
-          # While v1beta1 doesn't have the `type: oci` and is unsupported we still want it
-          # so that we can show a warning in the logs that we refuse to mutate
+          # While v1beta1 doesn't have the `type: oci` and is unsupported we still want to run mutations
+          # so that we can show a warning in the logs
           - "*"
         resources:
           - "helmrepositories"

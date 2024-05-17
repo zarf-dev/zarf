@@ -39,7 +39,6 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 		patches   []operations.PatchOperation
 	)
 
-	// Parse into a simple struct to read the HelmRepo url
 	src := &flux.HelmRepository{}
 	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
@@ -58,7 +57,6 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 		}, nil
 	}
 
-	// Form the zarfState.GitServer.Address from the zarfState
 	if zarfState, err = state.GetZarfStateFromAgentPod(); err != nil {
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
@@ -91,7 +89,7 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 	// Patch updates of the repo spec (Flux resource requires oci:// prefix)
 	patches = populateHelmRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry)
 
-	patches = addPatchedAnnotation(patches, src.ObjectMeta.Annotations)
+	patches = append(patches, getAnnotationPatch(src.Annotations))
 
 	return &operations.Result{
 		Allowed:  true,

@@ -155,7 +155,7 @@ The `zarf-agent` is responsible for modifying [Kubernetes PodSpec](https://kuber
 
 The `zarf-agent` modifies the following [flux](https://fluxcd.io/flux/) resources: [GitRepository](https://fluxcd.io/docs/components/source/gitrepositories/), [OCIRepository](https://fluxcd.io/flux/components/source/ocirepositories/), & [HelmRepository](https://fluxcd.io/flux/components/source/helmrepositories/) to point to the local Git Server or Zarf Registry. HelmRepositories are only mutated if the `type` key is set to `oci`.
 
-> Support for mutating OCIRepository and HelmRepository objects is in [`alpha`](/roadmap#beta) and should be tested on non-production clusters before being deployed to production clusters.
+> Support for mutating OCIRepository and HelmRepository objects is in [`alpha`](/roadmap#alpha) and should be tested on non-production clusters before being deployed to production clusters.
 
 :::caution
 

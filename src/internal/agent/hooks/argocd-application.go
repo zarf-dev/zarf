@@ -85,7 +85,7 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 		}
 	}
 
-	patches = addPatchedAnnotation(patches, src.Annotations)
+	patches = append(patches, getAnnotationPatch(src.Annotations))
 
 	return &operations.Result{
 		Allowed:  true,
