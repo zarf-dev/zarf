@@ -33,13 +33,6 @@ type ArgoApplication struct {
 	metav1.ObjectMeta
 }
 
-var (
-	zarfState *types.ZarfState
-	isPatched bool
-	isCreate  bool
-	isUpdate  bool
-)
-
 // NewApplicationMutationHook creates a new instance of the ArgoCD Application mutation hook.
 func NewApplicationMutationHook() operations.Hook {
 	message.Debug("hooks.NewApplicationMutationHook()")
@@ -51,11 +44,9 @@ func NewApplicationMutationHook() operations.Hook {
 
 // mutateApplication mutates the git repository url to point to the repository URL defined in the ZarfState.
 func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err error) {
-
-	isCreate = r.Operation == v1.Create
-	isUpdate = r.Operation == v1.Update
-
-	patches := []operations.PatchOperation{}
+	var (
+		zarfState *types.ZarfState
+	)
 
 	// Form the zarfState.GitServer.Address from the zarfState
 	if zarfState, err = state.GetZarfStateFromAgentPod(); err != nil {
@@ -71,16 +62,18 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
+	patches := []operations.PatchOperation{}
+
 	message.Debugf("Data %v", string(r.Object.Raw))
 
 	if src.Spec.Source != (Source{}) {
-		patchedURL, _ := getPatchedRepoURL(src.Spec.Source.RepoURL)
+		patchedURL, _ := getPatchedRepoURL(src.Spec.Source.RepoURL, r.Operation, zarfState)
 		patches = populateSingleSourceArgoApplicationPatchOperations(patchedURL, patches)
 	}
 
 	if len(src.Spec.Sources) > 0 {
 		for idx, source := range src.Spec.Sources {
-			patchedURL, _ := getPatchedRepoURL(source.RepoURL)
+			patchedURL, _ := getPatchedRepoURL(source.RepoURL, r.Operation, zarfState)
 			patches = populateMultipleSourceArgoApplicationPatchOperations(idx, patchedURL, patches)
 		}
 	}
@@ -93,13 +86,18 @@ func mutateApplication(r *v1.AdmissionRequest) (result *operations.Result, err e
 	}, nil
 }
 
-func getPatchedRepoURL(repoURL string) (string, error) {
+func getPatchedRepoURL(repoURL string, operation v1.Operation, zarfState *types.ZarfState) (string, error) {
 	var err error
+
 	patchedURL := repoURL
+
+	isCreate := operation == v1.Create
+	isUpdate := operation == v1.Update
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different from the hostname in the zarfState
 	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
+	var isPatched bool
 	if isUpdate {
 		isPatched, err = helpers.DoHostnamesMatch(zarfState.GitServer.Address, repoURL)
 		if err != nil {

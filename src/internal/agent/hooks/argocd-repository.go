@@ -42,8 +42,6 @@ func mutateRepository(r *v1.AdmissionRequest) (result *operations.Result, err er
 
 	var (
 		zarfState *types.ZarfState
-		patches   []operations.PatchOperation
-		isPatched bool
 
 		isCreate = r.Operation == v1.Create
 		isUpdate = r.Operation == v1.Update
@@ -72,6 +70,7 @@ func mutateRepository(r *v1.AdmissionRequest) (result *operations.Result, err er
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different from the hostname in the zarfState
 	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
+	var isPatched bool
 	if isUpdate {
 		isPatched, err = helpers.DoHostnamesMatch(zarfState.GitServer.Address, src.Data.URL)
 		if err != nil {
@@ -90,7 +89,7 @@ func mutateRepository(r *v1.AdmissionRequest) (result *operations.Result, err er
 		message.Debugf("original url of (%s) got mutated to (%s)", src.Data.URL, patchedURL)
 	}
 
-	patches = populateArgoRepositoryPatchOperations(patchedURL, zarfState.GitServer)
+	patches := populateArgoRepositoryPatchOperations(patchedURL, zarfState.GitServer)
 	patches = append(patches, getAnnotationPatch(src.Annotations))
 
 	return &operations.Result{
