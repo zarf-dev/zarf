@@ -360,7 +360,7 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
 	CmdDevDeployErr        = "Failed to dev deploy: %s"
 
-	CmdDevPatchShort    = "Manually patches files to match Zarf's mutated airgap resource references (not needed when using the Zarf Agent)"
+	CmdDevPatchShort    = "Manually patches files to match Zarf's mutated airgap resource references. This is not needed when using the Zarf Agent"
 	CmdDevPatchLong     = "Manually patches files to match Zarf's mutated airgap resource references. Useful when not using the Zarf Agent in your cluster or when you need to see how a given resource will be mutated in the airgap."
 	CmdDevPatchGitShort = "[Deprecated] Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."

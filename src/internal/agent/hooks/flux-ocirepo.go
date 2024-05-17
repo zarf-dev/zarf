@@ -123,7 +123,7 @@ func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.O
 		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
 	}
 
-	// If semver is used we don't want to add the latest tag that's automatically set on the ref above
+	// If semver is used we don't want to add the ":latest" tag + crc to the spec
 	if ref.SemVer != "" {
 		return patches
 	}
