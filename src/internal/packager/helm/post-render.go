@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -47,10 +47,10 @@ func (h *Helm) newRenderer() (*renderer, error) {
 	}
 
 	namespace, err := h.cluster.Clientset.CoreV1().Namespaces().Get(context.TODO(), h.chart.Namespace, metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !kerrors.IsNotFound(err) {
 		return nil, fmt.Errorf("unable to check for existing namespace %q in cluster: %w", h.chart.Namespace, err)
 	}
-	if errors.IsNotFound(err) {
+	if kerrors.IsNotFound(err) {
 		rend.namespaces[h.chart.Namespace] = cluster.NewZarfManagedNamespace(h.chart.Namespace)
 	} else if h.cfg.DeployOpts.AdoptExistingResources {
 		namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
