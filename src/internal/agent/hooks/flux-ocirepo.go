@@ -76,7 +76,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	ref := src.Spec.URL
 	if src.Spec.Reference.Digest != "" {
 		ref = fmt.Sprintf("%s@%s", ref, src.Spec.Reference.Digest)
-	} else {
+	} else if src.Spec.Reference.Tag != "" {
 		ref = fmt.Sprintf("%s:%s", ref, src.Spec.Reference.Tag)
 	}
 
@@ -97,7 +97,7 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 
 	if patchedRefInfo.Digest != "" {
 		patchedRef.Digest = patchedRefInfo.Digest
-	} else {
+	} else if patchedRefInfo.Tag != "" {
 		patchedRef.Tag = patchedRefInfo.Tag
 	}
 
@@ -123,12 +123,15 @@ func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.O
 		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
 	}
 
-	if ref.Tag != "" {
-		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/tag", ref.Tag))
-	} else if ref.Digest != "" {
+	// If semver is used we don't want to add the latest tag that's automatically set on the ref above
+	if ref.SemVer != "" {
+		return patches
+	}
+
+	if ref.Digest != "" {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/digest", ref.Digest))
-	} else {
-		patches = append(patches, operations.AddPatchOperation("/spec/ref", ref))
+	} else if ref.Tag != "" {
+		patches = append(patches, operations.ReplacePatchOperation("/spec/ref/tag", ref.Tag))
 	}
 
 	return patches
