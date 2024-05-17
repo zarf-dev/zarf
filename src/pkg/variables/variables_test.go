@@ -117,7 +117,7 @@ func TestPopulateVariables(t *testing.T) {
 			t.Fatalf("got unexpected err: %s", gotErr)
 		}
 
-		gotVars := tc.vc.GetSetVariables()
+		gotVars := tc.vc.setVariableMap
 
 		if len(gotVars) != len(tc.wantVars) {
 			t.Fatalf("wanted vars len: %d, got vars len: %d", len(tc.wantVars), len(gotVars))
