@@ -76,9 +76,13 @@ func (vc *VariableConfig) SetVariable(name, value string, sensitive bool, autoIn
 
 // CheckVariablePattern checks to see if a current variable is set to a value that matches its pattern
 func (vc *VariableConfig) CheckVariablePattern(name, pattern string) error {
-	if regexp.MustCompile(pattern).MatchString(vc.setVariableMap[name].Value) {
-		return nil
+	if variable, ok := vc.setVariableMap[name]; ok {
+		if regexp.MustCompile(pattern).MatchString(variable.Value) {
+			return nil
+		}
+
+		return fmt.Errorf("provided value for variable %q does not match pattern %q", name, pattern)
 	}
 
-	return fmt.Errorf("provided value for variable %q does not match pattern %q", name, pattern)
+	return fmt.Errorf("variable %q was not found in the current variable map", name)
 }
