@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/agent/http/admission"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
@@ -39,23 +38,9 @@ func TestPodMutationWebhook(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
 	c := &cluster.Cluster{K8s: &k8s.K8s{Clientset: fake.NewSimpleClientset()}}
-	handler := admission.NewHandler().Serve(NewPodMutationHook(ctx, c))
-
-	state, err := json.Marshal(&types.ZarfState{RegistryInfo: types.RegistryInfo{Address: "127.0.0.1:31999"}})
-	require.NoError(t, err)
-
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.ZarfStateSecretName,
-			Namespace: cluster.ZarfNamespaceName,
-		},
-		Data: map[string][]byte{
-			cluster.ZarfStateDataKey: state,
-		},
-	}
-	c.Clientset.CoreV1().Secrets("zarf").Create(ctx, secret, metav1.CreateOptions{})
+	state := &types.ZarfState{RegistryInfo: types.RegistryInfo{Address: "127.0.0.1:31999"}}
+	handler := setupWebhookTest(ctx, t, c, state, NewPodMutationHook)
 
 	tests := []struct {
 		name          string

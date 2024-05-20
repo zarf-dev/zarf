@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/agent/http/admission"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
@@ -19,7 +18,6 @@ import (
 	flux "github.com/fluxcd/source-controller/api/v1"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/admission/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
@@ -41,26 +39,12 @@ func TestFluxMutationWebhook(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-
 	c := &cluster.Cluster{K8s: &k8s.K8s{Clientset: fake.NewSimpleClientset()}}
-	handler := admission.NewHandler().Serve(NewGitRepositoryMutationHook(ctx, c))
-
-	state, err := json.Marshal(&types.ZarfState{GitServer: types.GitServerInfo{
+	state := &types.ZarfState{GitServer: types.GitServerInfo{
 		Address:      "https://git-server.com",
 		PushUsername: "a-push-user",
-	}})
-	require.NoError(t, err)
-
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.ZarfStateSecretName,
-			Namespace: cluster.ZarfNamespaceName,
-		},
-		Data: map[string][]byte{
-			cluster.ZarfStateDataKey: state,
-		},
-	}
-	c.Clientset.CoreV1().Secrets(cluster.ZarfNamespaceName).Create(ctx, secret, metav1.CreateOptions{})
+	}}
+	handler := setupWebhookTest(ctx, t, c, state, NewGitRepositoryMutationHook)
 
 	tests := []struct {
 		name          string
