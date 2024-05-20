@@ -202,35 +202,48 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 
 func TestGetDeployedPackage(t *testing.T) {
 	t.Parallel()
-
-	packageName := "test"
-	expected := &types.DeployedPackage{
-		Name: packageName,
-	}
-	b, err := json.Marshal(expected)
-	require.NoError(t, err)
-	data := map[string][]byte{
-		"data": b,
-	}
-	secret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      strings.Join([]string{config.ZarfPackagePrefix, packageName}, ""),
-			Namespace: "zarf",
-			Labels: map[string]string{
-				ZarfPackageInfoLabel: packageName,
-			},
-		},
-		Data: data,
-	}
 	ctx := context.Background()
 	c := &Cluster{&k8s.K8s{Clientset: fake.NewSimpleClientset()}}
-	c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &secret, metav1.CreateOptions{})
-	actual, err := c.GetDeployedPackage(ctx, packageName)
-	require.NoError(t, err)
-	require.Equal(t, expected, actual)
+
+	packages := []types.DeployedPackage{
+		{Name: "package1"},
+		{Name: "package2"},
+	}
+
+	for _, p := range packages {
+		b, err := json.Marshal(p)
+		require.NoError(t, err)
+		data := map[string][]byte{
+			"data": b,
+		}
+		secret := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      strings.Join([]string{config.ZarfPackagePrefix, p.Name}, ""),
+				Namespace: "zarf",
+				Labels: map[string]string{
+					ZarfPackageInfoLabel: p.Name,
+				},
+			},
+			Data: data,
+		}
+		c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &secret, metav1.CreateOptions{})
+		actual, err := c.GetDeployedPackage(ctx, p.Name)
+		require.NoError(t, err)
+		require.Equal(t, p, *actual)
+	}
+
+	nonPackageSecret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "hello-world",
+			Namespace: "zarf",
+			Labels: map[string]string{
+				ZarfPackageInfoLabel: "whatever",
+			},
+		},
+	}
+	c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &nonPackageSecret, metav1.CreateOptions{})
 
 	actualList, err := c.GetDeployedZarfPackages(ctx)
 	require.NoError(t, err)
-	require.Equal(t, *expected, actualList[0])
-
+	require.ElementsMatch(t, packages, actualList)
 }
