@@ -21,7 +21,6 @@ type K8s struct {
 	Clientset  kubernetes.Interface
 	RestConfig *rest.Config
 	Log        Log
-	Labels     Labels
 }
 
 // PodLookup is a struct for specifying a pod to target for data injection or lookups.
