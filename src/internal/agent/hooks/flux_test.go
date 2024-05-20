@@ -9,11 +9,13 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/agent/http/admission"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
+	fluxmeta "github.com/fluxcd/pkg/apis/meta"
 	flux "github.com/fluxcd/source-controller/api/v1"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/admission/v1"
@@ -23,7 +25,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-// createFluxGitRepoAdmissionRequest creates an admission request for a Flux GitRepository.
 func createFluxGitRepoAdmissionRequest(t *testing.T, op v1.Operation, fluxGitRepo *flux.GitRepository) *v1.AdmissionRequest {
 	t.Helper()
 	raw, err := json.Marshal(fluxGitRepo)
@@ -87,7 +88,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 				),
 				operations.AddPatchOperation(
 					"/spec/secretRef",
-					map[string]string{"name": "private-git-server"},
+					fluxmeta.LocalObjectReference{Name: config.ZarfGitServerSecretName},
 				),
 			},
 			code: http.StatusOK,

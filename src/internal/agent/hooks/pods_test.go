@@ -23,7 +23,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-// createPodAdmissionRequest creates an admission request for a pod.
 func createPodAdmissionRequest(t *testing.T, op v1.Operation, pod *corev1.Pod) *v1.AdmissionRequest {
 	t.Helper()
 	raw, err := json.Marshal(pod)
@@ -36,7 +35,6 @@ func createPodAdmissionRequest(t *testing.T, op v1.Operation, pod *corev1.Pod) *
 	}
 }
 
-// TestPodMutationWebhook tests the pod mutation webhook.
 func TestPodMutationWebhook(t *testing.T) {
 	t.Parallel()
 
