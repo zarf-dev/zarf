@@ -8,7 +8,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
@@ -21,12 +20,7 @@ type Cluster struct {
 const (
 	// DefaultTimeout is the default time to wait for a cluster to be ready.
 	DefaultTimeout = 30 * time.Second
-	agentLabel     = "zarf.dev/agent"
 )
-
-var labels = k8s.Labels{
-	config.ZarfManagedByLabel: "zarf",
-}
 
 // NewClusterWithWait creates a new Cluster instance and waits for the given timeout for the cluster to be ready.
 func NewClusterWithWait(ctx context.Context) (*Cluster, error) {
@@ -36,7 +30,7 @@ func NewClusterWithWait(ctx context.Context) (*Cluster, error) {
 	c := &Cluster{}
 	var err error
 
-	c.K8s, err = k8s.New(message.Debugf, labels)
+	c.K8s, err = k8s.New(message.Debugf)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +50,7 @@ func NewCluster() (*Cluster, error) {
 	c := &Cluster{}
 	var err error
 
-	c.K8s, err = k8s.New(message.Debugf, labels)
+	c.K8s, err = k8s.New(message.Debugf)
 	if err != nil {
 		return nil, err
 	}
