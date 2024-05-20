@@ -4,10 +4,11 @@
 package variables
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 var start = `
@@ -61,7 +62,7 @@ func TestReplaceTextTemplate(t *testing.T) {
 	type test struct {
 		vc           VariableConfig
 		path         string
-		wantErr      error
+		wantErrMsg   string
 		wantContents string
 	}
 
@@ -69,7 +70,7 @@ func TestReplaceTextTemplate(t *testing.T) {
 		{
 			vc:           VariableConfig{setVariableMap: SetVariableMap{}, applicationTemplates: map[string]*TextTemplate{}},
 			path:         "non-existent.test",
-			wantErr:      errors.New("open non-existent.test: no such file or directory"),
+			wantErrMsg:   "open non-existent.test: no such file or directory",
 			wantContents: start,
 		},
 		{
@@ -83,7 +84,7 @@ func TestReplaceTextTemplate(t *testing.T) {
 					"###PREFIX_APP_REPLACE_ME###": {Value: "APP_REPLACED"},
 				},
 			},
-			wantErr:      nil,
+			wantErrMsg:   "",
 			wantContents: simple,
 		},
 		{
@@ -97,7 +98,7 @@ func TestReplaceTextTemplate(t *testing.T) {
 					"###PREFIX_APP_REPLACE_ME###": {Value: "APP_REPLACED\nAPP_SECOND"},
 				},
 			},
-			wantErr:      nil,
+			wantErrMsg:   "",
 			wantContents: multiline,
 		},
 		{
@@ -111,7 +112,7 @@ func TestReplaceTextTemplate(t *testing.T) {
 					"###PREFIX_APP_REPLACE_ME###": {Value: "APP_REPLACED\nAPP_SECOND", AutoIndent: true},
 				},
 			},
-			wantErr:      nil,
+			wantErrMsg:   "",
 			wantContents: autoIndent,
 		},
 		{
@@ -125,33 +126,29 @@ func TestReplaceTextTemplate(t *testing.T) {
 					"###PREFIX_APP_REPLACE_ME###": {Value: "testdata/file.txt", Type: FileVariableType},
 				},
 			},
-			wantErr:      nil,
+			wantErrMsg:   "",
 			wantContents: file,
 		},
 	}
 
 	for _, tc := range tests {
-		tmpDir := t.TempDir()
-		tc.path = filepath.Join(tmpDir, "templates.test")
+		if tc.path == "" {
+			tmpDir := t.TempDir()
+			tc.path = filepath.Join(tmpDir, "templates.test")
 
-		f, _ := os.Create(tc.path)
-		defer f.Close()
+			f, _ := os.Create(tc.path)
+			defer f.Close()
 
-		f.WriteString(start)
-
-		gotErr := tc.vc.ReplaceTextTemplate(tc.path)
-		if gotErr != nil && tc.wantErr != nil {
-			if gotErr.Error() != tc.wantErr.Error() {
-				t.Fatalf("wanted err: %s, got err: %s", tc.wantErr, gotErr)
-			}
-		} else if gotErr != nil {
-			t.Fatalf("got unexpected err: %s", gotErr)
-		} else {
-			gotContents, _ := os.ReadFile(tc.path)
-			if string(gotContents) != tc.wantContents {
-				t.Fatalf("wanted contents: %s, got contents: %s", tc.wantContents, string(gotContents))
-			}
+			f.WriteString(start)
 		}
 
+		gotErr := tc.vc.ReplaceTextTemplate(tc.path)
+		if tc.wantErrMsg != "" {
+			require.EqualError(t, gotErr, tc.wantErrMsg)
+		} else {
+			require.NoError(t, gotErr)
+			gotContents, _ := os.ReadFile(tc.path)
+			require.Equal(t, string(gotContents), tc.wantContents)
+		}
 	}
 }
