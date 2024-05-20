@@ -61,14 +61,9 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 
 	state, err := cluster.LoadZarfState(ctx)
 	if err != nil {
-		message.Debugf("failed to load Zarf state: %s", err.Error())
-		return &operations.Result{
-			Allowed:  true,
-			PatchOps: []operations.PatchOperation{},
-		}, nil
+		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
-
-	containerRegistryURL := state.RegistryInfo.Address
+	registryURL := state.RegistryInfo.Address
 
 	var patchOperations []operations.PatchOperation
 
@@ -79,7 +74,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {
 		path := fmt.Sprintf("/spec/initContainers/%d/image", idx)
-		replacement, err := transform.ImageTransformHost(containerRegistryURL, container.Image)
+		replacement, err := transform.ImageTransformHost(registryURL, container.Image)
 		if err != nil {
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
@@ -90,7 +85,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 	// update the image host for each ephemeral container
 	for idx, container := range pod.Spec.EphemeralContainers {
 		path := fmt.Sprintf("/spec/ephemeralContainers/%d/image", idx)
-		replacement, err := transform.ImageTransformHost(containerRegistryURL, container.Image)
+		replacement, err := transform.ImageTransformHost(registryURL, container.Image)
 		if err != nil {
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
@@ -101,7 +96,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 	// update the image host for each normal container
 	for idx, container := range pod.Spec.Containers {
 		path := fmt.Sprintf("/spec/containers/%d/image", idx)
-		replacement, err := transform.ImageTransformHost(containerRegistryURL, container.Image)
+		replacement, err := transform.ImageTransformHost(registryURL, container.Image)
 		if err != nil {
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
