@@ -11,20 +11,24 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
-	"github.com/defenseunicorns/zarf/src/internal/agent/state"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/defenseunicorns/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 
 	corev1 "k8s.io/api/core/v1"
 )
 
 // NewPodMutationHook creates a new instance of pods mutation hook.
-func NewPodMutationHook() operations.Hook {
+func NewPodMutationHook(zarfState *types.ZarfState) operations.Hook {
 	message.Debug("hooks.NewMutationHook()")
 	return operations.Hook{
-		Create: mutatePod,
-		Update: mutatePod,
+		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
+			return mutatePod(r, zarfState)
+		},
+		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
+			return mutatePod(r, zarfState)
+		},
 	}
 }
 
@@ -38,7 +42,7 @@ func parsePod(object []byte) (*corev1.Pod, error) {
 	return &pod, nil
 }
 
-func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
+func mutatePod(r *v1.AdmissionRequest, zarfState *types.ZarfState) (*operations.Result, error) {
 	message.Debugf("hooks.mutatePod()(*v1.AdmissionRequest) - %#v , %s/%s: %#v", r.Kind, r.Namespace, r.Name, r.Operation)
 
 	var patchOperations []operations.PatchOperation
@@ -59,10 +63,6 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	zarfSecret := []corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}}
 	patchOperations = append(patchOperations, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
 
-	zarfState, err := state.GetZarfStateFromAgentPod()
-	if err != nil {
-		return nil, fmt.Errorf(lang.AgentErrGetState, err)
-	}
 	containerRegistryURL := zarfState.RegistryInfo.Address
 
 	// update the image host for each init container
