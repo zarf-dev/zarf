@@ -189,6 +189,13 @@ func testHelmAdoption(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
+	existingLabel, _, err := e2e.Kubectl("get", "ns", "dos-games", "-o=jsonpath={.metadata.labels.keep-this}")
+	require.Equal(t, "label", existingLabel)
+	require.NoError(t, err)
+	existingAnnotation, _, err := e2e.Kubectl("get", "ns", "dos-games", "-o=jsonpath={.metadata.annotations.keep-this}")
+	require.Equal(t, "annotation", existingAnnotation)
+	require.NoError(t, err)
+
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
