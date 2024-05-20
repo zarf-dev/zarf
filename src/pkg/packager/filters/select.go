@@ -26,26 +26,16 @@ type selectStateFilter struct {
 // Apply applies the filter.
 func (f *selectStateFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
 	isPartial := len(f.requestedComponents) > 0 && f.requestedComponents[0] != ""
-
 	result := []types.ZarfComponent{}
-
 	for _, component := range pkg.Components {
-		selectState := unknown
-
+		selectState := included
 		if isPartial {
 			selectState, _ = includedOrExcluded(component.Name, f.requestedComponents)
-
-			if selectState == excluded {
-				continue
-			}
-		} else {
-			selectState = included
 		}
-
-		if selectState == included {
-			result = append(result, component)
+		if selectState != included {
+			continue
 		}
+		result = append(result, component)
 	}
-
 	return result, nil
 }

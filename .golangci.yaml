@@ -5,6 +5,7 @@ linters:
   enable:
     - gosimple
     - govet
+    - ineffassign
     - staticcheck
     - unused
     - revive
