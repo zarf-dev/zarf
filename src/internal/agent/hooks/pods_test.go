@@ -147,7 +147,7 @@ func TestPodMutationWebhook(t *testing.T) {
 		{
 			name:         "empty pod",
 			admissionReq: createPodAdmissionRequest(t, v1.Create, nil),
-			code:         200,
+			code:         http.StatusOK,
 		},
 	}
 
@@ -161,7 +161,6 @@ func TestPodMutationWebhook(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, resp)
 				require.True(t, resp.Allowed)
-
 				require.JSONEq(t, string(expectedPatchJSON), string(resp.Patch))
 			} else if tt.code != http.StatusInternalServerError {
 				require.Empty(t, string(resp.Patch))
