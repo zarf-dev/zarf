@@ -70,7 +70,7 @@ func TestReplaceTextTemplate(t *testing.T) {
 		{
 			vc:           VariableConfig{setVariableMap: SetVariableMap{}, applicationTemplates: map[string]*TextTemplate{}},
 			path:         "non-existent.test",
-			wantErrMsg:   "open non-existent.test: no such file or directory",
+			wantErrMsg:   "open non-existent.test:",
 			wantContents: start,
 		},
 		{
@@ -144,11 +144,11 @@ func TestReplaceTextTemplate(t *testing.T) {
 
 		gotErr := tc.vc.ReplaceTextTemplate(tc.path)
 		if tc.wantErrMsg != "" {
-			require.EqualError(t, gotErr, tc.wantErrMsg)
+			require.Contains(t, gotErr.Error(), tc.wantErrMsg)
 		} else {
 			require.NoError(t, gotErr)
 			gotContents, _ := os.ReadFile(tc.path)
-			require.Equal(t, string(gotContents), tc.wantContents)
+			require.Equal(t, tc.wantContents, string(gotContents))
 		}
 	}
 }

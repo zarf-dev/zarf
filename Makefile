@@ -225,5 +225,5 @@ cve-report: ## Create a CVE report for the current project (must `brew install g
 	@test -d ./build || mkdir ./build
 	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
 
-lint-go: ## Run golang-ci-lint to lint the go code (must `brew install golang-ci-lint` first)
+lint-go: ## Run golang-ci-lint to lint the go code (must `brew install golangci-lint` first)
 	golangci-lint run
