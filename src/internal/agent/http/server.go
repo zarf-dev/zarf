@@ -26,9 +26,11 @@ func NewAdmissionServer(port string) *http.Server {
 		message.Fatalf(err, err.Error())
 	}
 
+	ctx := context.Background()
+
 	// Instances hooks
-	podsMutation := hooks.NewPodMutationHook(context.Background(), c)
-	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(context.Background(), c)
+	podsMutation := hooks.NewPodMutationHook(ctx, c)
+	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(ctx, c)
 	argocdApplicationMutation := hooks.NewApplicationMutationHook()
 	argocdRepositoryMutation := hooks.NewRepositoryMutationHook()
 
