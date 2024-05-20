@@ -109,6 +109,59 @@ func TestFluxMutationWebhook(t *testing.T) {
 			expectedPatch: nil,
 			code:          http.StatusInternalServerError,
 		},
+		{
+			name: "should replace existing secret",
+			admissionReq: createFluxGitRepoAdmissionRequest(t, v1.Create, &flux.GitRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "replace-secret",
+				},
+				Spec: flux.GitRepositorySpec{
+					URL: "https://github.com/stefanprodan/podinfo.git",
+					SecretRef: &fluxmeta.LocalObjectReference{
+						Name: "existing-secret",
+					},
+					Reference: &flux.GitRepositoryRef{
+						Tag: "6.4.0",
+					},
+				},
+			}),
+			expectedPatch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"https://git-server.com/a-push-user/podinfo-1646971829.git",
+				),
+				operations.ReplacePatchOperation(
+					"/spec/secretRef/name",
+					config.ZarfGitServerSecretName,
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should not mutate on update if hostname matches",
+			admissionReq: createFluxGitRepoAdmissionRequest(t, v1.Update, &flux.GitRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "no-mutate",
+				},
+				Spec: flux.GitRepositorySpec{
+					URL: "https://git-server.com/a-push-user/podinfo.git",
+					Reference: &flux.GitRepositoryRef{
+						Tag: "6.4.0",
+					},
+				},
+			}),
+			expectedPatch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"https://git-server.com/a-push-user/podinfo.git",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfGitServerSecretName},
+				),
+			},
+			code: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {

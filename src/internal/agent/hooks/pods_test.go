@@ -49,7 +49,7 @@ func TestPodMutationWebhook(t *testing.T) {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cluster.ZarfStateSecretName,
-			Namespace: "zarf",
+			Namespace: cluster.ZarfNamespaceName,
 		},
 		Data: map[string][]byte{
 			cluster.ZarfStateDataKey: state,
