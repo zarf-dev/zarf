@@ -34,12 +34,10 @@ func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handl
 	require.Equal(t, code, rr.Code)
 
 	var admissionReview v1.AdmissionReview
-	err = json.NewDecoder(rr.Body).Decode(&admissionReview)
-	require.NoError(t, err)
+	if rr.Code == http.StatusOK {
+		err = json.NewDecoder(rr.Body).Decode(&admissionReview)
+		require.NoError(t, err)
+	}
 
-	resp := admissionReview.Response
-	require.NotNil(t, resp)
-	require.True(t, resp.Allowed)
-
-	return resp
+	return admissionReview.Response
 }

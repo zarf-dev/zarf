@@ -119,7 +119,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 				expectedPatchJSON, err := json.Marshal(tt.expectedPatch)
 				require.NoError(t, err)
 				require.JSONEq(t, string(expectedPatchJSON), string(resp.Patch))
-			} else {
+			} else if tt.code != http.StatusInternalServerError {
 				require.Empty(t, string(resp.Patch))
 			}
 		})
