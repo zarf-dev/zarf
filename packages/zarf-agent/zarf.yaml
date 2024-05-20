@@ -27,8 +27,8 @@ components:
           - manifests/secret.yaml
           - manifests/deployment.yaml
           - manifests/webhook.yaml
-          - manifests/clusterrole.yaml
-          - manifests/clusterrolebinding.yaml
+          - manifests/role.yaml
+          - manifests/rolebinding.yaml
           - manifests/serviceaccount.yaml
     actions:
       onCreate:

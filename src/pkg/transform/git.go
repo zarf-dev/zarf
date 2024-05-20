@@ -34,7 +34,7 @@ func GitURLSplitRef(sourceURL string) (string, string, error) {
 	get, err := helpers.MatchRegex(gitURLRegex, sourceURL)
 
 	if err != nil {
-		return "", "", fmt.Errorf("unable to get extract the source url and ref from the url %s", sourceURL)
+		return "", "", fmt.Errorf("unable to extract the repo name from the url %q", sourceURL)
 	}
 
 	gitURLNoRef := fmt.Sprintf("%s%s/%s%s", get("proto"), get("hostPath"), get("repo"), get("git"))
@@ -49,7 +49,7 @@ func GitURLtoFolderName(sourceURL string) (string, error) {
 
 	if err != nil {
 		// Unable to find a substring match for the regex
-		return "", fmt.Errorf("unable to get extract the folder name from the url %s", sourceURL)
+		return "", fmt.Errorf("unable to extract the repo name from the url %q", sourceURL)
 	}
 
 	repoName := get("repo")
@@ -70,7 +70,7 @@ func GitURLtoRepoName(sourceURL string) (string, error) {
 
 	if err != nil {
 		// Unable to find a substring match for the regex
-		return "", fmt.Errorf("unable to get extract the repo name from the url %s", sourceURL)
+		return "", fmt.Errorf("unable to extract the repo name from the url %q", sourceURL)
 	}
 
 	repoName := get("repo")

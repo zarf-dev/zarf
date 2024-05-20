@@ -23,8 +23,8 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-// createFluxAdmissionRequest creates an admission request for a pod.
-func createFluxAdmissionRequest(t *testing.T, op v1.Operation, fluxGitRepo *flux.GitRepository) *v1.AdmissionRequest {
+// createFluxGitRepoAdmissionRequest creates an admission request for a Flux GitRepository.
+func createFluxGitRepoAdmissionRequest(t *testing.T, op v1.Operation, fluxGitRepo *flux.GitRepository) *v1.AdmissionRequest {
 	t.Helper()
 	raw, err := json.Marshal(fluxGitRepo)
 	require.NoError(t, err)
@@ -68,8 +68,8 @@ func TestFluxMutationWebhook(t *testing.T) {
 		code          int
 	}{
 		{
-			name: "flux object should be mutated on Create",
-			admissionReq: createFluxAdmissionRequest(t, v1.Create, &flux.GitRepository{
+			name: "should be mutated",
+			admissionReq: createFluxGitRepoAdmissionRequest(t, v1.Create, &flux.GitRepository{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "mutate-this",
 				},
@@ -93,8 +93,8 @@ func TestFluxMutationWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
-			name: "flux object should be mutated on Update",
-			admissionReq: createFluxAdmissionRequest(t, v1.Update, &flux.GitRepository{
+			name: "should not mutate invalid git url",
+			admissionReq: createFluxGitRepoAdmissionRequest(t, v1.Update, &flux.GitRepository{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "mutate-this",
 				},

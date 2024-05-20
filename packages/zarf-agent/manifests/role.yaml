@@ -1,13 +1,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   name: zarf-agent
 rules:
 - apiGroups:
   - ""
   resources:
-  - services
   - secrets
   verbs:
   - get
-  - list
