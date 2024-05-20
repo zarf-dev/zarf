@@ -267,6 +267,7 @@ func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions
 		// TODO: Replace use of reflections with explicit setting
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, initOptions.RegistryInfo)
 		// Set the state of the internal registry if it has changed
+		// TODO: Internal registry should be a function of the address and not a property.
 		if newState.RegistryInfo.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, newState.RegistryInfo.NodePort) {
 			newState.RegistryInfo.InternalRegistry = true
 		} else {
@@ -290,6 +291,7 @@ func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions
 		newState.GitServer = helpers.MergeNonZero(newState.GitServer, initOptions.GitServer)
 
 		// Set the state of the internal git server if it has changed
+		// TODO: Internal server should be a function of the address and not a property.
 		if newState.GitServer.Address == types.ZarfInClusterGitServiceURL {
 			newState.GitServer.InternalServer = true
 		} else {
@@ -313,6 +315,7 @@ func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions
 		newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, initOptions.ArtifactServer)
 
 		// Set the state of the internal artifact server if it has changed
+		// TODO: Internal server should be a function of the address and not a property.
 		if newState.ArtifactServer.Address == types.ZarfInClusterArtifactServiceURL {
 			newState.ArtifactServer.InternalServer = true
 		} else {

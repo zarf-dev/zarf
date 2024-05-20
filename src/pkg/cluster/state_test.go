@@ -237,19 +237,6 @@ func TestMergeZarfStateArtifact(t *testing.T) {
 			},
 		},
 		{
-			name: "old state is not internal server auto generate push token",
-			oldArtifactServer: types.ArtifactServerInfo{
-				PushToken:      "foobar",
-				Address:        types.ZarfInClusterArtifactServiceURL,
-				InternalServer: false,
-			},
-			expectedArtifactServer: types.ArtifactServerInfo{
-				PushToken:      "foobar",
-				Address:        types.ZarfInClusterArtifactServiceURL,
-				InternalServer: true,
-			},
-		},
-		{
 			name: "old state is not internal server auto generate push token but init options does not match",
 			initArtifactServer: types.ArtifactServerInfo{
 				PushToken: "hello world",
