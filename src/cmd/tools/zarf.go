@@ -7,25 +7,27 @@ package tools
 import (
 	"fmt"
 	"os"
-
 	"slices"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/spf13/cobra"
+
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/pkg/oci"
+
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/pkg/zoci"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/spf13/cobra"
 )
 
 var subAltNames []string
@@ -92,8 +94,8 @@ var updateCredsCmd = &cobra.Command{
 			// If no distro the zarf secret did not load properly
 			message.Fatalf(nil, lang.ErrLoadState)
 		}
-		var newState *types.ZarfState
-		if newState, err = c.MergeZarfState(oldState, updateCredsInitOpts, args); err != nil {
+		newState, err := cluster.MergeZarfState(oldState, updateCredsInitOpts, args)
+		if err != nil {
 			message.Fatal(err, lang.CmdToolsUpdateCredsUnableUpdateCreds)
 		}
 
