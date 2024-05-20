@@ -5,29 +5,30 @@
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 
 	corev1 "k8s.io/api/core/v1"
 )
 
 // NewPodMutationHook creates a new instance of pods mutation hook.
-func NewPodMutationHook(zarfState *types.ZarfState) operations.Hook {
+func NewPodMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
 	message.Debug("hooks.NewMutationHook()")
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutatePod(r, zarfState)
+			return mutatePod(ctx, r, cluster)
 		},
 		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutatePod(r, zarfState)
+			return mutatePod(ctx, r, cluster)
 		},
 	}
 }
@@ -42,10 +43,9 @@ func parsePod(object []byte) (*corev1.Pod, error) {
 	return &pod, nil
 }
 
-func mutatePod(r *v1.AdmissionRequest, zarfState *types.ZarfState) (*operations.Result, error) {
+func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
 	message.Debugf("hooks.mutatePod()(*v1.AdmissionRequest) - %#v , %s/%s: %#v", r.Kind, r.Namespace, r.Name, r.Operation)
 
-	var patchOperations []operations.PatchOperation
 	pod, err := parsePod(r.Object.Raw)
 	if err != nil {
 		return &operations.Result{Msg: err.Error()}, nil
@@ -55,15 +55,26 @@ func mutatePod(r *v1.AdmissionRequest, zarfState *types.ZarfState) (*operations.
 		// We've already played with this pod, just keep swimming 🐟
 		return &operations.Result{
 			Allowed:  true,
-			PatchOps: patchOperations,
+			PatchOps: []operations.PatchOperation{},
 		}, nil
 	}
+
+	state, err := cluster.LoadZarfState(ctx)
+	if err != nil {
+		message.Debugf("failed to load Zarf state: %s", err.Error())
+		return &operations.Result{
+			Allowed:  true,
+			PatchOps: []operations.PatchOperation{},
+		}, nil
+	}
+
+	containerRegistryURL := state.RegistryInfo.Address
+
+	var patchOperations []operations.PatchOperation
 
 	// Add the zarf secret to the podspec
 	zarfSecret := []corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}}
 	patchOperations = append(patchOperations, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
-
-	containerRegistryURL := zarfState.RegistryInfo.Address
 
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {

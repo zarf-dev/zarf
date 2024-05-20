@@ -5,13 +5,14 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/agent/hooks"
 	"github.com/defenseunicorns/zarf/src/internal/agent/http/admission"
-	"github.com/defenseunicorns/zarf/src/internal/agent/state"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -20,13 +21,13 @@ import (
 func NewAdmissionServer(port string) *http.Server {
 	message.Debugf("http.NewServer(%s)", port)
 
-	zarfState, err := state.GetZarfStateFromAgentPod()
+	c, err := cluster.NewCluster()
 	if err != nil {
-		message.Fatal(err, err.Error())
+		message.Fatalf(err, err.Error())
 	}
 
 	// Instances hooks
-	podsMutation := hooks.NewPodMutationHook(zarfState)
+	podsMutation := hooks.NewPodMutationHook(context.Background(), c)
 	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook()
 	argocdApplicationMutation := hooks.NewApplicationMutationHook()
 	argocdRepositoryMutation := hooks.NewRepositoryMutationHook()
