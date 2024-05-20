@@ -15,7 +15,7 @@ import (
 )
 
 // sendAdmissionRequest sends an admission request to the handler and returns the response.
-func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handler http.HandlerFunc) *v1.AdmissionResponse {
+func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handler http.HandlerFunc, code int) *v1.AdmissionResponse {
 	t.Helper()
 
 	b, err := json.Marshal(&v1.AdmissionReview{
@@ -31,7 +31,7 @@ func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handl
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
-	require.Equal(t, http.StatusOK, rr.Code)
+	require.Equal(t, code, rr.Code)
 
 	var admissionReview v1.AdmissionReview
 	err = json.NewDecoder(rr.Body).Decode(&admissionReview)

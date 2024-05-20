@@ -6,6 +6,7 @@ package hooks
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/internal/agent/http/admission"
@@ -22,7 +23,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-// createPodAdmissionRequest creates an admission request for a pod.
+// createFluxAdmissionRequest creates an admission request for a pod.
 func createFluxAdmissionRequest(t *testing.T, op v1.Operation, fluxGitRepo *flux.GitRepository) *v1.AdmissionRequest {
 	t.Helper()
 	raw, err := json.Marshal(fluxGitRepo)
@@ -64,9 +65,10 @@ func TestFluxMutationWebhook(t *testing.T) {
 		name          string
 		admissionReq  *v1.AdmissionRequest
 		expectedPatch []operations.PatchOperation
+		code          int
 	}{
 		{
-			name: "flux object should be mutated",
+			name: "flux object should be mutated on Create",
 			admissionReq: createFluxAdmissionRequest(t, v1.Create, &flux.GitRepository{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "mutate-this",
@@ -78,7 +80,33 @@ func TestFluxMutationWebhook(t *testing.T) {
 					},
 				},
 			}),
+			expectedPatch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"https://git-server.com/a-push-user/podinfo-1646971829.git",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					map[string]string{"name": "private-git-server"},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "flux object should be mutated on Update",
+			admissionReq: createFluxAdmissionRequest(t, v1.Update, &flux.GitRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mutate-this",
+				},
+				Spec: flux.GitRepositorySpec{
+					URL: "not-a-git-url",
+					Reference: &flux.GitRepositoryRef{
+						Tag: "6.4.0",
+					},
+				},
+			}),
 			expectedPatch: nil,
+			code:          http.StatusInternalServerError,
 		},
 	}
 
@@ -86,7 +114,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			resp := sendAdmissionRequest(t, tt.admissionReq, handler)
+			resp := sendAdmissionRequest(t, tt.admissionReq, handler, tt.code)
 			if tt.expectedPatch != nil {
 				expectedPatchJSON, err := json.Marshal(tt.expectedPatch)
 				require.NoError(t, err)

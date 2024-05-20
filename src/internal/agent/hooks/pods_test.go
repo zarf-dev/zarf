@@ -6,6 +6,7 @@ package hooks
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -62,6 +63,7 @@ func TestPodMutationWebhook(t *testing.T) {
 		name          string
 		admissionReq  *v1.AdmissionRequest
 		expectedPatch []operations.PatchOperation
+		code          int
 	}{
 		{
 			name: "pod with label should be mutated",
@@ -103,6 +105,7 @@ func TestPodMutationWebhook(t *testing.T) {
 					"patched",
 				),
 			},
+			code: http.StatusOK,
 		},
 		{
 			name: "pod with zarf-agent patched label",
@@ -115,6 +118,7 @@ func TestPodMutationWebhook(t *testing.T) {
 				},
 			}),
 			expectedPatch: nil,
+			code:          http.StatusOK,
 		},
 		{
 			name: "pod with no labels",
@@ -140,6 +144,7 @@ func TestPodMutationWebhook(t *testing.T) {
 					map[string]string{"zarf-agent": "patched"},
 				),
 			},
+			code: http.StatusOK,
 		},
 	}
 
@@ -147,7 +152,7 @@ func TestPodMutationWebhook(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			resp := sendAdmissionRequest(t, tt.admissionReq, handler)
+			resp := sendAdmissionRequest(t, tt.admissionReq, handler, tt.code)
 			if tt.expectedPatch != nil {
 				expectedPatchJSON, err := json.Marshal(tt.expectedPatch)
 				require.NoError(t, err)

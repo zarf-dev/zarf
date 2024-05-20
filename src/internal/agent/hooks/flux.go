@@ -56,8 +56,6 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		isUpdate = r.Operation == v1.Update
 	)
 
-	// Form the zarfState.GitServer.Address from the zarfState
-
 	state, err := cluster.LoadZarfState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
@@ -87,7 +85,7 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
 		transformedURL, err := transform.GitURL(state.GitServer.Address, patchedURL, state.GitServer.PushUsername)
 		if err != nil {
-			message.Warnf("Unable to transform the git url, using the original url we have: %s", patchedURL)
+			return nil, fmt.Errorf("unable to transform the git url: %w", err)
 		}
 		patchedURL = transformedURL.String()
 		message.Debugf("original git URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
