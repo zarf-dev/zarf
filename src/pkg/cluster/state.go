@@ -260,12 +260,14 @@ func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) err
 }
 
 // MergeZarfState merges init options for provided services into the provided state to create a new state struct
-func (c *Cluster) MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions, services []string) (*types.ZarfState, error) {
+func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions, services []string) (*types.ZarfState, error) {
 	newState := *oldState
 	var err error
 	if slices.Contains(services, message.RegistryKey) {
+		// TODO: Replace use of reflections with explicit setting
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, initOptions.RegistryInfo)
 		// Set the state of the internal registry if it has changed
+		// TODO: Internal registry should be a function of the address and not a property.
 		if newState.RegistryInfo.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, newState.RegistryInfo.NodePort) {
 			newState.RegistryInfo.InternalRegistry = true
 		} else {
@@ -285,9 +287,11 @@ func (c *Cluster) MergeZarfState(oldState *types.ZarfState, initOptions types.Za
 		}
 	}
 	if slices.Contains(services, message.GitKey) {
+		// TODO: Replace use of reflections with explicit setting
 		newState.GitServer = helpers.MergeNonZero(newState.GitServer, initOptions.GitServer)
 
 		// Set the state of the internal git server if it has changed
+		// TODO: Internal server should be a function of the address and not a property.
 		if newState.GitServer.Address == types.ZarfInClusterGitServiceURL {
 			newState.GitServer.InternalServer = true
 		} else {
@@ -307,9 +311,11 @@ func (c *Cluster) MergeZarfState(oldState *types.ZarfState, initOptions types.Za
 		}
 	}
 	if slices.Contains(services, message.ArtifactKey) {
+		// TODO: Replace use of reflections with explicit setting
 		newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, initOptions.ArtifactServer)
 
 		// Set the state of the internal artifact server if it has changed
+		// TODO: Internal server should be a function of the address and not a property.
 		if newState.ArtifactServer.Address == types.ZarfInClusterArtifactServiceURL {
 			newState.ArtifactServer.InternalServer = true
 		} else {
