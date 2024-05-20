@@ -227,8 +227,8 @@ func pruneImages(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	zarfPackages, errs := c.GetDeployedZarfPackages(ctx)
-	if len(errs) > 0 {
+	zarfPackages, err := c.GetDeployedZarfPackages(ctx)
+	if err != nil {
 		return lang.ErrUnableToGetPackages
 	}
 

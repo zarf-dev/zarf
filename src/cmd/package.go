@@ -133,9 +133,9 @@ var packageListCmd = &cobra.Command{
 	Short:   lang.CmdPackageListShort,
 	Run: func(cmd *cobra.Command, _ []string) {
 		ctx := cmd.Context()
-		deployedZarfPackages, errs := common.NewClusterOrDie(ctx).GetDeployedZarfPackages(ctx)
-		if len(errs) > 0 && len(deployedZarfPackages) == 0 {
-			message.Fatalf(errs, lang.CmdPackageListNoPackageWarn)
+		deployedZarfPackages, err := common.NewClusterOrDie(ctx).GetDeployedZarfPackages(ctx)
+		if err != nil && len(deployedZarfPackages) == 0 {
+			message.Fatalf(err, lang.CmdPackageListNoPackageWarn)
 		}
 
 		// Populate a matrix of all the deployed packages
@@ -157,8 +157,8 @@ var packageListCmd = &cobra.Command{
 		message.Table(header, packageData)
 
 		// Print out any unmarshalling errors
-		if len(errs) > 0 {
-			message.Fatalf(errs, lang.CmdPackageListUnmarshalErr)
+		if err != nil {
+			message.Fatalf(err, lang.CmdPackageListUnmarshalErr)
 		}
 	},
 }

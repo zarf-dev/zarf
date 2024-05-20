@@ -216,6 +216,9 @@ func TestGetDeployedPackage(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      strings.Join([]string{config.ZarfPackagePrefix, packageName}, ""),
 			Namespace: "zarf",
+			Labels: map[string]string{
+				ZarfPackageInfoLabel: packageName,
+			},
 		},
 		Data: data,
 	}
@@ -225,4 +228,9 @@ func TestGetDeployedPackage(t *testing.T) {
 	actual, err := c.GetDeployedPackage(ctx, packageName)
 	require.NoError(t, err)
 	require.Equal(t, expected, actual)
+
+	actualList, err := c.GetDeployedZarfPackages(ctx)
+	require.NoError(t, err)
+	require.Equal(t, *expected, actualList[0])
+
 }
