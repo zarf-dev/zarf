@@ -7,6 +7,7 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -23,31 +24,30 @@ import (
 // GetDeployedZarfPackages gets metadata information about packages that have been deployed to the cluster.
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
 // Returns a list of DeployedPackage structs and a list of errors.
-func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.DeployedPackage, []error) {
-	var deployedPackages = []types.DeployedPackage{}
-	var errorList []error
+func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.DeployedPackage, error) {
 	// Get the secrets that describe the deployed packages
 	secrets, err := c.GetSecretsWithLabel(ctx, ZarfNamespaceName, ZarfPackageInfoLabel)
 	if err != nil {
-		return deployedPackages, append(errorList, err)
+		return nil, err
 	}
 
-	// Process the k8s secret into our internal structs
+	errs := []error{}
+	deployedPackages := []types.DeployedPackage{}
 	for _, secret := range secrets.Items {
-		if strings.HasPrefix(secret.Name, config.ZarfPackagePrefix) {
-			var deployedPackage types.DeployedPackage
-			err := json.Unmarshal(secret.Data["data"], &deployedPackage)
-			// add the error to the error list
-			if err != nil {
-				errorList = append(errorList, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
-			} else {
-				deployedPackages = append(deployedPackages, deployedPackage)
-			}
+		if !strings.HasPrefix(secret.Name, config.ZarfPackagePrefix) {
+			continue
 		}
+		var deployedPackage types.DeployedPackage
+		// Process the k8s secret into our internal structs
+		err := json.Unmarshal(secret.Data["data"], &deployedPackage)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
+			continue
+		}
+		deployedPackages = append(deployedPackages, deployedPackage)
 	}
 
-	// TODO: If we move this function out of `internal` we should return a more standard singular error.
-	return deployedPackages, errorList
+	return deployedPackages, errors.Join(errs...)
 }
 
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
