@@ -53,13 +53,13 @@ func TestConnectAndCreds(t *testing.T) {
 	require.Contains(t, stdOut, "2.8.3")
 	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/grafana/promtail")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Equal(t, stdOut, "")
+	require.Empty(t, stdOut)
 	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/grafana/grafana")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Equal(t, stdOut, "")
+	require.Empty(t, stdOut)
 	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/grafana/loki")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Equal(t, stdOut, "")
+	require.Empty(t, stdOut)
 }
 
 func TestMetrics(t *testing.T) {
@@ -96,7 +96,7 @@ func TestMetrics(t *testing.T) {
 	}
 
 	desiredString := "go_gc_duration_seconds_count"
-	require.Equal(t, true, strings.Contains(string(body), desiredString))
+	require.Contains(t, string(body), desiredString)
 	require.NoError(t, err, resp)
 	require.Equal(t, 200, resp.StatusCode)
 }

@@ -33,7 +33,7 @@ repos:
         entry: golangci-lint run --enable-only goimports --fix
         types: [go]
         language: golang
-        pass_filenames: true
+        pass_filenames: false
       - id: lint
         name: golangci-lint go lint
         entry: golangci-lint run

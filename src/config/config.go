@@ -29,7 +29,6 @@ const (
 	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
 	ZarfConnectAnnotationURL         = "zarf.dev/connect-url"
 
-	ZarfManagedByLabel     = "app.kubernetes.io/managed-by"
 	ZarfCleanupScriptsPath = "/opt/zarf"
 
 	ZarfPackagePrefix = "zarf-package-"

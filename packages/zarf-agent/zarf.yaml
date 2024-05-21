@@ -29,6 +29,9 @@ components:
           - manifests/secret.yaml
           - manifests/deployment.yaml
           - manifests/webhook.yaml
+          - manifests/role.yaml
+          - manifests/rolebinding.yaml
+          - manifests/serviceaccount.yaml
     actions:
       onCreate:
         before:
