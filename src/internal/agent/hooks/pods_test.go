@@ -41,13 +41,7 @@ func TestPodMutationWebhook(t *testing.T) {
 	c := createTestClientWithZarfState(ctx, t, state)
 	handler := admission.NewHandler().Serve(NewPodMutationHook(ctx, c))
 
-	tests := []struct {
-		name          string
-		admissionReq  *v1.AdmissionRequest
-		expectedPatch []operations.PatchOperation
-		code          int
-		expectedErr   string
-	}{
+	tests := []admissionTest{
 		{
 			name: "pod with label should be mutated",
 			admissionReq: createPodAdmissionRequest(t, v1.Create, &corev1.Pod{
@@ -66,7 +60,7 @@ func TestPodMutationWebhook(t *testing.T) {
 					},
 				},
 			}),
-			expectedPatch: []operations.PatchOperation{
+			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/imagePullSecrets",
 					[]corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}},
@@ -100,8 +94,8 @@ func TestPodMutationWebhook(t *testing.T) {
 					Containers: []corev1.Container{{Image: "nginx"}},
 				},
 			}),
-			expectedPatch: nil,
-			code:          http.StatusOK,
+			patch: nil,
+			code:  http.StatusOK,
 		},
 		{
 			name: "pod with no labels should not error",
@@ -113,7 +107,7 @@ func TestPodMutationWebhook(t *testing.T) {
 					Containers: []corev1.Container{{Image: "nginx"}},
 				},
 			}),
-			expectedPatch: []operations.PatchOperation{
+			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/imagePullSecrets",
 					[]corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}},
@@ -136,7 +130,7 @@ func TestPodMutationWebhook(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
-			verifyAdmission(t, rr, tt.code, tt.expectedPatch, tt.expectedErr)
+			verifyAdmission(t, rr, tt)
 		})
 	}
 }

@@ -22,6 +22,14 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
+type admissionTest struct {
+	name         string
+	admissionReq *v1.AdmissionRequest
+	patch        []operations.PatchOperation
+	code         int
+	errContains  string
+}
+
 func createTestClientWithZarfState(ctx context.Context, t *testing.T, state *types.ZarfState) *cluster.Cluster {
 	t.Helper()
 	c := &cluster.Cluster{K8s: &k8s.K8s{Clientset: fake.NewSimpleClientset()}}
@@ -62,13 +70,13 @@ func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handl
 	return rr
 }
 
-func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expectedCode int, expectedPatch []operations.PatchOperation, expectedErrContains string) {
+func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expected admissionTest) {
 	t.Helper()
 
-	require.Equal(t, expectedCode, rr.Code)
+	require.Equal(t, expected.code, rr.Code)
 
-	if expectedErrContains != "" {
-		require.Contains(t, rr.Body.String(), expectedErrContains)
+	if expected.errContains != "" {
+		require.Contains(t, rr.Body.String(), expected.errContains)
 		return
 	}
 
@@ -77,10 +85,10 @@ func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expectedCode i
 	err := json.NewDecoder(rr.Body).Decode(&admissionReview)
 	resp := admissionReview.Response
 	require.NoError(t, err)
-	if expectedPatch == nil {
+	if expected.patch == nil {
 		require.Empty(t, string(resp.Patch))
 	} else {
-		expectedPatchJSON, err := json.Marshal(expectedPatch)
+		expectedPatchJSON, err := json.Marshal(expected.patch)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 		require.True(t, resp.Allowed)

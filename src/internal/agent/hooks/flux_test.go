@@ -45,13 +45,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 	c := createTestClientWithZarfState(ctx, t, state)
 	handler := admission.NewHandler().Serve(NewGitRepositoryMutationHook(ctx, c))
 
-	tests := []struct {
-		name          string
-		admissionReq  *v1.AdmissionRequest
-		expectedPatch []operations.PatchOperation
-		code          int
-		errContains   string
-	}{
+	tests := []admissionTest{
 		{
 			name: "should be mutated",
 			admissionReq: createFluxGitRepoAdmissionRequest(t, v1.Create, &flux.GitRepository{
@@ -65,7 +59,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 					},
 				},
 			}),
-			expectedPatch: []operations.PatchOperation{
+			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
 					"https://git-server.com/a-push-user/podinfo-1646971829.git",
@@ -90,9 +84,9 @@ func TestFluxMutationWebhook(t *testing.T) {
 					},
 				},
 			}),
-			expectedPatch: nil,
-			code:          http.StatusInternalServerError,
-			errContains:   lang.AgentErrTransformGitURL,
+			patch:       nil,
+			code:        http.StatusInternalServerError,
+			errContains: lang.AgentErrTransformGitURL,
 		},
 		{
 			name: "should replace existing secret",
@@ -110,7 +104,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 					},
 				},
 			}),
-			expectedPatch: []operations.PatchOperation{
+			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
 					"https://git-server.com/a-push-user/podinfo-1646971829.git",
@@ -135,7 +129,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 					},
 				},
 			}),
-			expectedPatch: []operations.PatchOperation{
+			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
 					"https://git-server.com/a-push-user/podinfo.git",
@@ -154,7 +148,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
-			verifyAdmission(t, rr, tt.code, tt.expectedPatch, tt.errContains)
+			verifyAdmission(t, rr, tt)
 		})
 	}
 }
