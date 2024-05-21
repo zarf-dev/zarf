@@ -19,25 +19,33 @@ import (
 	v1 "k8s.io/api/admission/v1"
 )
 
-// Source represents a subset of the Argo Source object needed for Zarf Git URL mutations
-type Source struct {
+// Application is a definition of an ArgoCD Application resource.
+// The ArgoCD Application structs in this file have been copied from upstream.
+//
+// https://github.com/argoproj/argo-cd/blob/v2.11.0/pkg/apis/application/v1alpha1/types.go
+//
+// There were errors encountered when trying to import argocd as a Go package.
+//
+// For more information: https://argo-cd.readthedocs.io/en/stable/user-guide/import/
+type Application struct {
+	Spec ApplicationSpec `json:"spec"`
+}
+
+// ApplicationSpec represents desired application state. Contains link to repository with application definition.
+type ApplicationSpec struct {
+	// Source is a reference to the location of the application's manifests or chart.
+	Source  *ApplicationSource `json:"source,omitempty"`
+	Sources ApplicationSources `json:"sources,omitempty"`
+}
+
+// ApplicationSource contains all required information about the source of an application.
+type ApplicationSource struct {
+	// RepoURL is the URL to the repository (Git or Helm) that contains the application manifests.
 	RepoURL string `json:"repoURL"`
 }
 
-// ArgoApplication represents a subset of the Argo Application object needed for Zarf Git URL mutations
-type ArgoApplication struct {
-	Spec struct {
-		Source  Source   `json:"source"`
-		Sources []Source `json:"sources"`
-	} `json:"spec"`
-}
-
-var (
-	patches   []operations.PatchOperation
-	isPatched bool
-	isCreate  bool
-	isUpdate  bool
-)
+// ApplicationSources contains list of required information about the sources of an application.
+type ApplicationSources []ApplicationSource
 
 // NewApplicationMutationHook creates a new instance of the ArgoCD Application mutation hook.
 func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
@@ -54,12 +62,6 @@ func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster) o
 
 // mutateApplication mutates the git repository url to point to the repository URL defined in the ZarfState.
 func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (result *operations.Result, err error) {
-
-	isCreate = r.Operation == v1.Create
-	isUpdate = r.Operation == v1.Update
-
-	patches = []operations.PatchOperation{}
-
 	state, err := cluster.LoadZarfState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
@@ -67,23 +69,29 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 
 	message.Debugf("Using the url of (%s) to mutate the ArgoCD Application", state.GitServer.Address)
 
-	// parse to simple struct to read the git url
-	src := &ArgoApplication{}
-
-	if err = json.Unmarshal(r.Object.Raw, &src); err != nil {
+	app := Application{}
+	if err = json.Unmarshal(r.Object.Raw, &app); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
 	message.Debugf("Data %v", string(r.Object.Raw))
 
-	if src.Spec.Source != (Source{}) {
-		patchedURL, _ := getPatchedRepoURL(src.Spec.Source.RepoURL, state.GitServer)
+	patches := []operations.PatchOperation{}
+
+	if app.Spec.Source != nil {
+		patchedURL, err := getPatchedRepoURL(app.Spec.Source.RepoURL, state.GitServer, r)
+		if err != nil {
+			return nil, err
+		}
 		patches = populateSingleSourceArgoApplicationPatchOperations(patchedURL, patches)
 	}
 
-	if len(src.Spec.Sources) > 0 {
-		for idx, source := range src.Spec.Sources {
-			patchedURL, _ := getPatchedRepoURL(source.RepoURL, state.GitServer)
+	if len(app.Spec.Sources) > 0 {
+		for idx, source := range app.Spec.Sources {
+			patchedURL, err := getPatchedRepoURL(source.RepoURL, state.GitServer, r)
+			if err != nil {
+				return nil, err
+			}
 			patches = populateMultipleSourceArgoApplicationPatchOperations(idx, patchedURL, patches)
 		}
 	}
@@ -94,9 +102,12 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	}, nil
 }
 
-func getPatchedRepoURL(repoURL string, gs types.GitServerInfo) (string, error) {
-	var err error
+func getPatchedRepoURL(repoURL string, gs types.GitServerInfo, r *v1.AdmissionRequest) (string, error) {
+	isCreate := r.Operation == v1.Create
+	isUpdate := r.Operation == v1.Update
 	patchedURL := repoURL
+	var isPatched bool
+	var err error
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different from the hostname in the zarfState
@@ -113,13 +124,13 @@ func getPatchedRepoURL(repoURL string, gs types.GitServerInfo) (string, error) {
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
 		transformedURL, err := transform.GitURL(gs.Address, patchedURL, gs.PushUsername)
 		if err != nil {
-			message.Warnf("Unable to transform the repoURL, using the original url we have: %s", patchedURL)
+			return "", fmt.Errorf("unable to transform the git url: %w", err)
 		}
 		patchedURL = transformedURL.String()
 		message.Debugf("original repoURL of (%s) got mutated to (%s)", repoURL, patchedURL)
 	}
 
-	return patchedURL, err
+	return patchedURL, nil
 }
 
 // Patch updates of the Argo source spec.
