@@ -74,7 +74,7 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
 		transformedURL, err := transform.GitURL(state.GitServer.Address, patchedURL, state.GitServer.PushUsername)
 		if err != nil {
-			return nil, fmt.Errorf("unable to transform the git url: %w", err)
+			return nil, fmt.Errorf("%s: %w", lang.AgentErrTransformGitURL, err)
 		}
 		patchedURL = transformedURL.String()
 		message.Debugf("original git URL of (%s) got mutated to (%s)", repo.Spec.URL, patchedURL)

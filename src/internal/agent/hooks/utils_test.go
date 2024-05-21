@@ -43,7 +43,7 @@ func createTestClientWithZarfState(ctx context.Context, t *testing.T, state *typ
 }
 
 // sendAdmissionRequest sends an admission request to the handler and returns the response.
-func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handler http.HandlerFunc, code int) *httptest.ResponseRecorder {
+func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handler http.HandlerFunc) *httptest.ResponseRecorder {
 	t.Helper()
 
 	b, err := json.Marshal(&v1.AdmissionReview{
@@ -62,16 +62,15 @@ func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handl
 	return rr
 }
 
-func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expectedCode int, expectedPatch []operations.PatchOperation, expectedErr error){
+func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expectedCode int, expectedPatch []operations.PatchOperation, expectedErrContains string) {
 	t.Helper()
 
 	require.Equal(t, expectedCode, rr.Code)
 
-	if expectedErr != nil {
-		require.Contains(t, rr.Body.String(), expectedErr.Error() )
+	if expectedErrContains != "" {
+		require.Contains(t, rr.Body.String(), expectedErrContains)
 		return
 	}
-
 
 	var admissionReview v1.AdmissionReview
 

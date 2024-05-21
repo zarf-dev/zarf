@@ -6,11 +6,11 @@ package hooks
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/http/admission"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -50,7 +50,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 		admissionReq  *v1.AdmissionRequest
 		expectedPatch []operations.PatchOperation
 		code          int
-		err           error
+		errContains   string
 	}{
 		{
 			name: "should be mutated",
@@ -92,7 +92,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 			}),
 			expectedPatch: nil,
 			code:          http.StatusInternalServerError,
-			err:           fmt.Errorf("unable to transform the git url:"),
+			errContains:   lang.AgentErrTransformGitURL,
 		},
 		{
 			name: "should replace existing secret",
@@ -153,19 +153,8 @@ func TestFluxMutationWebhook(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			rr := sendAdmissionRequest(t, tt.admissionReq, handler, tt.code)
-			verifyAdmission(t, rr, tt.code, tt.expectedPatch, tt.err)
-			// if tt.err != nil {
-			// 	resp.Body
-			// } else if tt.expectedPatch == nil {
-			// 	require.Empty(t, string(resp.Patch))
-			// } else {
-			// 	expectedPatchJSON, err := json.Marshal(tt.expectedPatch)
-			// 	require.NoError(t, err)
-			// 	require.NotNil(t, resp)
-			// 	require.True(t, resp.Allowed)
-			// 	require.JSONEq(t, string(expectedPatchJSON), string(resp.Patch))
-			// }
+			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
+			verifyAdmission(t, rr, tt.code, tt.expectedPatch, tt.errContains)
 		})
 	}
 }

@@ -33,10 +33,6 @@ func NewHandler() *Handler {
 	}
 }
 
-type errorResponse struct {
-	err string `json:"error"`
-}
-
 // Serve returns an http.HandlerFunc for an admission webhook.
 func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 	message.Debugf("http.Serve(%#v)", hook)
@@ -76,19 +72,20 @@ func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 			message.Warnf("%s: %s", lang.AgentErrBindHandler, err.Error())
 
 			// // Preparing the error response
-			errorResponse := errorResponse{
-				err: err.Error(),
-			}
-			responseBytes, err := json.Marshal(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			if err != nil {
-				message.Warnf("Error marshaling the error response: %s", errorResponse)
-				w.WriteHeader(800) // Fallback if response cannot be marshaled
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
+			// errorResponse := errorResponse{
+			// 	err: err.Error(),
+			// }
+			// responseBytes, err := json.Marshal(err)
 
-			w.Write(responseBytes)
+			// if err != nil {
+			// 	message.Warnf("Error marshaling the error response: %s", errorResponse)
+			// 	w.WriteHeader(800) // Fallback if response cannot be marshaled
+			// 	return
+			// }
+			w.WriteHeader(http.StatusInternalServerError)
+
+			// TODO look at how/if this gets propagated to the agent
+			w.Write([]byte(err.Error()))
 			return
 		}
 
