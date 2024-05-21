@@ -19,7 +19,7 @@ import (
 
 // NewAdmissionServer creates a http.Server for the mutating webhook admission handler.
 func NewAdmissionServer(port string) *http.Server {
-	message.Debugf("http.NewServer(%s)", port)
+	message.Debugf("http.NewAdmissionServer(%s)", port)
 
 	c, err := cluster.NewCluster()
 	if err != nil {
@@ -31,8 +31,8 @@ func NewAdmissionServer(port string) *http.Server {
 	// Instances hooks
 	podsMutation := hooks.NewPodMutationHook(ctx, c)
 	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(ctx, c)
-	argocdApplicationMutation := hooks.NewApplicationMutationHook()
-	argocdRepositoryMutation := hooks.NewRepositoryMutationHook()
+	argocdApplicationMutation := hooks.NewApplicationMutationHook(ctx, c)
+	argocdRepositoryMutation := hooks.NewRepositoryMutationHook(ctx, c)
 
 	// Routers
 	ah := admission.NewHandler()
