@@ -5,6 +5,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -45,6 +46,10 @@ func (pkg ZarfPackage) Validate() error {
 
 	if !IsLowercaseNumberHyphenNoStartHyphen(pkg.Metadata.Name) {
 		return fmt.Errorf(lang.PkgValidateErrPkgName, pkg.Metadata.Name)
+	}
+
+	if pkg.Components == nil {
+		return errors.New("package must have at least 1 component")
 	}
 
 	for _, variable := range pkg.Variables {
