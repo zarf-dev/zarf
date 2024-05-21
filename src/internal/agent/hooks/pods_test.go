@@ -90,7 +90,7 @@ func TestPodMutationWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
-			name: "pod with zarf-agent patched label",
+			name: "pod with zarf-agent patched label should not be mutated",
 			admissionReq: createPodAdmissionRequest(t, v1.Create, &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{"zarf-agent": "patched"},
@@ -103,7 +103,7 @@ func TestPodMutationWebhook(t *testing.T) {
 			code:          http.StatusOK,
 		},
 		{
-			name: "pod with no labels",
+			name: "pod with no labels should not error",
 			admissionReq: createPodAdmissionRequest(t, v1.Create, &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: nil,
