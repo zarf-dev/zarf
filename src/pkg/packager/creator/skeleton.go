@@ -48,11 +48,6 @@ func (sc *SkeletonCreator) LoadPackageDefinition(src *layout.PackagePaths) (pkg 
 		return types.ZarfPackage{}, nil, err
 	}
 
-	// Perform early package validation.
-	if err := pkg.Validate(); err != nil {
-		return types.ZarfPackage{}, nil, fmt.Errorf("unable to validate package: %w", err)
-	}
-
 	pkg.Metadata.Architecture = config.GetArch()
 
 	// Compose components into a single zarf.yaml file
@@ -68,6 +63,11 @@ func (sc *SkeletonCreator) LoadPackageDefinition(src *layout.PackagePaths) (pkg 
 	pkg.Components, err = sc.processExtensions(pkg.Components, src)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
+	}
+
+	// Perform early package validation.
+	if err := pkg.Validate(); err != nil {
+		return types.ZarfPackage{}, nil, fmt.Errorf("unable to validate package: %w", err)
 	}
 
 	for _, warning := range warnings {

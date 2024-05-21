@@ -67,11 +67,6 @@ func (pc *PackageCreator) LoadPackageDefinition(src *layout.PackagePaths) (pkg t
 		return types.ZarfPackage{}, nil, err
 	}
 
-	// Perform early package validation.
-	if err := pkg.Validate(); err != nil {
-		return types.ZarfPackage{}, nil, fmt.Errorf("unable to validate package: %w", err)
-	}
-
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 
 	// Compose components into a single zarf.yaml file
@@ -122,6 +117,11 @@ func (pc *PackageCreator) LoadPackageDefinition(src *layout.PackagePaths) (pkg t
 		if err != nil {
 			return types.ZarfPackage{}, nil, err
 		}
+	}
+
+	// Perform early package validation.
+	if err := pkg.Validate(); err != nil {
+		return types.ZarfPackage{}, nil, fmt.Errorf("unable to validate package: %w", err)
 	}
 
 	return pkg, warnings, nil
