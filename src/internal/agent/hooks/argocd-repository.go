@@ -58,7 +58,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
 
-	message.Debugf("Using the url of (%s) to mutate the ArgoCD Repository Secret", state.GitServer.Address)
+	message.Infof("Using the url of (%s) to mutate the ArgoCD Repository Secret", state.GitServer.Address)
 
 	secret := corev1.Secret{}
 	if err = json.Unmarshal(r.Object.Raw, &secret); err != nil {
@@ -89,7 +89,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
 		transformedURL, err := transform.GitURL(state.GitServer.Address, repoCreds.URL, state.GitServer.PushUsername)
 		if err != nil {
-			return nil, fmt.Errorf("unable to transform the git url: %w", err)
+			return nil, fmt.Errorf("unable the git url: %w", err)
 		}
 		patchedURL = transformedURL.String()
 		message.Debugf("original url of (%s) got mutated to (%s)", repoCreds.URL, patchedURL)

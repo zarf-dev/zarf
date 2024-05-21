@@ -56,7 +56,6 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	if err = json.Unmarshal(r.Object.Raw, &repo); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
-	patchedURL := repo.Spec.URL
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
@@ -67,6 +66,8 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
 		}
 	}
+
+	patchedURL := repo.Spec.URL
 
 	// Mutate the git URL if necessary
 	if isCreate || (isUpdate && !isPatched) {

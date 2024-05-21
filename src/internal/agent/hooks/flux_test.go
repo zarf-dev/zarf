@@ -122,7 +122,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
-			name: "should not mutate on update if hostname matches",
+			name: "should patch to same url and update secret if hostname matches",
 			admissionReq: createFluxGitRepoAdmissionRequest(t, v1.Update, &flux.GitRepository{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "no-mutate",
