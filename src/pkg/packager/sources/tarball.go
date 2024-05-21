@@ -204,5 +204,34 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 // Collect for the TarballSource is essentially an `mv`
 func (s *TarballSource) Collect(dir string) (string, error) {
 	dst := filepath.Join(dir, filepath.Base(s.PackageSource))
-	return dst, os.Rename(s.PackageSource, dst)
+	err := os.Rename(s.PackageSource, dst)
+	linkErr := &os.LinkError{}
+	isLinkErr := errors.As(err, &linkErr)
+	if err != nil && !isLinkErr {
+		return "", err
+	}
+	if err == nil {
+		return dst, nil
+	}
+
+	// Copy file if rename is not possible due to existing on different partitions.
+	srcFile, err := os.Open(linkErr.Old)
+	if err != nil {
+		return "", err
+	}
+	defer srcFile.Close()
+	dstFile, err := os.Create(linkErr.New)
+	if err != nil {
+		return "", err
+	}
+	defer dstFile.Close()
+	_, err = io.Copy(dstFile, srcFile)
+	if err != nil {
+		return "", err
+	}
+	err = os.Remove(linkErr.Old)
+	if err != nil {
+		return "", err
+	}
+	return dst, nil
 }

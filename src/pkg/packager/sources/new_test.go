@@ -5,49 +5,181 @@
 package sources
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
-var ociS *OCISource
-var urlS *URLSource
-var tarballS *TarballSource
-var splitS *SplitTarballSource
-var packageS *PackageSource
+func TestNewPackageSource(t *testing.T) {
+	t.Parallel()
 
-type source struct {
-	pkgSrc  string
-	srcType string
-	source  PackageSource
-}
+	tests := []struct {
+		name             string
+		src              string
+		expectedIdentify string
+		expectedType     PackageSource
+	}{
+		{
+			name:             "oci",
+			src:              "oci://ghcr.io/defenseunicorns/packages/init:1.0.0",
+			expectedIdentify: "oci",
+			expectedType:     &OCISource{},
+		},
+		{
+			name:             "sget with sub path",
+			src:              "sget://github.com/defenseunicorns/zarf-hello-world:x86",
+			expectedIdentify: "sget",
+			expectedType:     &URLSource{},
+		},
+		{
+			name:             "sget without host",
+			src:              "sget://defenseunicorns/zarf-hello-world:x86_64",
+			expectedIdentify: "sget",
+			expectedType:     &URLSource{},
+		},
+		{
+			name:             "https",
+			src:              "https://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst",
+			expectedIdentify: "https",
+			expectedType:     &URLSource{},
+		},
+		{
+			name:             "http",
+			src:              "http://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst",
+			expectedIdentify: "http",
+			expectedType:     &URLSource{},
+		},
+		{
+			name:             "local tar init zst",
+			src:              "zarf-init-amd64-v1.0.0.tar.zst",
+			expectedIdentify: "tarball",
+			expectedType:     &TarballSource{},
+		},
+		{
+			name:             "local tar",
+			src:              "zarf-package-manifests-amd64-v1.0.0.tar",
+			expectedIdentify: "tarball",
+			expectedType:     &TarballSource{},
+		},
+		{
+			name:             "local tar manifest zst",
+			src:              "zarf-package-manifests-amd64-v1.0.0.tar.zst",
+			expectedIdentify: "tarball",
+			expectedType:     &TarballSource{},
+		},
+		{
+			name:             "local tar split",
+			src:              "testdata/.part000",
+			expectedIdentify: "split",
+			expectedType:     &SplitTarballSource{},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-var sources = []source{
-	{pkgSrc: "oci://ghcr.io/defenseunicorns/packages/init:1.0.0", srcType: "oci", source: ociS},
-	{pkgSrc: "sget://github.com/defenseunicorns/zarf-hello-world:x86", srcType: "sget", source: urlS},
-	{pkgSrc: "sget://defenseunicorns/zarf-hello-world:x86_64", srcType: "sget", source: urlS},
-	{pkgSrc: "https://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst", srcType: "https", source: urlS},
-	{pkgSrc: "http://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst", srcType: "http", source: urlS},
-	{pkgSrc: "zarf-init-amd64-v1.0.0.tar.zst", srcType: "tarball", source: tarballS},
-	{pkgSrc: "zarf-package-manifests-amd64-v1.0.0.tar", srcType: "tarball", source: tarballS},
-	{pkgSrc: "zarf-package-manifests-amd64-v1.0.0.tar.zst", srcType: "tarball", source: tarballS},
-	{pkgSrc: "some-dir/.part000", srcType: "split", source: splitS},
-}
-
-func Test_identifySourceType(t *testing.T) {
-	for _, source := range sources {
-		actual := Identify(source.pkgSrc)
-		require.Equalf(t, source.srcType, actual, fmt.Sprintf("source: %s", source))
+			require.Equal(t, tt.expectedIdentify, Identify(tt.src))
+			ps, err := New(&types.ZarfPackageOptions{PackageSource: tt.src})
+			require.NoError(t, err)
+			require.IsType(t, tt.expectedType, ps)
+		})
 	}
 }
 
-func TestNew(t *testing.T) {
-	for _, source := range sources {
-		actual, err := New(&types.ZarfPackageOptions{PackageSource: source.pkgSrc})
-		require.NoError(t, err)
-		require.IsType(t, source.source, actual)
-		require.Implements(t, packageS, actual)
+func TestPackageSource(t *testing.T) {
+	t.Parallel()
+
+	// Copy tar to a temp directory, otherwise Collect will delete it.
+	tarName := "zarf-package-wordpress-amd64-16.0.4.tar.zst"
+	testDir := t.TempDir()
+	src, err := os.Open(path.Join("./testdata/", tarName))
+	require.NoError(t, err)
+	tarPath := path.Join(testDir, tarName)
+	dst, err := os.Create(tarPath)
+	require.NoError(t, err)
+	_, err = io.Copy(dst, src)
+	require.NoError(t, err)
+	src.Close()
+	dst.Close()
+
+	b, err := os.ReadFile("./testdata/expected-pkg.json")
+	require.NoError(t, err)
+	expectedPkg := types.ZarfPackage{}
+	err = json.Unmarshal(b, &expectedPkg)
+	require.NoError(t, err)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		_, fp := path.Split(req.URL.Path)
+		f, err := os.Open(path.Join("testdata", fp))
+		if err != nil {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+		defer f.Close()
+		io.Copy(rw, f)
+	}))
+
+	tests := []struct {
+		name   string
+		src    string
+		shasum string
+	}{
+		{
+			name: "local",
+			src:  tarPath,
+		},
+		{
+			name:   "http",
+			src:    fmt.Sprintf("%s/zarf-package-wordpress-amd64-16.0.4.tar.zst", ts.URL),
+			shasum: "835b06fc509e639497fb45f45d432e5c4cbd5d84212db5357b16bc69724b0e26",
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			opts := &types.ZarfPackageOptions{
+				PackageSource: tt.src,
+				Shasum:        tt.shasum,
+			}
+
+			ps, err := New(opts)
+			require.NoError(t, err)
+			packageDir := t.TempDir()
+			pkgLayout := layout.New(packageDir)
+			pkg, warnings, err := ps.LoadPackage(pkgLayout, filters.Empty(), false)
+			require.NoError(t, err)
+			require.Empty(t, warnings)
+			require.Equal(t, expectedPkg, pkg)
+
+			ps, err = New(opts)
+			require.NoError(t, err)
+			metadataDir := t.TempDir()
+			metadataLayout := layout.New(metadataDir)
+			metadata, warnings, err := ps.LoadPackageMetadata(metadataLayout, true, false)
+			require.NoError(t, err)
+			require.Empty(t, warnings)
+			require.Equal(t, expectedPkg, metadata)
+
+			ps, err = New(opts)
+			require.NoError(t, err)
+			collectDir := t.TempDir()
+			fp, err := ps.Collect(collectDir)
+			require.NoError(t, err)
+			require.Equal(t, path.Join(collectDir, path.Base(tt.src)), fp)
+		})
 	}
 }
