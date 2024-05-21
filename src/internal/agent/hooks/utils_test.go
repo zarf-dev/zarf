@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -42,7 +43,7 @@ func createTestClientWithZarfState(ctx context.Context, t *testing.T, state *typ
 }
 
 // sendAdmissionRequest sends an admission request to the handler and returns the response.
-func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handler http.HandlerFunc, code int) *v1.AdmissionResponse {
+func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handler http.HandlerFunc, code int) *httptest.ResponseRecorder {
 	t.Helper()
 
 	b, err := json.Marshal(&v1.AdmissionReview{
@@ -58,13 +59,32 @@ func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handl
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
-	require.Equal(t, code, rr.Code)
+	return rr
+}
 
-	var admissionReview v1.AdmissionReview
-	if rr.Code == http.StatusOK {
-		err = json.NewDecoder(rr.Body).Decode(&admissionReview)
-		require.NoError(t, err)
+func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expectedCode int, expectedPatch []operations.PatchOperation, expectedErr error){
+	t.Helper()
+
+	require.Equal(t, expectedCode, rr.Code)
+
+	if expectedErr != nil {
+		require.Contains(t, rr.Body.String(), expectedErr.Error() )
+		return
 	}
 
-	return admissionReview.Response
+
+	var admissionReview v1.AdmissionReview
+
+	err := json.NewDecoder(rr.Body).Decode(&admissionReview)
+	resp := admissionReview.Response
+	require.NoError(t, err)
+	if expectedPatch == nil {
+		require.Empty(t, string(resp.Patch))
+	} else {
+		expectedPatchJSON, err := json.Marshal(expectedPatch)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.True(t, resp.Allowed)
+		require.JSONEq(t, string(expectedPatchJSON), string(resp.Patch))
+	}
 }
