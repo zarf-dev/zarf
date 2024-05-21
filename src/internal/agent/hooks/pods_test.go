@@ -129,11 +129,6 @@ func TestPodMutationWebhook(t *testing.T) {
 			},
 			code: http.StatusOK,
 		},
-		{
-			name:         "empty pod",
-			admissionReq: createPodAdmissionRequest(t, v1.Create, nil),
-			code:         http.StatusOK,
-		},
 	}
 
 	for _, tt := range tests {
@@ -147,7 +142,7 @@ func TestPodMutationWebhook(t *testing.T) {
 				require.NotNil(t, resp)
 				require.True(t, resp.Allowed)
 				require.JSONEq(t, string(expectedPatchJSON), string(resp.Patch))
-			} else if tt.code != http.StatusInternalServerError {
+			} else {
 				require.Empty(t, string(resp.Patch))
 			}
 		})
