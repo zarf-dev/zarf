@@ -20,7 +20,7 @@ import (
 )
 
 // Application is a definition of an ArgoCD Application resource.
-// The ArgoCD Application structs in this file have been copied from upstream.
+// The ArgoCD Application structs in this file have been partially copied from upstream.
 //
 // https://github.com/argoproj/argo-cd/blob/v2.11.0/pkg/apis/application/v1alpha1/types.go
 //

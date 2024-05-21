@@ -32,7 +32,7 @@ func NewAdmissionServer(port string) *http.Server {
 	podsMutation := hooks.NewPodMutationHook(ctx, c)
 	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(ctx, c)
 	argocdApplicationMutation := hooks.NewApplicationMutationHook(ctx, c)
-	argocdRepositoryMutation := hooks.NewRepositoryMutationHook(ctx, c)
+	argocdRepositoryMutation := hooks.NewRepositorySecretMutationHook(ctx, c)
 
 	// Routers
 	ah := admission.NewHandler()
