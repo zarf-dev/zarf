@@ -5,10 +5,18 @@
 package cluster
 
 import (
+	"context"
+	"encoding/json"
+	"strings"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 // TestPackageSecretNeedsWait verifies that Zarf waits for webhooks to complete correctly.
@@ -190,4 +198,51 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 			require.Equal(t, testCase.hookName, hookName)
 		})
 	}
+}
+
+func TestGetDeployedPackage(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	c := &Cluster{&k8s.K8s{Clientset: fake.NewSimpleClientset()}}
+
+	packages := []types.DeployedPackage{
+		{Name: "package1"},
+		{Name: "package2"},
+	}
+
+	for _, p := range packages {
+		b, err := json.Marshal(p)
+		require.NoError(t, err)
+		secret := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      strings.Join([]string{config.ZarfPackagePrefix, p.Name}, ""),
+				Namespace: "zarf",
+				Labels: map[string]string{
+					ZarfPackageInfoLabel: p.Name,
+				},
+			},
+			Data: map[string][]byte{
+				"data": b,
+			},
+		}
+		c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &secret, metav1.CreateOptions{})
+		actual, err := c.GetDeployedPackage(ctx, p.Name)
+		require.NoError(t, err)
+		require.Equal(t, p, *actual)
+	}
+
+	nonPackageSecret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "hello-world",
+			Namespace: "zarf",
+			Labels: map[string]string{
+				ZarfPackageInfoLabel: "whatever",
+			},
+		},
+	}
+	c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &nonPackageSecret, metav1.CreateOptions{})
+
+	actualList, err := c.GetDeployedZarfPackages(ctx)
+	require.NoError(t, err)
+	require.ElementsMatch(t, packages, actualList)
 }
