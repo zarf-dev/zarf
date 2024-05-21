@@ -39,7 +39,6 @@ func parsePod(object []byte) (*corev1.Pod, error) {
 	if err := json.Unmarshal(object, &pod); err != nil {
 		return nil, err
 	}
-
 	return &pod, nil
 }
 
