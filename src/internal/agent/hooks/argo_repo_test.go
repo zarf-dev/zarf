@@ -78,7 +78,6 @@ func TestArgoRepoWebhook(t *testing.T) {
 				),
 				operations.ReplacePatchOperation(
 					"/data/password",
-					//TODO this should be different
 					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullPassword)),
 				),
 			},
