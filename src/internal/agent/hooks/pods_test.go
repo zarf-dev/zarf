@@ -135,14 +135,14 @@ func TestPodMutationWebhook(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			resp := sendAdmissionRequest(t, tt.admissionReq, handler, tt.code)
-			if tt.expectedPatch != nil {
+			if tt.expectedPatch == nil {
+				require.Empty(t, string(resp.Patch))
+			} else {
 				expectedPatchJSON, err := json.Marshal(tt.expectedPatch)
 				require.NoError(t, err)
 				require.NotNil(t, resp)
 				require.True(t, resp.Allowed)
 				require.JSONEq(t, string(expectedPatchJSON), string(resp.Patch))
-			} else {
-				require.Empty(t, string(resp.Patch))
 			}
 		})
 	}
