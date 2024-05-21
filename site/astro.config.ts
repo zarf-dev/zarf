@@ -25,6 +25,15 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Zarf",
+      head: [
+        {
+          tag: "script",
+          content: "(function(w,d,s,l,i){ ... })(window,document,'script','dataLayer','G-N1XZ8ZXCWL');",
+        },
+      ],
+      components: {
+        SkipLink: "./src/components/SkipLink.astro",
+      },
       social: {
         github: "https://github.com/defenseunicorns/zarf",
         slack: "https://kubernetes.slack.com/archives/C03B6BJAUJ3",
