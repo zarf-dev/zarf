@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package http provides a http server for the webhook and proxy.
-package http
+// Package admission provides an HTTP handler for a Kubernetes admission webhook.
+// It includes functionality to decode incoming admission requests, execute
+// the corresponding operations, and return appropriate admission responses.
+package admission
 
 import (
 	"encoding/json"
@@ -19,20 +21,20 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-// admissionHandler represents the HTTP handler for an admission webhook.
-type admissionHandler struct {
+// Handler represents the HTTP handler for an admission webhook.
+type Handler struct {
 	decoder runtime.Decoder
 }
 
-// newAdmissionHandler returns an instance of AdmissionHandler.
-func newAdmissionHandler() *admissionHandler {
-	return &admissionHandler{
+// NewHandler returns a new admission Handler.
+func NewHandler() *Handler {
+	return &Handler{
 		decoder: serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer(),
 	}
 }
 
-// Serve returns a http.HandlerFunc for an admission webhook.
-func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
+// Serve returns an http.HandlerFunc for an admission webhook.
+func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 	message.Debugf("http.Serve(%#v)", hook)
 	return func(w http.ResponseWriter, r *http.Request) {
 		message.Debugf("http.Serve()(writer, %#v)", r.URL)
@@ -67,7 +69,7 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 
 		result, err := hook.Execute(review.Request)
 		if err != nil {
-			message.WarnErr(err, lang.AgentErrBindHandler)
+			message.Warnf("%s: %s", lang.AgentErrBindHandler, err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -84,7 +86,7 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 			},
 		}
 
-		// set the patch operations for mutating admission
+		// Set the patch operations for mutating admission
 		if len(result.PatchOps) > 0 {
 			jsonPatchType := v1.PatchTypeJSONPatch
 			patchBytes, err := json.Marshal(result.PatchOps)
