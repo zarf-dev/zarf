@@ -43,6 +43,9 @@ spec:
             - name: tls-certs
               mountPath: /etc/certs
               readOnly: true
+            - name: zarf-state
+              mountPath: /etc/zarf-state
+              readOnly: true
             # Required for OpenShift to mount k9s vendored directories
             - name: config
               mountPath: /.config
@@ -52,6 +55,9 @@ spec:
         - name: tls-certs
           secret:
             secretName: agent-hook-tls
+        - name: zarf-state
+          secret:
+            secretName: zarf-state
         # Required for OpenShift to mount k9s vendored directories
         - name: config
           emptyDir: {}
