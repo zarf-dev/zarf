@@ -10,16 +10,14 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/agent/http/admission"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 func createPodAdmissionRequest(t *testing.T, op v1.Operation, pod *corev1.Pod) *v1.AdmissionRequest {
@@ -38,9 +36,10 @@ func TestPodMutationWebhook(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	c := &cluster.Cluster{K8s: &k8s.K8s{Clientset: fake.NewSimpleClientset()}}
+
 	state := &types.ZarfState{RegistryInfo: types.RegistryInfo{Address: "127.0.0.1:31999"}}
-	handler := setupWebhookTest(ctx, t, c, state, NewPodMutationHook)
+	c := createTestClientWithZarfState(ctx, t, state)
+	handler := admission.NewHandler().Serve(NewPodMutationHook(ctx, c))
 
 	tests := []struct {
 		name          string
