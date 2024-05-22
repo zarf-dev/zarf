@@ -46,7 +46,7 @@ func TestArgoAppWebhook(t *testing.T) {
 			admissionReq: createArgoAppAdmissionRequest(t, v1.Create, &Application{
 				Spec: ApplicationSpec{
 					Source: &ApplicationSource{RepoURL: "https://diff-git-server.com/peanuts"},
-					Sources: ApplicationSources{
+					Sources: []ApplicationSource{
 						{
 							RepoURL: "https://diff-git-server.com/cashews",
 						},

@@ -34,8 +34,8 @@ type Application struct {
 // ApplicationSpec represents desired application state. Contains link to repository with application definition.
 type ApplicationSpec struct {
 	// Source is a reference to the location of the application's manifests or chart.
-	Source  *ApplicationSource `json:"source,omitempty"`
-	Sources ApplicationSources `json:"sources,omitempty"`
+	Source  *ApplicationSource  `json:"source,omitempty"`
+	Sources []ApplicationSource `json:"sources,omitempty"`
 }
 
 // ApplicationSource contains all required information about the source of an application.
@@ -43,9 +43,6 @@ type ApplicationSource struct {
 	// RepoURL is the URL to the repository (Git or Helm) that contains the application manifests.
 	RepoURL string `json:"repoURL"`
 }
-
-// ApplicationSources contains list of required information about the sources of an application.
-type ApplicationSources []ApplicationSource
 
 // NewApplicationMutationHook creates a new instance of the ArgoCD Application mutation hook.
 func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
