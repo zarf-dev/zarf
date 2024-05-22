@@ -48,7 +48,7 @@ func proxyRequestTransform(r *http.Request) error {
 
 	c, err := cluster.NewCluster()
 	if err != nil {
-		message.Fatalf(err, err.Error())
+		return err
 	}
 	ctx := context.Background()
 	state, err := c.LoadZarfState(ctx)
