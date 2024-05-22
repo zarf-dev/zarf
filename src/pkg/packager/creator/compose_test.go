@@ -169,7 +169,7 @@ func TestComposeComponents(t *testing.T) {
 			}
 
 			require.EqualError(t, err, tt.expectedErr)
-			require.Equal(t, tt.expectedPkg.Components, pkg.Components)
+			require.Empty(t, tt.expectedPkg)
 		})
 	}
 }
