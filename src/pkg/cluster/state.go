@@ -8,21 +8,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
-	"slices"
-
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/fatih/color"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Zarf Cluster Constants.
@@ -54,20 +53,24 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		state = &types.ZarfState{}
 		spinner.Updatef("New cluster, no prior Zarf deployments found")
 
-		// If the K3s component is being deployed, skip distro detection.
 		if initOptions.ApplianceMode {
-			distro = k8s.DistroIsK3s
+			// If the K3s component is being deployed, skip distro detection.
+			distro = DistroIsK3s
 			state.ZarfAppliance = true
 		} else {
 			// Otherwise, trying to detect the K8s distro type.
-			distro, err = c.DetectDistro(ctx)
+			nodeList, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 			if err != nil {
-				// This is a basic failure right now but likely could be polished to provide user guidance to resolve.
-				return fmt.Errorf("unable to connect to the cluster to verify the distro: %w", err)
+				return err
 			}
+			namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+			if err != nil {
+				return err
+			}
+			distro = detectDistro(nodeList.Items[0], namespaceList.Items)
 		}
 
-		if distro != k8s.DistroIsUnknown {
+		if distro != DistroIsUnknown {
 			spinner.Updatef("Detected K8s distro %s", distro)
 		}
 
@@ -144,13 +147,13 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 	}
 
 	switch state.Distro {
-	case k8s.DistroIsK3s, k8s.DistroIsK3d:
+	case DistroIsK3s, DistroIsK3d:
 		state.StorageClass = "local-path"
 
-	case k8s.DistroIsKind, k8s.DistroIsGKE:
+	case DistroIsKind, DistroIsGKE:
 		state.StorageClass = "standard"
 
-	case k8s.DistroIsDockerDesktop:
+	case DistroIsDockerDesktop:
 		state.StorageClass = "hostpath"
 	}
 
