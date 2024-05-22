@@ -97,16 +97,16 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 
 	return &operations.Result{
 		Allowed:  true,
-		PatchOps: populateArgoRepositoryPatchOperations(patchedURL, state.GitServer.PullPassword),
+		PatchOps: populateArgoRepositoryPatchOperations(patchedURL, state.GitServer),
 	}, nil
 }
 
 // Patch updates of the Argo Repository Secret.
-func populateArgoRepositoryPatchOperations(repoURL string, zarfGitPullPassword string) []operations.PatchOperation {
+func populateArgoRepositoryPatchOperations(repoURL string, gitServer types.GitServerInfo) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/data/url", base64.StdEncoding.EncodeToString([]byte(repoURL))))
-	patches = append(patches, operations.ReplacePatchOperation("/data/username", base64.StdEncoding.EncodeToString([]byte(types.ZarfGitReadUser))))
-	patches = append(patches, operations.ReplacePatchOperation("/data/password", base64.StdEncoding.EncodeToString([]byte(zarfGitPullPassword))))
+	patches = append(patches, operations.ReplacePatchOperation("/data/username", base64.StdEncoding.EncodeToString([]byte(gitServer.PullUsername))))
+	patches = append(patches, operations.ReplacePatchOperation("/data/password", base64.StdEncoding.EncodeToString([]byte(gitServer.PullPassword))))
 
 	return patches
 }
