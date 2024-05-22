@@ -75,14 +75,15 @@ func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expected admis
 
 	require.Equal(t, expected.code, rr.Code)
 
-	if expected.errContains != "" {
-		require.Contains(t, rr.Body.String(), expected.errContains)
-		return
-	}
-
 	var admissionReview v1.AdmissionReview
 
 	err := json.NewDecoder(rr.Body).Decode(&admissionReview)
+
+	if expected.errContains != "" {
+		require.Contains(t, admissionReview.Response.Result.Message, expected.errContains)
+		return
+	}
+
 	resp := admissionReview.Response
 	require.NoError(t, err)
 	if expected.patch == nil {
