@@ -45,6 +45,7 @@ func TestSkeletonLoadPackageDefinition(t *testing.T) {
 			switch {
 			case tt.expectErr:
 				require.Error(t, err)
+				require.Empty(t, pkg)
 			default:
 				require.NoError(t, err)
 				require.NotEmpty(t, pkg)
