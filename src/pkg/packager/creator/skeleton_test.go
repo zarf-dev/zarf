@@ -39,8 +39,8 @@ func TestSkeletonLoadPackageDefinition(t *testing.T) {
 			t.Parallel()
 
 			src := layout.New(filepath.Join("testdata", tt.testDir))
-			pc := NewSkeletonCreator(types.ZarfCreateOptions{}, types.ZarfPublishOptions{})
-			pkg, _, err := pc.LoadPackageDefinition(src)
+			sc := NewSkeletonCreator(types.ZarfCreateOptions{}, types.ZarfPublishOptions{})
+			pkg, _, err := sc.LoadPackageDefinition(src)
 
 			switch {
 			case tt.expectErr:
