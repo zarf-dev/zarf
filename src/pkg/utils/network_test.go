@@ -5,92 +5,148 @@
 package utils
 
 import (
-	"os"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
+
+	"github.com/defenseunicorns/pkg/helpers"
 )
 
-type TestNetworkSuite struct {
-	suite.Suite
-	*require.Assertions
-}
+func TestParseChecksum(t *testing.T) {
+	t.Parallel()
 
-func (suite *TestNetworkSuite) SetupSuite() {
-	suite.Assertions = require.New(suite.T())
-}
-
-func (suite *TestNetworkSuite) Test_0_parseChecksum() {
-	// zarf prepare sha256sum .adr-dir
 	adr := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/.adr-dir"
 	sum := "930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3"
-	url := adr + "@" + sum
-	uri, checksum, err := parseChecksum(url)
-	suite.NoError(err)
-	suite.Equal(adr, uri)
-	suite.Equal(sum, checksum)
 
-	url = adr + "?foo=bar@" + sum
-	uri, checksum, err = parseChecksum(url)
-	suite.NoError(err)
-	suite.Equal(adr+"?foo=bar", uri)
-	suite.Equal(sum, checksum)
+	tests := []struct {
+		name        string
+		url         string
+		expectedURI string
+		expectedSum string
+	}{
+		{
+			name:        "url with checksum",
+			url:         adr + "@" + sum,
+			expectedURI: adr,
+			expectedSum: sum,
+		},
+		{
+			name:        "url with query parameters and checksum",
+			url:         adr + "?foo=bar@" + sum,
+			expectedURI: adr + "?foo=bar",
+			expectedSum: sum,
+		},
+		{
+			name:        "url with auth but without checksum",
+			url:         "https://user:pass@hello.world?foo=bar",
+			expectedURI: "https://user:pass@hello.world?foo=bar",
+			expectedSum: "",
+		},
+		{
+			name:        "url with auth and checksum",
+			url:         "https://user:pass@hello.world?foo=bar@" + sum,
+			expectedURI: "https://user:pass@hello.world?foo=bar",
+			expectedSum: sum,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	url = "https://user:pass@hello.world?foo=bar"
-	uri, checksum, err = parseChecksum(url)
-	suite.NoError(err)
-	suite.Equal("https://user:pass@hello.world?foo=bar", uri)
-	suite.Equal("", checksum)
-
-	url = "https://user:pass@hello.world?foo=bar@" + sum
-	uri, checksum, err = parseChecksum(url)
-	suite.NoError(err)
-	suite.Equal("https://user:pass@hello.world?foo=bar", uri)
-	suite.Equal(sum, checksum)
+			uri, checksum, err := parseChecksum(tt.url)
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedURI, uri)
+			require.Equal(t, tt.expectedSum, checksum)
+		})
+	}
 }
 
-func (suite *TestNetworkSuite) Test_1_DownloadToFile() {
-	readme := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md"
-	tmp := suite.T().TempDir()
-	path := filepath.Join(tmp, "README.md")
-	suite.NoError(DownloadToFile(readme, path, ""))
-	suite.FileExists(path)
+func TestDownloadToFile(t *testing.T) {
+	t.Parallel()
 
-	path = filepath.Join(tmp, "README.md.bad")
-	bad := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md.bad"
-	suite.Error(DownloadToFile(bad, path, ""))
+	// TODO: Explore replacing client transport instead of spinning up  http server.
+	files := map[string]string{
+		"README.md": "Hello World\n",
+		".adr-dir":  "adr\n",
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		_, fileName := path.Split(req.URL.Path)
+		content, ok := files[fileName]
+		if !ok {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+		rw.Write([]byte(content))
+	}))
 
-	// zarf prepare sha256sum .adr-dir
-	path = filepath.Join(tmp, ".adr-dir")
-	sum := "930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3"
-	adr := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/.adr-dir"
-	url := adr + "@" + sum
-	err := DownloadToFile(url, path, "")
-	suite.NoError(err)
-	suite.FileExists(path)
-	content, err := os.ReadFile(path)
-	suite.NoError(err)
-	suite.Contains(string(content), "adr")
+	tests := []struct {
+		name        string
+		fileName    string
+		queryParams string
+		shasum      string
+		expectedErr string
+	}{
+		{
+			name:     "existing file",
+			fileName: "README.md",
+		},
+		{
+			name:        "non existing file",
+			fileName:    "README.md.bad",
+			expectedErr: "bad HTTP status: 404 Not Found",
+		},
+		{
+			name:     "existing file with shasum",
+			fileName: ".adr-dir",
+			shasum:   "930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3",
+		},
+		{
+			name:        "existing file with wrong shasum",
+			fileName:    ".adr-dir",
+			shasum:      "badsha",
+			expectedErr: "expected badsha, got 930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3",
+		},
+		{
+			name:        "existing file with shasum and query parameters",
+			fileName:    ".adr-dir",
+			queryParams: "foo=bar",
+			shasum:      "930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3",
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	check, err := helpers.GetSHA256OfFile(path)
-	suite.NoError(err)
-	suite.Equal(sum, check)
-
-	url = adr + "@" + "badsha"
-	path = filepath.Join(tmp, ".adr-dir.bad")
-	suite.Error(DownloadToFile(url, path, ""))
-
-	url = adr + "?foo=bar@" + sum
-	path = filepath.Join(tmp, ".adr-dir.good")
-	suite.NoError(DownloadToFile(url, path, ""))
-	suite.FileExists(path)
-}
-
-func TestNetwork(t *testing.T) {
-	message.SetLogLevel(message.DebugLevel)
-	suite.Run(t, new(TestNetworkSuite))
+			src := fmt.Sprintf("%s/%s", srv.URL, tt.fileName)
+			if tt.queryParams != "" {
+				src = strings.Join([]string{src, tt.queryParams}, "?")
+			}
+			if tt.shasum != "" {
+				src = strings.Join([]string{src, tt.shasum}, "@")
+			}
+			fmt.Println(src)
+			dst := filepath.Join(t.TempDir(), tt.fileName)
+			err := DownloadToFile(src, dst, "")
+			if tt.expectedErr != "" {
+				require.ErrorContains(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.FileExists(t, dst)
+			if tt.shasum == "" {
+				return
+			}
+			check, err := helpers.GetSHA256OfFile(dst)
+			require.NoError(t, err)
+			require.Equal(t, tt.shasum, check)
+		})
+	}
 }

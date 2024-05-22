@@ -670,7 +670,6 @@ const (
 	AgentErrImageSwap              = "Unable to swap the host for (%s)"
 	AgentErrInvalidMethod          = "invalid method only POST requests are allowed"
 	AgentErrInvalidOp              = "invalid operation: %s"
-	AgentErrTransformGitURL        = "unable to transform the git url"
 	AgentErrInvalidType            = "only content type 'application/json' is supported"
 	AgentErrMarshallJSONPatch      = "unable to marshall the json patch"
 	AgentErrMarshalResponse        = "unable to marshal the response"

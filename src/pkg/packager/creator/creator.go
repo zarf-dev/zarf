@@ -11,7 +11,7 @@ import (
 
 // Creator is an interface for creating Zarf packages.
 type Creator interface {
-	LoadPackageDefinition(dst *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error)
+	LoadPackageDefinition(src *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error)
 	Assemble(dst *layout.PackagePaths, components []types.ZarfComponent, arch string) error
 	Output(dst *layout.PackagePaths, pkg *types.ZarfPackage) error
 }

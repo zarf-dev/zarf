@@ -21,6 +21,9 @@ import (
 	v1 "k8s.io/api/admission/v1"
 )
 
+// AgentErrTransformGitURL is thrown when the agent fails to make the git url a Zarf compatible url
+const AgentErrTransformGitURL = "unable to transform the git url"
+
 // NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
 func NewGitRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
 	message.Debug("hooks.NewGitRepositoryMutationHook()")
@@ -74,7 +77,7 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
 		transformedURL, err := transform.GitURL(state.GitServer.Address, patchedURL, state.GitServer.PushUsername)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", lang.AgentErrTransformGitURL, err)
+			return nil, fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
 		}
 		patchedURL = transformedURL.String()
 		message.Debugf("original git URL of (%s) got mutated to (%s)", repo.Spec.URL, patchedURL)
