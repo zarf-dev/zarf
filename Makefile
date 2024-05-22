@@ -208,10 +208,7 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 
 .PHONY: test-unit
 test-unit: ## Run unit tests
-	go test $(go list ./... | grep -v '^github.com/defenseunicorns/zarf/src/test' | grep -v 'github.com/defenseunicorns/zarf/src/extensions/bigbang/test') -coverprofile=coverage.out -covermode=atomic
-	cd src/pkg && go test ./... -failfast -v -timeout 30m
-	cd src/internal && go test ./... -failfast -v timeout 30m
-	cd src/extensions/bigbang && go test ./. -failfast -v timeout 30m
+	go test -failfast -v -coverprofile=coverage.out -covermode=atomic $$(go list ./... | grep -v '^github.com/defenseunicorns/zarf/src/test' | grep -v 'github.com/defenseunicorns/zarf/src/extensions/bigbang/test')
 
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR
 test-docs-and-schema:
