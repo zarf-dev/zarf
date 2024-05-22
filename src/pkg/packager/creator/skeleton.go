@@ -65,13 +65,12 @@ func (sc *SkeletonCreator) LoadPackageDefinition(src *layout.PackagePaths) (pkg 
 		return types.ZarfPackage{}, nil, err
 	}
 
-	// Perform early package validation.
-	if err := pkg.Validate(); err != nil {
-		return types.ZarfPackage{}, nil, fmt.Errorf("unable to validate package: %w", err)
-	}
-
 	for _, warning := range warnings {
 		message.Warn(warning)
+	}
+
+	if err := pkg.Validate(); err != nil {
+		return types.ZarfPackage{}, nil, err
 	}
 
 	return pkg, warnings, nil

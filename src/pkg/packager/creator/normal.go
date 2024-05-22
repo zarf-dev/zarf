@@ -119,9 +119,8 @@ func (pc *PackageCreator) LoadPackageDefinition(src *layout.PackagePaths) (pkg t
 		}
 	}
 
-	// Perform early package validation.
 	if err := pkg.Validate(); err != nil {
-		return types.ZarfPackage{}, nil, fmt.Errorf("unable to validate package: %w", err)
+		return types.ZarfPackage{}, nil, err
 	}
 
 	return pkg, warnings, nil

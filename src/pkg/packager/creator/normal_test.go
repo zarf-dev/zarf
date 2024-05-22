@@ -63,19 +63,19 @@ func TestLoadPackageDefinition(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		testDir   string
-		expectErr bool
+		name        string
+		testDir     string
+		expectedErr string
 	}{
 		{
-			name:      "valid package definition",
-			testDir:   "valid",
-			expectErr: false,
+			name:        "valid package definition",
+			testDir:     "valid",
+			expectedErr: "",
 		},
 		{
-			name:      "invalid package definition",
-			testDir:   "invalid",
-			expectErr: true,
+			name:        "invalid package definition",
+			testDir:     "invalid",
+			expectedErr: "package must have at least 1 component",
 		},
 	}
 
@@ -88,14 +88,14 @@ func TestLoadPackageDefinition(t *testing.T) {
 			pc := NewPackageCreator(types.ZarfCreateOptions{}, "")
 			pkg, _, err := pc.LoadPackageDefinition(src)
 
-			switch {
-			case tt.expectErr:
-				require.Error(t, err)
-				require.Empty(t, pkg)
-			default:
+			if tt.expectedErr == "" {
 				require.NoError(t, err)
 				require.NotEmpty(t, pkg)
+				return
 			}
+
+			require.EqualError(t, err, tt.expectedErr)
+			require.Empty(t, pkg)
 		})
 	}
 }
