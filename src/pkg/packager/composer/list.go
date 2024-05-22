@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -303,7 +304,7 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 		overrideResources(composed, node.ZarfComponent)
 		overrideActions(composed, node.ZarfComponent)
 
-		composeExtensions(composed, node.ZarfComponent, node.relativeToHead)
+		bigbang.Compose(composed, node.ZarfComponent, node.relativeToHead)
 
 		node = node.prev
 	}

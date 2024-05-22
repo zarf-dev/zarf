@@ -19,15 +19,13 @@ import (
 func TestNewImportChain(t *testing.T) {
 	t.Parallel()
 
-	type testCase struct {
+	tests := []struct {
 		name                 string
 		head                 types.ZarfComponent
 		arch                 string
 		flavor               string
 		expectedErrorMessage string
-	}
-
-	testCases := []testCase{
+	}{
 		{
 			name:                 "No Architecture",
 			head:                 types.ZarfComponent{},
@@ -45,28 +43,19 @@ func TestNewImportChain(t *testing.T) {
 		},
 	}
 	testPackageName := "test-package"
-	for _, testCase := range testCases {
-		testCase := testCase
-
-		t.Run(testCase.name, func(t *testing.T) {
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := NewImportChain(testCase.head, 0, testPackageName, testCase.arch, testCase.flavor)
-			require.Contains(t, err.Error(), testCase.expectedErrorMessage)
+			_, err := NewImportChain(tt.head, 0, testPackageName, tt.arch, tt.flavor)
+			require.Contains(t, err.Error(), tt.expectedErrorMessage)
 		})
 	}
 }
 
 func TestCompose(t *testing.T) {
 	t.Parallel()
-
-	type testCase struct {
-		name                 string
-		ic                   *ImportChain
-		returnError          bool
-		expectedComposed     types.ZarfComponent
-		expectedErrorMessage string
-	}
 
 	firstDirectory := "hello"
 	secondDirectory := "world"
@@ -76,10 +65,16 @@ func TestCompose(t *testing.T) {
 	secondDirectoryActionDefault := filepath.Join(firstDirectory, "world-dc")
 	firstDirectoryActionDefault := "hello-dc"
 
-	testCases := []testCase{
+	tests := []struct {
+		name                 string
+		ic                   *ImportChain
+		returnError          bool
+		expectedComposed     types.ZarfComponent
+		expectedErrorMessage string
+	}{
 		{
 			name: "Single Component",
-			ic: createChainFromSlice([]types.ZarfComponent{
+			ic: createChainFromSlice(t, []types.ZarfComponent{
 				{
 					Name: "no-import",
 				},
@@ -91,10 +86,10 @@ func TestCompose(t *testing.T) {
 		},
 		{
 			name: "Multiple Components",
-			ic: createChainFromSlice([]types.ZarfComponent{
-				createDummyComponent("hello", firstDirectory, "hello"),
-				createDummyComponent("world", secondDirectory, "world"),
-				createDummyComponent("today", "", "hello"),
+			ic: createChainFromSlice(t, []types.ZarfComponent{
+				createDummyComponent(t, "hello", firstDirectory, "hello"),
+				createDummyComponent(t, "world", secondDirectory, "world"),
+				createDummyComponent(t, "today", "", "hello"),
 			}),
 			returnError: false,
 			expectedComposed: types.ZarfComponent{
@@ -244,17 +239,16 @@ func TestCompose(t *testing.T) {
 		},
 	}
 
-	for _, testCase := range testCases {
-		testCase := testCase
-
-		t.Run(testCase.name, func(t *testing.T) {
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			composed, err := testCase.ic.Compose()
-			if testCase.returnError {
-				require.Contains(t, err.Error(), testCase.expectedErrorMessage)
+			composed, err := tt.ic.Compose()
+			if tt.returnError {
+				require.Contains(t, err.Error(), tt.expectedErrorMessage)
 			} else {
-				require.EqualValues(t, &testCase.expectedComposed, composed)
+				require.EqualValues(t, &tt.expectedComposed, composed)
 			}
 		})
 	}
@@ -262,15 +256,6 @@ func TestCompose(t *testing.T) {
 
 func TestMerging(t *testing.T) {
 	t.Parallel()
-
-	type testCase struct {
-		name           string
-		ic             *ImportChain
-		existingVars   []variables.InteractiveVariable
-		existingConsts []variables.Constant
-		expectedVars   []variables.InteractiveVariable
-		expectedConsts []variables.Constant
-	}
 
 	head := Node{
 		vars: []variables.InteractiveVariable{
@@ -316,7 +301,14 @@ func TestMerging(t *testing.T) {
 	tail.prev = &head
 	testIC := &ImportChain{head: &head, tail: &tail}
 
-	testCases := []testCase{
+	tests := []struct {
+		name           string
+		ic             *ImportChain
+		existingVars   []variables.InteractiveVariable
+		existingConsts []variables.Constant
+		expectedVars   []variables.InteractiveVariable
+		expectedConsts []variables.Constant
+	}{
 		{
 			name: "empty-ic",
 			ic:   &ImportChain{},
@@ -425,41 +417,40 @@ func TestMerging(t *testing.T) {
 		},
 	}
 
-	for _, testCase := range testCases {
-		testCase := testCase
-
-		t.Run(testCase.name, func(t *testing.T) {
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			mergedVars := testCase.ic.MergeVariables(testCase.existingVars)
-			require.EqualValues(t, testCase.expectedVars, mergedVars)
+			mergedVars := tt.ic.MergeVariables(tt.existingVars)
+			require.EqualValues(t, tt.expectedVars, mergedVars)
 
-			mergedConsts := testCase.ic.MergeConstants(testCase.existingConsts)
-			require.EqualValues(t, testCase.expectedConsts, mergedConsts)
+			mergedConsts := tt.ic.MergeConstants(tt.existingConsts)
+			require.EqualValues(t, tt.expectedConsts, mergedConsts)
 		})
 	}
 }
 
-func createChainFromSlice(components []types.ZarfComponent) (ic *ImportChain) {
+func createChainFromSlice(t *testing.T, components []types.ZarfComponent) (ic *ImportChain) {
+	t.Helper()
+
 	ic = &ImportChain{}
 	testPackageName := "test-package"
-
 	if len(components) == 0 {
 		return ic
 	}
-
 	ic.append(components[0], 0, testPackageName, ".", nil, nil)
 	history := []string{}
-
 	for idx := 1; idx < len(components); idx++ {
 		history = append(history, components[idx-1].Import.Path)
 		ic.append(components[idx], idx, testPackageName, filepath.Join(history...), nil, nil)
 	}
-
 	return ic
 }
 
-func createDummyComponent(name, importDir, subName string) types.ZarfComponent {
+func createDummyComponent(t *testing.T, name, importDir, subName string) types.ZarfComponent {
+	t.Helper()
+
 	return types.ZarfComponent{
 		Name: fmt.Sprintf("import-%s", name),
 		Import: types.ZarfComponentImport{
