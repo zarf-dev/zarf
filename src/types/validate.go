@@ -48,7 +48,7 @@ func (pkg ZarfPackage) Validate() error {
 		return fmt.Errorf(lang.PkgValidateErrPkgName, pkg.Metadata.Name)
 	}
 
-	if pkg.Components == nil {
+	if len(pkg.Components) == 0 {
 		return errors.New("package must have at least 1 component")
 	}
 

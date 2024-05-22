@@ -1,5 +1,4 @@
 kind: ZarfPackageConfig
 metadata:
   name: minimal-invalid
-  # must have at least 1 component
-  description: Minimal invalid package
+  description: Must have at least 1 component
