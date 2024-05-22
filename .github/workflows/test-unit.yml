@@ -28,14 +28,11 @@ jobs:
 
       - name: Setup golang
         uses: ./.github/actions/golang
-      
-      - name: Run coverage
-        run: go test $(go list ./... | grep -v '^github.com/defenseunicorns/zarf/src/test' | grep -v 'github.com/defenseunicorns/zarf/src/extensions/bigbang/test') -coverprofile=coverage.out -covermode=atomic
 
+      - name: Run unit tests
+        run: make test-unit
+      
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c # v4.4.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Run unit tests
-        run: make test-unit
