@@ -15,8 +15,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	v1 "k8s.io/api/admission/v1"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
@@ -31,10 +31,6 @@ func NewHandler() *Handler {
 	return &Handler{
 		decoder: serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer(),
 	}
-}
-
-type errorResponse struct {
-	err string `json:"error"`
 }
 
 // Serve returns an http.HandlerFunc for an admission webhook.
@@ -60,7 +56,7 @@ func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 			return
 		}
 
-		var review v1.AdmissionReview
+		var review corev1.AdmissionReview
 		if _, _, err := h.decoder.Decode(body, nil, &review); err != nil {
 			http.Error(w, fmt.Sprintf(lang.AgentErrCouldNotDeserializeReq, err), http.StatusBadRequest)
 			return
@@ -72,41 +68,41 @@ func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 		}
 
 		result, err := hook.Execute(review.Request)
+		admissionMeta := metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "AdmissionReview",
+		}
 		if err != nil {
 			message.Warnf("%s: %s", lang.AgentErrBindHandler, err.Error())
-
-			// // Preparing the error response
-			errorResponse := errorResponse{
-				err: err.Error(),
+			admissionResponse := corev1.AdmissionReview{
+				TypeMeta: admissionMeta,
+				Response: &corev1.AdmissionResponse{
+					Result: &metav1.Status{Message: err.Error(), Status: string(metav1.StatusReasonInternalError)},
+				},
 			}
-			responseBytes, err := json.Marshal(err)
-			w.WriteHeader(http.StatusInternalServerError)
+			jsonResponse, err := json.Marshal(admissionResponse)
 			if err != nil {
-				message.Warnf("Error marshaling the error response: %s", errorResponse)
-				w.WriteHeader(800) // Fallback if response cannot be marshaled
+				message.WarnErr(err, lang.AgentErrMarshalResponse)
+				http.Error(w, lang.AgentErrMarshalResponse, http.StatusInternalServerError)
 				return
 			}
-			w.Header().Set("Content-Type", "application/json")
-
-			w.Write(responseBytes)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(jsonResponse)
 			return
 		}
 
-		admissionResponse := v1.AdmissionReview{
-			TypeMeta: meta.TypeMeta{
-				APIVersion: v1.SchemeGroupVersion.String(),
-				Kind:       "AdmissionReview",
-			},
-			Response: &v1.AdmissionResponse{
+		admissionResponse := corev1.AdmissionReview{
+			TypeMeta: admissionMeta,
+			Response: &corev1.AdmissionResponse{
 				UID:     review.Request.UID,
 				Allowed: result.Allowed,
-				Result:  &meta.Status{Message: result.Msg},
+				Result:  &metav1.Status{Message: result.Msg},
 			},
 		}
 
 		// Set the patch operations for mutating admission
 		if len(result.PatchOps) > 0 {
-			jsonPatchType := v1.PatchTypeJSONPatch
+			jsonPatchType := corev1.PatchTypeJSONPatch
 			patchBytes, err := json.Marshal(result.PatchOps)
 			if err != nil {
 				message.WarnErr(err, lang.AgentErrMarshallJSONPatch)

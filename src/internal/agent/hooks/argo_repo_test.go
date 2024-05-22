@@ -39,16 +39,12 @@ func TestArgoRepoWebhook(t *testing.T) {
 	state := &types.ZarfState{GitServer: types.GitServerInfo{
 		Address:      "https://git-server.com",
 		PushUsername: "a-push-user",
+		PullPassword: "a-pull-user",
 	}}
 	c := createTestClientWithZarfState(ctx, t, state)
-	handler := admission.NewHandler().Serve(NewGitRepositoryMutationHook(ctx, c))
+	handler := admission.NewHandler().Serve(NewRepositorySecretMutationHook(ctx, c))
 
-	tests := []struct {
-		name          string
-		admissionReq  *v1.AdmissionRequest
-		expectedPatch []operations.PatchOperation
-		code          int
-	}{
+	tests := []admissionTest{
 		{
 			name: "should be mutated",
 			admissionReq: createArgoRepoAdmissionRequest(t, v1.Create, &corev1.Secret{
@@ -63,7 +59,7 @@ func TestArgoRepoWebhook(t *testing.T) {
 					"url": []byte("https://diff-git-server.com/podinfo"),
 				},
 			}),
-			expectedPatch: []operations.PatchOperation{
+			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/data/url",
 					b64.StdEncoding.EncodeToString([]byte("https://git-server.com/a-push-user/podinfo-1868163476")),
@@ -83,20 +79,11 @@ func TestArgoRepoWebhook(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		// fmt.Println(tt)
-		// tt := tt
-		// t.Run(tt.name, func(t *testing.T) {
-		// 	t.Parallel()
-		sendAdmissionRequest(t, tt.admissionReq, handler, tt.code)
-		// 	if tt.expectedPatch != nil {
-		// 		expectedPatchJSON, err := json.Marshal(tt.expectedPatch)
-		// 		require.NoError(t, err)
-		// 		require.NotNil(t, resp)
-		// 		require.True(t, resp.Allowed)
-		// 		require.JSONEq(t, string(expectedPatchJSON), string(resp.Patch))
-		// 	} else if tt.code != http.StatusInternalServerError {
-		// 		require.Empty(t, string(resp.Patch))
-		// 	}
-		// })
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
+			verifyAdmission(t, rr, tt)
+		})
 	}
 }

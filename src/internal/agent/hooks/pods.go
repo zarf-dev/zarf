@@ -39,7 +39,6 @@ func parsePod(object []byte) (*corev1.Pod, error) {
 	if err := json.Unmarshal(object, &pod); err != nil {
 		return nil, err
 	}
-
 	return &pod, nil
 }
 
@@ -48,7 +47,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 
 	pod, err := parsePod(r.Object.Raw)
 	if err != nil {
-		return &operations.Result{Msg: err.Error()}, nil
+		return nil, fmt.Errorf(lang.AgentErrParsePod, err)
 	}
 
 	if pod.Labels != nil && pod.Labels["zarf-agent"] == "patched" {

@@ -6,11 +6,11 @@ package hooks
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/http/admission"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -45,13 +45,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 	c := createTestClientWithZarfState(ctx, t, state)
 	handler := admission.NewHandler().Serve(NewGitRepositoryMutationHook(ctx, c))
 
-	tests := []struct {
-		name          string
-		admissionReq  *v1.AdmissionRequest
-		expectedPatch []operations.PatchOperation
-		code          int
-		err           error
-	}{
+	tests := []admissionTest{
 		{
 			name: "should be mutated",
 			admissionReq: createFluxGitRepoAdmissionRequest(t, v1.Create, &flux.GitRepository{
@@ -60,12 +54,9 @@ func TestFluxMutationWebhook(t *testing.T) {
 				},
 				Spec: flux.GitRepositorySpec{
 					URL: "https://github.com/stefanprodan/podinfo.git",
-					Reference: &flux.GitRepositoryRef{
-						Tag: "6.4.0",
-					},
 				},
 			}),
-			expectedPatch: []operations.PatchOperation{
+			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
 					"https://git-server.com/a-push-user/podinfo-1646971829.git",
@@ -85,42 +76,11 @@ func TestFluxMutationWebhook(t *testing.T) {
 				},
 				Spec: flux.GitRepositorySpec{
 					URL: "not-a-git-url",
-					Reference: &flux.GitRepositoryRef{
-						Tag: "6.4.0",
-					},
 				},
 			}),
-			expectedPatch: nil,
-			code:          http.StatusInternalServerError,
-			err:           fmt.Errorf("unable to transform the git url:"),
-		},
-		{
-			name: "should replace existing secret",
-			admissionReq: createFluxGitRepoAdmissionRequest(t, v1.Create, &flux.GitRepository{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "replace-secret",
-				},
-				Spec: flux.GitRepositorySpec{
-					URL: "https://github.com/stefanprodan/podinfo.git",
-					SecretRef: &fluxmeta.LocalObjectReference{
-						Name: "existing-secret",
-					},
-					Reference: &flux.GitRepositoryRef{
-						Tag: "6.4.0",
-					},
-				},
-			}),
-			expectedPatch: []operations.PatchOperation{
-				operations.ReplacePatchOperation(
-					"/spec/url",
-					"https://git-server.com/a-push-user/podinfo-1646971829.git",
-				),
-				operations.ReplacePatchOperation(
-					"/spec/secretRef/name",
-					config.ZarfGitServerSecretName,
-				),
-			},
-			code: http.StatusOK,
+			patch:       nil,
+			code:        http.StatusInternalServerError,
+			errContains: lang.AgentErrTransformGitURL,
 		},
 		{
 			name: "should patch to same url and update secret if hostname matches",
@@ -130,12 +90,9 @@ func TestFluxMutationWebhook(t *testing.T) {
 				},
 				Spec: flux.GitRepositorySpec{
 					URL: "https://git-server.com/a-push-user/podinfo.git",
-					Reference: &flux.GitRepositoryRef{
-						Tag: "6.4.0",
-					},
 				},
 			}),
-			expectedPatch: []operations.PatchOperation{
+			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
 					"https://git-server.com/a-push-user/podinfo.git",
@@ -153,19 +110,8 @@ func TestFluxMutationWebhook(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			rr := sendAdmissionRequest(t, tt.admissionReq, handler, tt.code)
-			verifyAdmission(t, rr, tt.code, tt.expectedPatch, tt.err)
-			// if tt.err != nil {
-			// 	resp.Body
-			// } else if tt.expectedPatch == nil {
-			// 	require.Empty(t, string(resp.Patch))
-			// } else {
-			// 	expectedPatchJSON, err := json.Marshal(tt.expectedPatch)
-			// 	require.NoError(t, err)
-			// 	require.NotNil(t, resp)
-			// 	require.True(t, resp.Allowed)
-			// 	require.JSONEq(t, string(expectedPatchJSON), string(resp.Patch))
-			// }
+			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
+			verifyAdmission(t, rr, tt)
 		})
 	}
 }

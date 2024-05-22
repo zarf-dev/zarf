@@ -74,14 +74,14 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
 		transformedURL, err := transform.GitURL(state.GitServer.Address, patchedURL, state.GitServer.PushUsername)
 		if err != nil {
-			return nil, fmt.Errorf("unable to transform the git url: %w", err)
+			return nil, fmt.Errorf("%s: %w", lang.AgentErrTransformGitURL, err)
 		}
 		patchedURL = transformedURL.String()
 		message.Debugf("original git URL of (%s) got mutated to (%s)", repo.Spec.URL, patchedURL)
 	}
 
 	// Patch updates of the repo spec
-	patches = populatePatchOperations(patchedURL, repo.Spec.SecretRef)
+	patches = populatePatchOperations(patchedURL)
 
 	return &operations.Result{
 		Allowed:  true,
@@ -90,20 +90,12 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 }
 
 // Patch updates of the repo spec.
-func populatePatchOperations(repoURL string, secretRef *fluxmeta.LocalObjectReference) []operations.PatchOperation {
+func populatePatchOperations(repoURL string) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
-	//TODO This logic can be simplified
-
-	// If a prior secret exists, replace it
-	if secretRef != nil && secretRef.Name != "" {
-		patches = append(patches, operations.ReplacePatchOperation("/spec/secretRef/name", config.ZarfGitServerSecretName))
-	} else {
-		// Otherwise, add the new secret
-		newSecretRef := fluxmeta.LocalObjectReference{Name: config.ZarfGitServerSecretName}
-		patches = append(patches, operations.AddPatchOperation("/spec/secretRef", newSecretRef))
-	}
+	newSecretRef := fluxmeta.LocalObjectReference{Name: config.ZarfGitServerSecretName}
+	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", newSecretRef))
 
 	return patches
 }

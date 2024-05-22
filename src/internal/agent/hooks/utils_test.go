@@ -22,6 +22,14 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
+type admissionTest struct {
+	name         string
+	admissionReq *v1.AdmissionRequest
+	patch        []operations.PatchOperation
+	code         int
+	errContains  string
+}
+
 func createTestClientWithZarfState(ctx context.Context, t *testing.T, state *types.ZarfState) *cluster.Cluster {
 	t.Helper()
 	c := &cluster.Cluster{K8s: &k8s.K8s{Clientset: fake.NewSimpleClientset()}}
@@ -43,7 +51,7 @@ func createTestClientWithZarfState(ctx context.Context, t *testing.T, state *typ
 }
 
 // sendAdmissionRequest sends an admission request to the handler and returns the response.
-func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handler http.HandlerFunc, code int) *httptest.ResponseRecorder {
+func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handler http.HandlerFunc) *httptest.ResponseRecorder {
 	t.Helper()
 
 	b, err := json.Marshal(&v1.AdmissionReview{
@@ -62,25 +70,26 @@ func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handl
 	return rr
 }
 
-func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expectedCode int, expectedPatch []operations.PatchOperation, expectedErr error) {
+func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expected admissionTest) {
 	t.Helper()
 
-	require.Equal(t, expectedCode, rr.Code)
-
-	if expectedErr != nil {
-		require.Contains(t, rr.Body.String(), expectedErr.Error())
-		return
-	}
+	require.Equal(t, expected.code, rr.Code)
 
 	var admissionReview v1.AdmissionReview
 
 	err := json.NewDecoder(rr.Body).Decode(&admissionReview)
+
+	if expected.errContains != "" {
+		require.Contains(t, admissionReview.Response.Result.Message, expected.errContains)
+		return
+	}
+
 	resp := admissionReview.Response
 	require.NoError(t, err)
-	if expectedPatch == nil {
+	if expected.patch == nil {
 		require.Empty(t, string(resp.Patch))
 	} else {
-		expectedPatchJSON, err := json.Marshal(expectedPatch)
+		expectedPatchJSON, err := json.Marshal(expected.patch)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 		require.True(t, resp.Allowed)
