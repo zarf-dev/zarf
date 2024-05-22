@@ -73,7 +73,7 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 	}
 
 	spinner.Updatef("Creating the injector configmap")
-	if err = c.createInjectorConfigmap(ctx, tmp.InjectionBinary); err != nil {
+	if err = c.createInjectorConfigMap(ctx, tmp.InjectionBinary); err != nil {
 		spinner.Fatalf(err, "Unable to create the injector configmap")
 	}
 
@@ -90,7 +90,7 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 	}
 
 	spinner.Updatef("Loading the seed registry configmaps")
-	if payloadConfigmaps, sha256sum, err = c.createPayloadConfigmaps(ctx, tmp.SeedImagesDir, tmp.InjectorPayloadTarGz, spinner); err != nil {
+	if payloadConfigmaps, sha256sum, err = c.createPayloadConfigMaps(ctx, tmp.SeedImagesDir, tmp.InjectorPayloadTarGz, spinner); err != nil {
 		spinner.Fatalf(err, "Unable to generate the injector payload configmaps")
 	}
 
@@ -197,7 +197,7 @@ func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSr
 	return seedImages, nil
 }
 
-func (c *Cluster) createPayloadConfigmaps(ctx context.Context, seedImagesDir, tarPath string, spinner *message.Spinner) ([]string, string, error) {
+func (c *Cluster) createPayloadConfigMaps(ctx context.Context, seedImagesDir, tarPath string, spinner *message.Spinner) ([]string, string, error) {
 	var configMaps []string
 
 	// Chunk size has to accommodate base64 encoding & etcd 1MB limit
@@ -285,7 +285,7 @@ func (c *Cluster) injectorIsReady(ctx context.Context, seedImages []transform.Im
 	return true
 }
 
-func (c *Cluster) createInjectorConfigmap(ctx context.Context, binaryPath string) error {
+func (c *Cluster) createInjectorConfigMap(ctx context.Context, binaryPath string) error {
 	var err error
 	configData := make(map[string][]byte)
 
@@ -473,10 +473,8 @@ func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeM
 					continue
 				}
 
-				for _, taint := range nodeDetails.Spec.Taints {
-					if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
-						continue
-					}
+				if hasBlockingTaints(nodeDetails.Spec.Taints) {
+					continue
 				}
 
 				for _, container := range pod.Spec.InitContainers {
@@ -498,4 +496,13 @@ func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeM
 			timer.Reset(2 * time.Second)
 		}
 	}
+}
+
+func hasBlockingTaints(taints []corev1.Taint) bool {
+	for _, taint := range taints {
+		if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
+			return true
+		}
+	}
+	return false
 }
