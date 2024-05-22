@@ -62,16 +62,15 @@ func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handl
 	return rr
 }
 
-func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expectedCode int, expectedPatch []operations.PatchOperation, expectedErr error){
+func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expectedCode int, expectedPatch []operations.PatchOperation, expectedErr error) {
 	t.Helper()
 
 	require.Equal(t, expectedCode, rr.Code)
 
 	if expectedErr != nil {
-		require.Contains(t, rr.Body.String(), expectedErr.Error() )
+		require.Contains(t, rr.Body.String(), expectedErr.Error())
 		return
 	}
-
 
 	var admissionReview v1.AdmissionReview
 
