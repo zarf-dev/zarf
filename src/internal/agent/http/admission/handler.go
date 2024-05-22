@@ -70,21 +70,7 @@ func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 		result, err := hook.Execute(review.Request)
 		if err != nil {
 			message.Warnf("%s: %s", lang.AgentErrBindHandler, err.Error())
-
-			// // Preparing the error response
-			// errorResponse := errorResponse{
-			// 	err: err.Error(),
-			// }
-			// responseBytes, err := json.Marshal(err)
-
-			// if err != nil {
-			// 	message.Warnf("Error marshaling the error response: %s", errorResponse)
-			// 	w.WriteHeader(800) // Fallback if response cannot be marshaled
-			// 	return
-			// }
 			w.WriteHeader(http.StatusInternalServerError)
-
-			// TODO look at how/if this gets propagated to the agent
 			w.Write([]byte(err.Error()))
 			return
 		}
