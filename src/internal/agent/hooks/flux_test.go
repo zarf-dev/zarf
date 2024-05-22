@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/http/admission"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -80,7 +79,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 			}),
 			patch:       nil,
 			code:        http.StatusInternalServerError,
-			errContains: lang.AgentErrTransformGitURL,
+			errContains: AgentErrTransformGitURL,
 		},
 		{
 			name: "should patch to same url and update secret if hostname matches",
