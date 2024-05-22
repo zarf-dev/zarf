@@ -30,7 +30,7 @@ func NewAdmissionServer(port string) *http.Server {
 
 	// Instances hooks
 	podsMutation := hooks.NewPodMutationHook(ctx, c)
-	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook()
+	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(ctx, c)
 	argocdApplicationMutation := hooks.NewApplicationMutationHook()
 	argocdRepositoryMutation := hooks.NewRepositoryMutationHook()
 

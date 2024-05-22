@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -20,6 +21,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
+
+type admissionTest struct {
+	name         string
+	admissionReq *v1.AdmissionRequest
+	patch        []operations.PatchOperation
+	code         int
+	errContains  string
+}
 
 func createTestClientWithZarfState(ctx context.Context, t *testing.T, state *types.ZarfState) *cluster.Cluster {
 	t.Helper()
@@ -42,7 +51,7 @@ func createTestClientWithZarfState(ctx context.Context, t *testing.T, state *typ
 }
 
 // sendAdmissionRequest sends an admission request to the handler and returns the response.
-func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handler http.HandlerFunc, code int) *v1.AdmissionResponse {
+func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handler http.HandlerFunc) *httptest.ResponseRecorder {
 	t.Helper()
 
 	b, err := json.Marshal(&v1.AdmissionReview{
@@ -58,13 +67,32 @@ func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handl
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
-	require.Equal(t, code, rr.Code)
+	return rr
+}
+
+func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expected admissionTest) {
+	t.Helper()
+
+	require.Equal(t, expected.code, rr.Code)
 
 	var admissionReview v1.AdmissionReview
-	if rr.Code == http.StatusOK {
-		err = json.NewDecoder(rr.Body).Decode(&admissionReview)
-		require.NoError(t, err)
+
+	err := json.NewDecoder(rr.Body).Decode(&admissionReview)
+
+	if expected.errContains != "" {
+		require.Contains(t, admissionReview.Response.Result.Message, expected.errContains)
+		return
 	}
 
-	return admissionReview.Response
+	resp := admissionReview.Response
+	require.NoError(t, err)
+	if expected.patch == nil {
+		require.Empty(t, string(resp.Patch))
+	} else {
+		expectedPatchJSON, err := json.Marshal(expected.patch)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.True(t, resp.Allowed)
+		require.JSONEq(t, string(expectedPatchJSON), string(resp.Patch))
+	}
 }
