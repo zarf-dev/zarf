@@ -82,7 +82,7 @@ func TestArgoAppWebhook(t *testing.T) {
 				},
 			}),
 			code:        http.StatusInternalServerError,
-			errContains: "unable to transform",
+			errContains: AgentErrTransformGitURL,
 		},
 	}
 
