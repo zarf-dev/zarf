@@ -39,11 +39,6 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	// Perform early package validation.
-	if err := p.cfg.Pkg.Validate(); err != nil {
-		return fmt.Errorf("unable to validate package: %w", err)
-	}
-
 	if !p.confirmAction(config.ZarfCreateStage) {
 		return fmt.Errorf("package creation canceled")
 	}
