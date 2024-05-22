@@ -68,9 +68,14 @@ func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 		}
 
 		result, err := hook.Execute(review.Request)
+		admissionMeta := metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "AdmissionReview",
+		}
 		if err != nil {
 			message.Warnf("%s: %s", lang.AgentErrBindHandler, err.Error())
 			admissionResponse := corev1.AdmissionReview{
+				TypeMeta: admissionMeta,
 				Response: &corev1.AdmissionResponse{
 					Result: &metav1.Status{Message: err.Error(), Status: string(metav1.StatusReasonInternalError)},
 				},
@@ -87,6 +92,7 @@ func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 		}
 
 		admissionResponse := corev1.AdmissionReview{
+			TypeMeta: admissionMeta,
 			Response: &corev1.AdmissionResponse{
 				UID:     review.Request.UID,
 				Allowed: result.Allowed,
