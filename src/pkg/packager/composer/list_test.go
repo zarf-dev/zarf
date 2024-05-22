@@ -20,16 +20,16 @@ func TestNewImportChain(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name                 string
-		head                 types.ZarfComponent
-		arch                 string
-		flavor               string
-		expectedErrorMessage string
+		name        string
+		head        types.ZarfComponent
+		arch        string
+		flavor      string
+		expectedErr string
 	}{
 		{
-			name:                 "No Architecture",
-			head:                 types.ZarfComponent{},
-			expectedErrorMessage: "architecture must be provided",
+			name:        "No Architecture",
+			head:        types.ZarfComponent{},
+			expectedErr: "architecture must be provided",
 		},
 		{
 			name: "Circular Import",
@@ -38,8 +38,8 @@ func TestNewImportChain(t *testing.T) {
 					Path: ".",
 				},
 			},
-			arch:                 "amd64",
-			expectedErrorMessage: "detected circular import chain",
+			arch:        "amd64",
+			expectedErr: "detected circular import chain",
 		},
 	}
 	testPackageName := "test-package"
@@ -49,7 +49,7 @@ func TestNewImportChain(t *testing.T) {
 			t.Parallel()
 
 			_, err := NewImportChain(tt.head, 0, testPackageName, tt.arch, tt.flavor)
-			require.Contains(t, err.Error(), tt.expectedErrorMessage)
+			require.ErrorContains(t, err, tt.expectedErr)
 		})
 	}
 }
@@ -66,11 +66,9 @@ func TestCompose(t *testing.T) {
 	firstDirectoryActionDefault := "hello-dc"
 
 	tests := []struct {
-		name                 string
-		ic                   *ImportChain
-		returnError          bool
-		expectedComposed     types.ZarfComponent
-		expectedErrorMessage string
+		name             string
+		ic               *ImportChain
+		expectedComposed types.ZarfComponent
 	}{
 		{
 			name: "Single Component",
@@ -79,7 +77,6 @@ func TestCompose(t *testing.T) {
 					Name: "no-import",
 				},
 			}),
-			returnError: false,
 			expectedComposed: types.ZarfComponent{
 				Name: "no-import",
 			},
@@ -91,7 +88,6 @@ func TestCompose(t *testing.T) {
 				createDummyComponent(t, "world", secondDirectory, "world"),
 				createDummyComponent(t, "today", "", "hello"),
 			}),
-			returnError: false,
 			expectedComposed: types.ZarfComponent{
 				Name: "import-hello",
 				// Files should always be appended with corrected directories
@@ -238,18 +234,14 @@ func TestCompose(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
 			composed, err := tt.ic.Compose()
-			if tt.returnError {
-				require.Contains(t, err.Error(), tt.expectedErrorMessage)
-			} else {
-				require.EqualValues(t, &tt.expectedComposed, composed)
-			}
+			require.NoError(t, err)
+			require.EqualValues(t, &tt.expectedComposed, composed)
 		})
 	}
 }
