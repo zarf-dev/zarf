@@ -36,8 +36,6 @@ func TestArgoAppWebhook(t *testing.T) {
 	state := &types.ZarfState{GitServer: types.GitServerInfo{
 		Address:      "https://git-server.com",
 		PushUsername: "a-push-user",
-		PullPassword: "a-pull-password",
-		PullUsername: "a-pull-user",
 	}}
 	c := createTestClientWithZarfState(ctx, t, state)
 	handler := admission.NewHandler().Serve(NewApplicationMutationHook(ctx, c))
