@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -156,7 +157,11 @@ func (c *Cluster) StopInjectionMadness(ctx context.Context) error {
 	}
 
 	// Remove the injector service
-	return c.DeleteService(ctx, ZarfNamespaceName, "zarf-injector")
+	err := c.Clientset.CoreV1().Services(ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSrcs []string, spinner *message.Spinner) ([]transform.Image, error) {
@@ -306,20 +311,37 @@ func (c *Cluster) createInjectorConfigMap(ctx context.Context, binaryPath string
 }
 
 func (c *Cluster) createService(ctx context.Context) (*corev1.Service, error) {
-	service := c.GenerateService(ZarfNamespaceName, "zarf-injector")
-
-	service.Spec.Type = corev1.ServiceTypeNodePort
-	service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
-		Port: int32(5000),
-	})
-	service.Spec.Selector = map[string]string{
-		"app": "zarf-injector",
+	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "zarf-injector",
+			Namespace: ZarfNamespaceName,
+		},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeNodePort,
+			Ports: []corev1.ServicePort{
+				{
+					Port: int32(5000),
+				},
+			},
+			Selector: map[string]string{
+				"app": "zarf-injector",
+			},
+		},
 	}
-
-	// Attempt to purse the service silently
-	_ = c.DeleteService(ctx, ZarfNamespaceName, "zarf-injector")
-
-	return c.CreateService(ctx, service)
+	// TODO: Replace with create or update
+	err := c.Clientset.CoreV1().Services(svc.Namespace).Delete(ctx, svc.Name, metav1.DeleteOptions{})
+	if err != nil && !kerrors.IsNotFound(err) {
+		return nil, err
+	}
+	svc, err = c.Clientset.CoreV1().Services(svc.Namespace).Create(ctx, svc, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return svc, nil
 }
 
 // buildInjectionPod return a pod for injection with the appropriate containers to perform the injection.
