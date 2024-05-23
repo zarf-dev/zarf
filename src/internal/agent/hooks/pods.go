@@ -5,13 +5,14 @@
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
-	"github.com/defenseunicorns/zarf/src/internal/agent/state"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
@@ -20,11 +21,15 @@ import (
 )
 
 // NewPodMutationHook creates a new instance of pods mutation hook.
-func NewPodMutationHook() operations.Hook {
+func NewPodMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
 	message.Debug("hooks.NewMutationHook()")
 	return operations.Hook{
-		Create: mutatePod,
-		Update: mutatePod,
+		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
+			return mutatePod(ctx, r, cluster)
+		},
+		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
+			return mutatePod(ctx, r, cluster)
+		},
 	}
 }
 
@@ -34,41 +39,41 @@ func parsePod(object []byte) (*corev1.Pod, error) {
 	if err := json.Unmarshal(object, &pod); err != nil {
 		return nil, err
 	}
-
 	return &pod, nil
 }
 
-func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
+func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
 	message.Debugf("hooks.mutatePod()(*v1.AdmissionRequest) - %#v , %s/%s: %#v", r.Kind, r.Namespace, r.Name, r.Operation)
 
-	var patchOperations []operations.PatchOperation
 	pod, err := parsePod(r.Object.Raw)
 	if err != nil {
-		return &operations.Result{Msg: err.Error()}, nil
+		return nil, fmt.Errorf(lang.AgentErrParsePod, err)
 	}
 
 	if pod.Labels != nil && pod.Labels["zarf-agent"] == "patched" {
 		// We've already played with this pod, just keep swimming 🐟
 		return &operations.Result{
 			Allowed:  true,
-			PatchOps: patchOperations,
+			PatchOps: []operations.PatchOperation{},
 		}, nil
 	}
+
+	state, err := cluster.LoadZarfState(ctx)
+	if err != nil {
+		return nil, fmt.Errorf(lang.AgentErrGetState, err)
+	}
+	registryURL := state.RegistryInfo.Address
+
+	var patchOperations []operations.PatchOperation
 
 	// Add the zarf secret to the podspec
 	zarfSecret := []corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}}
 	patchOperations = append(patchOperations, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
 
-	zarfState, err := state.GetZarfStateFromAgentPod()
-	if err != nil {
-		return nil, fmt.Errorf(lang.AgentErrGetState, err)
-	}
-	containerRegistryURL := zarfState.RegistryInfo.Address
-
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {
 		path := fmt.Sprintf("/spec/initContainers/%d/image", idx)
-		replacement, err := transform.ImageTransformHost(containerRegistryURL, container.Image)
+		replacement, err := transform.ImageTransformHost(registryURL, container.Image)
 		if err != nil {
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
@@ -79,7 +84,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	// update the image host for each ephemeral container
 	for idx, container := range pod.Spec.EphemeralContainers {
 		path := fmt.Sprintf("/spec/ephemeralContainers/%d/image", idx)
-		replacement, err := transform.ImageTransformHost(containerRegistryURL, container.Image)
+		replacement, err := transform.ImageTransformHost(registryURL, container.Image)
 		if err != nil {
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
@@ -90,7 +95,7 @@ func mutatePod(r *v1.AdmissionRequest) (*operations.Result, error) {
 	// update the image host for each normal container
 	for idx, container := range pod.Spec.Containers {
 		path := fmt.Sprintf("/spec/containers/%d/image", idx)
-		replacement, err := transform.ImageTransformHost(containerRegistryURL, container.Image)
+		replacement, err := transform.ImageTransformHost(registryURL, container.Image)
 		if err != nil {
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod

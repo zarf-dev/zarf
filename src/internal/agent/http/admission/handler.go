@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package http provides a http server for the webhook and proxy.
-package http
+// Package admission provides an HTTP handler for a Kubernetes admission webhook.
+// It includes functionality to decode incoming admission requests, execute
+// the corresponding operations, and return appropriate admission responses.
+package admission
 
 import (
 	"encoding/json"
@@ -13,26 +15,26 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
-	v1 "k8s.io/api/admission/v1"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-// admissionHandler represents the HTTP handler for an admission webhook.
-type admissionHandler struct {
+// Handler represents the HTTP handler for an admission webhook.
+type Handler struct {
 	decoder runtime.Decoder
 }
 
-// newAdmissionHandler returns an instance of AdmissionHandler.
-func newAdmissionHandler() *admissionHandler {
-	return &admissionHandler{
+// NewHandler returns a new admission Handler.
+func NewHandler() *Handler {
+	return &Handler{
 		decoder: serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer(),
 	}
 }
 
-// Serve returns a http.HandlerFunc for an admission webhook.
-func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
+// Serve returns an http.HandlerFunc for an admission webhook.
+func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 	message.Debugf("http.Serve(%#v)", hook)
 	return func(w http.ResponseWriter, r *http.Request) {
 		message.Debugf("http.Serve()(writer, %#v)", r.URL)
@@ -54,7 +56,7 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 			return
 		}
 
-		var review v1.AdmissionReview
+		var review corev1.AdmissionReview
 		if _, _, err := h.decoder.Decode(body, nil, &review); err != nil {
 			http.Error(w, fmt.Sprintf(lang.AgentErrCouldNotDeserializeReq, err), http.StatusBadRequest)
 			return
@@ -66,27 +68,41 @@ func (h *admissionHandler) Serve(hook operations.Hook) http.HandlerFunc {
 		}
 
 		result, err := hook.Execute(review.Request)
+		admissionMeta := metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "AdmissionReview",
+		}
 		if err != nil {
-			message.WarnErr(err, lang.AgentErrBindHandler)
+			message.Warnf("%s: %s", lang.AgentErrBindHandler, err.Error())
+			admissionResponse := corev1.AdmissionReview{
+				TypeMeta: admissionMeta,
+				Response: &corev1.AdmissionResponse{
+					Result: &metav1.Status{Message: err.Error(), Status: string(metav1.StatusReasonInternalError)},
+				},
+			}
+			jsonResponse, err := json.Marshal(admissionResponse)
+			if err != nil {
+				message.WarnErr(err, lang.AgentErrMarshalResponse)
+				http.Error(w, lang.AgentErrMarshalResponse, http.StatusInternalServerError)
+				return
+			}
 			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(jsonResponse)
 			return
 		}
 
-		admissionResponse := v1.AdmissionReview{
-			TypeMeta: meta.TypeMeta{
-				APIVersion: v1.SchemeGroupVersion.String(),
-				Kind:       "AdmissionReview",
-			},
-			Response: &v1.AdmissionResponse{
+		admissionResponse := corev1.AdmissionReview{
+			TypeMeta: admissionMeta,
+			Response: &corev1.AdmissionResponse{
 				UID:     review.Request.UID,
 				Allowed: result.Allowed,
-				Result:  &meta.Status{Message: result.Msg},
+				Result:  &metav1.Status{Message: result.Msg},
 			},
 		}
 
-		// set the patch operations for mutating admission
+		// Set the patch operations for mutating admission
 		if len(result.PatchOps) > 0 {
-			jsonPatchType := v1.PatchTypeJSONPatch
+			jsonPatchType := corev1.PatchTypeJSONPatch
 			patchBytes, err := json.Marshal(result.PatchOps)
 			if err != nil {
 				message.WarnErr(err, lang.AgentErrMarshallJSONPatch)
