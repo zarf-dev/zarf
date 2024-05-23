@@ -222,39 +222,31 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg types.ZarfPac
 
 // EnableRegHPAScaleDown enables the HPA scale down for the Zarf Registry.
 func (c *Cluster) EnableRegHPAScaleDown(ctx context.Context) error {
-	hpa, err := c.GetHPA(ctx, ZarfNamespaceName, "zarf-docker-registry")
+	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-
-	// Enable HPA scale down.
 	policy := autoscalingV2.MinChangePolicySelect
 	hpa.Spec.Behavior.ScaleDown.SelectPolicy = &policy
-
-	// Save the HPA changes.
-	if _, err = c.UpdateHPA(ctx, hpa); err != nil {
+	_, err = c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Update(ctx, hpa, metav1.UpdateOptions{})
+	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
 // DisableRegHPAScaleDown disables the HPA scale down for the Zarf Registry.
 func (c *Cluster) DisableRegHPAScaleDown(ctx context.Context) error {
-	hpa, err := c.GetHPA(ctx, ZarfNamespaceName, "zarf-docker-registry")
+	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-
-	// Disable HPA scale down.
 	policy := autoscalingV2.DisabledPolicySelect
 	hpa.Spec.Behavior.ScaleDown.SelectPolicy = &policy
-
-	// Save the HPA changes.
-	if _, err = c.UpdateHPA(ctx, hpa); err != nil {
+	_, err = c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Update(ctx, hpa, metav1.UpdateOptions{})
+	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
