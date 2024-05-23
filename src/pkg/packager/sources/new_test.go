@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -104,9 +104,9 @@ func TestPackageSource(t *testing.T) {
 	// Copy tar to a temp directory, otherwise Collect will delete it.
 	tarName := "zarf-package-wordpress-amd64-16.0.4.tar.zst"
 	testDir := t.TempDir()
-	src, err := os.Open(path.Join("./testdata/", tarName))
+	src, err := os.Open(filepath.Join("testdata", tarName))
 	require.NoError(t, err)
-	tarPath := path.Join(testDir, tarName)
+	tarPath := filepath.Join(testDir, tarName)
 	dst, err := os.Create(tarPath)
 	require.NoError(t, err)
 	_, err = io.Copy(dst, src)
@@ -121,8 +121,8 @@ func TestPackageSource(t *testing.T) {
 	require.NoError(t, err)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		_, fp := path.Split(req.URL.Path)
-		f, err := os.Open(path.Join("testdata", fp))
+		_, fp := filepath.Split(req.URL.Path)
+		f, err := os.Open(filepath.Join("testdata", fp))
 		if err != nil {
 			rw.WriteHeader(http.StatusNotFound)
 			return
@@ -179,7 +179,7 @@ func TestPackageSource(t *testing.T) {
 			collectDir := t.TempDir()
 			fp, err := ps.Collect(collectDir)
 			require.NoError(t, err)
-			require.Equal(t, path.Join(collectDir, path.Base(tt.src)), fp)
+			require.Equal(t, filepath.Join(collectDir, filepath.Base(tt.src)), fp)
 		})
 	}
 }
