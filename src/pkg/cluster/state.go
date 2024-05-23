@@ -13,6 +13,7 @@ import (
 
 	"github.com/fatih/color"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/defenseunicorns/pkg/helpers"
@@ -115,7 +116,28 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		// The default SA is required for pods to start properly.
 		saCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
-		if _, err := c.WaitForServiceAccount(saCtx, ZarfNamespaceName, "default"); err != nil {
+		err = func(ctx context.Context, ns, name string) error {
+			timer := time.NewTimer(0)
+			defer timer.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return fmt.Errorf("failed to get service account %s/%s: %w", ns, name, ctx.Err())
+				case <-timer.C:
+					_, err := c.Clientset.CoreV1().ServiceAccounts(ns).Get(ctx, name, metav1.GetOptions{})
+					if err != nil && !kerrors.IsNotFound(err) {
+						return err
+					}
+					if kerrors.IsNotFound(err) {
+						c.Log("Service account %s/%s not found, retrying...", ns, name)
+						timer.Reset(1 * time.Second)
+						continue
+					}
+					return nil
+				}
+			}
+		}(saCtx, ZarfNamespaceName, "default")
+		if err != nil {
 			return fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 
