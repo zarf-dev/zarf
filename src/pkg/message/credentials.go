@@ -32,8 +32,8 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 
 	// Pause the logfile's output to avoid credentials being printed to the log file
 	if logFile != nil {
-		logFile.pause()
-		defer logFile.resume()
+		logFile.Pause()
+		defer logFile.Resume()
 	}
 
 	loginData := [][]string{}
@@ -95,8 +95,8 @@ func PrintComponentCredential(state *types.ZarfState, componentName string) {
 func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState, services []string) {
 	// Pause the logfile's output to avoid credentials being printed to the log file
 	if logFile != nil {
-		logFile.pause()
-		defer logFile.resume()
+		logFile.Pause()
+		defer logFile.Resume()
 	}
 
 	for _, service := range services {

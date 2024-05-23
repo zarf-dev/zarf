@@ -7,7 +7,6 @@ package message
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -49,7 +48,7 @@ var RuleLine = strings.Repeat("━", TermWidth)
 var logLevel = InfoLevel
 
 // logFile acts as a buffer for logFile generation
-var logFile *pausableLogFile
+var logFile *PausableWriter
 
 // DebugWriter represents a writer interface that writes to message.Debug
 type DebugWriter struct{}
@@ -77,30 +76,12 @@ func init() {
 	pterm.SetDefaultOutput(os.Stderr)
 }
 
-// UseLogFile writes output to stderr and a logFile.
-func UseLogFile(dir string) (io.Writer, error) {
-	// Prepend the log filename with a timestamp.
-	ts := time.Now().Format("2006-01-02-15-04-05")
-
-	f, err := os.CreateTemp(dir, fmt.Sprintf("zarf-%s-*.log", ts))
-	if err != nil {
-		return nil, err
-	}
-
-	logFile = &pausableLogFile{
-		wr: f,
-		f:  f,
-	}
+// UseLogFile wraps a given file in a PausableWriter
+// and sets it as the log file used by the message package.
+func UseLogFile(f *os.File) (*PausableWriter, error) {
+	logFile = NewPausableWriter(f)
 
 	return logFile, nil
-}
-
-// LogFileLocation returns the location of the log file.
-func LogFileLocation() string {
-	if logFile == nil {
-		return ""
-	}
-	return logFile.f.Name()
 }
 
 // SetLogLevel sets the log level.

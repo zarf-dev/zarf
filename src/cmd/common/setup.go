@@ -5,8 +5,10 @@
 package common
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -51,14 +53,20 @@ func SetupCLI() {
 	}
 
 	if !config.SkipLogFile {
-		logFile, err := message.UseLogFile("")
+		ts := time.Now().Format("2006-01-02-15-04-05")
+
+		f, err := os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts))
+		if err != nil {
+			message.WarnErr(err, "Error creating a log file in a temporary directory")
+			return
+		}
+		logFile, err := message.UseLogFile(f)
 		if err != nil {
 			message.WarnErr(err, "Error saving a log file to a temporary directory")
 			return
 		}
 
 		pterm.SetDefaultOutput(io.MultiWriter(os.Stderr, logFile))
-		location := message.LogFileLocation()
-		message.Notef("Saving log file to %s", location)
+		message.Notef("Saving log file to %s", f.Name())
 	}
 }
