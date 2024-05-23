@@ -6,31 +6,29 @@ package message
 
 import (
 	"io"
-	"os"
 )
 
-// PausableLogFile is a pausable log file
-type PausableLogFile struct {
-	wr io.Writer
-	f  *os.File
+// PausableWriter is a pausable writer
+type PausableWriter struct {
+	out, wr io.Writer
 }
 
-// NewPausableLogFile creates a new pausable log file
-func NewPausableLogFile(f *os.File) *PausableLogFile {
-	return &PausableLogFile{wr: f, f: f}
+// NewPausableWriter creates a new pausable writer
+func NewPausableWriter(wr io.Writer) *PausableWriter {
+	return &PausableWriter{out: wr, wr: wr}
 }
 
-// Pause the log file
-func (l *PausableLogFile) Pause() {
-	l.wr = io.Discard
+// Pause sets the output writer to io.Discard
+func (pw *PausableWriter) Pause() {
+	pw.out = io.Discard
 }
 
-// Resume the log file
-func (l *PausableLogFile) Resume() {
-	l.wr = l.f
+// Resume sets the output writer back to the original writer
+func (pw *PausableWriter) Resume() {
+	pw.out = pw.wr
 }
 
-// Write writes the data to the log file
-func (l *PausableLogFile) Write(p []byte) (n int, err error) {
-	return l.wr.Write(p)
+// Write writes the data to the underlying output writer
+func (pw *PausableWriter) Write(p []byte) (n int, err error) {
+	return pw.out.Write(p)
 }

@@ -48,7 +48,7 @@ var RuleLine = strings.Repeat("━", TermWidth)
 var logLevel = InfoLevel
 
 // logFile acts as a buffer for logFile generation
-var logFile *PausableLogFile
+var logFile *PausableWriter
 
 // DebugWriter represents a writer interface that writes to message.Debug
 type DebugWriter struct{}
@@ -76,10 +76,10 @@ func init() {
 	pterm.SetDefaultOutput(os.Stderr)
 }
 
-// UseLogFile wraps a given file in a PausableLogFile
+// UseLogFile wraps a given file in a PausableWriter
 // and sets it as the log file used by the message package.
-func UseLogFile(f *os.File) (*PausableLogFile, error) {
-	logFile = NewPausableLogFile(f)
+func UseLogFile(f *os.File) (*PausableWriter, error) {
+	logFile = NewPausableWriter(f)
 
 	return logFile, nil
 }
