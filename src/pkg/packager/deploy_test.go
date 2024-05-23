@@ -10,6 +10,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGenerateValuesOverrides(t *testing.T) {
@@ -224,6 +225,52 @@ func TestGenerateValuesOverrides(t *testing.T) {
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("%s: generateValuesOverrides() got = %v, want %v", tt.name, got, tt.want)
 			}
+		})
+	}
+}
+
+func TestServiceInfoFromServiceURL(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name              string
+		serviceURL        string
+		expectedErr       string
+		expectedNamespace string
+		expectedName      string
+		expectedPort      int
+	}{
+		{
+			name:        "no port",
+			serviceURL:  "http://example.com",
+			expectedErr: `strconv.Atoi: parsing "": invalid syntax`,
+		},
+		{
+			name:        "normal domain",
+			serviceURL:  "http://example.com:8080",
+			expectedErr: "unable to match against example.com",
+		},
+		{
+			name:              "valid url",
+			serviceURL:        "http://foo.bar.svc.cluster.local:9090",
+			expectedNamespace: "bar",
+			expectedName:      "foo",
+			expectedPort:      9090,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			namespace, name, port, err := serviceInfoFromServiceURL(tt.serviceURL)
+			if tt.expectedErr != "" {
+				require.EqualError(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedNamespace, namespace)
+			require.Equal(t, tt.expectedName, name)
+			require.Equal(t, tt.expectedPort, port)
 		})
 	}
 }
