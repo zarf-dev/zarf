@@ -25,3 +25,4 @@ zarf-sbom/
 test-*.txt
 __debug_bin
 .netlify
+coverage.out
