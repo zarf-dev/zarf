@@ -73,7 +73,7 @@ func TestArgoAppWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
-			name: "should be mutated",
+			name: "should return internal server error on bad git URL",
 			admissionReq: createArgoAppAdmissionRequest(t, v1.Create, &Application{
 				Spec: ApplicationSpec{
 					Source: &ApplicationSource{RepoURL: "https://bad-url"},
