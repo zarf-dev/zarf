@@ -9,23 +9,28 @@ import (
 	"os"
 )
 
-// pausableLogFile is a pausable log file
-type pausableLogFile struct {
+// PausableLogFile is a pausable log file
+type PausableLogFile struct {
 	wr io.Writer
 	f  *os.File
 }
 
-// pause the log file
-func (l *pausableLogFile) pause() {
+// NewPausableLogFile creates a new pausable log file
+func NewPausableLogFile(f *os.File) *PausableLogFile {
+	return &PausableLogFile{wr: f, f: f}
+}
+
+// Pause the log file
+func (l *PausableLogFile) Pause() {
 	l.wr = io.Discard
 }
 
-// resume the log file
-func (l *pausableLogFile) resume() {
+// Resume the log file
+func (l *PausableLogFile) Resume() {
 	l.wr = l.f
 }
 
 // Write writes the data to the log file
-func (l *pausableLogFile) Write(p []byte) (n int, err error) {
+func (l *PausableLogFile) Write(p []byte) (n int, err error) {
 	return l.wr.Write(p)
 }
