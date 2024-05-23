@@ -11,30 +11,28 @@ import (
 
 func TestPopulateVariables(t *testing.T) {
 	type test struct {
-		vc         VariableConfig
-		vars       []InteractiveVariable
-		presets    map[string]string
-		wantErrMsg string
-		wantVars   SetVariableMap
+		vc       VariableConfig
+		vars     []InteractiveVariable
+		presets  map[string]string
+		wantErr  bool
+		wantVars SetVariableMap
 	}
 
 	prompt := func(_ InteractiveVariable) (value string, err error) { return "Prompt", nil }
 
 	tests := []test{
 		{
-			vc:         VariableConfig{setVariableMap: SetVariableMap{}},
-			vars:       []InteractiveVariable{{Variable: Variable{Name: "NAME"}}},
-			presets:    map[string]string{},
-			wantErrMsg: "",
-			wantVars:   SetVariableMap{"NAME": {Variable: Variable{Name: "NAME"}}},
+			vc:       VariableConfig{setVariableMap: SetVariableMap{}},
+			vars:     []InteractiveVariable{{Variable: Variable{Name: "NAME"}}},
+			presets:  map[string]string{},
+			wantVars: SetVariableMap{"NAME": {Variable: Variable{Name: "NAME"}}},
 		},
 		{
 			vc: VariableConfig{setVariableMap: SetVariableMap{}},
 			vars: []InteractiveVariable{
 				{Variable: Variable{Name: "NAME"}, Default: "Default"},
 			},
-			presets:    map[string]string{},
-			wantErrMsg: "",
+			presets: map[string]string{},
 			wantVars: SetVariableMap{
 				"NAME": {Variable: Variable{Name: "NAME"}, Value: "Default"},
 			},
@@ -44,8 +42,7 @@ func TestPopulateVariables(t *testing.T) {
 			vars: []InteractiveVariable{
 				{Variable: Variable{Name: "NAME"}, Default: "Default"},
 			},
-			presets:    map[string]string{"NAME": "Set"},
-			wantErrMsg: "",
+			presets: map[string]string{"NAME": "Set"},
 			wantVars: SetVariableMap{
 				"NAME": {Variable: Variable{Name: "NAME"}, Value: "Set"},
 			},
@@ -55,8 +52,7 @@ func TestPopulateVariables(t *testing.T) {
 			vars: []InteractiveVariable{
 				{Variable: Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: FileVariableType}},
 			},
-			presets:    map[string]string{},
-			wantErrMsg: "",
+			presets: map[string]string{},
 			wantVars: SetVariableMap{
 				"NAME": {Variable: Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: FileVariableType}},
 			},
@@ -66,8 +62,7 @@ func TestPopulateVariables(t *testing.T) {
 			vars: []InteractiveVariable{
 				{Variable: Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: FileVariableType}},
 			},
-			presets:    map[string]string{"NAME": "Set"},
-			wantErrMsg: "",
+			presets: map[string]string{"NAME": "Set"},
 			wantVars: SetVariableMap{
 				"NAME": {Variable: Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: FileVariableType}, Value: "Set"},
 			},
@@ -77,8 +72,7 @@ func TestPopulateVariables(t *testing.T) {
 			vars: []InteractiveVariable{
 				{Variable: Variable{Name: "NAME"}, Prompt: true},
 			},
-			presets:    map[string]string{},
-			wantErrMsg: "",
+			presets: map[string]string{},
 			wantVars: SetVariableMap{
 				"NAME": {Variable: Variable{Name: "NAME"}, Value: "Prompt"},
 			},
@@ -88,8 +82,7 @@ func TestPopulateVariables(t *testing.T) {
 			vars: []InteractiveVariable{
 				{Variable: Variable{Name: "NAME"}, Default: "Default", Prompt: true},
 			},
-			presets:    map[string]string{},
-			wantErrMsg: "",
+			presets: map[string]string{},
 			wantVars: SetVariableMap{
 				"NAME": {Variable: Variable{Name: "NAME"}, Value: "Prompt"},
 			},
@@ -99,8 +92,7 @@ func TestPopulateVariables(t *testing.T) {
 			vars: []InteractiveVariable{
 				{Variable: Variable{Name: "NAME"}, Prompt: true},
 			},
-			presets:    map[string]string{"NAME": "Set"},
-			wantErrMsg: "",
+			presets: map[string]string{"NAME": "Set"},
 			wantVars: SetVariableMap{
 				"NAME": {Variable: Variable{Name: "NAME"}, Value: "Set"},
 			},
@@ -109,8 +101,8 @@ func TestPopulateVariables(t *testing.T) {
 
 	for _, tc := range tests {
 		gotErr := tc.vc.PopulateVariables(tc.vars, tc.presets)
-		if tc.wantErrMsg != "" {
-			require.EqualError(t, gotErr, tc.wantErrMsg)
+		if tc.wantErr {
+			require.Error(t, gotErr)
 		} else {
 			require.NoError(t, gotErr)
 		}

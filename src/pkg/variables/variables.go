@@ -82,11 +82,11 @@ func (vc *VariableConfig) CheckVariablePattern(name, pattern string) error {
 			return err
 		}
 
-		if !r.MatchString(variable.Value) {
-			return fmt.Errorf("provided value for variable %q does not match pattern %q", name, pattern)
+		if r.MatchString(variable.Value) {
+			return nil
 		}
 
-		return nil
+		return fmt.Errorf("provided value for variable %q does not match pattern %q", name, pattern)
 	}
 
 	return fmt.Errorf("variable %q was not found in the current variable map", name)

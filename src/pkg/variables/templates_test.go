@@ -62,7 +62,7 @@ func TestReplaceTextTemplate(t *testing.T) {
 	type test struct {
 		vc           VariableConfig
 		path         string
-		wantErrMsg   string
+		wantErr      bool
 		wantContents string
 	}
 
@@ -70,7 +70,7 @@ func TestReplaceTextTemplate(t *testing.T) {
 		{
 			vc:           VariableConfig{setVariableMap: SetVariableMap{}, applicationTemplates: map[string]*TextTemplate{}},
 			path:         "non-existent.test",
-			wantErrMsg:   "open non-existent.test:",
+			wantErr:      true,
 			wantContents: start,
 		},
 		{
@@ -84,7 +84,6 @@ func TestReplaceTextTemplate(t *testing.T) {
 					"###PREFIX_APP_REPLACE_ME###": {Value: "APP_REPLACED"},
 				},
 			},
-			wantErrMsg:   "",
 			wantContents: simple,
 		},
 		{
@@ -98,7 +97,6 @@ func TestReplaceTextTemplate(t *testing.T) {
 					"###PREFIX_APP_REPLACE_ME###": {Value: "APP_REPLACED\nAPP_SECOND"},
 				},
 			},
-			wantErrMsg:   "",
 			wantContents: multiline,
 		},
 		{
@@ -112,7 +110,6 @@ func TestReplaceTextTemplate(t *testing.T) {
 					"###PREFIX_APP_REPLACE_ME###": {Value: "APP_REPLACED\nAPP_SECOND", AutoIndent: true},
 				},
 			},
-			wantErrMsg:   "",
 			wantContents: autoIndent,
 		},
 		{
@@ -126,7 +123,6 @@ func TestReplaceTextTemplate(t *testing.T) {
 					"###PREFIX_APP_REPLACE_ME###": {Value: "testdata/file.txt", Type: FileVariableType},
 				},
 			},
-			wantErrMsg:   "",
 			wantContents: file,
 		},
 	}
@@ -143,8 +139,8 @@ func TestReplaceTextTemplate(t *testing.T) {
 		}
 
 		gotErr := tc.vc.ReplaceTextTemplate(tc.path)
-		if tc.wantErrMsg != "" {
-			require.Contains(t, gotErr.Error(), tc.wantErrMsg)
+		if tc.wantErr {
+			require.Error(t, gotErr)
 		} else {
 			require.NoError(t, gotErr)
 			gotContents, _ := os.ReadFile(tc.path)
