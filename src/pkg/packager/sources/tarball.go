@@ -229,6 +229,9 @@ func (s *TarballSource) Collect(dir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	err = os.Remove(linkErr.Old)
+	if err != nil {
+		return "", err
+	}
 	return dst, nil
-
 }

@@ -101,6 +101,19 @@ func TestNewPackageSource(t *testing.T) {
 func TestPackageSource(t *testing.T) {
 	t.Parallel()
 
+	// Copy tar to a temp directory, otherwise Collect will delete it.
+	tarName := "zarf-package-wordpress-amd64-16.0.4.tar.zst"
+	testDir := t.TempDir()
+	src, err := os.Open(path.Join("./testdata/", tarName))
+	require.NoError(t, err)
+	tarPath := path.Join(testDir, tarName)
+	dst, err := os.Create(tarPath)
+	require.NoError(t, err)
+	_, err = io.Copy(dst, src)
+	require.NoError(t, err)
+	src.Close()
+	dst.Close()
+
 	b, err := os.ReadFile("./testdata/expected-pkg.json")
 	require.NoError(t, err)
 	expectedPkg := types.ZarfPackage{}
@@ -125,12 +138,12 @@ func TestPackageSource(t *testing.T) {
 	}{
 		{
 			name: "local",
-			src:  "./testdata/zarf-package-wordpress-amd64-16.0.4.tar.zst",
+			src:  tarPath,
 		},
 		{
 			name:   "http",
 			src:    fmt.Sprintf("%s/zarf-package-wordpress-amd64-16.0.4.tar.zst", ts.URL),
-			shasum: "7161a86e0f33e0273131ce60a205d7656472266edd6392f509de2879fc21c671",
+			shasum: "835b06fc509e639497fb45f45d432e5c4cbd5d84212db5357b16bc69724b0e26",
 		},
 	}
 	for _, tt := range tests {

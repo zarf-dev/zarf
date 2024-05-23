@@ -213,9 +213,6 @@ func TestGetDeployedPackage(t *testing.T) {
 	for _, p := range packages {
 		b, err := json.Marshal(p)
 		require.NoError(t, err)
-		data := map[string][]byte{
-			"data": b,
-		}
 		secret := corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      strings.Join([]string{config.ZarfPackagePrefix, p.Name}, ""),
@@ -224,7 +221,9 @@ func TestGetDeployedPackage(t *testing.T) {
 					ZarfPackageInfoLabel: p.Name,
 				},
 			},
-			Data: data,
+			Data: map[string][]byte{
+				"data": b,
+			},
 		}
 		c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &secret, metav1.CreateOptions{})
 		actual, err := c.GetDeployedPackage(ctx, p.Name)
