@@ -61,8 +61,8 @@ func NewPackageCreator(createOpts types.ZarfCreateOptions, cwd string) *PackageC
 }
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
-func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
-	pkg, warnings, err = dst.ReadZarfYAML()
+func (pc *PackageCreator) LoadPackageDefinition(src *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
+	pkg, warnings, err = src.ReadZarfYAML()
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
@@ -86,7 +86,7 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg t
 	warnings = append(warnings, templateWarnings...)
 
 	// After templates are filled process any create extensions
-	pkg.Components, err = pc.processExtensions(pkg.Components, dst, pkg.Metadata.YOLO)
+	pkg.Components, err = pc.processExtensions(pkg.Components, src, pkg.Metadata.YOLO)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
@@ -117,6 +117,10 @@ func (pc *PackageCreator) LoadPackageDefinition(dst *layout.PackagePaths) (pkg t
 		if err != nil {
 			return types.ZarfPackage{}, nil, err
 		}
+	}
+
+	if err := pkg.Validate(); err != nil {
+		return types.ZarfPackage{}, nil, err
 	}
 
 	return pkg, warnings, nil

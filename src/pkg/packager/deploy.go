@@ -7,8 +7,10 @@ package packager
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -511,13 +513,11 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
 			gitClient := git.New(p.state.GitServer)
-			svcInfo, _ := k8s.ServiceInfoFromServiceURL(gitClient.Server.Address)
-
-			var err error
-			var tunnel *k8s.Tunnel
+			namespace, name, port, err := serviceInfoFromServiceURL(gitClient.Server.Address)
 
 			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
-			if svcInfo != nil {
+			// TODO: Find a better way as ignoring the error is not a good solution to decide to port forward.
+			if err == nil {
 				if !p.isConnectedToCluster() {
 					connectCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 					defer cancel()
@@ -527,7 +527,7 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 					}
 				}
 
-				tunnel, err = p.cluster.NewTunnel(svcInfo.Namespace, k8s.SvcResource, svcInfo.Name, "", 0, svcInfo.Port)
+				tunnel, err := p.cluster.NewTunnel(namespace, k8s.SvcResource, name, "", 0, port)
 				if err != nil {
 					return err
 				}
@@ -703,4 +703,32 @@ func (p *Packager) printTablesForDeployment(ctx context.Context, componentsToDep
 			message.PrintCredentialTable(freshState, componentsToDeploy)
 		}
 	}
+}
+
+// ServiceInfoFromServiceURL takes a serviceURL and parses it to find the service info for connecting to the cluster. The string is expected to follow the following format:
+// Example serviceURL: http://{SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}.
+func serviceInfoFromServiceURL(serviceURL string) (string, string, int, error) {
+	parsedURL, err := url.Parse(serviceURL)
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	// Get the remote port from the serviceURL.
+	remotePort, err := strconv.Atoi(parsedURL.Port())
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	// Match hostname against local cluster service format.
+	pattern, err := regexp.Compile(`^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`)
+	if err != nil {
+		return "", "", 0, err
+	}
+	get, err := helpers.MatchRegex(pattern, parsedURL.Hostname())
+
+	// If incomplete match, return an error.
+	if err != nil {
+		return "", "", 0, err
+	}
+	return get("namespace"), get("name"), remotePort, nil
 }

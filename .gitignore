@@ -26,3 +26,4 @@ test-*.txt
 __debug_bin
 .netlify
 !**/testdata/**
+coverage.out
