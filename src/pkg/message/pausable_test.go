@@ -15,19 +15,25 @@ func TestPausableWriter(t *testing.T) {
 
 	pw := NewPausableWriter(&buf)
 
-	pw.Write([]byte("foo"))
+	n, err := pw.Write([]byte("foo"))
+	require.NoError(t, err)
+	require.Equal(t, 3, n)
 
 	require.Equal(t, "foo", buf.String())
 
 	pw.Pause()
 
-	pw.Write([]byte("bar"))
+	n, err = pw.Write([]byte("bar"))
+	require.NoError(t, err)
+	require.Equal(t, 3, n)
 
 	require.Equal(t, "foo", buf.String())
 
 	pw.Resume()
 
-	pw.Write([]byte("baz"))
+	n, err = pw.Write([]byte("baz"))
+	require.NoError(t, err)
+	require.Equal(t, 3, n)
 
 	require.Equal(t, "foobaz", buf.String())
 }
