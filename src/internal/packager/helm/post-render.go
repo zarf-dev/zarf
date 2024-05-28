@@ -159,24 +159,49 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			continue
 		}
 
-		// Create the secret
-		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
-
 		// Try to get a valid existing secret
-		currentRegistrySecret, _ := c.GetSecret(ctx, name, config.ZarfImagePullSecretName)
+		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
+		// TODO: Refactor as error is not checked instead of checking for not found error.
+		currentRegistrySecret, _ := c.Clientset.CoreV1().Secrets(name).Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
 		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentRegistrySecret.Data, validRegistrySecret.Data) {
-			// Create or update the zarf registry secret
-			if _, err := c.CreateOrUpdateSecret(ctx, validRegistrySecret); err != nil {
+			err := func() error {
+				_, err := c.Clientset.CoreV1().Secrets(validRegistrySecret.Namespace).Create(ctx, validRegistrySecret, metav1.CreateOptions{})
+				if err != nil && !kerrors.IsAlreadyExists(err) {
+					return err
+				}
+				if err == nil {
+					return nil
+				}
+				_, err = c.Clientset.CoreV1().Secrets(validRegistrySecret.Namespace).Update(ctx, validRegistrySecret, metav1.UpdateOptions{})
+				if err != nil {
+					return err
+				}
+				return nil
+			}()
+			if err != nil {
 				message.WarnErrf(err, "Problem creating registry secret for the %s namespace", name)
 			}
 
-			// Generate the git server secret
-			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
-
 			// Create or update the zarf git server secret
-			if _, err := c.CreateOrUpdateSecret(ctx, gitServerSecret); err != nil {
+			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
+			err = func() error {
+				_, err := c.Clientset.CoreV1().Secrets(gitServerSecret.Namespace).Create(ctx, gitServerSecret, metav1.CreateOptions{})
+				if err != nil && !kerrors.IsAlreadyExists(err) {
+					return err
+				}
+				if err == nil {
+					return nil
+				}
+				_, err = c.Clientset.CoreV1().Secrets(gitServerSecret.Namespace).Update(ctx, gitServerSecret, metav1.UpdateOptions{})
+				if err != nil {
+					return err
+				}
+				return nil
+			}()
+			if err != nil {
 				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
 			}
+
 		}
 	}
 	return nil
