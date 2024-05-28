@@ -218,7 +218,10 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 		zt.remotePort = svc.Spec.Ports[0].TargetPort.IntValue()
 		// if targetPort == 0, look for Port (which is required)
 		if zt.remotePort == 0 {
-			zt.remotePort = c.FindPodContainerPort(ctx, svc)
+			zt.remotePort, err = c.FindPodContainerPort(ctx, svc)
+			if err != nil {
+				return TunnelInfo{}, err
+			}
 		}
 
 		// Add the url suffix too.

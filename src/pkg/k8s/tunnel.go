@@ -254,13 +254,16 @@ func (tunnel *Tunnel) getAttachablePodForService(ctx context.Context) (string, e
 	if err != nil {
 		return "", fmt.Errorf("unable to find the service: %w", err)
 	}
-	selectorLabelsOfPods := MakeLabels(service.Spec.Selector)
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{MatchLabels: service.Spec.Selector})
+	if err != nil {
+		return "", err
+	}
 
 	servicePods := tunnel.kube.WaitForPodsAndContainers(
 		ctx,
 		PodLookup{
 			Namespace: tunnel.namespace,
-			Selector:  selectorLabelsOfPods,
+			Selector:  selector.String(),
 		},
 		nil,
 	)
