@@ -678,6 +678,7 @@ const (
 	AgentErrBindHandler            = "Unable to bind the webhook handler"
 	AgentErrCouldNotDeserializeReq = "could not deserialize request: %s"
 	AgentErrGetState               = "failed to load zarf state: %w"
+	AgentErrParsePod               = "failed to parse pod: %w"
 	AgentErrHostnameMatch          = "failed to complete hostname matching: %w"
 	AgentErrImageSwap              = "Unable to swap the host for (%s)"
 	AgentErrInvalidMethod          = "invalid method only POST requests are allowed"

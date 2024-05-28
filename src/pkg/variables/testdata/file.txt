@@ -1,0 +1,1 @@
+The contents of this file become the template value

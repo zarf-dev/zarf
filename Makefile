@@ -73,7 +73,7 @@ destroy: ## Run `zarf destroy` on the current cluster
 	rm -fr build
 
 delete-packages: ## Delete all Zarf package tarballs in the project recursively
-	find . -type f -name 'zarf-package-*' -delete
+	find . -type f -name 'zarf-package-*' -not -path '*/testdata/*' -print -delete
 
 # Note: the path to the main.go file is not used due to https://github.com/golang/go/issues/51831#issuecomment-1074188363
 .PHONY: build
@@ -208,10 +208,7 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 
 .PHONY: test-unit
 test-unit: ## Run unit tests
-	cd src/pkg && go test ./... -failfast -v -timeout 30m
-	cd src/types && go test ./... -failfast -v -timeout 30m
-	cd src/internal && go test ./... -failfast -v timeout 30m
-	cd src/extensions/bigbang && go test ./. -failfast -v timeout 30m
+	go test -failfast -v -coverprofile=coverage.out -covermode=atomic $$(go list ./... | grep -v '^github.com/defenseunicorns/zarf/src/test' | grep -v 'github.com/defenseunicorns/zarf/src/extensions/bigbang/test')
 
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR
 test-docs-and-schema:
@@ -226,5 +223,5 @@ cve-report: ## Create a CVE report for the current project (must `brew install g
 	@test -d ./build || mkdir ./build
 	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
 
-lint-go: ## Run golang-ci-lint to lint the go code (must `brew install golang-ci-lint` first)
+lint-go: ## Run golang-ci-lint to lint the go code (must `brew install golangci-lint` first)
 	golangci-lint run
