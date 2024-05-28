@@ -514,7 +514,7 @@ func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeM
 			for _, pod := range pods.Items {
 				nodeName := pod.Spec.NodeName
 
-				nodeDetails, err := c.GetNode(ctx, nodeName)
+				nodeDetails, err := c.Clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 				if err != nil {
 					return nil, fmt.Errorf("unable to get the node %q: %w", nodeName, err)
 				}

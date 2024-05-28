@@ -178,13 +178,16 @@ func (k *K8s) WaitForPodsAndContainers(ctx context.Context, target PodLookup, in
 // FindPodContainerPort will find a pod's container port from a service and return it.
 //
 // Returns 0 if no port is found.
-func (k *K8s) FindPodContainerPort(ctx context.Context, svc corev1.Service) int {
-	selectorLabelsOfPods := MakeLabels(svc.Spec.Selector)
+func (k *K8s) FindPodContainerPort(ctx context.Context, svc corev1.Service) (int, error) {
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{MatchLabels: svc.Spec.Selector})
+	if err != nil {
+		return 0, err
+	}
 	pods := k.WaitForPodsAndContainers(
 		ctx,
 		PodLookup{
 			Namespace: svc.Namespace,
-			Selector:  selectorLabelsOfPods,
+			Selector:  selector.String(),
 		},
 		nil,
 	)
@@ -194,11 +197,11 @@ func (k *K8s) FindPodContainerPort(ctx context.Context, svc corev1.Service) int 
 		for _, container := range pod.Spec.Containers {
 			for _, port := range container.Ports {
 				if port.Name == svc.Spec.Ports[0].TargetPort.String() {
-					return int(port.ContainerPort)
+					return int(port.ContainerPort), nil
 				}
 			}
 		}
 	}
 
-	return 0
+	return 0, nil
 }
