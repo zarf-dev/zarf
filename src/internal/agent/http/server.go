@@ -33,6 +33,9 @@ func NewAdmissionServer(port string) *http.Server {
 	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(ctx, c)
 	argocdApplicationMutation := hooks.NewApplicationMutationHook(ctx, c)
 	argocdRepositoryMutation := hooks.NewRepositorySecretMutationHook(ctx, c)
+	crossplaneProviderMutation := hooks.NewProviderMutationHook(ctx, c)
+	crossplaneFunctionMutation := hooks.NewFunctionMutationHook(ctx, c)
+	crossplaneConfigurationMutation := hooks.NewConfigurationMutationHook(ctx, c)
 
 	// Routers
 	ah := admission.NewHandler()
@@ -42,6 +45,9 @@ func NewAdmissionServer(port string) *http.Server {
 	mux.Handle("/mutate/flux-gitrepository", ah.Serve(fluxGitRepositoryMutation))
 	mux.Handle("/mutate/argocd-application", ah.Serve(argocdApplicationMutation))
 	mux.Handle("/mutate/argocd-repository", ah.Serve(argocdRepositoryMutation))
+	mux.Handle("/mutate/crossplane-provider", ah.Serve(crossplaneProviderMutation))
+	mux.Handle("/mutate/crossplane-function", ah.Serve(crossplaneFunctionMutation))
+	mux.Handle("/mutate/crossplane-configuration", ah.Serve(crossplaneConfigurationMutation))
 	mux.Handle("/metrics", promhttp.Handler())
 
 	return &http.Server{

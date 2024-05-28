@@ -6,10 +6,10 @@ webhooks:
   - name: agent-pod.zarf.dev
     namespaceSelector:
       matchExpressions:
+        # Ensure we don't mess with kube-system
         - key: "kubernetes.io/metadata.name"
           operator: NotIn
           values:
-            # Ensure we don't mess with kube-system
             - "kube-system"
         # Allow ignoring whole namespaces
         - key: zarf.dev/agent
@@ -176,6 +176,96 @@ webhooks:
           - "v1"
         resources:
           - "secrets"
+    admissionReviewVersions:
+      - "v1"
+      - "v1beta1"
+    sideEffects: None
+  - name: agent-crossplane-provider.zarf.dev
+    # No namespace selector for cluster scoped resource
+    objectSelector:
+      matchExpressions:
+        # Always ignore specific resources if requested by annotation/label
+        - key: zarf.dev/agent
+          operator: NotIn
+          values:
+            - "skip"
+            - "ignore"
+    clientConfig:
+      service:
+        name: agent-hook
+        namespace: zarf
+        path: "/mutate/crossplane-provider"
+      caBundle: "###ZARF_AGENT_CA###"
+    rules:
+      - operations:
+          - "CREATE"
+          - "UPDATE"
+        apiGroups:
+          - "pkg.crossplane.io"
+        apiVersions:
+          - "v1"
+        resources:
+          - "providers"
+    admissionReviewVersions:
+      - "v1"
+      - "v1beta1"
+    sideEffects: None
+  - name: agent-crossplane-function.zarf.dev
+    # No namespace selector for cluster scoped resource
+    objectSelector:
+      matchExpressions:
+        # Always ignore specific resources if requested by annotation/label
+        - key: zarf.dev/agent
+          operator: NotIn
+          values:
+            - "skip"
+            - "ignore"
+    clientConfig:
+      service:
+        name: agent-hook
+        namespace: zarf
+        path: "/mutate/crossplane-function"
+      caBundle: "###ZARF_AGENT_CA###"
+    rules:
+      - operations:
+          - "CREATE"
+          - "UPDATE"
+        apiGroups:
+          - "pkg.crossplane.io"
+        apiVersions:
+          - "v1beta1"
+        resources:
+          - "functions"
+    admissionReviewVersions:
+      - "v1"
+      - "v1beta1"
+    sideEffects: None
+  - name: agent-crossplane-configuration.zarf.dev
+    # No namespace selector for cluster scoped resource
+    objectSelector:
+      matchExpressions:
+        # Always ignore specific resources if requested by annotation/label
+        - key: zarf.dev/agent
+          operator: NotIn
+          values:
+            - "skip"
+            - "ignore"
+    clientConfig:
+      service:
+        name: agent-hook
+        namespace: zarf
+        path: "/mutate/crossplane-configuration"
+      caBundle: "###ZARF_AGENT_CA###"
+    rules:
+      - operations:
+          - "CREATE"
+          - "UPDATE"
+        apiGroups:
+          - "pkg.crossplane.io"
+        apiVersions:
+          - "v1"
+        resources:
+          - "configurations"
     admissionReviewVersions:
       - "v1"
       - "v1beta1"
