@@ -15,9 +15,10 @@ import (
 
 	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -79,18 +80,21 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 	}
 
 	// Get the current agent image from one of its pods.
-	pods := h.cluster.WaitForPodsAndContainers(
-		ctx,
-		k8s.PodLookup{
-			Namespace: cluster.ZarfNamespaceName,
-			Selector:  "app=agent-hook",
-		},
-		nil,
-	)
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{MatchLabels: map[string]string{"app": "agent-hook"}})
+	if err != nil {
+		return err
+	}
+	listOpts := metav1.ListOptions{
+		LabelSelector: selector.String(),
+	}
+	podList, err := h.cluster.Clientset.CoreV1().Pods(cluster.ZarfNamespaceName).List(ctx, listOpts)
+	if err != nil {
+		return err
+	}
 
 	var currentAgentImage transform.Image
-	if len(pods) > 0 && len(pods[0].Spec.Containers) > 0 {
-		currentAgentImage, err = transform.ParseImageRef(pods[0].Spec.Containers[0].Image)
+	if len(podList.Items) > 0 && len(podList.Items[0].Spec.Containers) > 0 {
+		currentAgentImage, err = transform.ParseImageRef(podList.Items[0].Spec.Containers[0].Image)
 		if err != nil {
 			return fmt.Errorf("unable to parse current agent image reference: %w", err)
 		}
@@ -142,13 +146,21 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 	defer spinner.Stop()
 
 	// Force pods to be recreated to get the updated secret.
-	err = h.cluster.DeletePods(
-		ctx,
-		k8s.PodLookup{
-			Namespace: cluster.ZarfNamespaceName,
-			Selector:  "app=agent-hook",
-		},
-	)
+	// TODO: Explain why no grace period is given.
+	deleteGracePeriod := int64(0)
+	deletePolicy := metav1.DeletePropagationForeground
+	deleteOpts := metav1.DeleteOptions{
+		GracePeriodSeconds: &deleteGracePeriod,
+		PropagationPolicy:  &deletePolicy,
+	}
+	selector, err = metav1.LabelSelectorAsSelector(&metav1.LabelSelector{MatchLabels: map[string]string{"app": "agent-hook"}})
+	if err != nil {
+		return err
+	}
+	listOpts = metav1.ListOptions{
+		LabelSelector: selector.String(),
+	}
+	err = h.cluster.Clientset.CoreV1().Pods(cluster.ZarfNamespaceName).DeleteCollection(ctx, deleteOpts, listOpts)
 	if err != nil {
 		return fmt.Errorf("error recycling pods for the Zarf Agent: %w", err)
 	}
