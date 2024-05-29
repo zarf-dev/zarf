@@ -85,6 +85,7 @@ func TestDownloadToFile(t *testing.T) {
 		}
 		rw.Write([]byte(content))
 	}))
+	defer srv.Close()
 
 	tests := []struct {
 		name        string
