@@ -20,9 +20,11 @@ func (c *Cluster) DeleteZarfNamespace(ctx context.Context) error {
 	spinner := message.NewProgressSpinner("Deleting the zarf namespace from this cluster")
 	defer spinner.Stop()
 
-	gracePeriod := int64(0)
-	err := c.Clientset.CoreV1().Namespaces().Delete(ctx, ZarfNamespaceName, metav1.DeleteOptions{GracePeriodSeconds: &gracePeriod})
-	if err != nil && !kerrors.IsNotFound(err) {
+	err := c.Clientset.CoreV1().Namespaces().Delete(ctx, ZarfNamespaceName, metav1.DeleteOptions{})
+	if kerrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
 		return err
 	}
 	timer := time.NewTimer(0)

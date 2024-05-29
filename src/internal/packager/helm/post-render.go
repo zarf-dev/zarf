@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"strings"
+	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -139,9 +139,9 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 				return fmt.Errorf("unable to create the missing namespace %s", name)
 			}
 		} else if r.cfg.DeployOpts.AdoptExistingResources {
-			// IsInitialNamespace returns true if the given namespace name is an initial k8s namespace: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
-			if name == "default" || strings.HasPrefix(name, "kube-") {
-				// If this is a K8s initial namespace, refuse to adopt it
+			// Refuse to adopt namespace if it is one of four initial Kubernetes namespaces.
+			// https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
+			if slices.Contains([]string{"default", "kube-node-lease", "kube-public", "kube-system"}, name) {
 				message.Warnf("Refusing to adopt the initial namespace: %s", name)
 			} else {
 				// This is an existing namespace to adopt

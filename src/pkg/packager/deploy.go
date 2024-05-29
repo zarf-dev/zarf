@@ -460,6 +460,9 @@ func (p *Packager) setupState(ctx context.Context) (err error) {
 			if err != nil && !kerrors.IsAlreadyExists(err) {
 				return err
 			}
+			if err == nil {
+				return nil
+			}
 			_, err = p.cluster.Clientset.CoreV1().Namespaces().Update(ctx, zarfNamespace, metav1.UpdateOptions{})
 			if err != nil {
 				return err
