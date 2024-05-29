@@ -69,6 +69,12 @@ func TestArgoAppWebhook(t *testing.T) {
 					"/spec/sources/1/repoURL",
 					"https://git-server.com/a-push-user/almonds-640159520",
 				),
+				operations.ReplacePatchOperation(
+					"/metadata/annotations",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
 			},
 			code: http.StatusOK,
 		},
