@@ -7,11 +7,13 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	autoscalingV2 "k8s.io/api/autoscaling/v2"
@@ -22,31 +24,30 @@ import (
 // GetDeployedZarfPackages gets metadata information about packages that have been deployed to the cluster.
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
 // Returns a list of DeployedPackage structs and a list of errors.
-func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.DeployedPackage, []error) {
-	var deployedPackages = []types.DeployedPackage{}
-	var errorList []error
+func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.DeployedPackage, error) {
 	// Get the secrets that describe the deployed packages
 	secrets, err := c.GetSecretsWithLabel(ctx, ZarfNamespaceName, ZarfPackageInfoLabel)
 	if err != nil {
-		return deployedPackages, append(errorList, err)
+		return nil, err
 	}
 
-	// Process the k8s secret into our internal structs
+	errs := []error{}
+	deployedPackages := []types.DeployedPackage{}
 	for _, secret := range secrets.Items {
-		if strings.HasPrefix(secret.Name, config.ZarfPackagePrefix) {
-			var deployedPackage types.DeployedPackage
-			err := json.Unmarshal(secret.Data["data"], &deployedPackage)
-			// add the error to the error list
-			if err != nil {
-				errorList = append(errorList, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
-			} else {
-				deployedPackages = append(deployedPackages, deployedPackage)
-			}
+		if !strings.HasPrefix(secret.Name, config.ZarfPackagePrefix) {
+			continue
 		}
+		var deployedPackage types.DeployedPackage
+		// Process the k8s secret into our internal structs
+		err := json.Unmarshal(secret.Data["data"], &deployedPackage)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
+			continue
+		}
+		deployedPackages = append(deployedPackages, deployedPackage)
 	}
 
-	// TODO: If we move this function out of `internal` we should return a more standard singular error.
-	return deployedPackages, errorList
+	return deployedPackages, errors.Join(errs...)
 }
 
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
@@ -68,16 +69,16 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 
 	deleteOptions := metav1.DeleteOptions{}
 	listOptions := metav1.ListOptions{
-		LabelSelector: config.ZarfManagedByLabel + "=zarf",
+		LabelSelector: k8s.ZarfManagedByLabel + "=zarf",
 	}
 
 	if namespaces, err := c.GetNamespaces(ctx); err != nil {
 		spinner.Errorf(err, "Unable to get k8s namespaces")
 	} else {
 		for _, namespace := range namespaces.Items {
-			if _, ok := namespace.Labels[agentLabel]; ok {
+			if _, ok := namespace.Labels[k8s.AgentLabel]; ok {
 				spinner.Updatef("Removing Zarf Agent label for namespace %s", namespace.Name)
-				delete(namespace.Labels, agentLabel)
+				delete(namespace.Labels, k8s.AgentLabel)
 				namespaceCopy := namespace
 				if _, err = c.UpdateNamespace(ctx, &namespaceCopy); err != nil {
 					// This is not a hard failure, but we should log it
@@ -221,39 +222,31 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg types.ZarfPac
 
 // EnableRegHPAScaleDown enables the HPA scale down for the Zarf Registry.
 func (c *Cluster) EnableRegHPAScaleDown(ctx context.Context) error {
-	hpa, err := c.GetHPA(ctx, ZarfNamespaceName, "zarf-docker-registry")
+	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-
-	// Enable HPA scale down.
 	policy := autoscalingV2.MinChangePolicySelect
 	hpa.Spec.Behavior.ScaleDown.SelectPolicy = &policy
-
-	// Save the HPA changes.
-	if _, err = c.UpdateHPA(ctx, hpa); err != nil {
+	_, err = c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Update(ctx, hpa, metav1.UpdateOptions{})
+	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
 // DisableRegHPAScaleDown disables the HPA scale down for the Zarf Registry.
 func (c *Cluster) DisableRegHPAScaleDown(ctx context.Context) error {
-	hpa, err := c.GetHPA(ctx, ZarfNamespaceName, "zarf-docker-registry")
+	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-
-	// Disable HPA scale down.
 	policy := autoscalingV2.DisabledPolicySelect
 	hpa.Spec.Behavior.ScaleDown.SelectPolicy = &policy
-
-	// Save the HPA changes.
-	if _, err = c.UpdateHPA(ctx, hpa); err != nil {
+	_, err = c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Update(ctx, hpa, metav1.UpdateOptions{})
+	if err != nil {
 		return err
 	}
-
 	return nil
 }
 

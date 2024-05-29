@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/klog/v2"
-
 	"github.com/go-logr/logr/funcr"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 
 	// Include the cloud auth plugins
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -21,11 +21,15 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// cannot import config.ZarfManagedByLabel due to import cycle
-const zarfManagedByLabel = "app.kubernetes.io/managed-by"
+const (
+	// ZarfManagedByLabel is used to denote Zarf manages the lifecycle of a resource
+	ZarfManagedByLabel = "app.kubernetes.io/managed-by"
+	// AgentLabel is used to give instructions to the Zarf agent
+	AgentLabel = "zarf.dev/agent"
+)
 
 // New creates a new K8s client.
-func New(logger Log, defaultLabels Labels) (*K8s, error) {
+func New(logger Log) (*K8s, error) {
 	klog.SetLogger(funcr.New(func(_, args string) {
 		logger(args)
 	}, funcr.Options{}))
@@ -39,18 +43,11 @@ func New(logger Log, defaultLabels Labels) (*K8s, error) {
 		RestConfig: config,
 		Clientset:  clientset,
 		Log:        logger,
-		Labels:     defaultLabels,
 	}, nil
 }
 
 // WaitForHealthyCluster checks for an available K8s cluster every second until timeout.
 func (k *K8s) WaitForHealthyCluster(ctx context.Context) error {
-	var (
-		err   error
-		nodes *v1.NodeList
-		pods  *v1.PodList
-	)
-
 	const waitDuration = 1 * time.Second
 
 	timer := time.NewTimer(0)
@@ -74,15 +71,16 @@ func (k *K8s) WaitForHealthyCluster(ctx context.Context) error {
 			}
 
 			// Make sure there is at least one running Node
-			nodes, err = k.GetNodes(ctx)
-			if err != nil || len(nodes.Items) < 1 {
+			nodeList, err := k.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+			if err != nil || len(nodeList.Items) < 1 {
 				k.Log("No nodes reporting healthy yet: %v\n", err)
 				timer.Reset(waitDuration)
 				continue
 			}
 
 			// Get the cluster pod list
-			if pods, err = k.GetAllPods(ctx); err != nil {
+			pods, err := k.GetAllPods(ctx)
+			if err != nil {
 				k.Log("Could not get the pod list: %w", err)
 				timer.Reset(waitDuration)
 				continue
@@ -90,7 +88,7 @@ func (k *K8s) WaitForHealthyCluster(ctx context.Context) error {
 
 			// Check that at least one pod is in the 'succeeded' or 'running' state
 			for _, pod := range pods.Items {
-				if pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodRunning {
+				if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodRunning {
 					return nil
 				}
 			}

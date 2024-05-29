@@ -1,0 +1,23 @@
+{
+  "kind": "ZarfPackageConfig",
+  "metadata": {
+    "name": "wordpress",
+    "description": "\"A Zarf Package that deploys the WordPress blogging and content management platform\"\n",
+    "version": "16.0.4",
+    "architecture": "amd64",
+    "aggregateChecksum": "cd6cc0c238c45982d80b55d3dd3d27497d4f3b264e0f037a37c464be34a3640e"
+  },
+  "build": {
+    "terminal": "control-center",
+    "user": "philip",
+    "architecture": "amd64",
+    "timestamp": "Wed, 22 May 2024 10:16:55 +0200",
+    "version": "v0.33.1",
+    "migrations": [
+      "scripts-to-actions",
+      "pluralize-set-variable"
+    ],
+    "lastNonBreakingVersion": "v0.27.0"
+  },
+  "components": []
+}

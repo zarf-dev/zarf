@@ -9,23 +9,23 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
-	"slices"
-
 	"github.com/Masterminds/semver/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
-	"github.com/defenseunicorns/zarf/src/types"
-
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Packager is the main struct for managing packages.
@@ -227,14 +227,26 @@ func (p *Packager) validatePackageArchitecture(ctx context.Context) error {
 		return nil
 	}
 
-	clusterArchitectures, err := p.cluster.GetArchitectures(ctx)
+	// Get node architectures
+	nodeList, err := p.cluster.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return lang.ErrUnableToCheckArch
 	}
+	if len(nodeList.Items) == 0 {
+		return lang.ErrUnableToCheckArch
+	}
+	archMap := map[string]bool{}
+	for _, node := range nodeList.Items {
+		archMap[node.Status.NodeInfo.Architecture] = true
+	}
+	architectures := []string{}
+	for arch := range archMap {
+		architectures = append(architectures, arch)
+	}
 
 	// Check if the package architecture and the cluster architecture are the same.
-	if !slices.Contains(clusterArchitectures, p.cfg.Pkg.Metadata.Architecture) {
-		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.cfg.Pkg.Metadata.Architecture, strings.Join(clusterArchitectures, ", "))
+	if !slices.Contains(architectures, p.cfg.Pkg.Metadata.Architecture) {
+		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, p.cfg.Pkg.Metadata.Architecture, strings.Join(architectures, ", "))
 	}
 
 	return nil

@@ -5,29 +5,39 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/internal/agent/hooks"
+	"github.com/defenseunicorns/zarf/src/internal/agent/http/admission"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // NewAdmissionServer creates a http.Server for the mutating webhook admission handler.
 func NewAdmissionServer(port string) *http.Server {
-	message.Debugf("http.NewServer(%s)", port)
+	message.Debugf("http.NewAdmissionServer(%s)", port)
 
-	// Instances hooks
-	podsMutation := hooks.NewPodMutationHook()
-	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook()
-	fluxHelmRepositoryMutation := hooks.NewHelmRepositoryMutationHook()
-	fluxOCIRepositoryMutation := hooks.NewOCIRepositoryMutationHook()
-	argocdApplicationMutation := hooks.NewApplicationMutationHook()
-	argocdRepositoryMutation := hooks.NewRepositoryMutationHook()
+	c, err := cluster.NewCluster()
+	if err != nil {
+		message.Fatalf(err, err.Error())
+	}
+
+	ctx := context.Background()
 
 	// Routers
-	admissionHandler := newAdmissionHandler()
+	admissionHandler := admission.NewHandler()
+	podsMutation := hooks.NewPodMutationHook(ctx, c)
+	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(ctx, c)
+	argocdApplicationMutation := hooks.NewApplicationMutationHook(ctx, c)
+	argocdRepositoryMutation := hooks.NewRepositorySecretMutationHook(ctx, c)
+	fluxHelmRepositoryMutation := hooks.NewHelmRepositoryMutationHook()
+	fluxOCIRepositoryMutation := hooks.NewOCIRepositoryMutationHook()
+
+	// Routers
 	mux := http.NewServeMux()
 	mux.Handle("/healthz", healthz())
 	mux.Handle("/mutate/pod", admissionHandler.Serve(podsMutation))

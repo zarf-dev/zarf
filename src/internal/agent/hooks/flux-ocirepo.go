@@ -13,7 +13,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
-	"github.com/defenseunicorns/zarf/src/internal/agent/state"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -57,14 +56,14 @@ func mutateOCIRepo(r *v1.AdmissionRequest) (result *operations.Result, err error
 	}
 
 	// Form the zarfState.RegistryServer.Address from the zarfState
-	if zarfState, err = state.GetZarfStateFromAgentPod(); err != nil {
-		return nil, fmt.Errorf(lang.AgentErrGetState, err)
-	}
+	// if zarfState, err = state.GetZarfStateFromAgentPod(); err != nil {
+	// 	return nil, fmt.Errorf(lang.AgentErrGetState, err)
+	// }
 
 	ctx := context.Background()
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
-	registryAddress, err := state.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo.Address)
+	registryAddress, err := GetServiceInfoFromRegistryAddress(ctx, "zarfState.RegistryInfo.Address")
 	if err != nil {
 		return nil, err
 	}

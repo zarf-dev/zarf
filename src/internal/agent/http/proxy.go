@@ -5,6 +5,7 @@
 package http
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -14,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/agent/state"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 )
@@ -45,7 +46,12 @@ func proxyRequestTransform(r *http.Request) error {
 	// We remove this so that go will encode and decode on our behalf (see https://pkg.go.dev/net/http#Transport DisableCompression)
 	r.Header.Del("Accept-Encoding")
 
-	zarfState, err := state.GetZarfStateFromAgentPod()
+	c, err := cluster.NewCluster()
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	state, err := c.LoadZarfState(ctx)
 	if err != nil {
 		return err
 	}
@@ -55,31 +61,31 @@ func proxyRequestTransform(r *http.Request) error {
 	// Setup authentication for each type of service based on User Agent
 	switch {
 	case isGitUserAgent(r.UserAgent()):
-		r.SetBasicAuth(zarfState.GitServer.PushUsername, zarfState.GitServer.PushPassword)
+		r.SetBasicAuth(state.GitServer.PushUsername, state.GitServer.PushPassword)
 	case isNpmUserAgent(r.UserAgent()):
-		r.Header.Set("Authorization", "Bearer "+zarfState.ArtifactServer.PushToken)
+		r.Header.Set("Authorization", "Bearer "+state.ArtifactServer.PushToken)
 	default:
-		r.SetBasicAuth(zarfState.ArtifactServer.PushUsername, zarfState.ArtifactServer.PushToken)
+		r.SetBasicAuth(state.ArtifactServer.PushUsername, state.ArtifactServer.PushToken)
 	}
 
 	// Transform the URL; if we see the NoTransform prefix, strip it; otherwise, transform the URL based on User Agent
 	if strings.HasPrefix(r.URL.Path, transform.NoTransform) {
 		switch {
 		case isGitUserAgent(r.UserAgent()):
-			targetURL, err = transform.NoTransformTarget(zarfState.GitServer.Address, r.URL.Path)
+			targetURL, err = transform.NoTransformTarget(state.GitServer.Address, r.URL.Path)
 		default:
-			targetURL, err = transform.NoTransformTarget(zarfState.ArtifactServer.Address, r.URL.Path)
+			targetURL, err = transform.NoTransformTarget(state.ArtifactServer.Address, r.URL.Path)
 		}
 	} else {
 		switch {
 		case isGitUserAgent(r.UserAgent()):
-			targetURL, err = transform.GitURL(zarfState.GitServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), zarfState.GitServer.PushUsername)
+			targetURL, err = transform.GitURL(state.GitServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), state.GitServer.PushUsername)
 		case isPipUserAgent(r.UserAgent()):
-			targetURL, err = transform.PipTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
+			targetURL, err = transform.PipTransformURL(state.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
 		case isNpmUserAgent(r.UserAgent()):
-			targetURL, err = transform.NpmTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
+			targetURL, err = transform.NpmTransformURL(state.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
 		default:
-			targetURL, err = transform.GenTransformURL(zarfState.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
+			targetURL, err = transform.GenTransformURL(state.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
 		}
 	}
 

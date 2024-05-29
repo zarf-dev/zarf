@@ -12,8 +12,10 @@ import (
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -43,8 +45,14 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 
 	var dockerConfigJSON DockerConfig
 
+	serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		// TODO figure out better err
+		return nil
+	}
+
 	// Build zarf-docker-registry service address string
-	registryServiceInfo, err := c.ServiceInfoFromNodePortURL(ctx, registry)
+	_, _, clusterIP, port, err := ServiceInfoFromNodePortURL(serviceList.Items, registry)
 	if err != nil {
 		dockerConfigJSON = DockerConfig{
 			Auths: DockerConfigEntry{
@@ -55,7 +63,7 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 			},
 		}
 	} else {
-		kubeDNSRegistryURL := fmt.Sprintf("%s:%d", registryServiceInfo.ClusterIP, registryServiceInfo.Port)
+		kubeDNSRegistryURL := fmt.Sprintf("%s:%d", clusterIP, port)
 		dockerConfigJSON = DockerConfig{
 			Auths: DockerConfigEntry{
 				// nodePort for zarf-docker-registry
@@ -96,6 +104,7 @@ func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo typ
 }
 
 // UpdateZarfManagedImageSecrets updates all Zarf-managed image secrets in all namespaces based on state
+// TODO: Refactor to return errors properly.
 func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *types.ZarfState) {
 	spinner := message.NewProgressSpinner("Updating existing Zarf-managed image secrets")
 	defer spinner.Stop()
@@ -111,8 +120,8 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 			}
 
 			// Check if this is a Zarf managed secret or is in a namespace the Zarf agent will take action in
-			if currentRegistrySecret.Labels[config.ZarfManagedByLabel] == "zarf" ||
-				(namespace.Labels[agentLabel] != "skip" && namespace.Labels[agentLabel] != "ignore") {
+			if currentRegistrySecret.Labels[k8s.ZarfManagedByLabel] == "zarf" ||
+				(namespace.Labels[k8s.AgentLabel] != "skip" && namespace.Labels[k8s.AgentLabel] != "ignore") {
 				spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
 
 				// Create the secret
@@ -130,6 +139,7 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 }
 
 // UpdateZarfManagedGitSecrets updates all Zarf-managed git secrets in all namespaces based on state
+// TODO: Refactor to return errors properly.
 func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.ZarfState) {
 	spinner := message.NewProgressSpinner("Updating existing Zarf-managed git secrets")
 	defer spinner.Stop()
@@ -145,8 +155,8 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 			}
 
 			// Check if this is a Zarf managed secret or is in a namespace the Zarf agent will take action in
-			if currentGitSecret.Labels[config.ZarfManagedByLabel] == "zarf" ||
-				(namespace.Labels[agentLabel] != "skip" && namespace.Labels[agentLabel] != "ignore") {
+			if currentGitSecret.Labels[k8s.ZarfManagedByLabel] == "zarf" ||
+				(namespace.Labels[k8s.AgentLabel] != "skip" && namespace.Labels[k8s.AgentLabel] != "ignore") {
 				spinner.Updatef("Updating existing Zarf-managed git secret for namespace: '%s'", namespace.Name)
 
 				// Create the secret

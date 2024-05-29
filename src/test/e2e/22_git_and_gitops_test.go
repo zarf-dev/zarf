@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/cmd/common"
-	"github.com/defenseunicorns/zarf/src/internal/agent/state"
+	"github.com/defenseunicorns/zarf/src/internal/agent/hooks"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -124,7 +124,7 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	ctx := context.Background()
 	zarfState, err := common.NewClusterOrDie(ctx).LoadZarfState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
-	registryAddress, err := state.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo.Address)
+	registryAddress, err := hooks.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo.Address)
 	require.NoError(t, err)
 	// Deploy the flux example and verify that it works
 	path := fmt.Sprintf("build/zarf-package-podinfo-flux-%s.tar.zst", e2e.Arch)
