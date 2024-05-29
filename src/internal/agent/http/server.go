@@ -34,8 +34,8 @@ func NewAdmissionServer(port string) *http.Server {
 	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(ctx, c)
 	argocdApplicationMutation := hooks.NewApplicationMutationHook(ctx, c)
 	argocdRepositoryMutation := hooks.NewRepositorySecretMutationHook(ctx, c)
-	fluxHelmRepositoryMutation := hooks.NewHelmRepositoryMutationHook()
-	fluxOCIRepositoryMutation := hooks.NewOCIRepositoryMutationHook()
+	fluxHelmRepositoryMutation := hooks.NewHelmRepositoryMutationHook(ctx, c)
+	fluxOCIRepositoryMutation := hooks.NewOCIRepositoryMutationHook(ctx, c)
 
 	// Routers
 	mux := http.NewServeMux()

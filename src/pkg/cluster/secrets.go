@@ -52,7 +52,7 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 	}
 
 	// Build zarf-docker-registry service address string
-	_, _, clusterIP, port, err := ServiceInfoFromNodePortURL(serviceList.Items, registry)
+	_, _, clusterIP, port, err := serviceInfoFromNodePortURL(serviceList.Items, registry)
 	if err != nil {
 		dockerConfigJSON = DockerConfig{
 			Auths: DockerConfigEntry{
@@ -171,4 +171,21 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 		}
 		spinner.Success()
 	}
+}
+
+// GetServiceInfoFromRegistryAddress gets the service info for a registry address if it is a NodePort
+func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, stateRegistryAddress string) (string, error) {
+	serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	// If this is an internal service then we need to look it up and
+	_, _, clusterIP, port, err := serviceInfoFromNodePortURL(serviceList.Items, stateRegistryAddress)
+	if err != nil {
+		message.Debugf("registry appears to not be a nodeport service, using original address %q", stateRegistryAddress)
+		return stateRegistryAddress, nil
+	}
+
+	return fmt.Sprintf("%s:%d", clusterIP, port), nil
 }

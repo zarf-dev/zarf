@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -23,16 +24,20 @@ import (
 )
 
 // NewHelmRepositoryMutationHook creates a new instance of the helm repo mutation hook.
-func NewHelmRepositoryMutationHook() operations.Hook {
+func NewHelmRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
 	message.Debug("hooks.NewHelmRepositoryMutationHook()")
 	return operations.Hook{
-		Create: mutateHelmRepo,
-		Update: mutateHelmRepo,
+		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
+			return mutateHelmRepo(ctx, r, cluster)
+		},
+		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
+			return mutateHelmRepo(ctx, r, cluster)
+		},
 	}
 }
 
 // mutateHelmRepo mutates the repository url to point to the repository URL defined in the ZarfState.
-func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err error) {
+func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (result *operations.Result, err error) {
 	var (
 		zarfState *types.ZarfState
 		patches   []operations.PatchOperation
@@ -56,14 +61,12 @@ func mutateHelmRepo(r *v1.AdmissionRequest) (result *operations.Result, err erro
 		}, nil
 	}
 
-	// if zarfState, err = state.GetZarfStateFromAgentPod(); err != nil {
-	// 	return nil, fmt.Errorf(lang.AgentErrGetState, err)
-	// }
-
-	ctx := context.Background()
+	if zarfState, err = cluster.LoadZarfState(ctx); err != nil {
+		return nil, fmt.Errorf(lang.AgentErrGetState, err)
+	}
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
-	registryAddress, err := GetServiceInfoFromRegistryAddress(ctx, "zarfState.RegistryInfo.Address")
+	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo.Address)
 	if err != nil {
 		return nil, err
 	}

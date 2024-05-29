@@ -116,7 +116,7 @@ func TestServiceInfoFromNodePortURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			namespace, name, clusterIP, port, err := ServiceInfoFromNodePortURL(tt.services, tt.nodePortURL)
+			namespace, name, clusterIP, port, err := serviceInfoFromNodePortURL(tt.services, tt.nodePortURL)
 			if tt.expectedErr != "" {
 				require.EqualError(t, err, tt.expectedErr)
 				return

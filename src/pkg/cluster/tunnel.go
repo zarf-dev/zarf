@@ -164,7 +164,7 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 		if err != nil {
 			return "", nil, err
 		}
-		namespace, name, _, port, err := ServiceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
+		namespace, name, _, port, err := serviceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
 
 		// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
 		if err == nil {
@@ -236,7 +236,7 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 }
 
 // TODO: Refactor to use netip.AddrPort instead of a string for nodePortURL.
-func ServiceInfoFromNodePortURL(services []corev1.Service, nodePortURL string) (string, string, string, int, error) {
+func serviceInfoFromNodePortURL(services []corev1.Service, nodePortURL string) (string, string, string, int, error) {
 	// Attempt to parse as normal, if this fails add a scheme to the URL (docker registries don't use schemes)
 	parsedURL, err := url.Parse(nodePortURL)
 	if err != nil {
