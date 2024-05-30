@@ -19,16 +19,7 @@ import (
 func TestGenerateRegistryPullCreds(t *testing.T) {
 	c := &Cluster{K8s: &k8s.K8s{Clientset: fake.NewSimpleClientset()}}
 	ctx := context.Background()
-	// ns := corev1.Namespace{
-	// 	ObjectMeta: metav1.ObjectMeta{
-	// 		Name: "bar",
-	// 	},
-	// }
-
-	// c.K8s.Clientset.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 	ri := types.RegistryInfo{
-		PushUsername: "push-user",
-		PushPassword: "push-password",
 		PullUsername: "pull-user",
 		PullPassword: "pull-password",
 		Address:      "example.com",
@@ -54,11 +45,55 @@ func TestGenerateRegistryPullCreds(t *testing.T) {
 	require.Equal(t, expectedSecret, *secret)
 }
 
+func TestGenerateRegistryPullCreds2(t *testing.T) {
+	c := &Cluster{K8s: &k8s.K8s{Clientset: fake.NewSimpleClientset()}}
+	ctx := context.Background()
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "good-service",
+			Namespace: "whatever",
+		},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeNodePort,
+			Ports: []corev1.ServicePort{
+				{
+					NodePort: 30001,
+					Port:     3333,
+				},
+			},
+		},
+	}
+
+	c.K8s.Clientset.CoreV1().Services("whatever").Create(ctx, svc, metav1.CreateOptions{})
+	ri := types.RegistryInfo{
+		PullUsername: "pull-user",
+		PullPassword: "pull-password",
+		Address:      "127.0.0.1:30001",
+	}
+	secret := c.GenerateRegistryPullCreds(ctx, "foo", "bar", ri)
+	expectedSecret := corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "bar",
+			Namespace: "foo",
+			Labels: map[string]string{
+				k8s.ZarfManagedByLabel: "zarf",
+			},
+		},
+		Type: corev1.SecretTypeDockerConfigJson,
+		Data: map[string][]byte{
+			".dockerconfigjson": []byte(`{"auths":{"127.0.0.1:30001":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="},"whatever:good-service.svc.cluster.local":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="}}}`),
+		},
+	}
+	require.Equal(t, expectedSecret, *secret)
+}
+
 func TestGenerateGitPullCreds(t *testing.T) {
 	c := &Cluster{}
 	gi := types.GitServerInfo{
-		PushUsername: "push-user",
-		PushPassword: "push-password",
 		PullUsername: "pull-user",
 		PullPassword: "pull-password",
 	}
