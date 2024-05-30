@@ -21,7 +21,6 @@ spec:
       imagePullSecrets:
         - name: private-registry
       priorityClassName: system-node-critical
-      serviceAccountName: zarf
       containers:
         - name: server
           image: "###ZARF_REGISTRY###/###ZARF_CONST_AGENT_IMAGE###:###ZARF_CONST_AGENT_IMAGE_TAG###"
