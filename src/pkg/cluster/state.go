@@ -64,6 +64,9 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 			if err != nil {
 				return err
 			}
+			if len(nodeList.Items) == 0 {
+				return fmt.Errorf("cannot init Zarf state in empty cluster")
+			}
 			namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 			if err != nil {
 				return err
@@ -90,6 +93,10 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		}
 		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
 		for _, namespace := range namespaces.Items {
+			// Skip Zarf namespace if it already exists.
+			if namespace.Name == ZarfNamespaceName {
+				continue
+			}
 			spinner.Updatef("Marking existing namespace %s as ignored by Zarf Agent", namespace.Name)
 			if namespace.Labels == nil {
 				// Ensure label map exists to avoid nil panic
@@ -107,8 +114,22 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		// Try to create the zarf namespace.
 		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := NewZarfManagedNamespace(ZarfNamespaceName)
-		if _, err := c.CreateNamespace(ctx, zarfNamespace); err != nil {
-			return fmt.Errorf("unable to create the zarf namespace: %w", err)
+		err = func() error {
+			_, err := c.Clientset.CoreV1().Namespaces().Create(ctx, zarfNamespace, metav1.CreateOptions{})
+			if err != nil && !kerrors.IsAlreadyExists(err) {
+				return fmt.Errorf("unable to create the Zarf namespace: %w", err)
+			}
+			if err == nil {
+				return nil
+			}
+			_, err = c.Clientset.CoreV1().Namespaces().Update(ctx, zarfNamespace, metav1.UpdateOptions{})
+			if err != nil {
+				return fmt.Errorf("unable to update the Zarf namespace: %w", err)
+			}
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
 
 		// Wait up to 2 minutes for the default service account to be created.

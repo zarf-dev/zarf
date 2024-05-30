@@ -5,15 +5,178 @@
 package cluster
 
 import (
+	"context"
 	"fmt"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/defenseunicorns/pkg/helpers"
+
+	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/stretchr/testify/require"
 )
+
+func TestInitZarfState(t *testing.T) {
+	tests := []struct {
+		name        string
+		initOpts    types.ZarfInitOptions
+		nodes       []corev1.Node
+		namespaces  []corev1.Namespace
+		secrets     []corev1.Secret
+		expectedErr string
+	}{
+		{
+			name:        "no nodes in cluster",
+			expectedErr: "cannot init Zarf state in empty cluster",
+		},
+		{
+			name:     "no namespaces exist",
+			initOpts: types.ZarfInitOptions{},
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "node",
+					},
+				},
+			},
+		},
+		{
+			name: "namespaces exists",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "node",
+					},
+				},
+			},
+			namespaces: []corev1.Namespace{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kube-system",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "default",
+					},
+				},
+			},
+		},
+		{
+			name: "Zarf namespace exists",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "node",
+					},
+				},
+			},
+			namespaces: []corev1.Namespace{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: ZarfNamespaceName,
+					},
+				},
+			},
+		},
+		{
+			name: "Zarf state exists",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "node",
+					},
+				},
+			},
+			namespaces: []corev1.Namespace{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: ZarfNamespaceName,
+					},
+				},
+			},
+			secrets: []corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ZarfNamespaceName,
+						Name:      ZarfStateSecretName,
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			cs := fake.NewSimpleClientset()
+			for _, node := range tt.nodes {
+				_, err := cs.CoreV1().Nodes().Create(ctx, &node, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+			for _, namespace := range tt.namespaces {
+				_, err := cs.CoreV1().Namespaces().Create(ctx, &namespace, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+			for _, secret := range tt.secrets {
+				_, err := cs.CoreV1().Secrets(secret.ObjectMeta.Namespace).Create(ctx, &secret, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+			c := &Cluster{
+				&k8s.K8s{
+					Clientset: cs,
+					Log:       func(string, ...any) {},
+				},
+			}
+
+			// Create default service account in Zarf namespace
+			go func() {
+				for {
+					time.Sleep(1 * time.Second)
+					ns, err := cs.CoreV1().Namespaces().Get(ctx, ZarfNamespaceName, metav1.GetOptions{})
+					if err != nil {
+						continue
+					}
+					sa := &corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: ns.Name,
+							Name:      "default",
+						},
+					}
+					cs.CoreV1().ServiceAccounts(ns.Name).Create(ctx, sa, metav1.CreateOptions{})
+					break
+				}
+			}()
+
+			err := c.InitZarfState(ctx, tt.initOpts)
+			if tt.expectedErr != "" {
+				require.EqualError(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			zarfNs, err := cs.CoreV1().Namespaces().Get(ctx, ZarfNamespaceName, metav1.GetOptions{})
+			require.NoError(t, err)
+			require.Equal(t, map[string]string{"app.kubernetes.io/managed-by": "zarf"}, zarfNs.Labels)
+			_, err = cs.CoreV1().Secrets(zarfNs.Name).Get(ctx, ZarfStateSecretName, metav1.GetOptions{})
+			require.NoError(t, err)
+			for _, ns := range tt.namespaces {
+				if ns.Name == zarfNs.Name {
+					continue
+				}
+				ns, err := cs.CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
+				require.NoError(t, err)
+				require.Equal(t, map[string]string{k8s.AgentLabel: "ignore"}, ns.Labels)
+			}
+		})
+	}
+}
 
 // TODO: Change password gen method to make testing possible.
 func TestMergeZarfStateRegistry(t *testing.T) {

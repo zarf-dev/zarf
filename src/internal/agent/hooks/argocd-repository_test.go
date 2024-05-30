@@ -73,6 +73,13 @@ func TestArgoRepoWebhook(t *testing.T) {
 					"/data/password",
 					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullPassword)),
 				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"argocd.argoproj.io/secret-type": "repository",
+						"zarf-agent":                     "patched",
+					},
+				),
 			},
 			code: http.StatusOK,
 		},
@@ -102,6 +109,13 @@ func TestArgoRepoWebhook(t *testing.T) {
 				operations.ReplacePatchOperation(
 					"/data/password",
 					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullPassword)),
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"argocd.argoproj.io/secret-type": "repository",
+						"zarf-agent":                     "patched",
+					},
 				),
 			},
 			code: http.StatusOK,
