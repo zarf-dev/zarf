@@ -130,6 +130,7 @@ func TestPackageSource(t *testing.T) {
 		defer f.Close()
 		io.Copy(rw, f)
 	}))
+	t.Cleanup(func() { ts.Close() })
 
 	tests := []struct {
 		name   string
