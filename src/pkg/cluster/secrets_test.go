@@ -85,7 +85,7 @@ func TestGenerateRegistryPullCreds2(t *testing.T) {
 		},
 		Type: corev1.SecretTypeDockerConfigJson,
 		Data: map[string][]byte{
-			".dockerconfigjson": []byte(`{"auths":{"127.0.0.1:30001":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="},"whatever:good-service.svc.cluster.local":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="}}}`),
+			".dockerconfigjson": []byte(`{"auths":{"127.0.0.1:30001":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="},"whatever.good-service.svc.cluster.local":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="}}}`),
 		},
 	}
 	require.Equal(t, expectedSecret, *secret)

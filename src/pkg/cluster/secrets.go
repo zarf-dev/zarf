@@ -61,7 +61,7 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 		},
 	}
 	if err == nil {
-		kubeDNSRegistryURL := fmt.Sprintf("%s:%s.svc.cluster.local", svc.Namespace, svc.Name)
+		kubeDNSRegistryURL := fmt.Sprintf("%s.%s.%s", svc.Namespace, svc.Name, svcDNSsuffix)
 		dockerConfigJSON.Auths[kubeDNSRegistryURL] = DockerConfigEntryWithAuth{
 			Auth: authEncodedValue,
 		}
@@ -113,7 +113,6 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 				(namespace.Labels[k8s.AgentLabel] != "skip" && namespace.Labels[k8s.AgentLabel] != "ignore") {
 				spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
 
-				// Create the secret
 				newRegistrySecret := c.GenerateRegistryPullCreds(ctx, namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
 				if !reflect.DeepEqual(currentRegistrySecret.Data, newRegistrySecret.Data) {
 					// Create or update the zarf registry secret
@@ -170,11 +169,11 @@ func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, stateRe
 	}
 
 	// If this is an internal service then we need to look it up and
-	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, stateRegistryAddress)
+	svc, _, err := serviceInfoFromNodePortURL(serviceList.Items, stateRegistryAddress)
 	if err != nil {
 		message.Debugf("registry appears to not be a nodeport service, using original address %q", stateRegistryAddress)
 		return stateRegistryAddress, nil
 	}
 
-	return fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, port), nil
+	return fmt.Sprintf("%s.%s.%s", svc.Namespace, svc.Name, svcDNSsuffix), nil
 }
