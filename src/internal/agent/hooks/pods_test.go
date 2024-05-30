@@ -46,7 +46,8 @@ func TestPodMutationWebhook(t *testing.T) {
 			name: "pod with label should be mutated",
 			admissionReq: createPodAdmissionRequest(t, v1.Create, &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"should-be": "mutated"},
+					Labels:      map[string]string{"should-be": "mutated"},
+					Annotations: map[string]string{"should-be": "mutated"},
 				},
 				Spec: corev1.PodSpec{
 					Containers:     []corev1.Container{{Image: "nginx"}},
@@ -78,8 +79,11 @@ func TestPodMutationWebhook(t *testing.T) {
 					"127.0.0.1:31999/library/nginx:latest-zarf-3793515731",
 				),
 				operations.ReplacePatchOperation(
-					"/metadata/labels/zarf-agent",
-					"patched",
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+						"should-be":  "mutated",
+					},
 				),
 			},
 			code: http.StatusOK,
@@ -116,7 +120,7 @@ func TestPodMutationWebhook(t *testing.T) {
 					"/spec/containers/0/image",
 					"127.0.0.1:31999/library/nginx:latest-zarf-3793515731",
 				),
-				operations.AddPatchOperation(
+				operations.ReplacePatchOperation(
 					"/metadata/labels",
 					map[string]string{"zarf-agent": "patched"},
 				),
