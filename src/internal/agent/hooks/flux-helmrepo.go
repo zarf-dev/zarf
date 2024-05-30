@@ -54,7 +54,7 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 		return &operations.Result{Allowed: true}, nil
 	}
 
-	if src.Annotations != nil && src.Annotations["zarf-agent"] == "patched" {
+	if src.Labels != nil && src.Labels["zarf-agent"] == "patched" {
 		return &operations.Result{
 			Allowed:  true,
 			PatchOps: patches,
@@ -91,7 +91,7 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 	// Patch updates of the repo spec (Flux resource requires oci:// prefix)
 	patches = populateHelmRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry)
 
-	patches = append(patches, getAnnotationPatch(src.Annotations))
+	patches = append(patches, getLabelPatch(src.Labels))
 
 	return &operations.Result{
 		Allowed:  true,

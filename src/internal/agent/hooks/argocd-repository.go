@@ -95,9 +95,12 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 		message.Debugf("original url of (%s) got mutated to (%s)", repoCreds.URL, patchedURL)
 	}
 
+	patches := populateArgoRepositoryPatchOperations(patchedURL, state.GitServer)
+	patches = append(patches, getLabelPatch(secret.Labels))
+
 	return &operations.Result{
 		Allowed:  true,
-		PatchOps: populateArgoRepositoryPatchOperations(patchedURL, state.GitServer),
+		PatchOps: patches,
 	}, nil
 }
 

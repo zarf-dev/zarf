@@ -107,7 +107,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 
 	patches := populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry, patchedRef)
 
-	patches = append(patches, getAnnotationPatch(src.Annotations))
+	patches = append(patches, getLabelPatch(src.Labels))
 	return &operations.Result{
 		Allowed:  true,
 		PatchOps: patches,

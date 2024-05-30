@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Application is a definition of an ArgoCD Application resource.
@@ -29,6 +30,7 @@ import (
 // For more information: https://argo-cd.readthedocs.io/en/stable/user-guide/import/
 type Application struct {
 	Spec ApplicationSpec `json:"spec"`
+	metav1.ObjectMeta
 }
 
 // ApplicationSpec represents desired application state. Contains link to repository with application definition.
@@ -92,6 +94,8 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 			patches = populateMultipleSourceArgoApplicationPatchOperations(idx, patchedURL, patches)
 		}
 	}
+
+	patches = append(patches, getLabelPatch(app.Labels))
 
 	return &operations.Result{
 		Allowed:  true,

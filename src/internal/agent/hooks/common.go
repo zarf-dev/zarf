@@ -4,18 +4,12 @@
 // Package hooks contains the mutation hooks for the Zarf agent.
 package hooks
 
-import (
-	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
-)
+import "github.com/defenseunicorns/zarf/src/internal/agent/operations"
 
-func addAgentLabel(labels map[string]string) map[string]string {
-	if labels == nil {
-		labels = make(map[string]string)
+func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
+	if currLabels == nil {
+		currLabels = make(map[string]string)
 	}
-	labels["zarf-agent"] = "patched"
-	return labels
-}
-
-func getAnnotationPatch(currAnnotations map[string]string) operations.PatchOperation {
-	return operations.ReplacePatchOperation("/metadata/annotations", addAgentLabel(currAnnotations))
+	currLabels["zarf-agent"] = "patched"
+	return operations.ReplacePatchOperation("/metadata/labels", currLabels)
 }
