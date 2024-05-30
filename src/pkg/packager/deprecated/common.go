@@ -26,7 +26,7 @@ type BreakingChange struct {
 
 // String returns the string representation of the BreakingChange.
 func (bc BreakingChange) String() string {
-	return fmt.Sprintf("\n %s\n\n  - %s\n    %s\n",
+	return fmt.Sprintf("%s\n\n  - %s\n    %s\n",
 		pterm.Bold.Sprintf(bc.title),
 		pterm.Bold.Sprint("Mitigation:"),
 		strings.ReplaceAll(message.Paragraphn(96, "%s", pterm.FgLightCyan.Sprint(bc.mitigation)), "\n", "\n    "),
@@ -115,7 +115,7 @@ func PrintBreakingChanges(w io.Writer, deployedZarfVersion, cliVersion string) {
 		"%s" + pterm.FgYellow.Sprint(". Between these versions there are the following breaking changes to consider:")
 	cliVersion = pterm.Bold.Sprintf(cliVersion)
 	deployedZarfVersion = pterm.Bold.Sprintf(deployedZarfVersion)
-	fmt.Fprintf(w, format, cliVersion, deployedZarfVersion)
+	message.Warnf(format, cliVersion, deployedZarfVersion)
 
 	// Print each applicable breaking change
 	for i, applicableBreakingChange := range applicableBreakingChanges {
