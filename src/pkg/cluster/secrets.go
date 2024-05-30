@@ -47,11 +47,12 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 
 	serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
 	if err != nil {
+		// TODO real error
 		return nil
 	}
 
 	// Build zarf-docker-registry service address string
-	svc, _, err := serviceInfoFromNodePortURL(serviceList.Items, registry)
+	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, registry)
 	dockerConfigJSON = DockerConfig{
 		Auths: DockerConfigEntry{
 			// nodePort for zarf-docker-registry
@@ -61,7 +62,7 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 		},
 	}
 	if err == nil {
-		kubeDNSRegistryURL := fmt.Sprintf("%s.%s.%s", svc.Namespace, svc.Name, svcDNSsuffix)
+		kubeDNSRegistryURL := fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, port)
 		dockerConfigJSON.Auths[kubeDNSRegistryURL] = DockerConfigEntryWithAuth{
 			Auth: authEncodedValue,
 		}
@@ -169,11 +170,11 @@ func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, stateRe
 	}
 
 	// If this is an internal service then we need to look it up and
-	svc, _, err := serviceInfoFromNodePortURL(serviceList.Items, stateRegistryAddress)
+	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, stateRegistryAddress)
 	if err != nil {
 		message.Debugf("registry appears to not be a nodeport service, using original address %q", stateRegistryAddress)
 		return stateRegistryAddress, nil
 	}
 
-	return fmt.Sprintf("%s.%s.%s", svc.Namespace, svc.Name, svcDNSsuffix), nil
+	return fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, port), nil
 }

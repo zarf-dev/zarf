@@ -61,6 +61,7 @@ func TestGenerateRegistryPullCreds2(t *testing.T) {
 					Port:     3333,
 				},
 			},
+			ClusterIP: "10.11.12.13",
 		},
 	}
 
@@ -85,7 +86,7 @@ func TestGenerateRegistryPullCreds2(t *testing.T) {
 		},
 		Type: corev1.SecretTypeDockerConfigJson,
 		Data: map[string][]byte{
-			".dockerconfigjson": []byte(`{"auths":{"127.0.0.1:30001":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="},"whatever.good-service.svc.cluster.local":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="}}}`),
+			".dockerconfigjson": []byte(`{"auths":{"10.11.12.13:3333":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="},"127.0.0.1:30001":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="}}}`),
 		},
 	}
 	require.Equal(t, expectedSecret, *secret)

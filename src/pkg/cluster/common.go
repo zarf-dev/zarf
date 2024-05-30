@@ -20,7 +20,6 @@ type Cluster struct {
 const (
 	// DefaultTimeout is the default time to wait for a cluster to be ready.
 	DefaultTimeout = 30 * time.Second
-	svcDNSsuffix   = "svc.cluster.local"
 )
 
 // NewClusterWithWait creates a new Cluster instance and waits for the given timeout for the cluster to be ready.
