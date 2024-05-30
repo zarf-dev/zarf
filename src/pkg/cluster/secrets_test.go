@@ -10,13 +10,22 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 func TestGenerateRegistryPullCreds(t *testing.T) {
-	c := &Cluster{}
+	c := &Cluster{K8s: &k8s.K8s{Clientset: fake.NewSimpleClientset()}}
+	ctx := context.Background()
+	// ns := corev1.Namespace{
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		Name: "bar",
+	// 	},
+	// }
+
+	// c.K8s.Clientset.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 	ri := types.RegistryInfo{
 		PushUsername: "push-user",
 		PushPassword: "push-password",
@@ -24,7 +33,7 @@ func TestGenerateRegistryPullCreds(t *testing.T) {
 		PullPassword: "pull-password",
 		Address:      "example.com",
 	}
-	secret := c.GenerateRegistryPullCreds(context.Background(), "foo", "bar", ri)
+	secret := c.GenerateRegistryPullCreds(ctx, "foo", "bar", ri)
 	expectedSecret := corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",

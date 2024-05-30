@@ -41,7 +41,7 @@ func TestServiceInfoFromNodePortURL(t *testing.T) {
 			expectedErr: "no matching node port services found",
 		},
 		{
-			name:        "found serivce",
+			name:        "found service",
 			nodePortURL: "http://localhost:30001",
 			services: []corev1.Service{
 				{
@@ -71,7 +71,6 @@ func TestServiceInfoFromNodePortURL(t *testing.T) {
 								Port:     2222,
 							},
 						},
-						ClusterIP: "good-ip",
 					},
 				},
 				{
@@ -87,6 +86,7 @@ func TestServiceInfoFromNodePortURL(t *testing.T) {
 								Port:     3333,
 							},
 						},
+						ClusterIP: "good-ip",
 					},
 				},
 				{
