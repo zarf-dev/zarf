@@ -715,7 +715,7 @@ const (
 	PkgValidateErrManifest                = "invalid manifest definition: %w"
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
-	PkgValidateErrManifestNameMissing     = "manifest %q must include a name"
+	PkgValidateErrManifestNameMissing     = "manifest must include a name"
 	PkgValidateErrManifestNameNotUnique   = "manifest name %q is not unique"
 	PkgValidateErrName                    = "invalid package name: %w"
 	PkgValidateErrPkgConstantName         = "constant name %q must be all uppercase and contain no special characters except _"

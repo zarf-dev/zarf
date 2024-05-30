@@ -125,11 +125,78 @@ func TestZarfPackageValidate(t *testing.T) {
 			wantErr: fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantPattern, "BAD", "^good_val$")).Error(),
 		},
 		{
-			name: "duplicate component names",
 			pkg: ZarfPackage{
 				Kind: ZarfPackageConfig,
 				Metadata: ZarfMetadata{
-					Name: "valid-package",
+					Name: "yolo-images",
+					YOLO: true,
+				},
+				Components: []ZarfComponent{
+					{
+						Name:   "component1",
+						Images: []string{"an-image"}},
+				},
+			},
+			wantErr: lang.PkgValidateErrYOLONoOCI,
+		},
+		{
+			pkg: ZarfPackage{
+				Kind: ZarfPackageConfig,
+				Metadata: ZarfMetadata{
+					Name: "yolo-repos",
+					YOLO: true,
+				},
+				Components: []ZarfComponent{
+					{
+						Name:  "component1",
+						Repos: []string{"a-repo"}},
+				},
+			},
+			wantErr: lang.PkgValidateErrYOLONoGit,
+		},
+		{
+			pkg: ZarfPackage{
+				Kind: ZarfPackageConfig,
+				Metadata: ZarfMetadata{
+					Name: "yolo-arch",
+					YOLO: true,
+				},
+				Components: []ZarfComponent{
+					{
+						Name: "component1",
+						Only: ZarfComponentOnlyTarget{
+							Cluster: ZarfComponentOnlyCluster{
+								Architecture: "not-empty",
+							},
+						}},
+				},
+			},
+			wantErr: lang.PkgValidateErrYOLONoArch,
+		},
+		{
+			pkg: ZarfPackage{
+				Kind: ZarfPackageConfig,
+				Metadata: ZarfMetadata{
+					Name: "yolo-distro",
+					YOLO: true,
+				},
+				Components: []ZarfComponent{
+					{
+						Name: "component1",
+						Only: ZarfComponentOnlyTarget{
+							Cluster: ZarfComponentOnlyCluster{
+								Distros: []string{"not-empty"},
+							},
+						}},
+				},
+			},
+			wantErr: lang.PkgValidateErrYOLONoDistro,
+		},
+		{
+			pkg: ZarfPackage{
+				Kind: ZarfPackageConfig,
+				Metadata: ZarfMetadata{
+					Name: "duplicate-component-names",
 				},
 				Components: []ZarfComponent{
 					{
@@ -143,19 +210,18 @@ func TestZarfPackageValidate(t *testing.T) {
 			wantErr: fmt.Sprintf(lang.PkgValidateErrComponentNameNotUnique, "component1"),
 		},
 		{
-			name: "invalid component name",
 			pkg: ZarfPackage{
 				Kind: ZarfPackageConfig,
 				Metadata: ZarfMetadata{
-					Name: "valid-package",
+					Name: "invalid-component-name",
 				},
 				Components: []ZarfComponent{
 					{
-						Name: "Component1",
+						Name: "-component1",
 					},
 				},
 			},
-			wantErr: fmt.Sprintf(lang.PkgValidateErrComponentName, "Component1"),
+			wantErr: fmt.Sprintf(lang.PkgValidateErrComponentName, "-component1"),
 		},
 		{
 			name: "unsupported OS",
@@ -252,6 +318,44 @@ func TestZarfPackageValidate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.pkg.Metadata.Name, func(t *testing.T) {
 			err := tt.pkg.Validate()
+			if tt.wantErr != "" {
+				assert.EqualError(t, err, tt.wantErr)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateManifest(t *testing.T) {
+	longName := ""
+	for range ZarfMaxChartNameLength + 1 {
+		longName += "a"
+	}
+	tests := []struct {
+		manifest ZarfManifest
+		wantErr  string
+	}{
+		{
+			manifest: ZarfManifest{Name: "valid", Files: []string{"a-file"}},
+			wantErr:  "",
+		},
+		{
+			manifest: ZarfManifest{Name: "", Files: []string{"a-file"}},
+			wantErr:  lang.PkgValidateErrManifestNameMissing,
+		},
+		{
+			manifest: ZarfManifest{Name: longName, Files: []string{"a-file"}},
+			wantErr:  fmt.Sprintf(lang.PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength),
+		},
+		{
+			manifest: ZarfManifest{Name: "nothing-there"},
+			wantErr:  fmt.Sprintf(lang.PkgValidateErrManifestFileOrKustomize, "nothing-there"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.manifest.Name, func(t *testing.T) {
+			err := tt.manifest.Validate()
 			if tt.wantErr != "" {
 				assert.EqualError(t, err, tt.wantErr)
 			} else {

@@ -323,7 +323,7 @@ func (chart ZarfChart) Validate() error {
 func (manifest ZarfManifest) Validate() error {
 	// Don't allow empty names
 	if manifest.Name == "" {
-		return fmt.Errorf(lang.PkgValidateErrManifestNameMissing, manifest.Name)
+		return fmt.Errorf(lang.PkgValidateErrManifestNameMissing)
 	}
 
 	// Helm max release name
