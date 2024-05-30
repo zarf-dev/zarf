@@ -17,10 +17,10 @@ spec:
         # Don't mutate this pod, that would be sad times
         zarf.dev/agent: ignore
     spec:
-      serviceAccountName: zarf
       imagePullSecrets:
         - name: private-registry
       priorityClassName: system-node-critical
+      serviceAccountName: zarf
       containers:
         - name: server
           image: "###ZARF_REGISTRY###/###ZARF_CONST_AGENT_IMAGE###:###ZARF_CONST_AGENT_IMAGE_TAG###"
