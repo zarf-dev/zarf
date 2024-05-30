@@ -116,16 +116,16 @@ func TestServiceInfoFromNodePortURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			namespace, name, clusterIP, port, err := serviceInfoFromNodePortURL(tt.services, tt.nodePortURL)
+			svc, port, err := serviceInfoFromNodePortURL(tt.services, tt.nodePortURL)
 			if tt.expectedErr != "" {
 				require.EqualError(t, err, tt.expectedErr)
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, tt.expectedNamespace, namespace)
-			require.Equal(t, tt.expectedName, name)
+			require.Equal(t, tt.expectedNamespace, svc.Namespace)
+			require.Equal(t, tt.expectedName, svc.Name)
 			require.Equal(t, tt.expectedPort, port)
-			require.Equal(t, tt.expectedIP, clusterIP)
+			require.Equal(t, tt.expectedIP, svc.Spec.ClusterIP)
 		})
 	}
 }
