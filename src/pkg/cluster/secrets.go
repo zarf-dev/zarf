@@ -40,13 +40,29 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string, registryInfo
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
 
 	registry := registryInfo.Address
+	svcRegistry := registryInfo.InClusterAddress
+
 	// Create the expected structure for the dockerconfigjson
-	dockerConfigJSON := DockerConfig{
-		Auths: DockerConfigEntry{
-			registry: DockerConfigEntryWithAuth{
-				Auth: authEncodedValue,
+	var dockerConfigJSON DockerConfig
+	if registryInfo.InternalRegistry {
+		dockerConfigJSON = DockerConfig{
+			Auths: DockerConfigEntry{
+				registry: DockerConfigEntryWithAuth{
+					Auth: authEncodedValue,
+				},
+				svcRegistry: DockerConfigEntryWithAuth{
+					Auth: authEncodedValue,
+				},
 			},
-		},
+		}
+	} else {
+		dockerConfigJSON = DockerConfig{
+			Auths: DockerConfigEntry{
+				registry: DockerConfigEntryWithAuth{
+					Auth: authEncodedValue,
+				},
+			},
+		}
 	}
 
 	// Convert to JSON

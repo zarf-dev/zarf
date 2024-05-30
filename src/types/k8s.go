@@ -40,6 +40,8 @@ const (
 	ZarfGeneratedPasswordLen               = 24
 	ZarfGeneratedSecretLen                 = 48
 	ZarfInClusterContainerRegistryNodePort = 31999
+	ZarfInClusterContainerRegistryPort     = 5000
+	ZarfInClusterRegistryURL               = "zarf-docker-registry.zarf.svc.cluster.local"
 	ZarfRegistryPushUser                   = "zarf-push"
 	ZarfRegistryPullUser                   = "zarf-pull"
 
@@ -178,6 +180,8 @@ type RegistryInfo struct {
 
 	Address          string `json:"address" jsonschema:"description=URL address of the registry"`
 	NodePort         int    `json:"nodePort" jsonschema:"description=Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster"`
+	InClusterAddress string `json:"inClusterAddress" jsonschema:"description=URL address of the registry from within the Cluster"`
+	InClusterPort    int    `json:"inClusterPort" jsonschema:"description=Port of the registry. Only needed if the registry is running inside the kubernetes cluster"`
 	InternalRegistry bool   `json:"internalRegistry" jsonschema:"description=Indicates if we are using a registry that Zarf is directly managing"`
 
 	Secret string `json:"secret" jsonschema:"description=Secret value that the registry was seeded with"`
@@ -190,11 +194,17 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 	if ri.NodePort == 0 {
 		ri.NodePort = ZarfInClusterContainerRegistryNodePort
 	}
+	if ri.InClusterPort == 0 {
+		ri.InClusterPort = ZarfInClusterContainerRegistryPort
+	}
 
 	// Set default url if an external registry was not provided
 	if ri.Address == "" {
 		ri.InternalRegistry = true
 		ri.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
+	}
+	if ri.InternalRegistry && ri.InClusterAddress == "" {
+		ri.InClusterAddress = fmt.Sprintf("%s:%d", ZarfInClusterRegistryURL, ri.InClusterPort)
 	}
 
 	// Generate a push-user password if not provided by init flag

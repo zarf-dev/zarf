@@ -62,7 +62,13 @@ func mutateConfiguration(ctx context.Context, r *v1.AdmissionRequest, cluster *c
 	if err != nil {
 		return nil, fmt.Errorf(lang.AgentErrGetState, err)
 	}
-	registryURL := state.RegistryInfo.Address
+
+	var registryURL string
+	if state.RegistryInfo.InternalRegistry {
+		registryURL = state.RegistryInfo.InClusterAddress
+	} else {
+		registryURL = state.RegistryInfo.Address
+	}
 
 	var patchOperations []operations.PatchOperation
 
