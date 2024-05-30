@@ -76,7 +76,8 @@ func TestArgoRepoWebhook(t *testing.T) {
 				operations.ReplacePatchOperation(
 					"/metadata/labels",
 					map[string]string{
-						"zarf-agent": "patched",
+						"argocd.argoproj.io/secret-type": "repository",
+						"zarf-agent":                     "patched",
 					},
 				),
 			},
@@ -112,7 +113,8 @@ func TestArgoRepoWebhook(t *testing.T) {
 				operations.ReplacePatchOperation(
 					"/metadata/labels",
 					map[string]string{
-						"zarf-agent": "patched",
+						"argocd.argoproj.io/secret-type": "repository",
+						"zarf-agent":                     "patched",
 					},
 				),
 			},
