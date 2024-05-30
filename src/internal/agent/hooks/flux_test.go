@@ -64,6 +64,12 @@ func TestFluxMutationWebhook(t *testing.T) {
 					"/spec/secretRef",
 					fluxmeta.LocalObjectReference{Name: config.ZarfGitServerSecretName},
 				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
 			},
 			code: http.StatusOK,
 		},
@@ -99,6 +105,12 @@ func TestFluxMutationWebhook(t *testing.T) {
 				operations.AddPatchOperation(
 					"/spec/secretRef",
 					fluxmeta.LocalObjectReference{Name: config.ZarfGitServerSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
 				),
 			},
 			code: http.StatusOK,
