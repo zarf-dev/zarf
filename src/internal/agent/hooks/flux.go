@@ -85,7 +85,7 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 
 	// Patch updates of the repo spec
 	patches = populatePatchOperations(patchedURL)
-	patches = append(patches, getAnnotationPatch(repo.Annotations))
+	patches = append(patches, getLabelPatch(repo.Annotations))
 
 	return &operations.Result{
 		Allowed:  true,

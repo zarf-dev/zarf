@@ -96,7 +96,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	}
 
 	patches := populateArgoRepositoryPatchOperations(patchedURL, state.GitServer)
-	patches = append(patches, getAnnotationPatch(secret.Annotations))
+	patches = append(patches, getLabelPatch(secret.Annotations))
 
 	return &operations.Result{
 		Allowed:  true,

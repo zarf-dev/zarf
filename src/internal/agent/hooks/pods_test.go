@@ -85,13 +85,6 @@ func TestPodMutationWebhook(t *testing.T) {
 						"should-be":  "mutated",
 					},
 				),
-				operations.ReplacePatchOperation(
-					"/metadata/annotations",
-					map[string]string{
-						"zarf-agent": "patched",
-						"should-be":  "mutated",
-					},
-				),
 			},
 			code: http.StatusOK,
 		},
@@ -129,10 +122,6 @@ func TestPodMutationWebhook(t *testing.T) {
 				),
 				operations.ReplacePatchOperation(
 					"/metadata/labels",
-					map[string]string{"zarf-agent": "patched"},
-				),
-				operations.ReplacePatchOperation(
-					"/metadata/annotations",
 					map[string]string{"zarf-agent": "patched"},
 				),
 			},

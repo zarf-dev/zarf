@@ -95,7 +95,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 		}
 	}
 
-	patches = append(patches, getAnnotationPatch(app.Annotations))
+	patches = append(patches, getLabelPatch(app.Annotations))
 
 	return &operations.Result{
 		Allowed:  true,

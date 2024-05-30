@@ -70,7 +70,7 @@ func TestArgoAppWebhook(t *testing.T) {
 					"https://git-server.com/a-push-user/almonds-640159520",
 				),
 				operations.ReplacePatchOperation(
-					"/metadata/annotations",
+					"/metadata/labels",
 					map[string]string{
 						"zarf-agent": "patched",
 					},

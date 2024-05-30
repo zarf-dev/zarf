@@ -74,7 +74,7 @@ func TestArgoRepoWebhook(t *testing.T) {
 					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullPassword)),
 				),
 				operations.ReplacePatchOperation(
-					"/metadata/annotations",
+					"/metadata/labels",
 					map[string]string{
 						"zarf-agent": "patched",
 					},
@@ -110,7 +110,7 @@ func TestArgoRepoWebhook(t *testing.T) {
 					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullPassword)),
 				),
 				operations.ReplacePatchOperation(
-					"/metadata/annotations",
+					"/metadata/labels",
 					map[string]string{
 						"zarf-agent": "patched",
 					},

@@ -103,10 +103,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
-	// It will be a breaking change but we would like to switch to annotations over labels at some point
-	// We are starting to put annotations now so the change will be breaking on less versions in the future
 	patches = append(patches, getLabelPatch(pod.Labels))
-	patches = append(patches, getAnnotationPatch(pod.Annotations))
 
 	return &operations.Result{
 		Allowed:  true,
