@@ -190,26 +190,27 @@ func (a ZarfComponentActions) validate() error {
 	return errors.Join(errs...)
 }
 
-// ValidateImportDefinition validates the component trying to be imported.
-func (c ZarfComponent) ValidateImportDefinition() error {
+// Validate validates the component trying to be imported.
+func (c ZarfComponent) Validate() error {
+	errs := []error{}
 	path := c.Import.Path
 	url := c.Import.URL
 
 	// ensure path or url is provided
 	if path == "" && url == "" {
-		return fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "neither a path nor a URL was provided")
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "neither a path nor a URL was provided"))
 	}
 
 	// ensure path and url are not both provided
 	if path != "" && url != "" {
-		return fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "both a path and a URL were provided")
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "both a path and a URL were provided"))
 	}
 
 	// validation for path
 	if url == "" && path != "" {
 		// ensure path is not an absolute path
 		if filepath.IsAbs(path) {
-			return fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "path cannot be an absolute path")
+			errs = append(errs, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "path cannot be an absolute path"))
 		}
 	}
 
@@ -217,11 +218,11 @@ func (c ZarfComponent) ValidateImportDefinition() error {
 	if url != "" && path == "" {
 		ok := helpers.IsOCIURL(url)
 		if !ok {
-			return fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "URL is not a valid OCI URL")
+			errs = append(errs, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "URL is not a valid OCI URL"))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // HasSetVariables returns true if any of the actions contain setVariables.

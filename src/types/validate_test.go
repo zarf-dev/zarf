@@ -262,7 +262,7 @@ func TestValidateChart(t *testing.T) {
 	}
 }
 
-func TestZarfComponentActions_Validate(t *testing.T) {
+func TestValidateComponentActions(t *testing.T) {
 	tests := []struct {
 		name     string
 		actions  ZarfComponentActions
@@ -308,28 +308,32 @@ func TestZarfComponentActions_Validate(t *testing.T) {
 				OnCreate: ZarfComponentActionSet{
 					Before: []ZarfComponentAction{
 						{
-							Cmd:  "cmd",
+							Cmd:  "create",
 							Wait: &ZarfComponentActionWait{},
 						},
 					},
 				},
-			},
-			wantErrs: []string{fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "cmd")).Error()},
-		},
-		{
-			name: "invalid onRemove action",
-			actions: ZarfComponentActions{
-				OnRemove: ZarfComponentActionSet{
-					Before: []ZarfComponentAction{
+				OnDeploy: ZarfComponentActionSet{
+					After: []ZarfComponentAction{
 						{
-							Cmd:  "cmd",
+							Cmd:  "deploy",
+							Wait: &ZarfComponentActionWait{},
+						},
+					},
+				},
+				OnRemove: ZarfComponentActionSet{
+					OnSuccess: []ZarfComponentAction{
+						{
+							Cmd:  "remove",
 							Wait: &ZarfComponentActionWait{},
 						},
 					},
 				},
 			},
 			wantErrs: []string{
-				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "cmd")).Error(),
+				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "create")).Error(),
+				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "deploy")).Error(),
+				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "remove")).Error(),
 			},
 		},
 	}
@@ -344,6 +348,144 @@ func TestZarfComponentActions_Validate(t *testing.T) {
 			require.Error(t, err)
 			for _, wantErr := range tt.wantErrs {
 				require.Contains(t, err.Error(), wantErr)
+			}
+		})
+	}
+}
+
+func TestZarfComponentAction_Validate(t *testing.T) {
+	tests := []struct {
+		name        string
+		action      ZarfComponentAction
+		expectError bool
+		wantErr     string
+	}{
+		{
+			name:        "valid action no conditions",
+			action:      ZarfComponentAction{},
+			expectError: false,
+		},
+		{
+			name: "cmd and wait both set",
+			action: ZarfComponentAction{
+				Cmd:  "ls",
+				Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}},
+			},
+			wantErr: fmt.Sprintf(lang.PkgValidateErrActionCmdWait, "ls"),
+		},
+		{
+			name: "cluster and network both set",
+			action: ZarfComponentAction{
+				Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}, Network: &ZarfComponentActionWaitNetwork{}},
+			},
+			expectError: true,
+			wantErr:     fmt.Sprintf(lang.PkgValidateErrActionClusterNetwork),
+		},
+		{
+			name: "neither cluster nor network set",
+			action: ZarfComponentAction{
+				Wait: &ZarfComponentActionWait{},
+			},
+			expectError: true,
+			wantErr:     lang.PkgValidateErrActionClusterNetwork,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.action.Validate()
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateZarfComponent(t *testing.T) {
+	tests := []struct {
+		component ZarfComponent
+		wantErrs  []string
+		name      string
+	}{
+		{
+			name: "valid path",
+			component: ZarfComponent{
+				Name: "component1",
+				Import: ZarfComponentImport{
+					Path: "relative/path",
+				},
+			},
+			wantErrs: nil,
+		},
+		{
+			name: "valid URL",
+			component: ZarfComponent{
+				Name: "component2",
+				Import: ZarfComponentImport{
+					URL: "oci://example.com/package:v0.0.1",
+				},
+			},
+			wantErrs: nil,
+		},
+		{
+			name: "neither path nor URL provided",
+			component: ZarfComponent{
+				Name: "invalid1",
+			},
+			wantErrs: []string{
+				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "invalid1", "neither a path nor a URL was provided"),
+			},
+		},
+		{
+			name: "both path and URL provided",
+			component: ZarfComponent{
+				Name: "invalid2",
+				Import: ZarfComponentImport{
+					Path: "relative/path",
+					URL:  "https://example.com",
+				},
+			},
+			wantErrs: []string{
+				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "invalid2", "both a path and a URL were provided"),
+			},
+		},
+		{
+			name: "absolute path provided",
+			component: ZarfComponent{
+				Name: "invalid3",
+				Import: ZarfComponentImport{
+					Path: "/absolute/path",
+				},
+			},
+			wantErrs: []string{
+				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "invalid3", "path cannot be an absolute path"),
+			},
+		},
+		{
+			name: "invalid URL provided",
+			component: ZarfComponent{
+				Name: "invalid4",
+				Import: ZarfComponentImport{
+					URL: "ftp://example.com",
+				},
+			},
+			wantErrs: []string{
+				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "invalid4", "URL is not a valid OCI URL"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.component.Validate()
+			if tt.wantErrs == nil {
+				require.NoError(t, err)
+				return
+			}
+			for _, wantErr := range tt.wantErrs {
+				require.ErrorContains(t, err, wantErr)
 			}
 		})
 	}
