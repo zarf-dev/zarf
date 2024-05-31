@@ -432,47 +432,47 @@ func TestValidateZarfComponent(t *testing.T) {
 		{
 			name: "neither path nor URL provided",
 			component: ZarfComponent{
-				Name: "invalid1",
+				Name: "neither",
 			},
 			wantErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "invalid1", "neither a path nor a URL was provided"),
+				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "neither", "neither a path nor a URL was provided"),
 			},
 		},
 		{
 			name: "both path and URL provided",
 			component: ZarfComponent{
-				Name: "invalid2",
+				Name: "both",
 				Import: ZarfComponentImport{
 					Path: "relative/path",
 					URL:  "https://example.com",
 				},
 			},
 			wantErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "invalid2", "both a path and a URL were provided"),
+				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "both", "both a path and a URL were provided"),
 			},
 		},
 		{
 			name: "absolute path provided",
 			component: ZarfComponent{
-				Name: "invalid3",
+				Name: "abs-path",
 				Import: ZarfComponentImport{
 					Path: "/absolute/path",
 				},
 			},
 			wantErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "invalid3", "path cannot be an absolute path"),
+				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "abs-path", "path cannot be an absolute path"),
 			},
 		},
 		{
 			name: "invalid URL provided",
 			component: ZarfComponent{
-				Name: "invalid4",
+				Name: "bad-url",
 				Import: ZarfComponentImport{
 					URL: "https://example.com",
 				},
 			},
 			wantErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "invalid4", "URL is not a valid OCI URL"),
+				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "bad-url", "URL is not a valid OCI URL"),
 			},
 		},
 	}
