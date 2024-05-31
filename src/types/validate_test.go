@@ -76,6 +76,16 @@ func TestZarfPackageValidate(t *testing.T) {
 						DeprecatedGroup: "a-group",
 					},
 					{
+						Name:            "multi-default",
+						Default:         true,
+						DeprecatedGroup: "multi-default",
+					},
+					{
+						Name:            "multi-default-2",
+						Default:         true,
+						DeprecatedGroup: "multi-default",
+					},
+					{
 						Name: "duplicate",
 					},
 					{
@@ -111,6 +121,7 @@ func TestZarfPackageValidate(t *testing.T) {
 				fmt.Sprintf(lang.PkgValidateErrComponentReqGrouped, "required-in-group"),
 				fmt.Sprintf(lang.PkgValidateErrComponentNameNotUnique, "duplicate"),
 				fmt.Sprintf(lang.PkgValidateErrGroupOneComponent, "a-group", "required-in-group"),
+				fmt.Sprintf(lang.PkgValidateErrGroupMultipleDefaults, "multi-default", "multi-default", "multi-default-2"),
 			},
 		},
 		{
