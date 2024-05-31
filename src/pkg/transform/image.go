@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/distribution/reference"
 )
 
@@ -33,6 +34,11 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 	// check if image has already been transformed
 	if strings.HasPrefix(targetHost, image.Host) {
 		return srcReference, nil
+	}
+
+	// If the image has already been parsed but has the in-cluster domain set
+	if strings.HasPrefix(image.Host, types.ZarfInClusterRegistryURL) {
+		return fmt.Sprintf("%s/%s:%s", targetHost, image.Path, image.Tag), nil
 	}
 
 	// Generate a crc32 hash of the image host + name

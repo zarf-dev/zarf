@@ -127,6 +127,32 @@ func TestPodMutationWebhook(t *testing.T) {
 			},
 			code: http.StatusOK,
 		},
+		{
+			name: "pod with in-cluster image reference should only update hostname",
+			admissionReq: createPodAdmissionRequest(t, v1.Create, &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: nil,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Image: "zarf-docker-registry.zarf.svc.cluster.local:5000/crossplane-contrib/provider-kubernetes:v0.13.0-zarf-2305458159"}},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/imagePullSecrets",
+					[]corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}},
+				),
+				operations.ReplacePatchOperation(
+					"/spec/containers/0/image",
+					"127.0.0.1:31999/crossplane-contrib/provider-kubernetes:v0.13.0-zarf-2305458159",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{"zarf-agent": "patched"},
+				),
+			},
+			code: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
