@@ -287,37 +287,34 @@ func (action ZarfComponentAction) Validate() error {
 
 // Validate runs all validation checks on a chart.
 func (chart ZarfChart) Validate() error {
-	// Don't allow empty names
+	errs := []error{}
+
 	if chart.Name == "" {
-		return fmt.Errorf(lang.PkgValidateErrChartNameMissing, chart.Name)
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrChartNameMissing))
 	}
 
-	// Helm max release name
 	if len(chart.Name) > ZarfMaxChartNameLength {
-		return fmt.Errorf(lang.PkgValidateErrChartName, chart.Name, ZarfMaxChartNameLength)
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrChartName, chart.Name, ZarfMaxChartNameLength))
 	}
 
-	// Must have a namespace
 	if chart.Namespace == "" {
-		return fmt.Errorf(lang.PkgValidateErrChartNamespaceMissing, chart.Name)
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrChartNamespaceMissing, chart.Name))
 	}
 
 	// Must have a url or localPath (and not both)
 	if chart.URL != "" && chart.LocalPath != "" {
-		return fmt.Errorf(lang.PkgValidateErrChartURLOrPath, chart.Name)
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrChartURLOrPath, chart.Name))
 	}
 
-	// Must have a url or localPath (and not both)
 	if chart.URL == "" && chart.LocalPath == "" {
-		return fmt.Errorf(lang.PkgValidateErrChartURLOrPath, chart.Name)
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrChartURLOrPath, chart.Name))
 	}
 
-	// Must have a version
 	if chart.Version == "" {
-		return fmt.Errorf(lang.PkgValidateErrChartVersion, chart.Name)
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrChartVersion, chart.Name))
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // Validate runs all validation checks on a manifest.

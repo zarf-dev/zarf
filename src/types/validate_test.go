@@ -203,3 +203,61 @@ func TestValidateManifest(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateChart(t *testing.T) {
+	longName := ""
+	for range ZarfMaxChartNameLength + 1 {
+		longName += "a"
+	}
+	tests := []struct {
+		chart    ZarfChart
+		wantErrs []string
+		name     string
+	}{
+		{
+			name:     "valid",
+			chart:    ZarfChart{Name: "chart1", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
+			wantErrs: nil,
+		},
+		{
+			name:     "empty name",
+			chart:    ZarfChart{Name: ""},
+			wantErrs: []string{lang.PkgValidateErrChartNameMissing},
+		},
+		{
+			name:  "long name",
+			chart: ZarfChart{Name: longName},
+			wantErrs: []string{
+				fmt.Sprintf(lang.PkgValidateErrChartName, longName, ZarfMaxChartNameLength),
+			},
+		},
+		{
+			name:  "no url or local path",
+			chart: ZarfChart{Name: "invalid"},
+			wantErrs: []string{
+				fmt.Sprintf(lang.PkgValidateErrChartNamespaceMissing, "invalid"),
+				fmt.Sprintf(lang.PkgValidateErrChartURLOrPath, "invalid"),
+				fmt.Sprintf(lang.PkgValidateErrChartVersion, "invalid"),
+			},
+		},
+		{
+			name:  "both url and local path",
+			chart: ZarfChart{Name: "invalid", Namespace: "whatever", URL: "http://whatever", LocalPath: "wherever"},
+			wantErrs: []string{
+				fmt.Sprintf(lang.PkgValidateErrChartURLOrPath, "invalid"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.chart.Validate()
+			if tt.wantErrs == nil {
+				require.NoError(t, err)
+				return
+			}
+			for _, wantErr := range tt.wantErrs {
+				require.ErrorContains(t, err, wantErr)
+			}
+		})
+	}
+}
