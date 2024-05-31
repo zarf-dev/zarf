@@ -267,16 +267,14 @@ func Paragraph(format string, a ...any) string {
 
 // Paragraphn formats text into an n column paragraph
 func Paragraphn(n int, format string, a ...any) string {
-	// Split the formatted string into lines based on newlines
+	// Split the text to keep pterm formatting but add newlines
 	lines := strings.Split(fmt.Sprintf(format, a...), "\n")
 
-	// Format each line individually
 	formattedLines := make([]string, len(lines))
 	for i, line := range lines {
 		formattedLines[i] = pterm.DefaultParagraph.WithMaxWidth(n).Sprintf(line)
 	}
 
-	// Join the formatted lines with newlines
 	return strings.Join(formattedLines, "\n")
 }
 
