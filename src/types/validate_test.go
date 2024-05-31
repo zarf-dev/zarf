@@ -22,6 +22,7 @@ func TestZarfPackageValidate(t *testing.T) {
 		wantErrs []error
 	}{
 		{
+			name: "valid package",
 			pkg: ZarfPackage{
 				Kind: ZarfPackageConfig,
 				Metadata: ZarfMetadata{
@@ -36,6 +37,7 @@ func TestZarfPackageValidate(t *testing.T) {
 			wantErrs: nil,
 		},
 		{
+			name: "no components",
 			pkg: ZarfPackage{
 				Kind: ZarfPackageConfig,
 				Metadata: ZarfMetadata{
@@ -46,6 +48,7 @@ func TestZarfPackageValidate(t *testing.T) {
 			wantErrs: []error{fmt.Errorf("package must have at least 1 component")},
 		},
 		{
+			name: "invalid package",
 			pkg: ZarfPackage{
 				Kind: ZarfPackageConfig,
 				Metadata: ZarfMetadata{
@@ -96,7 +99,6 @@ func TestZarfPackageValidate(t *testing.T) {
 					},
 				},
 			},
-			//TODO refactor this to only have to contain each error so order doesn't matter
 			wantErrs: []error{
 				fmt.Errorf(lang.PkgValidateErrPkgName, "-invalid-package"),
 				fmt.Errorf(lang.PkgValidateErrVariable, fmt.Errorf(lang.PkgValidateMustBeUppercase, "not_uppercase")),
@@ -113,6 +115,7 @@ func TestZarfPackageValidate(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid yolo",
 			pkg: ZarfPackage{
 				Kind: ZarfInitConfig,
 				Metadata: ZarfMetadata{
@@ -144,7 +147,7 @@ func TestZarfPackageValidate(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.pkg.Metadata.Name, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			err := tt.pkg.Validate()
 			if tt.wantErrs == nil {
 				assert.NoError(t, err)
