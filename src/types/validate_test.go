@@ -6,6 +6,7 @@ package types
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -404,6 +405,8 @@ func TestValidateComponentAction(t *testing.T) {
 }
 
 func TestValidateZarfComponent(t *testing.T) {
+	absPath, err := filepath.Abs("abs")
+	require.NoError(t, err)
 	tests := []struct {
 		component ZarfComponent
 		wantErrs  []string
@@ -456,7 +459,7 @@ func TestValidateZarfComponent(t *testing.T) {
 			component: ZarfComponent{
 				Name: "abs-path",
 				Import: ZarfComponentImport{
-					Path: "/absolute/path",
+					Path: absPath,
 				},
 			},
 			wantErrs: []string{
