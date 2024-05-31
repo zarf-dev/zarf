@@ -139,7 +139,7 @@ func (pkg ZarfPackage) Validate() error {
 			}
 		}
 
-		if err := component.Actions.Validate(); err != nil {
+		if err := component.Actions.validate(); err != nil {
 			errs = append(errs, fmt.Errorf("%q: %w", component.Name, err))
 		}
 
@@ -164,25 +164,30 @@ func (pkg ZarfPackage) Validate() error {
 	return errors.Join(errs...)
 }
 
-// Validate runs all validation checks on component actions.
-func (a ZarfComponentActions) Validate() error {
+func (a ZarfComponentActions) validate() error {
+	var errs []error
+
 	if err := a.OnCreate.Validate(); err != nil {
-		return fmt.Errorf(lang.PkgValidateErrAction, err)
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrAction, err))
 	}
 
 	if a.OnCreate.HasSetVariables() {
-		return fmt.Errorf("cannot contain setVariables outside of onDeploy in actions")
+		errs = append(errs, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
 	}
 
 	if err := a.OnDeploy.Validate(); err != nil {
-		return fmt.Errorf(lang.PkgValidateErrAction, err)
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrAction, err))
 	}
 
 	if a.OnRemove.HasSetVariables() {
-		return fmt.Errorf("cannot contain setVariables outside of onDeploy in actions")
+		errs = append(errs, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
 	}
 
-	return nil
+	if err := a.OnRemove.Validate(); err != nil {
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrAction, err))
+	}
+
+	return errors.Join(errs...)
 }
 
 // ValidateImportDefinition validates the component trying to be imported.
@@ -258,31 +263,32 @@ func (as ZarfComponentActionSet) Validate() error {
 
 // Validate runs all validation checks on an action.
 func (action ZarfComponentAction) Validate() error {
+	errs := []error{}
 	// Validate SetVariable
 	for _, variable := range action.SetVariables {
 		if err := variable.Validate(); err != nil {
-			return err
+			errs = append(errs, err)
 		}
 	}
 
 	if action.Wait != nil {
 		// Validate only cmd or wait, not both
 		if action.Cmd != "" {
-			return fmt.Errorf(lang.PkgValidateErrActionCmdWait, action.Cmd)
+			errs = append(errs, fmt.Errorf(lang.PkgValidateErrActionCmdWait, action.Cmd))
 		}
 
 		// Validate only cluster or network, not both
 		if action.Wait.Cluster != nil && action.Wait.Network != nil {
-			return fmt.Errorf(lang.PkgValidateErrActionClusterNetwork)
+			errs = append(errs, fmt.Errorf(lang.PkgValidateErrActionClusterNetwork))
 		}
 
 		// Validate at least one of cluster or network
 		if action.Wait.Cluster == nil && action.Wait.Network == nil {
-			return fmt.Errorf(lang.PkgValidateErrActionClusterNetwork)
+			errs = append(errs, fmt.Errorf(lang.PkgValidateErrActionClusterNetwork))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // Validate runs all validation checks on a chart.
@@ -320,17 +326,15 @@ func (chart ZarfChart) Validate() error {
 // Validate runs all validation checks on a manifest.
 func (manifest ZarfManifest) Validate() error {
 	errs := []error{}
-	// Don't allow empty names
+
 	if manifest.Name == "" {
 		errs = append(errs, fmt.Errorf(lang.PkgValidateErrManifestNameMissing))
 	}
 
-	// Helm max release name
 	if len(manifest.Name) > ZarfMaxChartNameLength {
 		errs = append(errs, fmt.Errorf(lang.PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))
 	}
 
-	// Require files in manifest
 	if len(manifest.Files) < 1 && len(manifest.Kustomizations) < 1 {
 		errs = append(errs, fmt.Errorf(lang.PkgValidateErrManifestFileOrKustomize, manifest.Name))
 	}

@@ -261,3 +261,90 @@ func TestValidateChart(t *testing.T) {
 		})
 	}
 }
+
+func TestZarfComponentActions_Validate(t *testing.T) {
+	tests := []struct {
+		name     string
+		actions  ZarfComponentActions
+		wantErrs []string
+	}{
+		{
+			name: "valid actions",
+			actions: ZarfComponentActions{
+				OnCreate: ZarfComponentActionSet{
+					Before: []ZarfComponentAction{
+						{
+							Cmd: "echo 'onCreate before valid'",
+						},
+					},
+				},
+				OnDeploy: ZarfComponentActionSet{
+					Before: []ZarfComponentAction{
+						{
+							Cmd: "echo 'onDeploy before valid'",
+						},
+					},
+				},
+			},
+			wantErrs: nil,
+		},
+		{
+			name: "setVariables in onCreate",
+			actions: ZarfComponentActions{
+				OnCreate: ZarfComponentActionSet{
+					Before: []ZarfComponentAction{
+						{
+							Cmd:          "echo 'invalid setVariable'",
+							SetVariables: []variables.Variable{{Name: "VAR"}},
+						},
+					},
+				},
+			},
+			wantErrs: []string{"cannot contain setVariables outside of onDeploy in actions"},
+		},
+		{
+			name: "invalid onCreate action",
+			actions: ZarfComponentActions{
+				OnCreate: ZarfComponentActionSet{
+					Before: []ZarfComponentAction{
+						{
+							Cmd:  "cmd",
+							Wait: &ZarfComponentActionWait{},
+						},
+					},
+				},
+			},
+			wantErrs: []string{fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "cmd")).Error()},
+		},
+		{
+			name: "invalid onRemove action",
+			actions: ZarfComponentActions{
+				OnRemove: ZarfComponentActionSet{
+					Before: []ZarfComponentAction{
+						{
+							Cmd:  "cmd",
+							Wait: &ZarfComponentActionWait{},
+						},
+					},
+				},
+			},
+			wantErrs: []string{
+				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "cmd")).Error(),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.actions.validate()
+			if tt.wantErrs == nil {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			for _, wantErr := range tt.wantErrs {
+				require.Contains(t, err.Error(), wantErr)
+			}
+		})
+	}
+}
