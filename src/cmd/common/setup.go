@@ -21,8 +21,6 @@ var LogLevelCLI string
 
 // SetupCLI sets up the CLI logging, interrupt functions, and more
 func SetupCLI() {
-	ExitOnInterrupt()
-
 	match := map[string]message.LogLevel{
 		"warn":  message.WarnLevel,
 		"info":  message.InfoLevel,

@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
@@ -39,9 +38,6 @@ func init() {
 		Aliases: []string{"r", "crane"},
 		Short:   lang.CmdToolsRegistryShort,
 		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
-
-			common.ExitOnInterrupt()
-
 			// The crane options loading here comes from the rootCmd of crane
 			craneOptions = append(craneOptions, crane.WithContext(cmd.Context()))
 			// TODO(jonjohnsonjr): crane.Verbose option?

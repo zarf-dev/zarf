@@ -7,8 +7,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -72,17 +70,12 @@ var (
 				}
 			}
 
-			// Keep this open until an interrupt signal is received.
-			interruptChan := make(chan os.Signal, 1)
-			signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
-			common.SuppressGlobalInterrupt = true
-
 			// Wait for the interrupt signal or an error.
 			select {
+			case <-ctx.Done():
+				spinner.Successf(lang.CmdConnectTunnelClosed, url)
 			case err = <-tunnel.ErrChan():
 				spinner.Fatalf(err, lang.CmdConnectErrService, err.Error())
-			case <-interruptChan:
-				spinner.Successf(lang.CmdConnectTunnelClosed, url)
 			}
 			os.Exit(0)
 		},
