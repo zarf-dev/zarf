@@ -6,20 +6,20 @@ package types
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestZarfPackageValidate(t *testing.T) {
 	tests := []struct {
-		name    string
-		pkg     ZarfPackage
-		wantErr string
+		name     string
+		pkg      ZarfPackage
+		wantErrs []error
 	}{
 		{
 			pkg: ZarfPackage{
@@ -33,7 +33,7 @@ func TestZarfPackageValidate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "",
+			wantErrs: nil,
 		},
 		{
 			pkg: ZarfPackage{
@@ -43,7 +43,7 @@ func TestZarfPackageValidate(t *testing.T) {
 				},
 				Components: []ZarfComponent{},
 			},
-			wantErr: "package must have at least 1 component",
+			wantErrs: []error{fmt.Errorf("package must have at least 1 component")},
 		},
 		{
 			pkg: ZarfPackage{
@@ -97,20 +97,20 @@ func TestZarfPackageValidate(t *testing.T) {
 				},
 			},
 			//TODO refactor this to only have to contain each error so order doesn't matter
-			wantErr: strings.Join([]string{
-				fmt.Sprintf(lang.PkgValidateErrPkgName, "-invalid-package"),
-				fmt.Errorf(lang.PkgValidateErrVariable, fmt.Errorf(lang.PkgValidateMustBeUppercase, "not_uppercase")).Error(),
-				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantName, "not_uppercase")).Error(),
-				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantPattern, "BAD", "^good_val$")).Error(),
-				fmt.Sprintf(lang.PkgValidateErrComponentName, "-invalid"),
-				fmt.Sprintf(lang.PkgValidateErrComponentLocalOS, "-invalid", "unsupportedOS", supportedOS),
-				fmt.Sprintf(lang.PkgValidateErrComponentReqDefault, "-invalid"),
-				fmt.Sprintf(lang.PkgValidateErrChartNameNotUnique, "chart1"),
-				fmt.Sprintf(lang.PkgValidateErrManifestNameNotUnique, "manifest1"),
-				fmt.Sprintf(lang.PkgValidateErrComponentReqGrouped, "required-in-group"),
-				fmt.Sprintf(lang.PkgValidateErrComponentNameNotUnique, "duplicate"),
-				fmt.Sprintf(lang.PkgValidateErrGroupOneComponent, "a-group", "required-in-group"),
-			}, "\n"),
+			wantErrs: []error{
+				fmt.Errorf(lang.PkgValidateErrPkgName, "-invalid-package"),
+				fmt.Errorf(lang.PkgValidateErrVariable, fmt.Errorf(lang.PkgValidateMustBeUppercase, "not_uppercase")),
+				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantName, "not_uppercase")),
+				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantPattern, "BAD", "^good_val$")),
+				fmt.Errorf(lang.PkgValidateErrComponentName, "-invalid"),
+				fmt.Errorf(lang.PkgValidateErrComponentLocalOS, "-invalid", "unsupportedOS", supportedOS),
+				fmt.Errorf(lang.PkgValidateErrComponentReqDefault, "-invalid"),
+				fmt.Errorf(lang.PkgValidateErrChartNameNotUnique, "chart1"),
+				fmt.Errorf(lang.PkgValidateErrManifestNameNotUnique, "manifest1"),
+				fmt.Errorf(lang.PkgValidateErrComponentReqGrouped, "required-in-group"),
+				fmt.Errorf(lang.PkgValidateErrComponentNameNotUnique, "duplicate"),
+				fmt.Errorf(lang.PkgValidateErrGroupOneComponent, "a-group", "required-in-group"),
+			},
 		},
 		{
 			pkg: ZarfPackage{
@@ -133,23 +133,25 @@ func TestZarfPackageValidate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: strings.Join([]string{
-				lang.PkgValidateErrInitNoYOLO,
-				lang.PkgValidateErrYOLONoOCI,
-				lang.PkgValidateErrYOLONoGit,
-				lang.PkgValidateErrYOLONoArch,
-				lang.PkgValidateErrYOLONoDistro,
-			}, "\n"),
+			wantErrs: []error{
+				fmt.Errorf(lang.PkgValidateErrInitNoYOLO),
+				fmt.Errorf(lang.PkgValidateErrYOLONoOCI),
+				fmt.Errorf(lang.PkgValidateErrYOLONoGit),
+				fmt.Errorf(lang.PkgValidateErrYOLONoArch),
+				fmt.Errorf(lang.PkgValidateErrYOLONoDistro),
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.pkg.Metadata.Name, func(t *testing.T) {
 			err := tt.pkg.Validate()
-			if tt.wantErr != "" {
-				assert.EqualError(t, err, tt.wantErr)
-			} else {
+			if tt.wantErrs == nil {
 				assert.NoError(t, err)
+				return
+			}
+			for _, wantErr := range tt.wantErrs {
+				require.ErrorContains(t, err, wantErr.Error())
 			}
 		})
 	}
