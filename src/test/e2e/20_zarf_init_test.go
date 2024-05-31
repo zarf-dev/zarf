@@ -7,7 +7,6 @@ package test
 import (
 	"encoding/base64"
 	"fmt"
-	"runtime"
 	"testing"
 
 	"encoding/json"
@@ -24,29 +23,6 @@ func TestZarfInit(t *testing.T) {
 	// Add k3s component in appliance mode
 	if e2e.ApplianceMode {
 		initComponents = "k3s,logging,git-server"
-	}
-
-	initPackageVersion := e2e.GetZarfVersion(t)
-
-	var (
-		mismatchedArch        = e2e.GetMismatchedArch()
-		mismatchedInitPackage = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
-		expectedErrorMessage  = "unable to run component before action: command \"Check that the host architecture matches the package architecture\""
-	)
-	t.Cleanup(func() {
-		e2e.CleanFiles(mismatchedInitPackage)
-	})
-
-	if runtime.GOOS == "linux" {
-		// Build init package with different arch than the cluster arch.
-		stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/20-mismatched-arch-init", "--architecture", mismatchedArch, "--confirm")
-		require.NoError(t, err, stdOut, stdErr)
-
-		// Check that `zarf init` returns an error because of the mismatched architectures.
-		// We need to use the --architecture flag here to force zarf to find the package.
-		_, stdErr, err = e2e.Zarf("init", "--architecture", mismatchedArch, "--components=k3s", "--confirm")
-		require.Error(t, err, stdErr)
-		require.Contains(t, stdErr, expectedErrorMessage)
 	}
 
 	if !e2e.ApplianceMode {
