@@ -19,7 +19,7 @@ func TestZarfPackageValidate(t *testing.T) {
 	tests := []struct {
 		name     string
 		pkg      ZarfPackage
-		wantErrs []error
+		wantErrs []string
 	}{
 		{
 			name: "valid package",
@@ -45,7 +45,7 @@ func TestZarfPackageValidate(t *testing.T) {
 				},
 				Components: []ZarfComponent{},
 			},
-			wantErrs: []error{fmt.Errorf("package must have at least 1 component")},
+			wantErrs: []string{"package must have at least 1 component"},
 		},
 		{
 			name: "invalid package",
@@ -99,19 +99,19 @@ func TestZarfPackageValidate(t *testing.T) {
 					},
 				},
 			},
-			wantErrs: []error{
-				fmt.Errorf(lang.PkgValidateErrPkgName, "-invalid-package"),
-				fmt.Errorf(lang.PkgValidateErrVariable, fmt.Errorf(lang.PkgValidateMustBeUppercase, "not_uppercase")),
-				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantName, "not_uppercase")),
-				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantPattern, "BAD", "^good_val$")),
-				fmt.Errorf(lang.PkgValidateErrComponentName, "-invalid"),
-				fmt.Errorf(lang.PkgValidateErrComponentLocalOS, "-invalid", "unsupportedOS", supportedOS),
-				fmt.Errorf(lang.PkgValidateErrComponentReqDefault, "-invalid"),
-				fmt.Errorf(lang.PkgValidateErrChartNameNotUnique, "chart1"),
-				fmt.Errorf(lang.PkgValidateErrManifestNameNotUnique, "manifest1"),
-				fmt.Errorf(lang.PkgValidateErrComponentReqGrouped, "required-in-group"),
-				fmt.Errorf(lang.PkgValidateErrComponentNameNotUnique, "duplicate"),
-				fmt.Errorf(lang.PkgValidateErrGroupOneComponent, "a-group", "required-in-group"),
+			wantErrs: []string{
+				fmt.Sprintf(lang.PkgValidateErrPkgName, "-invalid-package"),
+				fmt.Errorf(lang.PkgValidateErrVariable, fmt.Errorf(lang.PkgValidateMustBeUppercase, "not_uppercase")).Error(),
+				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantName, "not_uppercase")).Error(),
+				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantPattern, "BAD", "^good_val$")).Error(),
+				fmt.Sprintf(lang.PkgValidateErrComponentName, "-invalid"),
+				fmt.Sprintf(lang.PkgValidateErrComponentLocalOS, "-invalid", "unsupportedOS", supportedOS),
+				fmt.Sprintf(lang.PkgValidateErrComponentReqDefault, "-invalid"),
+				fmt.Sprintf(lang.PkgValidateErrChartNameNotUnique, "chart1"),
+				fmt.Sprintf(lang.PkgValidateErrManifestNameNotUnique, "manifest1"),
+				fmt.Sprintf(lang.PkgValidateErrComponentReqGrouped, "required-in-group"),
+				fmt.Sprintf(lang.PkgValidateErrComponentNameNotUnique, "duplicate"),
+				fmt.Sprintf(lang.PkgValidateErrGroupOneComponent, "a-group", "required-in-group"),
 			},
 		},
 		{
@@ -136,12 +136,12 @@ func TestZarfPackageValidate(t *testing.T) {
 					},
 				},
 			},
-			wantErrs: []error{
-				fmt.Errorf(lang.PkgValidateErrInitNoYOLO),
-				fmt.Errorf(lang.PkgValidateErrYOLONoOCI),
-				fmt.Errorf(lang.PkgValidateErrYOLONoGit),
-				fmt.Errorf(lang.PkgValidateErrYOLONoArch),
-				fmt.Errorf(lang.PkgValidateErrYOLONoDistro),
+			wantErrs: []string{
+				lang.PkgValidateErrInitNoYOLO,
+				lang.PkgValidateErrYOLONoOCI,
+				lang.PkgValidateErrYOLONoGit,
+				lang.PkgValidateErrYOLONoArch,
+				lang.PkgValidateErrYOLONoDistro,
 			},
 		},
 	}
@@ -154,7 +154,7 @@ func TestZarfPackageValidate(t *testing.T) {
 				return
 			}
 			for _, wantErr := range tt.wantErrs {
-				require.ErrorContains(t, err, wantErr.Error())
+				require.ErrorContains(t, err, wantErr)
 			}
 		})
 	}
@@ -167,32 +167,34 @@ func TestValidateManifest(t *testing.T) {
 	}
 	tests := []struct {
 		manifest ZarfManifest
-		wantErr  string
+		wantErrs []string
 	}{
 		{
 			manifest: ZarfManifest{Name: "valid", Files: []string{"a-file"}},
-			wantErr:  "",
+			wantErrs: nil,
 		},
 		{
 			manifest: ZarfManifest{Name: "", Files: []string{"a-file"}},
-			wantErr:  lang.PkgValidateErrManifestNameMissing,
+			wantErrs: []string{lang.PkgValidateErrManifestNameMissing},
 		},
 		{
 			manifest: ZarfManifest{Name: longName, Files: []string{"a-file"}},
-			wantErr:  fmt.Sprintf(lang.PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength),
+			wantErrs: []string{fmt.Sprintf(lang.PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength)},
 		},
 		{
 			manifest: ZarfManifest{Name: "nothing-there"},
-			wantErr:  fmt.Sprintf(lang.PkgValidateErrManifestFileOrKustomize, "nothing-there"),
+			wantErrs: []string{fmt.Sprintf(lang.PkgValidateErrManifestFileOrKustomize, "nothing-there")},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.manifest.Name, func(t *testing.T) {
 			err := tt.manifest.Validate()
-			if tt.wantErr != "" {
-				assert.EqualError(t, err, tt.wantErr)
-			} else {
+			if tt.wantErrs == nil {
 				assert.NoError(t, err)
+				return
+			}
+			for _, wantErr := range tt.wantErrs {
+				assert.EqualError(t, err, wantErr)
 			}
 		})
 	}
