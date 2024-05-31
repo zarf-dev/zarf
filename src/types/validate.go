@@ -40,27 +40,28 @@ func SupportedOS() []string {
 
 // Validate runs all validation checks on the package.
 func (pkg ZarfPackage) Validate() error {
+	errs := []error{}
 	if pkg.Kind == ZarfInitConfig && pkg.Metadata.YOLO {
-		return fmt.Errorf(lang.PkgValidateErrInitNoYOLO)
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrInitNoYOLO))
 	}
 
 	if !IsLowercaseNumberHyphenNoStartHyphen(pkg.Metadata.Name) {
-		return fmt.Errorf(lang.PkgValidateErrPkgName, pkg.Metadata.Name)
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrPkgName, pkg.Metadata.Name))
 	}
 
 	if len(pkg.Components) == 0 {
-		return errors.New("package must have at least 1 component")
+		errs = append(errs, fmt.Errorf("package must have at least 1 component"))
 	}
 
 	for _, variable := range pkg.Variables {
 		if err := variable.Validate(); err != nil {
-			return fmt.Errorf(lang.PkgValidateErrVariable, err)
+			errs = append(errs, fmt.Errorf(lang.PkgValidateErrVariable, err))
 		}
 	}
 
 	for _, constant := range pkg.Constants {
 		if err := constant.Validate(); err != nil {
-			return fmt.Errorf(lang.PkgValidateErrConstant, err)
+			errs = append(errs, fmt.Errorf(lang.PkgValidateErrConstant, err))
 		}
 	}
 
@@ -71,19 +72,19 @@ func (pkg ZarfPackage) Validate() error {
 	if pkg.Metadata.YOLO {
 		for _, component := range pkg.Components {
 			if len(component.Images) > 0 {
-				return fmt.Errorf(lang.PkgValidateErrYOLONoOCI)
+				errs = append(errs, fmt.Errorf(lang.PkgValidateErrYOLONoOCI))
 			}
 
 			if len(component.Repos) > 0 {
-				return fmt.Errorf(lang.PkgValidateErrYOLONoGit)
+				errs = append(errs, fmt.Errorf(lang.PkgValidateErrYOLONoGit))
 			}
 
 			if component.Only.Cluster.Architecture != "" {
-				return fmt.Errorf(lang.PkgValidateErrYOLONoArch)
+				errs = append(errs, fmt.Errorf(lang.PkgValidateErrYOLONoArch))
 			}
 
 			if len(component.Only.Cluster.Distros) > 0 {
-				return fmt.Errorf(lang.PkgValidateErrYOLONoDistro)
+				errs = append(errs, fmt.Errorf(lang.PkgValidateErrYOLONoDistro))
 			}
 		}
 	}
@@ -91,24 +92,24 @@ func (pkg ZarfPackage) Validate() error {
 	for _, component := range pkg.Components {
 		// ensure component name is unique
 		if _, ok := uniqueComponentNames[component.Name]; ok {
-			return fmt.Errorf(lang.PkgValidateErrComponentNameNotUnique, component.Name)
+			errs = append(errs, fmt.Errorf(lang.PkgValidateErrComponentNameNotUnique, component.Name))
 		}
 		uniqueComponentNames[component.Name] = true
 
 		if !IsLowercaseNumberHyphenNoStartHyphen(component.Name) {
-			return fmt.Errorf(lang.PkgValidateErrComponentName, component.Name)
+			errs = append(errs, fmt.Errorf(lang.PkgValidateErrComponentName, component.Name))
 		}
 
 		if !slices.Contains(supportedOS, component.Only.LocalOS) {
-			return fmt.Errorf(lang.PkgValidateErrComponentLocalOS, component.Name, component.Only.LocalOS, supportedOS)
+			errs = append(errs, fmt.Errorf(lang.PkgValidateErrComponentLocalOS, component.Name, component.Only.LocalOS, supportedOS))
 		}
 
 		if component.IsRequired() {
 			if component.Default {
-				return fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name)
+				errs = append(errs, fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name))
 			}
 			if component.DeprecatedGroup != "" {
-				return fmt.Errorf(lang.PkgValidateErrComponentReqGrouped, component.Name)
+				errs = append(errs, fmt.Errorf(lang.PkgValidateErrComponentReqGrouped, component.Name))
 			}
 		}
 
@@ -116,12 +117,12 @@ func (pkg ZarfPackage) Validate() error {
 		for _, chart := range component.Charts {
 			// ensure chart name is unique
 			if _, ok := uniqueChartNames[chart.Name]; ok {
-				return fmt.Errorf(lang.PkgValidateErrChartNameNotUnique, chart.Name)
+				errs = append(errs, fmt.Errorf(lang.PkgValidateErrChartNameNotUnique, chart.Name))
 			}
 			uniqueChartNames[chart.Name] = true
 
 			if err := chart.Validate(); err != nil {
-				return fmt.Errorf(lang.PkgValidateErrChart, err)
+				errs = append(errs, fmt.Errorf(lang.PkgValidateErrChart, err))
 			}
 		}
 
@@ -129,24 +130,24 @@ func (pkg ZarfPackage) Validate() error {
 		for _, manifest := range component.Manifests {
 			// ensure manifest name is unique
 			if _, ok := uniqueManifestNames[manifest.Name]; ok {
-				return fmt.Errorf(lang.PkgValidateErrManifestNameNotUnique, manifest.Name)
+				errs = append(errs, fmt.Errorf(lang.PkgValidateErrManifestNameNotUnique, manifest.Name))
 			}
 			uniqueManifestNames[manifest.Name] = true
 
 			if err := manifest.Validate(); err != nil {
-				return fmt.Errorf(lang.PkgValidateErrManifest, err)
+				errs = append(errs, fmt.Errorf(lang.PkgValidateErrManifest, err))
 			}
 		}
 
 		if err := component.Actions.Validate(); err != nil {
-			return fmt.Errorf("%q: %w", component.Name, err)
+			errs = append(errs, fmt.Errorf("%q: %w", component.Name, err))
 		}
 
 		// ensure groups don't have multiple defaults or only one component
 		if component.DeprecatedGroup != "" {
 			if component.Default {
 				if _, ok := groupDefault[component.DeprecatedGroup]; ok {
-					return fmt.Errorf(lang.PkgValidateErrGroupMultipleDefaults, component.DeprecatedGroup, groupDefault[component.DeprecatedGroup], component.Name)
+					errs = append(errs, fmt.Errorf(lang.PkgValidateErrGroupMultipleDefaults, component.DeprecatedGroup, groupDefault[component.DeprecatedGroup], component.Name))
 				}
 				groupDefault[component.DeprecatedGroup] = component.Name
 			}
@@ -156,11 +157,11 @@ func (pkg ZarfPackage) Validate() error {
 
 	for groupKey, componentNames := range groupedComponents {
 		if len(componentNames) == 1 {
-			return fmt.Errorf(lang.PkgValidateErrGroupOneComponent, groupKey, componentNames[0])
+			errs = append(errs, fmt.Errorf(lang.PkgValidateErrGroupOneComponent, groupKey, componentNames[0]))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // Validate runs all validation checks on component actions.
