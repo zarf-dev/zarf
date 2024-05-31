@@ -6,6 +6,7 @@ package types
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers"
@@ -163,9 +164,8 @@ func TestZarfPackageValidate(t *testing.T) {
 				require.NoError(t, err)
 				return
 			}
-			for _, wantErr := range tt.wantErrs {
-				require.ErrorContains(t, err, wantErr)
-			}
+			errs := strings.Split(err.Error(), "\n")
+			require.ElementsMatch(t, errs, tt.wantErrs)
 		})
 	}
 }
@@ -187,7 +187,7 @@ func TestValidateManifest(t *testing.T) {
 		},
 		{
 			name:     "empty name",
-			manifest: ZarfManifest{Name: ""},
+			manifest: ZarfManifest{Name: "", Files: []string{"a-file"}},
 			wantErrs: []string{lang.PkgValidateErrManifestNameMissing},
 		},
 		{
@@ -208,9 +208,8 @@ func TestValidateManifest(t *testing.T) {
 				require.NoError(t, err)
 				return
 			}
-			for _, wantErr := range tt.wantErrs {
-				require.ErrorContains(t, err, wantErr)
-			}
+			errs := strings.Split(err.Error(), "\n")
+			require.ElementsMatch(t, errs, tt.wantErrs)
 		})
 	}
 }
@@ -232,12 +231,12 @@ func TestValidateChart(t *testing.T) {
 		},
 		{
 			name:     "empty name",
-			chart:    ZarfChart{Name: ""},
+			chart:    ZarfChart{Name: "", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
 			wantErrs: []string{lang.PkgValidateErrChartNameMissing},
 		},
 		{
 			name:  "long name",
-			chart: ZarfChart{Name: longName},
+			chart: ZarfChart{Name: longName, Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
 			wantErrs: []string{
 				fmt.Sprintf(lang.PkgValidateErrChartName, longName, ZarfMaxChartNameLength),
 			},
@@ -253,7 +252,7 @@ func TestValidateChart(t *testing.T) {
 		},
 		{
 			name:  "both url and local path",
-			chart: ZarfChart{Name: "invalid", Namespace: "whatever", URL: "http://whatever", LocalPath: "wherever"},
+			chart: ZarfChart{Name: "invalid", Namespace: "whatever", URL: "http://whatever", LocalPath: "wherever", Version: "v1.0.0"},
 			wantErrs: []string{
 				fmt.Sprintf(lang.PkgValidateErrChartURLOrPath, "invalid"),
 			},
@@ -266,9 +265,8 @@ func TestValidateChart(t *testing.T) {
 				require.NoError(t, err)
 				return
 			}
-			for _, wantErr := range tt.wantErrs {
-				require.ErrorContains(t, err, wantErr)
-			}
+			errs := strings.Split(err.Error(), "\n")
+			require.ElementsMatch(t, tt.wantErrs, errs)
 		})
 	}
 }
@@ -320,7 +318,7 @@ func TestValidateComponentActions(t *testing.T) {
 					Before: []ZarfComponentAction{
 						{
 							Cmd:  "create",
-							Wait: &ZarfComponentActionWait{},
+							Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}},
 						},
 					},
 				},
@@ -328,7 +326,7 @@ func TestValidateComponentActions(t *testing.T) {
 					After: []ZarfComponentAction{
 						{
 							Cmd:  "deploy",
-							Wait: &ZarfComponentActionWait{},
+							Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}},
 						},
 					},
 				},
@@ -336,7 +334,7 @@ func TestValidateComponentActions(t *testing.T) {
 					OnSuccess: []ZarfComponentAction{
 						{
 							Cmd:  "remove",
-							Wait: &ZarfComponentActionWait{},
+							Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}},
 						},
 					},
 				},
@@ -356,60 +354,51 @@ func TestValidateComponentActions(t *testing.T) {
 				require.NoError(t, err)
 				return
 			}
-			require.Error(t, err)
-			for _, wantErr := range tt.wantErrs {
-				require.Contains(t, err.Error(), wantErr)
-			}
+			errs := strings.Split(err.Error(), "\n")
+			require.ElementsMatch(t, tt.wantErrs, errs)
 		})
 	}
 }
 
-func TestZarfComponentAction_Validate(t *testing.T) {
+func TestValidateComponentAction(t *testing.T) {
 	tests := []struct {
-		name        string
-		action      ZarfComponentAction
-		expectError bool
-		wantErr     string
+		name     string
+		action   ZarfComponentAction
+		wantErrs []string
 	}{
 		{
-			name:        "valid action no conditions",
-			action:      ZarfComponentAction{},
-			expectError: false,
+			name:   "valid action no conditions",
+			action: ZarfComponentAction{},
 		},
 		{
-			name: "cmd and wait both set",
+			name: "cmd and wait both set, nothing in wait",
 			action: ZarfComponentAction{
 				Cmd:  "ls",
-				Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}},
+				Wait: &ZarfComponentActionWait{},
 			},
-			wantErr: fmt.Sprintf(lang.PkgValidateErrActionCmdWait, "ls"),
+			wantErrs: []string{
+				fmt.Sprintf(lang.PkgValidateErrActionCmdWait, "ls"),
+				lang.PkgValidateErrActionClusterNetwork,
+			},
 		},
 		{
 			name: "cluster and network both set",
 			action: ZarfComponentAction{
 				Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}, Network: &ZarfComponentActionWaitNetwork{}},
 			},
-			expectError: true,
-			wantErr:     fmt.Sprintf(lang.PkgValidateErrActionClusterNetwork),
-		},
-		{
-			name: "neither cluster nor network set",
-			action: ZarfComponentAction{
-				Wait: &ZarfComponentActionWait{},
-			},
-			expectError: true,
-			wantErr:     lang.PkgValidateErrActionClusterNetwork,
+			wantErrs: []string{fmt.Sprintf(lang.PkgValidateErrActionClusterNetwork)},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.action.Validate()
-			if tt.wantErr != "" {
-				require.ErrorContains(t, err, tt.wantErr)
-			} else {
+			if tt.wantErrs == nil {
 				require.NoError(t, err)
+				return
 			}
+			errs := strings.Split(err.Error(), "\n")
+			require.ElementsMatch(t, tt.wantErrs, errs)
 		})
 	}
 }
@@ -479,7 +468,7 @@ func TestValidateZarfComponent(t *testing.T) {
 			component: ZarfComponent{
 				Name: "invalid4",
 				Import: ZarfComponentImport{
-					URL: "ftp://example.com",
+					URL: "https://example.com",
 				},
 			},
 			wantErrs: []string{
@@ -495,9 +484,8 @@ func TestValidateZarfComponent(t *testing.T) {
 				require.NoError(t, err)
 				return
 			}
-			for _, wantErr := range tt.wantErrs {
-				require.ErrorContains(t, err, wantErr)
-			}
+			errs := strings.Split(err.Error(), "\n")
+			require.ElementsMatch(t, tt.wantErrs, errs)
 		})
 	}
 }
