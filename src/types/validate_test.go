@@ -52,7 +52,13 @@ func TestZarfPackageValidate(t *testing.T) {
 				},
 				Components: []ZarfComponent{
 					{
-						Name: "component1",
+						Name: "-invalid",
+					},
+					{
+						Name: "duplicate",
+					},
+					{
+						Name: "duplicate",
 					},
 				},
 				Variables: []variables.InteractiveVariable{
@@ -76,6 +82,8 @@ func TestZarfPackageValidate(t *testing.T) {
 				fmt.Errorf(lang.PkgValidateErrVariable, fmt.Errorf(lang.PkgValidateMustBeUppercase, "not_uppercase")).Error(),
 				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantName, "not_uppercase")).Error(),
 				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantPattern, "BAD", "^good_val$")).Error(),
+				fmt.Sprintf(lang.PkgValidateErrComponentName, "-invalid"),
+				fmt.Sprintf(lang.PkgValidateErrComponentNameNotUnique, "duplicate"),
 			}, "\n"),
 		},
 		{
@@ -87,68 +95,26 @@ func TestZarfPackageValidate(t *testing.T) {
 				},
 				Components: []ZarfComponent{
 					{
-						Name:   "component1",
-						Images: []string{"an-image"}},
+						Name:   "yolo",
+						Images: []string{"an-image"},
+						Repos:  []string{"a-repo"},
+						Only: ZarfComponentOnlyTarget{
+							Cluster: ZarfComponentOnlyCluster{
+								Architecture: "not-empty",
+								Distros:      []string{"not-empty"},
+							},
+						},
+					},
 				},
 			},
 			wantErr: strings.Join([]string{
 				lang.PkgValidateErrInitNoYOLO,
 				lang.PkgValidateErrYOLONoOCI,
+				lang.PkgValidateErrYOLONoGit,
+				lang.PkgValidateErrYOLONoArch,
+				lang.PkgValidateErrYOLONoDistro,
 			}, "\n"),
 		},
-		// {
-		// 	pkg: ZarfPackage{
-		// 		Kind: ZarfPackageConfig,
-		// 		Metadata: ZarfMetadata{
-		// 			Name: "yolo-repos",
-		// 			YOLO: true,
-		// 		},
-		// 		Components: []ZarfComponent{
-		// 			{
-		// 				Name:  "component1",
-		// 				Repos: []string{"a-repo"}},
-		// 		},
-		// 	},
-		// 	wantErr: lang.PkgValidateErrYOLONoGit,
-		// },
-		// {
-		// 	pkg: ZarfPackage{
-		// 		Kind: ZarfPackageConfig,
-		// 		Metadata: ZarfMetadata{
-		// 			Name: "yolo-arch",
-		// 			YOLO: true,
-		// 		},
-		// 		Components: []ZarfComponent{
-		// 			{
-		// 				Name: "component1",
-		// 				Only: ZarfComponentOnlyTarget{
-		// 					Cluster: ZarfComponentOnlyCluster{
-		// 						Architecture: "not-empty",
-		// 					},
-		// 				}},
-		// 		},
-		// 	},
-		// 	wantErr: lang.PkgValidateErrYOLONoArch,
-		// },
-		// {
-		// 	pkg: ZarfPackage{
-		// 		Kind: ZarfPackageConfig,
-		// 		Metadata: ZarfMetadata{
-		// 			Name: "yolo-distro",
-		// 			YOLO: true,
-		// 		},
-		// 		Components: []ZarfComponent{
-		// 			{
-		// 				Name: "component1",
-		// 				Only: ZarfComponentOnlyTarget{
-		// 					Cluster: ZarfComponentOnlyCluster{
-		// 						Distros: []string{"not-empty"},
-		// 					},
-		// 				}},
-		// 		},
-		// 	},
-		// 	wantErr: lang.PkgValidateErrYOLONoDistro,
-		// },
 		// {
 		// 	pkg: ZarfPackage{
 		// 		Kind: ZarfPackageConfig,
@@ -164,7 +130,7 @@ func TestZarfPackageValidate(t *testing.T) {
 		// 			},
 		// 		},
 		// 	},
-		// 	wantErr: fmt.Sprintf(lang.PkgValidateErrComponentNameNotUnique, "component1"),
+		// 	wantErr: ,
 		// },
 		// {
 		// 	pkg: ZarfPackage{
