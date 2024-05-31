@@ -322,20 +322,21 @@ func (chart ZarfChart) Validate() error {
 
 // Validate runs all validation checks on a manifest.
 func (manifest ZarfManifest) Validate() error {
+	errs := []error{}
 	// Don't allow empty names
 	if manifest.Name == "" {
-		return fmt.Errorf(lang.PkgValidateErrManifestNameMissing)
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrManifestNameMissing))
 	}
 
 	// Helm max release name
 	if len(manifest.Name) > ZarfMaxChartNameLength {
-		return fmt.Errorf(lang.PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength)
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))
 	}
 
 	// Require files in manifest
 	if len(manifest.Files) < 1 && len(manifest.Kustomizations) < 1 {
-		return fmt.Errorf(lang.PkgValidateErrManifestFileOrKustomize, manifest.Name)
+		errs = append(errs, fmt.Errorf(lang.PkgValidateErrManifestFileOrKustomize, manifest.Name))
 	}
 
-	return nil
+	return errors.Join(errs...)
 }

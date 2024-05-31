@@ -11,7 +11,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/variables"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -150,7 +149,7 @@ func TestZarfPackageValidate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.pkg.Validate()
 			if tt.wantErrs == nil {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				return
 			}
 			for _, wantErr := range tt.wantErrs {
@@ -168,33 +167,38 @@ func TestValidateManifest(t *testing.T) {
 	tests := []struct {
 		manifest ZarfManifest
 		wantErrs []string
+		name     string
 	}{
 		{
+			name:     "valid",
 			manifest: ZarfManifest{Name: "valid", Files: []string{"a-file"}},
 			wantErrs: nil,
 		},
 		{
-			manifest: ZarfManifest{Name: "", Files: []string{"a-file"}},
+			name:     "empty name",
+			manifest: ZarfManifest{Name: ""},
 			wantErrs: []string{lang.PkgValidateErrManifestNameMissing},
 		},
 		{
+			name:     "long name",
 			manifest: ZarfManifest{Name: longName, Files: []string{"a-file"}},
 			wantErrs: []string{fmt.Sprintf(lang.PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength)},
 		},
 		{
+			name:     "no files or kustomize",
 			manifest: ZarfManifest{Name: "nothing-there"},
 			wantErrs: []string{fmt.Sprintf(lang.PkgValidateErrManifestFileOrKustomize, "nothing-there")},
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.manifest.Name, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			err := tt.manifest.Validate()
 			if tt.wantErrs == nil {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				return
 			}
 			for _, wantErr := range tt.wantErrs {
-				assert.EqualError(t, err, wantErr)
+				require.ErrorContains(t, err, wantErr)
 			}
 		})
 	}
