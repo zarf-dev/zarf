@@ -7,6 +7,7 @@ package message
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -59,6 +60,11 @@ func (d *DebugWriter) Write(raw []byte) (int, error) {
 }
 
 func init() {
+	InitializePTerm(os.Stderr)
+}
+
+// InitializePTerm sets the default styles and output for pterm.
+func InitializePTerm(w io.Writer) {
 	pterm.ThemeDefault.SuccessMessageStyle = *pterm.NewStyle(pterm.FgLightGreen)
 	// Customize default error.
 	pterm.Success.Prefix = pterm.Prefix{
@@ -73,7 +79,7 @@ func init() {
 		Text: " •",
 	}
 
-	pterm.SetDefaultOutput(os.Stderr)
+	pterm.SetDefaultOutput(w)
 }
 
 // UseLogFile wraps a given file in a PausableWriter
