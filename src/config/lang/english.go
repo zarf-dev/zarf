@@ -722,10 +722,10 @@ const (
 	PkgValidateErrPkgConstantPattern      = "provided value for constant %q does not match pattern %q"
 	PkgValidateErrPkgName                 = "package name %q must be all lowercase and contain no special characters except '-' and cannot start with a '-'"
 	PkgValidateErrVariable                = "invalid package variable: %w"
-	PkgValidateErrYOLONoArch              = "cluster architecture not allowed"
-	PkgValidateErrYOLONoDistro            = "cluster distros not allowed"
-	PkgValidateErrYOLONoGit               = "git repos not allowed"
-	PkgValidateErrYOLONoOCI               = "OCI images not allowed"
+	PkgValidateErrYOLONoArch              = "cluster architecture not allowed in YOLO"
+	PkgValidateErrYOLONoDistro            = "cluster distros not allowed in YOLO"
+	PkgValidateErrYOLONoGit               = "git repos not allowed in YOLO"
+	PkgValidateErrYOLONoOCI               = "OCI images not allowed in YOLO"
 )
 
 // Collection of reusable error messages.
