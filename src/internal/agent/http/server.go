@@ -18,15 +18,13 @@ import (
 )
 
 // NewAdmissionServer creates a http.Server for the mutating webhook admission handler.
-func NewAdmissionServer(port string) *http.Server {
+func NewAdmissionServer(ctx context.Context, port string) *http.Server {
 	message.Debugf("http.NewAdmissionServer(%s)", port)
 
 	c, err := cluster.NewCluster()
 	if err != nil {
 		message.Fatalf(err, err.Error())
 	}
-
-	ctx := context.Background()
 
 	// Instances hooks
 	podsMutation := hooks.NewPodMutationHook(ctx, c)
