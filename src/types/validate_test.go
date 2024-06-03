@@ -159,7 +159,9 @@ func TestZarfPackageValidate(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.pkg.Validate()
 			if tt.wantErrs == nil {
 				require.NoError(t, err)
@@ -203,7 +205,9 @@ func TestValidateManifest(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.manifest.Validate()
 			if tt.wantErrs == nil {
 				require.NoError(t, err)
@@ -260,7 +264,9 @@ func TestValidateChart(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.chart.Validate()
 			if tt.wantErrs == nil {
 				require.NoError(t, err)
@@ -349,7 +355,9 @@ func TestValidateComponentActions(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.actions.validate()
 			if tt.wantErrs == nil {
 				require.NoError(t, err)
@@ -392,7 +400,9 @@ func TestValidateComponentAction(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.action.Validate()
 			if tt.wantErrs == nil {
 				require.NoError(t, err)
@@ -481,7 +491,9 @@ func TestValidateZarfComponent(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.component.Validate()
 			if tt.wantErrs == nil {
 				require.NoError(t, err)
