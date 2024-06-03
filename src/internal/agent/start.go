@@ -30,7 +30,7 @@ const (
 // StartWebhook launches the Zarf agent mutating webhook in the cluster.
 func StartWebhook(ctx context.Context) error {
 	message.Debug("agent.StartWebhook()")
-	return startServer(ctx, agentHttp.NewAdmissionServer(httpPort))
+	return startServer(ctx, agentHttp.NewAdmissionServer(ctx, httpPort))
 }
 
 // StartHTTPProxy launches the zarf agent proxy in the cluster.
