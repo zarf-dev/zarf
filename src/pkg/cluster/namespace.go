@@ -6,10 +6,12 @@ package cluster
 
 import (
 	"context"
+	"time"
 
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -18,7 +20,30 @@ func (c *Cluster) DeleteZarfNamespace(ctx context.Context) error {
 	spinner := message.NewProgressSpinner("Deleting the zarf namespace from this cluster")
 	defer spinner.Stop()
 
-	return c.DeleteNamespace(ctx, ZarfNamespaceName)
+	err := c.Clientset.CoreV1().Namespaces().Delete(ctx, ZarfNamespaceName, metav1.DeleteOptions{})
+	if kerrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	timer := time.NewTimer(0)
+	defer timer.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timer.C:
+			_, err := c.Clientset.CoreV1().Namespaces().Get(ctx, ZarfNamespaceName, metav1.GetOptions{})
+			if kerrors.IsNotFound(err) {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			timer.Reset(1 * time.Second)
+		}
+	}
 }
 
 // NewZarfManagedNamespace returns a corev1.Namespace with Zarf-managed labels
