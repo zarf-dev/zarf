@@ -17,6 +17,7 @@ import (
 )
 
 func TestZarfPackageValidate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		pkg          ZarfPackage
@@ -174,6 +175,7 @@ func TestZarfPackageValidate(t *testing.T) {
 }
 
 func TestValidateManifest(t *testing.T) {
+	t.Parallel()
 	longName := strings.Repeat("a", ZarfMaxChartNameLength+1)
 	tests := []struct {
 		manifest     ZarfManifest
@@ -217,6 +219,7 @@ func TestValidateManifest(t *testing.T) {
 }
 
 func TestValidateChart(t *testing.T) {
+	t.Parallel()
 	longName := strings.Repeat("a", ZarfMaxChartNameLength+1)
 	tests := []struct {
 		chart        ZarfChart
@@ -273,6 +276,7 @@ func TestValidateChart(t *testing.T) {
 }
 
 func TestValidateComponentActions(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		actions      ZarfComponentActions
@@ -364,6 +368,7 @@ func TestValidateComponentActions(t *testing.T) {
 }
 
 func TestValidateComponentAction(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		action       ZarfComponentAction
@@ -409,6 +414,7 @@ func TestValidateComponentAction(t *testing.T) {
 }
 
 func TestValidateZarfComponent(t *testing.T) {
+	t.Parallel()
 	absPath, err := filepath.Abs("abs")
 	require.NoError(t, err)
 	tests := []struct {
