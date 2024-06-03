@@ -18,9 +18,9 @@ import (
 
 func TestZarfPackageValidate(t *testing.T) {
 	tests := []struct {
-		name     string
-		pkg      ZarfPackage
-		wantErrs []string
+		name         string
+		pkg          ZarfPackage
+		expectedErrs []string
 	}{
 		{
 			name: "valid package",
@@ -35,7 +35,7 @@ func TestZarfPackageValidate(t *testing.T) {
 					},
 				},
 			},
-			wantErrs: nil,
+			expectedErrs: nil,
 		},
 		{
 			name: "no components",
@@ -46,7 +46,7 @@ func TestZarfPackageValidate(t *testing.T) {
 				},
 				Components: []ZarfComponent{},
 			},
-			wantErrs: []string{"package must have at least 1 component"},
+			expectedErrs: []string{"package must have at least 1 component"},
 		},
 		{
 			name: "invalid package",
@@ -110,7 +110,7 @@ func TestZarfPackageValidate(t *testing.T) {
 					},
 				},
 			},
-			wantErrs: []string{
+			expectedErrs: []string{
 				fmt.Sprintf(lang.PkgValidateErrPkgName, "-invalid-package"),
 				fmt.Errorf(lang.PkgValidateErrVariable, fmt.Errorf(lang.PkgValidateMustBeUppercase, "not_uppercase")).Error(),
 				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantName, "not_uppercase")).Error(),
@@ -148,7 +148,7 @@ func TestZarfPackageValidate(t *testing.T) {
 					},
 				},
 			},
-			wantErrs: []string{
+			expectedErrs: []string{
 				lang.PkgValidateErrInitNoYOLO,
 				lang.PkgValidateErrYOLONoOCI,
 				lang.PkgValidateErrYOLONoGit,
@@ -163,45 +163,42 @@ func TestZarfPackageValidate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := tt.pkg.Validate()
-			if tt.wantErrs == nil {
+			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
 			}
 			errs := strings.Split(err.Error(), "\n")
-			require.ElementsMatch(t, errs, tt.wantErrs)
+			require.ElementsMatch(t, errs, tt.expectedErrs)
 		})
 	}
 }
 
 func TestValidateManifest(t *testing.T) {
-	longName := ""
-	for range ZarfMaxChartNameLength + 1 {
-		longName += "a"
-	}
+	longName := strings.Repeat("a", ZarfMaxChartNameLength+1)
 	tests := []struct {
-		manifest ZarfManifest
-		wantErrs []string
-		name     string
+		manifest     ZarfManifest
+		expectedErrs []string
+		name         string
 	}{
 		{
-			name:     "valid",
-			manifest: ZarfManifest{Name: "valid", Files: []string{"a-file"}},
-			wantErrs: nil,
+			name:         "valid",
+			manifest:     ZarfManifest{Name: "valid", Files: []string{"a-file"}},
+			expectedErrs: nil,
 		},
 		{
-			name:     "empty name",
-			manifest: ZarfManifest{Name: "", Files: []string{"a-file"}},
-			wantErrs: []string{lang.PkgValidateErrManifestNameMissing},
+			name:         "empty name",
+			manifest:     ZarfManifest{Name: "", Files: []string{"a-file"}},
+			expectedErrs: []string{lang.PkgValidateErrManifestNameMissing},
 		},
 		{
-			name:     "long name",
-			manifest: ZarfManifest{Name: longName, Files: []string{"a-file"}},
-			wantErrs: []string{fmt.Sprintf(lang.PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength)},
+			name:         "long name",
+			manifest:     ZarfManifest{Name: longName, Files: []string{"a-file"}},
+			expectedErrs: []string{fmt.Sprintf(lang.PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength)},
 		},
 		{
-			name:     "no files or kustomize",
-			manifest: ZarfManifest{Name: "nothing-there"},
-			wantErrs: []string{fmt.Sprintf(lang.PkgValidateErrManifestFileOrKustomize, "nothing-there")},
+			name:         "no files or kustomize",
+			manifest:     ZarfManifest{Name: "nothing-there"},
+			expectedErrs: []string{fmt.Sprintf(lang.PkgValidateErrManifestFileOrKustomize, "nothing-there")},
 		},
 	}
 	for _, tt := range tests {
@@ -209,47 +206,44 @@ func TestValidateManifest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := tt.manifest.Validate()
-			if tt.wantErrs == nil {
+			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
 			}
 			errs := strings.Split(err.Error(), "\n")
-			require.ElementsMatch(t, errs, tt.wantErrs)
+			require.ElementsMatch(t, errs, tt.expectedErrs)
 		})
 	}
 }
 
 func TestValidateChart(t *testing.T) {
-	longName := ""
-	for range ZarfMaxChartNameLength + 1 {
-		longName += "a"
-	}
+	longName := strings.Repeat("a", ZarfMaxChartNameLength+1)
 	tests := []struct {
-		chart    ZarfChart
-		wantErrs []string
-		name     string
+		chart        ZarfChart
+		expectedErrs []string
+		name         string
 	}{
 		{
-			name:     "valid",
-			chart:    ZarfChart{Name: "chart1", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
-			wantErrs: nil,
+			name:         "valid",
+			chart:        ZarfChart{Name: "chart1", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
+			expectedErrs: nil,
 		},
 		{
-			name:     "empty name",
-			chart:    ZarfChart{Name: "", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
-			wantErrs: []string{lang.PkgValidateErrChartNameMissing},
+			name:         "empty name",
+			chart:        ZarfChart{Name: "", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
+			expectedErrs: []string{lang.PkgValidateErrChartNameMissing},
 		},
 		{
 			name:  "long name",
 			chart: ZarfChart{Name: longName, Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
-			wantErrs: []string{
+			expectedErrs: []string{
 				fmt.Sprintf(lang.PkgValidateErrChartName, longName, ZarfMaxChartNameLength),
 			},
 		},
 		{
 			name:  "no url or local path",
 			chart: ZarfChart{Name: "invalid"},
-			wantErrs: []string{
+			expectedErrs: []string{
 				fmt.Sprintf(lang.PkgValidateErrChartNamespaceMissing, "invalid"),
 				fmt.Sprintf(lang.PkgValidateErrChartURLOrPath, "invalid"),
 				fmt.Sprintf(lang.PkgValidateErrChartVersion, "invalid"),
@@ -258,7 +252,7 @@ func TestValidateChart(t *testing.T) {
 		{
 			name:  "both url and local path",
 			chart: ZarfChart{Name: "invalid", Namespace: "whatever", URL: "http://whatever", LocalPath: "wherever", Version: "v1.0.0"},
-			wantErrs: []string{
+			expectedErrs: []string{
 				fmt.Sprintf(lang.PkgValidateErrChartURLOrPath, "invalid"),
 			},
 		},
@@ -268,21 +262,21 @@ func TestValidateChart(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := tt.chart.Validate()
-			if tt.wantErrs == nil {
+			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
 			}
 			errs := strings.Split(err.Error(), "\n")
-			require.ElementsMatch(t, tt.wantErrs, errs)
+			require.ElementsMatch(t, tt.expectedErrs, errs)
 		})
 	}
 }
 
 func TestValidateComponentActions(t *testing.T) {
 	tests := []struct {
-		name     string
-		actions  ZarfComponentActions
-		wantErrs []string
+		name         string
+		actions      ZarfComponentActions
+		expectedErrs []string
 	}{
 		{
 			name: "valid actions",
@@ -302,7 +296,7 @@ func TestValidateComponentActions(t *testing.T) {
 					},
 				},
 			},
-			wantErrs: nil,
+			expectedErrs: nil,
 		},
 		{
 			name: "setVariables in onCreate",
@@ -316,7 +310,7 @@ func TestValidateComponentActions(t *testing.T) {
 					},
 				},
 			},
-			wantErrs: []string{"cannot contain setVariables outside of onDeploy in actions"},
+			expectedErrs: []string{"cannot contain setVariables outside of onDeploy in actions"},
 		},
 		{
 			name: "invalid onCreate action",
@@ -346,7 +340,7 @@ func TestValidateComponentActions(t *testing.T) {
 					},
 				},
 			},
-			wantErrs: []string{
+			expectedErrs: []string{
 				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "create")).Error(),
 				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "deploy")).Error(),
 				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "remove")).Error(),
@@ -359,21 +353,21 @@ func TestValidateComponentActions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := tt.actions.validate()
-			if tt.wantErrs == nil {
+			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
 			}
 			errs := strings.Split(err.Error(), "\n")
-			require.ElementsMatch(t, tt.wantErrs, errs)
+			require.ElementsMatch(t, tt.expectedErrs, errs)
 		})
 	}
 }
 
 func TestValidateComponentAction(t *testing.T) {
 	tests := []struct {
-		name     string
-		action   ZarfComponentAction
-		wantErrs []string
+		name         string
+		action       ZarfComponentAction
+		expectedErrs []string
 	}{
 		{
 			name:   "valid action no conditions",
@@ -385,7 +379,7 @@ func TestValidateComponentAction(t *testing.T) {
 				Cmd:  "ls",
 				Wait: &ZarfComponentActionWait{},
 			},
-			wantErrs: []string{
+			expectedErrs: []string{
 				fmt.Sprintf(lang.PkgValidateErrActionCmdWait, "ls"),
 				lang.PkgValidateErrActionClusterNetwork,
 			},
@@ -395,7 +389,7 @@ func TestValidateComponentAction(t *testing.T) {
 			action: ZarfComponentAction{
 				Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}, Network: &ZarfComponentActionWaitNetwork{}},
 			},
-			wantErrs: []string{fmt.Sprintf(lang.PkgValidateErrActionClusterNetwork)},
+			expectedErrs: []string{fmt.Sprintf(lang.PkgValidateErrActionClusterNetwork)},
 		},
 	}
 
@@ -404,12 +398,12 @@ func TestValidateComponentAction(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := tt.action.Validate()
-			if tt.wantErrs == nil {
+			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
 			}
 			errs := strings.Split(err.Error(), "\n")
-			require.ElementsMatch(t, tt.wantErrs, errs)
+			require.ElementsMatch(t, tt.expectedErrs, errs)
 		})
 	}
 }
@@ -418,9 +412,9 @@ func TestValidateZarfComponent(t *testing.T) {
 	absPath, err := filepath.Abs("abs")
 	require.NoError(t, err)
 	tests := []struct {
-		component ZarfComponent
-		wantErrs  []string
-		name      string
+		component    ZarfComponent
+		expectedErrs []string
+		name         string
 	}{
 		{
 			name: "valid path",
@@ -430,7 +424,7 @@ func TestValidateZarfComponent(t *testing.T) {
 					Path: "relative/path",
 				},
 			},
-			wantErrs: nil,
+			expectedErrs: nil,
 		},
 		{
 			name: "valid URL",
@@ -440,14 +434,14 @@ func TestValidateZarfComponent(t *testing.T) {
 					URL: "oci://example.com/package:v0.0.1",
 				},
 			},
-			wantErrs: nil,
+			expectedErrs: nil,
 		},
 		{
 			name: "neither path nor URL provided",
 			component: ZarfComponent{
 				Name: "neither",
 			},
-			wantErrs: []string{
+			expectedErrs: []string{
 				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "neither", "neither a path nor a URL was provided"),
 			},
 		},
@@ -460,7 +454,7 @@ func TestValidateZarfComponent(t *testing.T) {
 					URL:  "https://example.com",
 				},
 			},
-			wantErrs: []string{
+			expectedErrs: []string{
 				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "both", "both a path and a URL were provided"),
 			},
 		},
@@ -472,7 +466,7 @@ func TestValidateZarfComponent(t *testing.T) {
 					Path: absPath,
 				},
 			},
-			wantErrs: []string{
+			expectedErrs: []string{
 				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "abs-path", "path cannot be an absolute path"),
 			},
 		},
@@ -484,7 +478,7 @@ func TestValidateZarfComponent(t *testing.T) {
 					URL: "https://example.com",
 				},
 			},
-			wantErrs: []string{
+			expectedErrs: []string{
 				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "bad-url", "URL is not a valid OCI URL"),
 			},
 		},
@@ -495,12 +489,12 @@ func TestValidateZarfComponent(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := tt.component.Validate()
-			if tt.wantErrs == nil {
+			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
 			}
 			errs := strings.Split(err.Error(), "\n")
-			require.ElementsMatch(t, tt.wantErrs, errs)
+			require.ElementsMatch(t, tt.expectedErrs, errs)
 		})
 	}
 }
