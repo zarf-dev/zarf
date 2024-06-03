@@ -21,6 +21,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/yaml"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -181,6 +183,16 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 }
 
 func (r *renderer) editHelmResources(ctx context.Context, resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
+	dc, err := dynamic.NewForConfig(r.cluster.RestConfig)
+	if err != nil {
+		return err
+	}
+	groupResources, err := restmapper.GetAPIGroupResources(r.cluster.Clientset.Discovery())
+	if err != nil {
+		return err
+	}
+	mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
+
 	for _, resource := range resources {
 		// parse to unstructured to have access to more data than just the name
 		rawData := &unstructured.Unstructured{}
@@ -206,8 +218,13 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 		case "Service":
 			// Check service resources for the zarf-connect label
 			labels := rawData.GetLabels()
+			if labels == nil {
+				labels = map[string]string{}
+			}
 			annotations := rawData.GetAnnotations()
-
+			if annotations == nil {
+				annotations = map[string]string{}
+			}
 			if key, keyExists := labels[config.ZarfConnectLabelName]; keyExists {
 				// If there is a zarf-connect label
 				message.Debugf("Match helm service %s for zarf connection %s", rawData.GetName(), key)
@@ -233,14 +250,35 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 				deployedNamespace = r.chart.Namespace
 			}
 
-			helmLabels := map[string]string{"app.kubernetes.io/managed-by": "Helm"}
-			helmAnnotations := map[string]string{
-				"meta.helm.sh/release-name":      r.chart.ReleaseName,
-				"meta.helm.sh/release-namespace": r.chart.Namespace,
-			}
-
-			if err := r.cluster.AddLabelsAndAnnotations(ctx, deployedNamespace, rawData.GetName(), rawData.GroupVersionKind().GroupKind(), helmLabels, helmAnnotations); err != nil {
-				// Print a debug message since this could just be because the resource doesn't exist
+			err := func() error {
+				mapping, err := mapper.RESTMapping(rawData.GroupVersionKind().GroupKind())
+				if err != nil {
+					return err
+				}
+				resource, err := dc.Resource(mapping.Resource).Namespace(deployedNamespace).Get(ctx, rawData.GetName(), metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+				labels := resource.GetLabels()
+				if labels == nil {
+					labels = map[string]string{}
+				}
+				labels["app.kubernetes.io/managed-by"] = "Helm"
+				resource.SetLabels(labels)
+				annotations := resource.GetAnnotations()
+				if annotations == nil {
+					annotations = map[string]string{}
+				}
+				annotations["meta.helm.sh/release-name"] = r.chart.ReleaseName
+				annotations["meta.helm.sh/release-namespace"] = r.chart.Namespace
+				resource.SetAnnotations(annotations)
+				_, err = dc.Resource(mapping.Resource).Namespace(deployedNamespace).Update(ctx, resource, metav1.UpdateOptions{})
+				if err != nil {
+					return err
+				}
+				return nil
+			}()
+			if err != nil {
 				message.Debugf("Unable to adopt resource %s: %s", rawData.GetName(), err.Error())
 			}
 		}
