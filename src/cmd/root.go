@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
 
@@ -44,9 +45,11 @@ var rootCmd = &cobra.Command{
 
 		common.SetupCLI()
 	},
-	Short: lang.RootCmdShort,
-	Long:  lang.RootCmdLong,
-	Args:  cobra.MaximumNArgs(1),
+	Short:         lang.RootCmdShort,
+	Long:          lang.RootCmdLong,
+	Args:          cobra.MaximumNArgs(1),
+	SilenceUsage:  true,
+	SilenceErrors: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		zarfLogo := message.GetLogo()
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
@@ -65,7 +68,17 @@ var rootCmd = &cobra.Command{
 
 // Execute is the entrypoint for the CLI.
 func Execute() {
-	cobra.CheckErr(rootCmd.Execute())
+	cmd, err := rootCmd.ExecuteC()
+	if err == nil {
+		return
+	}
+	comps := strings.Split(cmd.CommandPath(), " ")
+	if len(comps) > 1 && comps[1] == "tools" {
+		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
+	} else {
+		pterm.Error.Println(err.Error())
+	}
+	os.Exit(1)
 }
 
 func init() {
