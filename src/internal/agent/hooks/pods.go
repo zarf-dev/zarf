@@ -47,7 +47,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 
 	pod, err := parsePod(r.Object.Raw)
 	if err != nil {
-		return &operations.Result{Msg: err.Error()}, nil
+		return nil, fmt.Errorf(lang.AgentErrParsePod, err)
 	}
 
 	if pod.Labels != nil && pod.Labels["zarf-agent"] == "patched" {
@@ -64,11 +64,11 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 	}
 	registryURL := state.RegistryInfo.Address
 
-	var patchOperations []operations.PatchOperation
+	var patches []operations.PatchOperation
 
 	// Add the zarf secret to the podspec
 	zarfSecret := []corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}}
-	patchOperations = append(patchOperations, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
+	patches = append(patches, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
 
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {
@@ -78,7 +78,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
-		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
+		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
 	// update the image host for each ephemeral container
@@ -89,7 +89,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
-		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
+		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
 	// update the image host for each normal container
@@ -100,22 +100,13 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
-		patchOperations = append(patchOperations, operations.ReplacePatchOperation(path, replacement))
+		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
-	// Add a label noting the zarf mutation
-	if pod.Labels == nil {
-		// If the labels path does not exist - create with map[string]string value
-		patchOperations = append(patchOperations, operations.AddPatchOperation("/metadata/labels",
-			map[string]string{
-				"zarf-agent": "patched",
-			}))
-	} else {
-		patchOperations = append(patchOperations, operations.ReplacePatchOperation("/metadata/labels/zarf-agent", "patched"))
-	}
+	patches = append(patches, getLabelPatch(pod.Labels))
 
 	return &operations.Result{
 		Allowed:  true,
-		PatchOps: patchOperations,
+		PatchOps: patches,
 	}, nil
 }

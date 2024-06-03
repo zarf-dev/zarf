@@ -14,9 +14,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
+
+	"github.com/defenseunicorns/pkg/helpers"
 )
 
 // Global lock to synchronize port selections.
@@ -248,17 +250,20 @@ func (tunnel *Tunnel) getAttachablePodForResource(ctx context.Context) (string, 
 
 // getAttachablePodForService will find an active pod associated with the Service and return the pod name.
 func (tunnel *Tunnel) getAttachablePodForService(ctx context.Context) (string, error) {
-	service, err := tunnel.kube.GetService(ctx, tunnel.namespace, tunnel.resourceName)
+	service, err := tunnel.kube.Clientset.CoreV1().Services(tunnel.namespace).Get(ctx, tunnel.resourceName, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("unable to find the service: %w", err)
 	}
-	selectorLabelsOfPods := MakeLabels(service.Spec.Selector)
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{MatchLabels: service.Spec.Selector})
+	if err != nil {
+		return "", err
+	}
 
 	servicePods := tunnel.kube.WaitForPodsAndContainers(
 		ctx,
 		PodLookup{
 			Namespace: tunnel.namespace,
-			Selector:  selectorLabelsOfPods,
+			Selector:  selector.String(),
 		},
 		nil,
 	)

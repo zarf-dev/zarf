@@ -41,17 +41,13 @@ func TestPodMutationWebhook(t *testing.T) {
 	c := createTestClientWithZarfState(ctx, t, state)
 	handler := admission.NewHandler().Serve(NewPodMutationHook(ctx, c))
 
-	tests := []struct {
-		name          string
-		admissionReq  *v1.AdmissionRequest
-		expectedPatch []operations.PatchOperation
-		code          int
-	}{
+	tests := []admissionTest{
 		{
 			name: "pod with label should be mutated",
 			admissionReq: createPodAdmissionRequest(t, v1.Create, &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"should-be": "mutated"},
+					Labels:      map[string]string{"should-be": "mutated"},
+					Annotations: map[string]string{"should-be": "mutated"},
 				},
 				Spec: corev1.PodSpec{
 					Containers:     []corev1.Container{{Image: "nginx"}},
@@ -65,7 +61,7 @@ func TestPodMutationWebhook(t *testing.T) {
 					},
 				},
 			}),
-			expectedPatch: []operations.PatchOperation{
+			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/imagePullSecrets",
 					[]corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}},
@@ -83,8 +79,11 @@ func TestPodMutationWebhook(t *testing.T) {
 					"127.0.0.1:31999/library/nginx:latest-zarf-3793515731",
 				),
 				operations.ReplacePatchOperation(
-					"/metadata/labels/zarf-agent",
-					"patched",
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+						"should-be":  "mutated",
+					},
 				),
 			},
 			code: http.StatusOK,
@@ -99,8 +98,8 @@ func TestPodMutationWebhook(t *testing.T) {
 					Containers: []corev1.Container{{Image: "nginx"}},
 				},
 			}),
-			expectedPatch: nil,
-			code:          http.StatusOK,
+			patch: nil,
+			code:  http.StatusOK,
 		},
 		{
 			name: "pod with no labels should not error",
@@ -112,7 +111,7 @@ func TestPodMutationWebhook(t *testing.T) {
 					Containers: []corev1.Container{{Image: "nginx"}},
 				},
 			}),
-			expectedPatch: []operations.PatchOperation{
+			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/imagePullSecrets",
 					[]corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}},
@@ -121,7 +120,7 @@ func TestPodMutationWebhook(t *testing.T) {
 					"/spec/containers/0/image",
 					"127.0.0.1:31999/library/nginx:latest-zarf-3793515731",
 				),
-				operations.AddPatchOperation(
+				operations.ReplacePatchOperation(
 					"/metadata/labels",
 					map[string]string{"zarf-agent": "patched"},
 				),
@@ -134,16 +133,8 @@ func TestPodMutationWebhook(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			resp := sendAdmissionRequest(t, tt.admissionReq, handler, tt.code)
-			if tt.expectedPatch == nil {
-				require.Empty(t, string(resp.Patch))
-			} else {
-				expectedPatchJSON, err := json.Marshal(tt.expectedPatch)
-				require.NoError(t, err)
-				require.NotNil(t, resp)
-				require.True(t, resp.Allowed)
-				require.JSONEq(t, string(expectedPatchJSON), string(resp.Patch))
-			}
+			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
+			verifyAdmission(t, rr, tt)
 		})
 	}
 }

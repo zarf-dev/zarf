@@ -9,22 +9,24 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers"
-
 	"github.com/Masterminds/semver/v3"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/types"
+	plutoversionsfile "github.com/fairwindsops/pluto/v5"
+	plutoapi "github.com/fairwindsops/pluto/v5/pkg/api"
+	goyaml "github.com/goccy/go-yaml"
+	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/release"
+	"helm.sh/helm/v3/pkg/releaseutil"
+	"helm.sh/helm/v3/pkg/storage/driver"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chartutil"
-	"helm.sh/helm/v3/pkg/releaseutil"
+	"github.com/defenseunicorns/pkg/helpers"
 
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/release"
-	"helm.sh/helm/v3/pkg/storage/driver"
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
@@ -370,12 +372,12 @@ func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
 
 func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 	// Get the Kubernetes version from the current cluster
-	kubeVersion, err := h.cluster.GetServerVersion()
+	kubeVersion, err := h.cluster.Clientset.Discovery().ServerVersion()
 	if err != nil {
 		return err
 	}
 
-	kubeGitVersion, err := semver.NewVersion(kubeVersion)
+	kubeGitVersion, err := semver.NewVersion(kubeVersion.String())
 	if err != nil {
 		return err
 	}
@@ -398,7 +400,7 @@ func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 			return fmt.Errorf("failed to unmarshal manifest: %#v", err)
 		}
 
-		rawData, manifestModified, _ := h.cluster.HandleDeprecations(rawData, *kubeGitVersion)
+		rawData, manifestModified, _ := handleDeprecations(rawData, *kubeGitVersion)
 		manifestContent, err := yaml.Marshal(rawData)
 		if err != nil {
 			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %#v", err)
@@ -436,4 +438,31 @@ func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 	}
 
 	return nil
+}
+
+// handleDeprecations takes in an unstructured object and the k8s version and returns the latest version of the object and if it was modified.
+func handleDeprecations(rawData *unstructured.Unstructured, kubernetesVersion semver.Version) (*unstructured.Unstructured, bool, error) {
+	deprecatedVersionContent := &plutoapi.VersionFile{}
+	err := goyaml.Unmarshal(plutoversionsfile.Content(), deprecatedVersionContent)
+	if err != nil {
+		return rawData, false, err
+	}
+	for _, deprecation := range deprecatedVersionContent.DeprecatedVersions {
+		if deprecation.Component == "k8s" && deprecation.Kind == rawData.GetKind() && deprecation.Name == rawData.GetAPIVersion() {
+			removedVersion, err := semver.NewVersion(deprecation.RemovedIn)
+			if err != nil {
+				return rawData, false, err
+			}
+
+			if removedVersion.LessThan(&kubernetesVersion) {
+				if deprecation.ReplacementAPI != "" {
+					rawData.SetAPIVersion(deprecation.ReplacementAPI)
+					return rawData, true, nil
+				}
+
+				return nil, true, nil
+			}
+		}
+	}
+	return rawData, false, nil
 }

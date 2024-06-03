@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -73,7 +74,7 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 	}
 
 	spinner.Updatef("Creating the injector configmap")
-	if err = c.createInjectorConfigmap(ctx, tmp.InjectionBinary); err != nil {
+	if err = c.createInjectorConfigMap(ctx, tmp.InjectionBinary); err != nil {
 		spinner.Fatalf(err, "Unable to create the injector configmap")
 	}
 
@@ -90,7 +91,7 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 	}
 
 	spinner.Updatef("Loading the seed registry configmaps")
-	if payloadConfigmaps, sha256sum, err = c.createPayloadConfigmaps(ctx, tmp.SeedImagesDir, tmp.InjectorPayloadTarGz, spinner); err != nil {
+	if payloadConfigmaps, sha256sum, err = c.createPayloadConfigMaps(ctx, tmp.SeedImagesDir, tmp.InjectorPayloadTarGz, spinner); err != nil {
 		spinner.Fatalf(err, "Unable to generate the injector payload configmaps")
 	}
 
@@ -150,13 +151,28 @@ func (c *Cluster) StopInjectionMadness(ctx context.Context) error {
 	}
 
 	// Remove the configmaps
-	labelMatch := map[string]string{"zarf-injector": "payload"}
-	if err := c.DeleteConfigMapsByLabel(ctx, ZarfNamespaceName, labelMatch); err != nil {
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"zarf-injector": "payload",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	listOpts := metav1.ListOptions{
+		LabelSelector: selector.String(),
+	}
+	err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	if err != nil {
 		return err
 	}
 
 	// Remove the injector service
-	return c.DeleteService(ctx, ZarfNamespaceName, "zarf-injector")
+	err = c.Clientset.CoreV1().Services(ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSrcs []string, spinner *message.Spinner) ([]transform.Image, error) {
@@ -197,7 +213,7 @@ func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSr
 	return seedImages, nil
 }
 
-func (c *Cluster) createPayloadConfigmaps(ctx context.Context, seedImagesDir, tarPath string, spinner *message.Spinner) ([]string, string, error) {
+func (c *Cluster) createPayloadConfigMaps(ctx context.Context, seedImagesDir, tarPath string, spinner *message.Spinner) ([]string, string, error) {
 	var configMaps []string
 
 	// Chunk size has to accommodate base64 encoding & etcd 1MB limit
@@ -226,16 +242,26 @@ func (c *Cluster) createPayloadConfigmaps(ctx context.Context, seedImagesDir, ta
 		// Create a cat-friendly filename
 		fileName := fmt.Sprintf("zarf-payload-%03d", idx)
 
-		// Store the binary data
-		configData := map[string][]byte{
-			fileName: data,
-		}
-
 		spinner.Updatef("Adding archive binary configmap %d of %d to the cluster", idx+1, chunkCount)
 
 		// Attempt to create the configmap in the cluster
-		if _, err = c.ReplaceConfigmap(ctx, ZarfNamespaceName, fileName, configData); err != nil {
-			return configMaps, "", err
+		// TODO: Replace with create or update.
+		err := c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).Delete(ctx, fileName, metav1.DeleteOptions{})
+		if err != nil && !kerrors.IsNotFound(err) {
+			return nil, "", err
+		}
+		cm := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fileName,
+				Namespace: ZarfNamespaceName,
+			},
+			BinaryData: map[string][]byte{
+				fileName: data,
+			},
+		}
+		_, err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).Create(ctx, cm, metav1.CreateOptions{})
+		if err != nil {
+			return nil, "", err
 		}
 
 		// Add the configmap to the configmaps slice for later usage in the pod
@@ -285,41 +311,66 @@ func (c *Cluster) injectorIsReady(ctx context.Context, seedImages []transform.Im
 	return true
 }
 
-func (c *Cluster) createInjectorConfigmap(ctx context.Context, binaryPath string) error {
-	var err error
-	configData := make(map[string][]byte)
-
-	// Add the injector binary data to the configmap
-	if configData["zarf-injector"], err = os.ReadFile(binaryPath); err != nil {
+func (c *Cluster) createInjectorConfigMap(ctx context.Context, binaryPath string) error {
+	name := "rust-binary"
+	// TODO: Replace with a create or update.
+	err := c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
-
-	// Try to delete configmap silently
-	_ = c.DeleteConfigmap(ctx, ZarfNamespaceName, "rust-binary")
-
-	// Attempt to create the configmap in the cluster
-	if _, err = c.CreateConfigmap(ctx, ZarfNamespaceName, "rust-binary", configData); err != nil {
+	b, err := os.ReadFile(binaryPath)
+	if err != nil {
 		return err
 	}
-
+	configData := map[string][]byte{
+		"zarf-injector": b,
+	}
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ZarfNamespaceName,
+		},
+		BinaryData: configData,
+	}
+	_, err = c.Clientset.CoreV1().ConfigMaps(configMap.Namespace).Create(ctx, configMap, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (c *Cluster) createService(ctx context.Context) (*corev1.Service, error) {
-	service := c.GenerateService(ZarfNamespaceName, "zarf-injector")
-
-	service.Spec.Type = corev1.ServiceTypeNodePort
-	service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
-		Port: int32(5000),
-	})
-	service.Spec.Selector = map[string]string{
-		"app": "zarf-injector",
+	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "zarf-injector",
+			Namespace: ZarfNamespaceName,
+		},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeNodePort,
+			Ports: []corev1.ServicePort{
+				{
+					Port: int32(5000),
+				},
+			},
+			Selector: map[string]string{
+				"app": "zarf-injector",
+			},
+		},
 	}
-
-	// Attempt to purse the service silently
-	_ = c.DeleteService(ctx, ZarfNamespaceName, "zarf-injector")
-
-	return c.CreateService(ctx, service)
+	// TODO: Replace with create or update
+	err := c.Clientset.CoreV1().Services(svc.Namespace).Delete(ctx, svc.Name, metav1.DeleteOptions{})
+	if err != nil && !kerrors.IsNotFound(err) {
+		return nil, err
+	}
+	svc, err = c.Clientset.CoreV1().Services(svc.Namespace).Create(ctx, svc, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return svc, nil
 }
 
 // buildInjectionPod return a pod for injection with the appropriate containers to perform the injection.
@@ -463,7 +514,7 @@ func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeM
 			for _, pod := range pods.Items {
 				nodeName := pod.Spec.NodeName
 
-				nodeDetails, err := c.GetNode(ctx, nodeName)
+				nodeDetails, err := c.Clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 				if err != nil {
 					return nil, fmt.Errorf("unable to get the node %q: %w", nodeName, err)
 				}
@@ -473,10 +524,8 @@ func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeM
 					continue
 				}
 
-				for _, taint := range nodeDetails.Spec.Taints {
-					if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
-						continue
-					}
+				if hasBlockingTaints(nodeDetails.Spec.Taints) {
+					continue
 				}
 
 				for _, container := range pod.Spec.InitContainers {
@@ -498,4 +547,13 @@ func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeM
 			timer.Reset(2 * time.Second)
 		}
 	}
+}
+
+func hasBlockingTaints(taints []corev1.Taint) bool {
+	for _, taint := range taints {
+		if taint.Effect == corev1.TaintEffectNoSchedule || taint.Effect == corev1.TaintEffectNoExecute {
+			return true
+		}
+	}
+	return false
 }
