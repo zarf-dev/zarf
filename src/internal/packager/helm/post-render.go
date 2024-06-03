@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -119,12 +120,15 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 
 func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 	c := r.cluster
-	existingNamespaces, _ := c.GetNamespaces(ctx)
+	namespaceList, err := r.cluster.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
 	for name, namespace := range r.namespaces {
 
 		// Check to see if this namespace already exists
 		var existingNamespace bool
-		for _, serverNamespace := range existingNamespaces.Items {
+		for _, serverNamespace := range namespaceList.Items {
 			if serverNamespace.Name == name {
 				existingNamespace = true
 			}
@@ -132,16 +136,19 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 
 		if !existingNamespace {
 			// This is a new namespace, add it
-			if _, err := c.CreateNamespace(ctx, namespace); err != nil {
+			_, err := c.Clientset.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
+			if err != nil {
 				return fmt.Errorf("unable to create the missing namespace %s", name)
 			}
 		} else if r.cfg.DeployOpts.AdoptExistingResources {
-			if r.cluster.IsInitialNamespace(name) {
-				// If this is a K8s initial namespace, refuse to adopt it
+			// Refuse to adopt namespace if it is one of four initial Kubernetes namespaces.
+			// https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
+			if slices.Contains([]string{"default", "kube-node-lease", "kube-public", "kube-system"}, name) {
 				message.Warnf("Refusing to adopt the initial namespace: %s", name)
 			} else {
 				// This is an existing namespace to adopt
-				if _, err := c.UpdateNamespace(ctx, namespace); err != nil {
+				_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, namespace, metav1.UpdateOptions{})
+				if err != nil {
 					return fmt.Errorf("unable to adopt the existing namespace %s", name)
 				}
 			}
