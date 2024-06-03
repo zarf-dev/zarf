@@ -87,16 +87,12 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		// Setup zarf agent PKI
 		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
 
-		namespaces, err := c.GetNamespaces(ctx)
+		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
 		}
 		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
-		for _, namespace := range namespaces.Items {
-			// Skip Zarf namespace if it already exists.
-			if namespace.Name == ZarfNamespaceName {
-				continue
-			}
+		for _, namespace := range namespaceList.Items {
 			spinner.Updatef("Marking existing namespace %s as ignored by Zarf Agent", namespace.Name)
 			if namespace.Labels == nil {
 				// Ensure label map exists to avoid nil panic
@@ -105,7 +101,8 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 			// This label will tell the Zarf Agent to ignore this namespace.
 			namespace.Labels[k8s.AgentLabel] = "ignore"
 			namespaceCopy := namespace
-			if _, err = c.UpdateNamespace(ctx, &namespaceCopy); err != nil {
+			_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
+			if err != nil {
 				// This is not a hard failure, but we should log it.
 				message.WarnErrf(err, "Unable to mark the namespace %s as ignored by Zarf Agent", namespace.Name)
 			}

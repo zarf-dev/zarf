@@ -72,15 +72,17 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 		LabelSelector: k8s.ZarfManagedByLabel + "=zarf",
 	}
 
-	if namespaces, err := c.GetNamespaces(ctx); err != nil {
+	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
 		spinner.Errorf(err, "Unable to get k8s namespaces")
 	} else {
-		for _, namespace := range namespaces.Items {
+		for _, namespace := range namespaceList.Items {
 			if _, ok := namespace.Labels[k8s.AgentLabel]; ok {
 				spinner.Updatef("Removing Zarf Agent label for namespace %s", namespace.Name)
 				delete(namespace.Labels, k8s.AgentLabel)
 				namespaceCopy := namespace
-				if _, err = c.UpdateNamespace(ctx, &namespaceCopy); err != nil {
+				_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
+				if err != nil {
 					// This is not a hard failure, but we should log it
 					spinner.Errorf(err, "Unable to update the namespace labels for %s", namespace.Name)
 				}
