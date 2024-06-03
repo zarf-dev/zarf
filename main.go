@@ -5,7 +5,10 @@
 package main
 
 import (
+	"context"
 	"embed"
+	"os/signal"
+	"syscall"
 
 	"github.com/defenseunicorns/zarf/src/cmd"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -19,7 +22,10 @@ var cosignPublicKey string
 var zarfSchema embed.FS
 
 func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
 	config.CosignPublicKey = cosignPublicKey
 	lint.ZarfSchema = zarfSchema
-	cmd.Execute()
+	cmd.Execute(ctx)
 }
