@@ -342,12 +342,19 @@ func TestValidateComponentActions(t *testing.T) {
 							Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}},
 						},
 					},
+					OnFailure: []ZarfComponentAction{
+						{
+							Cmd:  "remove2",
+							Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}},
+						},
+					},
 				},
 			},
 			expectedErrs: []string{
 				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "create")).Error(),
 				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "deploy")).Error(),
 				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "remove")).Error(),
+				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "remove2")).Error(),
 			},
 		},
 	}

@@ -168,7 +168,7 @@ func (a ZarfComponentActions) validate() error {
 	var err error
 
 	if setErr := a.OnCreate.Validate(); setErr != nil {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrAction, setErr))
+		err = errors.Join(err, setErr)
 	}
 
 	if a.OnCreate.HasSetVariables() {
@@ -176,7 +176,7 @@ func (a ZarfComponentActions) validate() error {
 	}
 
 	if setErr := a.OnDeploy.Validate(); setErr != nil {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrAction, setErr))
+		err = errors.Join(err, setErr)
 	}
 
 	if a.OnRemove.HasSetVariables() {
@@ -184,7 +184,7 @@ func (a ZarfComponentActions) validate() error {
 	}
 
 	if setErr := a.OnRemove.Validate(); setErr != nil {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrAction, setErr))
+		err = errors.Join(err, setErr)
 	}
 
 	return err
@@ -241,25 +241,21 @@ func (as ZarfComponentActionSet) HasSetVariables() bool {
 
 // Validate runs all validation checks on component action sets.
 func (as ZarfComponentActionSet) Validate() error {
-	validate := func(actions []ZarfComponentAction) error {
+	var err error
+	validate := func(actions []ZarfComponentAction) {
 		for _, action := range actions {
-			if err := action.Validate(); err != nil {
-				return err
+			if actionErr := action.Validate(); actionErr != nil {
+				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrAction, actionErr))
 			}
+
 		}
-		return nil
 	}
 
-	if err := validate(as.Before); err != nil {
-		return err
-	}
-	if err := validate(as.After); err != nil {
-		return err
-	}
-	if err := validate(as.OnSuccess); err != nil {
-		return err
-	}
-	return validate(as.OnFailure)
+	validate(as.Before)
+	validate(as.After)
+	validate(as.OnFailure)
+	validate(as.OnSuccess)
+	return err
 }
 
 // Validate runs all validation checks on an action.
