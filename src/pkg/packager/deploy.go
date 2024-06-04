@@ -17,7 +17,12 @@ import (
 	"sync"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/defenseunicorns/pkg/helpers"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
@@ -32,7 +37,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func (p *Packager) resetRegistryHPA(ctx context.Context) {
@@ -451,7 +455,21 @@ func (p *Packager) setupState(ctx context.Context) (err error) {
 		// Try to create the zarf namespace
 		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := cluster.NewZarfManagedNamespace(cluster.ZarfNamespaceName)
-		if _, err := p.cluster.CreateNamespace(ctx, zarfNamespace); err != nil {
+		err := func() error {
+			_, err := p.cluster.Clientset.CoreV1().Namespaces().Create(ctx, zarfNamespace, metav1.CreateOptions{})
+			if err != nil && !kerrors.IsAlreadyExists(err) {
+				return err
+			}
+			if err == nil {
+				return nil
+			}
+			_, err = p.cluster.Clientset.CoreV1().Namespaces().Update(ctx, zarfNamespace, metav1.UpdateOptions{})
+			if err != nil {
+				return err
+			}
+			return nil
+		}()
+		if err != nil {
 			spinner.Fatalf(err, "Unable to create the zarf namespace")
 		}
 	}
