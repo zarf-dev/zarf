@@ -124,7 +124,6 @@ var updateCredsCmd = &cobra.Command{
 		if slices.Contains(args, message.GitKey) {
 			c.UpdateZarfManagedGitSecrets(ctx, newState)
 		}
-
 		// Update artifact token (if internal)
 		if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.InternalServer {
 			g := git.New(oldState.GitServer)
@@ -145,9 +144,8 @@ var updateCredsCmd = &cobra.Command{
 
 		// Update Zarf 'init' component Helm releases if present
 		h := helm.NewClusterOnly(&types.PackagerConfig{}, template.GetZarfVariableConfig(), newState, c)
-
 		if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
-			err = h.UpdateZarfRegistryValues()
+			err = h.UpdateZarfRegistryValues(ctx)
 			if err != nil {
 				// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
 				message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
