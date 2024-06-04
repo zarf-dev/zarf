@@ -40,28 +40,28 @@ func SupportedOS() []string {
 
 // Validate runs all validation checks on the package.
 func (pkg ZarfPackage) Validate() error {
-	errs := []error{}
+	var err error
 	if pkg.Kind == ZarfInitConfig && pkg.Metadata.YOLO {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrInitNoYOLO))
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrInitNoYOLO))
 	}
 
 	if !IsLowercaseNumberHyphenNoStartHyphen(pkg.Metadata.Name) {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrPkgName, pkg.Metadata.Name))
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrPkgName, pkg.Metadata.Name))
 	}
 
 	if len(pkg.Components) == 0 {
-		errs = append(errs, fmt.Errorf("package must have at least 1 component"))
+		err = errors.Join(err, fmt.Errorf("package must have at least 1 component"))
 	}
 
 	for _, variable := range pkg.Variables {
-		if err := variable.Validate(); err != nil {
-			errs = append(errs, fmt.Errorf(lang.PkgValidateErrVariable, err))
+		if varErr := variable.Validate(); varErr != nil {
+			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrVariable, varErr))
 		}
 	}
 
 	for _, constant := range pkg.Constants {
-		if err := constant.Validate(); err != nil {
-			errs = append(errs, fmt.Errorf(lang.PkgValidateErrConstant, err))
+		if varErr := constant.Validate(); varErr != nil {
+			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrConstant, varErr))
 		}
 	}
 
@@ -72,19 +72,19 @@ func (pkg ZarfPackage) Validate() error {
 	if pkg.Metadata.YOLO {
 		for _, component := range pkg.Components {
 			if len(component.Images) > 0 {
-				errs = append(errs, fmt.Errorf(lang.PkgValidateErrYOLONoOCI))
+				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrYOLONoOCI))
 			}
 
 			if len(component.Repos) > 0 {
-				errs = append(errs, fmt.Errorf(lang.PkgValidateErrYOLONoGit))
+				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrYOLONoGit))
 			}
 
 			if component.Only.Cluster.Architecture != "" {
-				errs = append(errs, fmt.Errorf(lang.PkgValidateErrYOLONoArch))
+				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrYOLONoArch))
 			}
 
 			if len(component.Only.Cluster.Distros) > 0 {
-				errs = append(errs, fmt.Errorf(lang.PkgValidateErrYOLONoDistro))
+				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrYOLONoDistro))
 			}
 		}
 	}
@@ -92,24 +92,24 @@ func (pkg ZarfPackage) Validate() error {
 	for _, component := range pkg.Components {
 		// ensure component name is unique
 		if _, ok := uniqueComponentNames[component.Name]; ok {
-			errs = append(errs, fmt.Errorf(lang.PkgValidateErrComponentNameNotUnique, component.Name))
+			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentNameNotUnique, component.Name))
 		}
 		uniqueComponentNames[component.Name] = true
 
 		if !IsLowercaseNumberHyphenNoStartHyphen(component.Name) {
-			errs = append(errs, fmt.Errorf(lang.PkgValidateErrComponentName, component.Name))
+			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentName, component.Name))
 		}
 
 		if !slices.Contains(supportedOS, component.Only.LocalOS) {
-			errs = append(errs, fmt.Errorf(lang.PkgValidateErrComponentLocalOS, component.Name, component.Only.LocalOS, supportedOS))
+			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentLocalOS, component.Name, component.Only.LocalOS, supportedOS))
 		}
 
 		if component.IsRequired() {
 			if component.Default {
-				errs = append(errs, fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name))
+				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name))
 			}
 			if component.DeprecatedGroup != "" {
-				errs = append(errs, fmt.Errorf(lang.PkgValidateErrComponentReqGrouped, component.Name))
+				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentReqGrouped, component.Name))
 			}
 		}
 
@@ -117,12 +117,12 @@ func (pkg ZarfPackage) Validate() error {
 		for _, chart := range component.Charts {
 			// ensure chart name is unique
 			if _, ok := uniqueChartNames[chart.Name]; ok {
-				errs = append(errs, fmt.Errorf(lang.PkgValidateErrChartNameNotUnique, chart.Name))
+				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartNameNotUnique, chart.Name))
 			}
 			uniqueChartNames[chart.Name] = true
 
-			if err := chart.Validate(); err != nil {
-				errs = append(errs, fmt.Errorf(lang.PkgValidateErrChart, err))
+			if chartErr := chart.Validate(); chartErr != nil {
+				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChart, chartErr))
 			}
 		}
 
@@ -130,24 +130,24 @@ func (pkg ZarfPackage) Validate() error {
 		for _, manifest := range component.Manifests {
 			// ensure manifest name is unique
 			if _, ok := uniqueManifestNames[manifest.Name]; ok {
-				errs = append(errs, fmt.Errorf(lang.PkgValidateErrManifestNameNotUnique, manifest.Name))
+				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifestNameNotUnique, manifest.Name))
 			}
 			uniqueManifestNames[manifest.Name] = true
 
-			if err := manifest.Validate(); err != nil {
-				errs = append(errs, fmt.Errorf(lang.PkgValidateErrManifest, err))
+			if manifestErr := manifest.Validate(); manifestErr != nil {
+				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifest, manifestErr))
 			}
 		}
 
-		if err := component.Actions.validate(); err != nil {
-			errs = append(errs, fmt.Errorf("%q: %w", component.Name, err))
+		if actionsErr := component.Actions.validate(); actionsErr != nil {
+			err = errors.Join(err, fmt.Errorf("%q: %w", component.Name, actionsErr))
 		}
 
 		// ensure groups don't have multiple defaults or only one component
 		if component.DeprecatedGroup != "" {
 			if component.Default {
 				if _, ok := groupDefault[component.DeprecatedGroup]; ok {
-					errs = append(errs, fmt.Errorf(lang.PkgValidateErrGroupMultipleDefaults, component.DeprecatedGroup, groupDefault[component.DeprecatedGroup], component.Name))
+					err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrGroupMultipleDefaults, component.DeprecatedGroup, groupDefault[component.DeprecatedGroup], component.Name))
 				}
 				groupDefault[component.DeprecatedGroup] = component.Name
 			}
@@ -157,60 +157,60 @@ func (pkg ZarfPackage) Validate() error {
 
 	for groupKey, componentNames := range groupedComponents {
 		if len(componentNames) == 1 {
-			errs = append(errs, fmt.Errorf(lang.PkgValidateErrGroupOneComponent, groupKey, componentNames[0]))
+			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrGroupOneComponent, groupKey, componentNames[0]))
 		}
 	}
 
-	return errors.Join(errs...)
+	return err
 }
 
 func (a ZarfComponentActions) validate() error {
-	var errs []error
+	var err error
 
-	if err := a.OnCreate.Validate(); err != nil {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrAction, err))
+	if setErr := a.OnCreate.Validate(); setErr != nil {
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrAction, setErr))
 	}
 
 	if a.OnCreate.HasSetVariables() {
-		errs = append(errs, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
+		err = errors.Join(err, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
 	}
 
-	if err := a.OnDeploy.Validate(); err != nil {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrAction, err))
+	if setErr := a.OnDeploy.Validate(); setErr != nil {
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrAction, setErr))
 	}
 
 	if a.OnRemove.HasSetVariables() {
-		errs = append(errs, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
+		err = errors.Join(err, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
 	}
 
-	if err := a.OnRemove.Validate(); err != nil {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrAction, err))
+	if setErr := a.OnRemove.Validate(); setErr != nil {
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrAction, setErr))
 	}
 
-	return errors.Join(errs...)
+	return err
 }
 
 // Validate validates the component trying to be imported.
 func (c ZarfComponent) Validate() error {
-	errs := []error{}
+	var err error
 	path := c.Import.Path
 	url := c.Import.URL
 
 	// ensure path or url is provided
 	if path == "" && url == "" {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "neither a path nor a URL was provided"))
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "neither a path nor a URL was provided"))
 	}
 
 	// ensure path and url are not both provided
 	if path != "" && url != "" {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "both a path and a URL were provided"))
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "both a path and a URL were provided"))
 	}
 
 	// validation for path
 	if url == "" && path != "" {
 		// ensure path is not an absolute path
 		if filepath.IsAbs(path) {
-			errs = append(errs, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "path cannot be an absolute path"))
+			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "path cannot be an absolute path"))
 		}
 	}
 
@@ -218,11 +218,11 @@ func (c ZarfComponent) Validate() error {
 	if url != "" && path == "" {
 		ok := helpers.IsOCIURL(url)
 		if !ok {
-			errs = append(errs, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "URL is not a valid OCI URL"))
+			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "URL is not a valid OCI URL"))
 		}
 	}
 
-	return errors.Join(errs...)
+	return err
 }
 
 // HasSetVariables returns true if any of the actions contain setVariables.
@@ -264,81 +264,81 @@ func (as ZarfComponentActionSet) Validate() error {
 
 // Validate runs all validation checks on an action.
 func (action ZarfComponentAction) Validate() error {
-	errs := []error{}
+	var err error
 	// Validate SetVariable
 	for _, variable := range action.SetVariables {
-		if err := variable.Validate(); err != nil {
-			errs = append(errs, err)
+		if varErr := variable.Validate(); varErr != nil {
+			err = errors.Join(err, varErr)
 		}
 	}
 
 	if action.Wait != nil {
 		// Validate only cmd or wait, not both
 		if action.Cmd != "" {
-			errs = append(errs, fmt.Errorf(lang.PkgValidateErrActionCmdWait, action.Cmd))
+			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrActionCmdWait, action.Cmd))
 		}
 
 		// Validate only cluster or network, not both
 		if action.Wait.Cluster != nil && action.Wait.Network != nil {
-			errs = append(errs, fmt.Errorf(lang.PkgValidateErrActionClusterNetwork))
+			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrActionClusterNetwork))
 		}
 
 		// Validate at least one of cluster or network
 		if action.Wait.Cluster == nil && action.Wait.Network == nil {
-			errs = append(errs, fmt.Errorf(lang.PkgValidateErrActionClusterNetwork))
+			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrActionClusterNetwork))
 		}
 	}
 
-	return errors.Join(errs...)
+	return err
 }
 
 // Validate runs all validation checks on a chart.
 func (chart ZarfChart) Validate() error {
-	errs := []error{}
+	var err error
 
 	if chart.Name == "" {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrChartNameMissing))
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartNameMissing))
 	}
 
 	if len(chart.Name) > ZarfMaxChartNameLength {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrChartName, chart.Name, ZarfMaxChartNameLength))
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartName, chart.Name, ZarfMaxChartNameLength))
 	}
 
 	if chart.Namespace == "" {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrChartNamespaceMissing, chart.Name))
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartNamespaceMissing, chart.Name))
 	}
 
 	// Must have a url or localPath (and not both)
 	if chart.URL != "" && chart.LocalPath != "" {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrChartURLOrPath, chart.Name))
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartURLOrPath, chart.Name))
 	}
 
 	if chart.URL == "" && chart.LocalPath == "" {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrChartURLOrPath, chart.Name))
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartURLOrPath, chart.Name))
 	}
 
 	if chart.Version == "" {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrChartVersion, chart.Name))
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartVersion, chart.Name))
 	}
 
-	return errors.Join(errs...)
+	return err
 }
 
 // Validate runs all validation checks on a manifest.
 func (manifest ZarfManifest) Validate() error {
-	errs := []error{}
+	var err error
 
 	if manifest.Name == "" {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrManifestNameMissing))
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifestNameMissing))
 	}
 
 	if len(manifest.Name) > ZarfMaxChartNameLength {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))
 	}
 
 	if len(manifest.Files) < 1 && len(manifest.Kustomizations) < 1 {
-		errs = append(errs, fmt.Errorf(lang.PkgValidateErrManifestFileOrKustomize, manifest.Name))
+		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifestFileOrKustomize, manifest.Name))
 	}
 
-	return errors.Join(errs...)
+	return err
 }
