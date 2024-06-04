@@ -102,7 +102,6 @@ var updateCredsCmd = &cobra.Command{
 		message.PrintCredentialUpdates(oldState, newState, args)
 
 		confirm := config.CommonOptions.Confirm
-
 		if confirm {
 			message.Note(lang.CmdToolsUpdateCredsConfirmProvided)
 		} else {
@@ -113,58 +112,60 @@ var updateCredsCmd = &cobra.Command{
 				message.Fatalf(nil, lang.ErrConfirmCancel, err)
 			}
 		}
+		// False means user answered no to confirm query
+		if !confirm {
+			return
+		}
 
-		if confirm {
-			// Update registry and git pull secrets
-			if slices.Contains(args, message.RegistryKey) {
-				c.UpdateZarfManagedImageSecrets(ctx, newState)
-			}
-			if slices.Contains(args, message.GitKey) {
-				c.UpdateZarfManagedGitSecrets(ctx, newState)
-			}
+		// Update registry and git pull secrets
+		if slices.Contains(args, message.RegistryKey) {
+			c.UpdateZarfManagedImageSecrets(ctx, newState)
+		}
+		if slices.Contains(args, message.GitKey) {
+			c.UpdateZarfManagedGitSecrets(ctx, newState)
+		}
 
-			// Update artifact token (if internal)
-			if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.InternalServer {
-				g := git.New(oldState.GitServer)
-				tokenResponse, err := g.CreatePackageRegistryToken(ctx)
-				if err != nil {
-					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
-					message.Warnf(lang.CmdToolsUpdateCredsUnableCreateToken, err.Error())
-				} else {
-					newState.ArtifactServer.PushToken = tokenResponse.Sha1
-				}
-			}
-
-			// Save the final Zarf State
-			err = c.SaveZarfState(ctx, newState)
+		// Update artifact token (if internal)
+		if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.InternalServer {
+			g := git.New(oldState.GitServer)
+			tokenResponse, err := g.CreatePackageRegistryToken(ctx)
 			if err != nil {
-				message.Fatalf(err, lang.ErrSaveState)
+				// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
+				message.Warnf(lang.CmdToolsUpdateCredsUnableCreateToken, err.Error())
+			} else {
+				newState.ArtifactServer.PushToken = tokenResponse.Sha1
 			}
+		}
 
-			// Update Zarf 'init' component Helm releases if present
-			h := helm.NewClusterOnly(&types.PackagerConfig{}, template.GetZarfVariableConfig(), newState, c)
+		// Save the final Zarf State
+		err = c.SaveZarfState(ctx, newState)
+		if err != nil {
+			message.Fatalf(err, lang.ErrSaveState)
+		}
 
-			if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
-				err = h.UpdateZarfRegistryValues()
-				if err != nil {
-					// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
-					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
-				}
+		// Update Zarf 'init' component Helm releases if present
+		h := helm.NewClusterOnly(&types.PackagerConfig{}, template.GetZarfVariableConfig(), newState, c)
+
+		if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
+			err = h.UpdateZarfRegistryValues()
+			if err != nil {
+				// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
+				message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
 			}
-			if slices.Contains(args, message.GitKey) && newState.GitServer.InternalServer {
-				g := git.New(newState.GitServer)
-				err = g.UpdateZarfGiteaUsers(ctx, oldState)
-				if err != nil {
-					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
-					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateGit, err.Error())
-				}
+		}
+		if slices.Contains(args, message.GitKey) && newState.GitServer.InternalServer {
+			g := git.New(newState.GitServer)
+			err = g.UpdateZarfGiteaUsers(ctx, oldState)
+			if err != nil {
+				// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
+				message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateGit, err.Error())
 			}
-			if slices.Contains(args, message.AgentKey) {
-				err = h.UpdateZarfAgentValues(ctx)
-				if err != nil {
-					// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
-					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateAgent, err.Error())
-				}
+		}
+		if slices.Contains(args, message.AgentKey) {
+			err = h.UpdateZarfAgentValues(ctx)
+			if err != nil {
+				// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
+				message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateAgent, err.Error())
 			}
 		}
 	},
