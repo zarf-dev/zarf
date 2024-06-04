@@ -167,25 +167,19 @@ func (pkg ZarfPackage) Validate() error {
 func (a ZarfComponentActions) validate() error {
 	var err error
 
-	if setErr := a.OnCreate.Validate(); setErr != nil {
-		err = errors.Join(err, setErr)
-	}
+	err = errors.Join(err, a.OnCreate.Validate())
 
 	if a.OnCreate.HasSetVariables() {
 		err = errors.Join(err, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
 	}
 
-	if setErr := a.OnDeploy.Validate(); setErr != nil {
-		err = errors.Join(err, setErr)
-	}
+	err = errors.Join(err, a.OnDeploy.Validate())
 
 	if a.OnRemove.HasSetVariables() {
 		err = errors.Join(err, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
 	}
 
-	if setErr := a.OnRemove.Validate(); setErr != nil {
-		err = errors.Join(err, setErr)
-	}
+	err = errors.Join(err, a.OnRemove.Validate())
 
 	return err
 }
@@ -261,11 +255,8 @@ func (as ZarfComponentActionSet) Validate() error {
 // Validate runs all validation checks on an action.
 func (action ZarfComponentAction) Validate() error {
 	var err error
-	// Validate SetVariable
 	for _, variable := range action.SetVariables {
-		if varErr := variable.Validate(); varErr != nil {
-			err = errors.Join(err, varErr)
-		}
+		err = errors.Join(err, variable.Validate())
 	}
 
 	if action.Wait != nil {
