@@ -13,33 +13,7 @@ components:
         files:
           - flux-install.yaml
     images:
-      - ghcr.io/fluxcd/kustomize-controller:v0.27.1
-      - ghcr.io/fluxcd/source-controller:v0.28.0
-
-  - name: podinfo-via-flux
-    description: Example deployment via flux using the famous podinfo example
-    required: true
-    manifests:
-      - name: podinfo-via-flux
-        namespace: podinfo
-        files:
-          - podinfo-source.yaml
-          - podinfo-kustomization.yaml
-    repos:
-      - https://github.com/stefanprodan/podinfo.git
-    images:
-      - ghcr.io/stefanprodan/podinfo:6.3.3
-    actions:
-      onDeploy:
-        after:
-          # This will use a wait action to wait for the podinfo pod to be ready
-          - description: Podinfo pods to be ready via wait action
-            wait:
-              cluster:
-                kind: pod
-                name: app=podinfo
-                namespace: podinfo
-                condition: ready
+      - alpine:austin
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
