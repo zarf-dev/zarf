@@ -5,10 +5,12 @@
 package layout
 
 import (
+	"os"
 	"path/filepath"
 
 	"slices"
 
+	"github.com/defenseunicorns/pkg/helpers"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
@@ -25,9 +27,18 @@ func (i *Images) AddBlob(blob string) {
 	if len(blob) != 64 {
 		return
 	}
-	abs := filepath.Join(i.Base, "blobs", "sha256", blob)
-	if !slices.Contains(i.Blobs, abs) {
-		i.Blobs = append(i.Blobs, abs)
+	layerPath := filepath.Join(i.Base, "blobs", "sha256")
+	abs := filepath.Join(layerPath, blob)
+	absSha, err := helpers.GetSHA256OfFile(abs)
+	if err != nil {
+		return
+	}
+	newPath := filepath.Join(layerPath, absSha)
+	if absSha != blob {
+		os.Rename(abs, newPath)
+	}
+	if !slices.Contains(i.Blobs, newPath) {
+		i.Blobs = append(i.Blobs, newPath)
 	}
 }
 
