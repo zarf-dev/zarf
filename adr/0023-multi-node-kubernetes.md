@@ -10,7 +10,7 @@ Pending
 
 Currently today, when allowing `zarf init` to handle cluster creation, Zarf doesn't have ability to automatically or semi-automatically provision itself across multiple nodes.  The idea here would be to allow for horizontal scalability across multiple virtual or physical nodes for site reliability and automatic failover.
 
-The first pass would consider scaling horizontally with the Embedded DB model.  There would be minimal changes on the current k3s.service config.  The change required here would be to include a shared token.  By default, if K3S doesn't receive a token it will auto generate one.  You can reset this on an existing cluster by running `k3s token rotate --new-token=foo`.
+The first pass would consider scaling horizontally with the [High Availability Embedded etcd](https://docs.k3s.io/datastore/ha-embedded) model.  There would be minimal changes on the current k3s.service config.  The change required here would be to include a shared token.  By default, if K3S doesn't receive a token it will auto generate one.  You can reset this on an existing cluster by running `k3s token rotate --new-token=foo`.
 
 If one wanted to specify a token in advance they could simply modify their existing `zarf deploy/init`, `--set K3S_ARGS` command to include `--token=foo`
 
