@@ -273,7 +273,15 @@ func Paragraph(format string, a ...any) string {
 
 // Paragraphn formats text into an n column paragraph
 func Paragraphn(n int, format string, a ...any) string {
-	return pterm.DefaultParagraph.WithMaxWidth(n).Sprintf(format, a...)
+	// Split the text to keep pterm formatting but add newlines
+	lines := strings.Split(fmt.Sprintf(format, a...), "\n")
+
+	formattedLines := make([]string, len(lines))
+	for i, line := range lines {
+		formattedLines[i] = pterm.DefaultParagraph.WithMaxWidth(n).Sprintf(line)
+	}
+
+	return strings.Join(formattedLines, "\n")
 }
 
 // PrintDiff prints the differences between a and b with a as original and b as new

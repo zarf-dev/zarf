@@ -142,7 +142,7 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 		}
 
 		// TODO: stuff like this should also happen in linting
-		if err := node.ZarfComponent.ValidateImportDefinition(); err != nil {
+		if err := node.ZarfComponent.Validate(); err != nil {
 			return ic, err
 		}
 
