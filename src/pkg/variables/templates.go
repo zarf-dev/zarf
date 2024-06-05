@@ -89,12 +89,6 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) error {
 			preTemplate := matches[regexTemplateLine.SubexpIndex("preTemplate")]
 			templateKey := matches[regexTemplateLine.SubexpIndex("template")]
 
-			_, present := vc.deprecatedKeys[templateKey]
-			if present {
-				deprecationWarning := fmt.Sprintf("This Zarf Package uses a deprecated variable: '%s' changed to '%s'.  Please notify your package creator for an update.", templateKey, vc.deprecatedKeys[templateKey])
-				vc.logger.Warn(deprecationWarning)
-			}
-
 			template := templateMap[templateKey]
 
 			// Check if the template is nil (present), use the original templateKey if not (so that it is not replaced).
