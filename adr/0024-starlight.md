@@ -70,7 +70,7 @@ To simplify the development process and improve the performance of the documenta
 
 ## Consequences
 
-- During the transition, we will need to update the existing documentation content to work with the new site generator. Additionally, the site archictecture will be re-evaluated and optimized. This _will_ result in many links to current content breaking.
+- During the transition, we will need to update the existing documentation content to work with the new site generator. Additionally, the site architecture will be re-evaluated and optimized. This _will_ result in many links to current content breaking.
 - Every documentation generator has its quirks and limitations, so we will need to adapt to the new workflow and learn how to best utilize the features of Starlight.
 - The migration will take time and effort, but the benefits of improved performance and flexibility will be worth it in the long run.
 - The team will need to learn how to use Astro and Starlight, which may require some training and experimentation.
