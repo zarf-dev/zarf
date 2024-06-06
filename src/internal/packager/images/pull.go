@@ -246,7 +246,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	doneSaving <- nil
 	<-doneSaving
 
-	// Needed because when pulling form the local docker daemon, while using the docker containerd runtime
+	// Needed because when pulling from the local docker daemon, while using the docker containerd runtime
 	// Crane incorrectly names the blob of the docker image config to a sha that does not match the contents
 	// https://github.com/defenseunicorns/zarf/issues/2584
 	// This is a band aid fix while we wait for crane and or docker to create the permanent fix
