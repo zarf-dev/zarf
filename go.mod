@@ -6,7 +6,6 @@ go 1.22.0
 replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
 
 require (
-	cuelang.org/go v0.7.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/agnivade/levenshtein v1.1.1
@@ -61,6 +60,8 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.16.0
 	sigs.k8s.io/yaml v1.4.0
 )
+
+require cuelang.org/go v0.7.0 // indirect
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect

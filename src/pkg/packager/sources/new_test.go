@@ -150,8 +150,7 @@ func TestPackageSource(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
+			// TODO once our messaging is thread safe, re-parallelize this test
 			opts := &types.ZarfPackageOptions{
 				PackageSource: tt.src,
 				Shasum:        tt.shasum,

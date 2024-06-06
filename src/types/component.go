@@ -13,7 +13,7 @@ import (
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
 type ZarfComponent struct {
 	// Name is the unique identifier for this component
-	Name string `json:"name" jsonschema:"description=The name of the component,pattern=^[a-z0-9\\-]*[a-z0-9]$"`
+	Name string `json:"name" jsonschema:"description=The name of the component,pattern=^[a-z0-9][a-z0-9\\-]*$"`
 
 	// Description is a message given to a user when deciding to enable this component or not
 	Description string `json:"description,omitempty" jsonschema:"description=Message to include during package deploy describing the purpose of this component"`

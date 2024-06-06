@@ -99,11 +99,12 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 	spinner := message.NewProgressSpinner("Updating existing Zarf-managed image secrets")
 	defer spinner.Stop()
 
-	if namespaces, err := c.GetNamespaces(ctx); err != nil {
+	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
 		spinner.Errorf(err, "Unable to get k8s namespaces")
 	} else {
 		// Update all image pull secrets
-		for _, namespace := range namespaces.Items {
+		for _, namespace := range namespaceList.Items {
 			currentRegistrySecret, err := c.GetSecret(ctx, namespace.Name, config.ZarfImagePullSecretName)
 			if err != nil {
 				continue
@@ -133,11 +134,12 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 	spinner := message.NewProgressSpinner("Updating existing Zarf-managed git secrets")
 	defer spinner.Stop()
 
-	if namespaces, err := c.GetNamespaces(ctx); err != nil {
+	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
 		spinner.Errorf(err, "Unable to get k8s namespaces")
 	} else {
 		// Update all git pull secrets
-		for _, namespace := range namespaces.Items {
+		for _, namespace := range namespaceList.Items {
 			currentGitSecret, err := c.GetSecret(ctx, namespace.Name, config.ZarfGitServerSecretName)
 			if err != nil {
 				continue

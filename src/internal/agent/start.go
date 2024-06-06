@@ -6,10 +6,11 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
+	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	agentHttp "github.com/defenseunicorns/zarf/src/internal/agent/http"
@@ -27,35 +28,40 @@ const (
 )
 
 // StartWebhook launches the Zarf agent mutating webhook in the cluster.
-func StartWebhook() {
+func StartWebhook(ctx context.Context) error {
 	message.Debug("agent.StartWebhook()")
-
-	startServer(agentHttp.NewAdmissionServer(httpPort))
+	return startServer(ctx, agentHttp.NewAdmissionServer(ctx, httpPort))
 }
 
 // StartHTTPProxy launches the zarf agent proxy in the cluster.
-func StartHTTPProxy() {
+func StartHTTPProxy(ctx context.Context) error {
 	message.Debug("agent.StartHttpProxy()")
-
-	startServer(agentHttp.NewProxyServer(httpPort))
+	return startServer(ctx, agentHttp.NewProxyServer(httpPort))
 }
 
-func startServer(server *http.Server) {
-	go func() {
-		if err := server.ListenAndServeTLS(tlsCert, tlsKey); err != nil && err != http.ErrServerClosed {
-			message.Fatal(err, lang.AgentErrStart)
+func startServer(ctx context.Context, srv *http.Server) error {
+	g, gCtx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		err := srv.ListenAndServeTLS(tlsCert, tlsKey)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
 		}
-	}()
-
+		return nil
+	})
+	g.Go(func() error {
+		<-gCtx.Done()
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		err := srv.Shutdown(ctx)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	message.Infof(lang.AgentInfoPort, httpPort)
-
-	// listen shutdown signal
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-	<-signalChan
-
-	message.Infof(lang.AgentInfoShutdown)
-	if err := server.Shutdown(context.Background()); err != nil {
-		message.Fatal(err, lang.AgentErrShutdown)
+	err := g.Wait()
+	if err != nil {
+		return err
 	}
+	return nil
 }
