@@ -74,7 +74,9 @@ func RenderProgressBarForLocalDirWrite(filepath string, expectedTotal int64, com
 				completeChan <- nil
 				return
 			} else {
-				progressBar.Stop()
+				if err := progressBar.Close(); err != nil {
+					message.Debugf("unable to close progress bar: %s", err.Error())
+				}
 				completeChan <- nil
 				return
 			}

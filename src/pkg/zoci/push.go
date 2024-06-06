@@ -68,7 +68,7 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 	total += manifestConfigDesc.Size
 
 	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", r.Repo().Reference.Repository, r.Repo().Reference.Reference))
-	defer progressBar.Stop()
+	defer progressBar.Close()
 	r.SetProgressWriter(progressBar)
 	defer r.ClearProgressWriter()
 
