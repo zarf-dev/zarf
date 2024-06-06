@@ -265,7 +265,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 			return err
 		}
 		newFile := filepath.Join(blobDir, hash)
-
 		return os.Rename(path, newFile)
 	})
 	if err != nil {
