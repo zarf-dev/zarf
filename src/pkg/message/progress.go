@@ -40,6 +40,20 @@ func NewProgressBar(total int64, text string) *ProgressBar {
 	}
 }
 
+// Close doesn't do anything but satisfy implementation.
+// https://github.com/defenseunicorns/pkg/blob/325e69d2560e8d767511c9e27187f775ecbad3fa/helpers/progress.go#L31-L38
+func (*ProgressBar) Close() error {
+	return nil
+}
+
+// Updatef doesn't do anything but satisfy implementation.
+// https://github.com/defenseunicorns/pkg/blob/325e69d2560e8d767511c9e27187f775ecbad3fa/helpers/progress.go#L31-L38
+func (*ProgressBar) Updatef(_ string, _ ...any) {}
+
+// Failf doesn't do anything but satisfy implementation.
+// https://github.com/defenseunicorns/pkg/blob/325e69d2560e8d767511c9e27187f775ecbad3fa/helpers/progress.go#L31-L38
+func (*ProgressBar) Failf(_ string, _ ...any) {}
+
 // Update updates the ProgressBar with completed progress and new text.
 func (p *ProgressBar) Update(complete int64, text string) {
 	if NoProgress {

@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"slices"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 )
 
