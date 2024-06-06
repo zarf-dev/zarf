@@ -12,7 +12,7 @@ require (
 	github.com/anchore/clio v0.0.0-20240408173007-3c4abf89e72f
 	github.com/anchore/stereoscope v0.0.1
 	github.com/anchore/syft v0.100.0
-	github.com/defenseunicorns/pkg/helpers v1.1.1
+	github.com/defenseunicorns/pkg/helpers v2.0.1
 	github.com/defenseunicorns/pkg/oci v0.0.1
 	github.com/derailed/k9s v0.31.7
 	github.com/distribution/reference v0.5.0
