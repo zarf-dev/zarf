@@ -10,7 +10,7 @@ For all questions documentation may not cover, we suggest utilizing [Github Disc
 All code issues should be a [Github Issue](https://github.com/defenseunicorns/zarf/issues/new/choose) that follows the issue template. 
 
 Following the templates provides the Zarf community a foundation of understanding to be able to assist quickly.
-After an issue is made, this issue can be brought into other chanels such as the [Kubernetes Slack #Zarf](https://zarf.dev/slack) channel or the [bi-weekly Zarf Community Meeting](https://docs.zarf.dev/contribute/contributor-guide/).
+After an issue is made, this issue can be brought into other channels such as the [Kubernetes Slack #Zarf](https://zarf.dev/slack) channel or the [bi-weekly Zarf Community Meeting](https://docs.zarf.dev/contribute/contributor-guide/).
 
                 Github Issue 
                 /          \

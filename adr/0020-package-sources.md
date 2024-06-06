@@ -70,7 +70,7 @@ The following sources have been implemented:
 - Published OCI package (`oci://`)
 - In-cluster (Deployed) package (`inspect` and `remove` only)
 
-The `layout` library contains the `PackagePaths` struct which supercedes the prior `TempPaths` struct. This new struct contains access methods to different aspects of Zarf's internal package layout. This struct is passed to the `PackageSource` functions to allow for the loading of packages into the correct layout. In order for a package to be loaded into the correct layout, the package must follow the default Zarf package structure, or be converted to the expected structure during loading operations.
+The `layout` library contains the `PackagePaths` struct which supersedes the prior `TempPaths` struct. This new struct contains access methods to different aspects of Zarf's internal package layout. This struct is passed to the `PackageSource` functions to allow for the loading of packages into the correct layout. In order for a package to be loaded into the correct layout, the package must follow the default Zarf package structure, or be converted to the expected structure during loading operations.
 
 ## Consequences
 

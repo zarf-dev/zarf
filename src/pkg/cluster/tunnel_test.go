@@ -40,7 +40,7 @@ func TestServiceInfoFromNodePortURL(t *testing.T) {
 			expectedErr: "no matching node port services found",
 		},
 		{
-			name:        "found serivce",
+			name:        "found service",
 			nodePortURL: "http://localhost:30001",
 			services: []corev1.Service{
 				{
