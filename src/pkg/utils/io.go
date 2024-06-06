@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -108,7 +108,7 @@ func SplitFile(srcPath string, chunkSizeBytes int) (err error) {
 	// start progress bar
 	title := fmt.Sprintf("[0/%d] MB bytes written", fileSize/1000/1000)
 	progressBar := message.NewProgressBar(fileSize, title)
-	defer progressBar.Stop()
+	defer progressBar.Close()
 
 	// open srcFile
 	srcFile, err := os.Open(srcPath)
@@ -183,7 +183,7 @@ func SplitFile(srcPath string, chunkSizeBytes int) (err error) {
 		// update progress bar
 		progressBar.Add(bufferSize)
 		title := fmt.Sprintf("[%d/%d] MB bytes written", progressBar.GetCurrent()/1000/1000, fileSize/1000/1000)
-		progressBar.UpdateTitle(title)
+		progressBar.Updatef(title)
 	}
 	srcFile.Close()
 	_ = os.RemoveAll(srcPath)

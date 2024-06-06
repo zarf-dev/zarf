@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -53,7 +53,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	)
 
 	progress := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
-	defer progress.Stop()
+	defer progress.Close()
 
 	if err := helpers.Retry(func() error {
 		c, _ := cluster.NewCluster()
@@ -86,7 +86,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		}()
 		for refInfo, img := range toPush {
 			refTruncated := helpers.Truncate(refInfo.Reference, 55, true)
-			progress.UpdateTitle(fmt.Sprintf("Pushing %s", refTruncated))
+			progress.Updatef(fmt.Sprintf("Pushing %s", refTruncated))
 
 			size, err := calcImgSize(img)
 			if err != nil {
