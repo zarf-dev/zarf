@@ -44,7 +44,6 @@ func (i *Images) AddV1Image(img v1.Image) error {
 		}
 		i.AddBlob(digest.Hex)
 	}
-
 	manifest, err := img.Manifest()
 	if err != nil {
 		return err
