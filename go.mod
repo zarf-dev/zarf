@@ -13,7 +13,7 @@ require (
 	github.com/anchore/stereoscope v0.0.1
 	github.com/anchore/syft v0.100.0
 	github.com/defenseunicorns/pkg/helpers v1.1.1
-	github.com/defenseunicorns/pkg/oci v0.0.1
+	github.com/defenseunicorns/pkg/oci v1.0.1
 	github.com/derailed/k9s v0.31.7
 	github.com/distribution/reference v0.5.0
 	github.com/fairwindsops/pluto/v5 v5.18.4
@@ -61,7 +61,10 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
-require cuelang.org/go v0.7.0 // indirect
+require (
+	cuelang.org/go v0.7.0 // indirect
+	github.com/defenseunicorns/pkg/helpers/v2 v2.0.1 // indirect
+)
 
 require (
 	atomicgo.dev/cursor v0.2.0 // indirect
