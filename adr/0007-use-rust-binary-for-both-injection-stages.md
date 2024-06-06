@@ -10,7 +10,7 @@ Amends [3. Image injection into remote clusters without native support](0003-ima
 
 ## Context
 
-In ADR 3, the decision was made to create a rust binary (`stage1`) that would re-assemble a `registry:2` image and a go registry binary (`stage2`) from a series of configmaps. While this solution works, it is overkill for the operations that `stage2` performs. The `stage2` binary is only responsible for 1. starting a docker registry in `rw` mode, 2. pushing the `registry:2` crane tarball into said registry, 3. starting the docker registry in `r` mode. This `registry:2` image is then immedietely consumed by the `zarf-registry` package, creating a true in-cluster docker registry. The injector pod is then destroyed. The overhead this operation creates:
+In ADR 3, the decision was made to create a rust binary (`stage1`) that would re-assemble a `registry:2` image and a go registry binary (`stage2`) from a series of configmaps. While this solution works, it is overkill for the operations that `stage2` performs. The `stage2` binary is only responsible for 1. starting a docker registry in `rw` mode, 2. pushing the `registry:2` crane tarball into said registry, 3. starting the docker registry in `r` mode. This `registry:2` image is then immediately consumed by the `zarf-registry` package, creating a true in-cluster docker registry. The injector pod is then destroyed. The overhead this operation creates:
 
 - having to keep track of another binary (making the total number 3 for the zarf ecosystem)
 - nearly doubling the amount of configmaps loaded into the cluster (makes init slower)

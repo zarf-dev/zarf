@@ -17,7 +17,7 @@ func (z ZarfHandler) Enabled(_ context.Context, _ slog.Level) bool {
 	return true
 }
 
-// WithAttrs is not suppported
+// WithAttrs is not supported
 func (z ZarfHandler) WithAttrs(_ []slog.Attr) slog.Handler {
 	return z
 }

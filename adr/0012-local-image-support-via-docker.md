@@ -21,7 +21,7 @@ We did extensive investigation into various strategies of loading docker images 
 
 ## Decision
 
-We had hoped to leverage docker caching and avoid crane caching moreso, but realized that caching was still occurring via Syft for SBOM. Additionally, the extremely-large, local-only image is actually the edge case here and we created a recommended workaround in the FAQs as well as an inline alert when a large docker image is detected. This restores behavior to what it was before the docker daemon support was added, but with the added benefit of being able to load images from the docker daemon when they are available locally.
+We had hoped to leverage docker caching and avoid crane caching more, but realized that caching was still occurring via Syft for SBOM. Additionally, the extremely-large, local-only image is actually the edge case here and we created a recommended workaround in the FAQs as well as an inline alert when a large docker image is detected. This restores behavior to what it was before the docker daemon support was added, but with the added benefit of being able to load images from the docker daemon when they are available locally.
 
 ## Consequences
 
