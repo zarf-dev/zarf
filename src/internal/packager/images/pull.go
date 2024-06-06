@@ -246,6 +246,32 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	doneSaving <- nil
 	<-doneSaving
 
+	// Needed because when pulling form the local docker daemon, while using the docker containerd runtime
+	// Crane incorrectly names the blob of the docker image config to a sha that does not match the contents
+	// https://github.com/defenseunicorns/zarf/issues/2584
+	// This is a band aid fix while we wait for crane and or docker to create the permanent fix
+	blobDir := filepath.Join(cfg.DestinationDirectory, "blobs", "sha256")
+	err = filepath.Walk(blobDir, func(path string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if fi.IsDir() {
+			return nil
+		}
+
+		hash, err := helpers.GetSHA256OfFile(path)
+		if err != nil {
+			return err
+		}
+		newFile := filepath.Join(blobDir, hash)
+
+		return os.Rename(path, newFile)
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	return fetched, nil
 }
 
