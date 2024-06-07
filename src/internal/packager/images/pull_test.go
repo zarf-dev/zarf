@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry[]
 	"github.com/stretchr/testify/require"
 )
 
