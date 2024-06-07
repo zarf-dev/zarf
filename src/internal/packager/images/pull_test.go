@@ -16,7 +16,6 @@ import (
 
 func TestPull(t *testing.T) {
 	t.Run("pulling a cosign image is successful and doesn't add anything to the cache", func(t *testing.T) {
-
 		ref, err := transform.ParseImageRef("ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig")
 		require.NoError(t, err)
 		destDir := t.TempDir()
