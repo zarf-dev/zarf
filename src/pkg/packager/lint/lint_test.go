@@ -5,6 +5,7 @@
 package lint
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -182,7 +183,7 @@ func TestValidateSchema(t *testing.T) {
 				Metadata: types.ZarfMetadata{Name: "test-zarf-package"}}}
 
 		createOpts := types.ZarfCreateOptions{Flavor: "", BaseDir: "."}
-		lintComponents(&validator, &createOpts)
+		lintComponents(context.Background(), &validator, &createOpts)
 		// Require.contains rather than equals since the error message changes from linux to windows
 		require.Contains(t, validator.findings[0].description, fmt.Sprintf("open %s", filepath.Join("fake-path", "zarf.yaml")))
 		require.Equal(t, ".components.[0].import.path", validator.findings[0].yqPath)

@@ -5,6 +5,7 @@
 package sources
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,7 +32,7 @@ type SplitTarballSource struct {
 }
 
 // Collect turns a split tarball into a full tarball.
-func (s *SplitTarballSource) Collect(dir string) (string, error) {
+func (s *SplitTarballSource) Collect(_ context.Context, dir string) (string, error) {
 	pattern := strings.Replace(s.PackageSource, ".part000", ".part*", 1)
 	fileList, err := filepath.Glob(pattern)
 	if err != nil {
@@ -109,8 +110,8 @@ func (s *SplitTarballSource) Collect(dir string) (string, error) {
 }
 
 // LoadPackage loads a package from a split tarball.
-func (s *SplitTarballSource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
-	tb, err := s.Collect(filepath.Dir(s.PackageSource))
+func (s *SplitTarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
+	tb, err := s.Collect(ctx, filepath.Dir(s.PackageSource))
 	if err != nil {
 		return pkg, nil, err
 	}
@@ -123,12 +124,12 @@ func (s *SplitTarballSource) LoadPackage(dst *layout.PackagePaths, filter filter
 	ts := &TarballSource{
 		s.ZarfPackageOptions,
 	}
-	return ts.LoadPackage(dst, filter, unarchiveAll)
+	return ts.LoadPackage(ctx, dst, filter, unarchiveAll)
 }
 
 // LoadPackageMetadata loads a package's metadata from a split tarball.
-func (s *SplitTarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
-	tb, err := s.Collect(filepath.Dir(s.PackageSource))
+func (s *SplitTarballSource) LoadPackageMetadata(ctx context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
+	tb, err := s.Collect(ctx, filepath.Dir(s.PackageSource))
 	if err != nil {
 		return pkg, nil, err
 	}
@@ -139,5 +140,5 @@ func (s *SplitTarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantS
 	ts := &TarballSource{
 		s.ZarfPackageOptions,
 	}
-	return ts.LoadPackageMetadata(dst, wantSBOM, skipValidation)
+	return ts.LoadPackageMetadata(ctx, dst, wantSBOM, skipValidation)
 }

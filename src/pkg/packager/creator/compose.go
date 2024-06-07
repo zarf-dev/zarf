@@ -5,13 +5,15 @@
 package creator
 
 import (
+	"context"
+
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // ComposeComponents composes components and their dependencies into a single Zarf package using an import chain.
-func ComposeComponents(pkg types.ZarfPackage, flavor string) (types.ZarfPackage, []string, error) {
+func ComposeComponents(ctx context.Context, pkg types.ZarfPackage, flavor string) (types.ZarfPackage, []string, error) {
 	components := []types.ZarfComponent{}
 	warnings := []string{}
 
@@ -31,7 +33,7 @@ func ComposeComponents(pkg types.ZarfPackage, flavor string) (types.ZarfPackage,
 		component.Only.Flavor = ""
 
 		// build the import chain
-		chain, err := composer.NewImportChain(component, i, pkg.Metadata.Name, arch, flavor)
+		chain, err := composer.NewImportChain(ctx, component, i, pkg.Metadata.Name, arch, flavor)
 		if err != nil {
 			return types.ZarfPackage{}, nil, err
 		}
@@ -42,7 +44,7 @@ func ComposeComponents(pkg types.ZarfPackage, flavor string) (types.ZarfPackage,
 		warnings = append(warnings, warning...)
 
 		// get the composed component
-		composed, err := chain.Compose()
+		composed, err := chain.Compose(ctx)
 		if err != nil {
 			return types.ZarfPackage{}, nil, err
 		}

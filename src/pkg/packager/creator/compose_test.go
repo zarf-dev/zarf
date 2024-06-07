@@ -5,6 +5,7 @@
 package creator
 
 import (
+	"context"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/types"
@@ -160,7 +161,7 @@ func TestComposeComponents(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			pkg, _, err := ComposeComponents(tt.pkg, tt.flavor)
+			pkg, _, err := ComposeComponents(context.Background(), tt.pkg, tt.flavor)
 
 			if tt.expectedErr == "" {
 				require.NoError(t, err)
