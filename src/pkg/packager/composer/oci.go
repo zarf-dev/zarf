@@ -23,7 +23,7 @@ import (
 	ocistore "oras.land/oras-go/v2/content/oci"
 )
 
-func (ic *ImportChain) getRemote(url string) (*zoci.Remote, error) {
+func (ic *ImportChain) getRemote(ctx context.Context, url string) (*zoci.Remote, error) {
 	if ic.remote != nil {
 		return ic.remote, nil
 	}
@@ -32,7 +32,7 @@ func (ic *ImportChain) getRemote(url string) (*zoci.Remote, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = ic.remote.ResolveRoot(context.TODO())
+	_, err = ic.remote.ResolveRoot(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("published skeleton package for %q does not exist: %w", url, err)
 	}
@@ -45,17 +45,16 @@ func (ic *ImportChain) ContainsOCIImport() bool {
 	return ic.tail.prev != nil && ic.tail.prev.Import.URL != ""
 }
 
-func (ic *ImportChain) fetchOCISkeleton() error {
+func (ic *ImportChain) fetchOCISkeleton(ctx context.Context) error {
 	if !ic.ContainsOCIImport() {
 		return nil
 	}
 	node := ic.tail.prev
-	remote, err := ic.getRemote(node.Import.URL)
+	remote, err := ic.getRemote(ctx, node.Import.URL)
 	if err != nil {
 		return err
 	}
 
-	ctx := context.TODO()
 	manifest, err := remote.FetchRoot(ctx)
 	if err != nil {
 		return err
@@ -91,7 +90,6 @@ func (ic *ImportChain) fetchOCISkeleton() error {
 			return err
 		}
 
-		ctx := context.TODO()
 		// ensure the tarball is in the cache
 		exists, err := store.Exists(ctx, componentDesc)
 		if err != nil {

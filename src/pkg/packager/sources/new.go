@@ -5,6 +5,7 @@
 package sources
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -30,13 +31,13 @@ import (
 //	`sources.ValidatePackageSignature` and `sources.ValidatePackageIntegrity` can be leveraged for this purpose.
 type PackageSource interface {
 	// LoadPackage loads a package from a source.
-	LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error)
+	LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error)
 
 	// LoadPackageMetadata loads a package's metadata from a source.
-	LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error)
+	LoadPackageMetadata(ctx context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error)
 
 	// Collect relocates a package from its source to a tarball in a given destination directory.
-	Collect(destinationDirectory string) (tarball string, err error)
+	Collect(ctx context.Context, destinationDirectory string) (tarball string, err error)
 }
 
 // Identify returns the type of package source based on the provided package source string.
