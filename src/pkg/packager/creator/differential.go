@@ -5,6 +5,7 @@
 package creator
 
 import (
+	"context"
 	"os"
 
 	"github.com/defenseunicorns/zarf/src/config"
@@ -15,7 +16,7 @@ import (
 )
 
 // loadDifferentialData sets any images and repos from the existing reference package in the DifferentialData and returns it.
-func loadDifferentialData(diffPkgPath string) (diffData *types.DifferentialData, err error) {
+func loadDifferentialData(ctx context.Context, diffPkgPath string) (diffData *types.DifferentialData, err error) {
 	tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -31,7 +32,7 @@ func loadDifferentialData(diffPkgPath string) (diffData *types.DifferentialData,
 		return nil, err
 	}
 
-	diffPkg, _, err := src.LoadPackageMetadata(diffLayout, false, false)
+	diffPkg, _, err := src.LoadPackageMetadata(ctx, diffLayout, false, false)
 	if err != nil {
 		return nil, err
 	}

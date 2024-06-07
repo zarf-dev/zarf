@@ -5,6 +5,7 @@
 package creator
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -40,7 +41,7 @@ func TestSkeletonLoadPackageDefinition(t *testing.T) {
 
 			src := layout.New(filepath.Join("testdata", tt.testDir))
 			sc := NewSkeletonCreator(types.ZarfCreateOptions{}, types.ZarfPublishOptions{})
-			pkg, _, err := sc.LoadPackageDefinition(src)
+			pkg, _, err := sc.LoadPackageDefinition(context.Background(), src)
 
 			if tt.expectedErr == "" {
 				require.NoError(t, err)

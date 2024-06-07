@@ -5,6 +5,7 @@
 package sources
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,7 +30,7 @@ type URLSource struct {
 }
 
 // Collect downloads a package from the source URL.
-func (s *URLSource) Collect(dir string) (string, error) {
+func (s *URLSource) Collect(_ context.Context, dir string) (string, error) {
 	if !config.CommonOptions.Insecure && s.Shasum == "" && !strings.HasPrefix(s.PackageSource, helpers.SGETURLPrefix) {
 		return "", fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
 	}
@@ -50,14 +51,14 @@ func (s *URLSource) Collect(dir string) (string, error) {
 }
 
 // LoadPackage loads a package from an http, https or sget URL.
-func (s *URLSource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
+func (s *URLSource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return pkg, nil, err
 	}
 	defer os.Remove(tmp)
 
-	dstTarball, err := s.Collect(tmp)
+	dstTarball, err := s.Collect(ctx, tmp)
 	if err != nil {
 		return pkg, nil, err
 	}
@@ -70,18 +71,18 @@ func (s *URLSource) LoadPackage(dst *layout.PackagePaths, filter filters.Compone
 		s.ZarfPackageOptions,
 	}
 
-	return ts.LoadPackage(dst, filter, unarchiveAll)
+	return ts.LoadPackage(ctx, dst, filter, unarchiveAll)
 }
 
 // LoadPackageMetadata loads a package's metadata from an http, https or sget URL.
-func (s *URLSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
+func (s *URLSource) LoadPackageMetadata(ctx context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return pkg, nil, err
 	}
 	defer os.Remove(tmp)
 
-	dstTarball, err := s.Collect(tmp)
+	dstTarball, err := s.Collect(ctx, tmp)
 	if err != nil {
 		return pkg, nil, err
 	}
@@ -92,5 +93,5 @@ func (s *URLSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 		s.ZarfPackageOptions,
 	}
 
-	return ts.LoadPackageMetadata(dst, wantSBOM, skipValidation)
+	return ts.LoadPackageMetadata(ctx, dst, wantSBOM, skipValidation)
 }

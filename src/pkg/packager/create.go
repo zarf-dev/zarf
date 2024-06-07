@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -16,7 +17,7 @@ import (
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
-func (p *Packager) Create() (err error) {
+func (p *Packager) Create(ctx context.Context) (err error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -34,7 +35,7 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(p.layout)
+	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(ctx, p.layout)
 	if err != nil {
 		return err
 	}
@@ -43,7 +44,7 @@ func (p *Packager) Create() (err error) {
 		return fmt.Errorf("package creation canceled")
 	}
 
-	if err := pc.Assemble(p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
+	if err := pc.Assemble(ctx, p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
 		return err
 	}
 
@@ -52,5 +53,5 @@ func (p *Packager) Create() (err error) {
 		return err
 	}
 
-	return pc.Output(p.layout, &p.cfg.Pkg)
+	return pc.Output(ctx, p.layout, &p.cfg.Pkg)
 }

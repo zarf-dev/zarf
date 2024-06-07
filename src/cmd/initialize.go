@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -49,7 +50,7 @@ var initCmd = &cobra.Command{
 
 		// Try to use an init-package in the executable directory if none exist in current working directory
 		var err error
-		if pkgConfig.PkgOpts.PackageSource, err = findInitPackage(initPackageName); err != nil {
+		if pkgConfig.PkgOpts.PackageSource, err = findInitPackage(cmd.Context(), initPackageName); err != nil {
 			message.Fatal(err, err.Error())
 		}
 
@@ -74,7 +75,7 @@ var initCmd = &cobra.Command{
 	},
 }
 
-func findInitPackage(initPackageName string) (string, error) {
+func findInitPackage(ctx context.Context, initPackageName string) (string, error) {
 	// First, look for the init package in the current working directory
 	if !helpers.InvalidPath(initPackageName) {
 		return initPackageName, nil
@@ -103,7 +104,7 @@ func findInitPackage(initPackageName string) (string, error) {
 	}
 
 	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
-	downloadCacheTarget, err := downloadInitPackage(config.GetAbsCachePath())
+	downloadCacheTarget, err := downloadInitPackage(ctx, config.GetAbsCachePath())
 	if err != nil {
 		if errors.Is(err, lang.ErrInitNotFound) {
 			message.Fatal(err, err.Error())
@@ -114,7 +115,7 @@ func findInitPackage(initPackageName string) (string, error) {
 	return downloadCacheTarget, nil
 }
 
-func downloadInitPackage(cacheDirectory string) (string, error) {
+func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, error) {
 	if config.CommonOptions.Confirm {
 		return "", lang.ErrInitNotFound
 	}
@@ -144,7 +145,7 @@ func downloadInitPackage(cacheDirectory string) (string, error) {
 			return "", err
 		}
 		source := &sources.OCISource{Remote: remote}
-		return source.Collect(cacheDirectory)
+		return source.Collect(ctx, cacheDirectory)
 	}
 	// Otherwise, exit and tell the user to manually download the init-package
 	return "", errors.New(lang.CmdInitPullErrManual)
