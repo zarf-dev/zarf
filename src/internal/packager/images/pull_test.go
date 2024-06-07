@@ -6,7 +6,6 @@ package images
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -22,7 +21,7 @@ func TestPull(t *testing.T) {
 		tmpDestDir := t.TempDir()
 		tmpCacheDir := t.TempDir()
 		destDir := filepath.Join(tmpDestDir, "images")
-		PullConfig := PullConfig{
+		pullConfig := PullConfig{
 			DestinationDirectory: destDir,
 			CacheDirectory:       tmpCacheDir,
 			ImageList: []transform.Image{
@@ -30,10 +29,9 @@ func TestPull(t *testing.T) {
 			},
 		}
 
-		_, err = Pull(context.Background(), PullConfig)
+		_, err = Pull(context.Background(), pullConfig)
 		require.NoError(t, err)
-		_, err = os.Stat(filepath.Join(destDir, "blobs/sha256/3e84ea487b4c52a3299cf2996f70e7e1721236a0998da33a0e30107108486b3e"))
-		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(destDir, "blobs/sha256/3e84ea487b4c52a3299cf2996f70e7e1721236a0998da33a0e30107108486b3e"))
 
 		files, err := filepath.Glob(filepath.Join(tmpCacheDir, "*"))
 		require.NoError(t, err)
