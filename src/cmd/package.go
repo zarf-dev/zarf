@@ -39,7 +39,7 @@ var packageCreateCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageCreateShort,
 	Long:    lang.CmdPackageCreateLong,
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 
 		var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
@@ -55,7 +55,7 @@ var packageCreateCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		if err := pkgClient.Create(); err != nil {
+		if err := pkgClient.Create(cmd.Context()); err != nil {
 			message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
 		}
 	},
@@ -112,7 +112,7 @@ var packageInspectCmd = &cobra.Command{
 	Short:   lang.CmdPackageInspectShort,
 	Long:    lang.CmdPackageInspectLong,
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
 
 		src := identifyAndFallbackToClusterSource()
@@ -120,7 +120,7 @@ var packageInspectCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
 		defer pkgClient.ClearTempPaths()
 
-		if err := pkgClient.Inspect(); err != nil {
+		if err := pkgClient.Inspect(cmd.Context()); err != nil {
 			message.Fatalf(err, lang.CmdPackageInspectErr, err.Error())
 		}
 	},
@@ -190,7 +190,7 @@ var packagePublishCmd = &cobra.Command{
 	Short:   lang.CmdPackagePublishShort,
 	Example: lang.CmdPackagePublishExample,
 	Args:    cobra.ExactArgs(2),
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = args[0]
 
 		if !helpers.IsOCIURL(args[1]) {
@@ -216,7 +216,7 @@ var packagePublishCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		if err := pkgClient.Publish(); err != nil {
+		if err := pkgClient.Publish(cmd.Context()); err != nil {
 			message.Fatalf(err, lang.CmdPackagePublishErr, err.Error())
 		}
 	},
@@ -227,13 +227,13 @@ var packagePullCmd = &cobra.Command{
 	Short:   lang.CmdPackagePullShort,
 	Example: lang.CmdPackagePullExample,
 	Args:    cobra.ExactArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.PkgOpts.PackageSource = args[0]
 
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		if err := pkgClient.Pull(); err != nil {
+		if err := pkgClient.Pull(cmd.Context()); err != nil {
 			message.Fatalf(err, lang.CmdPackagePullErr, err.Error())
 		}
 	},

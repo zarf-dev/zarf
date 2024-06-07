@@ -34,9 +34,7 @@ type OCISource struct {
 }
 
 // LoadPackage loads a package from an OCI registry.
-func (s *OCISource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
-	ctx := context.TODO()
-
+func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	message.Debugf("Loading package from %q", s.PackageSource)
 
 	pkg, err = s.FetchZarfYAML(ctx)
@@ -112,12 +110,11 @@ func (s *OCISource) LoadPackage(dst *layout.PackagePaths, filter filters.Compone
 }
 
 // LoadPackageMetadata loads a package's metadata from an OCI registry.
-func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
+func (s *OCISource) LoadPackageMetadata(ctx context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	toPull := zoci.PackageAlwaysPull
 	if wantSBOM {
 		toPull = append(toPull, layout.SBOMTar)
 	}
-	ctx := context.TODO()
 	layersFetched, err := s.PullPaths(ctx, dst.Base, toPull)
 	if err != nil {
 		return pkg, nil, err
@@ -165,13 +162,12 @@ func (s *OCISource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool,
 }
 
 // Collect pulls a package from an OCI registry and writes it to a tarball.
-func (s *OCISource) Collect(dir string) (string, error) {
+func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return "", err
 	}
 	defer os.RemoveAll(tmp)
-	ctx := context.TODO()
 	fetched, err := s.PullPackage(ctx, tmp, config.CommonOptions.OCIConcurrency)
 	if err != nil {
 		return "", err
