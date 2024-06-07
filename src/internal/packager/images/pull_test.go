@@ -6,6 +6,7 @@ package images
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -33,8 +34,8 @@ func TestPull(t *testing.T) {
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(destDir, "blobs/sha256/3e84ea487b4c52a3299cf2996f70e7e1721236a0998da33a0e30107108486b3e"))
 
-		files, err := filepath.Glob(filepath.Join(tmpCacheDir, "*"))
+		dir, err := os.ReadDir(tmpCacheDir)
 		require.NoError(t, err)
-		require.Empty(t, files)
+		require.Empty(t, dir)
 	})
 }
