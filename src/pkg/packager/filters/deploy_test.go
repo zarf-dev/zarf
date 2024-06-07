@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 )

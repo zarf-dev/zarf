@@ -10,7 +10,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"

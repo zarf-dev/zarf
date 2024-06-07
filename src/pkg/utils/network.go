@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
@@ -112,7 +112,7 @@ func httpGetFile(url string, destinationFile *os.File) error {
 	progressBar := message.NewProgressBar(resp.ContentLength, title)
 
 	if _, err = io.Copy(destinationFile, io.TeeReader(resp.Body, progressBar)); err != nil {
-		progressBar.Errorf(err, "Unable to save the file %s", destinationFile.Name())
+		progressBar.Failf("Unable to save the file %s: %s", destinationFile.Name(), err.Error())
 		return err
 	}
 

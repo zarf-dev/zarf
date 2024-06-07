@@ -18,7 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -245,6 +245,31 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	// Send a signal to the progress bar that we're done and wait for the thread to finish
 	doneSaving <- nil
 	<-doneSaving
+
+	// Needed because when pulling from the local docker daemon, while using the docker containerd runtime
+	// Crane incorrectly names the blob of the docker image config to a sha that does not match the contents
+	// https://github.com/defenseunicorns/zarf/issues/2584
+	// This is a band aid fix while we wait for crane and or docker to create the permanent fix
+	blobDir := filepath.Join(cfg.DestinationDirectory, "blobs", "sha256")
+	err = filepath.Walk(blobDir, func(path string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if fi.IsDir() {
+			return nil
+		}
+
+		hash, err := helpers.GetSHA256OfFile(path)
+		if err != nil {
+			return err
+		}
+		newFile := filepath.Join(blobDir, hash)
+		return os.Rename(path, newFile)
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	return fetched, nil
 }

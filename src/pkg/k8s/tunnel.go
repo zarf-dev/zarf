@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 )
 
 // Global lock to synchronize port selections.
