@@ -172,7 +172,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 			if cacheImg {
 				img = cache.Image(img, cache.NewFilesystemCache(cfg.CacheDirectory))
 			}
-			img = cache.Image(img, cache.NewFilesystemCache(cfg.CacheDirectory))
 
 			manifest, err := img.Manifest()
 			if err != nil {
