@@ -186,7 +186,7 @@ var clearCacheCmd = &cobra.Command{
 var downloadInitCmd = &cobra.Command{
 	Use:   "download-init",
 	Short: lang.CmdToolsDownloadInitShort,
-	Run: func(_ *cobra.Command, _ []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		url := zoci.GetInitPackageURL(config.CLIVersion)
 
 		remote, err := zoci.NewRemote(url, oci.PlatformForArch(config.GetArch()))
@@ -196,7 +196,7 @@ var downloadInitCmd = &cobra.Command{
 
 		source := &sources.OCISource{Remote: remote}
 
-		_, err = source.Collect(outputDirectory)
+		_, err = source.Collect(cmd.Context(), outputDirectory)
 		if err != nil {
 			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
 		}

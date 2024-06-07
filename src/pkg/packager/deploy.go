@@ -60,12 +60,12 @@ func (p *Packager) Deploy(ctx context.Context) (err error) {
 	if isInteractive {
 		filter := filters.Empty()
 
-		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, true)
+		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, filter, true)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
 	} else {
-		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, deployFilter, true)
+		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, deployFilter, true)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}

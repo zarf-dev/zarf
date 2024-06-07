@@ -5,6 +5,7 @@
 package creator
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -86,7 +87,7 @@ func TestLoadPackageDefinition(t *testing.T) {
 
 			src := layout.New(filepath.Join("testdata", tt.testDir))
 			pc := NewPackageCreator(types.ZarfCreateOptions{}, "")
-			pkg, _, err := pc.LoadPackageDefinition(src)
+			pkg, _, err := pc.LoadPackageDefinition(context.Background(), src)
 
 			if tt.expectedErr == "" {
 				require.NoError(t, err)

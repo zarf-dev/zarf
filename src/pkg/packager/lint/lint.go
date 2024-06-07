@@ -5,6 +5,7 @@
 package lint
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"os"
@@ -33,7 +34,7 @@ func getSchemaFile() ([]byte, error) {
 
 // Validate validates a zarf file against the zarf schema, returns *validator with warnings or errors if they exist
 // along with an error if the validation itself failed
-func Validate(createOpts types.ZarfCreateOptions) (*Validator, error) {
+func Validate(ctx context.Context, createOpts types.ZarfCreateOptions) (*Validator, error) {
 	validator := Validator{}
 	var err error
 
@@ -51,7 +52,7 @@ func Validate(createOpts types.ZarfCreateOptions) (*Validator, error) {
 
 	validator.baseDir = createOpts.BaseDir
 
-	lintComponents(&validator, &createOpts)
+	lintComponents(ctx, &validator, &createOpts)
 
 	if validator.jsonSchema, err = getSchemaFile(); err != nil {
 		return nil, err
@@ -64,7 +65,7 @@ func Validate(createOpts types.ZarfCreateOptions) (*Validator, error) {
 	return &validator, nil
 }
 
-func lintComponents(validator *Validator, createOpts *types.ZarfCreateOptions) {
+func lintComponents(ctx context.Context, validator *Validator, createOpts *types.ZarfCreateOptions) {
 	for i, component := range validator.typedZarfPackage.Components {
 		arch := config.GetArch(validator.typedZarfPackage.Metadata.Architecture)
 
@@ -72,7 +73,7 @@ func lintComponents(validator *Validator, createOpts *types.ZarfCreateOptions) {
 			continue
 		}
 
-		chain, err := composer.NewImportChain(component, i, validator.typedZarfPackage.Metadata.Name, arch, createOpts.Flavor)
+		chain, err := composer.NewImportChain(ctx, component, i, validator.typedZarfPackage.Metadata.Name, arch, createOpts.Flavor)
 		baseComponent := chain.Head()
 
 		var badImportYqPath string
