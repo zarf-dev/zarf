@@ -5,6 +5,7 @@
 package tools
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -37,7 +38,7 @@ func init() {
 		Use:     "registry",
 		Aliases: []string{"r", "crane"},
 		Short:   lang.CmdToolsRegistryShort,
-		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			// The crane options loading here comes from the rootCmd of crane
 			craneOptions = append(craneOptions, crane.WithContext(cmd.Context()))
 			// TODO(jonjohnsonjr): crane.Verbose option?
@@ -56,11 +57,12 @@ func init() {
 			if platform != "all" {
 				v1Platform, err = v1.ParsePlatform(platform)
 				if err != nil {
-					message.Fatalf(err, lang.CmdToolsRegistryInvalidPlatformErr, platform, err.Error())
+					return fmt.Errorf("invalid platform %s: %w", platform, err)
 				}
 			}
 
 			craneOptions = append(craneOptions, crane.WithPlatform(v1Platform))
+			return nil
 		},
 	}
 
@@ -159,7 +161,7 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 
 	wrappedCommand.RunE = func(cmd *cobra.Command, args []string) error {
 		if len(args) < imageNameArgumentIndex+1 {
-			message.Fatal(nil, lang.CmdToolsCraneNotEnoughArgumentsErr)
+			return errors.New("not have enough arguments specified for this command")
 		}
 
 		// Try to connect to a Zarf initialized cluster otherwise then pass it down to crane.
@@ -333,7 +335,7 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 				Message: lang.CmdConfirmContinue,
 			}
 			if err := survey.AskOne(prompt, &confirm); err != nil {
-				message.Fatalf(nil, lang.ErrConfirmCancel, err)
+				return fmt.Errorf("confirm selection canceled: %w", err)
 			}
 		}
 		if confirm {
