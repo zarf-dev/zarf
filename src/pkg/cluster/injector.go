@@ -276,7 +276,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, seedImagesDir, ta
 
 // Test for pod readiness and seed image presence.
 func (c *Cluster) injectorIsReady(ctx context.Context, seedImages []transform.Image, spinner *message.Spinner) bool {
-	tunnel, err := c.NewTunnel(ZarfNamespaceName, k8s.SvcResource, ZarfInjectorName, "", 0, ZarfInjectorPort)
+	tunnel, err := c.NewTunnel(ZarfNamespaceName, SvcResource, ZarfInjectorName, "", 0, ZarfInjectorPort)
 	if err != nil {
 		return false
 	}

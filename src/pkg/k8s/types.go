@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
 )
 
 // Log is a function that logs a message.
@@ -20,6 +21,7 @@ type Labels map[string]string
 type K8s struct {
 	Clientset  kubernetes.Interface
 	RestConfig *rest.Config
+	Watcher    watcher.StatusWatcher
 	Log        Log
 }
 
