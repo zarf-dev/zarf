@@ -108,7 +108,14 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 		spinner.Updatef("Attempting to bootstrap with the %s/%s", node, image)
 
 		// Make sure the pod is not there first
-		err = c.DeletePod(ctx, ZarfNamespaceName, "injector")
+		// TODO: Explain why no grace period is given.
+		deleteGracePeriod := int64(0)
+		deletePolicy := metav1.DeletePropagationForeground
+		deleteOpts := metav1.DeleteOptions{
+			GracePeriodSeconds: &deleteGracePeriod,
+			PropagationPolicy:  &deletePolicy,
+		}
+		err := c.Clientset.CoreV1().Pods(ZarfNamespaceName).Delete(ctx, "injector", deleteOpts)
 		if err != nil {
 			message.Debug("could not delete pod injector:", err)
 		}
@@ -123,7 +130,7 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 		}
 
 		// Create the pod in the cluster
-		pod, err = c.CreatePod(ctx, pod)
+		pod, err = c.Clientset.CoreV1().Pods(pod.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 		if err != nil {
 			// Just debug log the output because failures just result in trying the next image
 			message.Debug("error creating pod in cluster:", pod, err)
@@ -146,7 +153,8 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 // StopInjectionMadness handles cleanup once the seed registry is up.
 func (c *Cluster) StopInjectionMadness(ctx context.Context) error {
 	// Try to kill the injector pod now
-	if err := c.DeletePod(ctx, ZarfNamespaceName, "injector"); err != nil {
+	err := c.Clientset.CoreV1().Pods(ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
+	if err != nil {
 		return err
 	}
 
@@ -375,94 +383,99 @@ func (c *Cluster) createService(ctx context.Context) (*corev1.Service, error) {
 
 // buildInjectionPod return a pod for injection with the appropriate containers to perform the injection.
 func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []string, payloadShasum string) (*corev1.Pod, error) {
-	pod := c.GeneratePod("injector", ZarfNamespaceName)
 	executeMode := int32(0777)
-
-	pod.Labels["app"] = "zarf-injector"
-
-	// Ensure zarf agent doesn't break the injector on future runs
-	pod.Labels[k8s.AgentLabel] = "ignore"
-
-	// Bind the pod to the node the image was found on
-	pod.Spec.NodeName = node
-
-	// Do not try to restart the pod as it will be deleted/re-created instead
-	pod.Spec.RestartPolicy = corev1.RestartPolicyNever
-
-	pod.Spec.Containers = []corev1.Container{
-		{
-			Name: "injector",
-
-			// An existing image already present on the cluster
-			Image: image,
-
-			// PullIfNotPresent because some distros provide a way (even in airgap) to pull images from local or direct-connected registries
-			ImagePullPolicy: corev1.PullIfNotPresent,
-
-			// This directory's contents come from the init container output
-			WorkingDir: "/zarf-init",
-
-			// Call the injector with shasum of the tarball
-			Command: []string{"/zarf-init/zarf-injector", payloadShasum},
-
-			// Shared mount between the init and regular containers
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      "init",
-					MountPath: "/zarf-init/zarf-injector",
-					SubPath:   "zarf-injector",
-				},
-				{
-					Name:      "seed",
-					MountPath: "/zarf-seed",
-				},
+	pod := &corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Pod",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "injector",
+			Namespace: ZarfNamespaceName,
+			Labels: map[string]string{
+				"app":          "zarf-injector",
+				k8s.AgentLabel: "ignore",
 			},
+		},
+		Spec: corev1.PodSpec{
+			NodeName: node,
+			// Do not try to restart the pod as it will be deleted/re-created instead
+			RestartPolicy: corev1.RestartPolicyNever,
+			Containers: []corev1.Container{
+				{
+					Name: "injector",
 
-			// Readiness probe to optimize the pod startup time
-			ReadinessProbe: &corev1.Probe{
-				PeriodSeconds:    2,
-				SuccessThreshold: 1,
-				FailureThreshold: 10,
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path: "/v2/",               // path to health check
-						Port: intstr.FromInt(5000), // port to health check
+					// An existing image already present on the cluster
+					Image: image,
+
+					// PullIfNotPresent because some distros provide a way (even in airgap) to pull images from local or direct-connected registries
+					ImagePullPolicy: corev1.PullIfNotPresent,
+
+					// This directory's contents come from the init container output
+					WorkingDir: "/zarf-init",
+
+					// Call the injector with shasum of the tarball
+					Command: []string{"/zarf-init/zarf-injector", payloadShasum},
+
+					// Shared mount between the init and regular containers
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "init",
+							MountPath: "/zarf-init/zarf-injector",
+							SubPath:   "zarf-injector",
+						},
+						{
+							Name:      "seed",
+							MountPath: "/zarf-seed",
+						},
+					},
+
+					// Readiness probe to optimize the pod startup time
+					ReadinessProbe: &corev1.Probe{
+						PeriodSeconds:    2,
+						SuccessThreshold: 1,
+						FailureThreshold: 10,
+						ProbeHandler: corev1.ProbeHandler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/v2/",               // path to health check
+								Port: intstr.FromInt(5000), // port to health check
+							},
+						},
+					},
+
+					// Keep resources as light as possible as we aren't actually running the container's other binaries
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    injectorRequestedCPU,
+							corev1.ResourceMemory: injectorRequestedMemory,
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    injectorLimitCPU,
+							corev1.ResourceMemory: injectorLimitMemory,
+						},
 					},
 				},
 			},
-
-			// Keep resources as light as possible as we aren't actually running the container's other binaries
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    injectorRequestedCPU,
-					corev1.ResourceMemory: injectorRequestedMemory,
-				},
-				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    injectorLimitCPU,
-					corev1.ResourceMemory: injectorLimitMemory,
-				},
-			},
-		},
-	}
-
-	pod.Spec.Volumes = []corev1.Volume{
-		// Contains the rust binary and collection of configmaps from the tarball (seed image).
-		{
-			Name: "init",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "rust-binary",
+			Volumes: []corev1.Volume{
+				// Contains the rust binary and collection of configmaps from the tarball (seed image).
+				{
+					Name: "init",
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "rust-binary",
+							},
+							DefaultMode: &executeMode,
+						},
 					},
-					DefaultMode: &executeMode,
 				},
-			},
-		},
-		// Empty directory to hold the seed image (new dir to avoid permission issues)
-		{
-			Name: "seed",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
+				// Empty directory to hold the seed image (new dir to avoid permission issues)
+				{
+					Name: "seed",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
 			},
 		},
 	}
@@ -504,14 +517,15 @@ func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeM
 		case <-ctx.Done():
 			return nil, fmt.Errorf("get image list timed-out: %w", ctx.Err())
 		case <-timer.C:
-			pods, err := c.GetPods(ctx, corev1.NamespaceAll, metav1.ListOptions{
+			listOpts := metav1.ListOptions{
 				FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
-			})
+			}
+			podList, err := c.Clientset.CoreV1().Pods(corev1.NamespaceAll).List(ctx, listOpts)
 			if err != nil {
 				return nil, fmt.Errorf("unable to get the list of %q pods in the cluster: %w", corev1.PodRunning, err)
 			}
 
-			for _, pod := range pods.Items {
+			for _, pod := range podList.Items {
 				nodeName := pod.Spec.NodeName
 
 				nodeDetails, err := c.Clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})

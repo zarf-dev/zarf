@@ -86,7 +86,7 @@ func (k *K8s) WaitForHealthyCluster(ctx context.Context) error {
 			}
 
 			// Get the cluster pod list
-			pods, err := k.GetAllPods(ctx)
+			pods, err := k.Clientset.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{})
 			if err != nil {
 				k.Log("Could not get the pod list: %w", err)
 				timer.Reset(waitDuration)

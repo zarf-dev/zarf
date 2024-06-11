@@ -225,10 +225,12 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 		zt.remotePort = svc.Spec.Ports[0].TargetPort.IntValue()
 		// if targetPort == 0, look for Port (which is required)
 		if zt.remotePort == 0 {
-			zt.remotePort, err = c.FindPodContainerPort(ctx, svc)
+			// TODO: Need a check for if container port is not found
+			remotePort, err := c.findPodContainerPort(ctx, svc)
 			if err != nil {
 				return TunnelInfo{}, err
 			}
+			zt.remotePort = remotePort
 		}
 
 		// Add the url suffix too.
@@ -240,6 +242,28 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 	}
 
 	return zt, nil
+}
+
+func (c *Cluster) findPodContainerPort(ctx context.Context, svc corev1.Service) (int, error) {
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{MatchLabels: svc.Spec.Selector})
+	if err != nil {
+		return 0, err
+	}
+	podList, err := c.Clientset.CoreV1().Pods(svc.Namespace).List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return 0, err
+	}
+	for _, pod := range podList.Items {
+		// Find the matching name on the port in the pod
+		for _, container := range pod.Spec.Containers {
+			for _, port := range container.Ports {
+				if port.Name == svc.Spec.Ports[0].TargetPort.String() {
+					return int(port.ContainerPort), nil
+				}
+			}
+		}
+	}
+	return 0, nil
 }
 
 // TODO: Refactor to use netip.AddrPort instead of a string for nodePortURL.
