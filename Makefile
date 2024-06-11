@@ -124,7 +124,7 @@ build-local-agent-image: ## Build the Zarf agent image to be used in a locally b
 	@ if [ "$(ARCH)" = "arm64" ]; then rm build/zarf-linux-arm64; fi
 
 init-package: ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	@test -s $(ZARF_BIN) || $(MAKE)
 	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm .
 
 # INTERNAL: used to build a release version of the init package with a specific agent image
