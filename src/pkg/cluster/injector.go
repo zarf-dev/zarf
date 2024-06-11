@@ -153,7 +153,13 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 // StopInjectionMadness handles cleanup once the seed registry is up.
 func (c *Cluster) StopInjectionMadness(ctx context.Context) error {
 	// Try to kill the injector pod now
-	err := c.Clientset.CoreV1().Pods(ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
+	deleteGracePeriod := int64(0)
+	deletePolicy := metav1.DeletePropagationForeground
+	deleteOpts := metav1.DeleteOptions{
+		GracePeriodSeconds: &deleteGracePeriod,
+		PropagationPolicy:  &deletePolicy,
+	}
+	err := c.Clientset.CoreV1().Pods(ZarfNamespaceName).Delete(ctx, "injector", deleteOpts)
 	if err != nil {
 		return err
 	}
