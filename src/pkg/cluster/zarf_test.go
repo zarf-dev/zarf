@@ -227,7 +227,8 @@ func TestGetDeployedPackage(t *testing.T) {
 				"data": b,
 			},
 		}
-		c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &secret, metav1.CreateOptions{})
+		_, err = c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &secret, metav1.CreateOptions{})
+		require.NoError(t, err)
 		actual, err := c.GetDeployedPackage(ctx, p.Name)
 		require.NoError(t, err)
 		require.Equal(t, p, *actual)
@@ -242,7 +243,8 @@ func TestGetDeployedPackage(t *testing.T) {
 			},
 		},
 	}
-	c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &nonPackageSecret, metav1.CreateOptions{})
+	_, err := c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &nonPackageSecret, metav1.CreateOptions{})
+	require.NoError(t, err)
 
 	actualList, err := c.GetDeployedZarfPackages(ctx)
 	require.NoError(t, err)

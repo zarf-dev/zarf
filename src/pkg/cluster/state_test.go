@@ -150,6 +150,7 @@ func TestInitZarfState(t *testing.T) {
 							Name:      "default",
 						},
 					}
+					//nolint:errcheck // ignore
 					cs.CoreV1().ServiceAccounts(ns.Name).Create(ctx, sa, metav1.CreateOptions{})
 					break
 				}
