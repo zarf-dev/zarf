@@ -152,6 +152,7 @@ func fillComponentTemplate(validator *Validator, node *composer.Node, createOpts
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
 	setVarsAndWarn(types.ZarfPackageVariablePrefix, true)
 
+	//nolint: errcheck // This error should bubble up
 	utils.ReloadYamlTemplate(node, templateMap)
 }
 

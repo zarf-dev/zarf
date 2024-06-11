@@ -319,6 +319,7 @@ func Table(header []string, data [][]string) {
 		table = append(table, pterm.TableData{row}...)
 	}
 
+	//nolint:errcheck // never returns an error
 	pterm.DefaultTable.WithHasHeader().WithData(table).Render()
 }
 

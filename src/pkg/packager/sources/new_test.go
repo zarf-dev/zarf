@@ -129,6 +129,7 @@ func TestPackageSource(t *testing.T) {
 			return
 		}
 		defer f.Close()
+		//nolint:errcheck // ignore
 		io.Copy(rw, f)
 	}))
 	t.Cleanup(func() { ts.Close() })
