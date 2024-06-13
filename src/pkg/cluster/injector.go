@@ -7,13 +7,13 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
@@ -21,12 +21,15 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/google/uuid"
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
 // The chunk size for the tarball chunks.
@@ -43,7 +46,7 @@ var (
 type imageNodeMap map[string][]string
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imagesDir string, injectorSeedSrcs []string) {
+func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imagesDir string, injectorSeedSrcs []string) error {
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer spinner.Stop()
 
@@ -56,110 +59,130 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 	}
 
 	if err := helpers.CreateDirectory(tmp.SeedImagesDir, helpers.ReadWriteExecuteUser); err != nil {
-		spinner.Fatalf(err, "Unable to create the seed images directory")
+		return fmt.Errorf("unable to create the seed images directory: %w", err)
 	}
 
 	var err error
 	var images imageNodeMap
 	var payloadConfigmaps []string
 	var sha256sum string
-	var seedImages []transform.Image
 
-	// Get all the images from the cluster
-	spinner.Updatef("Getting the list of existing cluster images")
 	findImagesCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	if images, err = c.getImagesAndNodesForInjection(findImagesCtx); err != nil {
-		spinner.Fatalf(err, "Unable to generate a list of candidate images to perform the registry injection")
+	images, err = c.getImagesAndNodesForInjection(findImagesCtx)
+	if err != nil {
+		return err
 	}
 
-	spinner.Updatef("Creating the injector configmap")
 	if err = c.createInjectorConfigMap(ctx, tmp.InjectionBinary); err != nil {
-		spinner.Fatalf(err, "Unable to create the injector configmap")
+		return fmt.Errorf("unable to create the injector configmap: %w", err)
 	}
 
-	spinner.Updatef("Creating the injector service")
-	if service, err := c.createService(ctx); err != nil {
-		spinner.Fatalf(err, "Unable to create the injector service")
-	} else {
-		config.ZarfSeedPort = fmt.Sprintf("%d", service.Spec.Ports[0].NodePort)
+	service, err := c.createService(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to create the injector service: %w", err)
+	}
+	config.ZarfSeedPort = fmt.Sprintf("%d", service.Spec.Ports[0].NodePort)
+
+	_, err = c.loadSeedImages(imagesDir, tmp.SeedImagesDir, injectorSeedSrcs)
+	if err != nil {
+		return fmt.Errorf("unable to load the injector seed image from the package: %w", err)
 	}
 
-	spinner.Updatef("Loading the seed image from the package")
-	if seedImages, err = c.loadSeedImages(imagesDir, tmp.SeedImagesDir, injectorSeedSrcs, spinner); err != nil {
-		spinner.Fatalf(err, "Unable to load the injector seed image from the package")
-	}
-
-	spinner.Updatef("Loading the seed registry configmaps")
 	if payloadConfigmaps, sha256sum, err = c.createPayloadConfigMaps(ctx, tmp.SeedImagesDir, tmp.InjectorPayloadTarGz, spinner); err != nil {
-		spinner.Fatalf(err, "Unable to generate the injector payload configmaps")
+		return fmt.Errorf("unable to generate the injector payload configmaps: %w", err)
 	}
 
 	// https://regex101.com/r/eLS3at/1
 	zarfImageRegex := regexp.MustCompile(`(?m)^127\.0\.0\.1:`)
 
+	var injectorImage string
+	var injectorNode string
 	// Try to create an injector pod using an existing image in the cluster
 	for image, node := range images {
 		// Don't try to run against the seed image if this is a secondary zarf init run
 		if zarfImageRegex.MatchString(image) {
 			continue
 		}
-
 		spinner.Updatef("Attempting to bootstrap with the %s/%s", node, image)
-
-		// Make sure the pod is not there first
-		// TODO: Explain why no grace period is given.
-		deleteGracePeriod := int64(0)
-		deletePolicy := metav1.DeletePropagationForeground
-		deleteOpts := metav1.DeleteOptions{
-			GracePeriodSeconds: &deleteGracePeriod,
-			PropagationPolicy:  &deletePolicy,
-		}
-		err := c.Clientset.CoreV1().Pods(ZarfNamespaceName).Delete(ctx, "injector", deleteOpts)
-		if err != nil {
-			message.Debug("could not delete pod injector:", err)
-		}
-
-		// Update the podspec image path and use the first node found
-
-		pod, err := c.buildInjectionPod(node[0], image, payloadConfigmaps, sha256sum)
-		if err != nil {
-			// Just debug log the output because failures just result in trying the next image
-			message.Debug("error making injection pod:", err)
-			continue
-		}
-
-		// Create the pod in the cluster
-		pod, err = c.Clientset.CoreV1().Pods(pod.Namespace).Create(ctx, pod, metav1.CreateOptions{})
-		if err != nil {
-			// Just debug log the output because failures just result in trying the next image
-			message.Debug("error creating pod in cluster:", pod, err)
-			continue
-		}
-
-		// if no error, try and wait for a seed image to be present, return if successful
-		if c.injectorIsReady(ctx, seedImages, spinner) {
-			spinner.Success()
-			return
-		}
-
-		// Otherwise just continue to try next image
+		injectorImage = image
+		injectorNode = node[0]
+	}
+	// Make sure the pod is not there first
+	// TODO: Explain why no grace period is given.
+	deleteGracePeriod := int64(0)
+	deletePolicy := metav1.DeletePropagationForeground
+	deleteOpts := metav1.DeleteOptions{
+		GracePeriodSeconds: &deleteGracePeriod,
+		PropagationPolicy:  &deletePolicy,
+	}
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"app": "zarf-injector",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	listOpts := metav1.ListOptions{
+		LabelSelector: selector.String(),
+	}
+	err = c.Clientset.CoreV1().Pods(ZarfNamespaceName).DeleteCollection(ctx, deleteOpts, listOpts)
+	if err != nil {
+		return err
 	}
 
-	// All images were exhausted and still no happiness
-	spinner.Fatalf(nil, "Unable to perform the injection")
+	pod, err := c.buildInjectionPod(injectorNode, injectorImage, payloadConfigmaps, sha256sum)
+	if err != nil {
+		return fmt.Errorf("error making injection pod: %w", err)
+	}
+
+	pod, err = c.Clientset.CoreV1().Pods(pod.Namespace).Create(ctx, pod, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating pod in cluster: %w", err)
+	}
+
+	objs := []object.ObjMetadata{
+		{
+			GroupKind: schema.GroupKind{
+				Kind: "Pod",
+			},
+			Namespace: ZarfNamespaceName,
+			Name:      pod.Name,
+		},
+	}
+	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
+	defer waitCancel()
+	err = pkgkubernetes.WaitForReady(waitCtx, c.Watcher, objs)
+	if err != nil {
+		return err
+	}
+	spinner.Success()
+	return nil
+
 }
 
 // StopInjectionMadness handles cleanup once the seed registry is up.
 func (c *Cluster) StopInjectionMadness(ctx context.Context) error {
 	// Try to kill the injector pod now
-	err := c.Clientset.CoreV1().Pods(ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"app": "zarf-injector",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	listOpts := metav1.ListOptions{
+		LabelSelector: selector.String(),
+	}
+	err = c.Clientset.CoreV1().Pods(ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
 	if err != nil {
 		return err
 	}
 
 	// Remove the configmaps
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+	selector, err = metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			"zarf-injector": "payload",
 		},
@@ -167,7 +190,7 @@ func (c *Cluster) StopInjectionMadness(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	listOpts := metav1.ListOptions{
+	listOpts = metav1.ListOptions{
 		LabelSelector: selector.String(),
 	}
 	err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
@@ -183,13 +206,12 @@ func (c *Cluster) StopInjectionMadness(ctx context.Context) error {
 	return nil
 }
 
-func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSrcs []string, spinner *message.Spinner) ([]transform.Image, error) {
+func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSrcs []string) ([]transform.Image, error) {
 	seedImages := []transform.Image{}
 	localReferenceToDigest := make(map[string]string)
 
 	// Load the injector-specific images and save them as seed-images
 	for _, src := range injectorSeedSrcs {
-		spinner.Updatef("Loading the seed image '%s' from the package", src)
 		ref, err := transform.ParseImageRef(src)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
@@ -230,7 +252,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, seedImagesDir, ta
 		return configMaps, "", err
 	}
 
-	spinner.Updatef("Creating the seed registry archive to send to the cluster")
 	// Create a tar archive of the injector payload
 	if err := archiver.Archive(tarFileList, tarPath); err != nil {
 		return configMaps, "", err
@@ -240,8 +261,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, seedImagesDir, ta
 	if err != nil {
 		return configMaps, "", err
 	}
-
-	spinner.Updatef("Splitting the archive into binary configmaps")
 
 	chunkCount := len(chunks)
 
@@ -280,43 +299,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, seedImagesDir, ta
 	}
 
 	return configMaps, sha256sum, nil
-}
-
-// Test for pod readiness and seed image presence.
-func (c *Cluster) injectorIsReady(ctx context.Context, seedImages []transform.Image, spinner *message.Spinner) bool {
-	tunnel, err := c.NewTunnel(ZarfNamespaceName, SvcResource, ZarfInjectorName, "", 0, ZarfInjectorPort)
-	if err != nil {
-		return false
-	}
-
-	_, err = tunnel.Connect(ctx)
-	if err != nil {
-		return false
-	}
-	defer tunnel.Close()
-
-	spinner.Updatef("Testing the injector for seed image availability")
-
-	for _, seedImage := range seedImages {
-		seedRegistry := fmt.Sprintf("%s/v2/%s/manifests/%s", tunnel.HTTPEndpoint(), seedImage.Path, seedImage.Tag)
-
-		var resp *http.Response
-		var err error
-		err = tunnel.Wrap(func() error {
-			message.Debug("getting seed registry %v", seedRegistry)
-			resp, err = http.Get(seedRegistry)
-			return err
-		})
-
-		if err != nil || resp.StatusCode != 200 {
-			// Just debug log the output because failures just result in trying the next image
-			message.Debug(resp, err)
-			return false
-		}
-	}
-
-	spinner.Updatef("Seed image found, injector is ready")
-	return true
 }
 
 func (c *Cluster) createInjectorConfigMap(ctx context.Context, binaryPath string) error {
@@ -384,13 +366,18 @@ func (c *Cluster) createService(ctx context.Context) (*corev1.Service, error) {
 // buildInjectionPod return a pod for injection with the appropriate containers to perform the injection.
 func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []string, payloadShasum string) (*corev1.Pod, error) {
 	executeMode := int32(0777)
+
+	// Generate a UUID to append to the pod name.
+	// This prevents collisions where `zarf init` is ran back to back and a previous injector pod still exists.
+	uuid := uuid.New().String()[:16]
+
 	pod := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Pod",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "injector",
+			Name:      fmt.Sprintf("injector-%s", uuid),
 			Namespace: ZarfNamespaceName,
 			Labels: map[string]string{
 				"app":          "zarf-injector",

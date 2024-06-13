@@ -77,6 +77,9 @@ func TestBuildInjectionPod(t *testing.T) {
 	c := &Cluster{}
 	pod, err := c.buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum")
 	require.NoError(t, err)
+	require.Contains(t, pod.Name, "injector-")
+	// Replace the random UUID in the pod name with a fixed placeholder for consistent comparison.
+	pod.ObjectMeta.Name = "injector-UUID"
 	b, err := json.Marshal(pod)
 	require.NoError(t, err)
 	expected, err := os.ReadFile("./testdata/expected-injection-pod.json")
