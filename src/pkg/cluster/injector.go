@@ -6,6 +6,8 @@ package cluster
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
@@ -43,7 +45,7 @@ var (
 type imageNodeMap map[string][]string
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imagesDir string, injectorSeedSrcs []string) {
+func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imagesDir string, injectorSeedSrcs []string) error {
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer spinner.Stop()
 
@@ -115,12 +117,21 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 			GracePeriodSeconds: &deleteGracePeriod,
 			PropagationPolicy:  &deletePolicy,
 		}
-		err := c.Clientset.CoreV1().Pods(ZarfNamespaceName).Delete(ctx, "injector", deleteOpts)
+		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app": "zarf-injector",
+			},
+		})
 		if err != nil {
-			message.Debug("could not delete pod injector:", err)
+			return err
 		}
-
-		// Update the podspec image path and use the first node found
+		listOpts := metav1.ListOptions{
+			LabelSelector: selector.String(),
+		}
+		err = c.Clientset.CoreV1().Pods(ZarfNamespaceName).DeleteCollection(ctx, deleteOpts, listOpts)
+		if err != nil {
+			return err
+		}
 
 		pod, err := c.buildInjectionPod(node[0], image, payloadConfigmaps, sha256sum)
 		if err != nil {
@@ -140,7 +151,7 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 		// if no error, try and wait for a seed image to be present, return if successful
 		if c.injectorIsReady(ctx, seedImages, spinner) {
 			spinner.Success()
-			return
+			return nil
 		}
 
 		// Otherwise just continue to try next image
@@ -148,18 +159,30 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 
 	// All images were exhausted and still no happiness
 	spinner.Fatalf(nil, "Unable to perform the injection")
+	return nil
 }
 
 // StopInjectionMadness handles cleanup once the seed registry is up.
 func (c *Cluster) StopInjectionMadness(ctx context.Context) error {
 	// Try to kill the injector pod now
-	err := c.Clientset.CoreV1().Pods(ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"app": "zarf-injector",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	listOpts := metav1.ListOptions{
+		LabelSelector: selector.String(),
+	}
+	err = c.Clientset.CoreV1().Pods(ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
 	if err != nil {
 		return err
 	}
 
 	// Remove the configmaps
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+	selector, err = metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			"zarf-injector": "payload",
 		},
@@ -167,7 +190,7 @@ func (c *Cluster) StopInjectionMadness(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	listOpts := metav1.ListOptions{
+	listOpts = metav1.ListOptions{
 		LabelSelector: selector.String(),
 	}
 	err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
@@ -384,13 +407,22 @@ func (c *Cluster) createService(ctx context.Context) (*corev1.Service, error) {
 // buildInjectionPod return a pod for injection with the appropriate containers to perform the injection.
 func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []string, payloadShasum string) (*corev1.Pod, error) {
 	executeMode := int32(0777)
+
+	// Create a SHA-256 hash of the image name to allow unique injector pod names.
+	// This prevents collisions where `zarf init` is ran back to back and a previous injector pod still exists.
+	hasher := sha256.New()
+	if _, err := hasher.Write([]byte(image)); err != nil {
+		return nil, err
+	}
+	hash := hex.EncodeToString(hasher.Sum(nil))[:8]
+
 	pod := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "Pod",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "injector",
+			Name:      fmt.Sprintf("injector-%s", hash),
 			Namespace: ZarfNamespaceName,
 			Labels: map[string]string{
 				"app":          "zarf-injector",
