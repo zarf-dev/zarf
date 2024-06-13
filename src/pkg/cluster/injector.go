@@ -6,8 +6,6 @@ package cluster
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,6 +21,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/google/uuid"
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -366,13 +365,9 @@ func (c *Cluster) createService(ctx context.Context) (*corev1.Service, error) {
 func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []string, payloadShasum string) (*corev1.Pod, error) {
 	executeMode := int32(0777)
 
-	// Create a SHA-256 hash of the image name to allow unique injector pod names.
+	// Generate a UUID to append to the pod name.
 	// This prevents collisions where `zarf init` is ran back to back and a previous injector pod still exists.
-	hasher := sha256.New()
-	if _, err := hasher.Write([]byte(image)); err != nil {
-		return nil, err
-	}
-	hash := hex.EncodeToString(hasher.Sum(nil))[:8]
+	uuid := uuid.New().String()[:16]
 
 	pod := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
@@ -380,7 +375,7 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 			Kind:       "Pod",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("injector-%s", hash),
+			Name:      fmt.Sprintf("injector-%s", uuid),
 			Namespace: ZarfNamespaceName,
 			Labels: map[string]string{
 				"app":          "zarf-injector",
