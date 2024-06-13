@@ -96,68 +96,70 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 	// https://regex101.com/r/eLS3at/1
 	zarfImageRegex := regexp.MustCompile(`(?m)^127\.0\.0\.1:`)
 
+	var injectorImage string
+	var injectorNode string
 	// Try to create an injector pod using an existing image in the cluster
 	for image, node := range images {
 		// Don't try to run against the seed image if this is a secondary zarf init run
 		if zarfImageRegex.MatchString(image) {
 			continue
 		}
-
 		spinner.Updatef("Attempting to bootstrap with the %s/%s", node, image)
-
-		// Make sure the pod is not there first
-		// TODO: Explain why no grace period is given.
-		deleteGracePeriod := int64(0)
-		deletePolicy := metav1.DeletePropagationForeground
-		deleteOpts := metav1.DeleteOptions{
-			GracePeriodSeconds: &deleteGracePeriod,
-			PropagationPolicy:  &deletePolicy,
-		}
-		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				"app": "zarf-injector",
-			},
-		})
-		if err != nil {
-			return err
-		}
-		listOpts := metav1.ListOptions{
-			LabelSelector: selector.String(),
-		}
-		err = c.Clientset.CoreV1().Pods(ZarfNamespaceName).DeleteCollection(ctx, deleteOpts, listOpts)
-		if err != nil {
-			return err
-		}
-
-		pod, err := c.buildInjectionPod(node[0], image, payloadConfigmaps, sha256sum)
-		if err != nil {
-			return fmt.Errorf("error making injection pod: %w", err)
-		}
-
-		pod, err = c.Clientset.CoreV1().Pods(pod.Namespace).Create(ctx, pod, metav1.CreateOptions{})
-		if err != nil {
-			return fmt.Errorf("error creating pod in cluster: %w", err)
-		}
-
-		objs := []object.ObjMetadata{
-			{
-				GroupKind: schema.GroupKind{
-					Kind: "Pod",
-				},
-				Namespace: ZarfNamespaceName,
-				Name:      pod.Name,
-			},
-		}
-		waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
-		defer waitCancel()
-		err = pkgkubernetes.WaitForReady(waitCtx, c.Watcher, objs)
-		if err != nil {
-			return err
-		}
-		spinner.Success()
-		return nil
+		injectorImage = image
+		injectorNode = node[0]
 	}
+	// Make sure the pod is not there first
+	// TODO: Explain why no grace period is given.
+	deleteGracePeriod := int64(0)
+	deletePolicy := metav1.DeletePropagationForeground
+	deleteOpts := metav1.DeleteOptions{
+		GracePeriodSeconds: &deleteGracePeriod,
+		PropagationPolicy:  &deletePolicy,
+	}
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"app": "zarf-injector",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	listOpts := metav1.ListOptions{
+		LabelSelector: selector.String(),
+	}
+	err = c.Clientset.CoreV1().Pods(ZarfNamespaceName).DeleteCollection(ctx, deleteOpts, listOpts)
+	if err != nil {
+		return err
+	}
+
+	pod, err := c.buildInjectionPod(injectorNode, injectorImage, payloadConfigmaps, sha256sum)
+	if err != nil {
+		return fmt.Errorf("error making injection pod: %w", err)
+	}
+
+	pod, err = c.Clientset.CoreV1().Pods(pod.Namespace).Create(ctx, pod, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating pod in cluster: %w", err)
+	}
+
+	objs := []object.ObjMetadata{
+		{
+			GroupKind: schema.GroupKind{
+				Kind: "Pod",
+			},
+			Namespace: ZarfNamespaceName,
+			Name:      pod.Name,
+		},
+	}
+	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
+	defer waitCancel()
+	err = pkgkubernetes.WaitForReady(waitCtx, c.Watcher, objs)
+	if err != nil {
+		return err
+	}
+	spinner.Success()
 	return nil
+
 }
 
 // StopInjectionMadness handles cleanup once the seed registry is up.
