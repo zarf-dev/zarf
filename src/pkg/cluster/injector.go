@@ -155,7 +155,7 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 			return err
 		}
 		spinner.Success()
-		// Otherwise just continue to try next image
+		return nil
 	}
 	return nil
 }
