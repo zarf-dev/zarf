@@ -10,10 +10,14 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
-
 	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"helm.sh/helm/v3/pkg/storage/driver"
+	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
@@ -22,8 +26,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
 	"github.com/defenseunicorns/zarf/src/types"
-	"helm.sh/helm/v3/pkg/storage/driver"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
@@ -104,25 +106,60 @@ func (p *Packager) Remove(ctx context.Context) (err error) {
 	return nil
 }
 
-func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage types.DeployedPackage) {
+func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage types.DeployedPackage) error {
 	// Only attempt to update the package secret if we are actually connected to a cluster
 	if p.cluster != nil {
+		newPackageSecretData, err := json.Marshal(deployedPackage)
+		if err != nil {
+			return err
+		}
+
 		secretName := config.ZarfPackagePrefix + deployedPackage.Name
 
 		// Save the new secret with the removed components removed from the secret
-		newPackageSecret := p.cluster.GenerateSecret(cluster.ZarfNamespaceName, secretName, corev1.SecretTypeOpaque)
-		newPackageSecret.Labels[cluster.ZarfPackageInfoLabel] = deployedPackage.Name
+		newPackageSecret := &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: corev1.SchemeGroupVersion.String(),
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: cluster.ZarfNamespaceName,
+				Labels: map[string]string{
+					cluster.ZarfManagedByLabel:   "zarf",
+					cluster.ZarfPackageInfoLabel: deployedPackage.Name,
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{
+				"data": newPackageSecretData,
+			},
+		}
 
-		newPackageSecretData, _ := json.Marshal(deployedPackage)
-		newPackageSecret.Data["data"] = newPackageSecretData
-
-		_, err := p.cluster.CreateOrUpdateSecret(ctx, newPackageSecret)
-
+		err = func() error {
+			_, err := p.cluster.Clientset.CoreV1().Secrets(newPackageSecret.Namespace).Get(ctx, newPackageSecret.Name, metav1.GetOptions{})
+			if err != nil && !kerrors.IsNotFound(err) {
+				return err
+			}
+			if kerrors.IsNotFound(err) {
+				_, err = p.cluster.Clientset.CoreV1().Secrets(newPackageSecret.Namespace).Create(ctx, newPackageSecret, metav1.CreateOptions{})
+				if err != nil {
+					return fmt.Errorf("unable to create the zarf state secret: %w", err)
+				}
+				return nil
+			}
+			_, err = p.cluster.Clientset.CoreV1().Secrets(newPackageSecret.Namespace).Update(ctx, newPackageSecret, metav1.UpdateOptions{})
+			if err != nil {
+				return fmt.Errorf("unable to update the zarf state secret: %w", err)
+			}
+			return nil
+		}()
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
 			message.Warnf("Unable to update the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
 		}
 	}
+	return nil
 }
 
 func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.DeployedPackage, deployedComponent types.DeployedComponent, spinner *message.Spinner) (*types.DeployedPackage, error) {
@@ -165,7 +202,10 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 		deployedComponent.InstalledCharts = helpers.RemoveMatches(deployedComponent.InstalledCharts, func(t types.InstalledChart) bool {
 			return t.ChartName == chart.ChartName
 		})
-		p.updatePackageSecret(ctx, *deployedPackage)
+		err := p.updatePackageSecret(ctx, *deployedPackage)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if err := actions.Run(onRemove.Defaults, onRemove.After, nil); err != nil {
@@ -187,19 +227,22 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 		secretName := config.ZarfPackagePrefix + deployedPackage.Name
 
 		// All the installed components were deleted, therefore this package is no longer actually deployed
-		packageSecret, err := p.cluster.GetSecret(ctx, cluster.ZarfNamespaceName, secretName)
+		packageSecret, err := p.cluster.Clientset.CoreV1().Secrets(cluster.ZarfNamespaceName).Get(ctx, secretName, metav1.GetOptions{})
 
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
 			message.Warnf("Unable to delete the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
 		} else {
-			err = p.cluster.DeleteSecret(ctx, packageSecret)
+			err = p.cluster.Clientset.CoreV1().Secrets(packageSecret.Namespace).Delete(ctx, packageSecret.Name, metav1.DeleteOptions{})
 			if err != nil {
 				message.Warnf("Unable to delete the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
 			}
 		}
 	} else {
-		p.updatePackageSecret(ctx, *deployedPackage)
+		err := p.updatePackageSecret(ctx, *deployedPackage)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return deployedPackage, nil
