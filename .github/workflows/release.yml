@@ -188,7 +188,7 @@ jobs:
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --rm-dist --debug
+          args: release --clean --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ steps.brew-tap-token.outputs.token }}
