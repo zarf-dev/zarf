@@ -65,3 +65,19 @@ func TestManifests(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf("package", "remove", "manifests", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
+
+func TestAgentIgnore(t *testing.T) {
+	t.Log("E2E: Test Manifests that are Agent Ignored")
+	e2e.SetupWithCluster(t)
+
+	testCreate := filepath.Join("src", "test", "packages", "26-agent-ignore")
+	testDeploy := filepath.Join("build", fmt.Sprintf("zarf-package-agent-ignore-namespace-%s.tar.zst", e2e.Arch))
+
+	// Create the agent ignore test package
+	stdOut, stdErr, err := e2e.Zarf("package", "create", testCreate, "-o", "build", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Deploy the agent ignore test package
+	stdOut, stdErr, err = e2e.Zarf("package", "deploy", testDeploy, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}

@@ -19,6 +19,8 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 )
 
 const (
@@ -38,10 +40,15 @@ func New(logger Log) (*K8s, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to k8s cluster: %w", err)
 	}
+	watcher, err := pkgkubernetes.WatcherForConfig(config)
+	if err != nil {
+		return nil, err
+	}
 
 	return &K8s{
 		RestConfig: config,
 		Clientset:  clientset,
+		Watcher:    watcher,
 		Log:        logger,
 	}, nil
 }
@@ -79,7 +86,7 @@ func (k *K8s) WaitForHealthyCluster(ctx context.Context) error {
 			}
 
 			// Get the cluster pod list
-			pods, err := k.GetAllPods(ctx)
+			pods, err := k.Clientset.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{})
 			if err != nil {
 				k.Log("Could not get the pod list: %w", err)
 				timer.Reset(waitDuration)

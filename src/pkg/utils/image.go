@@ -86,8 +86,8 @@ func AddImageNameAnnotation(ociPath string, referenceToDigest map[string]string)
 	return os.WriteFile(indexPath, b, helpers.ReadWriteUser)
 }
 
-// HasImageLayers checks if all layers in the v1.Image are known image layers.
-func HasImageLayers(img v1.Image) (bool, error) {
+// OnlyHasImageLayers checks if all layers in the v1.Image are known image layers.
+func OnlyHasImageLayers(img v1.Image) (bool, error) {
 	layers, err := img.Layers()
 	if err != nil {
 		return false, err

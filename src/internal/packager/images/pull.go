@@ -165,7 +165,13 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 				return fmt.Errorf("%s resolved to an index, please select a specific platform to use", refInfo.Reference)
 			}
 
-			img = cache.Image(img, cache.NewFilesystemCache(cfg.CacheDirectory))
+			cacheImg, err := utils.OnlyHasImageLayers(img)
+			if err != nil {
+				return err
+			}
+			if cacheImg {
+				img = cache.Image(img, cache.NewFilesystemCache(cfg.CacheDirectory))
+			}
 
 			manifest, err := img.Manifest()
 			if err != nil {

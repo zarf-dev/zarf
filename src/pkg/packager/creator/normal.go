@@ -201,7 +201,7 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 			if err := dst.Images.AddV1Image(img); err != nil {
 				return err
 			}
-			ok, err := utils.HasImageLayers(img)
+			ok, err := utils.OnlyHasImageLayers(img)
 			if err != nil {
 				return fmt.Errorf("failed to validate %s is an image and not an artifact: %w", info, err)
 			}

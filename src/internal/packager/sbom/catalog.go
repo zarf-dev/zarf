@@ -161,7 +161,7 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 		return nil, err
 	}
 
-	syftSource, err := source.NewFromStereoscopeImageObject(syftImage, "", nil)
+	syftSource, err := source.NewFromStereoscopeImageObject(syftImage, refInfo.Reference, nil)
 	if err != nil {
 		return nil, err
 	}

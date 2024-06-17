@@ -53,7 +53,10 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 
 	// assumes referrers API is not supported since OCI artifact
 	// media type is not supported
-	r.Repo().SetReferrersCapability(false)
+	err = r.Repo().SetReferrersCapability(false)
+	if err != nil {
+		return err
+	}
 
 	// push the manifest config
 	manifestConfigDesc, err := r.CreateAndPushManifestConfig(ctx, annotations, ZarfConfigMediaType)
