@@ -19,7 +19,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -100,7 +99,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 				namespace.Labels = make(map[string]string)
 			}
 			// This label will tell the Zarf Agent to ignore this namespace.
-			namespace.Labels[k8s.AgentLabel] = "ignore"
+			namespace.Labels[AgentLabel] = "ignore"
 			namespaceCopy := namespace
 			_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
 			if err != nil {
@@ -148,7 +147,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 						return err
 					}
 					if kerrors.IsNotFound(err) {
-						c.Log("Service account %s/%s not found, retrying...", ns, name)
+						message.Debug("Service account %s/%s not found, retrying...", ns, name)
 						timer.Reset(1 * time.Second)
 						continue
 					}
@@ -281,7 +280,7 @@ func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) err
 			Name:      ZarfStateSecretName,
 			Namespace: ZarfNamespaceName,
 			Labels: map[string]string{
-				k8s.ZarfManagedByLabel: "zarf",
+				ZarfManagedByLabel: "zarf",
 			},
 		},
 		Type: corev1.SecretTypeOpaque,

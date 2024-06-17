@@ -14,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -118,8 +117,8 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 			}
 
 			// Check if this is a Zarf managed secret or is in a namespace the Zarf agent will take action in
-			if currentRegistrySecret.Labels[k8s.ZarfManagedByLabel] == "zarf" ||
-				(namespace.Labels[k8s.AgentLabel] != "skip" && namespace.Labels[k8s.AgentLabel] != "ignore") {
+			if currentRegistrySecret.Labels[ZarfManagedByLabel] == "zarf" ||
+				(namespace.Labels[AgentLabel] != "skip" && namespace.Labels[AgentLabel] != "ignore") {
 				spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
 
 				newRegistrySecret := c.GenerateRegistryPullCreds(namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
@@ -153,8 +152,8 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 			}
 
 			// Check if this is a Zarf managed secret or is in a namespace the Zarf agent will take action in
-			if currentGitSecret.Labels[k8s.ZarfManagedByLabel] == "zarf" ||
-				(namespace.Labels[k8s.AgentLabel] != "skip" && namespace.Labels[k8s.AgentLabel] != "ignore") {
+			if currentGitSecret.Labels[ZarfManagedByLabel] == "zarf" ||
+				(namespace.Labels[AgentLabel] != "skip" && namespace.Labels[AgentLabel] != "ignore") {
 				spinner.Updatef("Updating existing Zarf-managed git secret for namespace: '%s'", namespace.Name)
 
 				// Create the secret

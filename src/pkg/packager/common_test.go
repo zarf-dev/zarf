@@ -8,15 +8,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 func TestValidatePackageArchitecture(t *testing.T) {
@@ -78,14 +78,10 @@ func TestValidatePackageArchitecture(t *testing.T) {
 			t.Parallel()
 
 			cs := fake.NewSimpleClientset()
-			logger := func(string, ...interface{}) {}
 
 			p := &Packager{
 				cluster: &cluster.Cluster{
-					K8s: &k8s.K8s{
-						Clientset: cs,
-						Log:       logger,
-					},
+					Clientset: cs,
 				},
 				cfg: &types.PackagerConfig{
 					Pkg: types.ZarfPackage{

@@ -18,8 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
-
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 )
 
 func TestCreateInjectorConfigMap(t *testing.T) {
@@ -32,9 +30,7 @@ func TestCreateInjectorConfigMap(t *testing.T) {
 
 	cs := fake.NewSimpleClientset()
 	c := &Cluster{
-		&k8s.K8s{
-			Clientset: cs,
-		},
+		Clientset: cs,
 	}
 
 	ctx := context.Background()
@@ -52,9 +48,7 @@ func TestCreateService(t *testing.T) {
 
 	cs := fake.NewSimpleClientset()
 	c := &Cluster{
-		&k8s.K8s{
-			Clientset: cs,
-		},
+		Clientset: cs,
 	}
 
 	expected, err := os.ReadFile("./testdata/expected-injection-service.json")
@@ -94,10 +88,7 @@ func TestImagesAndNodesForInjection(t *testing.T) {
 	cs := fake.NewSimpleClientset()
 
 	c := &Cluster{
-		&k8s.K8s{
-			Clientset: cs,
-			Log:       func(string, ...any) {},
-		},
+		Clientset: cs,
 	}
 
 	nodes := []corev1.Node{
