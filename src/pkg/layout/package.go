@@ -38,13 +38,6 @@ type PackagePaths struct {
 	isLegacyLayout bool
 }
 
-// InjectionMadnessPaths contains paths for injection madness.
-type InjectionMadnessPaths struct {
-	InjectionBinary      string
-	SeedImagesDir        string
-	InjectorPayloadTarGz string
-}
-
 // New returns a new PackagePaths struct.
 func New(baseDir string) *PackagePaths {
 	return &PackagePaths{

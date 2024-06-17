@@ -14,7 +14,7 @@ require (
 	github.com/anchore/syft v0.100.0
 	github.com/defenseunicorns/pkg/helpers v1.1.3
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.1
-	github.com/defenseunicorns/pkg/kubernetes v0.0.1
+	github.com/defenseunicorns/pkg/kubernetes v0.2.0
 	github.com/defenseunicorns/pkg/oci v1.0.1
 	github.com/derailed/k9s v0.31.7
 	github.com/distribution/reference v0.5.0
@@ -61,6 +61,11 @@ require (
 	sigs.k8s.io/kustomize/api v0.16.0
 	sigs.k8s.io/kustomize/kyaml v0.16.0
 	sigs.k8s.io/yaml v1.4.0
+)
+
+require (
+	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
+	github.com/go-logr/logr v1.4.2 // indirect
 )
 
 require (
@@ -223,7 +228,6 @@ require (
 	github.com/emicklei/proto v1.12.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/evanphx/json-patch v5.7.0+incompatible // indirect
-	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
 	github.com/facebookincubator/nvdtools v0.1.5 // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect
@@ -245,7 +249,6 @@ require (
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/analysis v0.22.0 // indirect
 	github.com/go-openapi/errors v0.21.0 // indirect
@@ -279,7 +282,7 @@ require (
 	github.com/google/pprof v0.0.0-20231023181126-ff6d637d2a7b // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/google/uuid v1.6.0
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.5 // indirect
 	github.com/gookit/color v1.5.4 // indirect
