@@ -29,14 +29,15 @@ components:
           container: data-loader
           path: /data
         compress: true
-    actions:
-      onCreate:
-        before:
-          # Download a .zim file of a DevOps Stack Exchange snapshot into the data directory for use with Kiwix
-          - cmd: curl https://zarf-remote.s3.us-east-2.amazonaws.com/testdata/devops.stackexchange.com_en_all_2023-05.zim -o zim-data/devops.stackexchange.com_en_all_2023-05.zim
-          # Below are some more examples of *.zim files of available content:
-          # https://library.kiwix.org/?lang=eng
-          # NOTE: If `zarf package create`ing regularly you should mirror content to a web host you control to be a friendly neighbor
+    files:
+        # Download a .zim file of a DevOps Stack Exchange snapshot into the data directory for use with Kiwix
+        # Below are some more examples of *.zim files of available content:
+        # https://library.kiwix.org/?lang=eng
+        # NOTE: If `zarf package create`ing regularly you should mirror content to a web host you control to be a friendly neighbor
+      - source: https://zarf-remote.s3.us-east-2.amazonaws.com/testdata/devops.stackexchange.com_en_all_2023-05.zim
+        target: zim-data/devops.stackexchange.com_en_all_2023-05.zim
+        shasum: "a41573e49a1a68abc14d8bfbc806d744b882cf689d99143e98a1819a02790f56"
+
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
