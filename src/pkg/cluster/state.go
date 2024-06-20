@@ -27,11 +27,11 @@ import (
 
 // Zarf Cluster Constants.
 const (
-	ZarfNamespaceName       = "zarf"
-	ZarfStateSecretName     = "zarf-state"
-	ZarfStateDataKey        = "state"
-	ZarfPackageInfoLabel    = "package-deploy-info"
-	ZarfInitPackageInfoName = "zarf-package-init"
+	ZarfManagedByLabel   = "app.kubernetes.io/managed-by"
+	ZarfNamespaceName    = "zarf"
+	ZarfStateSecretName  = "zarf-state"
+	ZarfStateDataKey     = "state"
+	ZarfPackageInfoLabel = "package-deploy-info"
 )
 
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
@@ -214,7 +214,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.
 func (c *Cluster) LoadZarfState(ctx context.Context) (state *types.ZarfState, err error) {
 	// Set up the API connection
-	secret, err := c.GetSecret(ctx, ZarfNamespaceName, ZarfStateSecretName)
+	secret, err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).Get(ctx, ZarfStateSecretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("%w. %s", err, message.ColorWrap("Did you remember to zarf init?", color.Bold))
 	}
@@ -267,17 +267,10 @@ func (c *Cluster) debugPrintZarfState(state *types.ZarfState) {
 func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) error {
 	c.debugPrintZarfState(state)
 
-	// Convert the data back to JSON.
 	data, err := json.Marshal(&state)
 	if err != nil {
 		return err
 	}
-
-	// Set up the data wrapper.
-	dataWrapper := make(map[string][]byte)
-	dataWrapper[ZarfStateDataKey] = data
-
-	// The secret object.
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -291,14 +284,23 @@ func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) err
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
-		Data: dataWrapper,
+		Data: map[string][]byte{
+			ZarfStateDataKey: data,
+		},
 	}
 
 	// Attempt to create or update the secret and return.
-	if _, err := c.CreateOrUpdateSecret(ctx, secret); err != nil {
-		return fmt.Errorf("unable to create the zarf state secret")
+	_, err = c.Clientset.CoreV1().Secrets(secret.Namespace).Create(ctx, secret, metav1.CreateOptions{})
+	if err != nil && !kerrors.IsAlreadyExists(err) {
+		return fmt.Errorf("unable to create the zarf state secret: %w", err)
 	}
-
+	if err == nil {
+		return nil
+	}
+	_, err = c.Clientset.CoreV1().Secrets(secret.Namespace).Update(ctx, secret, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to update the zarf state secret: %w", err)
+	}
 	return nil
 }
 

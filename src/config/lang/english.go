@@ -19,9 +19,6 @@ import (
 const (
 	ErrLoadState                    = "Failed to load the Zarf State from the cluster."
 	ErrSaveState                    = "Failed to save the Zarf State to the cluster."
-	ErrLoadPackageSecret            = "Failed to load %s's secret from the cluster"
-	ErrNoClusterConnection          = "Failed to connect to the cluster."
-	ErrTunnelFailed                 = "Failed to create a tunnel to the cluster."
 	ErrUnmarshal                    = "failed to unmarshal file: %w"
 	ErrWritingFile                  = "failed to write file %s: %s"
 	ErrDownloading                  = "failed to download %s: %s"
@@ -316,8 +313,6 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
-	CmdPackageRemoveTarballErr     = "Invalid tarball path provided"
-	CmdPackageRemoveExtractErr     = "Unable to extract the package contents"
 	CmdPackageRemoveErr            = "Unable to remove the package with an error of: %s"
 
 	CmdPackageRegistryPrefixErr = "Registry must be prefixed with 'oci://'"
@@ -397,7 +392,6 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 
 	CmdDevLintShort = "Lints the given package for valid schema and recommended practices"
 	CmdDevLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
-	CmdDevLintErr   = "Unable to lint package: %s"
 
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"
@@ -556,7 +550,6 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsGenKeySuccess               = "Generated key pair and written to %s and %s"
 
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
-	CmdToolsSbomErr   = "Unable to create SBOM (Syft) CLI"
 
 	CmdToolsWaitForShort = "Waits for a given Kubernetes resource to be ready"
 	CmdToolsWaitForLong  = "By default Zarf will wait for all Kubernetes resources to be ready before completion of a component during a deployment.\n" +
@@ -654,7 +647,6 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 // These are only seen in the Kubernetes logs.
 const (
 	AgentInfoWebhookAllowed = "Webhook [%s - %s] - Allowed: %t"
-	AgentInfoShutdown       = "Shutdown gracefully..."
 	AgentInfoPort           = "Server running in port: %s"
 
 	AgentErrBadRequest             = "could not read request body: %s"
@@ -670,8 +662,6 @@ const (
 	AgentErrMarshallJSONPatch      = "unable to marshall the json patch"
 	AgentErrMarshalResponse        = "unable to marshal the response"
 	AgentErrNilReq                 = "malformed admission review: request is nil"
-	AgentErrShutdown               = "unable to properly shutdown the web server"
-	AgentErrStart                  = "Failed to start the web server"
 	AgentErrUnableTransform        = "unable to transform the provided request; see zarf http proxy logs for more details"
 )
 
@@ -686,7 +676,6 @@ const (
 	PkgValidateTemplateDeprecation        = "Package template %q is using the deprecated syntax ###ZARF_PKG_VAR_%s###. This will be removed in Zarf v1.0.0. Please update to ###ZARF_PKG_TMPL_%s###."
 	PkgValidateMustBeUppercase            = "variable name %q must be all uppercase and contain no special characters except _"
 	PkgValidateErrAction                  = "invalid action: %w"
-	PkgValidateErrActionVariables         = "component %q cannot contain setVariables outside of onDeploy in actions"
 	PkgValidateErrActionCmdWait           = "action %q cannot be both a command and wait action"
 	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
 	PkgValidateErrChart                   = "invalid chart definition: %w"
@@ -699,10 +688,8 @@ const (
 	PkgValidateErrComponentName           = "component name %q must be all lowercase and contain no special characters except '-' and cannot start with a '-'"
 	PkgValidateErrComponentLocalOS        = "component %q contains a localOS value that is not supported: %s (supported: %s)"
 	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
-	PkgValidateErrComponent               = "invalid component %q: %w"
 	PkgValidateErrComponentReqDefault     = "component %q cannot be both required and default"
 	PkgValidateErrComponentReqGrouped     = "component %q cannot be both required and grouped"
-	PkgValidateErrComponentYOLO           = "component %q incompatible with the online-only package flag (metadata.yolo): %w"
 	PkgValidateErrGroupMultipleDefaults   = "group %q has multiple defaults (%q, %q)"
 	PkgValidateErrGroupOneComponent       = "group %q only has one component (%q)"
 	PkgValidateErrConstant                = "invalid package constant: %w"
@@ -713,7 +700,6 @@ const (
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
 	PkgValidateErrManifestNameMissing     = "manifest must include a name"
 	PkgValidateErrManifestNameNotUnique   = "manifest name %q is not unique"
-	PkgValidateErrName                    = "invalid package name: %w"
 	PkgValidateErrPkgConstantName         = "constant name %q must be all uppercase and contain no special characters except _"
 	PkgValidateErrPkgConstantPattern      = "provided value for constant %q does not match pattern %q"
 	PkgValidateErrPkgName                 = "package name %q must be all lowercase and contain no special characters except '-' and cannot start with a '-'"
@@ -728,7 +714,6 @@ const (
 var (
 	ErrInitNotFound        = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
 	ErrUnableToCheckArch   = errors.New("unable to get the configured cluster's architecture")
-	ErrInterrupt           = errors.New("execution cancelled due to an interrupt")
 	ErrUnableToGetPackages = errors.New("unable to load the Zarf Package data from the cluster")
 )
 

@@ -18,7 +18,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -41,7 +40,7 @@ func (g *Git) CreateReadOnlyUser(ctx context.Context) error {
 	}
 
 	// Establish a git tunnel to send the repo
-	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, k8s.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 	if err != nil {
 		return err
 	}
@@ -128,7 +127,7 @@ func (g *Git) UpdateGitUser(ctx context.Context, oldAdminPass string, username s
 		return err
 	}
 	// Establish a git tunnel to send the repo
-	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, k8s.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 	if err != nil {
 		return err
 	}
@@ -167,7 +166,7 @@ func (g *Git) CreatePackageRegistryToken(ctx context.Context) (CreateTokenRespon
 	}
 
 	// Establish a git tunnel to send the repo
-	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, k8s.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 	if err != nil {
 		return CreateTokenResponse{}, err
 	}

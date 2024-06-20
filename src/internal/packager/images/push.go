@@ -11,7 +11,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
@@ -48,7 +47,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 	var (
 		err         error
-		tunnel      *k8s.Tunnel
+		tunnel      *cluster.Tunnel
 		registryURL = cfg.RegInfo.Address
 	)
 

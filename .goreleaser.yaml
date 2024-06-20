@@ -1,3 +1,5 @@
+version: 2
+
 before:
   hooks:
     - go mod tidy
@@ -72,7 +74,7 @@ release:
 # Update the 'generic' brew formula and create a versioned brew formula for artifacts from this release
 brews:
   - name: "{{ .Env.BREW_NAME }}"
-    tap:
+    repository:
       owner: defenseunicorns
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
@@ -91,7 +93,7 @@ brews:
   # NOTE: We are using .Version instead of .Tag because homebrew has weird semver parsing rules and won't be able to
   #       install versioned releases that has a `v` character before the version number.
   - name: "zarf@{{ .Version }}"
-    tap:
+    repository:
       owner: defenseunicorns
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
@@ -111,4 +113,4 @@ blobs:
   - provider: s3
     region: us-gov-west-1
     bucket: zarf-public
-    folder: "release/{{.Version}}"
+    directory: "release/{{.Version}}"

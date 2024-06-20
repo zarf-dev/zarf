@@ -33,7 +33,7 @@ components:
       onCreate:
         before:
           # Download a .zim file of a DevOps Stack Exchange snapshot into the data directory for use with Kiwix
-          - cmd: curl https://zarf-examples.s3.amazonaws.com/devops.stackexchange.com_en_all_2023-05.zim -o zim-data/devops.stackexchange.com_en_all_2023-05.zim
+          - cmd: curl https://zarf-remote.s3.us-east-2.amazonaws.com/testdata/devops.stackexchange.com_en_all_2023-05.zim -o zim-data/devops.stackexchange.com_en_all_2023-05.zim
           # Below are some more examples of *.zim files of available content:
           # https://library.kiwix.org/?lang=eng
           # NOTE: If `zarf package create`ing regularly you should mirror content to a web host you control to be a friendly neighbor

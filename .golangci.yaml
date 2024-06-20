@@ -3,6 +3,7 @@ run:
 linters:
   disable-all: true
   enable:
+    - errcheck
     - gosimple
     - govet
     - ineffassign
@@ -54,6 +55,12 @@ linters-settings:
       - name: redefines-builtin-id
   testifylint:
     enable-all: true
+  errcheck:
+    exclude-functions:
+      - (*github.com/spf13/cobra.Command).Help
+      - (*github.com/spf13/cobra.Command).MarkFlagRequired
+      - (*github.com/spf13/pflag.FlagSet).MarkHidden
+      - (*github.com/spf13/pflag.FlagSet).MarkDeprecated
 issues:
   # Revive rules that are disabled by default.
   include:
