@@ -28,10 +28,6 @@ const (
 
 	IndexJSON = "index.json"
 	OCILayout = "oci-layout"
-
-	SeedImagesDir        = "seed-images"
-	InjectorBinary       = "zarf-injector"
-	InjectorPayloadTarGz = "payload.tgz"
 )
 
 var (
