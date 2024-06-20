@@ -1,0 +1,4 @@
+{
+  "skip": "^(https://.*github.com)",
+  "verbosity": "error"
+}
