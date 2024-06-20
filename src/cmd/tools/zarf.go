@@ -13,7 +13,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/spf13/cobra"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 
 	"github.com/defenseunicorns/zarf/src/cmd/common"
@@ -145,7 +145,7 @@ var updateCredsCmd = &cobra.Command{
 			h := helm.NewClusterOnly(&types.PackagerConfig{}, template.GetZarfVariableConfig(), newState, c)
 
 			if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
-				err = h.UpdateZarfRegistryValues()
+				err = h.UpdateZarfRegistryValues(ctx)
 				if err != nil {
 					// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
@@ -186,7 +186,7 @@ var clearCacheCmd = &cobra.Command{
 var downloadInitCmd = &cobra.Command{
 	Use:   "download-init",
 	Short: lang.CmdToolsDownloadInitShort,
-	Run: func(_ *cobra.Command, _ []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		url := zoci.GetInitPackageURL(config.CLIVersion)
 
 		remote, err := zoci.NewRemote(url, oci.PlatformForArch(config.GetArch()))
@@ -196,7 +196,7 @@ var downloadInitCmd = &cobra.Command{
 
 		source := &sources.OCISource{Remote: remote}
 
-		_, err = source.Collect(outputDirectory)
+		_, err = source.Collect(cmd.Context(), outputDirectory)
 		if err != nil {
 			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
 		}

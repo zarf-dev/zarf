@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 )
 
 // TextTemplate represents a value to be templated into a text file.

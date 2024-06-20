@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/fatih/color"
 	"github.com/pterm/pterm"
@@ -319,6 +319,7 @@ func Table(header []string, data [][]string) {
 		table = append(table, pterm.TableData{row}...)
 	}
 
+	//nolint:errcheck // never returns an error
 	pterm.DefaultTable.WithHasHeader().WithData(table).Render()
 }
 

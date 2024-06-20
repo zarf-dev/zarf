@@ -21,7 +21,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -30,7 +30,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
@@ -60,12 +59,12 @@ func (p *Packager) Deploy(ctx context.Context) (err error) {
 	if isInteractive {
 		filter := filters.Empty()
 
-		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, true)
+		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, filter, true)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
 	} else {
-		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, deployFilter, true)
+		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, deployFilter, true)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
@@ -238,13 +237,13 @@ func (p *Packager) deployInitComponent(ctx context.Context, component types.Zarf
 	if component.RequiresCluster() && p.state == nil {
 		err = p.cluster.InitZarfState(ctx, p.cfg.InitOpts)
 		if err != nil {
-			return charts, fmt.Errorf("unable to initialize Zarf state: %w", err)
+			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
 		}
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
 		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
-		return charts, nil
+		return nil, nil
 	}
 
 	if isRegistry {
@@ -254,18 +253,21 @@ func (p *Packager) deployInitComponent(ctx context.Context, component types.Zarf
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		p.cluster.StartInjectionMadness(ctx, p.layout.Base, p.layout.Images.Base, component.Images)
+		err := p.cluster.StartInjectionMadness(ctx, p.layout.Base, p.layout.Images.Base, component.Images)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	charts, err = p.deployComponent(ctx, component, isAgent /* skip img checksum if isAgent */, isSeedRegistry /* skip image push if isSeedRegistry */)
 	if err != nil {
-		return charts, err
+		return nil, err
 	}
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
 		if err := p.cluster.StopInjectionMadness(ctx); err != nil {
-			return charts, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
+			return nil, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
 		}
 	}
 
@@ -545,7 +547,7 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 					}
 				}
 
-				tunnel, err := p.cluster.NewTunnel(namespace, k8s.SvcResource, name, "", 0, port)
+				tunnel, err := p.cluster.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
 				if err != nil {
 					return err
 				}

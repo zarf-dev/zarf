@@ -25,10 +25,11 @@ func verifyKubectlWaitSuccess(t *testing.T, timeoutMinutes time.Duration, args [
 }
 
 func createPodInfoPackageWithInsecureSources(t *testing.T, temp string) {
-	copy.Copy("../../../examples/podinfo-flux", temp)
+	err := copy.Copy("../../../examples/podinfo-flux", temp)
+	require.NoError(t, err)
 	// This is done because while .spec.insecure is auto set to true for internal registries by the agent
 	// it is not for external registries, however since we are using an insecure external registry, we still need it
-	err := exec.CmdWithPrint(zarfBinPath, "tools", "yq", "eval", ".spec.insecure = true", "-i", filepath.Join(temp, "helm", "podinfo-source.yaml"))
+	err = exec.CmdWithPrint(zarfBinPath, "tools", "yq", "eval", ".spec.insecure = true", "-i", filepath.Join(temp, "helm", "podinfo-source.yaml"))
 	require.NoError(t, err, "unable to yq edit helm source")
 	err = exec.CmdWithPrint(zarfBinPath, "tools", "yq", "eval", ".spec.insecure = true", "-i", filepath.Join(temp, "oci", "podinfo-source.yaml"))
 	require.NoError(t, err, "unable to yq edit oci source")

@@ -80,7 +80,7 @@ Cons:
 
 The current proposition (subject to change before acceptance) is **Zarf Bundles**, which a following PR will focus on and create a POC of.
 
-In essense the `zarf-bundle.yaml` would look something like so:
+In essence the `zarf-bundle.yaml` would look something like so:
 
 ```yaml
 metadata:

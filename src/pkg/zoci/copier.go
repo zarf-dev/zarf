@@ -27,7 +27,7 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, concurrency int)
 
 	title := fmt.Sprintf("[0/%d] layers copied", len(layers))
 	progressBar := message.NewProgressBar(size, title)
-	defer progressBar.Stop()
+	defer progressBar.Close()
 
 	if err := oci.Copy(ctx, src.OrasRemote, dst.OrasRemote, nil, concurrency, progressBar); err != nil {
 		return err

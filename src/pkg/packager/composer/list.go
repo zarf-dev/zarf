@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
@@ -120,7 +120,7 @@ func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageN
 
 // NewImportChain creates a new import chain from a component
 // Returning the chain on error so we can have additional information to use during lint
-func NewImportChain(head types.ZarfComponent, index int, originalPackageName, arch, flavor string) (*ImportChain, error) {
+func NewImportChain(ctx context.Context, head types.ZarfComponent, index int, originalPackageName, arch, flavor string) (*ImportChain, error) {
 	ic := &ImportChain{}
 	if arch == "" {
 		return ic, fmt.Errorf("cannot build import chain: architecture must be provided")
@@ -179,11 +179,11 @@ func NewImportChain(head types.ZarfComponent, index int, originalPackageName, ar
 			}
 		} else if isRemote {
 			importURL = node.Import.URL
-			remote, err := ic.getRemote(node.Import.URL)
+			remote, err := ic.getRemote(ctx, node.Import.URL)
 			if err != nil {
 				return ic, err
 			}
-			pkg, err = remote.FetchZarfYAML(context.TODO())
+			pkg, err = remote.FetchZarfYAML(ctx)
 			if err != nil {
 				return ic, err
 			}
@@ -274,7 +274,7 @@ func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 
 // Compose merges the import chain into a single component
 // fixing paths, overriding metadata, etc
-func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
+func (ic *ImportChain) Compose(ctx context.Context) (composed *types.ZarfComponent, err error) {
 	composed = &ic.tail.ZarfComponent
 
 	if ic.tail.prev == nil {
@@ -282,7 +282,7 @@ func (ic *ImportChain) Compose() (composed *types.ZarfComponent, err error) {
 		return composed, nil
 	}
 
-	if err := ic.fetchOCISkeleton(); err != nil {
+	if err := ic.fetchOCISkeleton(ctx); err != nil {
 		return nil, err
 	}
 

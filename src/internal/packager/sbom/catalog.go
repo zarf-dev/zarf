@@ -23,7 +23,7 @@ import (
 	"github.com/anchore/syft/syft/pkg/cataloger"
 	"github.com/anchore/syft/syft/sbom"
 	"github.com/anchore/syft/syft/source"
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -161,7 +161,7 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 		return nil, err
 	}
 
-	syftSource, err := source.NewFromStereoscopeImageObject(syftImage, "", nil)
+	syftSource, err := source.NewFromStereoscopeImageObject(syftImage, refInfo.Reference, nil)
 	if err != nil {
 		return nil, err
 	}

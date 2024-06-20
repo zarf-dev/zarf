@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"sigs.k8s.io/kustomize/api/krusty"
 	krustytypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"

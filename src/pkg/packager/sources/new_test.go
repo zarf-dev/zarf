@@ -5,6 +5,7 @@
 package sources
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -128,6 +129,7 @@ func TestPackageSource(t *testing.T) {
 			return
 		}
 		defer f.Close()
+		//nolint:errcheck // ignore
 		io.Copy(rw, f)
 	}))
 	t.Cleanup(func() { ts.Close() })
@@ -160,7 +162,7 @@ func TestPackageSource(t *testing.T) {
 			require.NoError(t, err)
 			packageDir := t.TempDir()
 			pkgLayout := layout.New(packageDir)
-			pkg, warnings, err := ps.LoadPackage(pkgLayout, filters.Empty(), false)
+			pkg, warnings, err := ps.LoadPackage(context.Background(), pkgLayout, filters.Empty(), false)
 			require.NoError(t, err)
 			require.Empty(t, warnings)
 			require.Equal(t, expectedPkg, pkg)
@@ -169,7 +171,7 @@ func TestPackageSource(t *testing.T) {
 			require.NoError(t, err)
 			metadataDir := t.TempDir()
 			metadataLayout := layout.New(metadataDir)
-			metadata, warnings, err := ps.LoadPackageMetadata(metadataLayout, true, false)
+			metadata, warnings, err := ps.LoadPackageMetadata(context.Background(), metadataLayout, true, false)
 			require.NoError(t, err)
 			require.Empty(t, warnings)
 			require.Equal(t, expectedPkg, metadata)
@@ -177,7 +179,7 @@ func TestPackageSource(t *testing.T) {
 			ps, err = New(opts)
 			require.NoError(t, err)
 			collectDir := t.TempDir()
-			fp, err := ps.Collect(collectDir)
+			fp, err := ps.Collect(context.Background(), collectDir)
 			require.NoError(t, err)
 			require.Equal(t, filepath.Join(collectDir, filepath.Base(tt.src)), fp)
 		})

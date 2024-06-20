@@ -66,6 +66,7 @@ func TestGenerateRegistryPullCreds2(t *testing.T) {
 	}
 
 	c.K8s.Clientset.CoreV1().Services("whatever").Create(ctx, svc, metav1.CreateOptions{})
+
 	ri := types.RegistryInfo{
 		PullUsername: "pull-user",
 		PullPassword: "pull-password",

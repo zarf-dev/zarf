@@ -23,7 +23,7 @@ func (p *Packager) Mirror(ctx context.Context) (err error) {
 		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
 	)
 
-	p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, true)
+	p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, filter, true)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}

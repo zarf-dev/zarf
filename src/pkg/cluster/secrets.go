@@ -35,8 +35,6 @@ type DockerConfigEntryWithAuth struct {
 
 // GenerateRegistryPullCreds generates a secret containing the registry credentials.
 func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name string, registryInfo types.RegistryInfo) *corev1.Secret {
-	secretDockerConfig := c.GenerateSecret(namespace, name, corev1.SecretTypeDockerConfigJson)
-
 	// Auth field must be username:password and base64 encoded
 	fieldValue := registryInfo.PullUsername + ":" + registryInfo.PullPassword
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
@@ -74,9 +72,23 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 		message.WarnErrf(err, "Unable to marshal the .dockerconfigjson secret data for the image pull secret")
 	}
 
-	// Add to the secret data
-	secretDockerConfig.Data[".dockerconfigjson"] = dockerConfigData
-
+	secretDockerConfig := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				ZarfManagedByLabel: "zarf",
+			},
+		},
+		Type: corev1.SecretTypeDockerConfigJson,
+		Data: map[string][]byte{
+			".dockerconfigjson": dockerConfigData,
+		},
+	}
 	return secretDockerConfig
 }
 
@@ -84,12 +96,25 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo types.GitServerInfo) *corev1.Secret {
 	message.Debugf("k8s.GenerateGitPullCreds(%s, %s, gitServerInfo)", namespace, name)
 
-	gitServerSecret := c.GenerateSecret(namespace, name, corev1.SecretTypeOpaque)
-	gitServerSecret.StringData = map[string]string{
-		"username": gitServerInfo.PullUsername,
-		"password": gitServerInfo.PullPassword,
+	gitServerSecret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				ZarfManagedByLabel: "zarf",
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{},
+		StringData: map[string]string{
+			"username": gitServerInfo.PullUsername,
+			"password": gitServerInfo.PullPassword,
+		},
 	}
-
 	return gitServerSecret
 }
 
@@ -105,7 +130,7 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 	} else {
 		// Update all image pull secrets
 		for _, namespace := range namespaceList.Items {
-			currentRegistrySecret, err := c.GetSecret(ctx, namespace.Name, config.ZarfImagePullSecretName)
+			currentRegistrySecret, err := c.Clientset.CoreV1().Secrets(namespace.Name).Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
 			if err != nil {
 				continue
 			}
@@ -117,8 +142,8 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 
 				newRegistrySecret := c.GenerateRegistryPullCreds(ctx, namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
 				if !reflect.DeepEqual(currentRegistrySecret.Data, newRegistrySecret.Data) {
-					// Create or update the zarf registry secret
-					if _, err := c.CreateOrUpdateSecret(ctx, newRegistrySecret); err != nil {
+					_, err := c.Clientset.CoreV1().Secrets(newRegistrySecret.Namespace).Update(ctx, newRegistrySecret, metav1.UpdateOptions{})
+					if err != nil {
 						message.WarnErrf(err, "Problem creating registry secret for the %s namespace", namespace.Name)
 					}
 				}
@@ -140,7 +165,7 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 	} else {
 		// Update all git pull secrets
 		for _, namespace := range namespaceList.Items {
-			currentGitSecret, err := c.GetSecret(ctx, namespace.Name, config.ZarfGitServerSecretName)
+			currentGitSecret, err := c.Clientset.CoreV1().Secrets(namespace.Name).Get(ctx, config.ZarfGitServerSecretName, metav1.GetOptions{})
 			if err != nil {
 				continue
 			}
@@ -153,8 +178,8 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 				// Create the secret
 				newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, state.GitServer)
 				if !reflect.DeepEqual(currentGitSecret.StringData, newGitSecret.StringData) {
-					// Create or update the zarf git secret
-					if _, err := c.CreateOrUpdateSecret(ctx, newGitSecret); err != nil {
+					_, err := c.Clientset.CoreV1().Secrets(newGitSecret.Namespace).Update(ctx, newGitSecret, metav1.UpdateOptions{})
+					if err != nil {
 						message.WarnErrf(err, "Problem creating git server secret for the %s namespace", namespace.Name)
 					}
 				}
