@@ -135,26 +135,26 @@ func TestPackageSource(t *testing.T) {
 	t.Cleanup(func() { ts.Close() })
 
 	tests := []struct {
-		name    string
-		src     string
-		shasum  string
-		wantErr string
+		name        string
+		src         string
+		shasum      string
+		expectedErr string
 	}{
 		{
-			name:    "local",
-			src:     tarPath,
-			wantErr: "",
+			name:        "local",
+			src:         tarPath,
+			expectedErr: "",
 		},
 		{
-			name:    "http",
-			src:     fmt.Sprintf("%s/zarf-package-wordpress-amd64-16.0.4.tar.zst", ts.URL),
-			shasum:  "835b06fc509e639497fb45f45d432e5c4cbd5d84212db5357b16bc69724b0e26",
-			wantErr: "",
+			name:        "http",
+			src:         fmt.Sprintf("%s/zarf-package-wordpress-amd64-16.0.4.tar.zst", ts.URL),
+			shasum:      "835b06fc509e639497fb45f45d432e5c4cbd5d84212db5357b16bc69724b0e26",
+			expectedErr: "",
 		},
 		{
-			name:    "http-insecure",
-			src:     fmt.Sprintf("%s/zarf-package-wordpress-amd64-16.0.4.tar.zst", ts.URL),
-			wantErr: "remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum",
+			name:        "http-insecure",
+			src:         fmt.Sprintf("%s/zarf-package-wordpress-amd64-16.0.4.tar.zst", ts.URL),
+			expectedErr: "remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum",
 		},
 	}
 	for _, tt := range tests {
@@ -171,8 +171,8 @@ func TestPackageSource(t *testing.T) {
 			packageDir := t.TempDir()
 			pkgLayout := layout.New(packageDir)
 			pkg, warnings, err := ps.LoadPackage(context.Background(), pkgLayout, filters.Empty(), false)
-			if tt.wantErr != "" {
-				require.EqualError(t, err, tt.wantErr)
+			if tt.expectedErr != "" {
+				require.EqualError(t, err, tt.expectedErr)
 				return
 			}
 			require.NoError(t, err)
