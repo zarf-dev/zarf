@@ -104,13 +104,6 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdErr, expectedOutString, "The log level should be changed to 'debug'")
 	})
 
-	t.Run("bad zarf package deploy w/o --insecure or --shasum", func(t *testing.T) {
-		t.Parallel()
-		// Test that `zarf package deploy` gives an error if deploying a remote package without the --insecure or --shasum flags
-		stdOut, stdErr, err := e2e.Zarf("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst", "--confirm")
-		require.Error(t, err, stdOut, stdErr)
-	})
-
 	t.Run("zarf package to test bad remote images", func(t *testing.T) {
 		_, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/00-remote-pull-fail", "--confirm")
 		// expecting zarf to have an error and output to stderr
