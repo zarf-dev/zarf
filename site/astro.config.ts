@@ -44,7 +44,7 @@ export default defineConfig({
       },
       favicon: "/favicon.svg",
       editLink: {
-        baseUrl: "https://github.com/defenseunicorns/zarf/edit/main/",
+        baseUrl: "https://github.com/defenseunicorns/zarf/edit/main/site",
       },
       logo: {
         src: "./src/assets/zarf-logo-header.svg",
