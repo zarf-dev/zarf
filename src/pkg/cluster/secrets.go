@@ -5,10 +5,11 @@
 package cluster
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"reflect"
+	"maps"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -122,7 +123,7 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 				spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
 
 				newRegistrySecret := c.GenerateRegistryPullCreds(namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
-				if !reflect.DeepEqual(currentRegistrySecret.Data, newRegistrySecret.Data) {
+				if !maps.EqualFunc(currentRegistrySecret.Data, newRegistrySecret.Data, func(v1, v2 []byte) bool { return bytes.Equal(v1, v2) }) {
 					_, err := c.Clientset.CoreV1().Secrets(newRegistrySecret.Namespace).Update(ctx, newRegistrySecret, metav1.UpdateOptions{})
 					if err != nil {
 						message.WarnErrf(err, "Problem creating registry secret for the %s namespace", namespace.Name)
@@ -158,7 +159,7 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 
 				// Create the secret
 				newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, state.GitServer)
-				if !reflect.DeepEqual(currentGitSecret.StringData, newGitSecret.StringData) {
+				if !maps.Equal(currentGitSecret.StringData, newGitSecret.StringData) {
 					_, err := c.Clientset.CoreV1().Secrets(newGitSecret.Namespace).Update(ctx, newGitSecret, metav1.UpdateOptions{})
 					if err != nil {
 						message.WarnErrf(err, "Problem creating git server secret for the %s namespace", namespace.Name)
