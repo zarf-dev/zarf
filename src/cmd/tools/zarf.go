@@ -76,6 +76,7 @@ var updateCredsCmd = &cobra.Command{
 	Example: lang.CmdToolsUpdateCredsExample,
 	Aliases: []string{"uc"},
 	Args:    cobra.MaximumNArgs(1),
+	//TODO changed to RunE
 	Run: func(cmd *cobra.Command, args []string) {
 		validKeys := []string{message.RegistryKey, message.GitKey, message.ArtifactKey, message.AgentKey}
 		if len(args) == 0 {
@@ -117,7 +118,10 @@ var updateCredsCmd = &cobra.Command{
 		if confirm {
 			// Update registry and git pull secrets
 			if slices.Contains(args, message.RegistryKey) {
-				c.UpdateZarfManagedImageSecrets(ctx, newState)
+				err = c.UpdateZarfManagedImageSecrets(ctx, newState)
+				if err != nil {
+					message.Fatalf(err, "unable to update Zarf managed secrets: %s", err.Error())
+				}
 			}
 			if slices.Contains(args, message.GitKey) {
 				c.UpdateZarfManagedGitSecrets(ctx, newState)

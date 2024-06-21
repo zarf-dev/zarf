@@ -24,7 +24,8 @@ func TestGenerateRegistryPullCredsWithOutSvc(t *testing.T) {
 		PullPassword: "pull-password",
 		Address:      "example.com",
 	}
-	secret := c.GenerateRegistryPullCreds(ctx, "foo", "bar", ri)
+	secret, err := c.GenerateRegistryPullCreds(ctx, "foo", "bar", ri)
+	require.NoError(t, err)
 	expectedSecret := corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -73,7 +74,8 @@ func TestGenerateRegistryPullCredsWithSvc(t *testing.T) {
 		PullPassword: "pull-password",
 		Address:      "127.0.0.1:30001",
 	}
-	secret := c.GenerateRegistryPullCreds(ctx, "foo", "bar", ri)
+	secret, err := c.GenerateRegistryPullCreds(ctx, "foo", "bar", ri)
+	require.NoError(t, err)
 	expectedSecret := corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
