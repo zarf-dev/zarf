@@ -88,7 +88,7 @@ It leverages the same `docker-registry` chart used in `zarf-seed-registry` but w
 
 1. The `image.repository` is set to the value of the built-in variable `###ZARF_REGISTRY###` which is set at runtime to the registry hosted by `zarf-seed-registry`.
 {/* you know, why DO we do this? if we kept the repository the same, and kept running the injector, couldnt this handle cluster full-deaths??? (ofc would need to tweak the zarf-agent to not mutate the image.repository for the docker-registry chart under the zarf namespace, but i think it might be doable) */}
-2. A `connect` manifest for running [`zarf connect registry`](/commands/zarf_connect_registry/) to tunnel to the Zarf Registry.
+2. A `connect` manifest for running [`zarf connect registry`](/commands/zarf_connect/) to tunnel to the Zarf Registry.
 3. A configmap to satisfy [KEP-1755](https://github.com/kubernetes/enhancements/tree/master/keps/sig-cluster-lifecycle/generic/1755-communicating-a-local-registry)
 
 :::tip
