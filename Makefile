@@ -107,6 +107,8 @@ docs-and-schema: ## Generate the Zarf Documentation and Schema
 	ZARF_CONFIG=hack/empty-config.toml go run main.go internal gen-cli-docs
 	ZARF_CONFIG=hack/empty-config.toml hack/create-zarf-schema.sh
 
+init-package-with-agent: build build-local-agent-image init-package
+
 lint-packages-and-examples: build ## Recursively lint all zarf.yaml files in the repo except for those dedicated to tests
 	hack/lint-all-zarf-packages.sh $(ZARF_BIN) false
 
@@ -133,7 +135,7 @@ release-init-package:
 
 # INTERNAL: used to build an iron bank version of the init package with an ib version of the registry image
 ib-init-package:
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	@test -s $(ZARF_BIN) || $(MAKE)
 	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm . \
 		--set REGISTRY_IMAGE_DOMAIN="registry1.dso.mil/" \
 		--set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
@@ -191,7 +193,7 @@ test-e2e-without-cluster: build-examples ## Run all of the core Zarf CLI E2E tes
 ## NOTE: Requires an existing cluster
 .PHONY: test-external
 test-external: ## Run the Zarf CLI E2E tests for an external registry and cluster
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	@test -s $(ZARF_BIN) || $(MAKE)
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH) --confirm
 	@test -s ./build/zarf-package-argocd-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/argocd -o build -a $(ARCH) --confirm
@@ -200,7 +202,7 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 ## NOTE: Requires an existing cluster and
 .PHONY: test-upgrade
 test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
-	@test -s $(ZARF_BIN) || $(MAKE) build-cli
+	@test -s $(ZARF_BIN) || $(MAKE)
 	[ -n "$(shell zarf version)" ] || (echo "Zarf must be installed prior to the upgrade test" && exit 1)
 	[ -n "$(shell zarf package list 2>&1 | grep test-upgrade-package)" ] || (echo "Zarf must be initialized and have the 6.3.3 upgrade-test package installed prior to the upgrade test" && exit 1)
 	@test -s "zarf-package-test-upgrade-package-amd64-6.3.4.tar.zst" || zarf package create src/test/upgrade/ --set PODINFO_VERSION=6.3.4 --confirm
