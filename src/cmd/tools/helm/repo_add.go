@@ -32,7 +32,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -134,11 +133,7 @@ func (o *repoAddOptions) run(ctx context.Context, out io.Writer) error {
 	defer cancel()
 	locked, err := fileLock.TryLockContext(lockCtx, time.Second)
 	if err == nil && locked {
-		defer func() {
-			if err := fileLock.Unlock(); err != nil {
-				message.Fatal(err, err.Error())
-			}
-		}()
+		defer fileLock.Unlock()
 	}
 	if err != nil {
 		return err

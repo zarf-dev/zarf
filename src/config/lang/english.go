@@ -573,12 +573,8 @@ $ zarf tools wait-for https 1.1.1.1 200                                 #  wait 
 $ zarf tools wait-for http google.com                                   #  wait for any 2xx response from http://google.com
 $ zarf tools wait-for http google.com success                           #  wait for any 2xx response from http://google.com
 `
-	CmdToolsWaitForFlagTimeout        = "Specify the timeout duration for the wait command."
-	CmdToolsWaitForErrTimeoutString   = "Invalid timeout duration '%s'. Please use a valid duration string (e.g. 1s, 2m, 3h)."
-	CmdToolsWaitForErrTimeout         = "Wait timed out."
-	CmdToolsWaitForErrConditionString = "Invalid HTTP status code. Please use a valid HTTP status code (e.g. 200, 404, 500)."
-	CmdToolsWaitForErrZarfPath        = "Could not locate the current Zarf binary path."
-	CmdToolsWaitForFlagNamespace      = "Specify the namespace of the resources to wait for."
+	CmdToolsWaitForFlagTimeout   = "Specify the timeout duration for the wait command."
+	CmdToolsWaitForFlagNamespace = "Specify the namespace of the resources to wait for."
 
 	CmdToolsKubectlDocs = "Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information."
 
