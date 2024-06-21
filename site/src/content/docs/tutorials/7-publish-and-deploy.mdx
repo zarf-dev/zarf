@@ -18,7 +18,7 @@ In this tutorial, we are going to run through how to publish a Zarf package to a
 For following along locally, please ensure the following prerequisites are met:
 
 - Zarf binary installed on your `$PATH`: ([Installing Zarf](/getting-started/install/))
-- Access to a [Registry supporting the OCI Distribution Spec](https://oras.land/implementors/#registries-supporting-oci-artifacts), this tutorial will be using Docker Hub
+- Access to a [Registry supporting the OCI Distribution Spec](https://oras.land/docs/compatible_oci_registries#registries-supporting-oci-artifacts), this tutorial will be using Docker Hub
 - Access to a cluster that has been [initialized with zarf](/tutorials/1-initializing-a-k8s-cluster/).
 
 ## Working with OCI Packages
@@ -128,7 +128,7 @@ You attempted to publish a package with no version metadata.
 <iframe src="/tutorials/troubleshoot_version_required_no_version.html" width="100%" height="300px"></iframe>
 
 1. Open the zarf.yaml file.
-2. Add a version attribute to the [package metadata](https://docs.zarf.dev/docs/user-guide/zarf-schema#metadata)
+2. Add the version attribute to the package metadata.
 3. Recreate the package with the `zarf package create` command.
 4. Publish the package.  The filename will now have the version as part of it.
 
