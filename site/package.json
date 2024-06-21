@@ -10,9 +10,10 @@
     "dev": "astro dev",
     "start": "astro dev",
     "prebuild": "cp ../zarf.schema.json ./src/assets/zarf.schema.json && node hack/copy-examples.js",
-    "build": "astro check && astro build",
+    "build": "rm -rf dist && astro check && astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "link-check": "linkinator --recurse dist/ --config linkinator.config.json"
   },
   "dependencies": {
     "@astrojs/check": "^0.5.10",
@@ -25,6 +26,7 @@
     "typescript": "^5.4.3"
   },
   "devDependencies": {
+    "linkinator": "^6.0.5",
     "markdownlint-cli2": "^0.12.1",
     "remark-gemoji": "^8.0.0",
     "yaml": "^2.4.1"

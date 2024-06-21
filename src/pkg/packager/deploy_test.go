@@ -4,7 +4,6 @@
 package packager
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
@@ -222,9 +221,7 @@ func TestGenerateValuesOverrides(t *testing.T) {
 			if err != nil {
 				t.Errorf("%s: generateValuesOverrides() error = %v", tt.name, err)
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("%s: generateValuesOverrides() got = %v, want %v", tt.name, got, tt.want)
-			}
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
