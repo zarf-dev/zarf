@@ -17,7 +17,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -130,10 +129,7 @@ func TestInitZarfState(t *testing.T) {
 				require.NoError(t, err)
 			}
 			c := &Cluster{
-				&k8s.K8s{
-					Clientset: cs,
-					Log:       func(string, ...any) {},
-				},
+				Clientset: cs,
 			}
 
 			// Create default service account in Zarf namespace
@@ -173,7 +169,7 @@ func TestInitZarfState(t *testing.T) {
 				}
 				ns, err := cs.CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
 				require.NoError(t, err)
-				require.Equal(t, map[string]string{k8s.AgentLabel: "ignore"}, ns.Labels)
+				require.Equal(t, map[string]string{AgentLabel: "ignore"}, ns.Labels)
 			}
 		})
 	}

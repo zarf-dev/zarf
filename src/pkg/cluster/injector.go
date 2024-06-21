@@ -12,14 +12,6 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/uuid"
 	"github.com/mholt/archiver/v3"
@@ -30,6 +22,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/cli-utils/pkg/object"
+
+	"github.com/defenseunicorns/pkg/helpers/v2"
+	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
+
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
 // The chunk size for the tarball chunks.
@@ -380,8 +381,8 @@ func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []stri
 			Name:      fmt.Sprintf("injector-%s", uuid),
 			Namespace: ZarfNamespaceName,
 			Labels: map[string]string{
-				"app":          "zarf-injector",
-				k8s.AgentLabel: "ignore",
+				"app":      "zarf-injector",
+				AgentLabel: "ignore",
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -544,7 +545,7 @@ func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeM
 				return result, nil
 			}
 
-			c.Log("No images found on any node. Retrying...")
+			message.Debug("No images found on any node. Retrying...")
 			timer.Reset(2 * time.Second)
 		}
 	}

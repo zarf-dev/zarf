@@ -13,7 +13,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/admission/v1"
@@ -32,7 +31,7 @@ type admissionTest struct {
 
 func createTestClientWithZarfState(ctx context.Context, t *testing.T, state *types.ZarfState) *cluster.Cluster {
 	t.Helper()
-	c := &cluster.Cluster{K8s: &k8s.K8s{Clientset: fake.NewSimpleClientset()}}
+	c := &cluster.Cluster{Clientset: fake.NewSimpleClientset()}
 	stateData, err := json.Marshal(state)
 	require.NoError(t, err)
 

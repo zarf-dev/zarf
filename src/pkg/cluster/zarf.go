@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
@@ -72,7 +71,7 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 
 	deleteOptions := metav1.DeleteOptions{}
 	listOptions := metav1.ListOptions{
-		LabelSelector: k8s.ZarfManagedByLabel + "=zarf",
+		LabelSelector: ZarfManagedByLabel + "=zarf",
 	}
 
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
@@ -80,9 +79,9 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 		spinner.Errorf(err, "Unable to get k8s namespaces")
 	} else {
 		for _, namespace := range namespaceList.Items {
-			if _, ok := namespace.Labels[k8s.AgentLabel]; ok {
+			if _, ok := namespace.Labels[AgentLabel]; ok {
 				spinner.Updatef("Removing Zarf Agent label for namespace %s", namespace.Name)
-				delete(namespace.Labels, k8s.AgentLabel)
+				delete(namespace.Labels, AgentLabel)
 				namespaceCopy := namespace
 				_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
 				if err != nil {

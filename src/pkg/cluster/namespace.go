@@ -8,11 +8,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
 // DeleteZarfNamespace deletes the Zarf namespace from the connected cluster.
@@ -66,6 +66,6 @@ func AdoptZarfManagedLabels(labels map[string]string) map[string]string {
 	if labels == nil {
 		labels = make(map[string]string)
 	}
-	labels[k8s.ZarfManagedByLabel] = "zarf"
+	labels[ZarfManagedByLabel] = "zarf"
 	return labels
 }
