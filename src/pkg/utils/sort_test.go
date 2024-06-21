@@ -5,7 +5,6 @@
 package utils
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -169,9 +168,7 @@ func TestSortDependencies(t *testing.T) {
 			} else {
 				require.Error(t, err)
 			}
-			if !reflect.DeepEqual(result, tt.expected) {
-				t.Errorf("expected %v but got %v", tt.expected, result)
-			}
+			require.Equal(t, tt.expected, result)
 		})
 	}
 }

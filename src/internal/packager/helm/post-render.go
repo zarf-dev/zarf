@@ -8,9 +8,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
-	"reflect"
 	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -163,7 +163,8 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
 		// TODO: Refactor as error is not checked instead of checking for not found error.
 		currentRegistrySecret, _ := c.Clientset.CoreV1().Secrets(name).Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
-		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentRegistrySecret.Data, validRegistrySecret.Data) {
+		sameSecretData := maps.EqualFunc(currentRegistrySecret.Data, validRegistrySecret.Data, func(v1, v2 []byte) bool { return bytes.Equal(v1, v2) })
+		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !sameSecretData {
 			err := func() error {
 				_, err := c.Clientset.CoreV1().Secrets(validRegistrySecret.Namespace).Create(ctx, validRegistrySecret, metav1.CreateOptions{})
 				if err != nil && !kerrors.IsAlreadyExists(err) {
