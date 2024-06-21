@@ -5,6 +5,7 @@
 package tools
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -28,11 +29,11 @@ var waitForCmd = &cobra.Command{
 	Long:    lang.CmdToolsWaitForLong,
 	Example: lang.CmdToolsWaitForExample,
 	Args:    cobra.MinimumNArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
 		// Parse the timeout string
 		timeout, err := time.ParseDuration(waitTimeout)
 		if err != nil {
-			message.Fatalf(err, lang.CmdToolsWaitForErrTimeoutString, waitTimeout)
+			return fmt.Errorf("invalid timeout duration %s, use a valid duration string e.g. 1s, 2m, 3h: %w", waitTimeout, err)
 		}
 
 		kind := args[0]
@@ -51,8 +52,9 @@ var waitForCmd = &cobra.Command{
 
 		// Execute the wait command.
 		if err := utils.ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier, timeout); err != nil {
-			message.Fatal(err, err.Error())
+			return err
 		}
+		return err
 	},
 }
 
