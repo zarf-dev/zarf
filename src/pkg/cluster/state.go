@@ -26,12 +26,11 @@ import (
 
 // Zarf Cluster Constants.
 const (
-	ZarfManagedByLabel      = "app.kubernetes.io/managed-by"
-	ZarfNamespaceName       = "zarf"
-	ZarfStateSecretName     = "zarf-state"
-	ZarfStateDataKey        = "state"
-	ZarfPackageInfoLabel    = "package-deploy-info"
-	ZarfInitPackageInfoName = "zarf-package-init"
+	ZarfManagedByLabel   = "app.kubernetes.io/managed-by"
+	ZarfNamespaceName    = "zarf"
+	ZarfStateSecretName  = "zarf-state"
+	ZarfStateDataKey     = "state"
+	ZarfPackageInfoLabel = "package-deploy-info"
 )
 
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
