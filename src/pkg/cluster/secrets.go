@@ -39,26 +39,22 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 	fieldValue := registryInfo.PullUsername + ":" + registryInfo.PullPassword
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
 
-	registry := registryInfo.Address
-
-	var dockerConfigJSON DockerConfig
+	dockerConfigJSON := DockerConfig{
+		Auths: DockerConfigEntry{
+			// nodePort for zarf-docker-registry
+			registryInfo.Address: DockerConfigEntryWithAuth{
+				Auth: authEncodedValue,
+			},
+		},
+	}
 
 	serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		// TODO real error
 		return nil
 	}
-
 	// Build zarf-docker-registry service address string
-	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, registry)
-	dockerConfigJSON = DockerConfig{
-		Auths: DockerConfigEntry{
-			// nodePort for zarf-docker-registry
-			registry: DockerConfigEntryWithAuth{
-				Auth: authEncodedValue,
-			},
-		},
-	}
+	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
 	if err == nil {
 		kubeDNSRegistryURL := fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, port)
 		dockerConfigJSON.Auths[kubeDNSRegistryURL] = DockerConfigEntryWithAuth{

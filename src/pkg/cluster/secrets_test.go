@@ -16,7 +16,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
-func TestGenerateRegistryPullCreds(t *testing.T) {
+func TestGenerateRegistryPullCredsWithOutSvc(t *testing.T) {
 	c := &Cluster{K8s: &k8s.K8s{Clientset: fake.NewSimpleClientset()}}
 	ctx := context.Background()
 	ri := types.RegistryInfo{
@@ -45,7 +45,7 @@ func TestGenerateRegistryPullCreds(t *testing.T) {
 	require.Equal(t, expectedSecret, *secret)
 }
 
-func TestGenerateRegistryPullCreds2(t *testing.T) {
+func TestGenerateRegistryPullCredsWithSvc(t *testing.T) {
 	c := &Cluster{K8s: &k8s.K8s{Clientset: fake.NewSimpleClientset()}}
 	ctx := context.Background()
 	svc := &corev1.Service{
