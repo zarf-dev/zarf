@@ -74,42 +74,26 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 	spinner := message.NewProgressSpinner("Gathering information to update Zarf Agent TLS")
 	defer spinner.Stop()
 
-	err := h.createActionConfig(cluster.ZarfNamespaceName, spinner)
-	if err != nil {
-		return fmt.Errorf("unable to initialize the K8s client: %w", err)
-	}
-
-	// Get the current agent image from one of its pods.
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{MatchLabels: map[string]string{"app": "agent-hook"}})
+	deployment, err := h.cluster.Clientset.AppsV1().Deployments(cluster.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-	listOpts := metav1.ListOptions{
-		LabelSelector: selector.String(),
-	}
-	podList, err := h.cluster.Clientset.CoreV1().Pods(cluster.ZarfNamespaceName).List(ctx, listOpts)
+	agentImage, err := transform.ParseImageRef(deployment.Spec.Template.Spec.Containers[0].Image)
 	if err != nil {
 		return err
 	}
 
-	var currentAgentImage transform.Image
-	if len(podList.Items) > 0 && len(podList.Items[0].Spec.Containers) > 0 {
-		currentAgentImage, err = transform.ParseImageRef(podList.Items[0].Spec.Containers[0].Image)
-		if err != nil {
-			return fmt.Errorf("unable to parse current agent image reference: %w", err)
-		}
-	} else {
-		return fmt.Errorf("unable to get current agent pod")
+	err = h.createActionConfig(cluster.ZarfNamespaceName, spinner)
+	if err != nil {
+		return err
 	}
 
 	// List the releases to find the current agent release name.
 	listClient := action.NewList(h.actionConfig)
-
 	releases, err := listClient.Run()
 	if err != nil {
 		return fmt.Errorf("unable to list helm releases: %w", err)
 	}
-
 	spinner.Success()
 
 	for _, release := range releases {
@@ -122,11 +106,11 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 			h.variableConfig.SetConstants([]variables.Constant{
 				{
 					Name:  "AGENT_IMAGE",
-					Value: currentAgentImage.Path,
+					Value: agentImage.Path,
 				},
 				{
 					Name:  "AGENT_IMAGE_TAG",
-					Value: currentAgentImage.Tag,
+					Value: agentImage.Tag,
 				},
 			})
 			applicationTemplates, err := template.GetZarfTemplates("zarf-agent", h.state)
@@ -142,30 +126,43 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 		}
 	}
 
-	spinner = message.NewProgressSpinner("Cleaning up Zarf Agent pods after update")
+	// Trigger a rolling update for the TLS secret update to take effect.
+	// https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment
+	spinner = message.NewProgressSpinner("Performing a rolling update for the Zarf Agent deployment")
 	defer spinner.Stop()
 
-	// Force pods to be recreated to get the updated secret.
-	// TODO: Explain why no grace period is given.
-	deleteGracePeriod := int64(0)
-	deletePolicy := metav1.DeletePropagationForeground
-	deleteOpts := metav1.DeleteOptions{
-		GracePeriodSeconds: &deleteGracePeriod,
-		PropagationPolicy:  &deletePolicy,
-	}
-	selector, err = metav1.LabelSelectorAsSelector(&metav1.LabelSelector{MatchLabels: map[string]string{"app": "agent-hook"}})
+	// Re-fetch the agent deployment before we update since the resourceVersion has changed after updating the Helm release values.
+	// Avoids this error: https://github.com/kubernetes/kubernetes/issues/28149
+	deployment, err = h.cluster.Clientset.AppsV1().Deployments(cluster.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-	listOpts = metav1.ListOptions{
-		LabelSelector: selector.String(),
+	if deployment.Spec.Template.Annotations == nil {
+		deployment.Spec.Template.Annotations = map[string]string{}
 	}
-	err = h.cluster.Clientset.CoreV1().Pods(cluster.ZarfNamespaceName).DeleteCollection(ctx, deleteOpts, listOpts)
+	deployment.Spec.Template.Annotations["zarf.dev/restartedAt"] = time.Now().UTC().Format(time.RFC3339)
+	_, err = h.cluster.Clientset.AppsV1().Deployments(cluster.ZarfNamespaceName).Update(ctx, deployment, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("error recycling pods for the Zarf Agent: %w", err)
+		return err
+	}
+
+	objs := []object.ObjMetadata{
+		{
+			GroupKind: schema.GroupKind{
+				Group: "apps",
+				Kind:  "Deployment",
+			},
+			Namespace: cluster.ZarfNamespaceName,
+			Name:      "agent-hook",
+		},
+	}
+	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
+	defer waitCancel()
+	err = pkgkubernetes.WaitForReady(waitCtx, h.cluster.Watcher, objs)
+	if err != nil {
+		return err
 	}
 
 	spinner.Success()
-
 	return nil
 }
