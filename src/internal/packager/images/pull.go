@@ -177,13 +177,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 			if err != nil {
 				return fmt.Errorf("unable to get manifest for %s: %w", refInfo.Reference, err)
 			}
-
-			// Only use the cached image if it is a container image as the crane cache implementation
-			// looks at specifics like diff ids which can fail non container OCI images like helm charts
-			if manifest.Config.MediaType.IsConfig() {
-				img = cache.Image(img, cache.NewFilesystemCache(cfg.CacheDirectory))
-			}
-
 			totalBytes.Add(manifest.Config.Size)
 
 			layers, err := img.Layers()
