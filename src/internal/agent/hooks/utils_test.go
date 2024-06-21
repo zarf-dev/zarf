@@ -28,6 +28,7 @@ type admissionTest struct {
 	patch        []operations.PatchOperation
 	code         int
 	errContains  string
+	svc          *corev1.Service
 }
 
 func createTestClientWithZarfState(ctx context.Context, t *testing.T, state *types.ZarfState) *cluster.Cluster {

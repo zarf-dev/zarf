@@ -129,8 +129,6 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 	@test -s $(ZARF_BIN) || $(MAKE)
 	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm .
 
-init-package-with-agent: build build-local-agent-image init-package
-
 # INTERNAL: used to build a release version of the init package with a specific agent image
 release-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
