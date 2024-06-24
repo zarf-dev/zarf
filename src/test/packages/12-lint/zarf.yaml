@@ -30,10 +30,6 @@ components:
     - source: file-without-shasum.txt
       target: src/
 
-  - name: import
-    import:
-      path: "###ZARF_PKG_TMPL_PATH###"
-
   - name: oci-games-url
     import:
       url: oci://🦄/dos-games:1.0.0

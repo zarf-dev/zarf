@@ -45,11 +45,8 @@ func TestLint(t *testing.T) {
 		require.Contains(t, strippedStderr, ".components.[1].images.[0] | Image not pinned with digest - registry.com:9001/whatever/image:latest")
 		// Testing import / compose + variables are working
 		require.Contains(t, strippedStderr, ".components.[2].images.[3] | Image not pinned with digest - busybox:latest")
-		require.Contains(t, strippedStderr, ".components.[3].import.path | Zarf does not evaluate variables at component.x.import.path - ###ZARF_PKG_TMPL_PATH###")
 		// Testing OCI imports get linted
 		require.Contains(t, strippedStderr, ".components.[0].images.[0] | Image not pinned with digest - defenseunicorns/zarf-game:multi-tile-dark")
-		// Testing a bad path leads to a finding in lint
-		require.Contains(t, strippedStderr, fmt.Sprintf(".components.[3].import.path | open %s", filepath.Join("###ZARF_PKG_TMPL_PATH###", "zarf.yaml")))
 
 		// Check flavors
 		require.NotContains(t, strippedStderr, "image-in-bad-flavor-component:unpinned")

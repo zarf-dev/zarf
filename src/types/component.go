@@ -8,6 +8,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
+	"github.com/invopop/jsonschema"
 )
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
@@ -121,7 +122,7 @@ type ZarfChart struct {
 	RepoName    string              `json:"repoName,omitempty" jsonschema:"description=The name of a chart within a Helm repository (defaults to the Zarf name of the chart)"`
 	GitPath     string              `json:"gitPath,omitempty" jsonschema:"description=(git repo only) The sub directory to the chart within a git repo,example=charts/your-chart"`
 	LocalPath   string              `json:"localPath,omitempty" jsonschema:"description=The path to a local chart's folder or .tgz archive"`
-	Namespace   string              `json:"namespace" jsonschema:"description=The namespace to deploy the chart to"`
+	Namespace   string              `json:"namespace,omitempty" jsonschema:"description=The namespace to deploy the chart to"`
 	ReleaseName string              `json:"releaseName,omitempty" jsonschema:"description=The name of the Helm release to create (defaults to the Zarf name of the chart)"`
 	NoWait      bool                `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for chart resources to be ready before continuing"`
 	ValuesFiles []string            `json:"valuesFiles,omitempty" jsonschema:"description=List of local values file paths or remote URLs to include in the package; these will be merged together when deployed"`
@@ -239,4 +240,17 @@ type ZarfComponentImport struct {
 	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from"`
 	// For further explanation see https://regex101.com/r/nxX8vx/1
 	URL string `json:"url,omitempty" jsonschema:"description=[beta] The URL to a Zarf package to import via OCI,pattern=^oci://.*$"`
+}
+
+// JSONSchemaExtend extends the generated json schema during `zarf internal gen-config-schema`
+func (ZarfComponentImport) JSONSchemaExtend(schema *jsonschema.Schema) {
+	path, _ := schema.Properties.Get("path")
+	url, _ := schema.Properties.Get("url")
+
+	notSchema := &jsonschema.Schema{
+		Pattern: ZarfPackageTemplatePrefix,
+	}
+
+	path.Not = notSchema
+	url.Not = notSchema
 }
