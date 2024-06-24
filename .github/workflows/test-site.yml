@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: npm install
-        run: npm run install
+        run: npm install
 
       - name: run site build
         run: npm run build
