@@ -566,7 +566,7 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 		}
 
 		// Try repo push up to retry limit
-		if err := helpers.Retry(tryPush, p.cfg.PkgOpts.Retries, 5*time.Second, message.Warnf); err != nil {
+		if err := helpers.RetryWithContext(ctx, tryPush, p.cfg.PkgOpts.Retries, 5*time.Second, message.Warnf); err != nil {
 			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}
 	}

@@ -240,10 +240,10 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		return err
 	}
 
-	if err := helpers.Retry(sc, 2, 5*time.Second, message.Warnf); err != nil {
+	if err := helpers.RetryWithContext(ctx, sc, 2, 5*time.Second, message.Warnf); err != nil {
 		message.Warnf("Failed to save images in parallel, falling back to sequential save: %s", err.Error())
 
-		if err := helpers.Retry(ss, 2, 5*time.Second, message.Warnf); err != nil {
+		if err := helpers.RetryWithContext(ctx, ss, 2, 5*time.Second, message.Warnf); err != nil {
 			return nil, err
 		}
 	}
@@ -348,30 +348,35 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 	for info, img := range m {
 		info, img := info, img
 		eg.Go(func() error {
-			desc, err := partial.Descriptor(img)
-			if err != nil {
-				return err
-			}
-
-			if err := cl.WriteImage(img); err != nil {
-				if err := CleanupInProgressLayers(ectx, img); err != nil {
-					message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
+			select {
+			case <-ectx.Done():
+				return ectx.Err()
+			default:
+				desc, err := partial.Descriptor(img)
+				if err != nil {
+					return err
 				}
-				return err
-			}
 
-			mu.Lock()
-			defer mu.Unlock()
-			annotations := map[string]string{
-				ocispec.AnnotationBaseImageName: info.Reference,
-			}
-			desc.Annotations = annotations
-			if err := cl.AppendDescriptor(*desc); err != nil {
-				return err
-			}
+				if err := cl.WriteImage(img); err != nil {
+					if err := CleanupInProgressLayers(ectx, img); err != nil {
+						message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
+					}
+					return err
+				}
 
-			saved[info] = img
-			return nil
+				mu.Lock()
+				defer mu.Unlock()
+				annotations := map[string]string{
+					ocispec.AnnotationBaseImageName: info.Reference,
+				}
+				desc.Annotations = annotations
+				if err := cl.AppendDescriptor(*desc); err != nil {
+					return err
+				}
+
+				saved[info] = img
+				return nil
+			}
 		})
 	}
 
