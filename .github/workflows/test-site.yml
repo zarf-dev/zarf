@@ -1,8 +1,6 @@
 name: Test site
 on:
   pull_request:
-    paths-ignore:
-      - "**.md"
 
 permissions:
   contents: read
@@ -18,11 +16,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-        with:
-          path: site
 
       - name: run site build
         run: npm run build
+        working-directory: ./site
 
       - name: check links
         run: npm run link-check
+        working-directory: ./site
