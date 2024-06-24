@@ -14,23 +14,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSkeletonLoadPackageDefinition(t *testing.T) {
+func TestLoadPackageDefinition(t *testing.T) {
 	t.Parallel()
-
 	tests := []struct {
 		name        string
 		testDir     string
 		expectedErr string
+		creator     Creator
 	}{
 		{
 			name:        "valid package definition",
 			testDir:     "valid",
 			expectedErr: "",
+			creator:     NewPackageCreator(types.ZarfCreateOptions{}, ""),
 		},
 		{
 			name:        "invalid package definition",
 			testDir:     "invalid",
 			expectedErr: "package must have at least 1 component",
+			creator:     NewPackageCreator(types.ZarfCreateOptions{}, ""),
+		},
+		{
+			name:        "valid package definition",
+			testDir:     "valid",
+			expectedErr: "",
+			creator:     NewSkeletonCreator(types.ZarfCreateOptions{}, types.ZarfPublishOptions{}),
+		},
+		{
+			name:        "invalid package definition",
+			testDir:     "invalid",
+			expectedErr: "package must have at least 1 component",
+			creator:     NewSkeletonCreator(types.ZarfCreateOptions{}, types.ZarfPublishOptions{}),
 		},
 	}
 
@@ -40,8 +54,7 @@ func TestSkeletonLoadPackageDefinition(t *testing.T) {
 			t.Parallel()
 
 			src := layout.New(filepath.Join("testdata", tt.testDir))
-			sc := NewSkeletonCreator(types.ZarfCreateOptions{}, types.ZarfPublishOptions{})
-			pkg, _, err := sc.LoadPackageDefinition(context.Background(), src)
+			pkg, _, err := tt.creator.LoadPackageDefinition(context.Background(), src)
 
 			if tt.expectedErr == "" {
 				require.NoError(t, err)
