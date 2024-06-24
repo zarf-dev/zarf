@@ -327,7 +327,7 @@ func Table(header []string, data [][]string) {
 // preventing future characters from taking on the given color
 // returns string as normal if color is disabled
 func ColorWrap(str string, attr color.Attribute) string {
-	if config.NoColor {
+	if config.NoColor || str == "" {
 		return str
 	}
 	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", attr, str)
