@@ -13,14 +13,18 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./site
     steps:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
+      - name: npm install
+        run: npm run install
+
       - name: run site build
         run: npm run build
-        working-directory: ./site
 
       - name: check links
         run: npm run link-check
-        working-directory: ./site
