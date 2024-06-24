@@ -32,7 +32,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
@@ -217,10 +216,7 @@ func loadCompletionForPlugin(pluginCmd *cobra.Command, plugin *plugin.Plugin) {
 	if err != nil {
 		// The file could be missing or invalid.  No static completion for this plugin.
 		if settings.Debug {
-			err := log.Output(2, fmt.Sprintf("[info] %s\n", err.Error()))
-			if err != nil {
-				message.Fatal(err, err.Error())
-			}
+			log.Output(2, fmt.Sprintf("[info] %s\n", err.Error()))
 		}
 		// Continue to setup dynamic completion.
 		cmds = &pluginCommand{}
@@ -242,10 +238,7 @@ func addPluginCommands(plugin *plugin.Plugin, baseCmd *cobra.Command, cmds *plug
 	if len(cmds.Name) == 0 {
 		// Missing name for a command
 		if settings.Debug {
-			err := log.Output(2, fmt.Sprintf("[info] sub-command name field missing for %s", baseCmd.CommandPath()))
-			if err != nil {
-				message.Fatal(err, err.Error())
-			}
+			log.Output(2, fmt.Sprintf("[info] sub-command name field missing for %s", baseCmd.CommandPath()))
 		}
 		return
 	}

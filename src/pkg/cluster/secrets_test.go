@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -33,7 +32,7 @@ func TestGenerateRegistryPullCreds(t *testing.T) {
 			Name:      "bar",
 			Namespace: "foo",
 			Labels: map[string]string{
-				k8s.ZarfManagedByLabel: "zarf",
+				ZarfManagedByLabel: "zarf",
 			},
 		},
 		Type: corev1.SecretTypeDockerConfigJson,
@@ -62,7 +61,7 @@ func TestGenerateGitPullCreds(t *testing.T) {
 			Name:      "bar",
 			Namespace: "foo",
 			Labels: map[string]string{
-				k8s.ZarfManagedByLabel: "zarf",
+				ZarfManagedByLabel: "zarf",
 			},
 		},
 		Type: corev1.SecretTypeOpaque,

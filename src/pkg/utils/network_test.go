@@ -15,7 +15,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 )
 
 func TestParseChecksum(t *testing.T) {
@@ -83,8 +83,10 @@ func TestDownloadToFile(t *testing.T) {
 			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
+		//nolint:errcheck // ignore
 		rw.Write([]byte(content))
 	}))
+	t.Cleanup(func() { srv.Close() })
 
 	tests := []struct {
 		name        string

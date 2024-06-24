@@ -10,7 +10,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -39,7 +39,7 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 		return err
 	}
 
-	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(p.layout)
+	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(ctx, p.layout)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 		}
 	}
 
-	if err := pc.Assemble(p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
+	if err := pc.Assemble(ctx, p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
 		return err
 	}
 

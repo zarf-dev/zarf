@@ -6,11 +6,10 @@ package filters
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 )
@@ -115,7 +114,7 @@ func TestDeployFilter_Apply(t *testing.T) {
 
 	possibilities := componentMatrix(t)
 
-	testCases := map[string]struct {
+	tests := map[string]struct {
 		pkg                types.ZarfPackage
 		optionalComponents string
 		want               []types.ZarfComponent
@@ -196,35 +195,19 @@ func TestDeployFilter_Apply(t *testing.T) {
 		},
 	}
 
-	for name, tc := range testCases {
+	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			// we do not currently support interactive mode in unit tests
 			isInteractive := false
-			filter := ForDeploy(tc.optionalComponents, isInteractive)
+			filter := ForDeploy(tt.optionalComponents, isInteractive)
 
-			result, err := filter.Apply(tc.pkg)
-			if tc.expectedErr != nil {
-				require.ErrorIs(t, err, tc.expectedErr)
+			result, err := filter.Apply(tt.pkg)
+			if tt.expectedErr != nil {
+				require.ErrorIs(t, err, tt.expectedErr)
 			} else {
 				require.NoError(t, err)
 			}
-			equal := reflect.DeepEqual(tc.want, result)
-			if !equal {
-				left := []string{}
-				right := []string{}
-
-				for _, c := range tc.want {
-					left = append(left, c.Name)
-				}
-
-				for _, c := range result {
-					right = append(right, c.Name)
-					fmt.Printf("componentFromQuery(t, %q),\n", strings.TrimSpace(c.Name))
-				}
-
-				// cause the test to fail
-				require.FailNow(t, "expected and actual are not equal", "\n\nexpected: %#v\n\nactual: %#v", left, right)
-			}
+			require.Equal(t, tt.want, result)
 		})
 	}
 }

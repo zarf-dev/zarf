@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,7 +15,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
@@ -37,7 +38,7 @@ import (
 type imageMap map[string]bool
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
-func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
+func (p *Packager) FindImages(ctx context.Context) (imgMap map[string][]string, err error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -59,7 +60,7 @@ func (p *Packager) FindImages() (imgMap map[string][]string, err error) {
 		return nil, err
 	}
 
-	p.cfg.Pkg, p.warnings, err = c.LoadPackageDefinition(p.layout)
+	p.cfg.Pkg, p.warnings, err = c.LoadPackageDefinition(ctx, p.layout)
 	if err != nil {
 		return nil, err
 	}

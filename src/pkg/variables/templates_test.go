@@ -135,7 +135,8 @@ func TestReplaceTextTemplate(t *testing.T) {
 			f, _ := os.Create(tc.path)
 			defer f.Close()
 
-			f.WriteString(start)
+			_, err := f.WriteString(start)
+			require.NoError(t, err)
 		}
 
 		gotErr := tc.vc.ReplaceTextTemplate(tc.path)

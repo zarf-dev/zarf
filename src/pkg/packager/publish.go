@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
@@ -25,10 +25,9 @@ import (
 )
 
 // Publish publishes the package to a registry
-func (p *Packager) Publish() (err error) {
+func (p *Packager) Publish(ctx context.Context) (err error) {
 	_, isOCISource := p.source.(*sources.OCISource)
 	if isOCISource && p.cfg.PublishOpts.SigningKeyPath == "" {
-		ctx := context.TODO()
 		// oci --> oci is a special case, where we will use oci.CopyPackage so that we can transfer the package
 		// w/o layers touching the filesystem
 		srcRemote := p.source.(*sources.OCISource).Remote
@@ -59,21 +58,21 @@ func (p *Packager) Publish() (err error) {
 			return err
 		}
 
-		p.cfg.Pkg, p.warnings, err = sc.LoadPackageDefinition(p.layout)
+		p.cfg.Pkg, p.warnings, err = sc.LoadPackageDefinition(ctx, p.layout)
 		if err != nil {
 			return err
 		}
 
-		if err := sc.Assemble(p.layout, p.cfg.Pkg.Components, ""); err != nil {
+		if err := sc.Assemble(ctx, p.layout, p.cfg.Pkg.Components, ""); err != nil {
 			return err
 		}
 
-		if err := sc.Output(p.layout, &p.cfg.Pkg); err != nil {
+		if err := sc.Output(ctx, p.layout, &p.cfg.Pkg); err != nil {
 			return err
 		}
 	} else {
 		filter := filters.Empty()
-		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, false)
+		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, filter, false)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
@@ -103,7 +102,6 @@ func (p *Packager) Publish() (err error) {
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref)
 
 	// Publish the package/skeleton to the registry
-	ctx := context.TODO()
 	if err := remote.PublishPackage(ctx, &p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency); err != nil {
 		return err
 	}

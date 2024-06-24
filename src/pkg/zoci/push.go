@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -53,7 +53,10 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 
 	// assumes referrers API is not supported since OCI artifact
 	// media type is not supported
-	r.Repo().SetReferrersCapability(false)
+	err = r.Repo().SetReferrersCapability(false)
+	if err != nil {
+		return err
+	}
 
 	// push the manifest config
 	manifestConfigDesc, err := r.CreateAndPushManifestConfig(ctx, annotations, ZarfConfigMediaType)
@@ -68,7 +71,7 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 	total += manifestConfigDesc.Size
 
 	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", r.Repo().Reference.Repository, r.Repo().Reference.Reference))
-	defer progressBar.Stop()
+	defer progressBar.Close()
 	r.SetProgressWriter(progressBar)
 	defer r.ClearProgressWriter()
 

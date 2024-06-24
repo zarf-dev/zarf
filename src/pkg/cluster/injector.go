@@ -7,26 +7,30 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/google/uuid"
 	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/cli-utils/pkg/object"
+
+	"github.com/defenseunicorns/pkg/helpers/v2"
+	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
+
+	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
+	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
 // The chunk size for the tarball chunks.
@@ -43,7 +47,7 @@ var (
 type imageNodeMap map[string][]string
 
 // StartInjectionMadness initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imagesDir string, injectorSeedSrcs []string) {
+func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imagesDir string, injectorSeedSrcs []string) error {
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer spinner.Stop()
 
@@ -56,102 +60,130 @@ func (c *Cluster) StartInjectionMadness(ctx context.Context, tmpDir string, imag
 	}
 
 	if err := helpers.CreateDirectory(tmp.SeedImagesDir, helpers.ReadWriteExecuteUser); err != nil {
-		spinner.Fatalf(err, "Unable to create the seed images directory")
+		return fmt.Errorf("unable to create the seed images directory: %w", err)
 	}
 
 	var err error
 	var images imageNodeMap
 	var payloadConfigmaps []string
 	var sha256sum string
-	var seedImages []transform.Image
 
-	// Get all the images from the cluster
-	spinner.Updatef("Getting the list of existing cluster images")
 	findImagesCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	if images, err = c.getImagesAndNodesForInjection(findImagesCtx); err != nil {
-		spinner.Fatalf(err, "Unable to generate a list of candidate images to perform the registry injection")
+	images, err = c.getImagesAndNodesForInjection(findImagesCtx)
+	if err != nil {
+		return err
 	}
 
-	spinner.Updatef("Creating the injector configmap")
 	if err = c.createInjectorConfigMap(ctx, tmp.InjectionBinary); err != nil {
-		spinner.Fatalf(err, "Unable to create the injector configmap")
+		return fmt.Errorf("unable to create the injector configmap: %w", err)
 	}
 
-	spinner.Updatef("Creating the injector service")
-	if service, err := c.createService(ctx); err != nil {
-		spinner.Fatalf(err, "Unable to create the injector service")
-	} else {
-		config.ZarfSeedPort = fmt.Sprintf("%d", service.Spec.Ports[0].NodePort)
+	service, err := c.createService(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to create the injector service: %w", err)
+	}
+	config.ZarfSeedPort = fmt.Sprintf("%d", service.Spec.Ports[0].NodePort)
+
+	_, err = c.loadSeedImages(imagesDir, tmp.SeedImagesDir, injectorSeedSrcs)
+	if err != nil {
+		return fmt.Errorf("unable to load the injector seed image from the package: %w", err)
 	}
 
-	spinner.Updatef("Loading the seed image from the package")
-	if seedImages, err = c.loadSeedImages(imagesDir, tmp.SeedImagesDir, injectorSeedSrcs, spinner); err != nil {
-		spinner.Fatalf(err, "Unable to load the injector seed image from the package")
-	}
-
-	spinner.Updatef("Loading the seed registry configmaps")
 	if payloadConfigmaps, sha256sum, err = c.createPayloadConfigMaps(ctx, tmp.SeedImagesDir, tmp.InjectorPayloadTarGz, spinner); err != nil {
-		spinner.Fatalf(err, "Unable to generate the injector payload configmaps")
+		return fmt.Errorf("unable to generate the injector payload configmaps: %w", err)
 	}
 
 	// https://regex101.com/r/eLS3at/1
 	zarfImageRegex := regexp.MustCompile(`(?m)^127\.0\.0\.1:`)
 
+	var injectorImage string
+	var injectorNode string
 	// Try to create an injector pod using an existing image in the cluster
 	for image, node := range images {
 		// Don't try to run against the seed image if this is a secondary zarf init run
 		if zarfImageRegex.MatchString(image) {
 			continue
 		}
-
 		spinner.Updatef("Attempting to bootstrap with the %s/%s", node, image)
-
-		// Make sure the pod is not there first
-		err = c.DeletePod(ctx, ZarfNamespaceName, "injector")
-		if err != nil {
-			message.Debug("could not delete pod injector:", err)
-		}
-
-		// Update the podspec image path and use the first node found
-
-		pod, err := c.buildInjectionPod(node[0], image, payloadConfigmaps, sha256sum)
-		if err != nil {
-			// Just debug log the output because failures just result in trying the next image
-			message.Debug("error making injection pod:", err)
-			continue
-		}
-
-		// Create the pod in the cluster
-		pod, err = c.CreatePod(ctx, pod)
-		if err != nil {
-			// Just debug log the output because failures just result in trying the next image
-			message.Debug("error creating pod in cluster:", pod, err)
-			continue
-		}
-
-		// if no error, try and wait for a seed image to be present, return if successful
-		if c.injectorIsReady(ctx, seedImages, spinner) {
-			spinner.Success()
-			return
-		}
-
-		// Otherwise just continue to try next image
+		injectorImage = image
+		injectorNode = node[0]
+	}
+	// Make sure the pod is not there first
+	// TODO: Explain why no grace period is given.
+	deleteGracePeriod := int64(0)
+	deletePolicy := metav1.DeletePropagationForeground
+	deleteOpts := metav1.DeleteOptions{
+		GracePeriodSeconds: &deleteGracePeriod,
+		PropagationPolicy:  &deletePolicy,
+	}
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"app": "zarf-injector",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	listOpts := metav1.ListOptions{
+		LabelSelector: selector.String(),
+	}
+	err = c.Clientset.CoreV1().Pods(ZarfNamespaceName).DeleteCollection(ctx, deleteOpts, listOpts)
+	if err != nil {
+		return err
 	}
 
-	// All images were exhausted and still no happiness
-	spinner.Fatalf(nil, "Unable to perform the injection")
+	pod, err := c.buildInjectionPod(injectorNode, injectorImage, payloadConfigmaps, sha256sum)
+	if err != nil {
+		return fmt.Errorf("error making injection pod: %w", err)
+	}
+
+	pod, err = c.Clientset.CoreV1().Pods(pod.Namespace).Create(ctx, pod, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating pod in cluster: %w", err)
+	}
+
+	objs := []object.ObjMetadata{
+		{
+			GroupKind: schema.GroupKind{
+				Kind: "Pod",
+			},
+			Namespace: ZarfNamespaceName,
+			Name:      pod.Name,
+		},
+	}
+	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
+	defer waitCancel()
+	err = pkgkubernetes.WaitForReady(waitCtx, c.Watcher, objs)
+	if err != nil {
+		return err
+	}
+	spinner.Success()
+	return nil
+
 }
 
 // StopInjectionMadness handles cleanup once the seed registry is up.
 func (c *Cluster) StopInjectionMadness(ctx context.Context) error {
 	// Try to kill the injector pod now
-	if err := c.DeletePod(ctx, ZarfNamespaceName, "injector"); err != nil {
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"app": "zarf-injector",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	listOpts := metav1.ListOptions{
+		LabelSelector: selector.String(),
+	}
+	err = c.Clientset.CoreV1().Pods(ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	if err != nil {
 		return err
 	}
 
 	// Remove the configmaps
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+	selector, err = metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			"zarf-injector": "payload",
 		},
@@ -159,7 +191,7 @@ func (c *Cluster) StopInjectionMadness(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	listOpts := metav1.ListOptions{
+	listOpts = metav1.ListOptions{
 		LabelSelector: selector.String(),
 	}
 	err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
@@ -175,13 +207,12 @@ func (c *Cluster) StopInjectionMadness(ctx context.Context) error {
 	return nil
 }
 
-func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSrcs []string, spinner *message.Spinner) ([]transform.Image, error) {
+func (c *Cluster) loadSeedImages(imagesDir, seedImagesDir string, injectorSeedSrcs []string) ([]transform.Image, error) {
 	seedImages := []transform.Image{}
 	localReferenceToDigest := make(map[string]string)
 
 	// Load the injector-specific images and save them as seed-images
 	for _, src := range injectorSeedSrcs {
-		spinner.Updatef("Loading the seed image '%s' from the package", src)
 		ref, err := transform.ParseImageRef(src)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
@@ -222,7 +253,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, seedImagesDir, ta
 		return configMaps, "", err
 	}
 
-	spinner.Updatef("Creating the seed registry archive to send to the cluster")
 	// Create a tar archive of the injector payload
 	if err := archiver.Archive(tarFileList, tarPath); err != nil {
 		return configMaps, "", err
@@ -232,8 +262,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, seedImagesDir, ta
 	if err != nil {
 		return configMaps, "", err
 	}
-
-	spinner.Updatef("Splitting the archive into binary configmaps")
 
 	chunkCount := len(chunks)
 
@@ -272,43 +300,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, seedImagesDir, ta
 	}
 
 	return configMaps, sha256sum, nil
-}
-
-// Test for pod readiness and seed image presence.
-func (c *Cluster) injectorIsReady(ctx context.Context, seedImages []transform.Image, spinner *message.Spinner) bool {
-	tunnel, err := c.NewTunnel(ZarfNamespaceName, k8s.SvcResource, ZarfInjectorName, "", 0, ZarfInjectorPort)
-	if err != nil {
-		return false
-	}
-
-	_, err = tunnel.Connect(ctx)
-	if err != nil {
-		return false
-	}
-	defer tunnel.Close()
-
-	spinner.Updatef("Testing the injector for seed image availability")
-
-	for _, seedImage := range seedImages {
-		seedRegistry := fmt.Sprintf("%s/v2/%s/manifests/%s", tunnel.HTTPEndpoint(), seedImage.Path, seedImage.Tag)
-
-		var resp *http.Response
-		var err error
-		err = tunnel.Wrap(func() error {
-			message.Debug("getting seed registry %v", seedRegistry)
-			resp, err = http.Get(seedRegistry)
-			return err
-		})
-
-		if err != nil || resp.StatusCode != 200 {
-			// Just debug log the output because failures just result in trying the next image
-			message.Debug(resp, err)
-			return false
-		}
-	}
-
-	spinner.Updatef("Seed image found, injector is ready")
-	return true
 }
 
 func (c *Cluster) createInjectorConfigMap(ctx context.Context, binaryPath string) error {
@@ -375,94 +366,104 @@ func (c *Cluster) createService(ctx context.Context) (*corev1.Service, error) {
 
 // buildInjectionPod return a pod for injection with the appropriate containers to perform the injection.
 func (c *Cluster) buildInjectionPod(node, image string, payloadConfigmaps []string, payloadShasum string) (*corev1.Pod, error) {
-	pod := c.GeneratePod("injector", ZarfNamespaceName)
 	executeMode := int32(0777)
 
-	pod.Labels["app"] = "zarf-injector"
+	// Generate a UUID to append to the pod name.
+	// This prevents collisions where `zarf init` is ran back to back and a previous injector pod still exists.
+	uuid := uuid.New().String()[:16]
 
-	// Ensure zarf agent doesn't break the injector on future runs
-	pod.Labels[k8s.AgentLabel] = "ignore"
-
-	// Bind the pod to the node the image was found on
-	pod.Spec.NodeName = node
-
-	// Do not try to restart the pod as it will be deleted/re-created instead
-	pod.Spec.RestartPolicy = corev1.RestartPolicyNever
-
-	pod.Spec.Containers = []corev1.Container{
-		{
-			Name: "injector",
-
-			// An existing image already present on the cluster
-			Image: image,
-
-			// PullIfNotPresent because some distros provide a way (even in airgap) to pull images from local or direct-connected registries
-			ImagePullPolicy: corev1.PullIfNotPresent,
-
-			// This directory's contents come from the init container output
-			WorkingDir: "/zarf-init",
-
-			// Call the injector with shasum of the tarball
-			Command: []string{"/zarf-init/zarf-injector", payloadShasum},
-
-			// Shared mount between the init and regular containers
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      "init",
-					MountPath: "/zarf-init/zarf-injector",
-					SubPath:   "zarf-injector",
-				},
-				{
-					Name:      "seed",
-					MountPath: "/zarf-seed",
-				},
+	pod := &corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Pod",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("injector-%s", uuid),
+			Namespace: ZarfNamespaceName,
+			Labels: map[string]string{
+				"app":      "zarf-injector",
+				AgentLabel: "ignore",
 			},
+		},
+		Spec: corev1.PodSpec{
+			NodeName: node,
+			// Do not try to restart the pod as it will be deleted/re-created instead
+			RestartPolicy: corev1.RestartPolicyNever,
+			Containers: []corev1.Container{
+				{
+					Name: "injector",
 
-			// Readiness probe to optimize the pod startup time
-			ReadinessProbe: &corev1.Probe{
-				PeriodSeconds:    2,
-				SuccessThreshold: 1,
-				FailureThreshold: 10,
-				ProbeHandler: corev1.ProbeHandler{
-					HTTPGet: &corev1.HTTPGetAction{
-						Path: "/v2/",               // path to health check
-						Port: intstr.FromInt(5000), // port to health check
+					// An existing image already present on the cluster
+					Image: image,
+
+					// PullIfNotPresent because some distros provide a way (even in airgap) to pull images from local or direct-connected registries
+					ImagePullPolicy: corev1.PullIfNotPresent,
+
+					// This directory's contents come from the init container output
+					WorkingDir: "/zarf-init",
+
+					// Call the injector with shasum of the tarball
+					Command: []string{"/zarf-init/zarf-injector", payloadShasum},
+
+					// Shared mount between the init and regular containers
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "init",
+							MountPath: "/zarf-init/zarf-injector",
+							SubPath:   "zarf-injector",
+						},
+						{
+							Name:      "seed",
+							MountPath: "/zarf-seed",
+						},
+					},
+
+					// Readiness probe to optimize the pod startup time
+					ReadinessProbe: &corev1.Probe{
+						PeriodSeconds:    2,
+						SuccessThreshold: 1,
+						FailureThreshold: 10,
+						ProbeHandler: corev1.ProbeHandler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path: "/v2/",               // path to health check
+								Port: intstr.FromInt(5000), // port to health check
+							},
+						},
+					},
+
+					// Keep resources as light as possible as we aren't actually running the container's other binaries
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    injectorRequestedCPU,
+							corev1.ResourceMemory: injectorRequestedMemory,
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    injectorLimitCPU,
+							corev1.ResourceMemory: injectorLimitMemory,
+						},
 					},
 				},
 			},
-
-			// Keep resources as light as possible as we aren't actually running the container's other binaries
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    injectorRequestedCPU,
-					corev1.ResourceMemory: injectorRequestedMemory,
-				},
-				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    injectorLimitCPU,
-					corev1.ResourceMemory: injectorLimitMemory,
-				},
-			},
-		},
-	}
-
-	pod.Spec.Volumes = []corev1.Volume{
-		// Contains the rust binary and collection of configmaps from the tarball (seed image).
-		{
-			Name: "init",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "rust-binary",
+			Volumes: []corev1.Volume{
+				// Contains the rust binary and collection of configmaps from the tarball (seed image).
+				{
+					Name: "init",
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "rust-binary",
+							},
+							DefaultMode: &executeMode,
+						},
 					},
-					DefaultMode: &executeMode,
 				},
-			},
-		},
-		// Empty directory to hold the seed image (new dir to avoid permission issues)
-		{
-			Name: "seed",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
+				// Empty directory to hold the seed image (new dir to avoid permission issues)
+				{
+					Name: "seed",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
 			},
 		},
 	}
@@ -504,14 +505,15 @@ func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeM
 		case <-ctx.Done():
 			return nil, fmt.Errorf("get image list timed-out: %w", ctx.Err())
 		case <-timer.C:
-			pods, err := c.GetPods(ctx, corev1.NamespaceAll, metav1.ListOptions{
+			listOpts := metav1.ListOptions{
 				FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
-			})
+			}
+			podList, err := c.Clientset.CoreV1().Pods(corev1.NamespaceAll).List(ctx, listOpts)
 			if err != nil {
 				return nil, fmt.Errorf("unable to get the list of %q pods in the cluster: %w", corev1.PodRunning, err)
 			}
 
-			for _, pod := range pods.Items {
+			for _, pod := range podList.Items {
 				nodeName := pod.Spec.NodeName
 
 				nodeDetails, err := c.Clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
@@ -543,7 +545,7 @@ func (c *Cluster) getImagesAndNodesForInjection(ctx context.Context) (imageNodeM
 				return result, nil
 			}
 
-			c.Log("No images found on any node. Retrying...")
+			message.Debug("No images found on any node. Retrying...")
 			timer.Reset(2 * time.Second)
 		}
 	}

@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
@@ -86,8 +86,8 @@ func AddImageNameAnnotation(ociPath string, referenceToDigest map[string]string)
 	return os.WriteFile(indexPath, b, helpers.ReadWriteUser)
 }
 
-// HasImageLayers checks if all layers in the v1.Image are known image layers.
-func HasImageLayers(img v1.Image) (bool, error) {
+// OnlyHasImageLayers checks if all layers in the v1.Image are known image layers.
+func OnlyHasImageLayers(img v1.Image) (bool, error) {
 	layers, err := img.Layers()
 	if err != nil {
 		return false, err

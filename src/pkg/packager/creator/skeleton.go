@@ -5,13 +5,14 @@
 package creator
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
@@ -42,7 +43,7 @@ func NewSkeletonCreator(createOpts types.ZarfCreateOptions, publishOpts types.Za
 }
 
 // LoadPackageDefinition loads and configure a zarf.yaml file when creating and publishing a skeleton package.
-func (sc *SkeletonCreator) LoadPackageDefinition(src *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
+func (sc *SkeletonCreator) LoadPackageDefinition(ctx context.Context, src *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
 	pkg, warnings, err = src.ReadZarfYAML()
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
@@ -51,7 +52,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(src *layout.PackagePaths) (pkg 
 	pkg.Metadata.Architecture = config.GetArch()
 
 	// Compose components into a single zarf.yaml file
-	pkg, composeWarnings, err := ComposeComponents(pkg, sc.createOpts.Flavor)
+	pkg, composeWarnings, err := ComposeComponents(ctx, pkg, sc.createOpts.Flavor)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
@@ -79,7 +80,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(src *layout.PackagePaths) (pkg 
 // Assemble updates all components of the loaded Zarf package with necessary modifications for package assembly.
 //
 // It processes each component to ensure correct structure and resource locations.
-func (sc *SkeletonCreator) Assemble(dst *layout.PackagePaths, components []types.ZarfComponent, _ string) error {
+func (sc *SkeletonCreator) Assemble(_ context.Context, dst *layout.PackagePaths, components []types.ZarfComponent, _ string) error {
 	for _, component := range components {
 		c, err := sc.addComponent(component, dst)
 		if err != nil {
@@ -100,7 +101,7 @@ func (sc *SkeletonCreator) Assemble(dst *layout.PackagePaths, components []types
 // - writes the loaded zarf.yaml to disk
 //
 // - signs the package
-func (sc *SkeletonCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackage) (err error) {
+func (sc *SkeletonCreator) Output(_ context.Context, dst *layout.PackagePaths, pkg *types.ZarfPackage) (err error) {
 	for _, component := range pkg.Components {
 		if err := dst.Components.Archive(component, false); err != nil {
 			return err

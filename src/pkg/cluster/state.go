@@ -16,10 +16,9 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/pki"
 	"github.com/defenseunicorns/zarf/src/types"
@@ -27,11 +26,11 @@ import (
 
 // Zarf Cluster Constants.
 const (
-	ZarfNamespaceName       = "zarf"
-	ZarfStateSecretName     = "zarf-state"
-	ZarfStateDataKey        = "state"
-	ZarfPackageInfoLabel    = "package-deploy-info"
-	ZarfInitPackageInfoName = "zarf-package-init"
+	ZarfManagedByLabel   = "app.kubernetes.io/managed-by"
+	ZarfNamespaceName    = "zarf"
+	ZarfStateSecretName  = "zarf-state"
+	ZarfStateDataKey     = "state"
+	ZarfPackageInfoLabel = "package-deploy-info"
 )
 
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
@@ -64,6 +63,9 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 			if err != nil {
 				return err
 			}
+			if len(nodeList.Items) == 0 {
+				return fmt.Errorf("cannot init Zarf state in empty cluster")
+			}
 			namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 			if err != nil {
 				return err
@@ -84,21 +86,22 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		// Setup zarf agent PKI
 		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
 
-		namespaces, err := c.GetNamespaces(ctx)
+		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
 		}
 		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
-		for _, namespace := range namespaces.Items {
+		for _, namespace := range namespaceList.Items {
 			spinner.Updatef("Marking existing namespace %s as ignored by Zarf Agent", namespace.Name)
 			if namespace.Labels == nil {
 				// Ensure label map exists to avoid nil panic
 				namespace.Labels = make(map[string]string)
 			}
 			// This label will tell the Zarf Agent to ignore this namespace.
-			namespace.Labels[k8s.AgentLabel] = "ignore"
+			namespace.Labels[AgentLabel] = "ignore"
 			namespaceCopy := namespace
-			if _, err = c.UpdateNamespace(ctx, &namespaceCopy); err != nil {
+			_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
+			if err != nil {
 				// This is not a hard failure, but we should log it.
 				message.WarnErrf(err, "Unable to mark the namespace %s as ignored by Zarf Agent", namespace.Name)
 			}
@@ -107,8 +110,22 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		// Try to create the zarf namespace.
 		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := NewZarfManagedNamespace(ZarfNamespaceName)
-		if _, err := c.CreateNamespace(ctx, zarfNamespace); err != nil {
-			return fmt.Errorf("unable to create the zarf namespace: %w", err)
+		err = func() error {
+			_, err := c.Clientset.CoreV1().Namespaces().Create(ctx, zarfNamespace, metav1.CreateOptions{})
+			if err != nil && !kerrors.IsAlreadyExists(err) {
+				return fmt.Errorf("unable to create the Zarf namespace: %w", err)
+			}
+			if err == nil {
+				return nil
+			}
+			_, err = c.Clientset.CoreV1().Namespaces().Update(ctx, zarfNamespace, metav1.UpdateOptions{})
+			if err != nil {
+				return fmt.Errorf("unable to update the Zarf namespace: %w", err)
+			}
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
 
 		// Wait up to 2 minutes for the default service account to be created.
@@ -129,7 +146,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 						return err
 					}
 					if kerrors.IsNotFound(err) {
-						c.Log("Service account %s/%s not found, retrying...", ns, name)
+						message.Debug("Service account %s/%s not found, retrying...", ns, name)
 						timer.Reset(1 * time.Second)
 						continue
 					}
@@ -196,7 +213,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.
 func (c *Cluster) LoadZarfState(ctx context.Context) (state *types.ZarfState, err error) {
 	// Set up the API connection
-	secret, err := c.GetSecret(ctx, ZarfNamespaceName, ZarfStateSecretName)
+	secret, err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).Get(ctx, ZarfStateSecretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("%w. %s", err, message.ColorWrap("Did you remember to zarf init?", color.Bold))
 	}
@@ -249,17 +266,10 @@ func (c *Cluster) debugPrintZarfState(state *types.ZarfState) {
 func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) error {
 	c.debugPrintZarfState(state)
 
-	// Convert the data back to JSON.
 	data, err := json.Marshal(&state)
 	if err != nil {
 		return err
 	}
-
-	// Set up the data wrapper.
-	dataWrapper := make(map[string][]byte)
-	dataWrapper[ZarfStateDataKey] = data
-
-	// The secret object.
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -269,18 +279,27 @@ func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) err
 			Name:      ZarfStateSecretName,
 			Namespace: ZarfNamespaceName,
 			Labels: map[string]string{
-				k8s.ZarfManagedByLabel: "zarf",
+				ZarfManagedByLabel: "zarf",
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
-		Data: dataWrapper,
+		Data: map[string][]byte{
+			ZarfStateDataKey: data,
+		},
 	}
 
 	// Attempt to create or update the secret and return.
-	if _, err := c.CreateOrUpdateSecret(ctx, secret); err != nil {
-		return fmt.Errorf("unable to create the zarf state secret")
+	_, err = c.Clientset.CoreV1().Secrets(secret.Namespace).Create(ctx, secret, metav1.CreateOptions{})
+	if err != nil && !kerrors.IsAlreadyExists(err) {
+		return fmt.Errorf("unable to create the zarf state secret: %w", err)
 	}
-
+	if err == nil {
+		return nil
+	}
+	_, err = c.Clientset.CoreV1().Secrets(secret.Namespace).Update(ctx, secret, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to update the zarf state secret: %w", err)
+	}
 	return nil
 }
 

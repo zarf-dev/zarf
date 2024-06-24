@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 )
 
 // TextTemplate represents a value to be templated into a text file.
@@ -88,12 +88,6 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) error {
 
 			preTemplate := matches[regexTemplateLine.SubexpIndex("preTemplate")]
 			templateKey := matches[regexTemplateLine.SubexpIndex("template")]
-
-			_, present := vc.deprecatedKeys[templateKey]
-			if present {
-				deprecationWarning := fmt.Sprintf("This Zarf Package uses a deprecated variable: '%s' changed to '%s'.  Please notify your package creator for an update.", templateKey, vc.deprecatedKeys[templateKey])
-				vc.logger.Warn(deprecationWarning)
-			}
 
 			template := templateMap[templateKey]
 

@@ -12,7 +12,7 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/types"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/interactive"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -21,8 +21,7 @@ import (
 )
 
 const (
-	depMarkerOld = "DATA_INJECTON_MARKER"
-	depMarkerNew = "DATA_INJECTION_MARKER"
+	depMarker = "DATA_INJECTION_MARKER"
 )
 
 // GetZarfVariableConfig gets a variable configuration specific to Zarf
@@ -36,7 +35,6 @@ func GetZarfVariableConfig() *variables.VariableConfig {
 
 	return variables.New(
 		"zarf",
-		deprecatedKeys(),
 		prompt,
 		slog.New(message.ZarfHandler{}))
 }
@@ -65,9 +63,7 @@ func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap
 			"GIT_AUTH_PULL": gitInfo.PullPassword,
 		}
 
-		// Preserve existing misspelling for backwards compatibility
-		builtinMap[depMarkerOld] = config.GetDataInjectionMarker()
-		builtinMap[depMarkerNew] = config.GetDataInjectionMarker()
+		builtinMap[depMarker] = config.GetDataInjectionMarker()
 
 		// Don't template component-specific variables for every component
 		switch componentName {
@@ -109,13 +105,6 @@ func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap
 	debugPrintTemplateMap(templateMap)
 
 	return templateMap, nil
-}
-
-// deprecatedKeys returns a map of template keys that are deprecated
-func deprecatedKeys() map[string]string {
-	return map[string]string{
-		fmt.Sprintf("###ZARF_%s###", depMarkerOld): fmt.Sprintf("###ZARF_%s###", depMarkerNew),
-	}
 }
 
 // generateHtpasswd returns an htpasswd string for the current state's RegistryInfo.

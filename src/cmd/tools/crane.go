@@ -5,12 +5,12 @@
 package tools
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
@@ -38,10 +38,7 @@ func init() {
 		Use:     "registry",
 		Aliases: []string{"r", "crane"},
 		Short:   lang.CmdToolsRegistryShort,
-		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
-
-			common.ExitOnInterrupt()
-
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			// The crane options loading here comes from the rootCmd of crane
 			craneOptions = append(craneOptions, crane.WithContext(cmd.Context()))
 			// TODO(jonjohnsonjr): crane.Verbose option?
@@ -60,11 +57,12 @@ func init() {
 			if platform != "all" {
 				v1Platform, err = v1.ParsePlatform(platform)
 				if err != nil {
-					message.Fatalf(err, lang.CmdToolsRegistryInvalidPlatformErr, platform, err.Error())
+					return fmt.Errorf("invalid platform %s: %w", platform, err)
 				}
 			}
 
 			craneOptions = append(craneOptions, crane.WithPlatform(v1Platform))
+			return nil
 		},
 	}
 
@@ -86,12 +84,12 @@ func init() {
 	craneCopy := craneCmd.NewCmdCopy(&craneOptions)
 
 	registryCmd.AddCommand(craneCopy)
-	registryCmd.AddCommand(zarfCraneCatalog(craneOptions))
-	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdList, craneOptions, lang.CmdToolsRegistryListExample, 0))
-	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPush, craneOptions, lang.CmdToolsRegistryPushExample, 1))
-	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPull, craneOptions, lang.CmdToolsRegistryPullExample, 0))
-	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
-	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, craneOptions, lang.CmdToolsRegistryDigestExample, 0))
+	registryCmd.AddCommand(zarfCraneCatalog(&craneOptions))
+	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdList, &craneOptions, lang.CmdToolsRegistryListExample, 0))
+	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPush, &craneOptions, lang.CmdToolsRegistryPushExample, 1))
+	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPull, &craneOptions, lang.CmdToolsRegistryPullExample, 0))
+	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
+	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, &craneOptions, lang.CmdToolsRegistryDigestExample, 0))
 	registryCmd.AddCommand(pruneCmd)
 	registryCmd.AddCommand(craneCmd.NewCmdVersion())
 
@@ -104,8 +102,8 @@ func init() {
 }
 
 // Wrap the original crane catalog with a zarf specific version
-func zarfCraneCatalog(cranePlatformOptions []crane.Option) *cobra.Command {
-	craneCatalog := craneCmd.NewCmdCatalog(&cranePlatformOptions)
+func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
+	craneCatalog := craneCmd.NewCmdCatalog(cranePlatformOptions)
 
 	craneCatalog.Example = lang.CmdToolsRegistryCatalogExample
 	craneCatalog.Args = nil
@@ -138,7 +136,7 @@ func zarfCraneCatalog(cranePlatformOptions []crane.Option) *cobra.Command {
 
 		// Add the correct authentication to the crane command options
 		authOption := images.WithPullAuth(zarfState.RegistryInfo)
-		cranePlatformOptions = append(cranePlatformOptions, authOption)
+		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
 
 		if tunnel != nil {
 			message.Notef(lang.CmdToolsRegistryTunnel, registryEndpoint, zarfState.RegistryInfo.Address)
@@ -153,8 +151,8 @@ func zarfCraneCatalog(cranePlatformOptions []crane.Option) *cobra.Command {
 }
 
 // Wrap the original crane list with a zarf specific version
-func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command, cranePlatformOptions []crane.Option, exampleText string, imageNameArgumentIndex int) *cobra.Command {
-	wrappedCommand := commandToWrap(&cranePlatformOptions)
+func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command, cranePlatformOptions *[]crane.Option, exampleText string, imageNameArgumentIndex int) *cobra.Command {
+	wrappedCommand := commandToWrap(cranePlatformOptions)
 
 	wrappedCommand.Example = exampleText
 	wrappedCommand.Args = nil
@@ -163,7 +161,7 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 
 	wrappedCommand.RunE = func(cmd *cobra.Command, args []string) error {
 		if len(args) < imageNameArgumentIndex+1 {
-			message.Fatal(nil, lang.CmdToolsCraneNotEnoughArgumentsErr)
+			return errors.New("not have enough arguments specified for this command")
 		}
 
 		// Try to connect to a Zarf initialized cluster otherwise then pass it down to crane.
@@ -194,7 +192,7 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 
 		// Add the correct authentication to the crane command options
 		authOption := images.WithPushAuth(zarfState.RegistryInfo)
-		cranePlatformOptions = append(cranePlatformOptions, authOption)
+		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
 
 		if tunnel != nil {
 			message.Notef(lang.CmdToolsRegistryTunnel, tunnel.Endpoint(), zarfState.RegistryInfo.Address)
@@ -337,7 +335,7 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 				Message: lang.CmdConfirmContinue,
 			}
 			if err := survey.AskOne(prompt, &confirm); err != nil {
-				message.Fatalf(nil, lang.ErrConfirmCancel, err)
+				return fmt.Errorf("confirm selection canceled: %w", err)
 			}
 		}
 		if confirm {

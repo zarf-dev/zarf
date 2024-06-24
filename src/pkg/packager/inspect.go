@@ -5,19 +5,20 @@
 package packager
 
 import (
+	"context"
 	"fmt"
 	"os"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 )
 
 // Inspect list the contents of a package.
-func (p *Packager) Inspect() (err error) {
+func (p *Packager) Inspect(ctx context.Context) (err error) {
 	wantSBOM := p.cfg.InspectOpts.ViewSBOM || p.cfg.InspectOpts.SBOMOutputDir != ""
 
-	p.cfg.Pkg, p.warnings, err = p.source.LoadPackageMetadata(p.layout, wantSBOM, true)
+	p.cfg.Pkg, p.warnings, err = p.source.LoadPackageMetadata(ctx, p.layout, wantSBOM, true)
 	if err != nil {
 		return err
 	}

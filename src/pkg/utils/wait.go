@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 )
 
@@ -33,8 +33,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 	// Handle network endpoints.
 	switch kind {
 	case "http", "https", "tcp":
-		waitForNetworkEndpoint(kind, identifier, condition, timeout)
-		return nil
+		return waitForNetworkEndpoint(kind, identifier, condition, timeout)
 	}
 
 	// Type of wait, condition or JSONPath
@@ -50,7 +49,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 	// Get the Zarf command configuration.
 	zarfCommand, err := GetFinalExecutableCommand()
 	if err != nil {
-		message.Fatal(err, lang.CmdToolsWaitForErrZarfPath)
+		return fmt.Errorf("could not locate the current Zarf binary path: %w", err)
 	}
 
 	identifierMsg := identifier
@@ -88,7 +87,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 
 		select {
 		case <-expired:
-			message.Fatal(nil, lang.CmdToolsWaitForErrTimeout)
+			return errors.New("wait timed out")
 
 		default:
 			spinner.Updatef(existMsg)
@@ -132,7 +131,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 }
 
 // waitForNetworkEndpoint waits for a network endpoint to respond.
-func waitForNetworkEndpoint(resource, name, condition string, timeout time.Duration) {
+func waitForNetworkEndpoint(resource, name, condition string, timeout time.Duration) error {
 	// Set the timeout for the wait-for command.
 	expired := time.After(timeout)
 
@@ -153,7 +152,7 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 
 		select {
 		case <-expired:
-			message.Fatal(nil, lang.CmdToolsWaitForErrTimeout)
+			return errors.New("wait timed out")
 
 		default:
 			switch resource {
@@ -179,8 +178,11 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 
 				// Convert the condition to an int and check if it's a valid HTTP status code.
 				code, err := strconv.Atoi(condition)
-				if err != nil || http.StatusText(code) == "" {
-					message.Fatal(err, lang.CmdToolsWaitForErrConditionString)
+				if err != nil {
+					return fmt.Errorf("http status code %s is not an integer: %w", condition, err)
+				}
+				if http.StatusText(code) == "" {
+					return errors.New("http status code %s is unknown")
 				}
 
 				// Try to get the URL and check the status code.
@@ -202,7 +204,7 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 
 			// Yay, we made it!
 			spinner.Success()
-			return
+			return nil
 		}
 	}
 }

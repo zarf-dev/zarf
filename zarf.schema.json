@@ -420,7 +420,7 @@
       "properties": {
         "name": {
           "type": "string",
-          "pattern": "^[a-z0-9\\-]*[a-z0-9]$",
+          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
           "description": "The name of the component"
         },
         "description": {
@@ -1003,7 +1003,7 @@
       "properties": {
         "name": {
           "type": "string",
-          "pattern": "^[a-z0-9\\-]*[a-z0-9]$",
+          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
           "description": "Name to identify this Zarf package"
         },
         "description": {
@@ -1017,10 +1017,6 @@
         "url": {
           "type": "string",
           "description": "Link to package information when online"
-        },
-        "image": {
-          "type": "string",
-          "description": "An image URL to embed in this package (Reserved for future use in Zarf UI)"
         },
         "uncompressed": {
           "type": "boolean",

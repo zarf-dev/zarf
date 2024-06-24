@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -55,47 +53,6 @@ func TestDifferentialPackagePathSetCorrectly(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			require.Equal(t, tc.expected, updateRelativeDifferentialPackagePath(tc.path, tc.cwd))
-		})
-	}
-}
-
-func TestLoadPackageDefinition(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name        string
-		testDir     string
-		expectedErr string
-	}{
-		{
-			name:        "valid package definition",
-			testDir:     "valid",
-			expectedErr: "",
-		},
-		{
-			name:        "invalid package definition",
-			testDir:     "invalid",
-			expectedErr: "package must have at least 1 component",
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			src := layout.New(filepath.Join("testdata", tt.testDir))
-			pc := NewPackageCreator(types.ZarfCreateOptions{}, "")
-			pkg, _, err := pc.LoadPackageDefinition(src)
-
-			if tt.expectedErr == "" {
-				require.NoError(t, err)
-				require.NotEmpty(t, pkg)
-				return
-			}
-
-			require.EqualError(t, err, tt.expectedErr)
-			require.Empty(t, pkg)
 		})
 	}
 }

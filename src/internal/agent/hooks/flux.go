@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
@@ -85,6 +85,7 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 
 	// Patch updates of the repo spec
 	patches = populatePatchOperations(patchedURL)
+	patches = append(patches, getLabelPatch(repo.Labels))
 
 	return &operations.Result{
 		Allowed:  true,

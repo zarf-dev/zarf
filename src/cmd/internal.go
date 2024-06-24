@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
@@ -38,8 +38,8 @@ var agentCmd = &cobra.Command{
 	Use:   "agent",
 	Short: lang.CmdInternalAgentShort,
 	Long:  lang.CmdInternalAgentLong,
-	Run: func(_ *cobra.Command, _ []string) {
-		agent.StartWebhook()
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		return agent.StartWebhook(cmd.Context())
 	},
 }
 
@@ -47,8 +47,8 @@ var httpProxyCmd = &cobra.Command{
 	Use:   "http-proxy",
 	Short: lang.CmdInternalProxyShort,
 	Long:  lang.CmdInternalProxyLong,
-	Run: func(_ *cobra.Command, _ []string) {
-		agent.StartHTTPProxy()
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		return agent.StartHTTPProxy(cmd.Context())
 	},
 }
 

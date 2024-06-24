@@ -17,7 +17,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/defenseunicorns/pkg/helpers/v2"
+
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
@@ -25,14 +30,12 @@ import (
 	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/internal/packager/template"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func (p *Packager) resetRegistryHPA(ctx context.Context) {
@@ -56,12 +59,12 @@ func (p *Packager) Deploy(ctx context.Context) (err error) {
 	if isInteractive {
 		filter := filters.Empty()
 
-		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, filter, true)
+		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, filter, true)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
 	} else {
-		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(p.layout, deployFilter, true)
+		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, deployFilter, true)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
@@ -234,13 +237,13 @@ func (p *Packager) deployInitComponent(ctx context.Context, component types.Zarf
 	if component.RequiresCluster() && p.state == nil {
 		err = p.cluster.InitZarfState(ctx, p.cfg.InitOpts)
 		if err != nil {
-			return charts, fmt.Errorf("unable to initialize Zarf state: %w", err)
+			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
 		}
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
 		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
-		return charts, nil
+		return nil, nil
 	}
 
 	if isRegistry {
@@ -250,18 +253,21 @@ func (p *Packager) deployInitComponent(ctx context.Context, component types.Zarf
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		p.cluster.StartInjectionMadness(ctx, p.layout.Base, p.layout.Images.Base, component.Images)
+		err := p.cluster.StartInjectionMadness(ctx, p.layout.Base, p.layout.Images.Base, component.Images)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	charts, err = p.deployComponent(ctx, component, isAgent /* skip img checksum if isAgent */, isSeedRegistry /* skip image push if isSeedRegistry */)
 	if err != nil {
-		return charts, err
+		return nil, err
 	}
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
 		if err := p.cluster.StopInjectionMadness(ctx); err != nil {
-			return charts, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
+			return nil, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
 		}
 	}
 
@@ -451,7 +457,21 @@ func (p *Packager) setupState(ctx context.Context) (err error) {
 		// Try to create the zarf namespace
 		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := cluster.NewZarfManagedNamespace(cluster.ZarfNamespaceName)
-		if _, err := p.cluster.CreateNamespace(ctx, zarfNamespace); err != nil {
+		err := func() error {
+			_, err := p.cluster.Clientset.CoreV1().Namespaces().Create(ctx, zarfNamespace, metav1.CreateOptions{})
+			if err != nil && !kerrors.IsAlreadyExists(err) {
+				return err
+			}
+			if err == nil {
+				return nil
+			}
+			_, err = p.cluster.Clientset.CoreV1().Namespaces().Update(ctx, zarfNamespace, metav1.UpdateOptions{})
+			if err != nil {
+				return err
+			}
+			return nil
+		}()
+		if err != nil {
 			spinner.Fatalf(err, "Unable to create the zarf namespace")
 		}
 	}
@@ -527,7 +547,7 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 					}
 				}
 
-				tunnel, err := p.cluster.NewTunnel(namespace, k8s.SvcResource, name, "", 0, port)
+				tunnel, err := p.cluster.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
 				if err != nil {
 					return err
 				}
@@ -546,7 +566,7 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 		}
 
 		// Try repo push up to retry limit
-		if err := helpers.Retry(tryPush, p.cfg.PkgOpts.Retries, 5*time.Second, message.Warnf); err != nil {
+		if err := helpers.RetryWithContext(ctx, tryPush, p.cfg.PkgOpts.Retries, 5*time.Second, message.Warnf); err != nil {
 			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}
 	}

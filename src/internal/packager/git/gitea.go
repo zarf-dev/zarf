@@ -10,17 +10,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	netHttp "net/http"
 	"os"
 	"time"
 
-	netHttp "net/http"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // CreateTokenResponse is the response given from creating a token in Gitea
@@ -41,7 +40,7 @@ func (g *Git) CreateReadOnlyUser(ctx context.Context) error {
 	}
 
 	// Establish a git tunnel to send the repo
-	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, k8s.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 	if err != nil {
 		return err
 	}
@@ -128,7 +127,7 @@ func (g *Git) UpdateGitUser(ctx context.Context, oldAdminPass string, username s
 		return err
 	}
 	// Establish a git tunnel to send the repo
-	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, k8s.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 	if err != nil {
 		return err
 	}
@@ -167,7 +166,7 @@ func (g *Git) CreatePackageRegistryToken(ctx context.Context) (CreateTokenRespon
 	}
 
 	// Establish a git tunnel to send the repo
-	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, k8s.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 	if err != nil {
 		return CreateTokenResponse{}, err
 	}
@@ -253,24 +252,38 @@ func UpdateGiteaPVC(ctx context.Context, shouldRollBack bool) (string, error) {
 	}
 
 	pvcName := os.Getenv("ZARF_VAR_GIT_SERVER_EXISTING_PVC")
-	groupKind := schema.GroupKind{
-		Group: "",
-		Kind:  "PersistentVolumeClaim",
-	}
-	labels := map[string]string{"app.kubernetes.io/managed-by": "Helm"}
-	annotations := map[string]string{"meta.helm.sh/release-name": "zarf-gitea", "meta.helm.sh/release-namespace": "zarf"}
 
 	if shouldRollBack {
-		err = c.K8s.RemoveLabelsAndAnnotations(ctx, cluster.ZarfNamespaceName, pvcName, groupKind, labels, annotations)
-		return "false", err
+		pvc, err := c.Clientset.CoreV1().PersistentVolumeClaims(cluster.ZarfNamespaceName).Get(ctx, pvcName, metav1.GetOptions{})
+		if err != nil {
+			return "false", err
+		}
+		delete(pvc.Labels, "app.kubernetes.io/managed-by")
+		delete(pvc.Annotations, "meta.helm.sh/release-name")
+		delete(pvc.Annotations, "meta.helm.sh/release-namespace")
+		_, err = c.Clientset.CoreV1().PersistentVolumeClaims(cluster.ZarfNamespaceName).Update(ctx, pvc, metav1.UpdateOptions{})
+		if err != nil {
+			return "false", err
+		}
+		return "false", nil
 	}
 
 	if pvcName == "data-zarf-gitea-0" {
-		err = c.K8s.AddLabelsAndAnnotations(ctx, cluster.ZarfNamespaceName, pvcName, groupKind, labels, annotations)
-		return "true", err
+		pvc, err := c.Clientset.CoreV1().PersistentVolumeClaims(cluster.ZarfNamespaceName).Get(ctx, pvcName, metav1.GetOptions{})
+		if err != nil {
+			return "true", err
+		}
+		pvc.Labels["app.kubernetes.io/managed-by"] = "Helm"
+		pvc.Annotations["meta.helm.sh/release-name"] = "zarf-gitea"
+		pvc.Annotations["meta.helm.sh/release-namespace"] = "zarf"
+		_, err = c.Clientset.CoreV1().PersistentVolumeClaims(cluster.ZarfNamespaceName).Update(ctx, pvc, metav1.UpdateOptions{})
+		if err != nil {
+			return "true", err
+		}
+		return "true", nil
 	}
 
-	return "false", err
+	return "false", nil
 }
 
 // DoHTTPThings adds http request boilerplate and perform the request, checking for a successful response.

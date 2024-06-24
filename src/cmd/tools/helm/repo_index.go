@@ -26,8 +26,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/defenseunicorns/pkg/helpers"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -104,7 +103,7 @@ func index(dir, url, mergeTo string) error {
 			i2 = repo.NewIndexFile()
 			err := i2.WriteFile(mergeTo, helpers.ReadAllWriteUser)
 			if err != nil {
-				message.Fatal(err, err.Error())
+				return err
 			}
 		} else {
 			i2, err = repo.LoadIndexFile(mergeTo)

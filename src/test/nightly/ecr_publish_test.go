@@ -30,7 +30,8 @@ func TestECRPublishing(t *testing.T) {
 	t.Log("E2E: Testing component actions")
 
 	// Work from the root directory of the project
-	os.Chdir("../../../")
+	err := os.Chdir("../../../")
+	require.NoError(t, err)
 
 	// Create a tmpDir for us to use during this test
 	tmpDir := t.TempDir()

@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -204,7 +204,7 @@ var devFindImagesCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdDevFindImagesShort,
 	Long:    lang.CmdDevFindImagesLong,
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 
 		v := common.GetViper()
@@ -216,7 +216,7 @@ var devFindImagesCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		if _, err := pkgClient.FindImages(); err != nil {
+		if _, err := pkgClient.FindImages(cmd.Context()); err != nil {
 			message.Fatalf(err, lang.CmdDevFindImagesErr, err.Error())
 		}
 	},
@@ -249,12 +249,12 @@ var devLintCmd = &cobra.Command{
 	Aliases: []string{"l"},
 	Short:   lang.CmdDevLintShort,
 	Long:    lang.CmdDevLintLong,
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
-		validator, err := lint.Validate(pkgConfig.CreateOpts)
+		validator, err := lint.Validate(cmd.Context(), pkgConfig.CreateOpts)
 		if err != nil {
 			message.Fatal(err, err.Error())
 		}

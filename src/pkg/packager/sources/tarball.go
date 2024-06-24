@@ -6,13 +6,14 @@ package sources
 
 import (
 	"archive/tar"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
@@ -32,7 +33,7 @@ type TarballSource struct {
 }
 
 // LoadPackage loads a package from a tarball.
-func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
+func (s *TarballSource) LoadPackage(_ context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	spinner := message.NewProgressSpinner("Loading package from %q", s.PackageSource)
 	defer spinner.Stop()
 
@@ -137,7 +138,7 @@ func (s *TarballSource) LoadPackage(dst *layout.PackagePaths, filter filters.Com
 }
 
 // LoadPackageMetadata loads a package's metadata from a tarball.
-func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
+func (s *TarballSource) LoadPackageMetadata(_ context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	if s.Shasum != "" {
 		if err := helpers.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
 			return pkg, nil, err
@@ -202,7 +203,7 @@ func (s *TarballSource) LoadPackageMetadata(dst *layout.PackagePaths, wantSBOM b
 }
 
 // Collect for the TarballSource is essentially an `mv`
-func (s *TarballSource) Collect(dir string) (string, error) {
+func (s *TarballSource) Collect(_ context.Context, dir string) (string, error) {
 	dst := filepath.Join(dir, filepath.Base(s.PackageSource))
 	err := os.Rename(s.PackageSource, dst)
 	linkErr := &os.LinkError{}

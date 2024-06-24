@@ -29,7 +29,7 @@ spec:
           averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
   behavior:
     scaleDown:
-      # Use 60 second stabilization window becuase zarf will freeze scale down during deploys
+      # Use 60 second stabilization window because zarf will freeze scale down during deploys
       stabilizationWindowSeconds: 60
       # Initially disable scale down - this gets set to Min later by Zarf (src/test/e2e/20_zarf_init_test.go)
       selectPolicy: Disabled

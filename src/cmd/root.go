@@ -8,7 +8,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
+
+	"github.com/pterm/pterm"
+	"github.com/spf13/cobra"
 
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/cmd/tools"
@@ -17,7 +21,6 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -32,21 +35,17 @@ var rootCmd = &cobra.Command{
 		if common.CheckVendorOnlyFromPath(cmd) {
 			return
 		}
-
 		// Don't log the help command
 		if cmd.Parent() == nil {
 			config.SkipLogFile = true
 		}
-
-		// Set the global context for the root command and all child commands
-		ctx := context.Background()
-		cmd.SetContext(ctx)
-
 		common.SetupCLI()
 	},
-	Short: lang.RootCmdShort,
-	Long:  lang.RootCmdLong,
-	Args:  cobra.MaximumNArgs(1),
+	Short:         lang.RootCmdShort,
+	Long:          lang.RootCmdLong,
+	Args:          cobra.MaximumNArgs(1),
+	SilenceUsage:  true,
+	SilenceErrors: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		zarfLogo := message.GetLogo()
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
@@ -64,8 +63,19 @@ var rootCmd = &cobra.Command{
 }
 
 // Execute is the entrypoint for the CLI.
-func Execute() {
-	cobra.CheckErr(rootCmd.Execute())
+func Execute(ctx context.Context) {
+	cmd, err := rootCmd.ExecuteContextC(ctx)
+	if err == nil {
+		return
+	}
+	defaultPrintCmds := []string{"helm", "yq", "kubectl"}
+	comps := strings.Split(cmd.CommandPath(), " ")
+	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
+		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
+	} else {
+		pterm.Error.Println(err.Error())
+	}
+	os.Exit(1)
 }
 
 func init() {

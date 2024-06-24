@@ -7,13 +7,14 @@ package message
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"runtime/debug"
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/fatih/color"
 	"github.com/pterm/pterm"
@@ -59,6 +60,11 @@ func (d *DebugWriter) Write(raw []byte) (int, error) {
 }
 
 func init() {
+	InitializePTerm(os.Stderr)
+}
+
+// InitializePTerm sets the default styles and output for pterm.
+func InitializePTerm(w io.Writer) {
 	pterm.ThemeDefault.SuccessMessageStyle = *pterm.NewStyle(pterm.FgLightGreen)
 	// Customize default error.
 	pterm.Success.Prefix = pterm.Prefix{
@@ -73,7 +79,7 @@ func init() {
 		Text: " •",
 	}
 
-	pterm.SetDefaultOutput(os.Stderr)
+	pterm.SetDefaultOutput(w)
 }
 
 // UseLogFile wraps a given file in a PausableWriter
@@ -267,7 +273,15 @@ func Paragraph(format string, a ...any) string {
 
 // Paragraphn formats text into an n column paragraph
 func Paragraphn(n int, format string, a ...any) string {
-	return pterm.DefaultParagraph.WithMaxWidth(n).Sprintf(format, a...)
+	// Split the text to keep pterm formatting but add newlines
+	lines := strings.Split(fmt.Sprintf(format, a...), "\n")
+
+	formattedLines := make([]string, len(lines))
+	for i, line := range lines {
+		formattedLines[i] = pterm.DefaultParagraph.WithMaxWidth(n).Sprintf(line)
+	}
+
+	return strings.Join(formattedLines, "\n")
 }
 
 // PrintDiff prints the differences between a and b with a as original and b as new
@@ -305,6 +319,7 @@ func Table(header []string, data [][]string) {
 		table = append(table, pterm.TableData{row}...)
 	}
 
+	//nolint:errcheck // never returns an error
 	pterm.DefaultTable.WithHasHeader().WithData(table).Render()
 }
 

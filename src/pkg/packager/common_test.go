@@ -5,137 +5,113 @@ package packager
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/fake"
-	k8sTesting "k8s.io/client-go/testing"
 )
 
-// TestValidatePackageArchitecture verifies that Zarf validates package architecture against cluster architecture correctly.
 func TestValidatePackageArchitecture(t *testing.T) {
 	t.Parallel()
 
-	type testCase struct {
-		name          string
-		pkgArch       string
-		clusterArchs  []string
-		images        []string
-		expectedError error
-		getArchError  error
-	}
-
-	testCases := []testCase{
+	tests := []struct {
+		name         string
+		pkgArch      string
+		clusterArchs []string
+		images       []string
+		wantErr      error
+	}{
 		{
-			name:          "architecture match",
-			pkgArch:       "amd64",
-			clusterArchs:  []string{"amd64"},
-			images:        []string{"nginx"},
-			expectedError: nil,
+			name:         "architecture match",
+			pkgArch:      "amd64",
+			clusterArchs: []string{"amd64"},
+			images:       []string{"nginx"},
+			wantErr:      nil,
 		},
 		{
-			name:          "architecture mismatch",
-			pkgArch:       "arm64",
-			clusterArchs:  []string{"amd64"},
-			images:        []string{"nginx"},
-			expectedError: fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, "arm64", "amd64"),
+			name:         "architecture mismatch",
+			pkgArch:      "arm64",
+			clusterArchs: []string{"amd64"},
+			images:       []string{"nginx"},
+			wantErr:      fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, "arm64", "amd64"),
 		},
 		{
-			name:          "multiple cluster architectures",
-			pkgArch:       "arm64",
-			clusterArchs:  []string{"amd64", "arm64"},
-			images:        []string{"nginx"},
-			expectedError: nil,
+			name:         "multiple cluster architectures",
+			pkgArch:      "arm64",
+			clusterArchs: []string{"amd64", "arm64"},
+			images:       []string{"nginx"},
+			wantErr:      nil,
 		},
 		{
-			name:          "ignore validation when package arch equals 'multi'",
-			pkgArch:       "multi",
-			clusterArchs:  []string{"not evaluated"},
-			expectedError: nil,
+			name:         "ignore validation when package arch equals 'multi'",
+			pkgArch:      "multi",
+			clusterArchs: []string{"not evaluated"},
+			wantErr:      nil,
 		},
 		{
-			name:          "ignore validation when a package doesn't contain images",
-			pkgArch:       "amd64",
-			images:        []string{},
-			clusterArchs:  []string{"not evaluated"},
-			expectedError: nil,
+			name:         "ignore validation when a package doesn't contain images",
+			pkgArch:      "amd64",
+			images:       []string{},
+			clusterArchs: []string{"not evaluated"},
+			wantErr:      nil,
 		},
 		{
-			name:          "test the error path when fetching cluster architecture fails",
-			pkgArch:       "amd64",
-			images:        []string{"nginx"},
-			getArchError:  errors.New("error fetching cluster architecture"),
-			expectedError: lang.ErrUnableToCheckArch,
+			name:    "test the error path when fetching cluster architecture fails",
+			pkgArch: "amd64",
+			images:  []string{"nginx"},
+			wantErr: lang.ErrUnableToCheckArch,
 		},
 	}
 
-	for _, testCase := range testCases {
-		testCase := testCase
+	for _, tt := range tests {
+		tt := tt
 
-		t.Run(testCase.name, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockClient := fake.NewSimpleClientset()
-			logger := func(string, ...interface{}) {}
+			cs := fake.NewSimpleClientset()
 
-			// Create a Packager instance with package architecture set and a mock Kubernetes client.
 			p := &Packager{
 				cluster: &cluster.Cluster{
-					K8s: &k8s.K8s{
-						Clientset: mockClient,
-						Log:       logger,
-					},
+					Clientset: cs,
 				},
 				cfg: &types.PackagerConfig{
 					Pkg: types.ZarfPackage{
-						Metadata: types.ZarfMetadata{Architecture: testCase.pkgArch},
+						Metadata: types.ZarfMetadata{Architecture: tt.pkgArch},
 						Components: []types.ZarfComponent{
 							{
-								Images: testCase.images,
+								Images: tt.images,
 							},
 						},
 					},
 				},
 			}
 
-			// Set up test data for fetching cluster architecture.
-			mockClient.Fake.PrependReactor("list", "nodes", func(_ k8sTesting.Action) (bool, runtime.Object, error) {
-				// Return an error for cases that test this error path.
-				if testCase.getArchError != nil {
-					return true, nil, testCase.getArchError
-				}
-
-				nodeItems := []v1.Node{}
-
-				for _, arch := range testCase.clusterArchs {
-					nodeItems = append(nodeItems, v1.Node{
-						Status: v1.NodeStatus{
-							NodeInfo: v1.NodeSystemInfo{
-								Architecture: arch,
-							},
+			for i, arch := range tt.clusterArchs {
+				node := &v1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: fmt.Sprintf("node-%d-%s", i, tt.name),
+					},
+					Status: v1.NodeStatus{
+						NodeInfo: v1.NodeSystemInfo{
+							Architecture: arch,
 						},
-					})
+					},
 				}
+				_, err := cs.CoreV1().Nodes().Create(context.Background(), node, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
 
-				// Create a NodeList object to fetch cluster architecture with the mock client.
-				nodeList := &v1.NodeList{
-					Items: nodeItems,
-				}
-				return true, nodeList, nil
-			})
-
-			err := p.validatePackageArchitecture(context.TODO())
-
-			require.Equal(t, testCase.expectedError, err)
+			err := p.validatePackageArchitecture(context.Background())
+			require.Equal(t, tt.wantErr, err)
 		})
 	}
 }

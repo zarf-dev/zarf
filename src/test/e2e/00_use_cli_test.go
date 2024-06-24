@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 )
@@ -102,13 +102,6 @@ func TestUseCLI(t *testing.T) {
 		_, stdErr, _ := e2e.Zarf("internal", "crc32", "zarf", "--log-level=debug")
 		expectedOutString := "Log level set to debug"
 		require.Contains(t, stdErr, expectedOutString, "The log level should be changed to 'debug'")
-	})
-
-	t.Run("bad zarf package deploy w/o --insecure or --shasum", func(t *testing.T) {
-		t.Parallel()
-		// Test that `zarf package deploy` gives an error if deploying a remote package without the --insecure or --shasum flags
-		stdOut, stdErr, err := e2e.Zarf("package", "deploy", "https://zarf-examples.s3.amazonaws.com/zarf-package-appliance-demo-doom-20210125.tar.zst", "--confirm")
-		require.Error(t, err, stdOut, stdErr)
 	})
 
 	t.Run("zarf package to test bad remote images", func(t *testing.T) {

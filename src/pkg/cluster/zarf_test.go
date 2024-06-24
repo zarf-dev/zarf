@@ -17,7 +17,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/k8s"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
@@ -205,7 +204,9 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 func TestGetDeployedPackage(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	c := &Cluster{&k8s.K8s{Clientset: fake.NewSimpleClientset()}}
+	c := &Cluster{
+		Clientset: fake.NewSimpleClientset(),
+	}
 
 	packages := []types.DeployedPackage{
 		{Name: "package1"},
@@ -227,7 +228,8 @@ func TestGetDeployedPackage(t *testing.T) {
 				"data": b,
 			},
 		}
-		c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &secret, metav1.CreateOptions{})
+		_, err = c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &secret, metav1.CreateOptions{})
+		require.NoError(t, err)
 		actual, err := c.GetDeployedPackage(ctx, p.Name)
 		require.NoError(t, err)
 		require.Equal(t, p, *actual)
@@ -242,7 +244,8 @@ func TestGetDeployedPackage(t *testing.T) {
 			},
 		},
 	}
-	c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &nonPackageSecret, metav1.CreateOptions{})
+	_, err := c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &nonPackageSecret, metav1.CreateOptions{})
+	require.NoError(t, err)
 
 	actualList, err := c.GetDeployedZarfPackages(ctx)
 	require.NoError(t, err)
@@ -266,9 +269,7 @@ func TestRegistryHPA(t *testing.T) {
 	_, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Create(ctx, &hpa, metav1.CreateOptions{})
 	require.NoError(t, err)
 	c := &Cluster{
-		&k8s.K8s{
-			Clientset: cs,
-		},
+		Clientset: cs,
 	}
 
 	err = c.EnableRegHPAScaleDown(ctx)

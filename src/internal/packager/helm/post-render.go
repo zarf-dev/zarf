@@ -8,11 +8,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
-	"reflect"
+	"slices"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
@@ -20,6 +21,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/yaml"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -117,12 +120,15 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 
 func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 	c := r.cluster
-	existingNamespaces, _ := c.GetNamespaces(ctx)
+	namespaceList, err := r.cluster.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
 	for name, namespace := range r.namespaces {
 
 		// Check to see if this namespace already exists
 		var existingNamespace bool
-		for _, serverNamespace := range existingNamespaces.Items {
+		for _, serverNamespace := range namespaceList.Items {
 			if serverNamespace.Name == name {
 				existingNamespace = true
 			}
@@ -130,16 +136,19 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 
 		if !existingNamespace {
 			// This is a new namespace, add it
-			if _, err := c.CreateNamespace(ctx, namespace); err != nil {
+			_, err := c.Clientset.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
+			if err != nil {
 				return fmt.Errorf("unable to create the missing namespace %s", name)
 			}
 		} else if r.cfg.DeployOpts.AdoptExistingResources {
-			if r.cluster.IsInitialNamespace(name) {
-				// If this is a K8s initial namespace, refuse to adopt it
+			// Refuse to adopt namespace if it is one of four initial Kubernetes namespaces.
+			// https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
+			if slices.Contains([]string{"default", "kube-node-lease", "kube-public", "kube-system"}, name) {
 				message.Warnf("Refusing to adopt the initial namespace: %s", name)
 			} else {
 				// This is an existing namespace to adopt
-				if _, err := c.UpdateNamespace(ctx, namespace); err != nil {
+				_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, namespace, metav1.UpdateOptions{})
+				if err != nil {
 					return fmt.Errorf("unable to adopt the existing namespace %s", name)
 				}
 			}
@@ -150,30 +159,66 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			continue
 		}
 
-		// Create the secret
-		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
-
 		// Try to get a valid existing secret
-		currentRegistrySecret, _ := c.GetSecret(ctx, name, config.ZarfImagePullSecretName)
-		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !reflect.DeepEqual(currentRegistrySecret.Data, validRegistrySecret.Data) {
-			// Create or update the zarf registry secret
-			if _, err := c.CreateOrUpdateSecret(ctx, validRegistrySecret); err != nil {
+		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
+		// TODO: Refactor as error is not checked instead of checking for not found error.
+		currentRegistrySecret, _ := c.Clientset.CoreV1().Secrets(name).Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
+		sameSecretData := maps.EqualFunc(currentRegistrySecret.Data, validRegistrySecret.Data, func(v1, v2 []byte) bool { return bytes.Equal(v1, v2) })
+		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !sameSecretData {
+			err := func() error {
+				_, err := c.Clientset.CoreV1().Secrets(validRegistrySecret.Namespace).Create(ctx, validRegistrySecret, metav1.CreateOptions{})
+				if err != nil && !kerrors.IsAlreadyExists(err) {
+					return err
+				}
+				if err == nil {
+					return nil
+				}
+				_, err = c.Clientset.CoreV1().Secrets(validRegistrySecret.Namespace).Update(ctx, validRegistrySecret, metav1.UpdateOptions{})
+				if err != nil {
+					return err
+				}
+				return nil
+			}()
+			if err != nil {
 				message.WarnErrf(err, "Problem creating registry secret for the %s namespace", name)
 			}
 
-			// Generate the git server secret
-			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
-
 			// Create or update the zarf git server secret
-			if _, err := c.CreateOrUpdateSecret(ctx, gitServerSecret); err != nil {
+			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
+			err = func() error {
+				_, err := c.Clientset.CoreV1().Secrets(gitServerSecret.Namespace).Create(ctx, gitServerSecret, metav1.CreateOptions{})
+				if err != nil && !kerrors.IsAlreadyExists(err) {
+					return err
+				}
+				if err == nil {
+					return nil
+				}
+				_, err = c.Clientset.CoreV1().Secrets(gitServerSecret.Namespace).Update(ctx, gitServerSecret, metav1.UpdateOptions{})
+				if err != nil {
+					return err
+				}
+				return nil
+			}()
+			if err != nil {
 				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
 			}
+
 		}
 	}
 	return nil
 }
 
 func (r *renderer) editHelmResources(ctx context.Context, resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
+	dc, err := dynamic.NewForConfig(r.cluster.RestConfig)
+	if err != nil {
+		return err
+	}
+	groupResources, err := restmapper.GetAPIGroupResources(r.cluster.Clientset.Discovery())
+	if err != nil {
+		return err
+	}
+	mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
+
 	for _, resource := range resources {
 		// parse to unstructured to have access to more data than just the name
 		rawData := &unstructured.Unstructured{}
@@ -199,8 +244,13 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 		case "Service":
 			// Check service resources for the zarf-connect label
 			labels := rawData.GetLabels()
+			if labels == nil {
+				labels = map[string]string{}
+			}
 			annotations := rawData.GetAnnotations()
-
+			if annotations == nil {
+				annotations = map[string]string{}
+			}
 			if key, keyExists := labels[config.ZarfConnectLabelName]; keyExists {
 				// If there is a zarf-connect label
 				message.Debugf("Match helm service %s for zarf connection %s", rawData.GetName(), key)
@@ -226,14 +276,35 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 				deployedNamespace = r.chart.Namespace
 			}
 
-			helmLabels := map[string]string{"app.kubernetes.io/managed-by": "Helm"}
-			helmAnnotations := map[string]string{
-				"meta.helm.sh/release-name":      r.chart.ReleaseName,
-				"meta.helm.sh/release-namespace": r.chart.Namespace,
-			}
-
-			if err := r.cluster.AddLabelsAndAnnotations(ctx, deployedNamespace, rawData.GetName(), rawData.GroupVersionKind().GroupKind(), helmLabels, helmAnnotations); err != nil {
-				// Print a debug message since this could just be because the resource doesn't exist
+			err := func() error {
+				mapping, err := mapper.RESTMapping(rawData.GroupVersionKind().GroupKind())
+				if err != nil {
+					return err
+				}
+				resource, err := dc.Resource(mapping.Resource).Namespace(deployedNamespace).Get(ctx, rawData.GetName(), metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+				labels := resource.GetLabels()
+				if labels == nil {
+					labels = map[string]string{}
+				}
+				labels["app.kubernetes.io/managed-by"] = "Helm"
+				resource.SetLabels(labels)
+				annotations := resource.GetAnnotations()
+				if annotations == nil {
+					annotations = map[string]string{}
+				}
+				annotations["meta.helm.sh/release-name"] = r.chart.ReleaseName
+				annotations["meta.helm.sh/release-namespace"] = r.chart.Namespace
+				resource.SetAnnotations(annotations)
+				_, err = dc.Resource(mapping.Resource).Namespace(deployedNamespace).Update(ctx, resource, metav1.UpdateOptions{})
+				if err != nil {
+					return err
+				}
+				return nil
+			}()
+			if err != nil {
 				message.Debugf("Unable to adopt resource %s: %s", rawData.GetName(), err.Error())
 			}
 		}

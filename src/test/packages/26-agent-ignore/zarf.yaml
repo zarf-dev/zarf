@@ -1,0 +1,23 @@
+kind: ZarfPackageConfig
+metadata:
+  name: agent-ignore-namespace
+  description: Simple test to check that Zarf respects ignored namespaces.
+
+components:
+  - name: httpd-deployment
+    required: true
+    manifests:
+      - name: agent-ignore-httpd
+        namespace: httpd-ignored
+        files:
+          - manifests/deployment.yaml
+          - manifests/namespace.yaml
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: httpd-deployment
+                namespace: httpd-ignored
+                condition: "{.status.readyReplicas}=2"

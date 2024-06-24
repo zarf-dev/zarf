@@ -5,6 +5,7 @@
 package sources
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -128,29 +129,38 @@ func TestPackageSource(t *testing.T) {
 			return
 		}
 		defer f.Close()
+		//nolint:errcheck // ignore
 		io.Copy(rw, f)
 	}))
+	t.Cleanup(func() { ts.Close() })
 
 	tests := []struct {
-		name   string
-		src    string
-		shasum string
+		name        string
+		src         string
+		shasum      string
+		expectedErr string
 	}{
 		{
-			name: "local",
-			src:  tarPath,
+			name:        "local",
+			src:         tarPath,
+			expectedErr: "",
 		},
 		{
-			name:   "http",
-			src:    fmt.Sprintf("%s/zarf-package-wordpress-amd64-16.0.4.tar.zst", ts.URL),
-			shasum: "835b06fc509e639497fb45f45d432e5c4cbd5d84212db5357b16bc69724b0e26",
+			name:        "http",
+			src:         fmt.Sprintf("%s/zarf-package-wordpress-amd64-16.0.4.tar.zst", ts.URL),
+			shasum:      "835b06fc509e639497fb45f45d432e5c4cbd5d84212db5357b16bc69724b0e26",
+			expectedErr: "",
+		},
+		{
+			name:        "http-insecure",
+			src:         fmt.Sprintf("%s/zarf-package-wordpress-amd64-16.0.4.tar.zst", ts.URL),
+			expectedErr: "remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum",
 		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
+			// TODO once our messaging is thread safe, re-parallelize this test
 			opts := &types.ZarfPackageOptions{
 				PackageSource: tt.src,
 				Shasum:        tt.shasum,
@@ -160,7 +170,11 @@ func TestPackageSource(t *testing.T) {
 			require.NoError(t, err)
 			packageDir := t.TempDir()
 			pkgLayout := layout.New(packageDir)
-			pkg, warnings, err := ps.LoadPackage(pkgLayout, filters.Empty(), false)
+			pkg, warnings, err := ps.LoadPackage(context.Background(), pkgLayout, filters.Empty(), false)
+			if tt.expectedErr != "" {
+				require.EqualError(t, err, tt.expectedErr)
+				return
+			}
 			require.NoError(t, err)
 			require.Empty(t, warnings)
 			require.Equal(t, expectedPkg, pkg)
@@ -169,7 +183,7 @@ func TestPackageSource(t *testing.T) {
 			require.NoError(t, err)
 			metadataDir := t.TempDir()
 			metadataLayout := layout.New(metadataDir)
-			metadata, warnings, err := ps.LoadPackageMetadata(metadataLayout, true, false)
+			metadata, warnings, err := ps.LoadPackageMetadata(context.Background(), metadataLayout, true, false)
 			require.NoError(t, err)
 			require.Empty(t, warnings)
 			require.Equal(t, expectedPkg, metadata)
@@ -177,7 +191,7 @@ func TestPackageSource(t *testing.T) {
 			ps, err = New(opts)
 			require.NoError(t, err)
 			collectDir := t.TempDir()
-			fp, err := ps.Collect(collectDir)
+			fp, err := ps.Collect(context.Background(), collectDir)
 			require.NoError(t, err)
 			require.Equal(t, filepath.Join(collectDir, filepath.Base(tt.src)), fp)
 		})

@@ -5,6 +5,7 @@
 package composer
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -48,7 +49,7 @@ func TestNewImportChain(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := NewImportChain(tt.head, 0, testPackageName, tt.arch, tt.flavor)
+			_, err := NewImportChain(context.Background(), tt.head, 0, testPackageName, tt.arch, tt.flavor)
 			require.ErrorContains(t, err, tt.expectedErr)
 		})
 	}
@@ -239,7 +240,7 @@ func TestCompose(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			composed, err := tt.ic.Compose()
+			composed, err := tt.ic.Compose(context.Background())
 			require.NoError(t, err)
 			require.EqualValues(t, &tt.expectedComposed, composed)
 		})

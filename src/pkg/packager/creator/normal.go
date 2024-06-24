@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -61,7 +61,7 @@ func NewPackageCreator(createOpts types.ZarfCreateOptions, cwd string) *PackageC
 }
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
-func (pc *PackageCreator) LoadPackageDefinition(src *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
+func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
 	pkg, warnings, err = src.ReadZarfYAML()
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
@@ -70,7 +70,7 @@ func (pc *PackageCreator) LoadPackageDefinition(src *layout.PackagePaths) (pkg t
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 
 	// Compose components into a single zarf.yaml file
-	pkg, composeWarnings, err := ComposeComponents(pkg, pc.createOpts.Flavor)
+	pkg, composeWarnings, err := ComposeComponents(ctx, pkg, pc.createOpts.Flavor)
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
@@ -95,7 +95,7 @@ func (pc *PackageCreator) LoadPackageDefinition(src *layout.PackagePaths) (pkg t
 	if pc.createOpts.DifferentialPackagePath != "" {
 		pkg.Build.Differential = true
 
-		diffData, err := loadDifferentialData(pc.createOpts.DifferentialPackagePath)
+		diffData, err := loadDifferentialData(ctx, pc.createOpts.DifferentialPackagePath)
 		if err != nil {
 			return types.ZarfPackage{}, nil, err
 		}
@@ -127,7 +127,7 @@ func (pc *PackageCreator) LoadPackageDefinition(src *layout.PackagePaths) (pkg t
 }
 
 // Assemble assembles all of the package assets into Zarf's tmp directory layout.
-func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.ZarfComponent, arch string) error {
+func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths, components []types.ZarfComponent, arch string) error {
 	var imageList []transform.Image
 
 	skipSBOMFlagUsed := pc.createOpts.SkipSBOM
@@ -184,8 +184,6 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 
 		dst.AddImages()
 
-		ctx := context.TODO()
-
 		pullCfg := images.PullConfig{
 			DestinationDirectory: dst.Images.Base,
 			ImageList:            imageList,
@@ -203,7 +201,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 			if err := dst.Images.AddV1Image(img); err != nil {
 				return err
 			}
-			ok, err := utils.HasImageLayers(img)
+			ok, err := utils.OnlyHasImageLayers(img)
 			if err != nil {
 				return fmt.Errorf("failed to validate %s is an image and not an artifact: %w", info, err)
 			}
@@ -238,7 +236,7 @@ func (pc *PackageCreator) Assemble(dst *layout.PackagePaths, components []types.
 //
 // - writes the Zarf package as a tarball to a local directory,
 // or an OCI registry based on the --output flag
-func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackage) (err error) {
+func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, pkg *types.ZarfPackage) (err error) {
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range pkg.Components {
@@ -278,8 +276,6 @@ func (pc *PackageCreator) Output(dst *layout.PackagePaths, pkg *types.ZarfPackag
 		if err != nil {
 			return err
 		}
-
-		ctx := context.TODO()
 		err = remote.PublishPackage(ctx, pkg, dst, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
