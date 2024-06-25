@@ -1,8 +1,10 @@
 import { promises as fs } from "fs";
 import path from "path";
 import yaml from "yaml";
+import { fileURLToPath } from 'url';
 
-const __dirname = import.meta.dirname;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const examplesDir = path.join(__dirname, "../../examples");
 const dstDir = path.join(__dirname, "../src/content/docs/ref/Examples");
