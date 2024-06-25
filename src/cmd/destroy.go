@@ -5,15 +5,17 @@
 package cmd
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"os"
 	"regexp"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 
@@ -28,9 +30,14 @@ var destroyCmd = &cobra.Command{
 	Aliases: []string{"d"},
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
-	Run: func(cmd *cobra.Command, _ []string) {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
-		c := common.NewClusterOrDie(ctx)
+		timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
+		defer cancel()
+		c, err := cluster.NewClusterWithWait(timeoutCtx)
+		if err != nil {
+			return err
+		}
 
 		// NOTE: If 'zarf init' failed to deploy the k3s component (or if we're looking at the wrong kubeconfig)
 		//       there will be no zarf-state to load and the struct will be empty. In these cases, if we can find
@@ -45,7 +52,7 @@ var destroyCmd = &cobra.Command{
 			// Check if we have the scripts to destroy everything
 			fileInfo, err := os.Stat(config.ZarfCleanupScriptsPath)
 			if errors.Is(err, os.ErrNotExist) || !fileInfo.IsDir() {
-				message.Fatalf(lang.CmdDestroyErrNoScriptPath, config.ZarfCleanupScriptsPath)
+				return fmt.Errorf("unable to find the folder %s which has the scripts to cleanup the cluster. Please double-check you have the right kube-context", config.ZarfCleanupScriptsPath)
 			}
 
 			// Run all the scripts!
@@ -73,12 +80,13 @@ var destroyCmd = &cobra.Command{
 
 			// If Zarf didn't deploy the cluster, only delete the ZarfNamespace
 			if err := c.DeleteZarfNamespace(ctx); err != nil {
-				message.Fatal(err, err.Error())
+				return err
 			}
 
 			// Remove zarf agent labels and secrets from namespaces Zarf doesn't manage
 			c.StripZarfLabelsAndSecretsFromNamespaces(ctx)
 		}
+		return nil
 	},
 }
 

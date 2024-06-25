@@ -6,6 +6,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -55,13 +56,14 @@ func NewClusterWithWait(ctx context.Context) (*Cluster, error) {
 
 // NewCluster creates a new Cluster instance and validates connection to the cluster by fetching the Kubernetes version.
 func NewCluster() (*Cluster, error) {
+	clusterErr := errors.New("unable to connect to the cluster")
 	clientset, config, err := pkgkubernetes.ClientAndConfig()
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(clusterErr, err)
 	}
 	watcher, err := pkgkubernetes.WatcherForConfig(config)
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(clusterErr, err)
 	}
 	c := &Cluster{
 		Clientset:  clientset,
@@ -71,7 +73,7 @@ func NewCluster() (*Cluster, error) {
 	// Dogsled the version output. We just want to ensure no errors were returned to validate cluster connection.
 	_, err = c.Clientset.Discovery().ServerVersion()
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(clusterErr, err)
 	}
 	return c, nil
 }
