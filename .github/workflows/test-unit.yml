@@ -10,6 +10,10 @@ on:
       - "adr/**"
       - "docs/**"
       - "CODEOWNERS"
+  push:
+    # Running unit tests on main gives codecov a base to compare PRs against
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -31,7 +35,7 @@ jobs:
 
       - name: Run unit tests
         run: make test-unit
-      
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c # v4.4.1
         with:
