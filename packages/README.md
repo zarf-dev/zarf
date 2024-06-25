@@ -38,14 +38,6 @@ Users who rely heavily on GitOps find it useful to deploy an internal Git reposi
 zarf init --components=git-server
 ```
 
-## Logging PGL
-
-The Logging PGL package deploys the Promtail, Grafana, and Loki stack which aggregates logs from different containers and presents them in a web dashboard.  This is useful as a quick way to get logging into a cluster when you otherwise wouldn't be bringing over a logging stack.
-
-```bash
-zarf init --components=logging
-```
-
 ## Zarf Agent
 
 The Zarf Agent is a mutating admission controller used to modify the image property within a PodSpec. The purpose is to redirect it to Zarf's configured registry instead of the the original registry (such as DockerHub, GHCR, or Quay). Additionally, the webhook attaches the appropriate `ImagePullSecret` for the seed registry to the pod. This configuration allows the pod to successfully retrieve the image from the seed registry, even when operating in an air-gapped environment.

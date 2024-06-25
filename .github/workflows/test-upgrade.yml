@@ -71,7 +71,7 @@ jobs:
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
         #       in a previous step. This test run will the current release to create a K3s cluster.
         run: |
-          sudo env "PATH=$PATH" CI=true zarf init --components k3s,git-server,logging --nodeport 31337 --confirm
+          sudo env "PATH=$PATH" CI=true zarf init --components k3s,git-server --nodeport 31337 --confirm
 
       # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files

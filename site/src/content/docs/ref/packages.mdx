@@ -32,7 +32,7 @@ Check out our [K3s cluster package](https://github.com/defenseunicorns/zarf/blob
 
 :::
 
-During the initialization process, Zarf will seed the cluster with a container registry to store images that other packages may require. The init package has the option to deploy other features to your cluster, such as a Git server to manage your repositories or a PLG logging stack that allows you to monitor the applications running on your cluster. For additional information on the init package, we provide detailed documentation on the Zarf ['init' package page](/ref/init-package/).
+During the initialization process, Zarf will seed the cluster with a container registry to store images that other packages may require. The init package has the option to deploy other features to your cluster, such as a Git server to manage your repositories. For additional information on the init package, we provide detailed documentation on the Zarf ['init' package page](/ref/init-package/).
 
 #### Using the init-package
 
@@ -50,7 +50,7 @@ During the deployment process, Zarf will leverage the infrastructure created dur
 
 ## Differential Packages
 
-If you already have a Zarf package and you want to create an updated package you would normally have to re-create the entire package from scratch, including things that might not have changed. Depending on your workflow, you may  want to create a package that only contains the artifacts that have changed since the last time you built your package. This can be achieved by using the `--differential` flag while running the `zarf package create` command. You can use this flag to point to an already built package you have locally or to a package that has been previously [published](/tutorials/7-publish-and-deploy#publish-package) to a registry.
+If you already have a Zarf package and you want to create an updated package you would normally have to re-create the entire package from scratch, including things that might not have changed. Depending on your workflow, you may  want to create a package that only contains the artifacts that have changed since the last time you built your package. This can be achieved by using the `--differential` flag while running the `zarf package create` command. You can use this flag to point to an already built package you have locally or to a package that has been previously [published](/tutorials/6-publish-and-deploy#publish-package) to a registry.
 
 ## Package Sources
 
@@ -79,7 +79,7 @@ A remote tarball is a Zarf package tarball that is hosted on a web server that i
 
 ### Remote OCI Reference (`oci://`)
 
-An OCI package is one that has been published to an OCI compatible registry using `zarf package publish` or the `-o` option on `zarf package create`.  These packages live within a given registry and you can learn more about them in our [Publish & Deploy Packages w/OCI Tutorial](/tutorials/7-publish-and-deploy/).
+An OCI package is one that has been published to an OCI compatible registry using `zarf package publish` or the `-o` option on `zarf package create`.  These packages live within a given registry and you can learn more about them in our [Publish & Deploy Packages w/OCI Tutorial](/tutorials/6-publish-and-deploy/).
 
 :::note
 

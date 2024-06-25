@@ -40,26 +40,6 @@ func TestConnectAndCreds(t *testing.T) {
 	require.NotEqual(t, prevAgentSecretData, newAgentSecretData, "agent secrets should not be the same")
 
 	connectToZarfServices(ctx, t)
-
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "init", "--components=logging", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-
-	// Prune the images from Grafana and ensure that they are gone
-	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "prune", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-
-	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/library/registry")
-	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "2.8.3")
-	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/grafana/promtail")
-	require.NoError(t, err, stdOut, stdErr)
-	require.Empty(t, stdOut)
-	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/grafana/grafana")
-	require.NoError(t, err, stdOut, stdErr)
-	require.Empty(t, stdOut)
-	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "ls", "127.0.0.1:31337/grafana/loki")
-	require.NoError(t, err, stdOut, stdErr)
-	require.Empty(t, stdOut)
 }
 
 func TestMetrics(t *testing.T) {
@@ -107,15 +87,11 @@ func connectToZarfServices(ctx context.Context, t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 	registryList := strings.Split(strings.Trim(stdOut, "\n "), "\n")
 
-	// We assert greater than or equal to since the base init has 12 images
+	// We assert greater than or equal to since the base init has 8 images
 	// HOWEVER during an upgrade we could have mismatched versions/names resulting in more images
-	require.GreaterOrEqual(t, len(registryList), 7)
+	require.GreaterOrEqual(t, len(registryList), 3)
 	require.Contains(t, stdOut, "defenseunicorns/zarf/agent")
 	require.Contains(t, stdOut, "gitea/gitea")
-	require.Contains(t, stdOut, "grafana/grafana")
-	require.Contains(t, stdOut, "grafana/loki")
-	require.Contains(t, stdOut, "grafana/promtail")
-	require.Contains(t, stdOut, "kiwigrid/k8s-sidecar")
 	require.Contains(t, stdOut, "library/registry")
 
 	// Get the git credentials
@@ -149,16 +125,4 @@ func connectToZarfServices(ctx context.Context, t *testing.T) {
 	respGit, err = http.Get(gitArtifactURL)
 	require.NoError(t, err)
 	require.Equal(t, 200, respGit.StatusCode)
-
-	// Connect to the Logging Stack
-	c, err = cluster.NewCluster()
-	require.NoError(t, err)
-	tunnelLog, err := c.Connect(ctx, cluster.ZarfLogging)
-	require.NoError(t, err)
-	defer tunnelLog.Close()
-
-	// Make sure Grafana comes up cleanly
-	respLog, err := http.Get(tunnelLog.HTTPEndpoint())
-	require.NoError(t, err)
-	require.Equal(t, 200, respLog.StatusCode)
 }

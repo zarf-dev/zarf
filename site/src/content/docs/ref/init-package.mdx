@@ -184,7 +184,6 @@ The Zarf team maintains some optional components in the default 'init' package.
 | Components   | Description                                                                                                                                                       |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | k3s          | REQUIRES ROOT (not sudo). Installs a lightweight Kubernetes Cluster on the local host [K3s](https://k3s.io/) and configures it to start up on boot.   |
-| logging      | Adds a log monitoring stack [promtail/loki/grafana (aka PLG)](https://github.com/grafana/loki) into the cluster.                                      |
 | git-server   | Adds a [GitOps](https://about.gitlab.com/topics/gitops/)-compatible source control service [Gitea](https://gitea.io/en-us/) into the cluster. |
 
 There are two ways to deploy these optional components. First, you can provide a comma-separated list of components to the `--components` flag, such as `zarf init --components k3s,git-server --confirm`, or, you can choose to exclude the `--components` and `--confirm` flags and respond with a yes (`y`) or no (`n`) for each optional component when interactively prompted.
@@ -271,7 +270,7 @@ cd zarf
 mv zarf.yaml zarf.yaml.bak
 ```
 
-You can learn more about creating a custom init package in the [Creating a Custom 'init' Package Tutorial](/tutorials/8-custom-init-packages).
+You can learn more about creating a custom init package in the [Creating a Custom 'init' Package Tutorial](/tutorials/7-custom-init-packages).
 
 :::
 

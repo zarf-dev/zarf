@@ -159,29 +159,6 @@ b.BWHI {background-color: #aaaaaa}
 <b style="color:#ff55ff;">    </b>-<b style="color:#ff55ff;"> packages/zarf-agent/manifests/webhook.yaml</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">images</b>:
   -<b style="color:#ff55ff;"> ghcr.io/defenseunicorns/zarf/agent:local</b>
-<b style="color:#ff55ff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> logging</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>: |
-<b style="color:#ff55ff;">    Deploys the Promtail Grafana &amp; Loki (PGL) stack.</b>
-<b style="color:#ff55ff;">    Aggregates logs from different containers and presents them in a web dashboard.</b>
-<b style="color:#ff55ff;">    Recommended if no other logging stack is deployed in the cluster.</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">charts</b>:
-  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> loki-stack</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">releaseName</b>:<b style="color:#ff55ff;"> zarf-loki-stack</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">url</b>:<b style="color:#ff55ff;"> https://grafana.github.io/helm-charts</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">version</b>:<b style="color:#ff55ff;"> 2.9.9</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> zarf</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">valuesFiles</b>:
-    -<b style="color:#ff55ff;"> packages/logging-pgl/pgl-values.yaml</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">manifests</b>:
-  -<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> logging-connect</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">namespace</b>:<b style="color:#ff55ff;"> zarf</b>
-<b style="color:#ff55ff;">    </b><b style="color:#55ffff;">files</b>:
-    -<b style="color:#ff55ff;"> packages/logging-pgl/connect.yaml</b>
-<b style="color:#ff55ff;">  </b><b style="color:#55ffff;">images</b>:
-  -<b style="color:#ff55ff;"> docker.io/grafana/promtail:2.7.2</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> grafana/grafana:8.3.5</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> grafana/loki:2.6.1</b>
-<b style="color:#ff55ff;">  </b>-<b style="color:#ff55ff;"> quay.io/kiwigrid/k8s-sidecar:1.19.2</b>
 <b style="color:#ff55ff;"></b>-<b style="color:#55ffff;"> name</b>:<b style="color:#ff55ff;"> git-server</b>
 <b style="color:#ff55ff;">  </b><b style="color:#55ffff;">description</b>: |
 <b style="color:#ff55ff;">    Deploys Gitea to provide git repositories for Kubernetes configurations.</b>

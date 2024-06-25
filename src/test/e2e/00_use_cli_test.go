@@ -75,7 +75,7 @@ func TestUseCLI(t *testing.T) {
 		t.Parallel()
 		// Test for expected failure when given a bad component input
 		path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.Arch)
-		_, _, err := e2e.Zarf("package", "deploy", path, "--components=on-create,foo,logging", "--confirm")
+		_, _, err := e2e.Zarf("package", "deploy", path, "--components=on-create,foo,git-server", "--confirm")
 		require.Error(t, err)
 	})
 

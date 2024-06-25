@@ -18,7 +18,7 @@ A typical Zarf deployment is made up of three parts:
 2. A [Zarf init package](/ref/init-package/):
    - A compressed tarball package that contains the configuration needed to instantiate an environment without connectivity.
    - Automatically seeds your cluster with a container registry or wires up a pre-existing one
-   - Provides additional capabilities such as logging, git server support, and/or a K8s cluster.
+   - Provides additional capabilities such as a git server and K3s cluster.
 3. A [Zarf Package](/ref/packages/):
    - A compressed tarball package that contains all of the files, manifests, source repositories, and images needed to deploy your infrastructure, application, and resources in a disconnected environment.
 
@@ -92,7 +92,7 @@ Zarf normally expects to operate against a Kubernetes cluster that has been [Zar
 
 - **YOLO Mode** - Yaml-OnLy Online mode allows for a faster deployment without requiring the `zarf init` command to be run beforehand. It can be useful for testing or for environments that manage their own registries and Git servers completely outside of Zarf.  Given this mode does not use the [Zarf Agent](/faq#what-is-the-zarf-agent) any resources specified will need to be manually modified for the environment.
 
-- **Cluster-less** - Zarf normally interacts with clusters and kubernetes resources, but it is possible to have Zarf perform actions before a cluster exists (including [deploying the cluster itself](/tutorials/5-creating-a-k8s-cluster-with-zarf)).  These packages generally have more dependencies on the host or environment that they run within.
+- **Cluster-less** - Zarf normally interacts with clusters and kubernetes resources, but it is possible to have Zarf perform actions before a cluster exists (including [deploying the cluster itself](/tutorials/4-creating-a-k8s-cluster-with-zarf)).  These packages generally have more dependencies on the host or environment that they run within.
 
 ## Typical Deployment Workflow
 

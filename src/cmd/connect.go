@@ -25,7 +25,7 @@ var (
 	cliOnly             bool
 
 	connectCmd = &cobra.Command{
-		Use:     "connect { REGISTRY | LOGGING | GIT | connect-name }",
+		Use:     "connect { REGISTRY | GIT | connect-name }",
 		Aliases: []string{"c"},
 		Short:   lang.CmdConnectShort,
 		Long:    lang.CmdConnectLong,
