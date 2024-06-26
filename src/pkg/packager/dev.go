@@ -27,7 +27,7 @@ import (
 // DevDeploy creates + deploys a package in one shot
 func (p *Packager) DevDeploy(ctx context.Context) error {
 	config.CommonOptions.Confirm = true
-	p.cfg.CreateOpts.SkipSBOM = true
+	p.cfg.CreateOpts.SkipSBOM = !p.cfg.CreateOpts.NoYOLO
 
 	cwd, err := os.Getwd()
 	if err != nil {
