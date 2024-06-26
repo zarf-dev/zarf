@@ -13,7 +13,7 @@ Accesses services or pods deployed in the cluster
 ### Synopsis
 
 Uses a k8s port-forward to connect to resources within the cluster referenced by your kube-context.
-Three default options for this command are <REGISTRY|LOGGING|GIT>. These will connect to the Zarf created resources (assuming they were selected when performing the `zarf init` command).
+Two default options for this command are <REGISTRY|GIT>. These will connect to the Zarf created resources (assuming they were selected when performing the `zarf init` command).
 
 Packages can provide service manifests that define their own shortcut connection options. These options will be printed to the terminal when the package finishes deploying.
  If you don't remember what connection shortcuts your deployed package offers, you can search your cluster for services that have the 'zarf.dev/connect-name' label. The value of that label is the name you will pass into the 'zarf connect' command.
@@ -21,7 +21,7 @@ Packages can provide service manifests that define their own shortcut connection
 Even if the packages you deploy don't define their own shortcut connection options, you can use the command flags to connect into specific resources. You can read the command flag descriptions below to get a better idea how to connect to whatever resource you are trying to connect to.
 
 ```
-zarf connect { REGISTRY | LOGGING | GIT | connect-name } [flags]
+zarf connect { REGISTRY | GIT | connect-name } [flags]
 ```
 
 ### Options

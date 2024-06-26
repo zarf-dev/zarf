@@ -32,11 +32,6 @@ components:
     import:
       path: packages/zarf-agent
 
-  # (Optional) Adds logging to the cluster
-  - name: logging
-    import:
-      path: packages/logging-pgl
-
   # (Optional) Adds a git server to the cluster
   - name: git-server
     import:

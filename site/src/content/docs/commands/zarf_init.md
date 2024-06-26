@@ -12,8 +12,8 @@ Prepares a k8s cluster for the deployment of Zarf packages
 
 ### Synopsis
 
-Injects a docker registry as well as other optional useful things (such as a git server and a logging stack) into a k8s cluster under the 'zarf' namespace to support future application deployments.
-If you do not have a k8s cluster already configured, this command will give you the ability to install a cluster locally.
+Injects an OCI registry as well as an optional git server into a Kubernetes cluster in the zarf namespace to support future application deployments.
+If you do not have a cluster already configured, this command will give you the ability to install a cluster locally.
 
 This command looks for a zarf-init package in the local directory that the command was executed from. If no package is found in the local directory and the Zarf CLI exists somewhere outside of the current directory, Zarf will failover and attempt to find a zarf-init package in the directory that the Zarf binary is located in.
 
@@ -34,9 +34,6 @@ $ zarf init
 
 # Initializing w/ Zarfs internal git server:
 $ zarf init --components=git-server
-
-# Initializing w/ Zarfs internal git server and PLG stack:
-$ zarf init --components=git-server,logging
 
 # Initializing w/ an internal registry but with a different nodeport:
 $ zarf init --nodeport=30333
@@ -61,7 +58,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --artifact-push-token string      [alpha] API Token for the push-user to access the artifact registry
       --artifact-push-username string   [alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
       --artifact-url string             [alpha] External artifact registry url to use for this Zarf cluster
-      --components string               Specify which optional components to install.  E.g. --components=git-server,logging
+      --components string               Specify which optional components to install.  E.g. --components=git-server
       --confirm                         Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
       --git-pull-password string        Password for the pull-only user to access the git server
       --git-pull-username string        Username for pull-only access to the git server

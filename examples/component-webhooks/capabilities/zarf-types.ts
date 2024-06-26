@@ -9,28 +9,28 @@
 
 export interface ZarfTypes {
     DeployedPackage: DeployedPackage;
-    ZarfPackage:     ZarfPackage;
+    ZarfPackage:     Data;
     ZarfState:       ZarfState;
 }
 
 export interface DeployedPackage {
     cliVersion:         string;
-    componentWebhooks?: { [key: string]: { [key: string]: Webhook } };
-    connectStrings?:    { [key: string]: ConnectString };
-    data:               ZarfPackage;
-    deployedComponents: DeployedComponent[];
+    componentWebhooks?: { [key: string]: { [key: string]: ComponentWebhookValue } };
+    connectStrings?:    { [key: string]: ConnectStringValue };
+    data:               Data;
+    deployedComponents: DeployedComponentElement[];
     generation:         number;
     name:               string;
 }
 
-export interface Webhook {
+export interface ComponentWebhookValue {
     name:                 string;
     observedGeneration:   number;
     status:               string;
     waitDurationSeconds?: number;
 }
 
-export interface ConnectString {
+export interface ConnectStringValue {
     /**
      * Descriptive text that explains what the resource you would be connecting to is used for
      */
@@ -41,19 +41,19 @@ export interface ConnectString {
     url: string;
 }
 
-export interface ZarfPackage {
+export interface Data {
     /**
      * Zarf-generated package build data
      */
-    build?: ZarfBuildData;
+    build?: Build;
     /**
      * List of components to deploy in this package
      */
-    components: ZarfComponent[];
+    components: ComponentElement[];
     /**
      * Constant template values applied on deploy for K8s resources
      */
-    constants?: ZarfPackageConstant[];
+    constants?: ConstantElement[];
     /**
      * The kind of Zarf package
      */
@@ -61,7 +61,7 @@ export interface ZarfPackage {
     /**
      * Package metadata
      */
-    metadata?: ZarfMetadata;
+    metadata?: Metadata;
     /**
      * Variable template values applied on deploy for K8s resources
      */
@@ -71,7 +71,7 @@ export interface ZarfPackage {
 /**
  * Zarf-generated package build data
  */
-export interface ZarfBuildData {
+export interface Build {
     /**
      * The architecture this package was created on
      */
@@ -84,6 +84,15 @@ export interface ZarfBuildData {
      * List of components that were not included in this package due to differential packaging
      */
     differentialMissing?: string[];
+    /**
+     * Version of a previously built package used as the basis for creating this differential
+     * package
+     */
+    differentialPackageVersion?: string;
+    /**
+     * The flavor of Zarf used to build this package
+     */
+    flavor?: string;
     /**
      * The minimum version of Zarf that does not have breaking package structure changes
      */
@@ -114,15 +123,15 @@ export interface ZarfBuildData {
     version: string;
 }
 
-export interface ZarfComponent {
+export interface ComponentElement {
     /**
      * Custom commands to run at various stages of a package lifecycle
      */
-    actions?: ZarfComponentActions;
+    actions?: Actions;
     /**
      * Helm charts to install during package deploy
      */
-    charts?: ZarfChart[];
+    charts?: ChartElement[];
     /**
      * [Deprecated] Specify a path to a public key to validate signed online resources. This
      * will be removed in Zarf v1.0.0.
@@ -131,7 +140,7 @@ export interface ZarfComponent {
     /**
      * Datasets to inject into a container in the target cluster
      */
-    dataInjections?: ZarfDataInjection[];
+    dataInjections?: DataInjectionElement[];
     /**
      * Determines the default Y/N state for installing this component on package deploy
      */
@@ -143,11 +152,11 @@ export interface ZarfComponent {
     /**
      * Extend component functionality with additional features
      */
-    extensions?: ZarfComponentExtensions;
+    extensions?: Extensions;
     /**
      * Files or folders to place on disk during package deployment
      */
-    files?: ZarfFile[];
+    files?: FileElement[];
     /**
      * [Deprecated] Create a user selector field based on all components in the same group. This
      * will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.
@@ -160,11 +169,11 @@ export interface ZarfComponent {
     /**
      * Import a component from another Zarf package
      */
-    import?: ZarfComponentImport;
+    import?: Import;
     /**
      * Kubernetes manifests to be included in a generated Helm chart on package deploy
      */
-    manifests?: ZarfManifest[];
+    manifests?: ManifestElement[];
     /**
      * The name of the component
      */
@@ -172,7 +181,7 @@ export interface ZarfComponent {
     /**
      * Filter when this component is included in package creation or deployment
      */
-    only?: ZarfComponentOnlyTarget;
+    only?: Only;
     /**
      * List of git repos to include in the package
      */
@@ -185,25 +194,25 @@ export interface ZarfComponent {
      * [Deprecated] (replaced by actions) Custom commands to run before or after package
      * deployment.  This will be removed in Zarf v1.0.0.
      */
-    scripts?: DeprecatedZarfComponentScripts;
+    scripts?: Scripts;
 }
 
 /**
  * Custom commands to run at various stages of a package lifecycle
  */
-export interface ZarfComponentActions {
+export interface Actions {
     /**
      * Actions to run during package creation
      */
-    onCreate?: ZarfComponentActionSet;
+    onCreate?: OnCreate;
     /**
      * Actions to run during package deployment
      */
-    onDeploy?: ZarfComponentActionSet;
+    onDeploy?: OnCreate;
     /**
      * Actions to run during package removal
      */
-    onRemove?: ZarfComponentActionSet;
+    onRemove?: OnCreate;
 }
 
 /**
@@ -213,30 +222,30 @@ export interface ZarfComponentActions {
  *
  * Actions to run during package removal
  */
-export interface ZarfComponentActionSet {
+export interface OnCreate {
     /**
      * Actions to run at the end of an operation
      */
-    after?: ZarfComponentAction[];
+    after?: AfterElement[];
     /**
      * Actions to run at the start of an operation
      */
-    before?: ZarfComponentAction[];
+    before?: AfterElement[];
     /**
      * Default configuration for all actions in this set
      */
-    defaults?: ZarfComponentActionDefaults;
+    defaults?: Defaults;
     /**
      * Actions to run if all operations fail
      */
-    onFailure?: ZarfComponentAction[];
+    onFailure?: AfterElement[];
     /**
      * Actions to run if all operations succeed
      */
-    onSuccess?: ZarfComponentAction[];
+    onSuccess?: AfterElement[];
 }
 
-export interface ZarfComponentAction {
+export interface AfterElement {
     /**
      * The command to run. Must specify either cmd or wait for the action to do anything.
      */
@@ -275,20 +284,20 @@ export interface ZarfComponentAction {
      * (onDeploy/cmd only) An array of variables to update with the output of the command. These
      * variables will be available to all remaining actions and components in the package.
      */
-    setVariables?: ZarfComponentActionSetVariable[];
+    setVariables?: SetVariableElement[];
     /**
      * (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on
      * supported operating systems
      */
-    shell?: ZarfComponentActionShell;
+    shell?: Shell;
     /**
      * Wait for a condition to be met before continuing. Must specify either cmd or wait for the
      * action. See the 'zarf tools wait-for' command for more info.
      */
-    wait?: ZarfComponentActionWait;
+    wait?: Wait;
 }
 
-export interface ZarfComponentActionSetVariable {
+export interface SetVariableElement {
     /**
      * Whether to automatically indent the variable's value (if multiline) when templating.
      * Based on the number of chars before the start of ###ZARF_VAR_.
@@ -304,7 +313,7 @@ export interface ZarfComponentActionSetVariable {
      */
     pattern?: string;
     /**
-     * Whether to mark this variable as sensitive to not print it in the Zarf log
+     * Whether to mark this variable as sensitive to not print it in the log
      */
     sensitive?: boolean;
     /**
@@ -327,7 +336,7 @@ export enum Type {
  * (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on
  * supported operating systems
  */
-export interface ZarfComponentActionShell {
+export interface Shell {
     /**
      * (default 'sh') Indicates a preference for the shell to use on macOS systems
      */
@@ -347,24 +356,24 @@ export interface ZarfComponentActionShell {
  * Wait for a condition to be met before continuing. Must specify either cmd or wait for the
  * action. See the 'zarf tools wait-for' command for more info.
  */
-export interface ZarfComponentActionWait {
+export interface Wait {
     /**
      * Wait for a condition to be met in the cluster before continuing. Only one of cluster or
      * network can be specified.
      */
-    cluster?: ZarfComponentActionWaitCluster;
+    cluster?: WaitCluster;
     /**
      * Wait for a condition to be met on the network before continuing. Only one of cluster or
      * network can be specified.
      */
-    network?: ZarfComponentActionWaitNetwork;
+    network?: Network;
 }
 
 /**
  * Wait for a condition to be met in the cluster before continuing. Only one of cluster or
  * network can be specified.
  */
-export interface ZarfComponentActionWaitCluster {
+export interface WaitCluster {
     /**
      * The condition or jsonpath state to wait for; defaults to exist
      */
@@ -387,7 +396,7 @@ export interface ZarfComponentActionWaitCluster {
  * Wait for a condition to be met on the network before continuing. Only one of cluster or
  * network can be specified.
  */
-export interface ZarfComponentActionWaitNetwork {
+export interface Network {
     /**
      * The address to wait for
      */
@@ -414,7 +423,7 @@ export enum Protocol {
 /**
  * Default configuration for all actions in this set
  */
-export interface ZarfComponentActionDefaults {
+export interface Defaults {
     /**
      * Working directory for commands (default CWD)
      */
@@ -439,21 +448,21 @@ export interface ZarfComponentActionDefaults {
      * (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on
      * supported operating systems
      */
-    shell?: ZarfComponentActionShell;
+    shell?: Shell;
 }
 
-export interface ZarfChart {
+export interface ChartElement {
     /**
-     * The path to the chart in the repo if using a git repo instead of a helm repo
+     * (git repo only) The sub directory to the chart within a git repo
      */
     gitPath?: string;
     /**
-     * The path to the chart folder
+     * The path to a local chart's folder or .tgz archive
      */
     localPath?: string;
     /**
-     * The name of the chart to deploy; this should be the name of the chart as it is installed
-     * in the helm repo
+     * The name of the chart within Zarf; note that this must be unique and does not need to be
+     * the same as the name in the chart repo
      */
     name: string;
     /**
@@ -465,26 +474,49 @@ export interface ZarfChart {
      */
     noWait?: boolean;
     /**
-     * The name of the release to create; defaults to the name of the chart
+     * The name of the Helm release to create (defaults to the Zarf name of the chart)
      */
     releaseName?: string;
+    /**
+     * The name of a chart within a Helm repository (defaults to the Zarf name of the chart)
+     */
+    repoName?: string;
     /**
      * The URL of the OCI registry, chart repository, or git repo where the helm chart is stored
      */
     url?: string;
     /**
      * List of local values file paths or remote URLs to include in the package; these will be
-     * merged together
+     * merged together when deployed
      */
     valuesFiles?: string[];
     /**
+     * [alpha] List of variables to set in the Helm chart
+     */
+    variables?: ChartVariable[];
+    /**
      * The version of the chart to deploy; for git-based charts this is also the tag of the git
-     * repo
+     * repo by default (when not using the '@' syntax for 'repos')
      */
     version?: string;
 }
 
-export interface ZarfDataInjection {
+export interface ChartVariable {
+    /**
+     * A brief description of what the variable controls
+     */
+    description: string;
+    /**
+     * The name of the variable
+     */
+    name: string;
+    /**
+     * The path within the Helm chart values where this variable applies
+     */
+    path: string;
+}
+
+export interface DataInjectionElement {
     /**
      * Compress the data before transmitting using gzip.  Note: this requires support for
      * tar/gzip locally and in the target image.
@@ -498,13 +530,13 @@ export interface ZarfDataInjection {
     /**
      * The target pod + container to inject the data into
      */
-    target: ZarfContainerTarget;
+    target: Target;
 }
 
 /**
  * The target pod + container to inject the data into
  */
-export interface ZarfContainerTarget {
+export interface Target {
     /**
      * The container name to target for data injection
      */
@@ -526,17 +558,17 @@ export interface ZarfContainerTarget {
 /**
  * Extend component functionality with additional features
  */
-export interface ZarfComponentExtensions {
+export interface Extensions {
     /**
      * Configurations for installing Big Bang and Flux in the cluster
      */
-    bigbang?: BigBang;
+    bigbang?: Bigbang;
 }
 
 /**
  * Configurations for installing Big Bang and Flux in the cluster
  */
-export interface BigBang {
+export interface Bigbang {
     /**
      * Optional paths to Flux kustomize strategic merge patch files
      */
@@ -559,7 +591,7 @@ export interface BigBang {
     version: string;
 }
 
-export interface ZarfFile {
+export interface FileElement {
     /**
      * (files only) Determines if the file should be made executable during package deploy
      */
@@ -590,7 +622,7 @@ export interface ZarfFile {
 /**
  * Import a component from another Zarf package
  */
-export interface ZarfComponentImport {
+export interface Import {
     /**
      * The name of the component to import from the referenced zarf.yaml
      */
@@ -605,7 +637,7 @@ export interface ZarfComponentImport {
     url?: string;
 }
 
-export interface ZarfManifest {
+export interface ManifestElement {
     /**
      * List of local K8s YAML files or remote URLs to deploy (in order)
      */
@@ -636,11 +668,11 @@ export interface ZarfManifest {
 /**
  * Filter when this component is included in package creation or deployment
  */
-export interface ZarfComponentOnlyTarget {
+export interface Only {
     /**
      * Only deploy component to specified clusters
      */
-    cluster?: ZarfComponentOnlyCluster;
+    cluster?: OnlyCluster;
     /**
      * Only include this component when a matching '--flavor' is specified on 'zarf package
      * create'
@@ -655,7 +687,7 @@ export interface ZarfComponentOnlyTarget {
 /**
  * Only deploy component to specified clusters
  */
-export interface ZarfComponentOnlyCluster {
+export interface OnlyCluster {
     /**
      * Only create and deploy to clusters of the given architecture
      */
@@ -687,7 +719,7 @@ export enum LocalOS {
  * [Deprecated] (replaced by actions) Custom commands to run before or after package
  * deployment.  This will be removed in Zarf v1.0.0.
  */
-export interface DeprecatedZarfComponentScripts {
+export interface Scripts {
     /**
      * Scripts to run after the component successfully deploys
      */
@@ -714,7 +746,7 @@ export interface DeprecatedZarfComponentScripts {
     timeoutSeconds?: number;
 }
 
-export interface ZarfPackageConstant {
+export interface ConstantElement {
     /**
      * Whether to automatically indent the variable's value (if multiline) when templating.
      * Based on the number of chars before the start of ###ZARF_CONST_.
@@ -751,7 +783,7 @@ export enum Kind {
 /**
  * Package metadata
  */
-export interface ZarfMetadata {
+export interface Metadata {
     /**
      * Checksum of a checksums.txt file that contains checksums all the layers within the
      * package.
@@ -773,10 +805,6 @@ export interface ZarfMetadata {
      * Link to package documentation when online
      */
     documentation?: string;
-    /**
-     * An image URL to embed in this package (Reserved for future use in Zarf UI)
-     */
-    image?: string;
     /**
      * Name to identify this Zarf package
      */
@@ -829,8 +857,8 @@ export interface ZarfPackageVariable {
      */
     name: string;
     /**
-     * An optional regex pattern that a variable value must match before a package can be
-     * deployed.
+     * An optional regex pattern that a variable value must match before a package deployment
+     * can continue.
      */
     pattern?: string;
     /**
@@ -838,7 +866,7 @@ export interface ZarfPackageVariable {
      */
     prompt?: boolean;
     /**
-     * Whether to mark this variable as sensitive to not print it in the Zarf log
+     * Whether to mark this variable as sensitive to not print it in the log
      */
     sensitive?: boolean;
     /**
@@ -848,20 +876,20 @@ export interface ZarfPackageVariable {
     type?: Type;
 }
 
-export interface DeployedComponent {
-    installedCharts:    InstalledChart[];
+export interface DeployedComponentElement {
+    installedCharts:    InstalledChartElement[];
     name:               string;
     observedGeneration: number;
     status:             string;
 }
 
-export interface InstalledChart {
+export interface InstalledChartElement {
     chartName: string;
     namespace: string;
 }
 
 export interface ZarfState {
-    agentTLS: GeneratedPKI;
+    agentTLS: AgentTLS;
     /**
      * Machine architecture of the k8s node(s)
      */
@@ -869,7 +897,7 @@ export interface ZarfState {
     /**
      * Information about the artifact registry Zarf is configured to use
      */
-    artifactServer: ArtifactServerInfo;
+    artifactServer: ArtifactServer;
     /**
      * K8s distribution of the cluster Zarf was deployed to
      */
@@ -877,11 +905,7 @@ export interface ZarfState {
     /**
      * Information about the repository Zarf is configured to use
      */
-    gitServer: GitServerInfo;
-    /**
-     * Secret value that the internal Grafana server was seeded with
-     */
-    loggingSecret: string;
+    gitServer: GitServer;
     /**
      * Information about the container registry Zarf is configured to use
      */
@@ -893,7 +917,7 @@ export interface ZarfState {
     zarfAppliance: boolean;
 }
 
-export interface GeneratedPKI {
+export interface AgentTLS {
     ca:   string;
     cert: string;
     key:  string;
@@ -902,7 +926,7 @@ export interface GeneratedPKI {
 /**
  * Information about the artifact registry Zarf is configured to use
  */
-export interface ArtifactServerInfo {
+export interface ArtifactServer {
     /**
      * URL address of the artifact registry
      */
@@ -924,7 +948,7 @@ export interface ArtifactServerInfo {
 /**
  * Information about the repository Zarf is configured to use
  */
-export interface GitServerInfo {
+export interface GitServer {
     /**
      * URL address of the git server
      */
@@ -1161,40 +1185,42 @@ function r(name: string) {
 const typeMap: any = {
     "ZarfTypes": o([
         { json: "DeployedPackage", js: "DeployedPackage", typ: r("DeployedPackage") },
-        { json: "ZarfPackage", js: "ZarfPackage", typ: r("ZarfPackage") },
+        { json: "ZarfPackage", js: "ZarfPackage", typ: r("Data") },
         { json: "ZarfState", js: "ZarfState", typ: r("ZarfState") },
     ], false),
     "DeployedPackage": o([
         { json: "cliVersion", js: "cliVersion", typ: "" },
-        { json: "componentWebhooks", js: "componentWebhooks", typ: u(undefined, m(m(r("Webhook")))) },
-        { json: "connectStrings", js: "connectStrings", typ: u(undefined, m(r("ConnectString"))) },
-        { json: "data", js: "data", typ: r("ZarfPackage") },
-        { json: "deployedComponents", js: "deployedComponents", typ: a(r("DeployedComponent")) },
+        { json: "componentWebhooks", js: "componentWebhooks", typ: u(undefined, m(m(r("ComponentWebhookValue")))) },
+        { json: "connectStrings", js: "connectStrings", typ: u(undefined, m(r("ConnectStringValue"))) },
+        { json: "data", js: "data", typ: r("Data") },
+        { json: "deployedComponents", js: "deployedComponents", typ: a(r("DeployedComponentElement")) },
         { json: "generation", js: "generation", typ: 0 },
         { json: "name", js: "name", typ: "" },
     ], false),
-    "Webhook": o([
+    "ComponentWebhookValue": o([
         { json: "name", js: "name", typ: "" },
         { json: "observedGeneration", js: "observedGeneration", typ: 0 },
         { json: "status", js: "status", typ: "" },
         { json: "waitDurationSeconds", js: "waitDurationSeconds", typ: u(undefined, 0) },
     ], false),
-    "ConnectString": o([
+    "ConnectStringValue": o([
         { json: "description", js: "description", typ: "" },
         { json: "url", js: "url", typ: "" },
     ], false),
-    "ZarfPackage": o([
-        { json: "build", js: "build", typ: u(undefined, r("ZarfBuildData")) },
-        { json: "components", js: "components", typ: a(r("ZarfComponent")) },
-        { json: "constants", js: "constants", typ: u(undefined, a(r("ZarfPackageConstant"))) },
+    "Data": o([
+        { json: "build", js: "build", typ: u(undefined, r("Build")) },
+        { json: "components", js: "components", typ: a(r("ComponentElement")) },
+        { json: "constants", js: "constants", typ: u(undefined, a(r("ConstantElement"))) },
         { json: "kind", js: "kind", typ: r("Kind") },
-        { json: "metadata", js: "metadata", typ: u(undefined, r("ZarfMetadata")) },
+        { json: "metadata", js: "metadata", typ: u(undefined, r("Metadata")) },
         { json: "variables", js: "variables", typ: u(undefined, a(r("ZarfPackageVariable"))) },
     ], false),
-    "ZarfBuildData": o([
+    "Build": o([
         { json: "architecture", js: "architecture", typ: "" },
         { json: "differential", js: "differential", typ: u(undefined, true) },
         { json: "differentialMissing", js: "differentialMissing", typ: u(undefined, a("")) },
+        { json: "differentialPackageVersion", js: "differentialPackageVersion", typ: u(undefined, "") },
+        { json: "flavor", js: "flavor", typ: u(undefined, "") },
         { json: "lastNonBreakingVersion", js: "lastNonBreakingVersion", typ: u(undefined, "") },
         { json: "migrations", js: "migrations", typ: u(undefined, a("")) },
         { json: "registryOverrides", js: "registryOverrides", typ: u(undefined, m("")) },
@@ -1203,38 +1229,38 @@ const typeMap: any = {
         { json: "user", js: "user", typ: "" },
         { json: "version", js: "version", typ: "" },
     ], false),
-    "ZarfComponent": o([
-        { json: "actions", js: "actions", typ: u(undefined, r("ZarfComponentActions")) },
-        { json: "charts", js: "charts", typ: u(undefined, a(r("ZarfChart"))) },
+    "ComponentElement": o([
+        { json: "actions", js: "actions", typ: u(undefined, r("Actions")) },
+        { json: "charts", js: "charts", typ: u(undefined, a(r("ChartElement"))) },
         { json: "cosignKeyPath", js: "cosignKeyPath", typ: u(undefined, "") },
-        { json: "dataInjections", js: "dataInjections", typ: u(undefined, a(r("ZarfDataInjection"))) },
+        { json: "dataInjections", js: "dataInjections", typ: u(undefined, a(r("DataInjectionElement"))) },
         { json: "default", js: "default", typ: u(undefined, true) },
         { json: "description", js: "description", typ: u(undefined, "") },
-        { json: "extensions", js: "extensions", typ: u(undefined, r("ZarfComponentExtensions")) },
-        { json: "files", js: "files", typ: u(undefined, a(r("ZarfFile"))) },
+        { json: "extensions", js: "extensions", typ: u(undefined, r("Extensions")) },
+        { json: "files", js: "files", typ: u(undefined, a(r("FileElement"))) },
         { json: "group", js: "group", typ: u(undefined, "") },
         { json: "images", js: "images", typ: u(undefined, a("")) },
-        { json: "import", js: "import", typ: u(undefined, r("ZarfComponentImport")) },
-        { json: "manifests", js: "manifests", typ: u(undefined, a(r("ZarfManifest"))) },
+        { json: "import", js: "import", typ: u(undefined, r("Import")) },
+        { json: "manifests", js: "manifests", typ: u(undefined, a(r("ManifestElement"))) },
         { json: "name", js: "name", typ: "" },
-        { json: "only", js: "only", typ: u(undefined, r("ZarfComponentOnlyTarget")) },
+        { json: "only", js: "only", typ: u(undefined, r("Only")) },
         { json: "repos", js: "repos", typ: u(undefined, a("")) },
         { json: "required", js: "required", typ: u(undefined, true) },
-        { json: "scripts", js: "scripts", typ: u(undefined, r("DeprecatedZarfComponentScripts")) },
+        { json: "scripts", js: "scripts", typ: u(undefined, r("Scripts")) },
     ], false),
-    "ZarfComponentActions": o([
-        { json: "onCreate", js: "onCreate", typ: u(undefined, r("ZarfComponentActionSet")) },
-        { json: "onDeploy", js: "onDeploy", typ: u(undefined, r("ZarfComponentActionSet")) },
-        { json: "onRemove", js: "onRemove", typ: u(undefined, r("ZarfComponentActionSet")) },
+    "Actions": o([
+        { json: "onCreate", js: "onCreate", typ: u(undefined, r("OnCreate")) },
+        { json: "onDeploy", js: "onDeploy", typ: u(undefined, r("OnCreate")) },
+        { json: "onRemove", js: "onRemove", typ: u(undefined, r("OnCreate")) },
     ], false),
-    "ZarfComponentActionSet": o([
-        { json: "after", js: "after", typ: u(undefined, a(r("ZarfComponentAction"))) },
-        { json: "before", js: "before", typ: u(undefined, a(r("ZarfComponentAction"))) },
-        { json: "defaults", js: "defaults", typ: u(undefined, r("ZarfComponentActionDefaults")) },
-        { json: "onFailure", js: "onFailure", typ: u(undefined, a(r("ZarfComponentAction"))) },
-        { json: "onSuccess", js: "onSuccess", typ: u(undefined, a(r("ZarfComponentAction"))) },
+    "OnCreate": o([
+        { json: "after", js: "after", typ: u(undefined, a(r("AfterElement"))) },
+        { json: "before", js: "before", typ: u(undefined, a(r("AfterElement"))) },
+        { json: "defaults", js: "defaults", typ: u(undefined, r("Defaults")) },
+        { json: "onFailure", js: "onFailure", typ: u(undefined, a(r("AfterElement"))) },
+        { json: "onSuccess", js: "onSuccess", typ: u(undefined, a(r("AfterElement"))) },
     ], false),
-    "ZarfComponentAction": o([
+    "AfterElement": o([
         { json: "cmd", js: "cmd", typ: u(undefined, "") },
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "dir", js: "dir", typ: u(undefined, "") },
@@ -1243,78 +1269,85 @@ const typeMap: any = {
         { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },
         { json: "setVariable", js: "setVariable", typ: u(undefined, "") },
-        { json: "setVariables", js: "setVariables", typ: u(undefined, a(r("ZarfComponentActionSetVariable"))) },
-        { json: "shell", js: "shell", typ: u(undefined, r("ZarfComponentActionShell")) },
-        { json: "wait", js: "wait", typ: u(undefined, r("ZarfComponentActionWait")) },
+        { json: "setVariables", js: "setVariables", typ: u(undefined, a(r("SetVariableElement"))) },
+        { json: "shell", js: "shell", typ: u(undefined, r("Shell")) },
+        { json: "wait", js: "wait", typ: u(undefined, r("Wait")) },
     ], false),
-    "ZarfComponentActionSetVariable": o([
+    "SetVariableElement": o([
         { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "name", js: "name", typ: "" },
         { json: "pattern", js: "pattern", typ: u(undefined, "") },
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
         { json: "type", js: "type", typ: u(undefined, r("Type")) },
     ], false),
-    "ZarfComponentActionShell": o([
+    "Shell": o([
         { json: "darwin", js: "darwin", typ: u(undefined, "") },
         { json: "linux", js: "linux", typ: u(undefined, "") },
         { json: "windows", js: "windows", typ: u(undefined, "") },
     ], false),
-    "ZarfComponentActionWait": o([
-        { json: "cluster", js: "cluster", typ: u(undefined, r("ZarfComponentActionWaitCluster")) },
-        { json: "network", js: "network", typ: u(undefined, r("ZarfComponentActionWaitNetwork")) },
+    "Wait": o([
+        { json: "cluster", js: "cluster", typ: u(undefined, r("WaitCluster")) },
+        { json: "network", js: "network", typ: u(undefined, r("Network")) },
     ], false),
-    "ZarfComponentActionWaitCluster": o([
+    "WaitCluster": o([
         { json: "condition", js: "condition", typ: u(undefined, "") },
         { json: "kind", js: "kind", typ: "" },
         { json: "name", js: "name", typ: "" },
         { json: "namespace", js: "namespace", typ: u(undefined, "") },
     ], false),
-    "ZarfComponentActionWaitNetwork": o([
+    "Network": o([
         { json: "address", js: "address", typ: "" },
         { json: "code", js: "code", typ: u(undefined, 0) },
         { json: "protocol", js: "protocol", typ: r("Protocol") },
     ], false),
-    "ZarfComponentActionDefaults": o([
+    "Defaults": o([
         { json: "dir", js: "dir", typ: u(undefined, "") },
         { json: "env", js: "env", typ: u(undefined, a("")) },
         { json: "maxRetries", js: "maxRetries", typ: u(undefined, 0) },
         { json: "maxTotalSeconds", js: "maxTotalSeconds", typ: u(undefined, 0) },
         { json: "mute", js: "mute", typ: u(undefined, true) },
-        { json: "shell", js: "shell", typ: u(undefined, r("ZarfComponentActionShell")) },
+        { json: "shell", js: "shell", typ: u(undefined, r("Shell")) },
     ], false),
-    "ZarfChart": o([
+    "ChartElement": o([
         { json: "gitPath", js: "gitPath", typ: u(undefined, "") },
         { json: "localPath", js: "localPath", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "namespace", js: "namespace", typ: "" },
         { json: "noWait", js: "noWait", typ: u(undefined, true) },
         { json: "releaseName", js: "releaseName", typ: u(undefined, "") },
+        { json: "repoName", js: "repoName", typ: u(undefined, "") },
         { json: "url", js: "url", typ: u(undefined, "") },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
+        { json: "variables", js: "variables", typ: u(undefined, a(r("ChartVariable"))) },
         { json: "version", js: "version", typ: u(undefined, "") },
     ], false),
-    "ZarfDataInjection": o([
+    "ChartVariable": o([
+        { json: "description", js: "description", typ: "" },
+        { json: "name", js: "name", typ: "" },
+        { json: "path", js: "path", typ: "" },
+    ], false),
+    "DataInjectionElement": o([
         { json: "compress", js: "compress", typ: u(undefined, true) },
         { json: "source", js: "source", typ: "" },
-        { json: "target", js: "target", typ: r("ZarfContainerTarget") },
+        { json: "target", js: "target", typ: r("Target") },
     ], false),
-    "ZarfContainerTarget": o([
+    "Target": o([
         { json: "container", js: "container", typ: "" },
         { json: "namespace", js: "namespace", typ: "" },
         { json: "path", js: "path", typ: "" },
         { json: "selector", js: "selector", typ: "" },
     ], false),
-    "ZarfComponentExtensions": o([
-        { json: "bigbang", js: "bigbang", typ: u(undefined, r("BigBang")) },
+    "Extensions": o([
+        { json: "bigbang", js: "bigbang", typ: u(undefined, r("Bigbang")) },
     ], false),
-    "BigBang": o([
+    "Bigbang": o([
         { json: "fluxPatchFiles", js: "fluxPatchFiles", typ: u(undefined, a("")) },
         { json: "repo", js: "repo", typ: u(undefined, "") },
         { json: "skipFlux", js: "skipFlux", typ: u(undefined, true) },
         { json: "valuesFiles", js: "valuesFiles", typ: u(undefined, a("")) },
         { json: "version", js: "version", typ: "" },
     ], false),
-    "ZarfFile": o([
+    "FileElement": o([
         { json: "executable", js: "executable", typ: u(undefined, true) },
         { json: "extractPath", js: "extractPath", typ: u(undefined, "") },
         { json: "shasum", js: "shasum", typ: u(undefined, "") },
@@ -1322,12 +1355,12 @@ const typeMap: any = {
         { json: "symlinks", js: "symlinks", typ: u(undefined, a("")) },
         { json: "target", js: "target", typ: "" },
     ], false),
-    "ZarfComponentImport": o([
+    "Import": o([
         { json: "name", js: "name", typ: u(undefined, "") },
         { json: "path", js: "path", typ: u(undefined, "") },
         { json: "url", js: "url", typ: u(undefined, "") },
     ], false),
-    "ZarfManifest": o([
+    "ManifestElement": o([
         { json: "files", js: "files", typ: u(undefined, a("")) },
         { json: "kustomizations", js: "kustomizations", typ: u(undefined, a("")) },
         { json: "kustomizeAllowAnyDirectory", js: "kustomizeAllowAnyDirectory", typ: u(undefined, true) },
@@ -1335,16 +1368,16 @@ const typeMap: any = {
         { json: "namespace", js: "namespace", typ: u(undefined, "") },
         { json: "noWait", js: "noWait", typ: u(undefined, true) },
     ], false),
-    "ZarfComponentOnlyTarget": o([
-        { json: "cluster", js: "cluster", typ: u(undefined, r("ZarfComponentOnlyCluster")) },
+    "Only": o([
+        { json: "cluster", js: "cluster", typ: u(undefined, r("OnlyCluster")) },
         { json: "flavor", js: "flavor", typ: u(undefined, "") },
         { json: "localOS", js: "localOS", typ: u(undefined, r("LocalOS")) },
     ], false),
-    "ZarfComponentOnlyCluster": o([
+    "OnlyCluster": o([
         { json: "architecture", js: "architecture", typ: u(undefined, r("Architecture")) },
         { json: "distros", js: "distros", typ: u(undefined, a("")) },
     ], false),
-    "DeprecatedZarfComponentScripts": o([
+    "Scripts": o([
         { json: "after", js: "after", typ: u(undefined, a("")) },
         { json: "before", js: "before", typ: u(undefined, a("")) },
         { json: "prepare", js: "prepare", typ: u(undefined, a("")) },
@@ -1352,20 +1385,19 @@ const typeMap: any = {
         { json: "showOutput", js: "showOutput", typ: u(undefined, true) },
         { json: "timeoutSeconds", js: "timeoutSeconds", typ: u(undefined, 0) },
     ], false),
-    "ZarfPackageConstant": o([
+    "ConstantElement": o([
         { json: "autoIndent", js: "autoIndent", typ: u(undefined, true) },
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "pattern", js: "pattern", typ: u(undefined, "") },
         { json: "value", js: "value", typ: "" },
     ], false),
-    "ZarfMetadata": o([
+    "Metadata": o([
         { json: "aggregateChecksum", js: "aggregateChecksum", typ: u(undefined, "") },
         { json: "architecture", js: "architecture", typ: u(undefined, "") },
         { json: "authors", js: "authors", typ: u(undefined, "") },
         { json: "description", js: "description", typ: u(undefined, "") },
         { json: "documentation", js: "documentation", typ: u(undefined, "") },
-        { json: "image", js: "image", typ: u(undefined, "") },
         { json: "name", js: "name", typ: "" },
         { json: "source", js: "source", typ: u(undefined, "") },
         { json: "uncompressed", js: "uncompressed", typ: u(undefined, true) },
@@ -1384,39 +1416,38 @@ const typeMap: any = {
         { json: "sensitive", js: "sensitive", typ: u(undefined, true) },
         { json: "type", js: "type", typ: u(undefined, r("Type")) },
     ], false),
-    "DeployedComponent": o([
-        { json: "installedCharts", js: "installedCharts", typ: a(r("InstalledChart")) },
+    "DeployedComponentElement": o([
+        { json: "installedCharts", js: "installedCharts", typ: a(r("InstalledChartElement")) },
         { json: "name", js: "name", typ: "" },
         { json: "observedGeneration", js: "observedGeneration", typ: 0 },
         { json: "status", js: "status", typ: "" },
     ], false),
-    "InstalledChart": o([
+    "InstalledChartElement": o([
         { json: "chartName", js: "chartName", typ: "" },
         { json: "namespace", js: "namespace", typ: "" },
     ], false),
     "ZarfState": o([
-        { json: "agentTLS", js: "agentTLS", typ: r("GeneratedPKI") },
+        { json: "agentTLS", js: "agentTLS", typ: r("AgentTLS") },
         { json: "architecture", js: "architecture", typ: "" },
-        { json: "artifactServer", js: "artifactServer", typ: r("ArtifactServerInfo") },
+        { json: "artifactServer", js: "artifactServer", typ: r("ArtifactServer") },
         { json: "distro", js: "distro", typ: "" },
-        { json: "gitServer", js: "gitServer", typ: r("GitServerInfo") },
-        { json: "loggingSecret", js: "loggingSecret", typ: "" },
+        { json: "gitServer", js: "gitServer", typ: r("GitServer") },
         { json: "registryInfo", js: "registryInfo", typ: r("RegistryInfo") },
         { json: "storageClass", js: "storageClass", typ: "" },
         { json: "zarfAppliance", js: "zarfAppliance", typ: true },
     ], false),
-    "GeneratedPKI": o([
+    "AgentTLS": o([
         { json: "ca", js: "ca", typ: "" },
         { json: "cert", js: "cert", typ: "" },
         { json: "key", js: "key", typ: "" },
     ], false),
-    "ArtifactServerInfo": o([
+    "ArtifactServer": o([
         { json: "address", js: "address", typ: "" },
         { json: "internalServer", js: "internalServer", typ: true },
         { json: "pushPassword", js: "pushPassword", typ: "" },
         { json: "pushUsername", js: "pushUsername", typ: "" },
     ], false),
-    "GitServerInfo": o([
+    "GitServer": o([
         { json: "address", js: "address", typ: "" },
         { json: "internalServer", js: "internalServer", typ: true },
         { json: "pullPassword", js: "pullPassword", typ: "" },

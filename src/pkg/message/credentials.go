@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
 )
@@ -20,14 +19,13 @@ const (
 	GitKey          = "git"
 	GitReadKey      = "git-readonly"
 	ArtifactKey     = "artifact"
-	LoggingKey      = "logging"
 	AgentKey        = "agent"
 )
 
 // PrintCredentialTable displays credentials in a table
 func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.DeployedComponent) {
 	if len(componentsToDeploy) == 0 {
-		componentsToDeploy = []types.DeployedComponent{{Name: "logging"}, {Name: "git-server"}}
+		componentsToDeploy = []types.DeployedComponent{{Name: "git-server"}}
 	}
 
 	// Pause the logfile's output to avoid credentials being printed to the log file
@@ -45,10 +43,6 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 	}
 
 	for _, component := range componentsToDeploy {
-		// Show message if including logging stack
-		if component.Name == "logging" {
-			loginData = append(loginData, []string{"Logging", config.ZarfLoggingUser, state.LoggingSecret, "zarf connect logging", LoggingKey})
-		}
 		// Show message if including git-server
 		if component.Name == "git-server" {
 			loginData = append(loginData,
@@ -68,9 +62,6 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 // PrintComponentCredential displays credentials for a single component
 func PrintComponentCredential(state *types.ZarfState, componentName string) {
 	switch strings.ToLower(componentName) {
-	case LoggingKey:
-		Notef("Logging credentials (username: %s):", config.ZarfLoggingUser)
-		fmt.Println(state.LoggingSecret)
 	case GitKey:
 		Notef("Git Server push password (username: %s):", state.GitServer.PushUsername)
 		fmt.Println(state.GitServer.PushPassword)

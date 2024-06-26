@@ -64,7 +64,7 @@ const (
 	// zarf connect
 	CmdConnectShort = "Accesses services or pods deployed in the cluster"
 	CmdConnectLong  = "Uses a k8s port-forward to connect to resources within the cluster referenced by your kube-context.\n" +
-		"Three default options for this command are <REGISTRY|LOGGING|GIT>. These will connect to the Zarf created resources " +
+		"Two default options for this command are <REGISTRY|GIT>. These will connect to the Zarf created resources " +
 		"(assuming they were selected when performing the `zarf init` command).\n\n" +
 		"Packages can provide service manifests that define their own shortcut connection options. These options will be " +
 		"printed to the terminal when the package finishes deploying.\n If you don't remember what connection shortcuts your deployed " +
@@ -112,10 +112,10 @@ const (
 
 	// zarf init
 	CmdInitShort = "Prepares a k8s cluster for the deployment of Zarf packages"
-	CmdInitLong  = "Injects a docker registry as well as other optional useful things (such as a git server " +
-		"and a logging stack) into a k8s cluster under the 'zarf' namespace " +
+	CmdInitLong  = "Injects an OCI registry as well as an optional git server " +
+		"into a Kubernetes cluster in the zarf namespace " +
 		"to support future application deployments.\n" +
-		"If you do not have a k8s cluster already configured, this command will give you " +
+		"If you do not have a cluster already configured, this command will give you " +
 		"the ability to install a cluster locally.\n\n" +
 		"This command looks for a zarf-init package in the local directory that the command was executed " +
 		"from. If no package is found in the local directory and the Zarf CLI exists somewhere outside of " +
@@ -128,9 +128,6 @@ $ zarf init
 
 # Initializing w/ Zarfs internal git server:
 $ zarf init --components=git-server
-
-# Initializing w/ Zarfs internal git server and PLG stack:
-$ zarf init --components=git-server,logging
 
 # Initializing w/ an internal registry but with a different nodeport:
 $ zarf init --nodeport=30333
@@ -162,7 +159,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInitFlagSet = "Specify deployment variables to set on the command line (KEY=value)"
 
 	CmdInitFlagConfirm      = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
-	CmdInitFlagComponents   = "Specify which optional components to install.  E.g. --components=git-server,logging"
+	CmdInitFlagComponents   = "Specify which optional components to install.  E.g. --components=git-server"
 	CmdInitFlagStorageClass = "Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard"
 
 	CmdInitFlagGitURL      = "External git server url to use for this Zarf cluster"
@@ -590,7 +587,6 @@ $ zarf tools get-creds registry-readonly
 $ zarf tools get-creds git
 $ zarf tools get-creds git-readonly
 $ zarf tools get-creds artifact
-$ zarf tools get-creds logging
 `
 
 	CmdToolsUpdateCredsShort   = "Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service"
