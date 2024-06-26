@@ -9,15 +9,19 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
+	"github.com/defenseunicorns/zarf/src/internal/packager/images"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
+	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/google/go-containerregistry/pkg/crane"
 )
 
 // DevDeploy creates + deploys a package in one shot
@@ -65,8 +69,6 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 		return fmt.Errorf("unable to set the active variables: %w", err)
 	}
 
-	preserveComponents := p.cfg.Pkg.Components
-
 	// If building in yolo mode, strip out all images and repos
 	if !p.cfg.CreateOpts.NoYOLO {
 		for idx := range p.cfg.Pkg.Components {
@@ -74,39 +76,36 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 			p.cfg.Pkg.Components[idx].Repos = []string{}
 		}
 	} else {
-		cluster, _ := cluster.NewCluster()
+		diff := func(a, b []string, normalizer func(string) string) []string {
+			var diff []string
 
-		dp, _ := cluster.GetDeployedPackage(ctx, p.cfg.Pkg.Metadata.Name)
-
-		booleanDiff := func(a, b []string) []string {
-			m := make(map[string]bool, len(a))
-			for _, item := range a {
-				m[item] = true
-			}
-			for _, item := range b {
-				// if the item only exists in b,
-				// add it to m
-				if _, ok := m[item]; !ok {
-					m[item] = true
-				} else {
-					// if item is in both a and b,
-					// delete it from m
-					delete(m, item)
+			for _, ele := range b {
+				if !slices.ContainsFunc(a, func(s string) bool {
+					return normalizer(s) == normalizer(ele)
+				}) {
+					diff = append(diff, ele)
 				}
 			}
-			var diff []string
-			for item := range m {
-				diff = append(diff, item)
-			}
+
 			return diff
 		}
 
-		if dp != nil {
-			// boolean diff the deployed package images with the package images
-			for _, c := range dp.Data.Components {
-				for idx, pending := range p.cfg.Pkg.Components {
-					if c.Name == pending.Name {
-						p.cfg.Pkg.Components[idx].Images = booleanDiff(c.Images, pending.Images)
+		normalizeImageName := func(s string) string {
+			imgInfo, _ := transform.ParseImageRef(s)
+			return imgInfo.Path
+		}
+
+		if c, err := cluster.NewCluster(); err == nil { // if NO error
+			if zarfState, err := c.LoadZarfState(ctx); err == nil { // if NO error
+				authOption := images.WithPullAuth(zarfState.RegistryInfo)
+
+				if registryEndpoint, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, zarfState.RegistryInfo); err == nil { // if NO error
+					defer tunnel.Close()
+
+					if names, err := crane.Catalog(registryEndpoint, authOption); err == nil { // if NO error
+						for idx, pending := range p.cfg.Pkg.Components {
+							p.cfg.Pkg.Components[idx].Images = diff(names, pending.Images, normalizeImageName)
+						}
 					}
 				}
 			}
@@ -115,11 +114,6 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 
 	if err := pc.Assemble(ctx, p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
 		return err
-	}
-
-	if p.cfg.CreateOpts.NoYOLO {
-		// restore potentially mutate components
-		p.cfg.Pkg.Components = preserveComponents
 	}
 
 	message.HeaderInfof("📦 PACKAGE DEPLOY %s", p.cfg.Pkg.Metadata.Name)
