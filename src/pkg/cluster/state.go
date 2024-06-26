@@ -35,10 +35,7 @@ const (
 
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
 func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitOptions) error {
-	var (
-		distro string
-		err    error
-	)
+	var distro string
 
 	spinner := message.NewProgressSpinner("Gathering cluster state information")
 	defer spinner.Stop()
@@ -79,9 +76,6 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 
 		// Defaults
 		state.Distro = distro
-		if state.LoggingSecret, err = helpers.RandomString(types.ZarfGeneratedPasswordLen); err != nil {
-			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
-		}
 
 		// Setup zarf agent PKI
 		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
@@ -245,9 +239,6 @@ func (c *Cluster) sanitizeZarfState(state *types.ZarfState) *types.ZarfState {
 
 	// Overwrite the ArtifactServer secret
 	state.ArtifactServer.PushToken = "**sanitized**"
-
-	// Overwrite the Logging secret
-	state.LoggingSecret = "**sanitized**"
 
 	return state
 }

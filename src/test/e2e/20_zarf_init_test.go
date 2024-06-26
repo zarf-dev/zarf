@@ -20,10 +20,9 @@ func TestZarfInit(t *testing.T) {
 	t.Log("E2E: Zarf init")
 	e2e.SetupWithCluster(t)
 
-	initComponents := "logging,git-server"
-	// Add k3s component in appliance mode
+	initComponents := "git-server"
 	if e2e.ApplianceMode {
-		initComponents = "k3s,logging,git-server"
+		initComponents = "k3s,git-server"
 	}
 
 	initPackageVersion := e2e.GetZarfVersion(t)
@@ -83,11 +82,6 @@ func TestZarfInit(t *testing.T) {
 	require.NoError(t, err)
 	checkLogForSensitiveState(t, logText, state)
 
-	// Check the old state values as well (if they exist) to ensure they weren't printed and then updated during init
-	if oldState.LoggingSecret != "" {
-		checkLogForSensitiveState(t, logText, oldState)
-	}
-
 	if e2e.ApplianceMode {
 		// make sure that we upgraded `k3s` correctly and are running the correct version - this should match that found in `packages/distros/k3s`
 		kubeletVersion, _, err := e2e.Kubectl("get", "nodes", "-o", "jsonpath={.items[0].status.nodeInfo.kubeletVersion}")
@@ -130,7 +124,6 @@ func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.Zar
 	require.NotContains(t, logText, zarfState.RegistryInfo.PullPassword)
 	require.NotContains(t, logText, zarfState.RegistryInfo.PushPassword)
 	require.NotContains(t, logText, zarfState.RegistryInfo.Secret)
-	require.NotContains(t, logText, zarfState.LoggingSecret)
 }
 
 func verifyZarfNamespaceLabels(t *testing.T) {
@@ -198,16 +191,8 @@ func verifyZarfPodLabels(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expectedLabels, actualLabels)
 
-	// logging and git server pods should have the `zarf-agent=patched` label
-	// since they should have been mutated by the agent
-	patchedLabel := `"zarf-agent":"patched"`
-
-	// logging
-	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "--selector=app.kubernetes.io/instance=zarf-loki-stack", "pods", "-o=jsonpath='{.items[0].metadata.labels}'")
-	require.NoError(t, err)
-	require.Contains(t, actualLabels, patchedLabel)
-
 	// git server
+	patchedLabel := `"zarf-agent":"patched"`
 	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "--selector=app.kubernetes.io/instance=zarf-gitea  ", "pods", "-o=jsonpath='{.items[0].metadata.labels}'")
 	require.NoError(t, err)
 	require.Contains(t, actualLabels, patchedLabel)
@@ -219,12 +204,6 @@ func verifyZarfServiceLabels(t *testing.T) {
 	// registry
 	expectedLabels := `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/connect-name":"registry"}'`
 	actualLabels, _, err := e2e.Kubectl("get", "-n=zarf", "service", "zarf-connect-registry", "-o=jsonpath='{.metadata.labels}'")
-	require.NoError(t, err)
-	require.Equal(t, expectedLabels, actualLabels)
-
-	// logging
-	expectedLabels = `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/connect-name":"logging"}'`
-	actualLabels, _, err = e2e.Kubectl("get", "-n=zarf", "service", "zarf-connect-logging", "-o=jsonpath='{.metadata.labels}'")
 	require.NoError(t, err)
 	require.Equal(t, expectedLabels, actualLabels)
 

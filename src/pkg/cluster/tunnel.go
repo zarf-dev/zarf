@@ -31,7 +31,6 @@ import (
 // Zarf specific connect strings
 const (
 	ZarfRegistry = "REGISTRY"
-	ZarfLogging  = "LOGGING"
 	ZarfGit      = "GIT"
 	ZarfInjector = "INJECTOR"
 
@@ -107,28 +106,18 @@ func (c *Cluster) Connect(ctx context.Context, target string) (*Tunnel, error) {
 		zt.resourceName = ZarfRegistryName
 		zt.remotePort = ZarfRegistryPort
 		zt.urlSuffix = `/v2/_catalog`
-
-	case ZarfLogging:
-		zt.resourceName = "zarf-loki-stack-grafana"
-		zt.remotePort = 3000
-		// Start the logs with something useful.
-		zt.urlSuffix = `/monitor/explore?orgId=1&left=%5B"now-12h","now","Loki",%7B"refId":"Zarf%20Logs","expr":"%7Bnamespace%3D%5C"zarf%5C"%7D"%7D%5D`
-
 	case ZarfGit:
 		zt.resourceName = ZarfGitServerName
 		zt.remotePort = ZarfGitServerPort
-
 	case ZarfInjector:
 		zt.resourceName = ZarfInjectorName
 		zt.remotePort = ZarfInjectorPort
-
 	default:
 		if target != "" {
 			if zt, err = c.checkForZarfConnectLabel(ctx, target); err != nil {
 				return nil, fmt.Errorf("problem looking for a zarf connect label in the cluster: %s", err.Error())
 			}
 		}
-
 		if zt.resourceName == "" {
 			return nil, fmt.Errorf("missing resource name")
 		}
@@ -136,7 +125,6 @@ func (c *Cluster) Connect(ctx context.Context, target string) (*Tunnel, error) {
 			return nil, fmt.Errorf("missing remote port")
 		}
 	}
-
 	return c.ConnectTunnelInfo(ctx, zt)
 }
 

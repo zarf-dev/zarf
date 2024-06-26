@@ -31,7 +31,6 @@ $ zarf tools get-creds registry-readonly
 $ zarf tools get-creds git
 $ zarf tools get-creds git-readonly
 $ zarf tools get-creds artifact
-$ zarf tools get-creds logging
 
 ```
 

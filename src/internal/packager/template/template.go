@@ -81,9 +81,6 @@ func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap
 			}
 			builtinMap["HTPASSWD"] = htpasswd
 			builtinMap["REGISTRY_SECRET"] = regInfo.Secret
-
-		case "logging":
-			builtinMap["LOGGING_AUTH"] = state.LoggingSecret
 		}
 
 		// Iterate over any custom variables and add them to the mappings for templating
@@ -93,7 +90,7 @@ func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap
 				Value: value,
 			}
 
-			if key == "LOGGING_AUTH" || key == "REGISTRY_SECRET" || key == "HTPASSWD" ||
+			if key == "REGISTRY_SECRET" || key == "HTPASSWD" ||
 				key == "AGENT_CA" || key == "AGENT_KEY" || key == "AGENT_CRT" || key == "GIT_AUTH_PULL" ||
 				key == "GIT_AUTH_PUSH" || key == "REGISTRY_AUTH_PULL" || key == "REGISTRY_AUTH_PUSH" {
 				// Sanitize any builtin templates that are sensitive

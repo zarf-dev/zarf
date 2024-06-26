@@ -41,8 +41,6 @@ const (
 	ZarfImagePullSecretName = "private-registry"
 	ZarfGitServerSecretName = "private-git-server"
 
-	ZarfLoggingUser = "zarf-admin"
-
 	UnsetCLIVersion = "unset-development-only"
 )
 
