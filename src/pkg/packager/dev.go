@@ -29,9 +29,6 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 	config.CommonOptions.Confirm = true
 	p.cfg.CreateOpts.SkipSBOM = true
 
-	// todo: implement dry-run for helm charts
-	// diff images before push
-
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
