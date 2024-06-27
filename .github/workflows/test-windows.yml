@@ -35,23 +35,23 @@ jobs:
           go-version-file: 'go.mod'
           cache: false
 
-      - name: set go cache paths
-        id: go-cache-paths
-        run: |
-          Write-Output "::set-output name=go-build::$(go env GOCACHE)"
-          Write-Output "::set-output name=go-mod::$(go env GOMODCACHE)"
-        shell: pwsh
+      # - name: set go cache paths
+      #   id: go-cache-paths
+      #   run: |
+      #     Write-Output "::set-output name=go-build::$(go env GOCACHE)"
+      #     Write-Output "::set-output name=go-mod::$(go env GOMODCACHE)"
+      #   shell: pwsh
 
-      - name: Cache Go modules
-        id: cache-go-mod
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ steps.go-cache-paths.outputs.go-build }}
-            ${{ steps.go-cache-paths.outputs.go-mod }}
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+      # - name: Cache Go modules
+      #   id: cache-go-mod
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: |
+      #       ${{ steps.go-cache-paths.outputs.go-build }}
+      #       ${{ steps.go-cache-paths.outputs.go-mod }}
+      #     key: windows-go-${{ hashFiles('**/go.sum') }}
+      #     restore-keys: |
+      #       windows-go-
 
       - name: Run Windows unit tests
         run: make test-unit
