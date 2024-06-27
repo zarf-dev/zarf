@@ -26,9 +26,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: Optimize caching
-        run: echo C:\Program Files\Git\usr\bin>>"%GITHUB_PATH%"
-        shell: cmd
+      # - name: Optimize caching
+      #   run: echo C:\Program Files\Git\usr\bin>>"%GITHUB_PATH%"
+      #   shell: cmd
 
       - name: Setup golang
         uses: ./.github/actions/golang
