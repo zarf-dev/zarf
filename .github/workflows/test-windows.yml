@@ -33,6 +33,23 @@ jobs:
       - name: Setup golang
         uses: ./.github/actions/golang
 
+      - id: go-cache-paths
+        run: |
+          Write-Output "::set-output name=go-build::$(go env GOCACHE)"
+          Write-Output "::set-output name=go-mod::$(go env GOMODCACHE)"
+        shell: pwsh
+
+      - name: Cache Go modules
+        id: cache-go-mod
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.go-cache-paths.outputs.go-build }}
+            ${{ steps.go-cache-paths.outputs.go-mod }}
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
       - name: Run Windows unit tests
         run: make test-unit
         shell: pwsh
@@ -43,6 +60,13 @@ jobs:
           init-package: "false"
           os: windows
           shell: pwsh
+
+      # TODO: (@WSTARR) Builds an init package manually off of the v0.30.1
+      # release since Windows in GitHub cannot natively build linux containers
+      # and the tests this workflow run do not use the agent at all!
+      - name: Build init-package
+        run: |
+          make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=v0.30.1
 
       - name: Run windows E2E tests
         run: make test-e2e-without-cluster
