@@ -33,7 +33,8 @@ jobs:
       - name: Setup golang
         uses: ./.github/actions/golang
 
-      - id: go-cache-paths
+      - name: set go cache paths
+        id: go-cache-paths
         run: |
           Write-Output "::set-output name=go-build::$(go env GOCACHE)"
           Write-Output "::set-output name=go-mod::$(go env GOMODCACHE)"
