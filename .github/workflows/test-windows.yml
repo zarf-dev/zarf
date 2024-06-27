@@ -26,21 +26,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: Setup golang
-        uses: ./.github/actions/golang
-
       - name: Run Windows unit tests
         run: make test-unit
         shell: pwsh
 
-  test-e2e:
+  test-e2e-without-cluster:
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-
-      - name: Setup golang
-        uses: ./.github/actions/golang
 
       - name: Build Windows binary and zarf packages
         uses: ./.github/actions/packages
