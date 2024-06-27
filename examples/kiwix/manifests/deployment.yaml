@@ -15,6 +15,7 @@ spec:
         app: kiwix-serve
     spec:
       # Kiwix can hot-load files from the filesystem, but if your application cannot, this example shows how you can use an initContainer to bootstrap the injected files.
+      # It's necessary to include the ###ZARF_DATA_INJECTION_MARKER### somewhere in the podspec, otherwise data injections will not occur.
       initContainers:
         - name: data-loader
           image: alpine:3.18
