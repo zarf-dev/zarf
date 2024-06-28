@@ -38,7 +38,7 @@ func ImageTransformHost(targetHost, srcReference string) (string, error) {
 	// Generate a crc32 hash of the image host + name
 	checksum := helpers.GetCRCHash(image.Name)
 
-	// If this image is specified by digest then don't add a checksum it as it will already be a specific SHA
+	// If this image is specified by digest then don't add a checksum as it will already be a specific SHA
 	if image.Digest != "" {
 		return fmt.Sprintf("%s/%s@%s", targetHost, image.Path, image.Digest), nil
 	}
@@ -63,6 +63,8 @@ func ImageTransformHostWithoutChecksum(targetHost, srcReference string) (string,
 
 // ParseImageRef parses a source reference into an Image struct
 func ParseImageRef(srcReference string) (out Image, err error) {
+	srcReference = strings.TrimPrefix(srcReference, helpers.OCIURLPrefix)
+
 	ref, err := reference.ParseAnyReference(srcReference)
 	if err != nil {
 		return out, err

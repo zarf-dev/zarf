@@ -9,12 +9,18 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
+	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
 var inClusterCredentialArgs = []string{
@@ -31,6 +37,7 @@ type ExtInClusterTestSuite struct {
 }
 
 func (suite *ExtInClusterTestSuite) SetupSuite() {
+	fmt.Println("start: current time is ", time.Now())
 	suite.Assertions = require.New(suite.T())
 
 	// Install a gitea chart to the k8s cluster to act as the 'remote' git server
@@ -49,14 +56,29 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 	suite.NoError(err, "unable to install the docker-registry chart")
 
 	// Verify the registry and gitea helm charts installed successfully
-	registryWaitCmd := []string{"wait", "deployment", "-n=external-registry", "external-registry-docker-registry", "--for", "condition=Available=True", "--timeout=5s"}
-	registryErrStr := "unable to verify the docker-registry chart installed successfully"
-	giteaWaitCmd := []string{"wait", "pod", "-n=git-server", "gitea-0", "--for", "condition=Ready=True", "--timeout=5s"}
-	giteaErrStr := "unable to verify the gitea chart installed successfully"
-	success := verifyKubectlWaitSuccess(suite.T(), 2, registryWaitCmd, registryErrStr)
-	suite.True(success, registryErrStr)
-	success = verifyKubectlWaitSuccess(suite.T(), 3, giteaWaitCmd, giteaErrStr)
-	suite.True(success, giteaErrStr)
+	c, err := cluster.NewCluster()
+	suite.NoError(err)
+	objs := []object.ObjMetadata{
+		{
+			GroupKind: schema.GroupKind{
+				Group: "apps",
+				Kind:  "Deployment",
+			},
+			Namespace: "external-registry",
+			Name:      "external-registry-docker-registry",
+		},
+		{
+			GroupKind: schema.GroupKind{
+				Kind: "Pod",
+			},
+			Namespace: "git-server",
+			Name:      "gitea-0",
+		},
+	}
+	waitCtx, waitCancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer waitCancel()
+	err = pkgkubernetes.WaitForReady(waitCtx, c.Watcher, objs)
+	suite.NoError(err)
 }
 
 func (suite *ExtInClusterTestSuite) TearDownSuite() {
@@ -123,17 +145,47 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	initArgs = append(initArgs, inClusterCredentialArgs...)
 	err := exec.CmdWithPrint(zarfBinPath, initArgs...)
 	suite.NoError(err, "unable to initialize the k8s server with zarf")
+	temp := suite.T().TempDir()
+	defer os.Remove(temp)
+	createPodInfoPackageWithInsecureSources(suite.T(), temp)
 
 	// Deploy the flux example package
-	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-podinfo-flux-amd64.tar.zst", "--confirm"}
+	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 
-	// Verify flux was able to pull from the 'external' repository
-	podinfoWaitCmd := []string{"wait", "deployment", "-n=podinfo", "podinfo", "--for", "condition=Available=True", "--timeout=3s"}
-	errorStr := "unable to verify flux deployed the podinfo example"
-	success := verifyKubectlWaitSuccess(suite.T(), 2, podinfoWaitCmd, errorStr)
-	suite.True(success, errorStr)
+	c, err := cluster.NewCluster()
+	suite.NoError(err)
+	objs := []object.ObjMetadata{
+		{
+			GroupKind: schema.GroupKind{
+				Group: "apps",
+				Kind:  "Deployment",
+			},
+			Namespace: "podinfo-git",
+			Name:      "podinfo",
+		},
+		{
+			GroupKind: schema.GroupKind{
+				Group: "apps",
+				Kind:  "Deployment",
+			},
+			Namespace: "podinfo-helm",
+			Name:      "podinfo",
+		},
+		{
+			GroupKind: schema.GroupKind{
+				Group: "apps",
+				Kind:  "Deployment",
+			},
+			Namespace: "podinfo-oci",
+			Name:      "podinfo",
+		},
+	}
+	waitCtx, waitCancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer waitCancel()
+	err = pkgkubernetes.WaitForReady(waitCtx, c.Watcher, objs)
+	suite.NoError(err)
 
 	_, _, err = exec.CmdWithContext(context.TODO(), exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")
 	suite.NoError(err, "unable to teardown zarf")

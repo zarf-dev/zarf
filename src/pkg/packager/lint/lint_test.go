@@ -9,136 +9,239 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 )
 
-const badZarfPackage = `
+func TestZarfSchema(t *testing.T) {
+	t.Parallel()
+	zarfSchema, err := os.ReadFile("../../../../zarf.schema.json")
+	require.NoError(t, err)
+
+	tests := []struct {
+		name                  string
+		pkg                   types.ZarfPackage
+		expectedSchemaStrings []string
+	}{
+		{
+			name: "valid package",
+			pkg: types.ZarfPackage{
+				Kind: types.ZarfInitConfig,
+				Metadata: types.ZarfMetadata{
+					Name: "valid-name",
+				},
+				Components: []types.ZarfComponent{
+					{
+						Name: "valid-comp",
+					},
+				},
+			},
+			expectedSchemaStrings: nil,
+		},
+		{
+			name: "no comp or kind",
+			pkg: types.ZarfPackage{
+				Metadata: types.ZarfMetadata{
+					Name: "no-comp-or-kind",
+				},
+				Components: []types.ZarfComponent{},
+			},
+			expectedSchemaStrings: []string{
+				"kind: kind must be one of the following: \"ZarfInitConfig\", \"ZarfPackageConfig\"",
+				"components: Array must have at least 1 items",
+			},
+		},
+		{
+			name: "invalid package",
+			pkg: types.ZarfPackage{
+				Kind: types.ZarfInitConfig,
+				Metadata: types.ZarfMetadata{
+					Name: "-invalid-name",
+				},
+				Components: []types.ZarfComponent{
+					{
+						Name: "invalid-name",
+						Only: types.ZarfComponentOnlyTarget{
+							LocalOS: "unsupportedOS",
+						},
+						Import: types.ZarfComponentImport{
+							Path: fmt.Sprintf("start%send", types.ZarfPackageTemplatePrefix),
+							URL:  fmt.Sprintf("oci://start%send", types.ZarfPackageTemplatePrefix),
+						},
+					},
+					{
+						Name: "actions",
+						Actions: types.ZarfComponentActions{
+							OnCreate: types.ZarfComponentActionSet{
+								Before: []types.ZarfComponentAction{
+									{
+										Cmd:          "echo 'invalid setVariable'",
+										SetVariables: []variables.Variable{{Name: "not_uppercase"}},
+									},
+								},
+							},
+							OnRemove: types.ZarfComponentActionSet{
+								OnSuccess: []types.ZarfComponentAction{
+									{
+										Cmd:          "echo 'invalid setVariable'",
+										SetVariables: []variables.Variable{{Name: "not_uppercase"}},
+									},
+								},
+							},
+						},
+					},
+				},
+				Variables: []variables.InteractiveVariable{
+					{
+						Variable: variables.Variable{Name: "not_uppercase"},
+					},
+				},
+				Constants: []variables.Constant{
+					{
+						Name: "not_uppercase",
+					},
+				},
+			},
+			expectedSchemaStrings: []string{
+				"metadata.name: Does not match pattern '^[a-z0-9][a-z0-9\\-]*$'",
+				"variables.0.name: Does not match pattern '^[A-Z0-9_]+$'",
+				"constants.0.name: Does not match pattern '^[A-Z0-9_]+$'",
+				"components.0.only.localOS: components.0.only.localOS must be one of the following: \"linux\", \"darwin\", \"windows\"",
+				"components.1.actions.onCreate.before.0.setVariables.0.name: Does not match pattern '^[A-Z0-9_]+$'",
+				"components.1.actions.onRemove.onSuccess.0.setVariables.0.name: Does not match pattern '^[A-Z0-9_]+$'",
+				"components.0.import.path: Must not validate the schema (not)",
+				"components.0.import.url: Must not validate the schema (not)",
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			findings, err := runSchema(zarfSchema, tt.pkg)
+			require.NoError(t, err)
+			var schemaStrings []string
+			for _, schemaErr := range findings {
+				schemaStrings = append(schemaStrings, schemaErr.String())
+			}
+			require.ElementsMatch(t, tt.expectedSchemaStrings, schemaStrings)
+		})
+	}
+
+	t.Run("validate schema fail with errors not possible from object", func(t *testing.T) {
+		t.Parallel()
+		// When we want to test the absence of a field, an incorrect type, or an extra field
+		// we can't do it through a struct since non pointer fields will have a zero value of their type
+		const badZarfPackage = `
 kind: ZarfInitConfig
+extraField: whatever
 metadata:
-  name: init
+  name: invalid
   description: Testing bad yaml
 
 components:
-- name: first-test-component
-  import:
-    not-path: packages/distros/k3s
 - name: import-test
   import:
     path: 123123
+  charts:
+  - noWait: true
+  manifests:
+  - namespace: no-name-for-manifest
 `
+		var unmarshalledYaml interface{}
+		err := goyaml.Unmarshal([]byte(badZarfPackage), &unmarshalledYaml)
+		require.NoError(t, err)
+		schemaErrs, err := runSchema(zarfSchema, unmarshalledYaml)
+		require.NoError(t, err)
+		var schemaStrings []string
+		for _, schemaErr := range schemaErrs {
+			schemaStrings = append(schemaStrings, schemaErr.String())
+		}
+		expectedSchemaStrings := []string{
+			"(root): Additional property extraField is not allowed",
+			"components.0.import.path: Invalid type. Expected: string, given: integer",
+			"components.0.charts.0: name is required",
+			"components.0.manifests.0: name is required",
+		}
 
-const goodZarfPackage = `
-x-name: &name good-zarf-package
+		require.ElementsMatch(t, expectedSchemaStrings, schemaStrings)
+	})
 
-kind: ZarfPackageConfig
-metadata:
-  name: *name
-  x-description: Testing good yaml with yaml extension
-
-components:
-  - name: baseline
-    required: true
-    x-foo: bar
-
-`
-
-func readAndUnmarshalYaml[T interface{}](t *testing.T, yamlString string) T {
-	t.Helper()
-	var unmarshalledYaml T
-	err := goyaml.Unmarshal([]byte(yamlString), &unmarshalledYaml)
-	if err != nil {
-		t.Errorf("error unmarshalling yaml: %v", err)
-	}
-	return unmarshalledYaml
+	t.Run("test schema findings is created as expected", func(t *testing.T) {
+		t.Parallel()
+		findings, err := validateSchema(zarfSchema, types.ZarfPackage{
+			Kind: types.ZarfInitConfig,
+			Metadata: types.ZarfMetadata{
+				Name: "invalid",
+			},
+		})
+		require.NoError(t, err)
+		expected := []types.PackageFinding{
+			{
+				Description: "Invalid type. Expected: array, given: null",
+				Severity:    types.SevErr,
+				YqPath:      ".components",
+			},
+		}
+		require.ElementsMatch(t, expected, findings)
+	})
 }
 
-func TestValidateSchema(t *testing.T) {
-	getZarfSchema := func(t *testing.T) []byte {
-		t.Helper()
-		file, err := os.ReadFile("../../../../zarf.schema.json")
-		if err != nil {
-			t.Errorf("error reading file: %v", err)
-		}
-		return file
-	}
-
-	t.Run("validate schema success", func(t *testing.T) {
-		unmarshalledYaml := readAndUnmarshalYaml[interface{}](t, goodZarfPackage)
-		validator := Validator{untypedZarfPackage: unmarshalledYaml, jsonSchema: getZarfSchema(t)}
-		err := validateSchema(&validator)
-		require.NoError(t, err)
-		require.Empty(t, validator.findings)
-	})
-
-	t.Run("validate schema fail", func(t *testing.T) {
-		unmarshalledYaml := readAndUnmarshalYaml[interface{}](t, badZarfPackage)
-		validator := Validator{untypedZarfPackage: unmarshalledYaml, jsonSchema: getZarfSchema(t)}
-		err := validateSchema(&validator)
-		require.NoError(t, err)
-		config.NoColor = true
-		require.Equal(t, "Additional property not-path is not allowed", validator.findings[0].String())
-		require.Equal(t, "Invalid type. Expected: string, given: integer", validator.findings[1].String())
-	})
-
-	t.Run("Template in component import success", func(t *testing.T) {
-		unmarshalledYaml := readAndUnmarshalYaml[types.ZarfPackage](t, goodZarfPackage)
-		validator := Validator{typedZarfPackage: unmarshalledYaml}
-		for _, component := range validator.typedZarfPackage.Components {
-			lintComponent(&validator, &composer.Node{ZarfComponent: component})
-		}
-		require.Empty(t, validator.findings)
-	})
-
-	t.Run("Path template in component import failure", func(t *testing.T) {
-		pathVar := "###ZARF_PKG_TMPL_PATH###"
-		pathComponent := types.ZarfComponent{Import: types.ZarfComponentImport{Path: pathVar}}
-		validator := Validator{typedZarfPackage: types.ZarfPackage{Components: []types.ZarfComponent{pathComponent}}}
-		checkForVarInComponentImport(&validator, &composer.Node{ZarfComponent: pathComponent})
-		require.Equal(t, pathVar, validator.findings[0].item)
-	})
-
-	t.Run("OCI template in component import failure", func(t *testing.T) {
-		ociPathVar := "oci://###ZARF_PKG_TMPL_PATH###"
-		URLComponent := types.ZarfComponent{Import: types.ZarfComponentImport{URL: ociPathVar}}
-		validator := Validator{typedZarfPackage: types.ZarfPackage{Components: []types.ZarfComponent{URLComponent}}}
-		checkForVarInComponentImport(&validator, &composer.Node{ZarfComponent: URLComponent})
-		require.Equal(t, ociPathVar, validator.findings[0].item)
-	})
+func TestValidateComponent(t *testing.T) {
+	t.Parallel()
 
 	t.Run("Unpinnned repo warning", func(t *testing.T) {
-		validator := Validator{}
+		t.Parallel()
 		unpinnedRepo := "https://github.com/defenseunicorns/zarf-public-test.git"
 		component := types.ZarfComponent{Repos: []string{
 			unpinnedRepo,
-			"https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1"}}
-		checkForUnpinnedRepos(&validator, &composer.Node{ZarfComponent: component})
-		require.Equal(t, unpinnedRepo, validator.findings[0].item)
-		require.Len(t, validator.findings, 1)
+			"https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1",
+		}}
+		findings := checkForUnpinnedRepos(component, 0)
+		expected := []types.PackageFinding{
+			{
+				Item:        unpinnedRepo,
+				Description: "Unpinned repository",
+				Severity:    types.SevWarn,
+				YqPath:      ".components.[0].repos.[0]",
+			},
+		}
+		require.Equal(t, expected, findings)
 	})
 
 	t.Run("Unpinnned image warning", func(t *testing.T) {
-		validator := Validator{}
+		t.Parallel()
 		unpinnedImage := "registry.com:9001/whatever/image:1.0.0"
 		badImage := "badimage:badimage@@sha256:3fbc632167424a6d997e74f5"
 		component := types.ZarfComponent{Images: []string{
 			unpinnedImage,
 			"busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
-			badImage}}
-		checkForUnpinnedImages(&validator, &composer.Node{ZarfComponent: component})
-		require.Equal(t, unpinnedImage, validator.findings[0].item)
-		require.Equal(t, badImage, validator.findings[1].item)
-		require.Len(t, validator.findings, 2)
+			badImage,
+		}}
+		findings := checkForUnpinnedImages(component, 0)
+		expected := []types.PackageFinding{
+			{
+				Item:        unpinnedImage,
+				Description: "Image not pinned with digest",
+				Severity:    types.SevWarn,
+				YqPath:      ".components.[0].images.[0]",
+			},
+			{
+				Item:        badImage,
+				Description: "Failed to parse image reference",
+				Severity:    types.SevWarn,
+				YqPath:      ".components.[0].images.[2]",
+			},
+		}
+		require.Equal(t, expected, findings)
 	})
 
 	t.Run("Unpinnned file warning", func(t *testing.T) {
-		validator := Validator{}
+		t.Parallel()
 		fileURL := "http://example.com/file.zip"
 		localFile := "local.txt"
 		zarfFiles := []types.ZarfFile{
@@ -154,12 +257,21 @@ func TestValidateSchema(t *testing.T) {
 			},
 		}
 		component := types.ZarfComponent{Files: zarfFiles}
-		checkForUnpinnedFiles(&validator, &composer.Node{ZarfComponent: component})
-		require.Equal(t, fileURL, validator.findings[0].item)
-		require.Len(t, validator.findings, 1)
+		findings := checkForUnpinnedFiles(component, 0)
+		expectedErr := []types.PackageFinding{
+			{
+				Item:        fileURL,
+				Description: "No shasum for remote file",
+				Severity:    types.SevWarn,
+				YqPath:      ".components.[0].files.[0]",
+			},
+		}
+		require.Equal(t, expectedErr, findings)
+		require.Len(t, findings, 1)
 	})
 
 	t.Run("Wrap standalone numbers in bracket", func(t *testing.T) {
+		t.Parallel()
 		input := "components12.12.import.path"
 		expected := ".components12.[12].import.path"
 		actual := makeFieldPathYqCompat(input)
@@ -167,29 +279,26 @@ func TestValidateSchema(t *testing.T) {
 	})
 
 	t.Run("root doesn't change", func(t *testing.T) {
+		t.Parallel()
 		input := "(root)"
 		actual := makeFieldPathYqCompat(input)
 		require.Equal(t, input, actual)
 	})
 
-	t.Run("Test composable components", func(t *testing.T) {
-		pathVar := "fake-path"
-		unpinnedImage := "unpinned:latest"
-		pathComponent := types.ZarfComponent{
-			Import: types.ZarfComponentImport{Path: pathVar},
-			Images: []string{unpinnedImage}}
-		validator := Validator{
-			typedZarfPackage: types.ZarfPackage{Components: []types.ZarfComponent{pathComponent},
-				Metadata: types.ZarfMetadata{Name: "test-zarf-package"}}}
+	t.Run("Test composable components with bad path", func(t *testing.T) {
+		t.Parallel()
+		zarfPackage := types.ZarfPackage{
+			Components: []types.ZarfComponent{
+				{
+					Import: types.ZarfComponentImport{Path: "bad-path"},
+				},
+			},
+			Metadata: types.ZarfMetadata{Name: "test-zarf-package"},
+		}
 
 		createOpts := types.ZarfCreateOptions{Flavor: "", BaseDir: "."}
-		lintComponents(context.Background(), &validator, &createOpts)
-		// Require.contains rather than equals since the error message changes from linux to windows
-		require.Contains(t, validator.findings[0].description, fmt.Sprintf("open %s", filepath.Join("fake-path", "zarf.yaml")))
-		require.Equal(t, ".components.[0].import.path", validator.findings[0].yqPath)
-		require.Equal(t, ".", validator.findings[0].packageRelPath)
-		require.Equal(t, unpinnedImage, validator.findings[1].item)
-		require.Equal(t, ".", validator.findings[1].packageRelPath)
+		_, err := lintComponents(context.Background(), zarfPackage, createOpts)
+		require.Error(t, err)
 	})
 
 	t.Run("isImagePinned", func(t *testing.T) {
