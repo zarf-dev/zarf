@@ -159,8 +159,11 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			continue
 		}
 
-		// Try to get a valid existing secret
-		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
+		// Create the secret
+		validRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
+		if err != nil {
+			return err
+		}
 		// TODO: Refactor as error is not checked instead of checking for not found error.
 		currentRegistrySecret, _ := c.Clientset.CoreV1().Secrets(name).Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
 		sameSecretData := maps.EqualFunc(currentRegistrySecret.Data, validRegistrySecret.Data, func(v1, v2 []byte) bool { return bytes.Equal(v1, v2) })

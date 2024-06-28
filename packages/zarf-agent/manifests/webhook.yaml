@@ -48,6 +48,92 @@ webhooks:
       - "v1"
       - "v1beta1"
     sideEffects: None
+  - name: agent-flux-ocirepo.zarf.dev
+    namespaceSelector:
+      matchExpressions:
+        # Ensure we don't mess with kube-system
+        - key: "kubernetes.io/metadata.name"
+          operator: NotIn
+          values:
+            - "kube-system"
+        # Allow ignoring whole namespaces
+        - key: zarf.dev/agent
+          operator: NotIn
+          values:
+            - "skip"
+            - "ignore"
+    objectSelector:
+      matchExpressions:
+        # Always ignore specific resources if requested by annotation/label
+        - key: zarf.dev/agent
+          operator: NotIn
+          values:
+            - "skip"
+            - "ignore"
+    clientConfig:
+      service:
+        name: agent-hook
+        namespace: zarf
+        path: "/mutate/flux-ocirepository"
+      caBundle: "###ZARF_AGENT_CA###"
+    rules:
+      - operations:
+          - "CREATE"
+          - "UPDATE"
+        apiGroups:
+          - "source.toolkit.fluxcd.io"
+        apiVersions:
+          - "*"
+        resources:
+          - "ocirepositories"
+    admissionReviewVersions:
+      - "v1"
+      - "v1beta1"
+    sideEffects: None
+  - name: agent-flux-helmrepo.zarf.dev
+    namespaceSelector:
+      matchExpressions:
+        # Ensure we don't mess with kube-system
+        - key: "kubernetes.io/metadata.name"
+          operator: NotIn
+          values:
+            - "kube-system"
+        # Allow ignoring whole namespaces
+        - key: zarf.dev/agent
+          operator: NotIn
+          values:
+            - "skip"
+            - "ignore"
+    objectSelector:
+      matchExpressions:
+        # Always ignore specific resources if requested by annotation/label
+        - key: zarf.dev/agent
+          operator: NotIn
+          values:
+            - "skip"
+            - "ignore"
+    clientConfig:
+      service:
+        name: agent-hook
+        namespace: zarf
+        path: "/mutate/flux-helmrepository"
+      caBundle: "###ZARF_AGENT_CA###"
+    rules:
+      - operations:
+          - "CREATE"
+          - "UPDATE"
+        apiGroups:
+          - "source.toolkit.fluxcd.io"
+        apiVersions:
+          # While v1beta1 doesn't have the `type: oci` and is unsupported we still want to run mutations
+          # so that we can show a warning in the logs
+          - "*"
+        resources:
+          - "helmrepositories"
+    admissionReviewVersions:
+      - "v1"
+      - "v1beta1"
+    sideEffects: None
   - name: agent-flux-gitrepo.zarf.dev
     namespaceSelector:
       matchExpressions:

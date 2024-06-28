@@ -2,7 +2,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: podinfo
+  name: podinfo-git
   namespace: flux-system
 spec:
   interval: 5m0s
@@ -11,4 +11,4 @@ spec:
   sourceRef:
     kind: GitRepository
     name: podinfo
-  targetNamespace: podinfo
+  targetNamespace: podinfo-git
