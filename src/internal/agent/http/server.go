@@ -18,12 +18,12 @@ import (
 )
 
 // NewAdmissionServer creates a http.Server for the mutating webhook admission handler.
-func NewAdmissionServer(ctx context.Context, port string) *http.Server {
+func NewAdmissionServer(ctx context.Context, port string) (*http.Server, error) {
 	message.Debugf("http.NewAdmissionServer(%s)", port)
 
 	c, err := cluster.NewCluster()
 	if err != nil {
-		message.Fatalf(err, err.Error())
+		return nil, err
 	}
 
 	// Routers
@@ -46,11 +46,12 @@ func NewAdmissionServer(ctx context.Context, port string) *http.Server {
 	mux.Handle("/mutate/argocd-repository", admissionHandler.Serve(argocdRepositoryMutation))
 	mux.Handle("/metrics", promhttp.Handler())
 
-	return &http.Server{
+	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%s", port),
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second, // Set ReadHeaderTimeout to avoid Slowloris attacks
 	}
+	return srv, nil
 }
 
 // NewProxyServer creates and returns an http proxy server.

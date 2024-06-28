@@ -54,7 +54,10 @@ var packageCreateCmd = &cobra.Command{
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient, err := packager.New(&pkgConfig)
+		if err != nil {
+			return err
+		}
 		defer pkgClient.ClearTempPaths()
 
 		if err := pkgClient.Create(cmd.Context()); err != nil {
@@ -81,7 +84,10 @@ var packageDeployCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient, err := packager.New(&pkgConfig)
+		if err != nil {
+			return err
+		}
 		defer pkgClient.ClearTempPaths()
 
 		ctx := cmd.Context()
@@ -106,7 +112,10 @@ var packageMirrorCmd = &cobra.Command{
 			return err
 		}
 		pkgConfig.PkgOpts.PackageSource = packageSource
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient, err := packager.New(&pkgConfig)
+		if err != nil {
+			return err
+		}
 		defer pkgClient.ClearTempPaths()
 		if err := pkgClient.Mirror(cmd.Context()); err != nil {
 			return fmt.Errorf("failed to mirror package: %w", err)
@@ -131,7 +140,10 @@ var packageInspectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
+		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
+		if err != nil {
+			return err
+		}
 		defer pkgClient.ClearTempPaths()
 		if err := pkgClient.Inspect(cmd.Context()); err != nil {
 			return fmt.Errorf("failed to inspect package: %w", err)
@@ -200,7 +212,10 @@ var packageRemoveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
+		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
+		if err != nil {
+			return err
+		}
 		defer pkgClient.ClearTempPaths()
 		if err := pkgClient.Remove(cmd.Context()); err != nil {
 			return fmt.Errorf("unable to remove the package with an error of: %w", err)
@@ -238,7 +253,10 @@ var packagePublishCmd = &cobra.Command{
 
 		pkgConfig.PublishOpts.PackageDestination = ref.String()
 
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient, err := packager.New(&pkgConfig)
+		if err != nil {
+			return err
+		}
 		defer pkgClient.ClearTempPaths()
 
 		if err := pkgClient.Publish(cmd.Context()); err != nil {
@@ -255,7 +273,10 @@ var packagePullCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pkgConfig.PkgOpts.PackageSource = args[0]
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient, err := packager.New(&pkgConfig)
+		if err != nil {
+			return err
+		}
 		defer pkgClient.ClearTempPaths()
 		if err := pkgClient.Pull(cmd.Context()); err != nil {
 			return fmt.Errorf("failed to pull package: %w", err)
