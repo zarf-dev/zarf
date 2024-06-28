@@ -20,8 +20,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/cli-utils/pkg/object"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
@@ -201,6 +204,31 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 			}
 
 			return deployedComponents, fmt.Errorf("unable to deploy component %q: %w", component.Name, deployErr)
+		}
+
+		// Run health checks if configured.
+		if len(component.HealthChecks) > 0 {
+			objs := []object.ObjMetadata{}
+			for _, hc := range component.HealthChecks {
+				gv, err := schema.ParseGroupVersion(hc.APIVersion)
+				if err != nil {
+					return nil, err
+				}
+				obj := object.ObjMetadata{
+					GroupKind: schema.GroupKind{
+						Group: gv.Group,
+						Kind:  hc.Kind,
+					},
+					Namespace: hc.Namespace,
+					Name:      hc.Name,
+				}
+				objs = append(objs, obj)
+			}
+			err := pkgkubernetes.WaitForReady(ctx, nil, objs)
+			if err != nil {
+				deployedComponents[idx].Status = types.ComponentStatusFailed
+				return deployedComponents, err
+			}
 		}
 
 		// Update the package secret to indicate that we successfully deployed this component

@@ -64,6 +64,9 @@ type ZarfComponent struct {
 
 	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
 	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
+
+	// List of resources to health check after deployment
+	HealthChecks []NamespacedObjectKindReference `json:"healthChecks,omitempty" jsonschema:"description=List of resources to health check after deployment"`
 }
 
 // RequiresCluster returns if the component requires a cluster connection to deploy
@@ -239,4 +242,12 @@ type ZarfComponentImport struct {
 	Path string `json:"path,omitempty" jsonschema:"description=The relative path to a directory containing a zarf.yaml to import from"`
 	// For further explanation see https://regex101.com/r/nxX8vx/1
 	URL string `json:"url,omitempty" jsonschema:"description=[beta] The URL to a Zarf package to import via OCI,pattern=^oci://.*$"`
+}
+
+// NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version.
+type NamespacedObjectKindReference struct {
+	APIVersion string `json:"apiVersion" jsonschema:"description=API Version of the resource"`
+	Kind       string `json:"kind" jsonschema:"description=Kind of the resource"`
+	Namespace  string `json:"namespace" jsonschema:"description=Namespace of the resource"`
+	Name       string `json:"name" jsonschema:"description=Name of the resource"`
 }
