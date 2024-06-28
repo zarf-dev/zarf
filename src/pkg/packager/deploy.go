@@ -472,7 +472,7 @@ func (p *Packager) setupState(ctx context.Context) (err error) {
 			return nil
 		}()
 		if err != nil {
-			spinner.Fatalf(err, "Unable to create the zarf namespace")
+			return fmt.Errorf("unable to create the Zarf namespace: %w", err)
 		}
 	}
 

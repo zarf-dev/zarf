@@ -468,8 +468,10 @@ func TestMergeZarfStateArtifact(t *testing.T) {
 func TestMergeZarfStateAgent(t *testing.T) {
 	t.Parallel()
 
+	agentTLS, err := pki.GeneratePKI("example.com")
+	require.NoError(t, err)
 	oldState := &types.ZarfState{
-		AgentTLS: pki.GeneratePKI("example.com"),
+		AgentTLS: agentTLS,
 	}
 	newState, err := MergeZarfState(oldState, types.ZarfInitOptions{}, []string{message.AgentKey})
 	require.NoError(t, err)

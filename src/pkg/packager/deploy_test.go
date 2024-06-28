@@ -212,7 +212,8 @@ func TestGenerateValuesOverrides(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			p := NewOrDie(&types.PackagerConfig{DeployOpts: tt.deployOpts}, WithSource(&sources.TarballSource{}))
+			p, err := New(&types.PackagerConfig{DeployOpts: tt.deployOpts}, WithSource(&sources.TarballSource{}))
+			require.NoError(t, err)
 			for k, v := range tt.setVariables {
 				p.variableConfig.SetVariable(k, v, false, false, variables.RawVariableType)
 			}

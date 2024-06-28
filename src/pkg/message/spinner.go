@@ -134,18 +134,3 @@ func (p *Spinner) Errorf(err error, format string, a ...any) {
 	Warnf(format, a...)
 	debugPrinter(2, err)
 }
-
-// Fatal calls message.Fatalf with the given error.
-func (p *Spinner) Fatal(err error) {
-	p.Fatalf(err, p.startText)
-}
-
-// Fatalf calls message.Fatalf with the given error and format.
-func (p *Spinner) Fatalf(err error, format string, a ...any) {
-	if p.spinner != nil {
-		p.spinner.RemoveWhenDone = true
-		_ = p.spinner.Stop()
-		activeSpinner = nil
-	}
-	Fatalf(err, format, a...)
-}
