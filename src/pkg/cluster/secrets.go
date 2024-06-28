@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"maps"
 
 	corev1 "k8s.io/api/core/v1"
@@ -33,25 +34,37 @@ type DockerConfigEntryWithAuth struct {
 }
 
 // GenerateRegistryPullCreds generates a secret containing the registry credentials.
-func (c *Cluster) GenerateRegistryPullCreds(namespace, name string, registryInfo types.RegistryInfo) *corev1.Secret {
+func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name string, registryInfo types.RegistryInfo) (*corev1.Secret, error) {
 	// Auth field must be username:password and base64 encoded
 	fieldValue := registryInfo.PullUsername + ":" + registryInfo.PullPassword
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
 
-	registry := registryInfo.Address
-	// Create the expected structure for the dockerconfigjson
 	dockerConfigJSON := DockerConfig{
 		Auths: DockerConfigEntry{
-			registry: DockerConfigEntryWithAuth{
+			// nodePort for zarf-docker-registry
+			registryInfo.Address: DockerConfigEntryWithAuth{
 				Auth: authEncodedValue,
 			},
 		},
 	}
 
+	serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	// Build zarf-docker-registry service address string
+	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
+	if err == nil {
+		kubeDNSRegistryURL := fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, port)
+		dockerConfigJSON.Auths[kubeDNSRegistryURL] = DockerConfigEntryWithAuth{
+			Auth: authEncodedValue,
+		}
+	}
+
 	// Convert to JSON
 	dockerConfigData, err := json.Marshal(dockerConfigJSON)
 	if err != nil {
-		message.WarnErrf(err, "Unable to marshal the .dockerconfigjson secret data for the image pull secret")
+		return nil, fmt.Errorf("Unable to marshal the .dockerconfigjson secret data for the image pull secret: %w", err)
 	}
 
 	secretDockerConfig := &corev1.Secret{
@@ -71,7 +84,7 @@ func (c *Cluster) GenerateRegistryPullCreds(namespace, name string, registryInfo
 			".dockerconfigjson": dockerConfigData,
 		},
 	}
-	return secretDockerConfig
+	return secretDockerConfig, nil
 }
 
 // GenerateGitPullCreds generates a secret containing the git credentials.
@@ -122,7 +135,11 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 				(namespace.Labels[AgentLabel] != "skip" && namespace.Labels[AgentLabel] != "ignore") {
 				spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
 
-				newRegistrySecret := c.GenerateRegistryPullCreds(namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
+				newRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
+				if err != nil {
+					message.WarnErrf(err, "Unable to generate registry creds")
+					continue
+				}
 				if !maps.EqualFunc(currentRegistrySecret.Data, newRegistrySecret.Data, func(v1, v2 []byte) bool { return bytes.Equal(v1, v2) }) {
 					_, err := c.Clientset.CoreV1().Secrets(newRegistrySecret.Namespace).Update(ctx, newRegistrySecret, metav1.UpdateOptions{})
 					if err != nil {
@@ -169,4 +186,21 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 		}
 		spinner.Success()
 	}
+}
+
+// GetServiceInfoFromRegistryAddress gets the service info for a registry address if it is a NodePort
+func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, stateRegistryAddress string) (string, error) {
+	serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	// If this is an internal service then we need to look it up and
+	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, stateRegistryAddress)
+	if err != nil {
+		message.Debugf("registry appears to not be a nodeport service, using original address %q", stateRegistryAddress)
+		return stateRegistryAddress, nil
+	}
+
+	return fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, port), nil
 }
