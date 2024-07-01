@@ -78,7 +78,11 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		state.Distro = distro
 
 		// Setup zarf agent PKI
-		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
+		agentTLS, err := pki.GeneratePKI(config.ZarfAgentHost)
+		if err != nil {
+			return err
+		}
+		state.AgentTLS = agentTLS
 
 		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
@@ -359,7 +363,11 @@ func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions
 		}
 	}
 	if slices.Contains(services, message.AgentKey) {
-		newState.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
+		agentTLS, err := pki.GeneratePKI(config.ZarfAgentHost)
+		if err != nil {
+			return nil, err
+		}
+		newState.AgentTLS = agentTLS
 	}
 
 	return &newState, nil

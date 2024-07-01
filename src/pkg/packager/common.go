@@ -117,24 +117,6 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 	return pkgr, nil
 }
 
-/*
-NewOrDie creates a new package instance with the provided config or throws a fatal error.
-
-Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
-*/
-func NewOrDie(config *types.PackagerConfig, mods ...Modifier) *Packager {
-	var (
-		err  error
-		pkgr *Packager
-	)
-
-	if pkgr, err = New(config, mods...); err != nil {
-		message.Fatalf(err, "Unable to setup the package config: %s", err.Error())
-	}
-
-	return pkgr
-}
-
 // setTempDirectory sets the temp directory for the packager.
 func (p *Packager) setTempDirectory(path string) error {
 	dir, err := utils.MakeTempDir(path)

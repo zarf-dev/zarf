@@ -50,7 +50,10 @@ var devDeployCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient, err := packager.New(&pkgConfig)
+		if err != nil {
+			return err
+		}
 		defer pkgClient.ClearTempPaths()
 
 		if err := pkgClient.DevDeploy(cmd.Context()); err != nil {
@@ -72,10 +75,13 @@ var devGenerateCmd = &cobra.Command{
 		pkgConfig.CreateOpts.BaseDir = "."
 		pkgConfig.FindImagesOpts.RepoHelmChartPath = pkgConfig.GenerateOpts.GitPath
 
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient, err := packager.New(&pkgConfig)
+		if err != nil {
+			return err
+		}
 		defer pkgClient.ClearTempPaths()
 
-		err := pkgClient.Generate()
+		err = pkgClient.Generate()
 		if err != nil {
 			return err
 		}
@@ -217,7 +223,10 @@ var devFindImagesCmd = &cobra.Command{
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient, err := packager.New(&pkgConfig)
+		if err != nil {
+			return err
+		}
 		defer pkgClient.ClearTempPaths()
 
 		if _, err := pkgClient.FindImages(cmd.Context()); err != nil {

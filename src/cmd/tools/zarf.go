@@ -233,7 +233,10 @@ var generatePKICmd = &cobra.Command{
 	Short:   lang.CmdToolsGenPkiShort,
 	Args:    cobra.ExactArgs(1),
 	RunE: func(_ *cobra.Command, args []string) error {
-		pki := pki.GeneratePKI(args[0], subAltNames...)
+		pki, err := pki.GeneratePKI(args[0], subAltNames...)
+		if err != nil {
+			return err
+		}
 		if err := os.WriteFile("tls.ca", pki.CA, helpers.ReadAllWriteUser); err != nil {
 			return err
 		}
