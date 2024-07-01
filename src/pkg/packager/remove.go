@@ -184,7 +184,7 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 	for _, chart := range helpers.Reverse(deployedComponent.InstalledCharts) {
 		spinner.Updatef("Uninstalling chart '%s' from the '%s' component", chart.ChartName, deployedComponent.Name)
 
-		helmCfg := helm.NewClusterOnly(p.cfg, p.variableConfig, p.state, p.cluster)
+		helmCfg := helm.NewClusterOnly(p.variableConfig, p.state, p.cluster, p.cfg.DeployOpts.AdoptExistingResources, p.cfg.Pkg.Metadata.YOLO)
 		if err := helmCfg.RemoveChart(chart.Namespace, chart.ChartName, spinner); err != nil {
 			if !errors.Is(err, driver.ErrReleaseNotFound) {
 				onFailure()

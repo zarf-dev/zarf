@@ -348,7 +348,7 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 	}
 
 	if hasCharts || hasManifests {
-		if charts, err = p.installChartAndManifests(componentPath, component); err != nil {
+		if charts, err = p.installChartAndManifests(ctx, componentPath, component); err != nil {
 			return charts, err
 		}
 	}
@@ -602,7 +602,7 @@ func (p *Packager) generateValuesOverrides(chart types.ZarfChart, componentName 
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
 		// Do not wait for the chart to be ready if data injections are present.
 		if len(component.DataInjections) > 0 {
@@ -629,16 +629,18 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 			componentPaths.Charts,
 			componentPaths.Values,
 			helm.WithDeployInfo(
-				p.cfg,
 				p.variableConfig,
 				p.state,
 				p.cluster,
 				valuesOverrides,
 				p.cfg.DeployOpts.Timeout,
-				p.cfg.PkgOpts.Retries),
+				p.cfg.PkgOpts.Retries,
+				p.cfg.DeployOpts.AdoptExistingResources,
+				p.cfg.Pkg.Metadata.YOLO,
+			),
 		)
 
-		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
+		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart(ctx)
 		if err != nil {
 			return installedCharts, err
 		}
@@ -678,20 +680,22 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 			p.cfg.Pkg.Metadata.Name,
 			component.Name,
 			helm.WithDeployInfo(
-				p.cfg,
 				p.variableConfig,
 				p.state,
 				p.cluster,
 				nil,
 				p.cfg.DeployOpts.Timeout,
-				p.cfg.PkgOpts.Retries),
+				p.cfg.PkgOpts.Retries,
+				p.cfg.DeployOpts.AdoptExistingResources,
+				p.cfg.Pkg.Metadata.YOLO,
+			),
 		)
 		if err != nil {
 			return installedCharts, err
 		}
 
 		// Install the chart.
-		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
+		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart(ctx)
 		if err != nil {
 			return installedCharts, err
 		}

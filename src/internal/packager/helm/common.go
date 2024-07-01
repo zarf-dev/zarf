@@ -30,10 +30,11 @@ type Helm struct {
 	chartPath  string
 	valuesPath string
 
-	cfg     *types.PackagerConfig
-	cluster *cluster.Cluster
-	timeout time.Duration
-	retries int
+	adoptExistingResources bool
+	yolo                   bool
+	cluster                *cluster.Cluster
+	timeout                time.Duration
+	retries                int
 
 	kubeVersion string
 
@@ -66,14 +67,15 @@ func New(chart types.ZarfChart, chartPath string, valuesPath string, mods ...Mod
 }
 
 // NewClusterOnly returns a new Helm config struct geared toward interacting with the cluster (not packages)
-func NewClusterOnly(cfg *types.PackagerConfig, variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster) *Helm {
+func NewClusterOnly(variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster, adoptExistingResources, yolo bool) *Helm {
 	return &Helm{
-		cfg:            cfg,
-		variableConfig: variableConfig,
-		state:          state,
-		cluster:        cluster,
-		timeout:        config.ZarfDefaultTimeout,
-		retries:        config.ZarfDefaultRetries,
+		adoptExistingResources: adoptExistingResources,
+		yolo:                   yolo,
+		variableConfig:         variableConfig,
+		state:                  state,
+		cluster:                cluster,
+		timeout:                config.ZarfDefaultTimeout,
+		retries:                config.ZarfDefaultRetries,
 	}
 }
 
@@ -137,9 +139,10 @@ func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName,
 }
 
 // WithDeployInfo adds the necessary information to deploy a given chart
-func WithDeployInfo(cfg *types.PackagerConfig, variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration, retries int) Modifier {
+func WithDeployInfo(variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration, retries int, adoptExistingResources, yolo bool) Modifier {
 	return func(h *Helm) {
-		h.cfg = cfg
+		h.adoptExistingResources = adoptExistingResources
+		h.yolo = yolo
 		h.variableConfig = variableConfig
 		h.state = state
 		h.cluster = cluster

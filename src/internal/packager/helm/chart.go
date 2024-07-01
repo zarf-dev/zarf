@@ -5,6 +5,7 @@
 package helm
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -30,7 +31,7 @@ import (
 )
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
-func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
+func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings, string, error) {
 	fromMessage := h.chart.URL
 	if fromMessage == "" {
 		fromMessage = "Zarf-generated helm chart"
@@ -52,7 +53,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		return nil, "", fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
-	postRender, err := h.newRenderer()
+	postRender, err := h.postRenderer(ctx)
 	if err != nil {
 		return nil, "", fmt.Errorf("unable to create helm renderer: %w", err)
 	}
@@ -126,7 +127,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 }
 
 // TemplateChart generates a helm template from a given chart.
-func (h *Helm) TemplateChart() (manifest string, chartValues chartutil.Values, err error) {
+func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues chartutil.Values, err error) {
 	message.Debugf("helm.TemplateChart()")
 	spinner := message.NewProgressSpinner("Templating helm chart %s", h.chart.Name)
 	defer spinner.Stop()
@@ -170,7 +171,7 @@ func (h *Helm) TemplateChart() (manifest string, chartValues chartutil.Values, e
 		return "", nil, fmt.Errorf("unable to load chart data: %w", err)
 	}
 
-	client.PostRenderer, err = h.newRenderer()
+	client.PostRenderer, err = h.postRenderer(ctx)
 	if err != nil {
 		return "", nil, fmt.Errorf("unable to create helm renderer: %w", err)
 	}
@@ -204,7 +205,7 @@ func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinn
 
 // UpdateReleaseValues updates values for a given chart release
 // (note: this only works on single-deep charts, charts with dependencies (like loki-stack) will not work)
-func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
+func (h *Helm) UpdateReleaseValues(ctx context.Context, updatedValues map[string]interface{}) error {
 	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.chart.ReleaseName)
 	defer spinner.Stop()
 
@@ -213,7 +214,7 @@ func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
 		return fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
-	postRender, err := h.newRenderer()
+	postRender, err := h.postRenderer(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to create helm renderer: %w", err)
 	}

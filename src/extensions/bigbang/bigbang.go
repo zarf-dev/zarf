@@ -5,6 +5,7 @@
 package bigbang
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -42,7 +43,7 @@ var tenMins = metav1.Duration{
 
 // Run mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
-func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	cfg := c.Extensions.BigBang
 	manifests := []types.ZarfManifest{}
 
@@ -106,7 +107,7 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 
 	// Template the chart so we can see what GitRepositories are being referenced in the
 	// manifests created with the provided Helm.
-	template, _, err := helmCfg.TemplateChart()
+	template, _, err := helmCfg.TemplateChart(ctx)
 	if err != nil {
 		return c, fmt.Errorf("unable to template Big Bang Chart: %w", err)
 	}
