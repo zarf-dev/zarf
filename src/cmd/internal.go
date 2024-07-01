@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/defenseunicorns/zarf/src/internal/agent"
 	"github.com/defenseunicorns/zarf/src/internal/packager/git"
+	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/invopop/jsonschema"
@@ -55,7 +57,7 @@ var httpProxyCmd = &cobra.Command{
 var genCLIDocs = &cobra.Command{
 	Use:   "gen-cli-docs",
 	Short: lang.CmdInternalGenerateCliDocsShort,
-	Run: func(_ *cobra.Command, _ []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		// Don't include the datestamp in the output
 		rootCmd.DisableAutoGenTag = true
 
@@ -114,10 +116,10 @@ var genCLIDocs = &cobra.Command{
 		}
 
 		if err := os.RemoveAll("./site/src/content/docs/commands"); err != nil {
-			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
+			return err
 		}
 		if err := os.Mkdir("./site/src/content/docs/commands", 0775); err != nil {
-			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
+			return err
 		}
 
 		var prependTitle = func(s string) string {
@@ -147,10 +149,10 @@ tableOfContents: false
 		}
 
 		if err := doc.GenMarkdownTreeCustom(rootCmd, "./site/src/content/docs/commands", prependTitle, linkHandler); err != nil {
-			message.Fatalf(lang.CmdInternalGenerateCliDocsErr, err.Error())
-		} else {
-			message.Success(lang.CmdInternalGenerateCliDocsSuccess)
+			return err
 		}
+		message.Success(lang.CmdInternalGenerateCliDocsSuccess)
+		return nil
 	},
 }
 
@@ -158,14 +160,15 @@ var genConfigSchemaCmd = &cobra.Command{
 	Use:     "gen-config-schema",
 	Aliases: []string{"gc"},
 	Short:   lang.CmdInternalConfigSchemaShort,
-	Run: func(_ *cobra.Command, _ []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		reflector := jsonschema.Reflector(jsonschema.Reflector{ExpandedStruct: true})
 		schema := reflector.Reflect(&types.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
-			message.Fatal(err, lang.CmdInternalConfigSchemaErr)
+			return fmt.Errorf("unable to generate the Zarf config schema: %w", err)
 		}
 		fmt.Print(string(output) + "\n")
+		return nil
 	},
 }
 
@@ -179,13 +182,14 @@ var genTypesSchemaCmd = &cobra.Command{
 	Use:     "gen-types-schema",
 	Aliases: []string{"gt"},
 	Short:   lang.CmdInternalTypesSchemaShort,
-	Run: func(_ *cobra.Command, _ []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		schema := jsonschema.Reflect(&zarfTypes{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
-			message.Fatal(err, lang.CmdInternalTypesSchemaErr)
+			return fmt.Errorf("unable to generate the JSON schema for the Zarf types DeployedPackage, ZarfPackage, and ZarfState: %w", err)
 		}
 		fmt.Print(string(output) + "\n")
+		return nil
 	},
 }
 
@@ -193,19 +197,23 @@ var createReadOnlyGiteaUser = &cobra.Command{
 	Use:   "create-read-only-gitea-user",
 	Short: lang.CmdInternalCreateReadOnlyGiteaUserShort,
 	Long:  lang.CmdInternalCreateReadOnlyGiteaUserLong,
-	Run: func(cmd *cobra.Command, _ []string) {
-		ctx := cmd.Context()
-
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
+		defer cancel()
+		c, err := cluster.NewClusterWithWait(timeoutCtx)
+		if err != nil {
+			return err
+		}
 		// Load the state so we can get the credentials for the admin git user
-		state, err := common.NewClusterOrDie(ctx).LoadZarfState(ctx)
+		state, err := c.LoadZarfState(cmd.Context())
 		if err != nil {
 			message.WarnErr(err, lang.ErrLoadState)
 		}
-
 		// Create the non-admin user
-		if err = git.New(state.GitServer).CreateReadOnlyUser(ctx); err != nil {
+		if err = git.New(state.GitServer).CreateReadOnlyUser(cmd.Context()); err != nil {
 			message.WarnErr(err, lang.CmdInternalCreateReadOnlyGiteaUserErr)
 		}
+		return nil
 	},
 }
 
@@ -213,9 +221,15 @@ var createPackageRegistryToken = &cobra.Command{
 	Use:   "create-artifact-registry-token",
 	Short: lang.CmdInternalArtifactRegistryGiteaTokenShort,
 	Long:  lang.CmdInternalArtifactRegistryGiteaTokenLong,
-	Run: func(cmd *cobra.Command, _ []string) {
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
+		defer cancel()
+		c, err := cluster.NewClusterWithWait(timeoutCtx)
+		if err != nil {
+			return err
+		}
+
 		ctx := cmd.Context()
-		c := common.NewClusterOrDie(ctx)
 		state, err := c.LoadZarfState(ctx)
 		if err != nil {
 			message.WarnErr(err, lang.ErrLoadState)
@@ -231,9 +245,10 @@ var createPackageRegistryToken = &cobra.Command{
 			state.ArtifactServer.PushToken = token.Sha1
 
 			if err := c.SaveZarfState(ctx, state); err != nil {
-				message.Fatal(err, err.Error())
+				return err
 			}
 		}
+		return nil
 	},
 }
 
@@ -257,11 +272,12 @@ var updateGiteaPVC = &cobra.Command{
 var isValidHostname = &cobra.Command{
 	Use:   "is-valid-hostname",
 	Short: lang.CmdInternalIsValidHostnameShort,
-	Run: func(_ *cobra.Command, _ []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		if valid := helpers.IsValidHostName(); !valid {
 			hostname, _ := os.Hostname()
-			message.Fatalf(nil, lang.CmdInternalIsValidHostnameErr, hostname)
+			return fmt.Errorf("the hostname %s is not valid. Ensure the hostname meets RFC1123 requirements https://www.rfc-editor.org/rfc/rfc1123.html", hostname)
 		}
+		return nil
 	},
 }
 
@@ -298,9 +314,6 @@ func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {
 	if cmd.PersistentFlags().Lookup(flagDummy) == nil {
 		var dummyStr string
 		cmd.PersistentFlags().StringVar(&dummyStr, flagDummy, "", "")
-		err := cmd.PersistentFlags().MarkHidden(flagDummy)
-		if err != nil {
-			message.Fatal(err, err.Error())
-		}
+		cmd.PersistentFlags().MarkHidden(flagDummy)
 	}
 }

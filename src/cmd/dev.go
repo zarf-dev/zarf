@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -39,7 +40,7 @@ var devDeployCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Short: lang.CmdDevDeployShort,
 	Long:  lang.CmdDevDeployLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 
 		v := common.GetViper()
@@ -53,8 +54,9 @@ var devDeployCmd = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		if err := pkgClient.DevDeploy(cmd.Context()); err != nil {
-			message.Fatalf(err, lang.CmdDevDeployErr, err.Error())
+			return fmt.Errorf("failed to dev deploy: %w", err)
 		}
+		return nil
 	},
 }
 
@@ -64,7 +66,7 @@ var devGenerateCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdDevGenerateShort,
 	Example: lang.CmdDevGenerateExample,
-	Run: func(_ *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
 		pkgConfig.GenerateOpts.Name = args[0]
 
 		pkgConfig.CreateOpts.BaseDir = "."
@@ -73,9 +75,11 @@ var devGenerateCmd = &cobra.Command{
 		pkgClient := packager.NewOrDie(&pkgConfig)
 		defer pkgClient.ClearTempPaths()
 
-		if err := pkgClient.Generate(); err != nil {
-			message.Fatalf(err, err.Error())
+		err := pkgClient.Generate()
+		if err != nil {
+			return err
 		}
+		return nil
 	},
 }
 
@@ -84,13 +88,13 @@ var devTransformGitLinksCmd = &cobra.Command{
 	Aliases: []string{"p"},
 	Short:   lang.CmdDevPatchGitShort,
 	Args:    cobra.ExactArgs(2),
-	Run: func(_ *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
 		host, fileName := args[0], args[1]
 
 		// Read the contents of the given file
 		content, err := os.ReadFile(fileName)
 		if err != nil {
-			message.Fatalf(err, lang.CmdDevPatchGitFileReadErr, fileName)
+			return fmt.Errorf("unable to read the file %s: %w", fileName, err)
 		}
 
 		pkgConfig.InitOpts.GitServer.Address = host
@@ -108,17 +112,17 @@ var devTransformGitLinksCmd = &cobra.Command{
 			Message: fmt.Sprintf(lang.CmdDevPatchGitOverwritePrompt, fileName),
 		}
 		if err := survey.AskOne(prompt, &confirm); err != nil {
-			message.Fatalf(nil, lang.CmdDevPatchGitOverwriteErr, err.Error())
+			return fmt.Errorf("confirm overwrite canceled: %w", err)
 		}
 
 		if confirm {
 			// Overwrite the file
 			err = os.WriteFile(fileName, []byte(processedText), helpers.ReadAllWriteUser)
 			if err != nil {
-				message.Fatal(err, lang.CmdDevPatchGitFileWriteErr)
+				return fmt.Errorf("unable to write the changes back to the file: %w", err)
 			}
 		}
-
+		return nil
 	},
 }
 
@@ -127,7 +131,9 @@ var devSha256SumCmd = &cobra.Command{
 	Aliases: []string{"s"},
 	Short:   lang.CmdDevSha256sumShort,
 	Args:    cobra.ExactArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
+		hashErr := errors.New("unable to compute the SHA256SUM hash")
+
 		fileName := args[0]
 
 		var tmp string
@@ -139,7 +145,7 @@ var devSha256SumCmd = &cobra.Command{
 
 			fileBase, err := helpers.ExtractBasePathFromURL(fileName)
 			if err != nil {
-				message.Fatalf(err, lang.CmdDevSha256sumHashErr, err.Error())
+				return errors.Join(hashErr, err)
 			}
 
 			if fileBase == "" {
@@ -148,13 +154,13 @@ var devSha256SumCmd = &cobra.Command{
 
 			tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
 			if err != nil {
-				message.Fatalf(err, lang.CmdDevSha256sumHashErr, err.Error())
+				return errors.Join(hashErr, err)
 			}
 
 			downloadPath := filepath.Join(tmp, fileBase)
 			err = utils.DownloadToFile(fileName, downloadPath, "")
 			if err != nil {
-				message.Fatalf(err, lang.CmdDevSha256sumHashErr, err.Error())
+				return errors.Join(hashErr, err)
 			}
 
 			fileName = downloadPath
@@ -166,7 +172,7 @@ var devSha256SumCmd = &cobra.Command{
 			if tmp == "" {
 				tmp, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
 				if err != nil {
-					message.Fatalf(err, lang.CmdDevSha256sumHashErr, err.Error())
+					return errors.Join(hashErr, err)
 				}
 				defer os.RemoveAll(tmp)
 			}
@@ -175,7 +181,7 @@ var devSha256SumCmd = &cobra.Command{
 
 			err = archiver.Extract(fileName, extractPath, tmp)
 			if err != nil {
-				message.Fatalf(err, lang.CmdDevSha256sumHashErr, err.Error())
+				return errors.Join(hashErr, err)
 			}
 
 			fileName = extractedFile
@@ -183,17 +189,16 @@ var devSha256SumCmd = &cobra.Command{
 
 		data, err = os.Open(fileName)
 		if err != nil {
-			message.Fatalf(err, lang.CmdDevSha256sumHashErr, err.Error())
+			return errors.Join(hashErr, err)
 		}
 		defer data.Close()
 
-		var hash string
-		hash, err = helpers.GetSHA256Hash(data)
+		hash, err := helpers.GetSHA256Hash(data)
 		if err != nil {
-			message.Fatalf(err, lang.CmdDevSha256sumHashErr, err.Error())
-		} else {
-			fmt.Println(hash)
+			return errors.Join(hashErr, err)
 		}
+		fmt.Println(hash)
+		return nil
 	},
 }
 
@@ -203,7 +208,7 @@ var devFindImagesCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdDevFindImagesShort,
 	Long:    lang.CmdDevFindImagesLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 
 		v := common.GetViper()
@@ -216,8 +221,9 @@ var devFindImagesCmd = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		if _, err := pkgClient.FindImages(cmd.Context()); err != nil {
-			message.Fatalf(err, lang.CmdDevFindImagesErr, err.Error())
+			return fmt.Errorf("unable to find images: %w", err)
 		}
+		return nil
 	},
 }
 
@@ -227,18 +233,18 @@ var devGenConfigFileCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdDevGenerateConfigShort,
 	Long:    lang.CmdDevGenerateConfigLong,
-	Run: func(_ *cobra.Command, args []string) {
-		fileName := "zarf-config.toml"
-
+	RunE: func(_ *cobra.Command, args []string) error {
 		// If a filename was provided, use that
+		fileName := "zarf-config.toml"
 		if len(args) > 0 {
 			fileName = args[0]
 		}
 
 		v := common.GetViper()
 		if err := v.SafeWriteConfigAs(fileName); err != nil {
-			message.Fatalf(err, lang.CmdDevGenerateConfigErr, fileName)
+			return fmt.Errorf("unable to write the config file %s, make sure the file doesn't already exist: %w", fileName, err)
 		}
+		return nil
 	},
 }
 
@@ -285,14 +291,8 @@ func init() {
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
 
-	err := devFindImagesCmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
-	if err != nil {
-		message.Fatal(err, err.Error())
-	}
-	err = devFindImagesCmd.Flags().MarkHidden("set")
-	if err != nil {
-		message.Fatal(err, err.Error())
-	}
+	devFindImagesCmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
+	devFindImagesCmd.Flags().MarkHidden("set")
 	devFindImagesCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
@@ -340,16 +340,7 @@ func bindDevGenerateFlags(_ *viper.Viper) {
 	generateFlags.StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "", "Output directory for the generated zarf.yaml")
 	generateFlags.StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
-	err := devGenerateCmd.MarkFlagRequired("url")
-	if err != nil {
-		message.Fatal(err, err.Error())
-	}
-	err = devGenerateCmd.MarkFlagRequired("version")
-	if err != nil {
-		message.Fatal(err, err.Error())
-	}
-	err = devGenerateCmd.MarkFlagRequired("output-directory")
-	if err != nil {
-		message.Fatal(err, err.Error())
-	}
+	devGenerateCmd.MarkFlagRequired("url")
+	devGenerateCmd.MarkFlagRequired("version")
+	devGenerateCmd.MarkFlagRequired("output-directory")
 }
