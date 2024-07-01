@@ -25,9 +25,9 @@ import (
 )
 
 // Publish publishes the package to a registry
-func (p *Packager) Publish(ctx context.Context) (err error) {
+func (p *Packager) Publish(ctx context.Context, packageDestination, signingKeyPath, signingKeyPassword string) (err error) {
 	_, isOCISource := p.source.(*sources.OCISource)
-	if isOCISource && p.cfg.PublishOpts.SigningKeyPath == "" {
+	if isOCISource && signingKeyPath == "" {
 		// oci --> oci is a special case, where we will use oci.CopyPackage so that we can transfer the package
 		// w/o layers touching the filesystem
 		srcRemote := p.source.(*sources.OCISource).Remote
@@ -35,11 +35,9 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 		parts := strings.Split(srcRemote.Repo().Reference.Repository, "/")
 		packageName := parts[len(parts)-1]
 
-		p.cfg.PublishOpts.PackageDestination = p.cfg.PublishOpts.PackageDestination + "/" + packageName
-
 		arch := config.GetArch()
 
-		dstRemote, err := zoci.NewRemote(p.cfg.PublishOpts.PackageDestination, oci.PlatformForArch(arch))
+		dstRemote, err := zoci.NewRemote(packageDestination+"/"+packageName, oci.PlatformForArch(arch))
 		if err != nil {
 			return err
 		}
@@ -52,7 +50,7 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 			return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 		}
 
-		sc := creator.NewSkeletonCreator(p.cfg.CreateOpts, p.cfg.PublishOpts)
+		sc := creator.NewSkeletonCreator(p.cfg.CreateOpts, signingKeyPath, signingKeyPassword)
 
 		if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
 			return err
@@ -78,13 +76,13 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 		}
 
 		// Sign the package if a key has been provided
-		if err := p.layout.SignPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword, !config.CommonOptions.Confirm); err != nil {
+		if err := p.layout.SignPackage(signingKeyPath, signingKeyPassword, !config.CommonOptions.Confirm); err != nil {
 			return err
 		}
 	}
 
 	// Get a reference to the registry for this package
-	ref, err := zoci.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata, &p.cfg.Pkg.Build)
+	ref, err := zoci.ReferenceFromMetadata(packageDestination, &p.cfg.Pkg.Metadata, &p.cfg.Pkg.Build)
 	if err != nil {
 		return err
 	}

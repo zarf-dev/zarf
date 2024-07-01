@@ -17,7 +17,7 @@ import (
 )
 
 // Mirror pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the air gap without deploying them
-func (p *Packager) Mirror(ctx context.Context) (err error) {
+func (p *Packager) Mirror(ctx context.Context, noImgChecksum bool) (err error) {
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
@@ -47,7 +47,7 @@ func (p *Packager) Mirror(ctx context.Context) (err error) {
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
-		if err := p.mirrorComponent(ctx, component); err != nil {
+		if err := p.mirrorComponent(ctx, component, noImgChecksum); err != nil {
 			return err
 		}
 	}
@@ -55,7 +55,7 @@ func (p *Packager) Mirror(ctx context.Context) (err error) {
 }
 
 // mirrorComponent mirrors a Zarf Component.
-func (p *Packager) mirrorComponent(ctx context.Context, component types.ZarfComponent) error {
+func (p *Packager) mirrorComponent(ctx context.Context, component types.ZarfComponent, noImgChecksum bool) error {
 	componentPaths := p.layout.Components.Dirs[component.Name]
 
 	// All components now require a name
@@ -65,7 +65,7 @@ func (p *Packager) mirrorComponent(ctx context.Context, component types.ZarfComp
 	hasRepos := len(component.Repos) > 0
 
 	if hasImages {
-		if err := p.pushImagesToRegistry(ctx, component.Images, p.cfg.MirrorOpts.NoImgChecksum); err != nil {
+		if err := p.pushImagesToRegistry(ctx, component.Images, noImgChecksum); err != nil {
 			return fmt.Errorf("unable to push images to the registry: %w", err)
 		}
 	}

@@ -6,19 +6,13 @@ package packager
 
 import (
 	"context"
-	"fmt"
 )
 
 // Pull pulls a Zarf package and saves it as a compressed tarball.
-func (p *Packager) Pull(ctx context.Context) (err error) {
-	if p.cfg.PkgOpts.OptionalComponents != "" {
-		return fmt.Errorf("pull does not support optional components")
-	}
-
-	_, err = p.source.Collect(ctx, p.cfg.PullOpts.OutputDirectory)
+func (p *Packager) Pull(ctx context.Context, outputDir string) (err error) {
+	_, err = p.source.Collect(ctx, outputDir)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }

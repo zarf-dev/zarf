@@ -36,16 +36,6 @@ type ZarfPackageOptions struct {
 	Retries            int               `json:"retries" jsonschema:"description=The number of retries to perform for Zarf deploy operations like image pushes or Helm installs"`
 }
 
-// ZarfInspectOptions tracks the user-defined preferences during a package inspection.
-type ZarfInspectOptions struct {
-	// View SBOM contents while inspecting the package
-	ViewSBOM bool
-	// Location to output an SBOM into after package inspection
-	SBOMOutputDir string
-	// ListImages will list the images in the package
-	ListImages bool
-}
-
 // ZarfFindImagesOptions tracks the user-defined preferences during a prepare find-images search.
 type ZarfFindImagesOptions struct {
 	RepoHelmChartPath   string `json:"repoHelmChartPath" jsonschema:"description=Path to the helm chart directory"`
@@ -63,32 +53,6 @@ type ZarfDeployOptions struct {
 
 	// TODO (@WSTARR): This is a library only addition to Zarf and should be refactored in the future (potentially to utilize component composability). As is it should NOT be exposed directly on the CLI
 	ValuesOverridesMap map[string]map[string]map[string]interface{} `json:"valuesOverridesMap" jsonschema:"description=[Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy"`
-}
-
-// ZarfMirrorOptions tracks the user-defined preferences during a package mirror.
-type ZarfMirrorOptions struct {
-	NoImgChecksum bool `json:"noImgChecksum" jsonschema:"description=Whether to skip adding a Zarf checksum to image references."`
-}
-
-// ZarfPublishOptions tracks the user-defined preferences during a package publish.
-type ZarfPublishOptions struct {
-	PackageDestination string `json:"packageDestination" jsonschema:"description=Location where the Zarf package will be published to"`
-	SigningKeyPassword string `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sign the published package"`
-	SigningKeyPath     string `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
-}
-
-// ZarfPullOptions tracks the user-defined preferences during a package pull.
-type ZarfPullOptions struct {
-	OutputDirectory string `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
-}
-
-// ZarfGenerateOptions tracks the user-defined options during package generation.
-type ZarfGenerateOptions struct {
-	Name    string `json:"name" jsonschema:"description=Name of the package being generated"`
-	URL     string `json:"url" jsonschema:"description=URL to the source git repository"`
-	Version string `json:"version" jsonschema:"description=Version of the chart to use"`
-	GitPath string `json:"gitPath" jsonschema:"description=Relative path to the chart in the git repository"`
-	Output  string `json:"output" jsonschema:"description=Location where the finalized zarf.yaml will be placed"`
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.

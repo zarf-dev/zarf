@@ -19,12 +19,12 @@ import (
 )
 
 // Generate generates a Zarf package definition.
-func (p *Packager) Generate() (err error) {
-	generatedZarfYAMLPath := filepath.Join(p.cfg.GenerateOpts.Output, layout.ZarfYAML)
-	spinner := message.NewProgressSpinner("Generating package for %q at %s", p.cfg.GenerateOpts.Name, generatedZarfYAMLPath)
+func (p *Packager) Generate(name, url, version, gitPath, outputDir, kubeVersionOverride string) (err error) {
+	generatedZarfYAMLPath := filepath.Join(outputDir, layout.ZarfYAML)
+	spinner := message.NewProgressSpinner("Generating package for %q at %s", name, generatedZarfYAMLPath)
 
 	if !helpers.InvalidPath(generatedZarfYAMLPath) {
-		prefixed := filepath.Join(p.cfg.GenerateOpts.Output, fmt.Sprintf("%s-%s", p.cfg.GenerateOpts.Name, layout.ZarfYAML))
+		prefixed := filepath.Join(outputDir, fmt.Sprintf("%s-%s", name, layout.ZarfYAML))
 
 		message.Warnf("%s already exists, writing to %s", generatedZarfYAMLPath, prefixed)
 
@@ -36,15 +36,15 @@ func (p *Packager) Generate() (err error) {
 	}
 
 	generatedComponent := types.ZarfComponent{
-		Name:     p.cfg.GenerateOpts.Name,
+		Name:     name,
 		Required: helpers.BoolPtr(true),
 		Charts: []types.ZarfChart{
 			{
-				Name:      p.cfg.GenerateOpts.Name,
-				Version:   p.cfg.GenerateOpts.Version,
-				Namespace: p.cfg.GenerateOpts.Name,
-				URL:       p.cfg.GenerateOpts.URL,
-				GitPath:   p.cfg.GenerateOpts.GitPath,
+				Name:      name,
+				Version:   version,
+				Namespace: name,
+				URL:       url,
+				GitPath:   gitPath,
 			},
 		},
 	}
@@ -52,8 +52,8 @@ func (p *Packager) Generate() (err error) {
 	p.cfg.Pkg = types.ZarfPackage{
 		Kind: types.ZarfPackageConfig,
 		Metadata: types.ZarfMetadata{
-			Name:        p.cfg.GenerateOpts.Name,
-			Version:     p.cfg.GenerateOpts.Version,
+			Name:        name,
+			Version:     version,
 			Description: "auto-generated using `zarf dev generate`",
 		},
 		Components: []types.ZarfComponent{
@@ -61,7 +61,7 @@ func (p *Packager) Generate() (err error) {
 		},
 	}
 
-	images, err := p.findImages()
+	images, err := p.findImages(gitPath, false, kubeVersionOverride, "", "")
 	if err != nil {
 		// purposefully not returning error here, as we can still generate the package without images
 		message.Warnf("Unable to find images: %s", err.Error())
@@ -76,7 +76,7 @@ func (p *Packager) Generate() (err error) {
 		return err
 	}
 
-	if err := helpers.CreateDirectory(p.cfg.GenerateOpts.Output, helpers.ReadExecuteAllWriteUser); err != nil {
+	if err := helpers.CreateDirectory(outputDir, helpers.ReadExecuteAllWriteUser); err != nil {
 		return err
 	}
 
@@ -93,7 +93,7 @@ func (p *Packager) Generate() (err error) {
 	content = strings.Replace(content, "metadata:\n", "\nmetadata:\n", 1)
 	content = strings.Replace(content, "components:\n", "\ncomponents:\n", 1)
 
-	spinner.Successf("Generated package for %q at %s", p.cfg.GenerateOpts.Name, generatedZarfYAMLPath)
+	spinner.Successf("Generated package for %q at %s", name, generatedZarfYAMLPath)
 
 	return os.WriteFile(generatedZarfYAMLPath, []byte(content), helpers.ReadAllWriteUser)
 }

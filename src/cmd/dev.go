@@ -63,6 +63,16 @@ var devDeployCmd = &cobra.Command{
 	},
 }
 
+type generateOptions struct {
+	url                 string
+	version             string
+	gitPath             string
+	outputPath          string
+	kubeVersionOverride string
+}
+
+var generateOpts = generateOptions{}
+
 var devGenerateCmd = &cobra.Command{
 	Use:     "generate NAME",
 	Aliases: []string{"g"},
@@ -70,18 +80,15 @@ var devGenerateCmd = &cobra.Command{
 	Short:   lang.CmdDevGenerateShort,
 	Example: lang.CmdDevGenerateExample,
 	RunE: func(_ *cobra.Command, args []string) error {
-		pkgConfig.GenerateOpts.Name = args[0]
-
 		pkgConfig.CreateOpts.BaseDir = "."
-		pkgConfig.FindImagesOpts.RepoHelmChartPath = pkgConfig.GenerateOpts.GitPath
-
 		pkgClient, err := packager.New(&pkgConfig)
 		if err != nil {
 			return err
 		}
 		defer pkgClient.ClearTempPaths()
 
-		err = pkgClient.Generate()
+		name := args[0]
+		err = pkgClient.Generate(name, generateOpts.url, generateOpts.version, generateOpts.gitPath, generateOpts.outputPath, generateOpts.kubeVersionOverride)
 		if err != nil {
 			return err
 		}
@@ -208,6 +215,16 @@ var devSha256SumCmd = &cobra.Command{
 	},
 }
 
+type findImagesOptions struct {
+	repoHelmChartPath   string
+	skipCosign          bool
+	kubeVersionOverride string
+	why                 string
+	registryURL         string
+}
+
+var findImagesOpts = findImagesOptions{}
+
 var devFindImagesCmd = &cobra.Command{
 	Use:     "find-images [ PACKAGE ]",
 	Aliases: []string{"f"},
@@ -229,7 +246,7 @@ var devFindImagesCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		if _, err := pkgClient.FindImages(cmd.Context()); err != nil {
+		if _, err := pkgClient.FindImages(cmd.Context(), findImagesOpts.repoHelmChartPath, findImagesOpts.skipCosign, findImagesOpts.kubeVersionOverride, findImagesOpts.why, findImagesOpts.registryURL); err != nil {
 			return fmt.Errorf("unable to find images: %w", err)
 		}
 		return nil
@@ -296,7 +313,7 @@ func init() {
 
 	devSha256SumCmd.Flags().StringVarP(&extractPath, "extract-path", "e", "", lang.CmdDevFlagExtractPath)
 
-	devFindImagesCmd.Flags().StringVarP(&pkgConfig.FindImagesOpts.RepoHelmChartPath, "repo-chart-path", "p", "", lang.CmdDevFlagRepoChartPath)
+	devFindImagesCmd.Flags().StringVarP(&findImagesOpts.repoHelmChartPath, "repo-chart-path", "p", "", lang.CmdDevFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
 
@@ -306,14 +323,14 @@ func init() {
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 	// allow for the override of the default helm KubeVersion
-	devFindImagesCmd.Flags().StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
+	devFindImagesCmd.Flags().StringVar(&findImagesOpts.kubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	// check which manifests are using this particular image
-	devFindImagesCmd.Flags().StringVar(&pkgConfig.FindImagesOpts.Why, "why", "", lang.CmdDevFlagFindImagesWhy)
+	devFindImagesCmd.Flags().StringVar(&findImagesOpts.why, "why", "", lang.CmdDevFlagFindImagesWhy)
 	// skip searching cosign artifacts in find images
-	devFindImagesCmd.Flags().BoolVar(&pkgConfig.FindImagesOpts.SkipCosign, "skip-cosign", false, lang.CmdDevFlagFindImagesSkipCosign)
+	devFindImagesCmd.Flags().BoolVar(&findImagesOpts.skipCosign, "skip-cosign", false, lang.CmdDevFlagFindImagesSkipCosign)
 
 	defaultRegistry := fmt.Sprintf("%s:%d", helpers.IPV4Localhost, types.ZarfInClusterContainerRegistryNodePort)
-	devFindImagesCmd.Flags().StringVar(&pkgConfig.FindImagesOpts.RegistryURL, "registry-url", defaultRegistry, lang.CmdDevFlagFindImagesRegistry)
+	devFindImagesCmd.Flags().StringVar(&findImagesOpts.registryURL, "registry-url", defaultRegistry, lang.CmdDevFlagFindImagesRegistry)
 
 	devLintCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
 	devLintCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
@@ -343,11 +360,11 @@ func bindDevDeployFlags(v *viper.Viper) {
 func bindDevGenerateFlags(_ *viper.Viper) {
 	generateFlags := devGenerateCmd.Flags()
 
-	generateFlags.StringVar(&pkgConfig.GenerateOpts.URL, "url", "", "URL to the source git repository")
-	generateFlags.StringVar(&pkgConfig.GenerateOpts.Version, "version", "", "The Version of the chart to use")
-	generateFlags.StringVar(&pkgConfig.GenerateOpts.GitPath, "gitPath", "", "Relative path to the chart in the git repository")
-	generateFlags.StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "", "Output directory for the generated zarf.yaml")
-	generateFlags.StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
+	generateFlags.StringVar(&generateOpts.url, "url", "", "URL to the source git repository")
+	generateFlags.StringVar(&generateOpts.version, "version", "", "The Version of the chart to use")
+	generateFlags.StringVar(&generateOpts.gitPath, "gitPath", "", "Relative path to the chart in the git repository")
+	generateFlags.StringVar(&generateOpts.outputPath, "output-directory", "", "Output directory for the generated zarf.yaml")
+	generateFlags.StringVar(&generateOpts.kubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	devGenerateCmd.MarkFlagRequired("url")
 	devGenerateCmd.MarkFlagRequired("version")

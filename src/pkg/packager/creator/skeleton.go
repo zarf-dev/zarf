@@ -33,13 +33,18 @@ var (
 
 // SkeletonCreator provides methods for creating skeleton Zarf packages.
 type SkeletonCreator struct {
-	createOpts  types.ZarfCreateOptions
-	publishOpts types.ZarfPublishOptions
+	createOpts         types.ZarfCreateOptions
+	signingKeyPath     string
+	signingKeyPassword string
 }
 
 // NewSkeletonCreator returns a new SkeletonCreator.
-func NewSkeletonCreator(createOpts types.ZarfCreateOptions, publishOpts types.ZarfPublishOptions) *SkeletonCreator {
-	return &SkeletonCreator{createOpts, publishOpts}
+func NewSkeletonCreator(createOpts types.ZarfCreateOptions, signingKeyPath, signingKeyPassword string) *SkeletonCreator {
+	return &SkeletonCreator{
+		createOpts:         createOpts,
+		signingKeyPath:     signingKeyPath,
+		signingKeyPassword: signingKeyPassword,
+	}
 }
 
 // LoadPackageDefinition loads and configure a zarf.yaml file when creating and publishing a skeleton package.
@@ -122,7 +127,7 @@ func (sc *SkeletonCreator) Output(_ context.Context, dst *layout.PackagePaths, p
 		return fmt.Errorf("unable to write zarf.yaml: %w", err)
 	}
 
-	return dst.SignPackage(sc.publishOpts.SigningKeyPath, sc.publishOpts.SigningKeyPassword, !config.CommonOptions.Confirm)
+	return dst.SignPackage(sc.signingKeyPath, sc.signingKeyPassword, !config.CommonOptions.Confirm)
 }
 
 func (sc *SkeletonCreator) processExtensions(components []types.ZarfComponent, layout *layout.PackagePaths) (processedComponents []types.ZarfComponent, err error) {

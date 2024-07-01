@@ -47,8 +47,7 @@ func (p *Packager) resetRegistryHPA(ctx context.Context) {
 }
 
 // Deploy attempts to deploy the given PackageConfig.
-func (p *Packager) Deploy(ctx context.Context) (err error) {
-
+func (p *Packager) Deploy(ctx context.Context, skipWebhooks bool) (err error) {
 	isInteractive := !config.CommonOptions.Confirm
 
 	deployFilter := filters.Combine(
@@ -109,7 +108,7 @@ func (p *Packager) Deploy(ctx context.Context) (err error) {
 	defer p.resetRegistryHPA(ctx)
 
 	// Get a list of all the components we are deploying and actually deploy them
-	deployedComponents, err := p.deployComponents(ctx)
+	deployedComponents, err := p.deployComponents(ctx, skipWebhooks)
 	if err != nil {
 		return err
 	}
@@ -126,7 +125,7 @@ func (p *Packager) Deploy(ctx context.Context) (err error) {
 }
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
-func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []types.DeployedComponent, err error) {
+func (p *Packager) deployComponents(ctx context.Context, skipWebhooks bool) (deployedComponents []types.DeployedComponent, err error) {
 	// Check if this package has been deployed before and grab relevant information about already deployed components
 	if p.generation == 0 {
 		p.generation = 1 // If this is the first deployment, set the generation to 1
@@ -167,7 +166,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 
 		// Update the package secret to indicate that we are attempting to deploy this component
 		if p.isConnectedToCluster() {
-			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
+			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, skipWebhooks); err != nil {
 				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
@@ -195,7 +194,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 			// Update the package secret to indicate that we failed to deploy this component
 			deployedComponents[idx].Status = types.ComponentStatusFailed
 			if p.isConnectedToCluster() {
-				if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
+				if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, skipWebhooks); err != nil {
 					message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 				}
 			}
@@ -207,7 +206,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 		deployedComponents[idx].InstalledCharts = charts
 		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 		if p.isConnectedToCluster() {
-			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
+			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, skipWebhooks); err != nil {
 				message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
@@ -602,7 +601,7 @@ func (p *Packager) generateValuesOverrides(chart types.ZarfChart, componentName 
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPaths, component types.ZarfComponent, timeout time.Duration) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
 		// Do not wait for the chart to be ready if data injections are present.
 		if len(component.DataInjections) > 0 {
@@ -634,7 +633,7 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 				p.state,
 				p.cluster,
 				valuesOverrides,
-				p.cfg.DeployOpts.Timeout,
+				timeout,
 				p.cfg.PkgOpts.Retries),
 		)
 
@@ -683,7 +682,7 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 				p.state,
 				p.cluster,
 				nil,
-				p.cfg.DeployOpts.Timeout,
+				timeout,
 				p.cfg.PkgOpts.Retries),
 		)
 		if err != nil {

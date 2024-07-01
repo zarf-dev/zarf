@@ -38,7 +38,7 @@ import (
 type imageMap map[string]bool
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
-func (p *Packager) FindImages(ctx context.Context) (imgMap map[string][]string, err error) {
+func (p *Packager) FindImages(ctx context.Context, repoHelmChartPath string, skipCosign bool, kubeVersionOverride string, why string, registryURL string) (imgMap map[string][]string, err error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -69,14 +69,10 @@ func (p *Packager) FindImages(ctx context.Context) (imgMap map[string][]string, 
 		message.Warn(warning)
 	}
 
-	return p.findImages()
+	return p.findImages(repoHelmChartPath, skipCosign, kubeVersionOverride, why, registryURL)
 }
 
-func (p *Packager) findImages() (imgMap map[string][]string, err error) {
-	repoHelmChartPath := p.cfg.FindImagesOpts.RepoHelmChartPath
-	kubeVersionOverride := p.cfg.FindImagesOpts.KubeVersionOverride
-	whyImage := p.cfg.FindImagesOpts.Why
-
+func (p *Packager) findImages(repoHelmChartPath string, skipCosign bool, kubeVersionOverride string, why string, registryURL string) (imgMap map[string][]string, err error) {
 	imagesMap := make(map[string][]string)
 	erroredCharts := []string{}
 	erroredCosignLookups := []string{}
@@ -98,7 +94,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 	}
 
 	// Set default builtin values so they exist in case any helm charts rely on them
-	registryInfo := types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}
+	registryInfo := types.RegistryInfo{Address: registryURL}
 	err = registryInfo.FillInEmptyValues()
 	if err != nil {
 		return nil, err
@@ -208,8 +204,8 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 			}
 
 			// Check if the --why flag is set
-			if whyImage != "" {
-				whyResourcesChart, err := findWhyResources(yamls, whyImage, component.Name, chart.Name, true)
+			if why != "" {
+				whyResourcesChart, err := findWhyResources(yamls, why, component.Name, chart.Name, true)
 				if err != nil {
 					message.WarnErrf(err, "Error finding why resources for chart %s: %s", chart.Name, err.Error())
 				}
@@ -262,8 +258,8 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 				resources = append(resources, yamls...)
 
 				// Check if the --why flag is set and if it is process the manifests
-				if whyImage != "" {
-					whyResourcesManifest, err := findWhyResources(yamls, whyImage, component.Name, manifest.Name, false)
+				if why != "" {
+					whyResourcesManifest, err := findWhyResources(yamls, why, component.Name, manifest.Name, false)
 					if err != nil {
 						message.WarnErrf(err, "Error finding why resources for manifest %s: %s", manifest.Name, err.Error())
 					}
@@ -316,7 +312,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 
 		spinner.Success()
 
-		if !p.cfg.FindImagesOpts.SkipCosign {
+		if !skipCosign {
 			// Handle cosign artifact lookups
 			if len(imagesMap[component.Name]) > 0 {
 				var cosignArtifactList []string
@@ -346,9 +342,9 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 		}
 	}
 
-	if whyImage != "" {
+	if why != "" {
 		if len(whyResources) == 0 {
-			message.Warnf("image %q not found in any charts or manifests", whyImage)
+			message.Warnf("image %q not found in any charts or manifests", why)
 		}
 		return nil, nil
 	}

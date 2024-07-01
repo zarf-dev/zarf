@@ -15,15 +15,15 @@ import (
 )
 
 // Inspect list the contents of a package.
-func (p *Packager) Inspect(ctx context.Context) (err error) {
-	wantSBOM := p.cfg.InspectOpts.ViewSBOM || p.cfg.InspectOpts.SBOMOutputDir != ""
+func (p *Packager) Inspect(ctx context.Context, viewSBOM bool, sbomOutputDir string, listImages bool) (err error) {
+	wantSBOM := viewSBOM || sbomOutputDir != ""
 
 	p.cfg.Pkg, p.warnings, err = p.source.LoadPackageMetadata(ctx, p.layout, wantSBOM, true)
 	if err != nil {
 		return err
 	}
 
-	if p.cfg.InspectOpts.ListImages {
+	if listImages {
 		imageList := []string{}
 		for _, component := range p.cfg.Pkg.Components {
 			imageList = append(imageList, component.Images...)
@@ -38,15 +38,15 @@ func (p *Packager) Inspect(ctx context.Context) (err error) {
 
 	sbomDir := p.layout.SBOMs.Path
 
-	if p.cfg.InspectOpts.SBOMOutputDir != "" {
-		out, err := p.layout.SBOMs.OutputSBOMFiles(p.cfg.InspectOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name)
+	if sbomOutputDir != "" {
+		out, err := p.layout.SBOMs.OutputSBOMFiles(sbomOutputDir, p.cfg.Pkg.Metadata.Name)
 		if err != nil {
 			return err
 		}
 		sbomDir = out
 	}
 
-	if p.cfg.InspectOpts.ViewSBOM {
+	if viewSBOM {
 		sbom.ViewSBOMFiles(sbomDir)
 	}
 

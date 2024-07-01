@@ -38,13 +38,13 @@ func TestLoadPackageDefinition(t *testing.T) {
 			name:        "valid package definition",
 			testDir:     "valid",
 			expectedErr: "",
-			creator:     NewSkeletonCreator(types.ZarfCreateOptions{}, types.ZarfPublishOptions{}),
+			creator:     NewSkeletonCreator(types.ZarfCreateOptions{}, "", ""),
 		},
 		{
 			name:        "invalid package definition",
 			testDir:     "invalid",
 			expectedErr: "package must have at least 1 component",
-			creator:     NewSkeletonCreator(types.ZarfCreateOptions{}, types.ZarfPublishOptions{}),
+			creator:     NewSkeletonCreator(types.ZarfCreateOptions{}, "", ""),
 		},
 	}
 

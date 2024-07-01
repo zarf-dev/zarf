@@ -67,6 +67,12 @@ var packageCreateCmd = &cobra.Command{
 	},
 }
 
+type packageDeployOptions struct {
+	skipWebhooks bool
+}
+
+var packageDeployOpts = packageDeployOptions{}
+
 var packageDeployCmd = &cobra.Command{
 	Use:     "deploy [ PACKAGE_SOURCE ]",
 	Aliases: []string{"d"},
@@ -92,12 +98,18 @@ var packageDeployCmd = &cobra.Command{
 
 		ctx := cmd.Context()
 
-		if err := pkgClient.Deploy(ctx); err != nil {
+		if err := pkgClient.Deploy(ctx, packageDeployOpts.skipWebhooks); err != nil {
 			return fmt.Errorf("failed to deploy package: %w", err)
 		}
 		return nil
 	},
 }
+
+type packageMirrorOptions struct {
+	noImgChecksum bool
+}
+
+var packageMirrorOpts = packageMirrorOptions{}
 
 var packageMirrorCmd = &cobra.Command{
 	Use:     "mirror-resources [ PACKAGE_SOURCE ]",
@@ -117,12 +129,21 @@ var packageMirrorCmd = &cobra.Command{
 			return err
 		}
 		defer pkgClient.ClearTempPaths()
-		if err := pkgClient.Mirror(cmd.Context()); err != nil {
+		err = pkgClient.Mirror(cmd.Context(), packageMirrorOpts.noImgChecksum)
+		if err != nil {
 			return fmt.Errorf("failed to mirror package: %w", err)
 		}
 		return nil
 	},
 }
+
+type packageInspectOptions struct {
+	viewSBOM      bool
+	sbomOutputDir string
+	listImages    bool
+}
+
+var packageInspectOpts = packageInspectOptions{}
 
 var packageInspectCmd = &cobra.Command{
 	Use:     "inspect [ PACKAGE_SOURCE ]",
@@ -145,7 +166,8 @@ var packageInspectCmd = &cobra.Command{
 			return err
 		}
 		defer pkgClient.ClearTempPaths()
-		if err := pkgClient.Inspect(cmd.Context()); err != nil {
+		err = pkgClient.Inspect(cmd.Context(), packageInspectOpts.viewSBOM, packagePullOpts.outputDir, packageInspectOpts.listImages)
+		if err != nil {
 			return fmt.Errorf("failed to inspect package: %w", err)
 		}
 		return nil
@@ -225,6 +247,13 @@ var packageRemoveCmd = &cobra.Command{
 	ValidArgsFunction: getPackageCompletionArgs,
 }
 
+type packagePublishOptions struct {
+	signingKeyPath     string
+	signingKeyPassword string
+}
+
+var packagePublishOpts = packagePublishOptions{}
+
 var packagePublishCmd = &cobra.Command{
 	Use:     "publish { PACKAGE_SOURCE | SKELETON DIRECTORY } REPOSITORY",
 	Short:   lang.CmdPackagePublishShort,
@@ -251,20 +280,25 @@ var packagePublishCmd = &cobra.Command{
 			pkgConfig.CreateOpts.IsSkeleton = true
 		}
 
-		pkgConfig.PublishOpts.PackageDestination = ref.String()
-
 		pkgClient, err := packager.New(&pkgConfig)
 		if err != nil {
 			return err
 		}
 		defer pkgClient.ClearTempPaths()
 
-		if err := pkgClient.Publish(cmd.Context()); err != nil {
+		err = pkgClient.Publish(cmd.Context(), ref.String(), packagePublishOpts.signingKeyPath, packagePublishOpts.signingKeyPassword)
+		if err != nil {
 			return fmt.Errorf("failed to publish package: %w", err)
 		}
 		return nil
 	},
 }
+
+type packagePullOptions struct {
+	outputDir string
+}
+
+var packagePullOpts = packagePullOptions{}
 
 var packagePullCmd = &cobra.Command{
 	Use:     "pull PACKAGE_SOURCE",
@@ -278,7 +312,7 @@ var packagePullCmd = &cobra.Command{
 			return err
 		}
 		defer pkgClient.ClearTempPaths()
-		if err := pkgClient.Pull(cmd.Context()); err != nil {
+		if err := pkgClient.Pull(cmd.Context(), packagePullOpts.outputDir); err != nil {
 			return fmt.Errorf("failed to pull package: %w", err)
 		}
 		return nil
@@ -439,7 +473,7 @@ func bindMirrorFlags(v *viper.Viper) {
 	// Always require confirm flag (no viper)
 	mirrorFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageDeployFlagConfirm)
 
-	mirrorFlags.BoolVar(&pkgConfig.MirrorOpts.NoImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
+	mirrorFlags.BoolVar(&packageMirrorOpts.noImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
 
 	mirrorFlags.IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)
 	mirrorFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageMirrorFlagComponents)
@@ -457,9 +491,9 @@ func bindMirrorFlags(v *viper.Viper) {
 
 func bindInspectFlags(_ *viper.Viper) {
 	inspectFlags := packageInspectCmd.Flags()
-	inspectFlags.BoolVarP(&pkgConfig.InspectOpts.ViewSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
-	inspectFlags.StringVar(&pkgConfig.InspectOpts.SBOMOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
-	inspectFlags.BoolVar(&pkgConfig.InspectOpts.ListImages, "list-images", false, lang.CmdPackageInspectFlagListImages)
+	inspectFlags.BoolVarP(&packageInspectOpts.viewSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
+	inspectFlags.StringVar(&packageInspectOpts.sbomOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
+	inspectFlags.BoolVar(&packageInspectOpts.listImages, "list-images", false, lang.CmdPackageInspectFlagListImages)
 }
 
 func bindRemoveFlags(v *viper.Viper) {
@@ -471,11 +505,11 @@ func bindRemoveFlags(v *viper.Viper) {
 
 func bindPublishFlags(v *viper.Viper) {
 	publishFlags := packagePublishCmd.Flags()
-	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPath, "signing-key", v.GetString(common.VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
-	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "signing-key-pass", v.GetString(common.VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
+	publishFlags.StringVar(&packagePublishOpts.signingKeyPath, "signing-key", v.GetString(common.VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
+	publishFlags.StringVar(&packagePublishOpts.signingKeyPassword, "signing-key-pass", v.GetString(common.VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
 }
 
 func bindPullFlags(v *viper.Viper) {
 	pullFlags := packagePullCmd.Flags()
-	pullFlags.StringVarP(&pkgConfig.PullOpts.OutputDirectory, "output-directory", "o", v.GetString(common.VPkgPullOutputDir), lang.CmdPackagePullFlagOutputDirectory)
+	pullFlags.StringVarP(&packagePullOpts.outputDir, "output-directory", "o", v.GetString(common.VPkgPullOutputDir), lang.CmdPackagePullFlagOutputDirectory)
 }
