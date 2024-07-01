@@ -218,11 +218,13 @@ func TestValidateComponent(t *testing.T) {
 		unpinnedImage := "registry.com:9001/whatever/image:1.0.0"
 		badImage := "badimage:badimage@@sha256:3fbc632167424a6d997e74f5"
 		cosignSignature := "ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig"
+		cosignAttestation := "ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.att"
 		component := types.ZarfComponent{Images: []string{
 			unpinnedImage,
 			"busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
 			badImage,
 			cosignSignature,
+			cosignAttestation,
 		}}
 		findings := checkForUnpinnedImages(component, 0)
 		expected := []types.PackageFinding{
@@ -337,6 +339,11 @@ func TestValidateComponent(t *testing.T) {
 			},
 			{
 				input:    "ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
+				expected: true,
+				err:      nil,
+			},
+			{
+				input:    "ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.att",
 				expected: true,
 				err:      nil,
 			},

@@ -64,7 +64,6 @@ func lintComponents(ctx context.Context, pkg types.ZarfPackage, createOpts types
 		}
 
 		chain, err := composer.NewImportChain(ctx, component, i, pkg.Metadata.Name, arch, createOpts.Flavor)
-
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +143,7 @@ func isPinnedImage(image string) (bool, error) {
 		}
 		return false, err
 	}
-	if isCosignSignature(transformedImage.Tag) {
+	if isCosignSignature(transformedImage.Tag) || isCosignAttestation(transformedImage.Tag) {
 		return true, nil
 	}
 	return (transformedImage.Digest != ""), err
@@ -152,6 +151,10 @@ func isPinnedImage(image string) (bool, error) {
 
 func isCosignSignature(image string) bool {
 	return (strings.HasSuffix(image, ".sig"))
+}
+
+func isCosignAttestation(image string) bool {
+	return (strings.HasSuffix(image, ".att"))
 }
 
 func isPinnedRepo(repo string) bool {
