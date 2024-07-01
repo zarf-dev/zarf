@@ -7,7 +7,7 @@ package packager
 import (
 	"context"
 	"fmt"
-	"os"
+	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -18,40 +18,20 @@ import (
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Create(ctx context.Context) (err error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
-	}
-
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
-
-	pc := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
-
-	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+	pc := creator.NewPackageCreator(p.cfg.CreateOpts)
+	if err := helpers.CreatePathAndCopy(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML), p.layout.ZarfYAML); err != nil {
 		return err
 	}
-
 	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(ctx, p.layout)
 	if err != nil {
 		return err
 	}
-
 	if !p.confirmAction(config.ZarfCreateStage) {
 		return fmt.Errorf("package creation canceled")
 	}
-
 	if err := pc.Assemble(ctx, p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
 		return err
 	}
-
-	// cd back for output
-	if err := os.Chdir(cwd); err != nil {
-		return err
-	}
-
 	return pc.Output(ctx, p.layout, &p.cfg.Pkg)
 }

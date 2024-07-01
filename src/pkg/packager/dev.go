@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 
@@ -29,21 +28,11 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 	config.CommonOptions.Confirm = true
 	p.cfg.CreateOpts.SkipSBOM = !p.cfg.CreateOpts.NoYOLO
 
-	cwd, err := os.Getwd()
+	pc := creator.NewPackageCreator(p.cfg.CreateOpts)
+	err := helpers.CreatePathAndCopy(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML), p.layout.ZarfYAML)
 	if err != nil {
 		return err
 	}
-
-	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
-	}
-
-	pc := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
-
-	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
-		return err
-	}
-
 	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(ctx, p.layout)
 	if err != nil {
 		return err
@@ -107,27 +96,21 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 
 	message.ZarfCommand("package inspect %s", p.cfg.Pkg.Metadata.Name)
 
-	// cd back
-	return os.Chdir(cwd)
+	return nil
 }
 
 // Lint ensures a package is valid & follows suggested conventions
 func (p *Packager) Lint(ctx context.Context) error {
-	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
-	}
-
-	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
+	err := utils.ReadYaml(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML), &p.cfg.Pkg)
+	if err != nil {
 		return err
 	}
-
 	findings, err := lint.Validate(ctx, p.cfg.Pkg, p.cfg.CreateOpts)
 	if err != nil {
 		return fmt.Errorf("linting failed: %w", err)
 	}
-
 	if len(findings) == 0 {
-		message.Successf("0 findings for %q", p.cfg.Pkg.Metadata.Name)
+		message.Successf("0 findings for %s", p.cfg.Pkg.Metadata.Name)
 		return nil
 	}
 

@@ -39,36 +39,18 @@ type imageMap map[string]bool
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
 func (p *Packager) FindImages(ctx context.Context) (imgMap map[string][]string, err error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		// Return to the original working directory
-		if err := os.Chdir(cwd); err != nil {
-			message.Warnf("Unable to return to the original working directory: %s", err.Error())
-		}
-	}()
-	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return nil, fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
-	}
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
-
-	c := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
-
-	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+	c := creator.NewPackageCreator(p.cfg.CreateOpts)
+	if err := helpers.CreatePathAndCopy(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML), p.layout.ZarfYAML); err != nil {
 		return nil, err
 	}
-
 	p.cfg.Pkg, p.warnings, err = c.LoadPackageDefinition(ctx, p.layout)
 	if err != nil {
 		return nil, err
 	}
-
 	for _, warning := range p.warnings {
 		message.Warn(warning)
 	}
-
 	return p.findImages()
 }
 

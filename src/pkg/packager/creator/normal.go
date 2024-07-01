@@ -55,8 +55,7 @@ func updateRelativeDifferentialPackagePath(path string, cwd string) string {
 }
 
 // NewPackageCreator returns a new PackageCreator.
-func NewPackageCreator(createOpts types.ZarfCreateOptions, cwd string) *PackageCreator {
-	createOpts.DifferentialPackagePath = updateRelativeDifferentialPackagePath(createOpts.DifferentialPackagePath, cwd)
+func NewPackageCreator(createOpts types.ZarfCreateOptions) *PackageCreator {
 	return &PackageCreator{createOpts}
 }
 

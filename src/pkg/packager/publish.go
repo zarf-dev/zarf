@@ -7,7 +7,7 @@ package packager
 import (
 	"context"
 	"fmt"
-	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -48,13 +48,9 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 	}
 
 	if p.cfg.CreateOpts.IsSkeleton {
-		if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-			return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
-		}
-
 		sc := creator.NewSkeletonCreator(p.cfg.CreateOpts, p.cfg.PublishOpts)
-
-		if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+		err := helpers.CreatePathAndCopy(filepath.Join(p.cfg.CreateOpts.BaseDir, layout.ZarfYAML), p.layout.ZarfYAML)
+		if err != nil {
 			return err
 		}
 
