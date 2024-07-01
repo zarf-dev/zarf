@@ -253,7 +253,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component types.Zarf
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := p.cluster.StartInjectionMadness(ctx, p.layout.Base, p.layout.Images.Base, component.Images)
+		err := p.cluster.StartInjection(ctx, p.layout.Base, p.layout.Images.Base, component.Images)
 		if err != nil {
 			return nil, err
 		}
@@ -266,7 +266,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component types.Zarf
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		if err := p.cluster.StopInjectionMadness(ctx); err != nil {
+		if err := p.cluster.StopInjection(ctx); err != nil {
 			return nil, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
 		}
 	}
