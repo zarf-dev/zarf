@@ -44,7 +44,7 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 		return err
 	}
 
-	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(ctx, p.layout)
+	p.cfg.Pkg, _, err = pc.LoadPackageDefinition(ctx, p.layout)
 	if err != nil {
 		return err
 	}
