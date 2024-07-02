@@ -140,6 +140,7 @@ components:
   - name: mattermost
     description: "Deploy Mattermost"
     required: true
+
     ## The `mattermost` component is now a self-contained, deployable unit.
     ## Thus, all the configuration from `common/zarf.yaml` has been inlined
     ## into this example. We no longer import a `common` "skeleton package".
@@ -162,7 +163,12 @@ components:
         version: 2.6.55
         valuesFiles:
           - values/common-values.yaml
-          - values/upstream-values.yaml
+
+          ## No longer needed because this was only used for replacing
+          ## image tags, see new `images` API usage below.
+          #
+          # - values/upstream-values.yaml
+
     ## Kustomize-style image replacements facilitate proper composition.
     ## This makes it easy for downstream components to override image tags
     ## without knowing anything about the Helm chart(s) being referenced
@@ -189,6 +195,7 @@ components:
                 condition: "'{.status.phase}'=Ready"
 
   - name: mattermost-registry1
+
     ## Previously a `required` component with the "registry1" `flavor`,
     ## `mattermost-registry1` is now defined simply as a component that directly
     ## extends the default `mattermost` component above.
@@ -237,6 +244,7 @@ components:
   ## (i.e. `mattermostApp.extraInitContainers`).
   - name: mattermost-plugins
     required: false
+
     ## Note that the semantics of `requires` is slightly different from `extends`.
     ## The idea is that `extends` signals intent to _replace_ the original component
     ## whereas `requires` signals that the originaly component(s) are being overlaid
