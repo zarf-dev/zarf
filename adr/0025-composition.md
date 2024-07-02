@@ -8,27 +8,33 @@ Draft
 
 ## Context
 
-Presently "composition" within Zarf is only possible at the package level. Specifically, it can only be done with a
+Presently "composition" within Zarf is only possible at the package level. This can only be done with a
 special kind of package, a "skeleton package". The actual "composition" of these "skeleton packages" into proper
 packages is then supported by the `import` and `flavor` APIs.
 
-We use "composition" (in quotations) here because this is not true composition. According to the
+We use "composition" (in quotations) here because this is not true composition. Specifically,
+there is no way to declare a self-contained "optional" component that overrides Helm chart values
+(or otherwise modifies the configuration of component(s) it is intended to be used with).
+
+According to the
 [Wikipeida article on _Composability_](https://en.wikipedia.org/wiki/Composability):
 
 > A highly composable system provides components that can be selected and assembled in various combinations to satisfy
 > specific user requirements. In information systems, the essential features that make a component composable are that it be:
 >
-> - self-contained (modular): it can be deployed independently – note that it may cooperate with other components, but dependent components are replaceable
+> - self-contained (modular): it can be deployed independently – note that it may cooperate with other components,
+>   but dependent components are replaceable
 > - stateless: it treats each request as an independent transaction, unrelated to any previous request
 
 Neither of these criteria are met in the context of Zarf components and packages. Here is a practical example from
 [`defenseunicorns/uds-package-mattermost`](https://github.com/defenseunicorns/uds-package-mattermost/blob/5e02c2ceb7b0e097b7e6eb356b19eaff4c913613/zarf.yaml):
 
-1. The `mattermost-(upstream|registry1)` component flavors depend on a `common` "skeleton package". The `common` package cannot be deployed independantly,
-   which violates the "self-contained" principle.
-2. The `mattermost-plugins` component is not "stateless". It must be declared first because it builds a container image during `onCreate` that is expected
-   by the other components.
-3. `mattermost-plugins` is not "self-contained" because, in order to use it, you must override Helm chart values declared by other components.
+1. The `mattermost-(upstream|registry1)` component flavors depend on a `common` "skeleton package".
+   The `common` package cannot be deployed independantly, which violates the "self-contained" principle.
+2. The `mattermost-plugins` component is not "stateless". It must be declared first because it
+   builds a container image during `onCreate` that is expected by the other components.
+3. `mattermost-plugins` is not "self-contained" because, in order to use it,
+   you must override Helm chart values declared by other components.
 
 ```yaml
 kind: ZarfPackageConfig
