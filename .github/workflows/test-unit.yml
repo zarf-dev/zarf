@@ -10,6 +10,16 @@ on:
       - "adr/**"
       - "docs/**"
       - "CODEOWNERS"
+  merge_group:
+    paths-ignore:
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+      - "CODEOWNERS"
   push:
     # Running unit tests on main gives codecov a base to compare PRs against
     branches:

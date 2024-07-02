@@ -1,6 +1,16 @@
 name: Docs Skip Shim
 on:
   pull_request:
+   paths:
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+      - "CODEOWNERS"
+  merge_group:
     paths:
       - "**.md"
       - "**.jpg"
