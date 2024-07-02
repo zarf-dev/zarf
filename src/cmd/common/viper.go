@@ -124,6 +124,17 @@ func InitViper() *viper.Viper {
 
 	// Specify an alternate config file
 	cfgFile := os.Getenv("ZARF_CONFIG")
+	if !argsConfigPathIsPresent() {
+		if cfgFile != "" {
+			// Use config file from the flag.
+			v.SetConfigFile(cfgFile)
+		} else {
+			// Search config paths in the current directory and $HOME/.zarf.
+			v.AddConfigPath(".")
+			v.AddConfigPath("$HOME/.zarf")
+			v.SetConfigName("zarf-config")
+		}
+	}
 
 	// Don't forget to read config either from cfgFile or from home directory!
 	if cfgFile != "" {
@@ -148,6 +159,24 @@ func InitViper() *viper.Viper {
 	setDefaults()
 
 	return v
+}
+
+func argsConfigPathIsPresent() bool {
+	args := os.Args
+	//check if the config path is set in the args
+	for _, arg := range args {
+		if arg == "--config" {
+			return true
+		}
+	}
+	return false
+}
+
+func SetViperConfigFilePath(vcfgFilePath string) {
+	if vcfgFilePath != "" {
+		v.SetConfigFile(config.CommonOptions.ConfigPath)
+		vConfigError = v.ReadInConfig()
+	}
 }
 
 // GetViper returns the viper singleton

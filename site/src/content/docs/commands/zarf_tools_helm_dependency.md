@@ -70,6 +70,7 @@ for this case.
 
 ```
       --burst-limit int                 client-side default throttling limit (default 100)
+      --config-path string              Specify the path of the configuration file to use
       --debug                           enable verbose output
       --kube-apiserver string           the address and the port for the Kubernetes API server
       --kube-as-group stringArray       group to impersonate for the operation, this flag can be repeated to specify multiple groups.

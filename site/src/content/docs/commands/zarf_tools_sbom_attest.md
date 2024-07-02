@@ -36,9 +36,10 @@ zarf tools sbom attest --output [FORMAT] <IMAGE> [flags]
 ### Options inherited from parent commands
 
 ```
-  -c, --config string   syft configuration file
-  -q, --quiet           suppress all logging output
-  -v, --verbose count   increase verbosity (-v = info, -vv = debug)
+  -c, --config string        syft configuration file
+      --config-path string   Specify the path of the configuration file to use
+  -q, --quiet                suppress all logging output
+  -v, --verbose count        increase verbosity (-v = info, -vv = debug)
 ```
 
 ### SEE ALSO

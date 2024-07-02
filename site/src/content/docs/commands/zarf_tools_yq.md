@@ -81,6 +81,12 @@ zarf tools yq -P sample.json
       --xml-strict-mode               enables strict parsing of XML. See https://pkg.go.dev/encoding/xml for more details.
 ```
 
+### Options inherited from parent commands
+
+```
+      --config-path string   Specify the path of the configuration file to use
+```
+
 ### SEE ALSO
 
 * [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier

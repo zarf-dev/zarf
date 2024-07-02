@@ -32,6 +32,8 @@ func SetupCLI() {
 		message.DisableColor()
 	}
 
+	SetViperConfigFilePath(config.CommonOptions.ConfigPath)
+
 	printViperConfigUsed()
 
 	// No log level set, so use the default

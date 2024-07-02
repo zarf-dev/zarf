@@ -82,6 +82,7 @@ var genCLIDocs = &cobra.Command{
 						addHiddenDummyFlag(toolCmd, "tmpdir")
 						addHiddenDummyFlag(toolCmd, "insecure")
 						addHiddenDummyFlag(toolCmd, "no-color")
+						addHiddenDummyFlag(toolCmd, "config-path")
 					}
 
 					// Remove the default values from all of the helm commands during the CLI command doc generation

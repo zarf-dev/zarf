@@ -36,6 +36,7 @@ $ zarf tools registry delete reg.example.com/stefanprodan/podinfo@sha256:57a654a
 
 ```
       --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
+      --config-path string                 Specify the path of the configuration file to use
       --insecure                           Allow image references to be fetched without TLS
       --platform string                    Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64). (default "all")
   -v, --verbose                            Enable debug logs

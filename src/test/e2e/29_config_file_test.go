@@ -18,17 +18,23 @@ func TestConfigFile(t *testing.T) {
 	e2e.SetupWithCluster(t)
 
 	var (
-		path   = fmt.Sprintf("zarf-package-config-file-%s.tar.zst", e2e.Arch)
-		dir    = "examples/config-file"
-		config = "zarf-config.toml"
+		path       = fmt.Sprintf("zarf-package-config-file-%s.tar.zst", e2e.Arch)
+		dir        = "examples/config-file"
+		config     = "zarf-config.toml"
+		configPath = filepath.Join(dir, config)
 	)
+	// defer unsetting the ZARF_CONFIG so that we can test w/ the env var and w/ the flag both
+	defer os.Unsetenv("ZARF_CONFIG")
 
 	e2e.CleanFiles(path)
 
+	// Test the config file flag
+	os.Unsetenv("ZARF_CONFIG")
+	configFileTests(t, dir, path, configPath)
+
 	// Test the config file environment variable
-	t.Setenv("ZARF_CONFIG", filepath.Join(dir, config))
-	defer os.Unsetenv("ZARF_CONFIG")
-	configFileTests(t, dir, path)
+	t.Setenv("ZARF_CONFIG", configPath)
+	configFileTests(t, dir, path, "")
 
 	configFileDefaultTests(t)
 
@@ -38,15 +44,17 @@ func TestConfigFile(t *testing.T) {
 	e2e.CleanFiles(path)
 }
 
-func configFileTests(t *testing.T, dir, path string) {
+func configFileTests(t *testing.T, dir, path string, configPath string) {
 	t.Helper()
 
-	_, stdErr, err := e2e.Zarf("package", "create", dir, "--confirm")
+	args := addConfigIfPresent([]string{"package", "create", dir, "--confirm"}, configPath)
+	_, stdErr, err := e2e.Zarf(args...)
 	require.NoError(t, err)
 	require.Contains(t, string(stdErr), "This is a zebra and they have stripes")
 	require.Contains(t, string(stdErr), "This is a leopard and they have spots")
 
-	_, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
+	args = addConfigIfPresent([]string{"package", "deploy", path, "--confirm"}, configPath)
+	_, stdErr, err = e2e.Zarf(args...)
 	require.NoError(t, err)
 	require.Contains(t, string(stdErr), "📦 LION COMPONENT")
 	require.NotContains(t, string(stdErr), "📦 LEOPARD COMPONENT")
@@ -165,4 +173,11 @@ func configFileDefaultTests(t *testing.T) {
 	for _, test := range packageDeployFlags {
 		require.Contains(t, string(stdOut), test)
 	}
+}
+
+func addConfigIfPresent(args []string, value string) []string {
+	if value != "" {
+		return append(args, fmt.Sprintf("--config-path=%s", value))
+	}
+	return args
 }

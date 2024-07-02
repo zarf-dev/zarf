@@ -56,6 +56,7 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 
 ```
   -C, --colors                        force print with colors
+      --config-path string            Specify the path of the configuration file to use
       --csv-auto-parse                parse CSV YAML/JSON values (default true)
       --csv-separator char            CSV Separator character (default ,)
   -e, --exit-status                   set exit status if there are no matches or null or false is returned

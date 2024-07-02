@@ -23,6 +23,7 @@ zarf COMMAND [flags]
 
 ```
   -a, --architecture string   Architecture for OCI images and Zarf packages
+      --config-path string    Specify the path of the configuration file to use
   -h, --help                  help for zarf
       --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
