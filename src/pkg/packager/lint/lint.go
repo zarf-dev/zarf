@@ -150,11 +150,11 @@ func isPinnedImage(image string) (bool, error) {
 }
 
 func isCosignSignature(image string) bool {
-	return (strings.HasSuffix(image, ".sig"))
+	return strings.HasSuffix(image, ".sig")
 }
 
 func isCosignAttestation(image string) bool {
-	return (strings.HasSuffix(image, ".att"))
+	return strings.HasSuffix(image, ".att")
 }
 
 func isPinnedRepo(repo string) bool {
