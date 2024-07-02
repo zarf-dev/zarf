@@ -18,8 +18,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-func (p *Packager) confirmAction(stage string) (confirm bool) {
-
+func (p *Packager) confirmAction(stage string, warnings []string) (confirm bool) {
 	pterm.Println()
 	message.HeaderInfof("📦 PACKAGE DEFINITION")
 	utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(stage), true)
@@ -54,10 +53,10 @@ func (p *Packager) confirmAction(stage string) (confirm bool) {
 		}
 	}
 
-	if len(p.warnings) > 0 {
+	if len(warnings) > 0 {
 		message.HorizontalRule()
 		message.Title("Package Warnings", "the following warnings were flagged while reading the package")
-		for _, warning := range p.warnings {
+		for _, warning := range warnings {
 			message.Warn(warning)
 		}
 	}

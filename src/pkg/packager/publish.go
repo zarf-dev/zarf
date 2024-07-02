@@ -58,7 +58,7 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 			return err
 		}
 
-		p.cfg.Pkg, p.warnings, err = sc.LoadPackageDefinition(ctx, p.layout)
+		p.cfg.Pkg, _, err = sc.LoadPackageDefinition(ctx, p.layout)
 		if err != nil {
 			return err
 		}
@@ -72,7 +72,7 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 		}
 	} else {
 		filter := filters.Empty()
-		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, filter, false)
+		p.cfg.Pkg, _, err = p.source.LoadPackage(ctx, p.layout, filter, false)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
