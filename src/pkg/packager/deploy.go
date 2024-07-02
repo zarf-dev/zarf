@@ -47,8 +47,7 @@ func (p *Packager) resetRegistryHPA(ctx context.Context) {
 }
 
 // Deploy attempts to deploy the given PackageConfig.
-func (p *Packager) Deploy(ctx context.Context) (err error) {
-
+func (p *Packager) Deploy(ctx context.Context) error {
 	isInteractive := !config.CommonOptions.Confirm
 
 	deployFilter := filters.Combine(
@@ -56,38 +55,42 @@ func (p *Packager) Deploy(ctx context.Context) (err error) {
 		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, isInteractive),
 	)
 
+	warnings := []string{}
 	if isInteractive {
 		filter := filters.Empty()
-
-		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, filter, true)
+		pkg, loadWarnings, err := p.source.LoadPackage(ctx, p.layout, filter, true)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
+		p.cfg.Pkg = pkg
+		warnings = append(warnings, loadWarnings...)
 	} else {
-		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, deployFilter, true)
+		pkg, loadWarnings, err := p.source.LoadPackage(ctx, p.layout, deployFilter, true)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
-
+		p.cfg.Pkg = pkg
+		warnings = append(warnings, loadWarnings...)
 		if err := p.populatePackageVariableConfig(); err != nil {
 			return fmt.Errorf("unable to set the active variables: %w", err)
 		}
 	}
 
-	if err := p.validateLastNonBreakingVersion(); err != nil {
-		return err
-	}
-
-	var sbomWarnings []string
-	p.sbomViewFiles, sbomWarnings, err = p.layout.SBOMs.StageSBOMViewFiles()
+	validateWarnings, err := validateLastNonBreakingVersion(config.CLIVersion, p.cfg.Pkg.Build.LastNonBreakingVersion)
 	if err != nil {
 		return err
 	}
+	warnings = append(warnings, validateWarnings...)
 
-	p.warnings = append(p.warnings, sbomWarnings...)
+	sbomViewFiles, sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
+	if err != nil {
+		return err
+	}
+	p.sbomViewFiles = sbomViewFiles
+	warnings = append(warnings, sbomWarnings...)
 
 	// Confirm the overall package deployment
-	if !p.confirmAction(config.ZarfDeployStage) {
+	if !p.confirmAction(config.ZarfDeployStage, warnings) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
