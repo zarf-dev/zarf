@@ -6,6 +6,7 @@ package external
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -77,14 +78,9 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	suite.NoError(err, "unable to create the k3d cluster")
 
 	// Install a gitea server via docker compose to act as the 'remote' git server
-	err = exec.CmdWithPrint("docker", "compose", "up", "-d")
-	suite.NoError(err, "unable to install the gitea-server")
-
-	// Wait for gitea to deploy properly
-	giteaArgs := []string{"inspect", "-f", "{{.State.Status}}", "gitea.init"}
-	giteaErrStr := "unable to verify the gitea container installed successfully"
-	success := verifyWaitSuccess(suite.T(), 2, "docker", giteaArgs, "exited", giteaErrStr)
-	suite.True(success, giteaErrStr)
+	_, stdErr, _ := exec.CmdWithContext(context.Background(), exec.PrintCfg(), "docker", "compose", "up", "--wait")
+	// Docker compose runs a container with a script that purposely exits once finished
+	suite.Contains(stdErr, "container gitea.init exited")
 
 	// Connect gitea to the k3d network
 	err = exec.CmdWithPrint("docker", "network", "connect", "--ip", giteaIP, network, giteaHost)
