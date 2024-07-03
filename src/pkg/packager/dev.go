@@ -85,7 +85,6 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 	if !p.cfg.CreateOpts.NoYOLO {
 		p.cfg.Pkg.Metadata.YOLO = true
 	} else {
-		p.hpaModified = false
 		// Reset registry HPA scale down whether an error occurs or not
 		defer p.resetRegistryHPA(ctx)
 	}

@@ -250,6 +250,10 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg types.ZarfPac
 // EnableRegHPAScaleDown enables the HPA scale down for the Zarf Registry.
 func (c *Cluster) EnableRegHPAScaleDown(ctx context.Context) error {
 	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
+	// Ignore not found error when HPA is disabled.
+	if kerrors.IsNotFound(err) {
+		return err
+	}
 	if err != nil {
 		return err
 	}
@@ -265,6 +269,10 @@ func (c *Cluster) EnableRegHPAScaleDown(ctx context.Context) error {
 // DisableRegHPAScaleDown disables the HPA scale down for the Zarf Registry.
 func (c *Cluster) DisableRegHPAScaleDown(ctx context.Context) error {
 	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
+	// Ignore not found error when HPA is disabled.
+	if kerrors.IsNotFound(err) {
+		return err
+	}
 	if err != nil {
 		return err
 	}

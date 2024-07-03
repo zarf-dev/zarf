@@ -35,7 +35,6 @@ type Packager struct {
 	state          *types.ZarfState
 	cluster        *cluster.Cluster
 	layout         *layout.PackagePaths
-	hpaModified    bool
 	connectStrings types.ConnectStrings
 	sbomViewFiles  []string
 	source         sources.PackageSource
