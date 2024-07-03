@@ -11,10 +11,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
-	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
+
+	"github.com/defenseunicorns/zarf/src/pkg/variables"
+	"github.com/defenseunicorns/zarf/src/types"
 )
 
 func TestZarfSchema(t *testing.T) {
@@ -296,8 +297,7 @@ func TestValidateComponent(t *testing.T) {
 			Metadata: types.ZarfMetadata{Name: "test-zarf-package"},
 		}
 
-		createOpts := types.ZarfCreateOptions{Flavor: "", BaseDir: "."}
-		_, err := lintComponents(context.Background(), zarfPackage, createOpts)
+		_, err := lintComponents(context.Background(), zarfPackage, nil, "")
 		require.Error(t, err)
 	})
 

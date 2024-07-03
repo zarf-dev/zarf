@@ -17,11 +17,14 @@ import (
 	"github.com/defenseunicorns/zarf/src/cmd/common"
 	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager"
+	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/fatih/color"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -264,19 +267,66 @@ var devLintCmd = &cobra.Command{
 	Short:   lang.CmdDevLintShort,
 	Long:    lang.CmdDevLintLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
+		baseDir := common.SetBaseDirectory(args)
 		v := common.GetViper()
-		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
-			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
+		setVariables := helpers.TransformAndMergeMap(v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-		pkgClient, err := packager.New(&pkgConfig)
+		var pkg types.ZarfPackage
+		err := utils.ReadYaml(filepath.Join(baseDir, layout.ZarfYAML), &pkg)
 		if err != nil {
 			return err
 		}
-		defer pkgClient.ClearTempPaths()
+		findings, err := lint.Validate(cmd.Context(), pkg, setVariables, pkgConfig.CreateOpts.Flavor)
+		if err != nil {
+			return fmt.Errorf("linting failed: %w", err)
+		}
+		if len(findings) == 0 {
+			message.Successf("0 findings for %q", pkg.Metadata.Name)
+			return nil
+		}
+		mapOfFindingsByPath := lint.GroupFindingsByPath(findings, types.SevWarn, pkg.Metadata.Name)
 
-		return pkgClient.Lint(cmd.Context())
+		header := []string{"Type", "Path", "Message"}
+		for _, findings := range mapOfFindingsByPath {
+			lintData := [][]string{}
+			for _, finding := range findings {
+				lintData = append(lintData, []string{
+					colorWrapSev(finding.Severity),
+					message.ColorWrap(finding.YqPath, color.FgCyan),
+					itemizedDescription(finding.Description, finding.Item),
+				})
+			}
+			var packagePathFromUser string
+			if helpers.IsOCIURL(findings[0].PackagePathOverride) {
+				packagePathFromUser = findings[0].PackagePathOverride
+			} else {
+				packagePathFromUser = filepath.Join(baseDir, findings[0].PackagePathOverride)
+			}
+			message.Notef("Linting package %q at %s", findings[0].PackageNameOverride, packagePathFromUser)
+			message.Table(header, lintData)
+		}
+
+		if lint.HasSeverity(findings, types.SevErr) {
+			return errors.New("errors during lint")
+		}
+		return nil
 	},
+}
+
+func itemizedDescription(description string, item string) string {
+	if item == "" {
+		return description
+	}
+	return fmt.Sprintf("%s - %s", description, item)
+}
+
+func colorWrapSev(s types.Severity) string {
+	if s == types.SevErr {
+		return message.ColorWrap("Error", color.FgRed)
+	} else if s == types.SevWarn {
+		return message.ColorWrap("Warning", color.FgYellow)
+	}
+	return "unknown"
 }
 
 func init() {

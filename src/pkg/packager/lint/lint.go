@@ -27,9 +27,9 @@ import (
 var ZarfSchema fs.ReadFileFS
 
 // Validate the given Zarf package. The Zarf package should not already be composed when sent to this function.
-func Validate(ctx context.Context, pkg types.ZarfPackage, createOpts types.ZarfCreateOptions) ([]types.PackageFinding, error) {
+func Validate(ctx context.Context, pkg types.ZarfPackage, setVariables map[string]string, flavor string) ([]types.PackageFinding, error) {
 	var findings []types.PackageFinding
-	compFindings, err := lintComponents(ctx, pkg, createOpts)
+	compFindings, err := lintComponents(ctx, pkg, setVariables, flavor)
 	if err != nil {
 		return nil, err
 	}
@@ -54,17 +54,16 @@ func Validate(ctx context.Context, pkg types.ZarfPackage, createOpts types.ZarfC
 	return findings, nil
 }
 
-func lintComponents(ctx context.Context, pkg types.ZarfPackage, createOpts types.ZarfCreateOptions) ([]types.PackageFinding, error) {
+func lintComponents(ctx context.Context, pkg types.ZarfPackage, setVariables map[string]string, flavor string) ([]types.PackageFinding, error) {
 	var findings []types.PackageFinding
 
 	for i, component := range pkg.Components {
 		arch := config.GetArch(pkg.Metadata.Architecture)
-		if !composer.CompatibleComponent(component, arch, createOpts.Flavor) {
+		if !composer.CompatibleComponent(component, arch, flavor) {
 			continue
 		}
 
-		chain, err := composer.NewImportChain(ctx, component, i, pkg.Metadata.Name, arch, createOpts.Flavor)
-
+		chain, err := composer.NewImportChain(ctx, component, i, pkg.Metadata.Name, arch, flavor)
 		if err != nil {
 			return nil, err
 		}
@@ -72,7 +71,7 @@ func lintComponents(ctx context.Context, pkg types.ZarfPackage, createOpts types
 		node := chain.Head()
 		for node != nil {
 			component := node.ZarfComponent
-			compFindings := fillComponentTemplate(&component, &createOpts)
+			compFindings := fillComponentTemplate(&component, setVariables)
 			compFindings = append(compFindings, checkComponent(component, node.Index())...)
 			for i := range compFindings {
 				compFindings[i].PackagePathOverride = node.ImportLocation()
@@ -85,7 +84,7 @@ func lintComponents(ctx context.Context, pkg types.ZarfPackage, createOpts types
 	return findings, nil
 }
 
-func fillComponentTemplate(c *types.ZarfComponent, createOpts *types.ZarfCreateOptions) []types.PackageFinding {
+func fillComponentTemplate(c *types.ZarfComponent, setVariables map[string]string) []types.PackageFinding {
 	var findings []types.PackageFinding
 	err := creator.ReloadComponentTemplate(c)
 	if err != nil {
@@ -112,7 +111,7 @@ func fillComponentTemplate(c *types.ZarfComponent, createOpts *types.ZarfCreateO
 					Severity:    types.SevWarn,
 				})
 			}
-			_, present := createOpts.SetVariables[key]
+			_, present := setVariables[key]
 			if !present {
 				findings = append(findings, types.PackageFinding{
 					Description: lang.UnsetVarLintWarning,
@@ -120,7 +119,7 @@ func fillComponentTemplate(c *types.ZarfComponent, createOpts *types.ZarfCreateO
 				})
 			}
 		}
-		for key, value := range createOpts.SetVariables {
+		for key, value := range setVariables {
 			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
 		}
 	}
