@@ -37,7 +37,6 @@ type Packager struct {
 	layout         *layout.PackagePaths
 	hpaModified    bool
 	connectStrings types.ConnectStrings
-	sbomViewFiles  []string
 	source         sources.PackageSource
 	generation     int
 }
