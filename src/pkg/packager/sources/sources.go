@@ -41,17 +41,17 @@ type PackageSource interface {
 }
 
 // Identify returns the type of package source based on the provided package source string.
-func Identify(pkgSrc string) string {
-	if helpers.IsURL(pkgSrc) {
-		parsed, _ := url.Parse(pkgSrc)
+func Identify(src string) string {
+	if helpers.IsURL(src) {
+		parsed, _ := url.Parse(src)
 		return parsed.Scheme
 	}
 
-	if strings.Contains(pkgSrc, ".part000") {
+	if strings.Contains(src, ".part000") {
 		return "split"
 	}
 
-	if IsValidFileExtension(pkgSrc) {
+	if IsValidFileExtension(src) {
 		return "tarball"
 	}
 
@@ -59,33 +59,46 @@ func Identify(pkgSrc string) string {
 }
 
 // New returns a new PackageSource based on the provided package options.
-func New(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
+func New(src, shasum, publicKeyPath, sGetKeyPath string) (PackageSource, error) {
 	var source PackageSource
-
-	pkgSrc := pkgOpts.PackageSource
-
-	switch Identify(pkgSrc) {
+	switch Identify(src) {
 	case "oci":
-		if pkgOpts.Shasum != "" {
-			pkgSrc = fmt.Sprintf("%s@sha256:%s", pkgSrc, pkgOpts.Shasum)
+		ociSrc := src
+		if shasum != "" {
+			ociSrc = fmt.Sprintf("%s@sha256:%s", src, shasum)
 		}
 		arch := config.GetArch()
-		remote, err := zoci.NewRemote(pkgSrc, oci.PlatformForArch(arch))
+		remote, err := zoci.NewRemote(ociSrc, oci.PlatformForArch(arch))
 		if err != nil {
 			return nil, err
 		}
-		source = &OCISource{ZarfPackageOptions: pkgOpts, Remote: remote}
+		source = &OCISource{
+			Remote:        remote,
+			Src:           ociSrc,
+			PublicKeyPath: publicKeyPath,
+		}
 	case "tarball":
-		source = &TarballSource{pkgOpts}
+		source = &TarballSource{
+			Src:           src,
+			Shasum:        shasum,
+			PublicKeyPath: publicKeyPath,
+		}
 	case "http", "https", "sget":
-		source = &URLSource{pkgOpts}
+		source = &URLSource{
+			Src:           src,
+			Shasum:        shasum,
+			PublicKeyPath: publicKeyPath,
+			SGetKeyPath:   sGetKeyPath,
+		}
 	case "split":
-		source = &SplitTarballSource{pkgOpts}
+		source = &SplitTarballSource{
+			Src:           src,
+			Shasum:        shasum,
+			PublicKeyPath: publicKeyPath,
+		}
 	default:
-		return nil, fmt.Errorf("could not identify source type for %q", pkgSrc)
+		return nil, fmt.Errorf("could not identify source type for %q", src)
 	}
-
-	message.Debugf("Using %T for %q", source, pkgSrc)
-
+	message.Debugf("Using %T for %q", source, src)
 	return source, nil
 }

@@ -54,7 +54,7 @@ var initCmd = &cobra.Command{
 			return err
 		}
 
-		src, err := sources.New(&pkgConfig.PkgOpts)
+		source, err := sources.New(pkgConfig.PkgOpts.PackageSource, pkgConfig.PkgOpts.Shasum, pkgConfig.PkgOpts.PublicKeyPath, pkgConfig.PkgOpts.SGetKeyPath)
 		if err != nil {
 			return err
 		}
@@ -63,7 +63,7 @@ var initCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
+		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(source))
 		if err != nil {
 			return err
 		}

@@ -99,7 +99,7 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 
 	// Fill the source if it wasn't provided - note source can be nil if the package is being created
 	if pkgr.source == nil && pkgr.cfg.CreateOpts.BaseDir == "" {
-		pkgr.source, err = sources.New(&pkgr.cfg.PkgOpts)
+		pkgr.source, err = sources.New(pkgr.cfg.PkgOpts.PackageSource, pkgr.cfg.PkgOpts.Shasum, pkgr.cfg.PkgOpts.PublicKeyPath, pkgr.cfg.PkgOpts.SGetKeyPath)
 		if err != nil {
 			return nil, err
 		}

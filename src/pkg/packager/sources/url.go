@@ -26,19 +26,22 @@ var (
 
 // URLSource is a package source for http, https and sget URLs.
 type URLSource struct {
-	*types.ZarfPackageOptions
+	Src           string
+	Shasum        string
+	PublicKeyPath string
+	SGetKeyPath   string
 }
 
 // Collect downloads a package from the source URL.
 func (s *URLSource) Collect(_ context.Context, dir string) (string, error) {
-	if !config.CommonOptions.Insecure && s.Shasum == "" && !strings.HasPrefix(s.PackageSource, helpers.SGETURLPrefix) {
+	if !config.CommonOptions.Insecure && s.Shasum == "" && !strings.HasPrefix(s.Src, helpers.SGETURLPrefix) {
 		return "", fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
 	}
 	var packageURL string
 	if s.Shasum != "" {
-		packageURL = fmt.Sprintf("%s@%s", s.PackageSource, s.Shasum)
+		packageURL = fmt.Sprintf("%s@%s", s.Src, s.Shasum)
 	} else {
-		packageURL = s.PackageSource
+		packageURL = s.Src
 	}
 
 	dstTarball := filepath.Join(dir, "zarf-package-url-unknown")
@@ -62,15 +65,11 @@ func (s *URLSource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 	if err != nil {
 		return pkg, nil, err
 	}
-
-	s.PackageSource = dstTarball
-	// Clear the shasum so that it doesn't get used again
-	s.Shasum = ""
-
 	ts := &TarballSource{
-		s.ZarfPackageOptions,
+		Src:           dstTarball,
+		Shasum:        "",
+		PublicKeyPath: s.PublicKeyPath,
 	}
-
 	return ts.LoadPackage(ctx, dst, filter, unarchiveAll)
 }
 
@@ -86,12 +85,10 @@ func (s *URLSource) LoadPackageMetadata(ctx context.Context, dst *layout.Package
 	if err != nil {
 		return pkg, nil, err
 	}
-
-	s.PackageSource = dstTarball
-
 	ts := &TarballSource{
-		s.ZarfPackageOptions,
+		Src:           dstTarball,
+		Shasum:        "",
+		PublicKeyPath: s.PublicKeyPath,
 	}
-
 	return ts.LoadPackageMetadata(ctx, dst, wantSBOM, skipValidation)
 }

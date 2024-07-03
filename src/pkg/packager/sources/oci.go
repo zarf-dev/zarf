@@ -29,15 +29,16 @@ var (
 
 // OCISource is a package source for OCI registries.
 type OCISource struct {
-	*types.ZarfPackageOptions
-	*zoci.Remote
+	Remote        *zoci.Remote
+	Src           string
+	PublicKeyPath string
 }
 
 // LoadPackage loads a package from an OCI registry.
 func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
-	message.Debugf("Loading package from %q", s.PackageSource)
+	message.Debugf("Loading package from %q", s.Src)
 
-	pkg, err = s.FetchZarfYAML(ctx)
+	pkg, err = s.Remote.FetchZarfYAML(ctx)
 	if err != nil {
 		return pkg, nil, err
 	}
@@ -46,13 +47,13 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 		return pkg, nil, err
 	}
 
-	layersToPull, err := s.LayersFromRequestedComponents(ctx, pkg.Components)
+	layersToPull, err := s.Remote.LayersFromRequestedComponents(ctx, pkg.Components)
 	if err != nil {
 		return pkg, nil, fmt.Errorf("unable to get published component image layers: %s", err.Error())
 	}
 
 	isPartial := true
-	root, err := s.FetchRoot(ctx)
+	root, err := s.Remote.FetchRoot(ctx)
 	if err != nil {
 		return pkg, nil, err
 	}
@@ -60,7 +61,7 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 		isPartial = false
 	}
 
-	layersFetched, err := s.PullPackage(ctx, dst.Base, config.CommonOptions.OCIConcurrency, layersToPull...)
+	layersFetched, err := s.Remote.PullPackage(ctx, dst.Base, config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
 		return pkg, nil, fmt.Errorf("unable to pull the package: %w", err)
 	}
@@ -115,7 +116,7 @@ func (s *OCISource) LoadPackageMetadata(ctx context.Context, dst *layout.Package
 	if wantSBOM {
 		toPull = append(toPull, layout.SBOMTar)
 	}
-	layersFetched, err := s.PullPaths(ctx, dst.Base, toPull)
+	layersFetched, err := s.Remote.PullPaths(ctx, dst.Base, toPull)
 	if err != nil {
 		return pkg, nil, err
 	}
@@ -168,7 +169,7 @@ func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 		return "", err
 	}
 	defer os.RemoveAll(tmp)
-	fetched, err := s.PullPackage(ctx, tmp, config.CommonOptions.OCIConcurrency)
+	fetched, err := s.Remote.PullPackage(ctx, tmp, config.CommonOptions.OCIConcurrency)
 	if err != nil {
 		return "", err
 	}
@@ -192,7 +193,7 @@ func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 	spinner.Success()
 
 	// TODO (@Noxsios) remove the suffix check at v1.0.0
-	isSkeleton := pkg.Build.Architecture == zoci.SkeletonArch || strings.HasSuffix(s.Repo().Reference.Reference, zoci.SkeletonArch)
+	isSkeleton := pkg.Build.Architecture == zoci.SkeletonArch || strings.HasSuffix(s.Remote.Repo().Reference.Reference, zoci.SkeletonArch)
 	name := fmt.Sprintf("%s%s", NameFromMetadata(&pkg, isSkeleton), PkgSuffix(pkg.Metadata.Uncompressed))
 
 	dstTarball := filepath.Join(dir, name)

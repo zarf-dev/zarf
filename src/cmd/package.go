@@ -273,12 +273,12 @@ var packagePullCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pkgConfig.PkgOpts.PackageSource = args[0]
-		pkgClient, err := packager.New(&pkgConfig)
+		source, err := sources.New(pkgConfig.PkgOpts.PackageSource, pkgConfig.PkgOpts.Shasum, pkgConfig.PkgOpts.PublicKeyPath, pkgConfig.PkgOpts.SGetKeyPath)
 		if err != nil {
 			return err
 		}
-		defer pkgClient.ClearTempPaths()
-		if err := pkgClient.Pull(cmd.Context()); err != nil {
+		_, err = source.Collect(cmd.Context(), pkgConfig.PullOpts.OutputDirectory)
+		if err != nil {
 			return fmt.Errorf("failed to pull package: %w", err)
 		}
 		return nil

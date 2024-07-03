@@ -28,12 +28,14 @@ var (
 
 // SplitTarballSource is a package source for split tarballs.
 type SplitTarballSource struct {
-	*types.ZarfPackageOptions
+	Src           string
+	Shasum        string
+	PublicKeyPath string
 }
 
 // Collect turns a split tarball into a full tarball.
 func (s *SplitTarballSource) Collect(_ context.Context, dir string) (string, error) {
-	pattern := strings.Replace(s.PackageSource, ".part000", ".part*", 1)
+	pattern := strings.Replace(s.Src, ".part000", ".part*", 1)
 	fileList, err := filepath.Glob(pattern)
 	if err != nil {
 		return "", fmt.Errorf("unable to find split tarball files: %s", err)
@@ -42,7 +44,7 @@ func (s *SplitTarballSource) Collect(_ context.Context, dir string) (string, err
 	// Ensure the files are in order so they are appended in the correct order
 	sort.Strings(fileList)
 
-	reassembled := filepath.Join(dir, filepath.Base(strings.Replace(s.PackageSource, ".part000", "", 1)))
+	reassembled := filepath.Join(dir, filepath.Base(strings.Replace(s.Src, ".part000", "", 1)))
 	// Create the new package
 	pkgFile, err := os.Create(reassembled)
 	if err != nil {
@@ -111,34 +113,38 @@ func (s *SplitTarballSource) Collect(_ context.Context, dir string) (string, err
 
 // LoadPackage loads a package from a split tarball.
 func (s *SplitTarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
-	tb, err := s.Collect(ctx, filepath.Dir(s.PackageSource))
+	tb, err := s.Collect(ctx, filepath.Dir(s.Src))
 	if err != nil {
 		return pkg, nil, err
 	}
 
 	// Update the package source to the reassembled tarball
-	s.PackageSource = tb
+	s.Src = tb
 	// Clear the shasum so it is not used for validation
 	s.Shasum = ""
 
 	ts := &TarballSource{
-		s.ZarfPackageOptions,
+		Src:           s.Src,
+		Shasum:        s.Shasum,
+		PublicKeyPath: s.PublicKeyPath,
 	}
 	return ts.LoadPackage(ctx, dst, filter, unarchiveAll)
 }
 
 // LoadPackageMetadata loads a package's metadata from a split tarball.
 func (s *SplitTarballSource) LoadPackageMetadata(ctx context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
-	tb, err := s.Collect(ctx, filepath.Dir(s.PackageSource))
+	tb, err := s.Collect(ctx, filepath.Dir(s.Src))
 	if err != nil {
 		return pkg, nil, err
 	}
 
 	// Update the package source to the reassembled tarball
-	s.PackageSource = tb
+	s.Src = tb
 
 	ts := &TarballSource{
-		s.ZarfPackageOptions,
+		Src:           s.Src,
+		Shasum:        s.Shasum,
+		PublicKeyPath: s.PublicKeyPath,
 	}
 	return ts.LoadPackageMetadata(ctx, dst, wantSBOM, skipValidation)
 }

@@ -29,23 +29,25 @@ var (
 
 // TarballSource is a package source for tarballs.
 type TarballSource struct {
-	*types.ZarfPackageOptions
+	Src           string
+	Shasum        string
+	PublicKeyPath string
 }
 
 // LoadPackage loads a package from a tarball.
 func (s *TarballSource) LoadPackage(_ context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
-	spinner := message.NewProgressSpinner("Loading package from %q", s.PackageSource)
+	spinner := message.NewProgressSpinner("Loading package from %q", s.Src)
 	defer spinner.Stop()
 
 	if s.Shasum != "" {
-		if err := helpers.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
+		if err := helpers.SHAsMatch(s.Src, s.Shasum); err != nil {
 			return pkg, nil, err
 		}
 	}
 
 	pathsExtracted := []string{}
 
-	err = archiver.Walk(s.PackageSource, func(f archiver.File) error {
+	err = archiver.Walk(s.Src, func(f archiver.File) error {
 		if f.IsDir() {
 			return nil
 		}
@@ -140,7 +142,7 @@ func (s *TarballSource) LoadPackage(_ context.Context, dst *layout.PackagePaths,
 // LoadPackageMetadata loads a package's metadata from a tarball.
 func (s *TarballSource) LoadPackageMetadata(_ context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	if s.Shasum != "" {
-		if err := helpers.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
+		if err := helpers.SHAsMatch(s.Src, s.Shasum); err != nil {
 			return pkg, nil, err
 		}
 	}
@@ -152,7 +154,7 @@ func (s *TarballSource) LoadPackageMetadata(_ context.Context, dst *layout.Packa
 	pathsExtracted := []string{}
 
 	for _, rel := range toExtract {
-		if err := archiver.Extract(s.PackageSource, rel, dst.Base); err != nil {
+		if err := archiver.Extract(s.Src, rel, dst.Base); err != nil {
 			return pkg, nil, err
 		}
 		// archiver.Extract will not return an error if the file does not exist, so we must manually check
@@ -204,8 +206,8 @@ func (s *TarballSource) LoadPackageMetadata(_ context.Context, dst *layout.Packa
 
 // Collect for the TarballSource is essentially an `mv`
 func (s *TarballSource) Collect(_ context.Context, dir string) (string, error) {
-	dst := filepath.Join(dir, filepath.Base(s.PackageSource))
-	err := os.Rename(s.PackageSource, dst)
+	dst := filepath.Join(dir, filepath.Base(s.Src))
+	err := os.Rename(s.Src, dst)
 	linkErr := &os.LinkError{}
 	isLinkErr := errors.As(err, &linkErr)
 	if err != nil && !isLinkErr {
