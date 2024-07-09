@@ -17,12 +17,8 @@ import (
 )
 
 var (
-	connectResourceName string
-	connectNamespace    string
-	connectResourceType string
-	connectLocalPort    int
-	connectRemotePort   int
-	cliOnly             bool
+	cliOnly bool
+	zt      cluster.TunnelInfo
 
 	connectCmd = &cobra.Command{
 		Use:     "connect { REGISTRY | GIT | connect-name }",
@@ -43,12 +39,34 @@ var (
 			ctx := cmd.Context()
 
 			var tunnel *cluster.Tunnel
-			if connectResourceName != "" {
-				zt := cluster.NewTunnelInfo(connectNamespace, connectResourceType, connectResourceName, "", connectLocalPort, connectRemotePort)
+			if target == "" {
 				tunnel, err = c.ConnectTunnelInfo(ctx, zt)
-			} else {
+			} else if zt == (cluster.TunnelInfo{}) {
 				tunnel, err = c.Connect(ctx, target)
+			} else {
+				var ti cluster.TunnelInfo
+				ti, err = c.NewTargetTunnelInfo(ctx, target)
+				if err != nil {
+					spinner.Fatalf(err, lang.CmdConnectErrService, err.Error())
+				}
+				if zt.ResourceType != cluster.SvcResource {
+					ti.ResourceType = zt.ResourceType
+				}
+				if zt.ResourceName != "" {
+					ti.ResourceName = zt.ResourceName
+				}
+				if zt.Namespace != cluster.ZarfNamespaceName {
+					ti.Namespace = zt.Namespace
+				}
+				if zt.LocalPort != 0 {
+					ti.LocalPort = zt.LocalPort
+				}
+				if zt.RemotePort != 0 {
+					ti.RemotePort = zt.RemotePort
+				}
+				tunnel, err = c.ConnectTunnelInfo(ctx, ti)
 			}
+
 			if err != nil {
 				spinner.Fatalf(err, lang.CmdConnectErrService, err.Error())
 			}
@@ -97,10 +115,10 @@ func init() {
 	rootCmd.AddCommand(connectCmd)
 	connectCmd.AddCommand(connectListCmd)
 
-	connectCmd.Flags().StringVar(&connectResourceName, "name", "", lang.CmdConnectFlagName)
-	connectCmd.Flags().StringVar(&connectNamespace, "namespace", cluster.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
-	connectCmd.Flags().StringVar(&connectResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
-	connectCmd.Flags().IntVar(&connectLocalPort, "local-port", 0, lang.CmdConnectFlagLocalPort)
-	connectCmd.Flags().IntVar(&connectRemotePort, "remote-port", 0, lang.CmdConnectFlagRemotePort)
+	connectCmd.Flags().StringVar(&zt.ResourceName, "name", "", lang.CmdConnectFlagName)
+	connectCmd.Flags().StringVar(&zt.Namespace, "namespace", cluster.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
+	connectCmd.Flags().StringVar(&zt.ResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
+	connectCmd.Flags().IntVar(&zt.LocalPort, "local-port", 0, lang.CmdConnectFlagLocalPort)
+	connectCmd.Flags().IntVar(&zt.RemotePort, "remote-port", 0, lang.CmdConnectFlagRemotePort)
 	connectCmd.Flags().BoolVar(&cliOnly, "cli-only", false, lang.CmdConnectFlagCliOnly)
 }
