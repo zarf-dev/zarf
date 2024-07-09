@@ -18,35 +18,40 @@ import (
 )
 
 // NewAdmissionServer creates a http.Server for the mutating webhook admission handler.
-func NewAdmissionServer(ctx context.Context, port string) *http.Server {
+func NewAdmissionServer(ctx context.Context, port string) (*http.Server, error) {
 	message.Debugf("http.NewAdmissionServer(%s)", port)
 
 	c, err := cluster.NewCluster()
 	if err != nil {
-		message.Fatalf(err, err.Error())
+		return nil, err
 	}
 
-	// Instances hooks
+	// Routers
+	admissionHandler := admission.NewHandler()
 	podsMutation := hooks.NewPodMutationHook(ctx, c)
 	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(ctx, c)
 	argocdApplicationMutation := hooks.NewApplicationMutationHook(ctx, c)
 	argocdRepositoryMutation := hooks.NewRepositorySecretMutationHook(ctx, c)
+	fluxHelmRepositoryMutation := hooks.NewHelmRepositoryMutationHook(ctx, c)
+	fluxOCIRepositoryMutation := hooks.NewOCIRepositoryMutationHook(ctx, c)
 
 	// Routers
-	ah := admission.NewHandler()
 	mux := http.NewServeMux()
 	mux.Handle("/healthz", healthz())
-	mux.Handle("/mutate/pod", ah.Serve(podsMutation))
-	mux.Handle("/mutate/flux-gitrepository", ah.Serve(fluxGitRepositoryMutation))
-	mux.Handle("/mutate/argocd-application", ah.Serve(argocdApplicationMutation))
-	mux.Handle("/mutate/argocd-repository", ah.Serve(argocdRepositoryMutation))
+	mux.Handle("/mutate/pod", admissionHandler.Serve(podsMutation))
+	mux.Handle("/mutate/flux-gitrepository", admissionHandler.Serve(fluxGitRepositoryMutation))
+	mux.Handle("/mutate/flux-helmrepository", admissionHandler.Serve(fluxHelmRepositoryMutation))
+	mux.Handle("/mutate/flux-ocirepository", admissionHandler.Serve(fluxOCIRepositoryMutation))
+	mux.Handle("/mutate/argocd-application", admissionHandler.Serve(argocdApplicationMutation))
+	mux.Handle("/mutate/argocd-repository", admissionHandler.Serve(argocdRepositoryMutation))
 	mux.Handle("/metrics", promhttp.Handler())
 
-	return &http.Server{
+	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%s", port),
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second, // Set ReadHeaderTimeout to avoid Slowloris attacks
 	}
+	return srv, nil
 }
 
 // NewProxyServer creates and returns an http proxy server.

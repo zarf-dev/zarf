@@ -78,7 +78,11 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		state.Distro = distro
 
 		// Setup zarf agent PKI
-		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
+		agentTLS, err := pki.GeneratePKI(config.ZarfAgentHost)
+		if err != nil {
+			return err
+		}
+		state.AgentTLS = agentTLS
 
 		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
@@ -206,19 +210,15 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.
 func (c *Cluster) LoadZarfState(ctx context.Context) (state *types.ZarfState, err error) {
-	// Set up the API connection
 	secret, err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).Get(ctx, ZarfStateSecretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("%w. %s", err, message.ColorWrap("Did you remember to zarf init?", color.Bold))
 	}
-
 	err = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
 	if err != nil {
 		return nil, err
 	}
-
 	c.debugPrintZarfState(state)
-
 	return state, nil
 }
 
@@ -363,7 +363,11 @@ func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions
 		}
 	}
 	if slices.Contains(services, message.AgentKey) {
-		newState.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
+		agentTLS, err := pki.GeneratePKI(config.ZarfAgentHost)
+		if err != nil {
+			return nil, err
+		}
+		newState.AgentTLS = agentTLS
 	}
 
 	return &newState, nil

@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"runtime/debug"
 	"strings"
 	"time"
 
@@ -160,20 +159,6 @@ func WarnErr(err any, message string) {
 func WarnErrf(err any, format string, a ...any) {
 	debugPrinter(2, err)
 	Warnf(format, a...)
-}
-
-// Fatal prints a fatal error message and exits with a 1.
-func Fatal(err any, message string) {
-	debugPrinter(2, err)
-	errorPrinter(2).Println(message)
-	debugPrinter(2, string(debug.Stack()))
-	os.Exit(1)
-}
-
-// Fatalf prints a fatal error message and exits with a 1 with a given format.
-func Fatalf(err any, format string, a ...any) {
-	message := Paragraph(format, a...)
-	Fatal(err, message)
 }
 
 // Info prints an info message.
@@ -327,7 +312,7 @@ func Table(header []string, data [][]string) {
 // preventing future characters from taking on the given color
 // returns string as normal if color is disabled
 func ColorWrap(str string, attr color.Attribute) string {
-	if config.NoColor {
+	if config.NoColor || str == "" {
 		return str
 	}
 	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", attr, str)
@@ -350,8 +335,4 @@ func debugPrinter(offset int, a ...any) {
 			WithWriter(logFile).
 			Println(a...)
 	}
-}
-
-func errorPrinter(offset int) *pterm.PrefixPrinter {
-	return pterm.Error.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
 }

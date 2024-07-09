@@ -47,8 +47,7 @@ func (p *Packager) resetRegistryHPA(ctx context.Context) {
 }
 
 // Deploy attempts to deploy the given PackageConfig.
-func (p *Packager) Deploy(ctx context.Context) (err error) {
-
+func (p *Packager) Deploy(ctx context.Context) error {
 	isInteractive := !config.CommonOptions.Confirm
 
 	deployFilter := filters.Combine(
@@ -56,38 +55,41 @@ func (p *Packager) Deploy(ctx context.Context) (err error) {
 		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, isInteractive),
 	)
 
+	warnings := []string{}
 	if isInteractive {
 		filter := filters.Empty()
-
-		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, filter, true)
+		pkg, loadWarnings, err := p.source.LoadPackage(ctx, p.layout, filter, true)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
+		p.cfg.Pkg = pkg
+		warnings = append(warnings, loadWarnings...)
 	} else {
-		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, deployFilter, true)
+		pkg, loadWarnings, err := p.source.LoadPackage(ctx, p.layout, deployFilter, true)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
-
+		p.cfg.Pkg = pkg
+		warnings = append(warnings, loadWarnings...)
 		if err := p.populatePackageVariableConfig(); err != nil {
 			return fmt.Errorf("unable to set the active variables: %w", err)
 		}
 	}
 
-	if err := p.validateLastNonBreakingVersion(); err != nil {
-		return err
-	}
-
-	var sbomWarnings []string
-	p.sbomViewFiles, sbomWarnings, err = p.layout.SBOMs.StageSBOMViewFiles()
+	validateWarnings, err := validateLastNonBreakingVersion(config.CLIVersion, p.cfg.Pkg.Build.LastNonBreakingVersion)
 	if err != nil {
 		return err
 	}
+	warnings = append(warnings, validateWarnings...)
 
-	p.warnings = append(p.warnings, sbomWarnings...)
+	sbomViewFiles, sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
+	if err != nil {
+		return err
+	}
+	warnings = append(warnings, sbomWarnings...)
 
 	// Confirm the overall package deployment
-	if !p.confirmAction(config.ZarfDeployStage) {
+	if !p.confirmAction(config.ZarfDeployStage, warnings, sbomViewFiles) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
@@ -253,7 +255,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component types.Zarf
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := p.cluster.StartInjectionMadness(ctx, p.layout.Base, p.layout.Images.Base, component.Images)
+		err := p.cluster.StartInjection(ctx, p.layout.Base, p.layout.Images.Base, component.Images)
 		if err != nil {
 			return nil, err
 		}
@@ -266,7 +268,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component types.Zarf
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		if err := p.cluster.StopInjectionMadness(ctx); err != nil {
+		if err := p.cluster.StopInjection(ctx); err != nil {
 			return nil, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
 		}
 	}
@@ -472,7 +474,7 @@ func (p *Packager) setupState(ctx context.Context) (err error) {
 			return nil
 		}()
 		if err != nil {
-			spinner.Fatalf(err, "Unable to create the zarf namespace")
+			return fmt.Errorf("unable to create the Zarf namespace: %w", err)
 		}
 	}
 

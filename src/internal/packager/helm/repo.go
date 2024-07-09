@@ -82,7 +82,7 @@ func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 	var saved string
 	temp := filepath.Join(h.chartPath, "temp")
 	if _, ok := cl.(loader.DirLoader); ok {
-		err = h.buildChartDependencies(spinner)
+		err = h.buildChartDependencies()
 		if err != nil {
 			return fmt.Errorf("unable to build dependencies for the chart: %w", err)
 		}
@@ -157,7 +157,7 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 	if registry.IsOCI(h.chart.URL) {
 		regClient, err = registry.NewClient(registry.ClientOptEnableCache(true))
 		if err != nil {
-			spinner.Fatalf(err, "Unable to create a new registry client")
+			return fmt.Errorf("unable to create the new registry client: %w", err)
 		}
 		chartURL = h.chart.URL
 		// Explicitly set the pull version for OCI
@@ -279,11 +279,11 @@ func (h *Helm) packageValues(cosignKeyPath string) error {
 }
 
 // buildChartDependencies builds the helm chart dependencies
-func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
+func (h *Helm) buildChartDependencies() error {
 	// Download and build the specified dependencies
 	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
 	if err != nil {
-		spinner.Fatalf(err, "Unable to create a new registry client")
+		return fmt.Errorf("unable to create a new registry client: %w", err)
 	}
 
 	h.settings = cli.New()

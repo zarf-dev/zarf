@@ -17,7 +17,7 @@ import (
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
-func (p *Packager) Create(ctx context.Context) (err error) {
+func (p *Packager) Create(ctx context.Context) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -35,12 +35,13 @@ func (p *Packager) Create(ctx context.Context) (err error) {
 		return err
 	}
 
-	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(ctx, p.layout)
+	pkg, warnings, err := pc.LoadPackageDefinition(ctx, p.layout)
 	if err != nil {
 		return err
 	}
+	p.cfg.Pkg = pkg
 
-	if !p.confirmAction(config.ZarfCreateStage) {
+	if !p.confirmAction(config.ZarfCreateStage, warnings, nil) {
 		return fmt.Errorf("package creation canceled")
 	}
 

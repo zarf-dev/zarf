@@ -18,8 +18,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-func (p *Packager) confirmAction(stage string) (confirm bool) {
-
+func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles []string) (confirm bool) {
 	pterm.Println()
 	message.HeaderInfof("📦 PACKAGE DEFINITION")
 	utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(stage), true)
@@ -31,14 +30,14 @@ func (p *Packager) confirmAction(stage string) (confirm bool) {
 			message.HorizontalRule()
 			message.Title("Software Bill of Materials", "an inventory of all software contained in this package")
 
-			if len(p.sbomViewFiles) > 0 {
+			if len(sbomViewFiles) > 0 {
 				cwd, _ := os.Getwd()
-				link := pterm.FgLightCyan.Sprint(pterm.Bold.Sprint(filepath.Join(cwd, layout.SBOMDir, filepath.Base(p.sbomViewFiles[0]))))
+				link := pterm.FgLightCyan.Sprint(pterm.Bold.Sprint(filepath.Join(cwd, layout.SBOMDir, filepath.Base(sbomViewFiles[0]))))
 				inspect := pterm.BgBlack.Sprint(pterm.FgWhite.Sprint(pterm.Bold.Sprintf("$ zarf package inspect %s", p.cfg.PkgOpts.PackageSource)))
 
-				artifactMsg := pterm.Bold.Sprintf("%d artifacts", len(p.sbomViewFiles)) + " to be reviewed. These are"
-				if len(p.sbomViewFiles) == 1 {
-					artifactMsg = pterm.Bold.Sprintf("%d artifact", len(p.sbomViewFiles)) + " to be reviewed. This is"
+				artifactMsg := pterm.Bold.Sprintf("%d artifacts", len(sbomViewFiles)) + " to be reviewed. These are"
+				if len(sbomViewFiles) == 1 {
+					artifactMsg = pterm.Bold.Sprintf("%d artifact", len(sbomViewFiles)) + " to be reviewed. This is"
 				}
 
 				msg := fmt.Sprintf("This package has %s available in a temporary '%s' folder in this directory and will be removed upon deployment.\n", artifactMsg, pterm.Bold.Sprint("zarf-sbom"))
@@ -54,10 +53,10 @@ func (p *Packager) confirmAction(stage string) (confirm bool) {
 		}
 	}
 
-	if len(p.warnings) > 0 {
+	if len(warnings) > 0 {
 		message.HorizontalRule()
 		message.Title("Package Warnings", "the following warnings were flagged while reading the package")
-		for _, warning := range p.warnings {
+		for _, warning := range warnings {
 			message.Warn(warning)
 		}
 	}

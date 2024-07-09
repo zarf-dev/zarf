@@ -382,8 +382,7 @@
       "additionalProperties": false,
       "type": "object",
       "required": [
-        "name",
-        "namespace"
+        "name"
       ],
       "patternProperties": {
         "^x-": {}
@@ -789,10 +788,16 @@
           "description": "The name of the component to import from the referenced zarf.yaml"
         },
         "path": {
+          "not": {
+            "pattern": "###ZARF_PKG_TMPL_"
+          },
           "type": "string",
           "description": "The relative path to a directory containing a zarf.yaml to import from"
         },
         "url": {
+          "not": {
+            "pattern": "###ZARF_PKG_TMPL_"
+          },
           "type": "string",
           "pattern": "^oci://.*$",
           "description": "[beta] The URL to a Zarf package to import via OCI"
@@ -1091,6 +1096,7 @@
         "$ref": "#/$defs/ZarfComponent"
       },
       "type": "array",
+      "minItems": 1,
       "description": "List of components to deploy in this package"
     },
     "constants": {

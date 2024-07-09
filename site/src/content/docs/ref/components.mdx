@@ -14,7 +14,7 @@ These components define what dependencies they have along with a declarative def
 
 Each package can have as many components as the package creator wants but a package isn't anything without at least one component.
 
-{/* 
+{/*
 ## What can be Packaged?
 
 The following types of software can be rolled into a Zarf Package:
@@ -129,7 +129,7 @@ Kustomizations are handled a bit differently than normal manifests in that Zarf 
 
 <Properties item="ZarfComponent" include={["images"]} />
 
-Images can either be discovered manually, or automatically by using [`zarf dev find-images`](/commands/zarf_dev_find-images/).
+Images can either be discovered manually, or automatically by using [`zarf dev find-images`](/commands/zarf_dev_find-images/). The image list is not limited to containers, any OCI image following the [Image Manifest specification](https://github.com/opencontainers/image-spec/blob/main/manifest.md) can be pulled
 
 :::note
 
@@ -141,9 +141,9 @@ Images can either be discovered manually, or automatically by using [`zarf dev f
 
 ### Git Repositories
 
-The [`podinfo-flux`](/ref/examples/podinfo-flux/) example showcases a simple GitOps workflow using Flux and Zarf.
-
 <Properties item="ZarfComponent" include={["repos"]} />
+
+The [`podinfo-flux`](/ref/examples/podinfo-flux/) example showcases a simple GitOps workflow using Flux and Zarf.
 
 <Tabs>
   <TabItem label="Full Mirror">
@@ -207,6 +207,10 @@ Git repositories included in a package can be deployed with `zarf package deploy
 ### Data Injections
 
 <Properties item="ZarfComponent" include={["dataInjections"]} />
+
+During `zarf package create`, data injections pull files from the host at the path specified by the `source` key. During `zarf package deploy`, these files are injected into the container specified by the `target` key. The pod holding the targeted container must have the variable `###ZARF_DATA_INJECTION_MARKER###` within the pod spec otherwise the data injection will not occur. This variable gets templated at deploy time to become the name of the extra file Zarf injects into the pod to signify that the data injection is complete.
+
+The [`kiwix`](/ref/examples/kiwix/) example showcases a simple data injection use case.
 
 <ExampleYAML src={import("../../../../../examples/kiwix/zarf.yaml?raw")} component="kiwix-serve" />
 

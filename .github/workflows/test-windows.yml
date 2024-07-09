@@ -10,6 +10,16 @@ on:
       - "adr/**"
       - "docs/**"
       - "CODEOWNERS"
+  merge_group:
+    paths-ignore:
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+      - "CODEOWNERS"
 
 permissions:
   contents: read
@@ -20,22 +30,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  test-unit:
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: Optimize caching
-        run: echo C:\Program Files\Git\usr\bin>>"%GITHUB_PATH%"
-        shell: cmd
-
-      - name: Setup golang
-        uses: ./.github/actions/golang
-
       - name: Run Windows unit tests
         run: make test-unit
         shell: pwsh
+
+  test-e2e-without-cluster:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Build Windows binary and zarf packages
         uses: ./.github/actions/packages
@@ -52,5 +61,5 @@ jobs:
           make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=v0.30.1
 
       - name: Run windows E2E tests
-        run: make test-e2e ARCH=amd64 -e SKIP_K8S=true
+        run: make test-e2e-without-cluster
         shell: pwsh

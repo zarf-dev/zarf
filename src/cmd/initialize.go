@@ -36,12 +36,12 @@ var initCmd = &cobra.Command{
 	Short:   lang.CmdInitShort,
 	Long:    lang.CmdInitLong,
 	Example: lang.CmdInitExample,
-	Run: func(cmd *cobra.Command, _ []string) {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		zarfLogo := message.GetLogo()
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 
 		if err := validateInitFlags(); err != nil {
-			message.Fatal(err, lang.CmdInitErrFlags)
+			return fmt.Errorf("invalid command flags were provided: %w", err)
 		}
 
 		// Continue running package deploy for all components like any other package
@@ -51,27 +51,29 @@ var initCmd = &cobra.Command{
 		// Try to use an init-package in the executable directory if none exist in current working directory
 		var err error
 		if pkgConfig.PkgOpts.PackageSource, err = findInitPackage(cmd.Context(), initPackageName); err != nil {
-			message.Fatal(err, err.Error())
+			return err
 		}
 
 		src, err := sources.New(&pkgConfig.PkgOpts)
 		if err != nil {
-			message.Fatal(err, err.Error())
+			return err
 		}
 
 		v := common.GetViper()
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
+		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
+		if err != nil {
+			return err
+		}
 		defer pkgClient.ClearTempPaths()
 
-		ctx := cmd.Context()
-
-		err = pkgClient.Deploy(ctx)
+		err = pkgClient.Deploy(cmd.Context())
 		if err != nil {
-			message.Fatal(err, err.Error())
+			return err
 		}
+		return nil
 	},
 }
 
@@ -94,7 +96,7 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 	// Create the cache directory if it doesn't exist
 	if helpers.InvalidPath(config.GetAbsCachePath()) {
 		if err := helpers.CreateDirectory(config.GetAbsCachePath(), helpers.ReadExecuteAllWriteUser); err != nil {
-			message.Fatalf(err, lang.CmdInitErrUnableCreateCache, config.GetAbsCachePath())
+			return "", fmt.Errorf("unable to create the cache directory %s: %w", config.GetAbsCachePath(), err)
 		}
 	}
 
@@ -107,10 +109,9 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 	downloadCacheTarget, err := downloadInitPackage(ctx, config.GetAbsCachePath())
 	if err != nil {
 		if errors.Is(err, lang.ErrInitNotFound) {
-			message.Fatal(err, err.Error())
-		} else {
-			message.Fatalf(err, lang.CmdInitErrDownload, err.Error())
+			return "", err
 		}
+		return "", fmt.Errorf("failed to download the init package: %w", err)
 	}
 	return downloadCacheTarget, nil
 }
@@ -134,7 +135,7 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, er
 			Message: lang.CmdInitPullConfirm,
 		}
 		if err := survey.AskOne(prompt, &confirmDownload); err != nil {
-			return "", fmt.Errorf(lang.ErrConfirmCancel, err.Error())
+			return "", fmt.Errorf("confirm download canceled: %w", err)
 		}
 	}
 

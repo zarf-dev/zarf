@@ -35,10 +35,8 @@ type Packager struct {
 	state          *types.ZarfState
 	cluster        *cluster.Cluster
 	layout         *layout.PackagePaths
-	warnings       []string
 	hpaModified    bool
 	connectStrings types.ConnectStrings
-	sbomViewFiles  []string
 	source         sources.PackageSource
 	generation     int
 }
@@ -115,24 +113,6 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 	}
 
 	return pkgr, nil
-}
-
-/*
-NewOrDie creates a new package instance with the provided config or throws a fatal error.
-
-Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
-*/
-func NewOrDie(config *types.PackagerConfig, mods ...Modifier) *Packager {
-	var (
-		err  error
-		pkgr *Packager
-	)
-
-	if pkgr, err = New(config, mods...); err != nil {
-		message.Fatalf(err, "Unable to setup the package config: %s", err.Error())
-	}
-
-	return pkgr
 }
 
 // setTempDirectory sets the temp directory for the packager.
@@ -253,26 +233,18 @@ func (p *Packager) validatePackageArchitecture(ctx context.Context) error {
 }
 
 // validateLastNonBreakingVersion validates the Zarf CLI version against a package's LastNonBreakingVersion.
-func (p *Packager) validateLastNonBreakingVersion() (err error) {
-	cliVersion := config.CLIVersion
-	lastNonBreakingVersion := p.cfg.Pkg.Build.LastNonBreakingVersion
-
+func validateLastNonBreakingVersion(cliVersion, lastNonBreakingVersion string) ([]string, error) {
 	if lastNonBreakingVersion == "" {
-		return nil
+		return nil, nil
 	}
-
 	lastNonBreakingSemVer, err := semver.NewVersion(lastNonBreakingVersion)
 	if err != nil {
-		return fmt.Errorf("unable to parse lastNonBreakingVersion '%s' from Zarf package build data : %w", lastNonBreakingVersion, err)
+		return nil, fmt.Errorf("unable to parse last non breaking version %s from Zarf package build data: %w", lastNonBreakingVersion, err)
 	}
-
 	cliSemVer, err := semver.NewVersion(cliVersion)
 	if err != nil {
-		warning := fmt.Sprintf(lang.CmdPackageDeployInvalidCLIVersionWarn, config.CLIVersion)
-		p.warnings = append(p.warnings, warning)
-		return nil
+		return []string{fmt.Sprintf(lang.CmdPackageDeployInvalidCLIVersionWarn, cliVersion)}, nil
 	}
-
 	if cliSemVer.LessThan(lastNonBreakingSemVer) {
 		warning := fmt.Sprintf(
 			lang.CmdPackageDeployValidateLastNonBreakingVersionWarn,
@@ -280,8 +252,7 @@ func (p *Packager) validateLastNonBreakingVersion() (err error) {
 			lastNonBreakingVersion,
 			lastNonBreakingVersion,
 		)
-		p.warnings = append(p.warnings, warning)
+		return []string{warning}, nil
 	}
-
-	return nil
+	return nil, nil
 }

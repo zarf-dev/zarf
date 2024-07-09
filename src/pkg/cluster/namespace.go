@@ -67,5 +67,6 @@ func AdoptZarfManagedLabels(labels map[string]string) map[string]string {
 		labels = make(map[string]string)
 	}
 	labels[ZarfManagedByLabel] = "zarf"
+	delete(labels, AgentLabel)
 	return labels
 }

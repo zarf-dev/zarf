@@ -37,15 +37,13 @@ func (p *Packager) Remove(ctx context.Context) (err error) {
 	spinner := message.NewProgressSpinner("Removing Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
-	var packageName string
-
 	// we do not want to allow removal of signed packages without a signature if there are remove actions
 	// as this is arbitrary code execution from an untrusted source
-	p.cfg.Pkg, p.warnings, err = p.source.LoadPackageMetadata(ctx, p.layout, false, false)
+	p.cfg.Pkg, _, err = p.source.LoadPackageMetadata(ctx, p.layout, false, false)
 	if err != nil {
 		return err
 	}
-	packageName = p.cfg.Pkg.Metadata.Name
+	packageName := p.cfg.Pkg.Metadata.Name
 
 	// Build a list of components to remove and determine if we need a cluster connection
 	componentsToRemove := []string{}

@@ -17,27 +17,26 @@ import (
 )
 
 // Mirror pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the air gap without deploying them
-func (p *Packager) Mirror(ctx context.Context) (err error) {
+func (p *Packager) Mirror(ctx context.Context) error {
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
 	)
 
-	p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, filter, true)
+	pkg, warnings, err := p.source.LoadPackage(ctx, p.layout, filter, true)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
+	p.cfg.Pkg = pkg
 
-	var sbomWarnings []string
-	p.sbomViewFiles, sbomWarnings, err = p.layout.SBOMs.StageSBOMViewFiles()
+	sbomViewFiles, sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
 	if err != nil {
 		return err
 	}
-
-	p.warnings = append(p.warnings, sbomWarnings...)
+	warnings = append(warnings, sbomWarnings...)
 
 	// Confirm the overall package mirror
-	if !p.confirmAction(config.ZarfMirrorStage) {
+	if !p.confirmAction(config.ZarfMirrorStage, warnings, sbomViewFiles) {
 		return fmt.Errorf("mirror cancelled")
 	}
 
