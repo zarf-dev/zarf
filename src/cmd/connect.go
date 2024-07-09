@@ -41,13 +41,11 @@ var (
 			var tunnel *cluster.Tunnel
 			if target == "" {
 				tunnel, err = c.ConnectTunnelInfo(ctx, zt)
-			} else if zt == (cluster.TunnelInfo{}) {
-				tunnel, err = c.Connect(ctx, target)
 			} else {
 				var ti cluster.TunnelInfo
 				ti, err = c.NewTargetTunnelInfo(ctx, target)
 				if err != nil {
-					spinner.Fatalf(err, lang.CmdConnectErrService, err.Error())
+					return fmt.Errorf("unable to create tunnel: %w", err)
 				}
 				if zt.ResourceType != cluster.SvcResource {
 					ti.ResourceType = zt.ResourceType
