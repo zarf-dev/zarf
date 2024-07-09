@@ -4,12 +4,50 @@
 package cluster
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
+
+	"github.com/defenseunicorns/zarf/src/types"
 )
+
+func TestListConnections(t *testing.T) {
+	t.Parallel()
+
+	c := &Cluster{
+		Clientset: fake.NewSimpleClientset(),
+	}
+	svc := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "connect",
+			Labels: map[string]string{
+				ZarfConnectLabelName: "connect name",
+			},
+			Annotations: map[string]string{
+				ZarfConnectAnnotationDescription: "description",
+				ZarfConnectAnnotationURL:         "url",
+			},
+		},
+		Spec: corev1.ServiceSpec{},
+	}
+	_, err := c.Clientset.CoreV1().Services(svc.ObjectMeta.Namespace).Create(context.Background(), &svc, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	connections, err := c.ListConnections(context.Background())
+	require.NoError(t, err)
+	expectedConnections := types.ConnectStrings{
+		"connect name": types.ConnectString{
+			Description: "description",
+			URL:         "url",
+		},
+	}
+	require.Equal(t, expectedConnections, connections)
+}
 
 func TestServiceInfoFromNodePortURL(t *testing.T) {
 	t.Parallel()
