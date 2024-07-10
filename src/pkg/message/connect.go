@@ -12,8 +12,6 @@ import (
 
 // PrintConnectStringTable prints a table of connect strings.
 func PrintConnectStringTable(connectStrings types.ConnectStrings) {
-	Debugf("message.PrintConnectStringTable(%#v)", connectStrings)
-
 	if len(connectStrings) > 0 {
 		connectData := [][]string{}
 		// Loop over each connectStrings and convert to a string matrix

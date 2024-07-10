@@ -24,7 +24,6 @@ import (
 
 // NewHelmRepositoryMutationHook creates a new instance of the helm repo mutation hook.
 func NewHelmRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
-	message.Debug("hooks.NewHelmRepositoryMutationHook()")
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
 			return mutateHelmRepo(ctx, r, cluster)

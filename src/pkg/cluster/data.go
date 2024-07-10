@@ -6,6 +6,7 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -46,8 +47,12 @@ func (c *Cluster) HandleDataInjection(ctx context.Context, wg *sync.WaitGroup, d
 
 	// Pod filter to ensure we only use the current deployment's pods
 	podFilterByInitContainer := func(pod corev1.Pod) bool {
+		b, err := json.Marshal(pod)
+		if err != nil {
+			return false
+		}
 		// Look everywhere in the pod for a matching data injection marker
-		return strings.Contains(message.JSONValue(pod), config.GetDataInjectionMarker())
+		return strings.Contains(string(b), config.GetDataInjectionMarker())
 	}
 
 	// Get the OS shell to execute commands in

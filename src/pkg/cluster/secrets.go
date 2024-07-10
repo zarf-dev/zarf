@@ -89,8 +89,6 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 
 // GenerateGitPullCreds generates a secret containing the git credentials.
 func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo types.GitServerInfo) *corev1.Secret {
-	message.Debugf("k8s.GenerateGitPullCreds(%s, %s, gitServerInfo)", namespace, name)
-
 	gitServerSecret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),

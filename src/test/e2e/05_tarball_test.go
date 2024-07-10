@@ -13,7 +13,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
@@ -98,10 +97,6 @@ func TestReproducibleTarballs(t *testing.T) {
 	err = utils.ReadYaml(filepath.Join(unpack1, layout.ZarfYAML), &pkg1)
 	require.NoError(t, err)
 
-	b, err := os.ReadFile(filepath.Join(unpack1, layout.Checksums))
-	require.NoError(t, err)
-	checksums1 := string(b)
-
 	e2e.CleanFiles(unpack1, tb)
 
 	stdOut, stdErr, err = e2e.Zarf("package", "create", createPath, "--confirm", "--output", tmp)
@@ -113,12 +108,6 @@ func TestReproducibleTarballs(t *testing.T) {
 	var pkg2 types.ZarfPackage
 	err = utils.ReadYaml(filepath.Join(unpack2, layout.ZarfYAML), &pkg2)
 	require.NoError(t, err)
-
-	b, err = os.ReadFile(filepath.Join(unpack2, layout.Checksums))
-	require.NoError(t, err)
-	checksums2 := string(b)
-
-	message.PrintDiff(checksums1, checksums2)
 
 	require.Equal(t, pkg1.Metadata.AggregateChecksum, pkg2.Metadata.AggregateChecksum)
 }
