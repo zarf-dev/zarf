@@ -250,7 +250,11 @@ func (c *Cluster) debugPrintZarfState(state *types.ZarfState) {
 	// this is a shallow copy, nested pointers WILL NOT be copied
 	oldState := *state
 	sanitized := c.sanitizeZarfState(&oldState)
-	message.Debugf("ZarfState - %s", message.JSONValue(sanitized))
+	b, err := json.MarshalIndent(sanitized, "", "  ")
+	if err != nil {
+		return
+	}
+	message.Debugf("ZarfState - %s", string(b))
 }
 
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.
