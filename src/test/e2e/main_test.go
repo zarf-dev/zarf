@@ -38,6 +38,7 @@ func TestMain(m *testing.M) {
 	e2e.ZarfBinPath = filepath.Join("build", test.GetCLIName())
 	e2e.ApplianceMode = os.Getenv(applianceModeEnvVar) == "true"
 	e2e.ApplianceModeKeep = os.Getenv(applianceModeKeepEnvVar) == "true"
+	e2e.RunClusterTests = true
 
 	message.SetLogLevel(message.TraceLevel)
 
