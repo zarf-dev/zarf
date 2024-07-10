@@ -254,14 +254,14 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			if annotations == nil {
 				annotations = map[string]string{}
 			}
-			if key, keyExists := labels[config.ZarfConnectLabelName]; keyExists {
+			if key, keyExists := labels[cluster.ZarfConnectLabelName]; keyExists {
 				// If there is a zarf-connect label
 				message.Debugf("Match helm service %s for zarf connection %s", rawData.GetName(), key)
 
 				// Add the connectString for processing later in the deployment
 				r.connectStrings[key] = types.ConnectString{
-					Description: annotations[config.ZarfConnectAnnotationDescription],
-					URL:         annotations[config.ZarfConnectAnnotationURL],
+					Description: annotations[cluster.ZarfConnectAnnotationDescription],
+					URL:         annotations[cluster.ZarfConnectAnnotationURL],
 				}
 			}
 		}
