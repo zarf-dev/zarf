@@ -36,7 +36,6 @@ type RepoCreds struct {
 
 // NewRepositorySecretMutationHook creates a new instance of the ArgoCD repository secret mutation hook.
 func NewRepositorySecretMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
-	message.Debug("hooks.NewRepositoryMutationHook()")
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
 			return mutateRepositorySecret(ctx, r, cluster)

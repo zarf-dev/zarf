@@ -38,8 +38,6 @@ func MakeTempDir(basePath string) (string, error) {
 
 // GetFinalExecutablePath returns the absolute path to the current executable, following any symlinks along the way.
 func GetFinalExecutablePath() (string, error) {
-	message.Debug("utils.GetExecutablePath()")
-
 	binaryPath, err := os.Executable()
 	if err != nil {
 		return "", err
