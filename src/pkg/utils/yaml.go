@@ -124,8 +124,6 @@ func AddRootHint(hints map[string]string, rootKey string, hintText string) map[s
 
 // ReadYaml reads a yaml file and unmarshals it into a given config.
 func ReadYaml(path string, destConfig any) error {
-	message.Debugf("Reading YAML at %s", path)
-
 	file, err := os.ReadFile(path)
 	if err != nil {
 		return err

@@ -50,8 +50,6 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	// Remove the custom protocol header from the url
 	image = strings.TrimPrefix(image, helpers.SGETURLPrefix)
 
-	message.Debugf("utils.Sget: image=%s, key=%s", image, key)
-
 	spinner := message.NewProgressSpinner("Loading signed file %s", image)
 	defer spinner.Stop()
 

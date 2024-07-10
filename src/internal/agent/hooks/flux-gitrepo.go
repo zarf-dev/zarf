@@ -26,7 +26,6 @@ const AgentErrTransformGitURL = "unable to transform the git url"
 
 // NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
 func NewGitRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
-	message.Debug("hooks.NewGitRepositoryMutationHook()")
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
 			return mutateGitRepo(ctx, r, cluster)
