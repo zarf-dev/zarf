@@ -23,13 +23,16 @@ import (
 	"k8s.io/client-go/transport/spdy"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
 // Zarf specific connect strings
 const (
+	ZarfConnectLabelName             = "zarf.dev/connect-name"
+	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
+	ZarfConnectAnnotationURL         = "zarf.dev/connect-url"
+
 	ZarfRegistry = "REGISTRY"
 	ZarfGit      = "GIT"
 	ZarfInjector = "INJECTOR"
@@ -52,33 +55,30 @@ type TunnelInfo struct {
 	urlSuffix    string
 }
 
-// PrintConnectTable will print a table of all Zarf connect matches found in the cluster.
-func (c *Cluster) PrintConnectTable(ctx context.Context) error {
+// ListConnections will return a list of all Zarf connect matches found in the cluster.
+func (c *Cluster) ListConnections(ctx context.Context) (types.ConnectStrings, error) {
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{{
 			Operator: metav1.LabelSelectorOpExists,
-			Key:      config.ZarfConnectLabelName,
+			Key:      ZarfConnectLabelName,
 		}},
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	connections := make(types.ConnectStrings)
+	connections := types.ConnectStrings{}
 	for _, svc := range serviceList.Items {
-		name := svc.Labels[config.ZarfConnectLabelName]
-		// Add the connectString for processing later in the deployment.
+		name := svc.Labels[ZarfConnectLabelName]
 		connections[name] = types.ConnectString{
-			Description: svc.Annotations[config.ZarfConnectAnnotationDescription],
-			URL:         svc.Annotations[config.ZarfConnectAnnotationURL],
+			Description: svc.Annotations[ZarfConnectAnnotationDescription],
+			URL:         svc.Annotations[ZarfConnectAnnotationURL],
 		}
 	}
-	message.PrintConnectStringTable(connections)
-	return nil
+	return connections, nil
 }
 
 // NewTargetTunnelInfo returns a new TunnelInfo object for the specified target.
@@ -186,7 +186,7 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			config.ZarfConnectLabelName: name,
+			ZarfConnectLabelName: name,
 		},
 	})
 	if err != nil {
@@ -219,7 +219,7 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 		}
 
 		// Add the url suffix too.
-		zt.urlSuffix = svc.Annotations[config.ZarfConnectAnnotationURL]
+		zt.urlSuffix = svc.Annotations[ZarfConnectAnnotationURL]
 
 		message.Debugf("tunnel connection match: %s/%s on port %d", svc.Namespace, svc.Name, zt.RemotePort)
 	} else {

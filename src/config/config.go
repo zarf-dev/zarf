@@ -21,10 +21,6 @@ const (
 
 	ZarfAgentHost = "agent-hook.zarf.svc"
 
-	ZarfConnectLabelName             = "zarf.dev/connect-name"
-	ZarfConnectAnnotationDescription = "zarf.dev/connect-description"
-	ZarfConnectAnnotationURL         = "zarf.dev/connect-url"
-
 	ZarfCleanupScriptsPath = "/opt/zarf"
 
 	ZarfPackagePrefix = "zarf-package-"
