@@ -52,18 +52,6 @@ type TunnelInfo struct {
 	urlSuffix    string
 }
 
-// NewTunnelInfo returns a new TunnelInfo object for connecting to a cluster
-func NewTunnelInfo(namespace, resourceType, resourceName, urlSuffix string, localPort, remotePort int) TunnelInfo {
-	return TunnelInfo{
-		Namespace:    namespace,
-		ResourceType: resourceType,
-		ResourceName: resourceName,
-		urlSuffix:    urlSuffix,
-		LocalPort:    localPort,
-		RemotePort:   remotePort,
-	}
-}
-
 // PrintConnectTable will print a table of all Zarf connect matches found in the cluster.
 func (c *Cluster) PrintConnectTable(ctx context.Context) error {
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{

@@ -47,20 +47,8 @@ var (
 				if err != nil {
 					return fmt.Errorf("unable to create tunnel: %w", err)
 				}
-				if zt.ResourceType != cluster.SvcResource {
-					ti.ResourceType = zt.ResourceType
-				}
-				if zt.ResourceName != "" {
-					ti.ResourceName = zt.ResourceName
-				}
-				if zt.Namespace != cluster.ZarfNamespaceName {
-					ti.Namespace = zt.Namespace
-				}
 				if zt.LocalPort != 0 {
 					ti.LocalPort = zt.LocalPort
-				}
-				if zt.RemotePort != 0 {
-					ti.RemotePort = zt.RemotePort
 				}
 				tunnel, err = c.ConnectTunnelInfo(ctx, ti)
 			}
