@@ -27,7 +27,7 @@ components:
           - disable-all-bb###ZARF_PKG_TMPL_BB_MAJOR###.yaml
           - enable-twistlock.yaml
     actions:
-      onDeploy:
-        onFailure:
-          - cmd: ./zarf tools kubectl describe nodes
-          - cmd: ./zarf tools kubectl describe pods -A
+      - when: FailedDeploy
+        cmd: ./zarf tools kubectl describe nodes
+      - when: FailedDeploy
+        cmd: ./zarf tools kubectl describe pods -A

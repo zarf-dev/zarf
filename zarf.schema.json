@@ -165,49 +165,6 @@
         "^x-": {}
       }
     },
-    "Shell": {
-      "properties": {
-        "windows": {
-          "type": "string",
-          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
-          "examples": [
-            "powershell",
-            "cmd",
-            "pwsh",
-            "sh",
-            "bash",
-            "gsh"
-          ]
-        },
-        "linux": {
-          "type": "string",
-          "description": "(default 'sh') Indicates a preference for the shell to use on Linux systems",
-          "examples": [
-            "sh",
-            "bash",
-            "fish",
-            "zsh",
-            "pwsh"
-          ]
-        },
-        "darwin": {
-          "type": "string",
-          "description": "(default 'sh') Indicates a preference for the shell to use on macOS systems",
-          "examples": [
-            "sh",
-            "bash",
-            "fish",
-            "zsh",
-            "pwsh"
-          ]
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
     "Variable": {
       "properties": {
         "name": {
@@ -501,7 +458,10 @@
           "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0."
         },
         "actions": {
-          "$ref": "#/$defs/ZarfComponentActions",
+          "items": {
+            "$ref": "#/$defs/ZarfComponentAction"
+          },
+          "type": "array",
           "description": "Custom commands to run at various stages of a package lifecycle"
         }
       },
@@ -516,41 +476,27 @@
     },
     "ZarfComponentAction": {
       "properties": {
-        "mute": {
-          "type": "boolean",
-          "description": "Hide the output of the command during package deployment (default false)"
-        },
-        "maxTotalSeconds": {
-          "type": "integer",
-          "description": "Timeout in seconds for the command (default to 0"
-        },
-        "maxRetries": {
-          "type": "integer",
-          "description": "Retry the command if it fails up to given number of times (default 0)"
+        "cmd": {
+          "type": "string",
+          "description": "The command to run. Must specify either cmd or wait for the action to do anything."
         },
         "dir": {
           "type": "string",
           "description": "The working directory to run the command in (default is CWD)"
         },
-        "env": {
+        "interpreter": {
           "items": {
             "type": "string"
           },
           "type": "array",
+          "description": "A list of interpreter arguments used to execute the command. The first argument is the interpreter itself. It can be provided as a relative path to the current working directory or as an absolute path. The remaining arguments are appended prior to the command. This allows building command lines of the form \"/bin/bash\""
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
           "description": "Additional environment variables to set for the command"
-        },
-        "cmd": {
-          "type": "string",
-          "description": "The command to run. Must specify either cmd or wait for the action to do anything."
-        },
-        "shell": {
-          "$ref": "#/$defs/Shell",
-          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
-        },
-        "setVariable": {
-          "type": "string",
-          "pattern": "^[A-Z0-9_]+$",
-          "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0"
         },
         "setVariables": {
           "items": {
@@ -559,94 +505,29 @@
           "type": "array",
           "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
         },
-        "description": {
+        "setVariable": {
           "type": "string",
-          "description": "Description of the action to be displayed during package execution instead of the command"
+          "pattern": "^[A-Z0-9_]+$",
+          "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0"
         },
         "wait": {
           "$ref": "#/$defs/ZarfComponentActionWait",
           "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
-    "ZarfComponentActionDefaults": {
-      "properties": {
+        },
+        "when": {
+          "type": "string",
+          "description": "When to run the action"
+        },
         "mute": {
           "type": "boolean",
-          "description": "Hide the output of commands during execution (default false)"
-        },
-        "maxTotalSeconds": {
-          "type": "integer",
-          "description": "Default timeout in seconds for commands (default to 0"
-        },
-        "maxRetries": {
-          "type": "integer",
-          "description": "Retry commands given number of times if they fail (default 0)"
-        },
-        "dir": {
-          "type": "string",
-          "description": "Working directory for commands (default CWD)"
-        },
-        "env": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Additional environment variables for commands"
-        },
-        "shell": {
-          "$ref": "#/$defs/Shell",
-          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
+          "description": "Hide the output of the command during package deployment (default false)"
         }
       },
       "additionalProperties": false,
       "type": "object",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
-    "ZarfComponentActionSet": {
-      "properties": {
-        "defaults": {
-          "$ref": "#/$defs/ZarfComponentActionDefaults",
-          "description": "Default configuration for all actions in this set"
-        },
-        "before": {
-          "items": {
-            "$ref": "#/$defs/ZarfComponentAction"
-          },
-          "type": "array",
-          "description": "Actions to run at the start of an operation"
-        },
-        "after": {
-          "items": {
-            "$ref": "#/$defs/ZarfComponentAction"
-          },
-          "type": "array",
-          "description": "Actions to run at the end of an operation"
-        },
-        "onSuccess": {
-          "items": {
-            "$ref": "#/$defs/ZarfComponentAction"
-          },
-          "type": "array",
-          "description": "Actions to run if all operations succeed"
-        },
-        "onFailure": {
-          "items": {
-            "$ref": "#/$defs/ZarfComponentAction"
-          },
-          "type": "array",
-          "description": "Actions to run if all operations fail"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
+      "required": [
+        "when"
+      ],
       "patternProperties": {
         "^x-": {}
       }
@@ -743,27 +624,6 @@
         "protocol",
         "address"
       ],
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
-    "ZarfComponentActions": {
-      "properties": {
-        "onCreate": {
-          "$ref": "#/$defs/ZarfComponentActionSet",
-          "description": "Actions to run during package creation"
-        },
-        "onDeploy": {
-          "$ref": "#/$defs/ZarfComponentActionSet",
-          "description": "Actions to run during package deployment"
-        },
-        "onRemove": {
-          "$ref": "#/$defs/ZarfComponentActionSet",
-          "description": "Actions to run during package removal"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
       "patternProperties": {
         "^x-": {}
       }

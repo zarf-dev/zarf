@@ -55,26 +55,7 @@ func overrideDeprecated(c *types.ZarfComponent, override types.ZarfComponent) {
 }
 
 func overrideActions(c *types.ZarfComponent, override types.ZarfComponent) {
-	// Merge create actions.
-	c.Actions.OnCreate.Defaults = override.Actions.OnCreate.Defaults
-	c.Actions.OnCreate.Before = append(c.Actions.OnCreate.Before, override.Actions.OnCreate.Before...)
-	c.Actions.OnCreate.After = append(c.Actions.OnCreate.After, override.Actions.OnCreate.After...)
-	c.Actions.OnCreate.OnFailure = append(c.Actions.OnCreate.OnFailure, override.Actions.OnCreate.OnFailure...)
-	c.Actions.OnCreate.OnSuccess = append(c.Actions.OnCreate.OnSuccess, override.Actions.OnCreate.OnSuccess...)
-
-	// Merge deploy actions.
-	c.Actions.OnDeploy.Defaults = override.Actions.OnDeploy.Defaults
-	c.Actions.OnDeploy.Before = append(c.Actions.OnDeploy.Before, override.Actions.OnDeploy.Before...)
-	c.Actions.OnDeploy.After = append(c.Actions.OnDeploy.After, override.Actions.OnDeploy.After...)
-	c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, override.Actions.OnDeploy.OnFailure...)
-	c.Actions.OnDeploy.OnSuccess = append(c.Actions.OnDeploy.OnSuccess, override.Actions.OnDeploy.OnSuccess...)
-
-	// Merge remove actions.
-	c.Actions.OnRemove.Defaults = override.Actions.OnRemove.Defaults
-	c.Actions.OnRemove.Before = append(c.Actions.OnRemove.Before, override.Actions.OnRemove.Before...)
-	c.Actions.OnRemove.After = append(c.Actions.OnRemove.After, override.Actions.OnRemove.After...)
-	c.Actions.OnRemove.OnFailure = append(c.Actions.OnRemove.OnFailure, override.Actions.OnRemove.OnFailure...)
-	c.Actions.OnRemove.OnSuccess = append(c.Actions.OnRemove.OnSuccess, override.Actions.OnRemove.OnSuccess...)
+	c.Actions = append(c.Actions, override.Actions...)
 }
 
 func overrideResources(c *types.ZarfComponent, override types.ZarfComponent) {

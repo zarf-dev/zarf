@@ -134,22 +134,8 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 	componentSBOMs := map[string]*layout.ComponentSBOM{}
 
 	for _, component := range components {
-		onCreate := component.Actions.OnCreate
-
-		onFailure := func() {
-			if err := actions.Run(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
-				message.Debugf("unable to run component failure action: %s", err.Error())
-			}
-		}
-
-		if err := pc.addComponent(component, dst); err != nil {
-			onFailure()
+		if err := pc.addComponent(ctx, component, dst); err != nil {
 			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
-		}
-
-		if err := actions.Run(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
-			onFailure()
-			return fmt.Errorf("unable to run component success action: %w", err)
 		}
 
 		if !skipSBOMFlagUsed {
@@ -348,7 +334,7 @@ func (pc *PackageCreator) processExtensions(components []types.ZarfComponent, la
 	return processedComponents, nil
 }
 
-func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layout.PackagePaths) error {
+func (pc *PackageCreator) addComponent(ctx context.Context, component types.ZarfComponent, dst *layout.PackagePaths) error {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
 	componentPaths, err := dst.Components.Create(component)
@@ -356,9 +342,8 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 		return err
 	}
 
-	onCreate := component.Actions.OnCreate
-	if err := actions.Run(onCreate.Defaults, onCreate.Before, nil); err != nil {
-		return fmt.Errorf("unable to run component before action: %w", err)
+	if err := actions.Run(ctx, component.Actions, types.BeforeCreate, nil); err != nil {
+		return fmt.Errorf("unable to run %s action: %w", string(types.BeforeCreate), err)
 	}
 
 	// If any helm charts are defined, process them.
@@ -521,8 +506,8 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 		spinner.Success()
 	}
 
-	if err := actions.Run(onCreate.Defaults, onCreate.After, nil); err != nil {
-		return fmt.Errorf("unable to run component after action: %w", err)
+	if err := actions.Run(ctx, component.Actions, types.AfterCreate, nil); err != nil {
+		return fmt.Errorf("unable to run %s action: %w", string(types.AfterCreate), err)
 	}
 
 	return nil

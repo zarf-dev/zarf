@@ -18,10 +18,3 @@ components:
         - touch test-deprecated-deploy-before-hook.txt
       after:
         - touch test-deprecated-deploy-after-hook.txt
-
-  # Test that script timeouts still get set
-  - name: 3-test-deprecated-timeout-scripts
-    scripts:
-      timeoutSeconds: 1
-      before:
-        - sleep 5

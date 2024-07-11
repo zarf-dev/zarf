@@ -35,16 +35,13 @@ components:
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
     actions:
-      onDeploy:
-        after:
-          # This will use a wait action to wait for the pods to be ready
-          - description: Podinfo pod to be ready via wait action
-            wait:
-              cluster:
-                kind: pod
-                name: app.kubernetes.io/name=apps-podinfo
-                namespace: podinfo
-                condition: ready
+      - when: AfterDeploy
+        wait:
+          cluster:
+            kind: pod
+            name: app.kubernetes.io/name=apps-podinfo
+            namespace: podinfo
+            condition: ready
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples

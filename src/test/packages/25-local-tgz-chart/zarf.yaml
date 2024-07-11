@@ -15,14 +15,12 @@ components:
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
     actions:
-      onCreate:
-        before:
-          - cmd: helm package ../../../../examples/helm-charts/chart/
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: deployment
-                name: podinfo
-                namespace: podinfo-from-local-chart
-                condition: available
+      - when: BeforeCreate
+        cmd: helm package ../../../../examples/helm-charts/chart/
+      - when: AfterDeploy
+        wait:
+          cluster:
+            kind: deployment
+            name: podinfo
+            namespace: podinfo-from-local-chart
+            condition: available

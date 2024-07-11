@@ -15,18 +15,18 @@ components:
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
     actions:
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: pod
-                name: app.kubernetes.io/name=podinfo
-                namespace: podinfo-from-oci
-                condition: ready
-          - wait:
-              cluster:
-                kind: deployment
-                # note this version is the same as the chart version
-                name: app.kubernetes.io/version=6.4.0
-                namespace: podinfo-from-oci
-                condition: available
+      - when: AfterDeploy
+        wait:
+          cluster:
+            kind: pod
+            name: app.kubernetes.io/name=podinfo
+            namespace: podinfo-from-oci
+            condition: ready
+      - when: AfterDeploy
+        wait:
+          cluster:
+            kind: deployment
+            # note this version is the same as the chart version
+            name: app.kubernetes.io/version=6.4.0
+            namespace: podinfo-from-oci
+            condition: available

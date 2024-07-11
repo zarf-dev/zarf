@@ -7,15 +7,14 @@ components:
   # Test that setVariable becomes setVariables
   - name: 1-test-deprecated-set-variable
     actions:
-      onDeploy:
-        before:
-          - cmd: echo "Hello Kitteh"
-            setVariable: HELLO_KITTEH
-          - cmd: echo "Hello from ${ZARF_VAR_HELLO_KITTEH}"
+      - when: BeforeDeploy
+        cmd: echo "Hello Kitteh"
+        setVariable: HELLO_KITTEH
+      - when: BeforeDeploy
+        cmd: echo "Hello from ${ZARF_VAR_HELLO_KITTEH}"
 
   # Test that ###ZARF_PKG_VAR_*### is still templated
   - name: 2-test-deprecated-pkg-var
     actions:
-      onDeploy:
-        before:
-          - cmd: echo "###ZARF_PKG_VAR_ECHO###"
+      - when: BeforeDeploy
+        cmd: echo "###ZARF_PKG_VAR_ECHO###"

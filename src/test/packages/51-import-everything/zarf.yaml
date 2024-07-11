@@ -42,17 +42,18 @@ components:
       - source: https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md
         target: files/zarf-readme.md
     actions:
-      onDeploy:
-        after:
-          - cmd: test -f files/coffee-ipsum.txt
-          - cmd: test -f files/zarf-readme.md
-      onRemove:
-        before:
-          - cmd: rm files/coffee-ipsum.txt
-          - cmd: rm files/zarf-readme.md
-        after:
-          - cmd: test ! -f files/coffee-ipsum.txt
-          - cmd: test ! -f files/zarf-readme.md
+      - when: AfterDeploy
+        cmd: |
+          test -f files/coffee-ipsum.txt
+          test -f files/zarf-readme.md
+      - when: BeforeRemove
+        cmd: |
+          rm files/coffee-ipsum.txt
+          rm files/zarf-readme.md
+      - when: AfterRemove
+        cmd: |
+          test ! -f files/coffee-ipsum.txt
+          test ! -f files/zarf-readme.md
 
   # Test local charts (for skeletons)
   - name: local-chart-import
@@ -66,11 +67,10 @@ components:
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
     actions:
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: deployment
-                name: podinfo
-                namespace: local-chart
-                condition: available
+      - when: AfterDeploy
+        wait:
+          cluster:
+            kind: deployment
+            name: podinfo
+            namespace: local-chart
+            condition: available

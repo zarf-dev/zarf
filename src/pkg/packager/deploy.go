@@ -183,17 +183,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 			charts, deployErr = p.deployComponent(ctx, component, false /* keep img checksum */, false /* always push images */)
 		}
 
-		onDeploy := component.Actions.OnDeploy
-
-		onFailure := func() {
-			if err := actions.Run(onDeploy.Defaults, onDeploy.OnFailure, p.variableConfig); err != nil {
-				message.Debugf("unable to run component failure action: %s", err.Error())
-			}
-		}
-
 		if deployErr != nil {
-			onFailure()
-
 			// Update the package secret to indicate that we failed to deploy this component
 			deployedComponents[idx].Status = types.ComponentStatusFailed
 			if p.isConnectedToCluster() {
@@ -212,11 +202,6 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
 				message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
-		}
-
-		if err := actions.Run(onDeploy.Defaults, onDeploy.OnSuccess, p.variableConfig); err != nil {
-			onFailure()
-			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
 	}
 
@@ -291,8 +276,6 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 	hasDataInjections := len(component.DataInjections) > 0
 	hasFiles := len(component.Files) > 0
 
-	onDeploy := component.Actions.OnDeploy
-
 	if component.RequiresCluster() {
 		// Setup the state in the config
 		if p.state == nil {
@@ -317,8 +300,8 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 		return charts, err
 	}
 
-	if err = actions.Run(onDeploy.Defaults, onDeploy.Before, p.variableConfig); err != nil {
-		return charts, fmt.Errorf("unable to run component before action: %w", err)
+	if err := actions.Run(ctx, component.Actions, types.BeforeDeploy, p.variableConfig); err != nil {
+		return nil, fmt.Errorf("unable to run %s action: %w", string(types.BeforeDeploy), err)
 	}
 
 	if hasFiles {
@@ -355,8 +338,8 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 		}
 	}
 
-	if err = actions.Run(onDeploy.Defaults, onDeploy.After, p.variableConfig); err != nil {
-		return charts, fmt.Errorf("unable to run component after action: %w", err)
+	if err := actions.Run(ctx, component.Actions, types.AfterDeploy, p.variableConfig); err != nil {
+		return nil, fmt.Errorf("unable to run %s action: %w", string(types.AfterDeploy), err)
 	}
 
 	return charts, nil

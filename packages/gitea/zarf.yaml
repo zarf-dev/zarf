@@ -64,30 +64,23 @@ components:
         valuesFiles:
           - gitea-values.yaml
     actions:
-      onDeploy:
-        before:
-          - cmd: ./zarf internal update-gitea-pvc --no-progress
-            setVariables:
-              - name: GIT_SERVER_CREATE_PVC
-            mute: true
-        after:
-          - wait:
-              cluster:
-                kind: pod
-                namespace: zarf
-                name: app=gitea
-                condition: Ready
-          - cmd: ./zarf internal create-read-only-gitea-user --no-progress
-            maxRetries: 3
-            maxTotalSeconds: 60
-            description: Create the read-only Gitea user
-          - cmd: ./zarf internal create-artifact-registry-token --no-progress
-            maxRetries: 3
-            maxTotalSeconds: 60
-            description: Create an artifact registry token
-
-        onFailure:
-          - cmd: ./zarf internal update-gitea-pvc --rollback --no-progress
+      - when: BeforeDeploy
+        cmd: ./zarf internal update-gitea-pvc --no-progress
+        setVariables:
+          - name: GIT_SERVER_CREATE_PVC
+      - when: AfterDeploy
+        wait:
+          cluster:
+            kind: pod
+            namespace: zarf
+            name: app=gitea
+            condition: Ready
+      - when: AfterDeploy
+        cmd: ./zarf internal create-read-only-gitea-user --no-progress
+      - when: AfterDeploy
+        cmd: ./zarf internal create-artifact-registry-token --no-progress
+      - when: FailedDeploy
+        cmd: ./zarf internal update-gitea-pvc --rollback --no-progress
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 x-mdx: |

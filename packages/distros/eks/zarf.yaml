@@ -50,20 +50,20 @@ components:
   - name: deploy-eks-cluster
     description: Create an EKS cluster!
     actions:
-      onDeploy:
-        before:
-          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster --dry-run -f eks.yaml
-          - cmd: sleep 15
-          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster -f eks.yaml
-          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) utils write-kubeconfig -c ${ZARF_VAR_EKS_CLUSTER_NAME}
+      - when: BeforeDeploy
+        cmd: |
+          ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster --dry-run -f eks.yaml
+          sleep 15
+          ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster -f eks.yaml
+          ./binaries/eksctl_$(uname -s)_$(uname -m) utils write-kubeconfig -c ${ZARF_VAR_EKS_CLUSTER_NAME}
 
   - name: teardown-eks-cluster
     description: Delete the EKS cluster that this package was used to create.
     actions:
-      onDeploy:
-        before:
-          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) delete cluster -f eks.yaml --disable-nodegroup-eviction --wait
-        after:
-          # clean up after ourselves
-          - cmd: rm -rf binaries
-          - cmd: rm -f eks.yaml
+      - when: BeforeDeploy
+        cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) delete cluster -f eks.yaml --disable-nodegroup-eviction --wait
+      - when: AfterDeploy
+        # clean up after ourselves
+        cmd: |
+          rm -rf binaries
+          rm -f eks.yaml

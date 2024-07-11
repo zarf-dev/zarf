@@ -57,32 +57,34 @@ components:
       # This is the cosign signature for the podinfo image for image signature verification
       - ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig
     actions:
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: deployment
-                name: podinfo-local
-                namespace: podinfo-from-local-chart
-                condition: available
-          - wait:
-              cluster:
-                kind: deployment
-                name: podinfo-oci
-                namespace: podinfo-from-oci
-                condition: available
-          - wait:
-              cluster:
-                kind: deployment
-                name: podinfo-git
-                namespace: podinfo-from-git
-                condition: available
-          - wait:
-              cluster:
-                kind: deployment
-                name: cool-release-name-podinfo
-                namespace: podinfo-from-repo
-                condition: available
+      - when: AfterDeploy
+        wait:
+          cluster:
+            kind: deployment
+            name: podinfo-local
+            namespace: podinfo-from-local-chart
+            condition: available
+      - when: AfterDeploy
+        wait:
+          cluster:
+            kind: deployment
+            name: podinfo-oci
+            namespace: podinfo-from-oci
+            condition: available
+      - when: AfterDeploy
+        wait:
+          cluster:
+            kind: deployment
+            name: podinfo-git
+            namespace: podinfo-from-git
+            condition: available
+      - when: AfterDeploy
+        wait:
+          cluster:
+            kind: deployment
+            name: cool-release-name-podinfo
+            namespace: podinfo-from-repo
+            condition: available
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples

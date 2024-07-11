@@ -28,11 +28,8 @@ components:
         shasum: bc4d05bad56a583c80ff443d60e8277a136cc4357dc8527702d38b5cca28880d
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
     actions:
-      onDeploy:
-        before:
-          - cmd: if [ "$(uname -m)" != "x86_64" ]; then echo "this package architecture is amd64, but the target system has a different architecture. These architectures must be the same" && exit 1; fi
-            description: Check that the host architecture matches the package architecture
-            maxRetries: 0
+      - cmd: if [ "$(uname -m)" != "x86_64" ]; then echo "this package architecture is amd64, but the target system has a different architecture. These architectures must be the same" && exit 1; fi
+        when: BeforeDeploy
 
   # ARM-64 version of the K3s stack
   - name: k3s
@@ -58,8 +55,5 @@ components:
         shasum: 50621ae1391aec7fc66ca66a46a0e9fd48ce373a58073000efdc278233adc64b
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
     actions:
-      onDeploy:
-        before:
-          - cmd: if [ "$(uname -m)" != "aarch64" ] && [ "$(uname -m)" != "arm64" ]; then echo "this package architecture is arm64, but the target system has a different architecture. These architectures must be the same" && exit 1; fi
-            description: Check that the host architecture matches the package architecture
-            maxRetries: 0
+      - cmd: if [ "$(uname -m)" != "aarch64" ] && [ "$(uname -m)" != "arm64" ]; then echo "this package architecture is arm64, but the target system has a different architecture. These architectures must be the same" && exit 1; fi
+        when: BeforeDeploy

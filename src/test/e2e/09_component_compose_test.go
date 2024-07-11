@@ -63,9 +63,8 @@ func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 	suite.Contains(stdErr, `
   - defenseunicorns/zarf-game:multi-tile-dark
   actions:
-    onDeploy:
-      before:
-      - cmd: ./zarf tools kubectl get -n dos-games deployment -o jsonpath={.items[0].metadata.creationTimestamp}`)
+    - when: BeforeDeploy
+      cmd: ./zarf tools kubectl get -n dos-games deployment -o jsonpath={.items[0].metadata.creationTimestamp}`)
 }
 
 func (suite *CompositionSuite) Test_1_FullComposability() {

@@ -75,22 +75,16 @@ func TestZarfSchema(t *testing.T) {
 					},
 					{
 						Name: "actions",
-						Actions: types.ZarfComponentActions{
-							OnCreate: types.ZarfComponentActionSet{
-								Before: []types.ZarfComponentAction{
-									{
-										Cmd:          "echo 'invalid setVariable'",
-										SetVariables: []variables.Variable{{Name: "not_uppercase"}},
-									},
-								},
+						Actions: []types.ZarfComponentAction{
+							{
+								When:         types.BeforeCreate,
+								Cmd:          "echo 'invalid setVariable'",
+								SetVariables: []variables.Variable{{Name: "not_uppercase"}},
 							},
-							OnRemove: types.ZarfComponentActionSet{
-								OnSuccess: []types.ZarfComponentAction{
-									{
-										Cmd:          "echo 'invalid setVariable'",
-										SetVariables: []variables.Variable{{Name: "not_uppercase"}},
-									},
-								},
+							{
+								When:         types.SuccessfulRemove,
+								Cmd:          "echo 'invalid setVariable'",
+								SetVariables: []variables.Variable{{Name: "not_uppercase"}},
 							},
 						},
 					},
@@ -111,8 +105,8 @@ func TestZarfSchema(t *testing.T) {
 				"variables.0.name: Does not match pattern '^[A-Z0-9_]+$'",
 				"constants.0.name: Does not match pattern '^[A-Z0-9_]+$'",
 				"components.0.only.localOS: components.0.only.localOS must be one of the following: \"linux\", \"darwin\", \"windows\"",
-				"components.1.actions.onCreate.before.0.setVariables.0.name: Does not match pattern '^[A-Z0-9_]+$'",
-				"components.1.actions.onRemove.onSuccess.0.setVariables.0.name: Does not match pattern '^[A-Z0-9_]+$'",
+				"components.1.actions.0.setVariables.0.name: Does not match pattern '^[A-Z0-9_]+$'",
+				"components.1.actions.1.setVariables.0.name: Does not match pattern '^[A-Z0-9_]+$'",
 				"components.0.import.path: Must not validate the schema (not)",
 				"components.0.import.url: Must not validate the schema (not)",
 			},

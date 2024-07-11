@@ -8,9 +8,8 @@ components:
     required: true
     description: Include a 50 MB file needed to demonstrate a multi-part package
     actions:
-      onCreate:
-        before:
-          - cmd: dd if=/dev/urandom of=multi-part-demo.dat bs=1048576 count=50
+      - when: BeforeCreate
+        cmd: dd if=/dev/urandom of=multi-part-demo.dat bs=1048576 count=50
     files:
       - source: multi-part-demo.dat
         target: multi-part-demo.dat

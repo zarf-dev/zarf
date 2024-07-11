@@ -26,15 +26,12 @@ func TestComponentActions(t *testing.T) {
 	}
 
 	allArtifacts := append(deployArtifacts, createArtifacts...)
-	e2e.CleanFiles(allArtifacts...)
-	defer e2e.CleanFiles(allArtifacts...)
+	t.Cleanup(func() { e2e.CleanFiles(allArtifacts...) })
 
 	/* Create */
 	// Try creating the package to test the onCreate actions.
 	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/component-actions", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Completed \"Create a test file\"")
-	require.Contains(t, stdErr, "Completed \"touch test-create-after.txt\"")
 	require.Contains(t, stdErr, "multiline!")
 	require.Contains(t, stdErr, "updates!")
 	require.Contains(t, stdErr, "realtime!")
@@ -72,22 +69,13 @@ func TestComponentActions(t *testing.T) {
 		}
 	})
 
-	t.Run("action on-deploy-with-timeout", func(t *testing.T) {
-		t.Parallel()
-		// Deploy the simple action that should fail the timeout.
-		stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=on-deploy-with-timeout", "--confirm")
-		require.Error(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "after 1 second")
-		require.Contains(t, stdErr, "😭😭😭 this action failed because it took too long to run 😭😭😭")
-	})
-
 	t.Run("action on-deploy-with-variable", func(t *testing.T) {
 		t.Parallel()
 
 		// Test using a Zarf Variable within the action
 		stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=on-deploy-with-variable", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "the dog says ruff")
+		require.Contains(t, stdOut, "the dog says ruff")
 
 	})
 
@@ -96,11 +84,7 @@ func TestComponentActions(t *testing.T) {
 		// Test using dynamic and multiple-variables
 		stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "the cat says meow")
-		require.Contains(t, stdErr, "the dog says ruff")
-		require.Contains(t, stdErr, "the snake says hiss")
-		require.Contains(t, stdErr, "with a TF_VAR, the snake also says hiss")
-
+		require.Equal(t, "meow\nthe cat says meow\nhiss\n", stdOut)
 	})
 
 	t.Run("action on-deploy-with-env-var", func(t *testing.T) {

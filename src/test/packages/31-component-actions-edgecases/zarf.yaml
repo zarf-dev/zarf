@@ -7,11 +7,9 @@ components:
   - name: on-deploy
     required: true
     actions:
-      # runs during "zarf package remove"
-      onDeploy:
-        before:
-          # Wait for something that doesn't have a namespace (no -n)
-          - wait:
-              cluster:
-                kind: ns
-                name: zarf
+      - when: BeforeDeploy
+        # Wait for something that doesn't have a namespace (no -n)
+        wait:
+          cluster:
+            kind: ns
+            name: zarf

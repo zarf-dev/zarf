@@ -139,10 +139,6 @@ func (pkg ZarfPackage) Validate() error {
 			}
 		}
 
-		if actionsErr := component.Actions.validate(); actionsErr != nil {
-			err = errors.Join(err, fmt.Errorf("%q: %w", component.Name, actionsErr))
-		}
-
 		// ensure groups don't have multiple defaults or only one component
 		if component.DeprecatedGroup != "" {
 			if component.Default {
@@ -160,26 +156,6 @@ func (pkg ZarfPackage) Validate() error {
 			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrGroupOneComponent, groupKey, componentNames[0]))
 		}
 	}
-
-	return err
-}
-
-func (a ZarfComponentActions) validate() error {
-	var err error
-
-	err = errors.Join(err, a.OnCreate.Validate())
-
-	if a.OnCreate.HasSetVariables() {
-		err = errors.Join(err, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
-	}
-
-	err = errors.Join(err, a.OnDeploy.Validate())
-
-	if a.OnRemove.HasSetVariables() {
-		err = errors.Join(err, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
-	}
-
-	err = errors.Join(err, a.OnRemove.Validate())
 
 	return err
 }
@@ -216,39 +192,6 @@ func (c ZarfComponent) Validate() error {
 		}
 	}
 
-	return err
-}
-
-// HasSetVariables returns true if any of the actions contain setVariables.
-func (as ZarfComponentActionSet) HasSetVariables() bool {
-	check := func(actions []ZarfComponentAction) bool {
-		for _, action := range actions {
-			if len(action.SetVariables) > 0 {
-				return true
-			}
-		}
-		return false
-	}
-
-	return check(as.Before) || check(as.After) || check(as.OnSuccess) || check(as.OnFailure)
-}
-
-// Validate runs all validation checks on component action sets.
-func (as ZarfComponentActionSet) Validate() error {
-	var err error
-	validate := func(actions []ZarfComponentAction) {
-		for _, action := range actions {
-			if actionErr := action.Validate(); actionErr != nil {
-				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrAction, actionErr))
-			}
-
-		}
-	}
-
-	validate(as.Before)
-	validate(as.After)
-	validate(as.OnFailure)
-	validate(as.OnSuccess)
 	return err
 }
 

@@ -50,9 +50,9 @@ func TestCreateTemplating(t *testing.T) {
 	// Deploy the package and look for the variables in the output
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", fileFoldersPkgName, "--set", "DOGGO=doggy", "--set", "KITTEH=meowza", "--set", "PANDA=pandemonium", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "A doggy barks!")
-	require.Contains(t, stdErr, "  - meowza")
-	require.Contains(t, stdErr, "# Total pandemonium")
+	require.Contains(t, stdOut, "A doggy barks!")
+	require.Contains(t, stdOut, "  - meowza")
+	require.Contains(t, stdOut, "# Total pandemonium")
 
 	// Ensure that the `requirements.txt` files are discovered correctly
 	require.FileExists(t, filepath.Join(sbomPath, "file-folders-templating-sbom", "compare.html"))

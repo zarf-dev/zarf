@@ -17,24 +17,22 @@ components:
         executable: true
     actions:
       # Run the Longhorn Environment Check on this cluster's nodes.
-      onDeploy:
-        after:
-          - cmd: |
-              export PATH=$PATH:./
-              awk '{gsub(/kubectl /, "./zarf tools kubectl ")} 1' ./environment_check.sh > tmp
-              mv tmp ./environment_check.sh
-              awk '{gsub(/"kubectl" /, "")} 1' ./environment_check.sh > tmp
-              mv tmp ./environment_check.sh
-              chmod +x ./environment_check.sh
-              ./environment_check.sh
+      - when: AfterDeploy
+        cmd: |
+          export PATH=$PATH:./
+          awk '{gsub(/kubectl /, "./zarf tools kubectl ")} 1' ./environment_check.sh > tmp
+          mv tmp ./environment_check.sh
+          awk '{gsub(/"kubectl" /, "")} 1' ./environment_check.sh > tmp
+          mv tmp ./environment_check.sh
+          chmod +x ./environment_check.sh
+          ./environment_check.sh
   - name: longhorn
     required: true
     description: Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io
     actions:
       # Set the delete confirmation flag for Longhorn
-      onRemove:
-        before:
-          - cmd: './zarf tools kubectl -n longhorn-system patch -p ''{"value": "true"}'' --type=merge lhs deleting-confirmation-flag'
+      - when: BeforeRemove
+        cmd: './zarf tools kubectl -n longhorn-system patch -p ''{"value": "true"}'' --type=merge lhs deleting-confirmation-flag'
     manifests:
       - name: longhorn-connect
         namespace: longhorn-system

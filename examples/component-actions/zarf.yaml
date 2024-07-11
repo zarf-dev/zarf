@@ -11,126 +11,75 @@ variables:
 components:
   - name: on-create
     actions:
-      # runs during "zarf package create"
-      onCreate:
-        # defaults are applied to all actions in this action set - below are the default defaults
-        defaults:
-          dir: ""
-          env: []
-          maxRetries: 0
-          maxTotalSeconds: 300
-          mute: false
-          shell:
-            darwin: sh
-            linux: sh
-            windows: powershell
-        # runs before the component is created
-        before:
-          # on Windows with `pwsh` or `powershell`, `touch` is replaced with New-Item
-          - cmd: touch test-create-before.txt
-            # description shows a more user friendly message when waiting for the command
-            description: Create a test file
-            # dir is the directory to run the command in
-            dir: ""
-            # env sets environment variables for this action only
-            env:
-              - thing=stuff
-            # maxRetries is the number of times to retry the action if it fails
-            maxRetries: 0
-            # maxTotalSeconds is the maximum amount of times the action can run before it is killed, over all retries
-            maxTotalSeconds: 30
-            # mute determine if actions output should be printed to the console
-            mute: false
-            # shell sets the preferred shell across operating systems, in this case "pwsh" instead of "powershell" on Windows
-            shell:
-              windows: pwsh
-        # runs after the component is created
-        after:
-          # actions in a list run in order
-          - cmd: touch test-create-after.txt
-          - cmd: sleep 0.5
-          - cmd: echo "I can print!"
-          - cmd: sleep 0.5
-          # cmd actions can also specify a multiline string to run like a script
-          - cmd: |
-              echo "multiline!"
-              sleep 0.5
-              echo "updates!"
-              sleep 1
-              echo "in!"
-              sleep 0.5
-              echo "realtime!"
-              sleep 0.5
+      - when: BeforeCreate
+        cmd: touch test-create-before.txt
+      - when: AfterCreate
+        cmd: |
+          touch test-create-after.txt
+          echo "multiline!"
+          sleep 0.5
+          echo "updates!"
+          sleep 1
+          echo "in!"
+          sleep 0.5
+          echo "realtime!"
+          sleep 0.5
 
   - name: on-deploy-and-remove
     actions:
-      # runs during "zarf package deploy"
-      onDeploy:
-        # runs before the component is deployed
-        before:
-          - cmd: touch test-deploy-before.txt
-        # runs after the component is deployed
-        after:
-          - cmd: touch test-deploy-after.txt
-      # runs during "zarf package remove"
-      onRemove:
-        # runs before anything else from the component is removed
-        before:
-          - cmd: rm test-deploy-before.txt
-        # runs after everything else from the component is removed
-        after:
-          - cmd: rm test-deploy-after.txt
+      - when: BeforeDeploy
+        cmd: touch test-deploy-before.txt
+      - when: AfterDeploy
+        cmd: touch test-deploy-after.txt
+      - when: BeforeRemove
+        cmd: rm test-deploy-before.txt
+      - when: AfterRemove
+        cmd: rm test-deploy-after.txt
 
   - name: on-deploy-with-variable
     actions:
-      # runs during "zarf package deploy"
-      onDeploy:
-        # runs before the component is deployed
-        before:
-          - cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
+      - when: BeforeDeploy
+        cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
 
   - name: on-deploy-with-dynamic-variable
     actions:
-      # runs during "zarf package deploy"
-      onDeploy:
-        # runs before the component is deployed
-        before:
-          # setVariables can be used to set a variable for use in other actions or components
-          - cmd: echo "meow"
-            # the name of the variable to set with the output of the action (only useable onDeploy)
-            setVariables:
-              - name: CAT_SOUND
-          # this action will have access to the variable set in the previous action
-          - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
+      - when: BeforeDeploy
+        # setVariables can be used to set a variable for use in other actions or components
+        cmd: echo "meow"
+        # the name of the variable to set with the output of the action (only useable on deploy)
+        setVariables:
+          - name: CAT_SOUND
+      - when: BeforeDeploy
+        # this action will have access to the variable set in the previous action
+        cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
 
   - name: on-deploy-with-multiple-variables
     actions:
-      # runs during "zarf package deploy"
-      onDeploy:
-        # runs before the component is deployed
-        before:
-          # setting this variable will allow it to be used in other actions with additional variables
-          # set in other actions or components
-          - cmd: echo "hiss"
-            # setVariables defines a list of variables to set from the `cmd` standard out.
-            setVariables:
-              - name: SNAKE_SOUND
-                # marks this variable as sensitive to prevent it from being output in the Zarf log
-                sensitive: true
-                # autoIndent tells Zarf to maintain spacing for any newlines when templating into a yaml file
-                autoIndent: true
-        # onSuccess will only run if steps in this component are successful
-        onSuccess:
-          # this action will print the CAT_SOUND variable that was set in a previous component
-          - cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
-          # this action will print the DOG_SOUND variable set at the top of the zarf.yaml file
-          - cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
-          # this action will print the SNAKE_SOUND variable set within this component
-          # > NOTE: when including a variable in a command output this will be written to the log regardless of the sensitive setting
-          # - use `mute` if you want to silence the command output for sensitive variables
-          - cmd: echo "the snake says ${ZARF_VAR_SNAKE_SOUND}"
-          # variables are also exposed as TF_VAR_name for terraform, note the lowercase variable name
-          - cmd: echo "with a TF_VAR, the snake also says ${TF_VAR_snake_sound}"
+      - when: BeforeDeploy
+        # setting this variable will allow it to be used in other actions with additional variables
+        # set in other actions or components
+        cmd: echo "hiss"
+        # setVariables defines a list of variables to set from the `cmd` standard out.
+        setVariables:
+          - name: SNAKE_SOUND
+            # marks this variable as sensitive to prevent it from being output in the Zarf log
+            sensitive: true
+            # autoIndent tells Zarf to maintain spacing for any newlines when templating into a yaml file
+            autoIndent: true
+        # this action will print the CAT_SOUND variable that was set in a previous component
+      - when: SuccessfulDeploy
+        cmd: echo "the cat says ${ZARF_VAR_CAT_SOUND}"
+        # this action will print the DOG_SOUND variable set at the top of the zarf.yaml file
+      - when: SuccessfulDeploy
+        cmd: echo "the dog says ${ZARF_VAR_DOG_SOUND}"
+        # this action will print the SNAKE_SOUND variable set within this component
+        # > NOTE: when including a variable in a command output this will be written to the log regardless of the sensitive setting
+        # - use `mute` if you want to silence the command output for sensitive variables
+      - when: SuccessfulDeploy
+        cmd: echo "the snake says ${ZARF_VAR_SNAKE_SOUND}"
+        # variables are also exposed as TF_VAR_name for terraform, note the lowercase variable name
+      - when: SuccessfulDeploy
+        cmd: echo "with a TF_VAR, the snake also says ${TF_VAR_snake_sound}"
 
   - name: on-deploy-with-template-use-of-variable
     files:
@@ -140,21 +89,6 @@ components:
         target: test-templated.txt
         shasum: 3c0404e0c767ace905c361fadded6c4b91fdb88aa07d5c42d2a220a87564836d
 
-  - name: on-deploy-with-timeout
-    description: This component will fail after 1 second
-    actions:
-      # runs during "zarf package deploy"
-      onDeploy:
-        # defaults allow you to specify default values for the actions in that actionSet
-        defaults:
-          # maxTotalSeconds is the maximum amount of time the action can run before it is killed, over all retries
-          maxTotalSeconds: 1
-        before:
-          # this action will fail after 1 second
-          - cmd: sleep 10
-        onFailure:
-          - cmd: echo "😭😭😭 this action failed because it took too long to run 😭😭😭"
-
   - name: on-remove
     # A manifest that we expect to be removed by Zarf
     manifests:
@@ -162,37 +96,31 @@ components:
         files:
           - test-configmap.yaml
     actions:
-      # runs during "zarf package remove"
-      onRemove:
-        before:
-          # because this runs before the manifest is removed this should return our manifest
-          - cmd: ./zarf tools kubectl get configmap -n zarf remove-test-configmap || echo "Not Found"
-        after:
-          # because this runs after the manifest is removed this should no longer be found
-          - cmd: ./zarf tools kubectl get configmap -n zarf remove-test-configmap || echo "Not Found"
+      - when: BeforeRemove
+        # because this runs before the manifest is removed this should return our manifest
+        cmd: ./zarf tools kubectl get configmap -n zarf remove-test-configmap || echo "Not Found"
+      - when: AfterRemove
+        # because this runs after the manifest is removed this should no longer be found
+        cmd: ./zarf tools kubectl get configmap -n zarf remove-test-configmap || echo "Not Found"
 
   - name: on-deploy-with-env-var
     actions:
-      onDeploy:
-        before:
-          - cmd: touch $ZARF_VAR_TEST_FILENAME
-            env:
-              # this will set the env var ZARF_VAR_TEST_FILENAME - useful for passing information into scripts
-              - ZARF_VAR_TEST_FILENAME=test-filename-from-env.txt
+      - when: BeforeDeploy
+        cmd: touch $ZARF_VAR_TEST_FILENAME
+        env:
+          # this will set the env var ZARF_VAR_TEST_FILENAME - useful for passing information into scripts
+          ZARF_VAR_TEST_FILENAME: test-filename-from-env.txt
 
   - name: on-create-with-network-wait-action
     description: This component will wait for 15 seconds for a network resource to be available
     actions:
-      onCreate:
-        after:
-          - description: Github.com to be available
-            maxTotalSeconds: 15
-            wait:
-              # wait for a network address to return a 200 OK response
-              network:
-                protocol: https
-                address: github.com
-                code: 200
+      - when: AfterCreate
+        wait:
+          # wait for a network address to return a 200 OK response
+          network:
+            protocol: https
+            address: github.com
+            code: 200
 
   - name: on-deploy-with-wait-action
     description: This component will wait for 5 seconds for the test-configmap to be exist
@@ -201,26 +129,22 @@ components:
         files:
           - test-configmap.yaml
     actions:
-      onDeploy:
-        after:
-          - description: The simple-configmap to exist
-            maxTotalSeconds: 5
-            wait:
-              # wait for the configmap to be available in the cluster
-              cluster:
-                kind: configmap
-                name: simple-configmap
-                namespace: zarf
+      - when: AfterDeploy
+        wait:
+          # wait for the configmap to be available in the cluster
+          cluster:
+            kind: configmap
+            name: simple-configmap
+            namespace: zarf
 
   - name: on-deploy-immediate-failure
     description: This component will fail on the first error instead of continuing execution
    # the default for multi-line commands is set -e
     actions:
-      onDeploy:
-        after:
-          - cmd: |
-              bad_cmd
-              echo "this text shouldn't be printed"
+      - when: AfterDeploy
+        cmd: |
+          bad_cmd
+          echo "this text shouldn't be printed"
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples

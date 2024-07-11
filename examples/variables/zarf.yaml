@@ -55,18 +55,17 @@ components:
       - source: simple-terraform.tf
         target: modified-terraform.tf
     actions:
-      onDeploy:
-        after:
-          # This command uses Zarf to return the SHASUM of the terraform file (`type: file` variables will return the filepath instead of the contents when used in actions due to constraints on env var size)
-          - cmd: ./zarf prepare sha256sum ${ZARF_VAR_MODIFIED_TERRAFORM}
+      - when: AfterDeploy
+        # This command uses Zarf to return the SHASUM of the terraform file (`type: file` variables will return the filepath instead of the contents when used in actions due to constraints on env var size)
+        cmd: ./zarf prepare sha256sum ${ZARF_VAR_MODIFIED_TERRAFORM}
             # `mute` is set to exclude the command output from being shown (since we are treating it as sensitive below)
-            mute: true
-            setVariables:
-              - name: MODIFIED_TERRAFORM_SHASUM
-                # `sensitive` is set to exclude the command output from the logs
-                sensitive: true
-                # `pattern` here will ensure that we get a properly formatted sha256 sum back from the zarf prepare command
-                pattern: "^[\\da-f]{64}$"
+        mute: true
+        setVariables:
+          - name: MODIFIED_TERRAFORM_SHASUM
+            # `sensitive` is set to exclude the command output from the logs
+            sensitive: true
+            # `pattern` here will ensure that we get a properly formatted sha256 sum back from the zarf prepare command
+            pattern: "^[\\da-f]{64}$"
 
   # The following component deploys nginx to the cluster using the defined variables
   - name: variables-with-nginx
@@ -82,14 +81,13 @@ components:
           - nginx-deployment.yaml
           - nginx-service.yaml
     actions:
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: pod
-                namespace: nginx
-                name: app=nginx
-                condition: Ready
+      - when: AfterDeploy
+        wait:
+          cluster:
+            kind: pod
+            namespace: nginx
+            name: app=nginx
+            condition: Ready
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples

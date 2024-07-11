@@ -38,9 +38,7 @@ components:
           container: podinfo
           path: /home/app/service.yaml
     actions:
-      onCreate:
-        before:
-          - cmd: ls
-      onDeploy:
-        after:
-          - cmd: cat coffee-ipsum.txt
+      - when: BeforeCreate
+        cmd: ls
+      - when: AfterDeploy
+        cmd: cat coffee-ipsum.txt

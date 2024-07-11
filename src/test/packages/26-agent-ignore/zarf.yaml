@@ -13,11 +13,10 @@ components:
           - manifests/deployment.yaml
           - manifests/namespace.yaml
     actions:
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: deployment
-                name: httpd-deployment
-                namespace: httpd-ignored
-                condition: "{.status.readyReplicas}=2"
+      - when: AfterDeploy
+        wait:
+          cluster:
+            kind: deployment
+            name: httpd-deployment
+            namespace: httpd-ignored
+            condition: "{.status.readyReplicas}=2"

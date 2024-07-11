@@ -8,10 +8,9 @@ components:
     description: "###ZARF_PKG_TMPL_NUMB3R5###"
     required: true
     actions:
-      onDeploy:
-        before:
-          - cmd: echo "Hello Kitteh"
-            setVariables:
-              - name: HELLO_KITTEH
-                # "Hello Kitteh" should not match a 40 char 0-f shasum string.
-                pattern: "^[\\da-f]{64}$"
+      - when: BeforeDeploy
+        cmd: echo "Hello Kitteh"
+        setVariables:
+          - name: HELLO_KITTEH
+            # "Hello Kitteh" should not match a 40 char 0-f shasum string.
+            pattern: "^[\\da-f]{64}$"

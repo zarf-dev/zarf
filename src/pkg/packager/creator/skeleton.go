@@ -165,24 +165,8 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 		updatedComponent.DeprecatedCosignKeyPath = "cosign.pub"
 	}
 
-	// TODO: (@WSTARR) Shim the skeleton component's create action dirs to be empty. This prevents actions from failing by cd'ing into directories that will be flattened.
-	updatedComponent.Actions.OnCreate.Defaults.Dir = ""
-
-	resetActions := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
-		for idx := range actions {
-			actions[idx].Dir = nil
-		}
-		return actions
-	}
-
-	updatedComponent.Actions.OnCreate.Before = resetActions(component.Actions.OnCreate.Before)
-	updatedComponent.Actions.OnCreate.After = resetActions(component.Actions.OnCreate.After)
-	updatedComponent.Actions.OnCreate.OnSuccess = resetActions(component.Actions.OnCreate.OnSuccess)
-	updatedComponent.Actions.OnCreate.OnFailure = resetActions(component.Actions.OnCreate.OnFailure)
-
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
-
 		if chart.LocalPath != "" {
 			rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			dst := filepath.Join(componentPaths.Base, rel)

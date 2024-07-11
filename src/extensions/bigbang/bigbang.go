@@ -137,20 +137,10 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 		return c, fmt.Errorf("unable to sort Big Bang HelmReleases: %w", err)
 	}
 
-	// ten minutes in seconds
-	maxTotalSeconds := 10 * 60
-
-	defaultMaxTotalSeconds := c.Actions.OnDeploy.Defaults.MaxTotalSeconds
-	if defaultMaxTotalSeconds > maxTotalSeconds {
-		maxTotalSeconds = defaultMaxTotalSeconds
-	}
-
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
 	for _, hrNamespacedName := range namespacedHelmReleaseNames {
 		hr := hrDependencies[hrNamespacedName]
 		action := types.ZarfComponentAction{
-			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hrNamespacedName),
-			MaxTotalSeconds: &maxTotalSeconds,
 			Wait: &types.ZarfComponentActionWait{
 				Cluster: &types.ZarfComponentActionWaitCluster{
 					Kind:       "HelmRelease",
@@ -166,7 +156,6 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 		// may not ever be created. See links below for more details.
 		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.54.0/chart/templates/metrics-server/helmrelease.yaml
 		if hr.Metadata.Name == "metrics-server" {
-			action.Description = "K8s metric server to exist or be deployed by Big Bang"
 			action.Wait.Cluster = &types.ZarfComponentActionWaitCluster{
 				Kind: "APIService",
 				// https://github.com/kubernetes-sigs/metrics-server#compatibility-matrix
@@ -174,7 +163,7 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 			}
 		}
 
-		c.Actions.OnDeploy.OnSuccess = append(c.Actions.OnDeploy.OnSuccess, action)
+		c.Actions = append(c.Actions, action)
 	}
 
 	t := true
@@ -192,25 +181,26 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 		"get events -A",
 	}
 
-	// Add onFailure actions with additional troubleshooting information.
+	// Add FailedDeploy actions with additional troubleshooting information.
 	for _, cmd := range failureGeneral {
-		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, types.ZarfComponentAction{
-			Cmd: fmt.Sprintf("./zarf tools kubectl %s", cmd),
+		c.Actions = append(c.Actions, types.ZarfComponentAction{
+			Cmd:  fmt.Sprintf("./zarf tools kubectl %s", cmd),
+			When: types.FailedDeploy,
 		})
 	}
 
 	for _, cmd := range failureDebug {
-		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, types.ZarfComponentAction{
-			Mute:        &t,
-			Description: "Storing debug information to the log for troubleshooting.",
-			Cmd:         fmt.Sprintf("./zarf tools kubectl %s", cmd),
+		c.Actions = append(c.Actions, types.ZarfComponentAction{
+			Mute: &t,
+			Cmd:  fmt.Sprintf("./zarf tools kubectl %s", cmd),
+			When: types.FailedDeploy,
 		})
 	}
 
-	// Add a pre-remove action to suspend the Big Bang HelmReleases to prevent reconciliation during removal.
-	c.Actions.OnRemove.Before = append(c.Actions.OnRemove.Before, types.ZarfComponentAction{
-		Description: "Suspend Big Bang HelmReleases to prevent reconciliation during removal.",
-		Cmd:         `./zarf tools kubectl patch helmrelease -n bigbang bigbang --type=merge -p '{"spec":{"suspend":true}}'`,
+	// Add a BeforeRemove action to suspend the Big Bang HelmReleases to prevent reconciliation during removal.
+	c.Actions = append(c.Actions, types.ZarfComponentAction{
+		Cmd:  `./zarf tools kubectl patch helmrelease -n bigbang bigbang --type=merge -p '{"spec":{"suspend":true}}'`,
+		When: types.BeforeRemove,
 	})
 
 	// Select the images needed to support the repos for this configuration of Big Bang.

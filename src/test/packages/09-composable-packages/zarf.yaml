@@ -52,14 +52,12 @@ components:
           container: podinfo
           path: /home/app/service.yaml
     actions:
-      onCreate:
-        before:
-          - cmd: ls
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: deployment
-                name: podinfo-compose-two
-                namespace: podinfo-compose-two
-                condition: available
+      - when: BeforeCreate
+        cmd: ls
+      - when: AfterDeploy
+        wait:
+          cluster:
+            kind: deployment
+            name: podinfo-compose-two
+            namespace: podinfo-compose-two
+            condition: available

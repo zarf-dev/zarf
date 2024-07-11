@@ -14,18 +14,18 @@ components:
       - source: include-files
         target: temp/include-files
     actions:
-      onDeploy:
-        after:
-          - cmd: cat temp/include-files/simple.txt
-          - cmd: cat temp/include-files/something.yaml
-          - cmd: rm -r temp
+      - when: AfterDeploy
+        cmd: |
+          cat temp/include-files/simple.txt
+          cat temp/include-files/something.yaml
+          rm -r temp
   - name: files
     required: true
     files:
       - source: requirements.txt
         target: temp/requirements.txt
     actions:
-      onDeploy:
-        after:
-          - cmd: cat temp/requirements.txt
-          - cmd: rm -r temp
+      - when: AfterDeploy
+        cmd: |
+          cat temp/requirements.txt
+          rm -r temp

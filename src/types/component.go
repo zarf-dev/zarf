@@ -5,7 +5,6 @@
 package types
 
 import (
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/defenseunicorns/zarf/src/types/extensions"
 	"github.com/invopop/jsonschema"
@@ -64,7 +63,7 @@ type ZarfComponent struct {
 	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0.,deprecated=true"`
 
 	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
-	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
+	Actions []ZarfComponentAction `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
 }
 
 // RequiresCluster returns if the component requires a cluster connection to deploy
@@ -156,45 +155,35 @@ type DeprecatedZarfComponentScripts struct {
 	After          []string `json:"after,omitempty" jsonschema:"description=Scripts to run after the component successfully deploys"`
 }
 
-// ZarfComponentActions are ActionSets that map to different zarf package operations
-type ZarfComponentActions struct {
-	OnCreate ZarfComponentActionSet `json:"onCreate,omitempty" jsonschema:"description=Actions to run during package creation"`
-	OnDeploy ZarfComponentActionSet `json:"onDeploy,omitempty" jsonschema:"description=Actions to run during package deployment"`
-	OnRemove ZarfComponentActionSet `json:"onRemove,omitempty" jsonschema:"description=Actions to run during package removal"`
-}
+type ActionPhase string
 
-// ZarfComponentActionSet is a set of actions to run during a zarf package operation
-type ZarfComponentActionSet struct {
-	Defaults  ZarfComponentActionDefaults `json:"defaults,omitempty" jsonschema:"description=Default configuration for all actions in this set"`
-	Before    []ZarfComponentAction       `json:"before,omitempty" jsonschema:"description=Actions to run at the start of an operation"`
-	After     []ZarfComponentAction       `json:"after,omitempty" jsonschema:"description=Actions to run at the end of an operation"`
-	OnSuccess []ZarfComponentAction       `json:"onSuccess,omitempty" jsonschema:"description=Actions to run if all operations succeed"`
-	OnFailure []ZarfComponentAction       `json:"onFailure,omitempty" jsonschema:"description=Actions to run if all operations fail"`
-}
-
-// ZarfComponentActionDefaults sets the default configs for child actions
-type ZarfComponentActionDefaults struct {
-	Mute            bool       `json:"mute,omitempty" jsonschema:"description=Hide the output of commands during execution (default false)"`
-	MaxTotalSeconds int        `json:"maxTotalSeconds,omitempty" jsonschema:"description=Default timeout in seconds for commands (default to 0, no timeout)"`
-	MaxRetries      int        `json:"maxRetries,omitempty" jsonschema:"description=Retry commands given number of times if they fail (default 0)"`
-	Dir             string     `json:"dir,omitempty" jsonschema:"description=Working directory for commands (default CWD)"`
-	Env             []string   `json:"env,omitempty" jsonschema:"description=Additional environment variables for commands"`
-	Shell           exec.Shell `json:"shell,omitempty" jsonschema:"description=(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"`
-}
+const (
+	BeforeCreate     ActionPhase = "BeforeCreate"
+	AfterCreate      ActionPhase = "AfterCreate"
+	BeforeDeploy     ActionPhase = "BeforeDeploy"
+	AfterDeploy      ActionPhase = "AfterDeploy"
+	FailedDeploy     ActionPhase = "FailedDeploy"
+	BeforeRemove     ActionPhase = "BeforeRemove"
+	AfterRemove      ActionPhase = "AfterRemove"
+	FailedRemove     ActionPhase = "FailedRemove"
+	SuccessfulRemove ActionPhase = "SuccessfulRemove"
+)
 
 // ZarfComponentAction represents a single action to run during a zarf package operation
 type ZarfComponentAction struct {
-	Mute                  *bool                    `json:"mute,omitempty" jsonschema:"description=Hide the output of the command during package deployment (default false)"`
-	MaxTotalSeconds       *int                     `json:"maxTotalSeconds,omitempty" jsonschema:"description=Timeout in seconds for the command (default to 0, no timeout for cmd actions and 300, 5 minutes for wait actions)"`
-	MaxRetries            *int                     `json:"maxRetries,omitempty" jsonschema:"description=Retry the command if it fails up to given number of times (default 0)"`
-	Dir                   *string                  `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
-	Env                   []string                 `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
 	Cmd                   string                   `json:"cmd,omitempty" jsonschema:"description=The command to run. Must specify either cmd or wait for the action to do anything."`
-	Shell                 *exec.Shell              `json:"shell,omitempty" jsonschema:"description=(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"`
-	DeprecatedSetVariable string                   `json:"setVariable,omitempty" jsonschema:"description=[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0,pattern=^[A-Z0-9_]+$"`
+	Dir                   string                   `json:"dir,omitempty" jsonschema:"description=The working directory to run the command in (default is CWD)"`
+	Interpreter           []string                 `json:"interpreter,omitempty" jsonschema:"description=A list of interpreter arguments used to execute the command. The first argument is the interpreter itself. It can be provided as a relative path to the current working directory or as an absolute path. The remaining arguments are appended prior to the command. This allows building command lines of the form \"/bin/bash\", \"-c\", \"echo foo\". If interpreter is unspecified, sensible defaults will be chosen based on the system OS."`
+	Env                   map[string]string        `json:"env,omitempty" jsonschema:"description=Additional environment variables to set for the command"`
 	SetVariables          []variables.Variable     `json:"setVariables,omitempty" jsonschema:"description=(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."`
-	Description           string                   `json:"description,omitempty" jsonschema:"description=Description of the action to be displayed during package execution instead of the command"`
+	DeprecatedSetVariable string                   `json:"setVariable,omitempty" jsonschema:"description=[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0,pattern=^[A-Z0-9_]+$"`
 	Wait                  *ZarfComponentActionWait `json:"wait,omitempty" jsonschema:"description=Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."`
+	When                  ActionPhase              `json:"when" jsonschema:"description=When to run the action"`
+	Mute                  *bool                    `json:"mute,omitempty" jsonschema:"description=Hide the output of the command during package deployment (default false)"`
+}
+
+func (a ZarfComponentAction) Phase() ActionPhase {
+	return a.When
 }
 
 // ZarfComponentActionWait specifies a condition to wait for before continuing

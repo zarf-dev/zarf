@@ -13,11 +13,10 @@ components:
     images:
       - rockylinux:9-minimal
     actions:
-      onDeploy:
-        before:
-          - cmd: echo "rockylinux:9-minimal"
-            setVariables:
-              - name: IMAGE
+      - when: BeforeDeploy
+        cmd: echo "rockylinux:9-minimal"
+        setVariables:
+          - name: IMAGE
 
   - name: image
     required: true
@@ -27,11 +26,10 @@ components:
     images:
       - oraclelinux:9-slim
     actions:
-      onDeploy:
-        before:
-          - cmd: echo "oraclelinux:9-slim"
-            setVariables:
-              - name: IMAGE
+      - when: BeforeDeploy
+        cmd: echo "oraclelinux:9-slim"
+        setVariables:
+          - name: IMAGE
 
   - name: image
     required: true
@@ -41,11 +39,10 @@ components:
     images:
       - almalinux:9-minimal
     actions:
-      onDeploy:
-        before:
-          - cmd: echo "almalinux:9-minimal"
-            setVariables:
-              - name: IMAGE
+      - when: BeforeDeploy
+        cmd: echo "almalinux:9-minimal"
+        setVariables:
+          - name: IMAGE
 
   - name: image
     required: true
@@ -55,11 +52,10 @@ components:
     images:
       - opensuse/leap:15
     actions:
-      onDeploy:
-        before:
-          - cmd: echo "opensuse/leap:15"
-            setVariables:
-              - name: IMAGE
+      - when: BeforeDeploy
+        cmd: echo "opensuse/leap:15"
+        setVariables:
+          - name: IMAGE
 
   - name: pod
     description: "The pod that runs the specified flavor of Enterprise Linux"

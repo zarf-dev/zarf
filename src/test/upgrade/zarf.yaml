@@ -35,16 +35,18 @@ components:
           container: podinfo
           path: /home/app/service.yaml
     actions:
-      onDeploy:
-        after:
-          - cmd: cat podinfo-cosign.pub
-            mute: true
-            setVariable: PODINFO_COSIGN_PUB
-          - cmd: "echo \"Successfully deployed podinfo ###ZARF_PKG_VAR_PODINFO_VERSION### with the following cosign key:\\n\\n${ZARF_VAR_PODINFO_COSIGN_PUB}\""
-          - cmd: rm podinfo-cosign.pub
-          - wait:
-              cluster:
-                kind: deployment
-                name: podinfo-upgrade
-                namespace: podinfo-upgrade
-                condition: available
+      - when: AfterDeploy
+        cmd: cat podinfo-cosign.pub
+        mute: true
+        setVariable: PODINFO_COSIGN_PUB
+      - when: AfterDeploy
+        cmd: |
+          "echo \"Successfully deployed podinfo ###ZARF_PKG_VAR_PODINFO_VERSION### with the following cosign key:\\n\\n${ZARF_VAR_PODINFO_COSIGN_PUB}\""
+          rm podinfo-cosign.pub
+      - when: AfterDeploy
+        wait:
+          cluster:
+            kind: deployment
+            name: podinfo-upgrade
+            namespace: podinfo-upgrade
+            condition: available

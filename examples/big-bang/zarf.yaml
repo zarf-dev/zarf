@@ -17,30 +17,28 @@ components:
   - name: bigbang
     required: true
     actions:
-      onRemove:
-        before:
-          - cmd: |
-              ./zarf tools kubectl patch helmrelease -n bigbang bigbang --type=merge -p '{"spec":{"suspend":true}}'
-              ./zarf tools kubectl delete helmrelease -n bigbang istio --ignore-not-found
-              ./zarf tools kubectl delete helmrelease -n bigbang istio-operator --ignore-not-found
-              ./zarf tools kubectl delete helmrelease -n bigbang monitoring --ignore-not-found
-              ./zarf tools kubectl delete providers grafana -n monitoring --ignore-not-found
-              ./zarf tools kubectl delete alerts grafana -n monitoring --ignore-not-found
-              ./zarf tools kubectl delete helmrelease -n bigbang promtail --ignore-not-found
-              ./zarf tools kubectl delete helmrelease -n bigbang loki --ignore-not-found
-              ./zarf tools kubectl delete kiali -n kiali kiali --ignore-not-found
-              ./zarf tools kubectl delete helmrelease -n bigbang tempo --ignore-not-found
-              ./zarf tools kubectl delete helmrelease -n bigbang neuvector --ignore-not-found
-              ./zarf tools kubectl delete validatingwebhookconfigurations.admissionregistration.k8s.io neuvector-validating-crd-webhook --ignore-not-found
-              ./zarf tools kubectl delete helmrelease -n bigbang kyverno-reporter --ignore-not-found
-              ./zarf tools kubectl delete helmrelease -n bigbang kyverno-policies --ignore-not-found
-              ./zarf tools kubectl delete helmrelease -n bigbang kyverno --ignore-not-found
-              ./zarf tools kubectl delete validatingwebhookconfigurations.admissionregistration.k8s.io kyverno-policy-validating-webhook-cfg kyverno-resource-validating-webhook-cfg --ignore-not-found
-              ./zarf tools kubectl delete helmrelease -n bigbang kiali --ignore-not-found
-              ./zarf tools kubectl delete helmrelease -n bigbang metrics-server --ignore-not-found
-              ./zarf tools kubectl delete apiservices.apiregistration.k8s.io -l helm.toolkit.fluxcd.io/namespace=bigbang,helm.toolkit.fluxcd.io/name=metrics-server --ignore-not-found
-              ./zarf tools kubectl delete gitrepositories -n bigbang -l app.kubernetes.io/part-of=bigbang
-            description: "Cleaning up Big Bang resources"
+      - when: BeforeRemove
+        cmd: |
+          ./zarf tools kubectl patch helmrelease -n bigbang bigbang --type=merge -p '{"spec":{"suspend":true}}'
+          ./zarf tools kubectl delete helmrelease -n bigbang istio --ignore-not-found
+          ./zarf tools kubectl delete helmrelease -n bigbang istio-operator --ignore-not-found
+          ./zarf tools kubectl delete helmrelease -n bigbang monitoring --ignore-not-found
+          ./zarf tools kubectl delete providers grafana -n monitoring --ignore-not-found
+          ./zarf tools kubectl delete alerts grafana -n monitoring --ignore-not-found
+          ./zarf tools kubectl delete helmrelease -n bigbang promtail --ignore-not-found
+          ./zarf tools kubectl delete helmrelease -n bigbang loki --ignore-not-found
+          ./zarf tools kubectl delete kiali -n kiali kiali --ignore-not-found
+          ./zarf tools kubectl delete helmrelease -n bigbang tempo --ignore-not-found
+          ./zarf tools kubectl delete helmrelease -n bigbang neuvector --ignore-not-found
+          ./zarf tools kubectl delete validatingwebhookconfigurations.admissionregistration.k8s.io neuvector-validating-crd-webhook --ignore-not-found
+          ./zarf tools kubectl delete helmrelease -n bigbang kyverno-reporter --ignore-not-found
+          ./zarf tools kubectl delete helmrelease -n bigbang kyverno-policies --ignore-not-found
+          ./zarf tools kubectl delete helmrelease -n bigbang kyverno --ignore-not-found
+          ./zarf tools kubectl delete validatingwebhookconfigurations.admissionregistration.k8s.io kyverno-policy-validating-webhook-cfg kyverno-resource-validating-webhook-cfg --ignore-not-found
+          ./zarf tools kubectl delete helmrelease -n bigbang kiali --ignore-not-found
+          ./zarf tools kubectl delete helmrelease -n bigbang metrics-server --ignore-not-found
+          ./zarf tools kubectl delete apiservices.apiregistration.k8s.io -l helm.toolkit.fluxcd.io/namespace=bigbang,helm.toolkit.fluxcd.io/name=metrics-server --ignore-not-found
+          ./zarf tools kubectl delete gitrepositories -n bigbang -l app.kubernetes.io/part-of=bigbang
     extensions:
       bigbang:
         # renovate: datasource=gitlab-releases depName=big-bang/bigbang versioning=semver registryUrl=https://repo1.dso.mil/
