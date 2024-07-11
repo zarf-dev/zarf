@@ -22,7 +22,6 @@ import (
 
 // NewPodMutationHook creates a new instance of pods mutation hook.
 func NewPodMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
-	message.Debug("hooks.NewMutationHook()")
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
 			return mutatePod(ctx, r, cluster)
@@ -34,7 +33,6 @@ func NewPodMutationHook(ctx context.Context, cluster *cluster.Cluster) operation
 }
 
 func parsePod(object []byte) (*corev1.Pod, error) {
-	message.Debugf("pods.parsePod(%s)", string(object))
 	var pod corev1.Pod
 	if err := json.Unmarshal(object, &pod); err != nil {
 		return nil, err
@@ -43,8 +41,6 @@ func parsePod(object []byte) (*corev1.Pod, error) {
 }
 
 func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
-	message.Debugf("hooks.mutatePod()(*v1.AdmissionRequest) - %#v , %s/%s: %#v", r.Kind, r.Namespace, r.Name, r.Operation)
-
 	pod, err := parsePod(r.Object.Raw)
 	if err != nil {
 		return nil, fmt.Errorf(lang.AgentErrParsePod, err)

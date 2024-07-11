@@ -23,6 +23,8 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
+	"github.com/pterm/pterm"
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -110,7 +112,10 @@ var devTransformGitLinksCmd = &cobra.Command{
 		processedText := transform.MutateGitURLsInText(message.Warnf, pkgConfig.InitOpts.GitServer.Address, text, pkgConfig.InitOpts.GitServer.PushUsername)
 
 		// Print the differences
-		message.PrintDiff(text, processedText)
+		dmp := diffmatchpatch.New()
+		diffs := dmp.DiffMain(text, processedText, true)
+		diffs = dmp.DiffCleanupSemantic(diffs)
+		pterm.Println(dmp.DiffPrettyText(diffs))
 
 		// Ask the user before this destructive action
 		confirm := false

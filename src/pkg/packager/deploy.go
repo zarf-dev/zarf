@@ -86,11 +86,10 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	p.sbomViewFiles = sbomViewFiles
 	warnings = append(warnings, sbomWarnings...)
 
 	// Confirm the overall package deployment
-	if !p.confirmAction(config.ZarfDeployStage, warnings) {
+	if !p.confirmAction(config.ZarfDeployStage, warnings, sbomViewFiles) {
 		return fmt.Errorf("deployment cancelled")
 	}
 

@@ -33,11 +33,10 @@ func (p *Packager) Mirror(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	p.sbomViewFiles = sbomViewFiles
 	warnings = append(warnings, sbomWarnings...)
 
 	// Confirm the overall package mirror
-	if !p.confirmAction(config.ZarfMirrorStage, warnings) {
+	if !p.confirmAction(config.ZarfMirrorStage, warnings, sbomViewFiles) {
 		return fmt.Errorf("mirror cancelled")
 	}
 
