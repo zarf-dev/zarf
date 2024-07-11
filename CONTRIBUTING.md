@@ -2,7 +2,7 @@
 
 First off, thanks so much for wanting to help out! :tada:
 
-This document describes the steps and requirements for contributing a bug fix or feature in a Pull Request to Zarf!  If you have any questions about the process or the pull request you are working on feel free to reach out in the [Zarf Dev Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03BP9Z3CMA).
+This document describes the steps and requirements for contributing a bug fix or feature in a Pull Request to Zarf!  If you have any questions about the process or the pull request you are working on feel free to reach out in the [Zarf Dev Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03BP9Z3CMA). The doc also details a bit about the governance structure of the project.
 
 ## Developer Experience
 
@@ -83,3 +83,29 @@ adr new -l "15:Amends:Amended by" Use store-bought butter for all waffle making
 # Get full help docs. There are all sorts of other helpful commands that help manage the decision log.
 adr help
 ```
+
+## Governance
+
+### Technical Steering Committee
+The Technical Steering Committee (the “TSC”) will be responsible for all technical oversight of the project. The TSC may elect a TSC Chair, who will preside over meetings of the TSC and will serve until their resignation or replacement by the TSC. Current members of the TSC include:
+
+#### Austin Abro
+Affiliation: Defense Unicorns
+GitHub: @AustinAbro321
+
+#### Danny Gershman
+Affiliation: Radius Method
+GitHub: @dgershman
+
+#### Jeff McCoy (TSC Chair)
+Affiliation: Defense Unicorns
+GitHub: @jeff-mccoy
+
+#### Sarah Christoff
+Affiliation: Defense Unicorns
+GitHub: @schristoff-du
+
+#### Wayne Starr
+Affiliation: Defense Unicorns
+GitHub: @Racer159
+
