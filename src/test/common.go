@@ -27,7 +27,6 @@ type ZarfE2ETest struct {
 	Arch              string
 	ApplianceMode     bool
 	ApplianceModeKeep bool
-	RunClusterTests   bool
 }
 
 var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
@@ -51,14 +50,6 @@ func GetCLIName() string {
 		}
 	}
 	return binaryName
-}
-
-// SetupWithCluster performs actions for each test that requires a K8s cluster.
-func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
-	if !e2e.RunClusterTests {
-		t.Skip("")
-	}
-	_ = exec.CmdWithPrint("sh", "-c", fmt.Sprintf("%s tools kubectl describe nodes | grep -A 99 Non-terminated", e2e.ZarfBinPath))
 }
 
 // Zarf executes a Zarf command.

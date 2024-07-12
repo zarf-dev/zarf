@@ -22,8 +22,6 @@ func TestYOLOMode(t *testing.T) {
 		return
 	}
 
-	e2e.SetupWithCluster(t)
-
 	// Destroy the cluster to test Zarf cleaning up after itself
 	stdOut, stdErr, err := e2e.Zarf("destroy", "--confirm", "--remove-components")
 	require.NoError(t, err, stdOut, stdErr)
@@ -54,7 +52,6 @@ func TestDevDeploy(t *testing.T) {
 	if e2e.ApplianceMode {
 		return
 	}
-	e2e.SetupWithCluster(t)
 
 	stdOut, stdErr, err := e2e.Zarf("dev", "deploy", "examples/dos-games")
 	require.NoError(t, err, stdOut, stdErr)
