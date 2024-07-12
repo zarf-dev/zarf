@@ -48,7 +48,6 @@ type ApplicationSource struct {
 
 // NewApplicationMutationHook creates a new instance of the ArgoCD Application mutation hook.
 func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
-	message.Debug("hooks.NewApplicationMutationHook()")
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
 			return mutateApplication(ctx, r, cluster)

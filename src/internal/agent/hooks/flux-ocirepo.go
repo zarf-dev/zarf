@@ -23,7 +23,6 @@ import (
 
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
 func NewOCIRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
-	message.Debug("hooks.NewOCIRepositoryMutationHook()")
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
 			return mutateOCIRepo(ctx, r, cluster)

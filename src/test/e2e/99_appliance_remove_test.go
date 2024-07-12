@@ -19,8 +19,6 @@ func TestApplianceRemove(t *testing.T) {
 		return
 	}
 
-	e2e.SetupWithCluster(t)
-
 	initPackageVersion := e2e.GetZarfVersion(t)
 
 	path := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", e2e.Arch, initPackageVersion)

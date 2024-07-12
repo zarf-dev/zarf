@@ -14,7 +14,7 @@ import (
 
 func TestCustomInit(t *testing.T) {
 	t.Log("E2E: Custom Init Package")
-	e2e.SetupWithCluster(t)
+
 	buildPath := filepath.Join("src", "test", "packages", "35-custom-init-package")
 	pkgName := fmt.Sprintf("zarf-init-%s-%s.tar.zst", e2e.Arch, e2e.GetZarfVersion(t))
 	privateKeyFlag := "--signing-key=src/test/packages/zarf-test.prv-key"

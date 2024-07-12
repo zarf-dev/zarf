@@ -13,7 +13,6 @@ import (
 
 func TestComponentWebhooks(t *testing.T) {
 	t.Log("E2E: Component Webhooks")
-	e2e.SetupWithCluster(t)
 
 	// Deploy example Pepr webhook.
 	webhookPath := fmt.Sprintf("build/zarf-package-component-webhooks-%s-0.0.1.tar.zst", e2e.Arch)

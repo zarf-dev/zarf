@@ -35,10 +35,7 @@ func NewHandler() *Handler {
 
 // Serve returns an http.HandlerFunc for an admission webhook.
 func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
-	message.Debugf("http.Serve(%#v)", hook)
 	return func(w http.ResponseWriter, r *http.Request) {
-		message.Debugf("http.Serve()(writer, %#v)", r.URL)
-
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != http.MethodPost {
 			http.Error(w, lang.AgentErrInvalidMethod, http.StatusMethodNotAllowed)
