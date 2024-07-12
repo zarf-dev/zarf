@@ -39,8 +39,6 @@ func TestECRPublishing(t *testing.T) {
 	// Set up the e2e configs
 	e2e.Arch = config.GetArch()
 	e2e.ZarfBinPath = path.Join("build", test.GetCLIName())
-	e2e.ApplianceMode = true
-	e2e.RunClusterTests = false
 
 	// Set up variables for common names/locations
 	testPackageName := "helm-charts"

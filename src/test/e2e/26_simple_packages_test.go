@@ -17,7 +17,6 @@ import (
 
 func TestDosGames(t *testing.T) {
 	t.Log("E2E: Dos games")
-	e2e.SetupWithCluster(t)
 
 	path := filepath.Join("build", fmt.Sprintf("zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch))
 
@@ -53,7 +52,6 @@ func TestDosGames(t *testing.T) {
 
 func TestManifests(t *testing.T) {
 	t.Log("E2E: Local, Remote, and Kustomize Manifests")
-	e2e.SetupWithCluster(t)
 
 	path := filepath.Join("build", fmt.Sprintf("zarf-package-manifests-%s-0.0.1.tar.zst", e2e.Arch))
 
@@ -68,7 +66,6 @@ func TestManifests(t *testing.T) {
 
 func TestAgentIgnore(t *testing.T) {
 	t.Log("E2E: Test Manifests that are Agent Ignored")
-	e2e.SetupWithCluster(t)
 
 	testCreate := filepath.Join("src", "test", "packages", "26-agent-ignore")
 	testDeploy := filepath.Join("build", fmt.Sprintf("zarf-package-agent-ignore-namespace-%s.tar.zst", e2e.Arch))

@@ -15,7 +15,6 @@ import (
 
 func TestGHCRDeploy(t *testing.T) {
 	t.Log("E2E: GHCR OCI deploy")
-	e2e.SetupWithCluster(t)
 
 	var sha string
 	// shas for package published 2023-08-08T22:13:51Z
@@ -36,7 +35,6 @@ func TestGHCRDeploy(t *testing.T) {
 
 func TestCosignDeploy(t *testing.T) {
 	t.Log("E2E: Cosign deploy")
-	e2e.SetupWithCluster(t)
 
 	// Test with command from https://docs.zarf.dev/getting-started/install/
 	command := fmt.Sprintf("%s package deploy sget://defenseunicorns/zarf-hello-world:$(uname -m) --confirm", e2e.ZarfBinPath)

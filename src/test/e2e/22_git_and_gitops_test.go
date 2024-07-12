@@ -21,7 +21,6 @@ import (
 
 func TestGit(t *testing.T) {
 	t.Log("E2E: Git")
-	e2e.SetupWithCluster(t)
 
 	buildPath := filepath.Join("src", "test", "packages", "22-git-data")
 	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "-o=build", "--confirm")
@@ -48,14 +47,12 @@ func TestGit(t *testing.T) {
 
 func TestGitOpsFlux(t *testing.T) {
 	t.Log("E2E: GitOps / Flux")
-	e2e.SetupWithCluster(t)
 
 	waitFluxPodInfoDeployment(t)
 }
 
 func TestGitOpsArgoCD(t *testing.T) {
 	t.Log("E2E: ArgoCD / Flux")
-	e2e.SetupWithCluster(t)
 
 	waitArgoDeployment(t)
 }

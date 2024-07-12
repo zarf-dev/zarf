@@ -15,7 +15,6 @@ import (
 
 func TestVariables(t *testing.T) {
 	t.Log("E2E: Package variables")
-	e2e.SetupWithCluster(t)
 
 	evilSrc := filepath.Join("src", "test", "packages", "24-evil-variables")
 	evilPath := fmt.Sprintf("zarf-package-evil-variables-%s.tar.zst", e2e.Arch)

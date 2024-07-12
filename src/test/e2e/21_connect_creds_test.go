@@ -23,7 +23,6 @@ type RegistryResponse struct {
 
 func TestConnectAndCreds(t *testing.T) {
 	t.Log("E2E: Connect")
-	e2e.SetupWithCluster(t)
 
 	prevAgentSecretData, _, err := e2e.Kubectl("get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
@@ -44,7 +43,6 @@ func TestConnectAndCreds(t *testing.T) {
 
 func TestMetrics(t *testing.T) {
 	t.Log("E2E: Emits metrics")
-	e2e.SetupWithCluster(t)
 
 	c, err := cluster.NewCluster()
 	require.NoError(t, err)

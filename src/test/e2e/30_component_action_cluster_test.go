@@ -14,7 +14,6 @@ import (
 
 func TestComponentActionRemove(t *testing.T) {
 	t.Log("E2E: Component action remove")
-	e2e.SetupWithCluster(t)
 
 	packagePath := filepath.Join("build", fmt.Sprintf("zarf-package-component-actions-%s.tar.zst", e2e.Arch))
 
@@ -31,7 +30,6 @@ func TestComponentActionRemove(t *testing.T) {
 
 func TestComponentActionEdgeCases(t *testing.T) {
 	t.Log("E2E: Component action edge cases")
-	e2e.SetupWithCluster(t)
 
 	sourcePath := filepath.Join("src", "test", "packages", "31-component-actions-edgecases")
 	packagePath := fmt.Sprintf("zarf-package-component-actions-edgecases-%s.tar.zst", e2e.Arch)

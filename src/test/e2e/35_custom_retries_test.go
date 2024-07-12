@@ -15,7 +15,6 @@ import (
 
 func TestRetries(t *testing.T) {
 	t.Log("E2E: Custom Retries")
-	e2e.SetupWithCluster(t)
 
 	tmpDir := t.TempDir()
 

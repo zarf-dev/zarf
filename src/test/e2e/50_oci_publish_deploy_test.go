@@ -164,7 +164,6 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 }
 
 func TestPublishDeploySuite(t *testing.T) {
-	e2e.SetupWithCluster(t)
 
 	suite.Run(t, new(PublishDeploySuiteTestSuite))
 }

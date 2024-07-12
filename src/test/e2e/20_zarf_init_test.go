@@ -18,7 +18,6 @@ import (
 
 func TestZarfInit(t *testing.T) {
 	t.Log("E2E: Zarf init")
-	e2e.SetupWithCluster(t)
 
 	initComponents := "git-server"
 	if e2e.ApplianceMode {
