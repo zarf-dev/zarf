@@ -26,12 +26,14 @@ var connectCmd = &cobra.Command{
 	Short:   lang.CmdConnectShort,
 	Long:    lang.CmdConnectLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var target string
+		target := ""
 		if len(args) > 0 {
 			target = args[0]
 		}
+
 		spinner := message.NewProgressSpinner(lang.CmdConnectPreparingTunnel, target)
 		defer spinner.Stop()
+
 		c, err := cluster.NewCluster()
 		if err != nil {
 			return err
@@ -59,17 +61,16 @@ var connectCmd = &cobra.Command{
 		}
 
 		defer tunnel.Close()
-		url := tunnel.FullURL()
 
 		// Dump the tunnel URL to the console for other tools to use.
-		fmt.Print(url)
+		fmt.Print(tunnel.FullURL())
 
 		if cliOnly {
-			spinner.Updatef(lang.CmdConnectEstablishedCLI, url)
+			spinner.Updatef(lang.CmdConnectEstablishedCLI, tunnel.FullURL())
 		} else {
-			spinner.Updatef(lang.CmdConnectEstablishedWeb, url)
+			spinner.Updatef(lang.CmdConnectEstablishedWeb, tunnel.FullURL())
 
-			if err := exec.LaunchURL(url); err != nil {
+			if err := exec.LaunchURL(tunnel.FullURL()); err != nil {
 				message.Debug(err)
 			}
 		}
@@ -77,11 +78,11 @@ var connectCmd = &cobra.Command{
 		// Wait for the interrupt signal or an error.
 		select {
 		case <-ctx.Done():
-			spinner.Successf(lang.CmdConnectTunnelClosed, url)
+			spinner.Successf(lang.CmdConnectTunnelClosed, tunnel.FullURL())
+			return nil
 		case err = <-tunnel.ErrChan():
 			return fmt.Errorf("lost connection to the service: %w", err)
 		}
-		return nil
 	},
 }
 
