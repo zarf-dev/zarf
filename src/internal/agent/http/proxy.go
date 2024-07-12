@@ -112,7 +112,9 @@ func proxyResponseTransform(resp *http.Response) error {
 		message.Debugf("Before Resp Location %#v", resp.Header.Get("Location"))
 
 		locationURL, err := url.Parse(resp.Header.Get("Location"))
-		message.Debugf("%#v", err)
+		if err != nil {
+			return err
+		}
 		locationURL.Path = transform.NoTransform + locationURL.Path
 		locationURL.Host = resp.Request.Header.Get("X-Forwarded-Host")
 
