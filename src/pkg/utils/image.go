@@ -9,12 +9,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2/registry"
 )
 
 // LoadOCIImage returns a v1.Image with the image ref specified from a location provided, or an error if the image cannot be found.
@@ -102,4 +104,37 @@ func OnlyHasImageLayers(img v1.Image) (bool, error) {
 		}
 	}
 	return true, nil
+}
+
+// DifferentiateImageLists returns a list of images that are in the second list but not in the first list.
+func DifferentiateImageLists(a, b []string) ([]string, error) {
+	left := make([]registry.Reference, 0, len(a))
+
+	for _, ele := range a {
+		ref, err := registry.ParseReference(ele)
+		if err != nil {
+			return nil, err
+		}
+		left = append(left, ref)
+	}
+
+	right := make([]registry.Reference, 0, len(b))
+
+	for _, ele := range b {
+		ref, err := registry.ParseReference(ele)
+		if err != nil {
+			return nil, err
+		}
+		right = append(right, ref)
+	}
+
+	diff := make([]string, 0, len(right))
+
+	for _, ele := range right {
+		if !slices.Contains(left, ele) {
+			diff = append(diff, ele.String())
+		}
+	}
+
+	return diff, nil
 }

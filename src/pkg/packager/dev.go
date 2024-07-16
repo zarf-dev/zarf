@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/zarf/src/config"
@@ -19,7 +18,7 @@ import (
 	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
 	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
 )
@@ -73,35 +72,32 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 			p.cfg.Pkg.Components[idx].Repos = []string{}
 		}
 	} else {
-		diff := func(a, b []string, normalizer func(string) string) []string {
-			var diff []string
-
-			for _, ele := range b {
-				if !slices.ContainsFunc(a, func(s string) bool {
-					return normalizer(s) == normalizer(ele)
-				}) {
-					diff = append(diff, ele)
-				}
-			}
-
-			return diff
-		}
-
-		normalizeImageName := func(s string) string {
-			imgInfo, _ := transform.ParseImageRef(s)
-			return imgInfo.Path
-		}
-
 		if c, err := cluster.NewCluster(); err == nil { // if NO error
 			if zarfState, err := c.LoadZarfState(ctx); err == nil { // if NO error
-				authOption := images.WithPullAuth(zarfState.RegistryInfo)
+				opts := []crane.Option{
+					images.WithPullAuth(zarfState.RegistryInfo),
+					images.WithArchitecture(p.cfg.Pkg.Build.Architecture),
+				}
 
 				if registryEndpoint, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, zarfState.RegistryInfo); err == nil { // if NO error
 					defer tunnel.Close()
 
-					if names, err := crane.Catalog(registryEndpoint, authOption); err == nil { // if NO error
+					if names, err := crane.Catalog(registryEndpoint, opts...); err == nil { // if NO error
+						everything := []string{}
+						for _, name := range names {
+							if tags, err := crane.ListTags(registryEndpoint+"/"+name, opts...); err == nil { // if NO error
+								for _, tag := range tags {
+									everything = append(everything, fmt.Sprintf("%s:%s", name, tag))
+								}
+							}
+						}
+
 						for idx, pending := range p.cfg.Pkg.Components {
-							p.cfg.Pkg.Components[idx].Images = diff(names, pending.Images, normalizeImageName)
+							diff, err := utils.DifferentiateImageLists(everything, pending.Images)
+							if err != nil {
+								return err
+							}
+							p.cfg.Pkg.Components[idx].Images = diff
 						}
 					}
 				}
