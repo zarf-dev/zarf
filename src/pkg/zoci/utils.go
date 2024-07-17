@@ -43,5 +43,5 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 
 // GetInitPackageURL returns the URL for the init package for the given version.
 func GetInitPackageURL(version string) string {
-	return fmt.Sprintf("ghcr.io/defenseunicorns/packages/init:%s", version)
+	return fmt.Sprintf("ghcr.io/zarf-dev/packages/init:%s", version)
 }
