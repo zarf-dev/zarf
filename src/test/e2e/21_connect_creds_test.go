@@ -88,7 +88,7 @@ func connectToZarfServices(ctx context.Context, t *testing.T) {
 	// We assert greater than or equal to since the base init has 8 images
 	// HOWEVER during an upgrade we could have mismatched versions/names resulting in more images
 	require.GreaterOrEqual(t, len(registryList), 3)
-	require.Contains(t, stdOut, "defenseunicorns/zarf/agent")
+	require.Contains(t, stdOut, "zarf-dev/zarf/agent")
 	require.Contains(t, stdOut, "gitea/gitea")
 	require.Contains(t, stdOut, "library/registry")
 

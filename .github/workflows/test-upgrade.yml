@@ -73,7 +73,7 @@ jobs:
           chmod +x build/zarf
 
       - name: Install release version of Zarf
-        uses: defenseunicorns/setup-zarf@f95763914e20e493bb5d45d63e30e17138f981d6 # v1.0.0
+        uses: defenseunicorns/setup-zarf@10e539efed02f75ec39eb8823e22a5c795f492ae #v1.0.1
         with:
           download-init-package: true
 
