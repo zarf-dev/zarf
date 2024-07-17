@@ -38,6 +38,11 @@ import (
 	"github.com/defenseunicorns/zarf/src/types"
 )
 
+var (
+	// localClusterServiceRegex is used to match the local cluster service format:
+	localClusterServiceRegex = regexp.MustCompile(`^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`)
+)
+
 func (p *Packager) resetRegistryHPA(ctx context.Context) {
 	if p.isConnectedToCluster() && p.hpaModified {
 		if err := p.cluster.EnableRegHPAScaleDown(ctx); err != nil {
@@ -742,11 +747,7 @@ func serviceInfoFromServiceURL(serviceURL string) (string, string, int, error) {
 	}
 
 	// Match hostname against local cluster service format.
-	pattern, err := regexp.Compile(`^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`)
-	if err != nil {
-		return "", "", 0, err
-	}
-	get, err := helpers.MatchRegex(pattern, parsedURL.Hostname())
+	get, err := helpers.MatchRegex(localClusterServiceRegex, parsedURL.Hostname())
 
 	// If incomplete match, return an error.
 	if err != nil {
