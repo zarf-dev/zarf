@@ -28,7 +28,4 @@ func TestRetries(t *testing.T) {
 	require.Error(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Retrying in 5s")
 	require.Contains(t, e2e.StripMessageFormatting(stdErr), "unable to install chart after 2 attempts")
-
-	_, _, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")
-	require.NoError(t, err)
 }

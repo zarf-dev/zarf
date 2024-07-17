@@ -43,6 +43,9 @@ func TestGit(t *testing.T) {
 	testGitServerConnect(t, tunnelGit.HTTPEndpoint())
 	testGitServerReadOnly(ctx, t, tunnelGit.HTTPEndpoint())
 	testGitServerTagAndHash(ctx, t, tunnelGit.HTTPEndpoint())
+
+	_, _, err = e2e.Zarf("package", "remove", path, "--confirm")
+	require.NoError(t, err)
 }
 
 func TestGitOpsFlux(t *testing.T) {

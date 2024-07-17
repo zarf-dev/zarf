@@ -48,6 +48,9 @@ func TestDosGames(t *testing.T) {
 	// Deploy the game image test package
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", testDeploy, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	_, _, err = e2e.Zarf("package", "remove", testDeploy, "--confirm")
+	require.NoError(t, err)
 }
 
 func TestManifests(t *testing.T) {
@@ -77,4 +80,7 @@ func TestAgentIgnore(t *testing.T) {
 	// Deploy the agent ignore test package
 	stdOut, stdErr, err = e2e.Zarf("package", "deploy", testDeploy, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	_, _, err = e2e.Zarf("package", "remove", testDeploy, "--confirm")
+	require.NoError(t, err)
 }

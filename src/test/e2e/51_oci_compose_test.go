@@ -284,6 +284,5 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 }
 
 func TestSkeletonSuite(t *testing.T) {
-
 	suite.Run(t, new(SkeletonSuite))
 }

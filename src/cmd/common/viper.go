@@ -78,13 +78,12 @@ const (
 
 	// Package deploy config keys
 
-	VPkgDeploySet          = "package.deploy.set"
-	VPkgDeployComponents   = "package.deploy.components"
-	VPkgDeployShasum       = "package.deploy.shasum"
-	VPkgDeploySget         = "package.deploy.sget"
-	VPkgDeploySkipWebhooks = "package.deploy.skip_webhooks"
-	VPkgDeployTimeout      = "package.deploy.timeout"
-	VPkgRetries            = "package.deploy.retries"
+	VPkgDeploySet        = "package.deploy.set"
+	VPkgDeployComponents = "package.deploy.components"
+	VPkgDeployShasum     = "package.deploy.shasum"
+	VPkgDeploySget       = "package.deploy.sget"
+	VPkgDeployTimeout    = "package.deploy.timeout"
+	VPkgRetries          = "package.deploy.retries"
 
 	// Package publish config keys
 

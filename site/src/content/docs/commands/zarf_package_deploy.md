@@ -29,7 +29,6 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
       --retries int                Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
       --set stringToString         Specify deployment variables to set on the command line (KEY=value) (default [])
       --shasum string              Shasum of the package to deploy. Required if deploying a remote package and "--insecure" is not provided
-      --skip-webhooks              [alpha] Skip waiting for external webhooks to execute as each package component is deployed
       --timeout duration           Timeout for Helm operations such as installs and rollbacks (default 15m0s)
 ```
 
