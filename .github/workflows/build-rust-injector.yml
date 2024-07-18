@@ -2,6 +2,7 @@ name: Zarf Injector Rust Binaries
 
 permissions:
   contents: read
+  id-token: write
 
 on:
   workflow_dispatch:
