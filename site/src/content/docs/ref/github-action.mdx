@@ -5,7 +5,7 @@ sidebar:
 tableOfContents: false
 ---
 
-The [setup-zarf](https://github.com/defenseunicorns/setup-zarf) Github action is an officially supported action to install any version of Zarf and it's `init` package with zero added dependencies.
+The [setup-zarf](https://github.com/zarf-dev/setup-zarf) Github action is an officially supported action to install any version of Zarf and it's `init` package with zero added dependencies.
 
 ## Example Usage - Creating a Package
 
@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 1
 
       - name: Install Zarf
-        uses: defenseunicorns/setup-zarf@main # use action's main branch
+        uses: zarf-dev/setup-zarf@main # use action's main branch
         with:
           version: v0.32.2 # any valid zarf version, leave blank to use latest
 
@@ -29,4 +29,4 @@ jobs:
         run: zarf package create --confirm
 ```
 
-More examples are located in the action's [README.md](https://github.com/defenseunicorns/setup-zarf#readme)
+More examples are located in the action's [README.md](https://github.com/zarf-dev/setup-zarf#readme)

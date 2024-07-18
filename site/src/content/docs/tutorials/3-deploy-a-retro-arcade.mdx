@@ -16,13 +16,13 @@ In previous tutorials, we learned how to [create a package](/tutorials/0-creatin
 
 Before beginning this tutorial you will need the following:
 
-- The [Zarf](https://github.com/defenseunicorns/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
+- The [Zarf](https://github.com/zarf-dev/zarf) repository cloned: ([git clone instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository))
 - Zarf binary installed on your $PATH: ([Installing Zarf](/getting-started/install/))
 - [An initialized cluster](/tutorials/1-initializing-a-k8s-cluster/)
 
 ## Deploying the Arcade
 
-1. The `dos-games` package is easily deployable via `oci://` by running `zarf package deploy oci://defenseunicorns/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub`.
+1. The `dos-games` package is easily deployable via `oci://` by running `zarf package deploy oci://zarf-dev/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub`.
 
 :::tip
 

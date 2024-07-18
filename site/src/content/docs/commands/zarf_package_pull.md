@@ -19,13 +19,13 @@ zarf package pull PACKAGE_SOURCE [flags]
 ```
 
 # Pull a package matching the current architecture
-$ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0
+$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.0.0
 
 # Pull a package matching a specific architecture
-$ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a arm64
+$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.0.0 -a arm64
 
 # Pull a skeleton package
-$ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a skeleton
+$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.0.0 -a skeleton
 ```
 
 ### Options

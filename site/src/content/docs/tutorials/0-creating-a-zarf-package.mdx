@@ -27,7 +27,7 @@ In order to create a Zarf package you first need to have an idea of what applica
 
 ### Creating the Package Definition
 
-A `zarf.yaml` file follows the [Zarf Package Schema](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json) and allows us to specify package metadata and a set of components for us to deploy. We start a package definition with the `kind` of package we are making and `metadata` that describes the package.  You can start our WordPress package by creating a new `zarf.yaml` with the following content:
+A `zarf.yaml` file follows the [Zarf Package Schema](https://github.com/zarf-dev/zarf/blob/main/zarf.schema.json) and allows us to specify package metadata and a set of components for us to deploy. We start a package definition with the `kind` of package we are making and `metadata` that describes the package.  You can start our WordPress package by creating a new `zarf.yaml` with the following content:
 
 ```yaml
 kind: ZarfPackageConfig # ZarfPackageConfig is the package kind for most normal zarf packages
@@ -40,7 +40,7 @@ metadata:
 
 :::tip
 
-You can run [`zarf dev lint <directory>`](/commands/zarf_dev_lint/) to validate against the [`zarf.schema.json`](https://github.com/defenseunicorns/zarf/blob/main/zarf.schema.json), or setup [VSCode](/ref/dev/#vscode) to see errors in real-time.
+You can run [`zarf dev lint <directory>`](/commands/zarf_dev_lint/) to validate against the [`zarf.schema.json`](https://github.com/zarf-dev/zarf/blob/main/zarf.schema.json), or setup [VSCode](/ref/dev/#vscode) to see errors in real-time.
 
 :::
 
