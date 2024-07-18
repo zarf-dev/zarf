@@ -1,5 +1,5 @@
-* @defenseunicorns/zarf @dgershman
+* @zarf-dev/maintainers @zarf-dev/reviewers
 
-/CODEOWNERS @jeff-mccoy @austenbryan
-/cosign.pub @jeff-mccoy @austenbryan
-/LICENSE @jeff-mccoy @austenbryan
+/CODEOWNERS @zarf-dev/tsc
+/cosign.pub @zarf-dev/tsc
+/LICENSE @zarf-dev/tsc
