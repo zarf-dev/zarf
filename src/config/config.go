@@ -17,7 +17,7 @@ import (
 
 // Zarf Global Configuration Constants.
 const (
-	GithubProject = "defenseunicorns/zarf"
+	GithubProject = "zarf-dev/zarf"
 
 	ZarfAgentHost = "agent-hook.zarf.svc"
 
