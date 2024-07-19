@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // Credential represents authentication for a given host.

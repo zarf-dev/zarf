@@ -19,11 +19,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -37,6 +32,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/moby/moby/client"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -132,7 +132,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 							ref, utils.ByteFormat(float64(rawImg.Size), 2))
 					}
 
-					// Use unbuffered opener to avoid OOM Kill issues https://github.com/defenseunicorns/zarf/issues/1214.
+					// Use unbuffered opener to avoid OOM Kill issues https://github.com/zarf-dev/zarf/issues/1214.
 					// This will also take forever to load large images.
 					img, err = daemon.Image(reference, daemon.WithUnbufferedOpener())
 					if err != nil {
@@ -254,7 +254,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 	// Needed because when pulling from the local docker daemon, while using the docker containerd runtime
 	// Crane incorrectly names the blob of the docker image config to a sha that does not match the contents
-	// https://github.com/defenseunicorns/zarf/issues/2584
+	// https://github.com/zarf-dev/zarf/issues/2584
 	// This is a band aid fix while we wait for crane and or docker to create the permanent fix
 	blobDir := filepath.Join(cfg.DestinationDirectory, "blobs", "sha256")
 	err = filepath.Walk(blobDir, func(path string, fi os.FileInfo, err error) error {

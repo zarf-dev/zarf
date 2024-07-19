@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 func TestPrintBreakingChanges(t *testing.T) {

@@ -12,8 +12,8 @@ import (
 
 	"encoding/json"
 
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestZarfInit(t *testing.T) {

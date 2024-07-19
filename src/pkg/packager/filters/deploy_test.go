@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func componentFromQuery(t *testing.T, q string) types.ZarfComponent {

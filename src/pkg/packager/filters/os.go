@@ -7,7 +7,7 @@ package filters
 import (
 	"errors"
 
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ByLocalOS creates a new filter that filters components based on local (runtime) OS.

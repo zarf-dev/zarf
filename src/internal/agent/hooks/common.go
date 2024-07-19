@@ -4,7 +4,7 @@
 // Package hooks contains the mutation hooks for the Zarf agent.
 package hooks
 
-import "github.com/defenseunicorns/zarf/src/internal/agent/operations"
+import "github.com/zarf-dev/zarf/src/internal/agent/operations"
 
 func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 	if currLabels == nil {

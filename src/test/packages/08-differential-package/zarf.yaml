@@ -11,8 +11,8 @@ components:
       - ghcr.io/stefanprodan/podinfo:6.0.0
       - ghcr.io/zarf-dev/zarf/agent:###ZARF_PKG_TMPL_PACKAGE_VERSION###
     repos:
-      - https://github.com/defenseunicorns/zarf.git@c74e2e9626da0400e0a41e78319b3054c53a5d4e
-      - https://github.com/defenseunicorns/zarf.git@refs/tags/###ZARF_PKG_TMPL_PACKAGE_VERSION###
+      - https://github.com/zarf-dev/zarf.git@c74e2e9626da0400e0a41e78319b3054c53a5d4e
+      - https://github.com/zarf-dev/zarf.git@refs/tags/###ZARF_PKG_TMPL_PACKAGE_VERSION###
 
   - name: generalized-assets
     required: true
@@ -22,4 +22,4 @@ components:
       # Do a full Git Repo Mirror
       - https://github.com/stefanprodan/podinfo.git
       - https://github.com/kelseyhightower/nocode.git
-      - https://github.com/defenseunicorns/zarf.git@refs/heads/main
+      - https://github.com/zarf-dev/zarf.git@refs/heads/main

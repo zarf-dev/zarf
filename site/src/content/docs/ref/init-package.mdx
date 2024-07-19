@@ -51,7 +51,7 @@ While there is no distro-agnostic method to inject images into a cluster, every 
 
 But then we have another problem of how to reassemble the image on the other side, as we don't have any consistent image that exists in the cluster that would have such utilities. This is where the `zarf-injector` Rust binary comes in.
 
-> For compiling the `zarf-injector` binary, refer to its [README.md](https://github.com/defenseunicorns/zarf/tree/main/src/injector/README.md).
+> For compiling the `zarf-injector` binary, refer to its [README.md](https://github.com/zarf-dev/zarf/tree/main/src/injector/README.md).
 
 The `zarf-injector` binary is statically compiled and injected into the cluster as a `configmap` along with the chunks of the `registry:2` image. During the `zarf-seed-registry`'s deployment, the `zarf-injector` binary is run in a pod that mounts the `configmaps` and reassembles the `registry:2` image. It then hosts a temporary, pull-only Docker registry implemented in Rust so that a real registry can be deployed into the cluster from the hosted `registry:2` image.
 
@@ -76,7 +76,7 @@ Doing this keeps Zarf cluster agnostic, however does require that the kubelet be
 
 :::note
 
-The `registry:2` image and the Zarf Agent image can be configured with a custom init package using the `registry_image_*` and `agent_image_*` templates defined in the Zarf repo's [zarf-config.toml](https://github.com/defenseunicorns/zarf/blob/main/zarf-config.toml).  This allows you to swap them for enterprise provided / hardened versions if desired such as those provided by [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
+The `registry:2` image and the Zarf Agent image can be configured with a custom init package using the `registry_image_*` and `agent_image_*` templates defined in the Zarf repo's [zarf-config.toml](https://github.com/zarf-dev/zarf/blob/main/zarf-config.toml).  This allows you to swap them for enterprise provided / hardened versions if desired such as those provided by [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
 
 :::
 
@@ -95,7 +95,7 @@ It leverages the same `docker-registry` chart used in `zarf-seed-registry` but w
 
 You can further customize how the registry behaves by setting variables such as `REGISTRY_PVC_SIZE` with a [config file](/ref/config-files/) or `--set` on `zarf init`.
 
-To see a full list of `variables` you can view the [`zarf.yaml` that defines the registry](https://github.com/defenseunicorns/zarf/blob/main/packages/zarf-registry/zarf.yaml).
+To see a full list of `variables` you can view the [`zarf.yaml` that defines the registry](https://github.com/zarf-dev/zarf/blob/main/packages/zarf-registry/zarf.yaml).
 
 :::
 
@@ -216,7 +216,7 @@ root@machine ~ # zarf init --components k3s --set K3S_ARGS="" --confirm
 
 You can further customize how the git-server behaves by setting variables such as `GIT_SERVER_PVC_SIZE` with a [config file](/ref/config-files/) or `--set` on `zarf init`.
 
-To see a full list of `variables` you can view the [zarf.yaml that defines the git-server](https://github.com/defenseunicorns/zarf/blob/main/packages/gitea/zarf.yaml).
+To see a full list of `variables` you can view the [zarf.yaml that defines the git-server](https://github.com/zarf-dev/zarf/blob/main/packages/gitea/zarf.yaml).
 
 :::
 
@@ -273,7 +273,7 @@ components:
 In order to reproduce / build the following example, you will need to have the Zarf repository cloned locally.
 
 ```bash
-git clone https://github.com/defenseunicorns/zarf.git
+git clone https://github.com/zarf-dev/zarf.git
 cd zarf
 mv zarf.yaml zarf.yaml.bak
 ```

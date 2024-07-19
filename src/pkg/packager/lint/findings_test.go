@@ -7,8 +7,8 @@ package lint
 import (
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestGroupFindingsByPath(t *testing.T) {
