@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
 func TestLint(t *testing.T) {

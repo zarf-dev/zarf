@@ -7,10 +7,10 @@ package tools
 import (
 	"github.com/anchore/clio"
 	syftCLI "github.com/anchore/syft/cmd/syft/cli"
-	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
-// ldflags github.com/defenseunicorns/zarf/src/cmd/tools.syftVersion=x.x.x
+// ldflags github.com/zarf-dev/zarf/src/cmd/tools.syftVersion=x.x.x
 var syftVersion string
 
 func init() {

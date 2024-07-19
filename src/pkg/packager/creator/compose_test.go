@@ -8,8 +8,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestComposeComponents(t *testing.T) {

@@ -1,4 +1,4 @@
-module github.com/defenseunicorns/zarf
+module github.com/zarf-dev/zarf
 
 go 1.22.4
 

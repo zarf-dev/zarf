@@ -96,4 +96,4 @@ x-mdx: |
 
   You can learn about YOLO mode in the [FAQ](/faq#what-is-yolo-mode-and-why-would-i-use-it) or the [YOLO mode example](/ref/examples/yolo/).
 
-  [Big Bang YOLO Mode Example](https://github.com/defenseunicorns/zarf/tree/main/examples/big-bang/yolo).
+  [Big Bang YOLO Mode Example](https://github.com/zarf-dev/zarf/tree/main/examples/big-bang/yolo).

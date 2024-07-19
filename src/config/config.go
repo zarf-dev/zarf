@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Zarf Global Configuration Constants.

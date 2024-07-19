@@ -5,8 +5,8 @@
 package bigbang
 
 import (
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/pterm/pterm"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 func printBanner() {

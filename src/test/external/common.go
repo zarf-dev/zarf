@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/defenseunicorns/zarf/src/test"
 	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/test"
 )
 
 var zarfBinPath = path.Join("../../../build", test.GetCLIName())

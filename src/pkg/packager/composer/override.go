@@ -7,7 +7,7 @@ package composer
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func overrideMetadata(c *types.ZarfComponent, override types.ZarfComponent) error {

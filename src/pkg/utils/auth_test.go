@@ -7,9 +7,9 @@ package utils
 import (
 	"testing"
 
-	mocks "github.com/defenseunicorns/zarf/src/test/mocks"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/stretchr/testify/require"
+	mocks "github.com/zarf-dev/zarf/src/test/mocks"
 )
 
 func TestCredentialParser(t *testing.T) {

@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Common constants for printing credentials

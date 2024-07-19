@@ -132,7 +132,7 @@ func testHelmUninstallRollback(t *testing.T) {
 	// Ensure this leaves behind a dos-games chart.
 	// We do not want to uninstall charts that had failed installs/upgrades
 	// to prevent unintentional deletion and/or data loss in production environments.
-	// https://github.com/defenseunicorns/zarf/issues/2455
+	// https://github.com/zarf-dev/zarf/issues/2455
 	helmOut, err := exec.Command("helm", "list", "-n", "dos-games").Output()
 	require.NoError(t, err)
 	require.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
