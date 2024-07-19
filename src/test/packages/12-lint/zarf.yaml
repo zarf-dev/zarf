@@ -14,7 +14,7 @@ components:
 
   - name: full-repo
     repos:
-    - https://github.com/defenseunicorns/zarf-public-test.git
+    - https://github.com/zarf-dev/zarf-public-test.git
     - https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1
     - https://gitlab.com/gitlab-org/build/omnibus-mirror/pcre2/-/tree/vreverse?ref_type=heads
     images:

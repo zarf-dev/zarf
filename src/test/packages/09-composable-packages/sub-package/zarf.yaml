@@ -26,7 +26,7 @@ components:
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
     repos:
-      - https://github.com/defenseunicorns/zarf-public-test.git
+      - https://github.com/zarf-dev/zarf-public-test.git
     files:
       - source: ../files/coffee-ipsum.txt
         target: coffee-ipsum.txt
