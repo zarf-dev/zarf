@@ -12,8 +12,6 @@ components:
       - https://github.com/zarf-dev/zarf-public-test.git
       # The following performs a full Git Repo Mirror forcing a fallback to host `git`
       - https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test
-      # Perform a full repo mirror of a simple repository with a single branch - (this causes an "already up to date" error in go-git)
-      - https://github.com/defenseunicorns/golang-tekton-hello-world.git
 
   - name: specific-tag
     required: true
