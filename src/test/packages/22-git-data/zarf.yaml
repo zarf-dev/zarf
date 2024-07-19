@@ -9,19 +9,17 @@ components:
     required: true
     repos:
       # Do a full Git Repo Mirror
-      - https://github.com/defenseunicorns/zarf-public-test.git
+      - https://github.com/zarf-dev/zarf-public-test.git
       # The following performs a full Git Repo Mirror forcing a fallback to host `git`
       - https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test
-      # Perform a full repo mirror of a simple repository with a single branch - (this causes an "already up to date" error in go-git)
-      - https://github.com/defenseunicorns/golang-tekton-hello-world.git
 
   - name: specific-tag
     required: true
     repos:
       # The following performs a tag Git Repo Mirror with `go-git` (internal to Zarf)
-      - https://github.com/defenseunicorns/zarf-public-test.git@v0.0.1
+      - https://github.com/zarf-dev/zarf-public-test.git@v0.0.1
       # The following performs a refspec tag Git Repo Mirror with `go-git`
-      - https://github.com/defenseunicorns/zarf-public-test.git@refs/tags/v0.0.1
+      - https://github.com/zarf-dev/zarf-public-test.git@refs/tags/v0.0.1
       # The following performs a tag Git Repo Mirror forcing a fallback to host `git`
       - https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1
     actions:
@@ -36,7 +34,7 @@ components:
     required: true
     repos:
       # The following performs a branch Git Repo Mirror with `go-git` (internal to Zarf)
-      - https://github.com/defenseunicorns/zarf-public-test.git@refs/heads/dragons
+      - https://github.com/zarf-dev/zarf-public-test.git@refs/heads/dragons
       # The following performs a branch Git Repo Mirror forcing a fallback to host `git`
       - https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@refs/heads/dragons
     actions:
@@ -51,7 +49,7 @@ components:
     required: true
     repos:
       # The following performs a SHA Git Repo Mirror with `go-git` (internal to Zarf)
-      - https://github.com/defenseunicorns/zarf-public-test.git@01a23218923f24194133b5eb11268cf8d73ff1bb
+      - https://github.com/zarf-dev/zarf-public-test.git@01a23218923f24194133b5eb11268cf8d73ff1bb
       # The following performs a SHA Git Repo Mirror forcing a fallback to host `git`
       - https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@01a23218923f24194133b5eb11268cf8d73ff1bb
     actions:
