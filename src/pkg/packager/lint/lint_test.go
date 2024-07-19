@@ -196,7 +196,7 @@ func TestValidateComponent(t *testing.T) {
 
 	t.Run("Unpinnned repo warning", func(t *testing.T) {
 		t.Parallel()
-		unpinnedRepo := "https://github.com/defenseunicorns/zarf-public-test.git"
+		unpinnedRepo := "https://github.com/zarf-dev/zarf-public-test.git"
 		component := types.ZarfComponent{Repos: []string{
 			unpinnedRepo,
 			"https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1",
