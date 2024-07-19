@@ -5,10 +5,10 @@
 package types
 
 import (
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
-	"github.com/defenseunicorns/zarf/src/types/extensions"
 	"github.com/invopop/jsonschema"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/types/extensions"
 )
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.

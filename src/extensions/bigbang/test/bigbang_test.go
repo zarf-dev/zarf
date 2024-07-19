@@ -14,10 +14,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	test "github.com/defenseunicorns/zarf/src/test"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	test "github.com/zarf-dev/zarf/src/test"
 )
 
 // The Big Bang project ID on Repo1

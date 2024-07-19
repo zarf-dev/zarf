@@ -7,8 +7,8 @@ package operations
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 	admission "k8s.io/api/admission/v1"
 )
 

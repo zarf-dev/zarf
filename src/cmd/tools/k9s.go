@@ -7,9 +7,9 @@ package tools
 import (
 	"os"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	k9s "github.com/derailed/k9s/cmd"
 	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/config/lang"
 
 	// This allows for go linkname to be used in this file.  Go linkname is used so that we can pull the CLI flags from k9s and generate proper docs for the vendored tool.
 	_ "unsafe"

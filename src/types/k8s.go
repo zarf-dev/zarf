@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
 // WebhookStatus defines the status of a Component Webhook operating on a Zarf package secret.

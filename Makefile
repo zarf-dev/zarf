@@ -30,7 +30,7 @@ else
 endif
 
 CLI_VERSION ?= $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
-BUILD_ARGS := -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion=$(CLI_VERSION)
+BUILD_ARGS := -s -w -X github.com/zarf-dev/zarf/src/config.CLIVersion=$(CLI_VERSION)
 K8S_MODULES_VER=$(subst ., ,$(subst v,,$(shell go list -f '{{.Version}}' -m k8s.io/client-go)))
 K8S_MODULES_MAJOR_VER=$(shell echo $$(($(firstword $(K8S_MODULES_VER)) + 1)))
 K8S_MODULES_MINOR_VER=$(word 2,$(K8S_MODULES_VER))
@@ -48,9 +48,9 @@ BUILD_ARGS += -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor=$(K8S_MODULES_MIN
 BUILD_ARGS += -X k8s.io/component-base/version.gitVersion=v$(K8S_MODULES_MAJOR_VER).$(K8S_MODULES_MINOR_VER).$(K8S_MODULES_PATCH_VER)
 BUILD_ARGS += -X github.com/derailed/k9s/cmd.version=$(K9S_VERSION)
 BUILD_ARGS += -X github.com/google/go-containerregistry/cmd/crane/cmd.Version=$(CRANE_VERSION)
-BUILD_ARGS += -X github.com/defenseunicorns/zarf/src/cmd/tools.syftVersion=$(SYFT_VERSION)
-BUILD_ARGS += -X github.com/defenseunicorns/zarf/src/cmd/tools.archiverVersion=$(ARCHIVER_VERSION)
-BUILD_ARGS += -X github.com/defenseunicorns/zarf/src/cmd/tools.helmVersion=$(HELM_VERSION)
+BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd/tools.syftVersion=$(SYFT_VERSION)
+BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd/tools.archiverVersion=$(ARCHIVER_VERSION)
+BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd/tools.helmVersion=$(HELM_VERSION)
 
 GIT_SHA := $(if $(shell git rev-parse HEAD),$(shell git rev-parse HEAD),"")
 BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
@@ -210,7 +210,7 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 
 .PHONY: test-unit
 test-unit: ## Run unit tests
-	go test -failfast -v -coverprofile=coverage.out -covermode=atomic $$(go list ./... | grep -v '^github.com/defenseunicorns/zarf/src/test' | grep -v 'github.com/defenseunicorns/zarf/src/extensions/bigbang/test')
+	go test -failfast -v -coverprofile=coverage.out -covermode=atomic $$(go list ./... | grep -v '^github.com/zarf-dev/zarf/src/test' | grep -v 'github.com/zarf-dev/zarf/src/extensions/bigbang/test')
 
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR
 test-docs-and-schema:

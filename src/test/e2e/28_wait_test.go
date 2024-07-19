@@ -10,8 +10,8 @@ import (
 
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/test"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/test"
 )
 
 type zarfCommandResult struct {

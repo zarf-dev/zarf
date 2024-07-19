@@ -14,12 +14,12 @@ brew tap defenseunicorns/tap && brew install zarf
 
 ## GitHub Releases
 
-All [Zarf releases](https://github.com/defenseunicorns/zarf/releases) on GitHub include prebuilt binaries that you can download and use. We offer range of combinations of OS and architecture for you to choose from.
+All [Zarf releases](https://github.com/zarf-dev/zarf/releases) on GitHub include prebuilt binaries that you can download and use. We offer range of combinations of OS and architecture for you to choose from.
 
 export const downloadScript = (os, arch) => `
-ZARF_VERSION=$(curl -sIX HEAD https://github.com/defenseunicorns/zarf/releases/latest | grep -i ^location: | grep -Eo 'v[0-9]+.[0-9]+.[0-9]+')
+ZARF_VERSION=$(curl -sIX HEAD https://github.com/zarf-dev/zarf/releases/latest | grep -i ^location: | grep -Eo 'v[0-9]+.[0-9]+.[0-9]+')
 
-curl -sL "https://github.com/defenseunicorns/zarf/releases/download/\${ZARF_VERSION}/zarf_\${ZARF_VERSION}_${os}_${arch}" -o zarf
+curl -sL "https://github.com/zarf-dev/zarf/releases/download/\${ZARF_VERSION}/zarf_\${ZARF_VERSION}_${os}_${arch}" -o zarf
 chmod +x zarf
 `
 
@@ -66,9 +66,9 @@ sudo mv zarf /usr/local/bin/zarf
 To download Zarf on Windows you can run the following (replacing `$ZarfVersion` with any release version of Zarf):
 
 export const downloadPowerShellScript = (arch) => `
-$ZarfVersion = (Invoke-RestMethod https://api.github.com/repos/defenseunicorns/zarf/releases/latest).tag_name
+$ZarfVersion = (Invoke-RestMethod https://api.github.com/repos/zarf-dev/zarf/releases/latest).tag_name
 
-Start-BitsTransfer -Source "https://github.com/defenseunicorns/zarf/releases/download/$($ZarfVersion)/zarf_$($ZarfVersion)_Windows_${arch}.exe" -Destination zarf.exe
+Start-BitsTransfer -Source "https://github.com/zarf-dev/zarf/releases/download/$($ZarfVersion)/zarf_$($ZarfVersion)_Windows_${arch}.exe" -Destination zarf.exe
 `
 
 <Tabs>
@@ -96,7 +96,7 @@ The following are unofficial methods of installing Zarf that are maintained by t
 If you want to build the CLI from scratch, you can do that too. Our local builds depend on [Go](https://golang.org/doc/install) and [make](https://www.gnu.org/software/make/).
 
 ```bash
-git clone https://github.com/defenseunicorns/zarf
+git clone https://github.com/zarf-dev/zarf
 cd zarf
 # build the CLI for your current OS and architecture
 make
@@ -134,7 +134,7 @@ $ zarf tools download-init
 $ zarf init --confirm
 ```
 
-The default 'init' package can also be obtained by visiting the [Zarf releases](https://github.com/defenseunicorns/zarf/releases) page and downloading it into your working directory or into `~/.zarf-cache/zarf-init-<amd64|arm64>-vX.X.X.tar.zst`.
+The default 'init' package can also be obtained by visiting the [Zarf releases](https://github.com/zarf-dev/zarf/releases) page and downloading it into your working directory or into `~/.zarf-cache/zarf-init-<amd64|arm64>-vX.X.X.tar.zst`.
 
 :::tip
 

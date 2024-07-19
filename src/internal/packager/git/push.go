@@ -10,13 +10,13 @@ import (
 	"os"
 	"path"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/go-git/go-git/v5"
 	goConfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 // PushRepo pushes a git repository from the local path to the configured git server.
@@ -145,7 +145,7 @@ func (g *Git) push(repo *git.Repository, spinner *message.Spinner) error {
 		RemoteName: offlineRemoteName,
 		Auth:       &gitCred,
 		Progress:   spinner,
-		// TODO: (@JEFFMCCOY) add the parsing for the `+` force prefix (see https://github.com/defenseunicorns/zarf/issues/1410)
+		// TODO: (@JEFFMCCOY) add the parsing for the `+` force prefix (see https://github.com/zarf-dev/zarf/issues/1410)
 		//Force: isForce,
 		// If a provided refspec doesn't push anything, it is just ignored
 		RefSpecs: []goConfig.RefSpec{

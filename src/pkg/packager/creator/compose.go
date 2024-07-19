@@ -7,9 +7,9 @@ package creator
 import (
 	"context"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/composer"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ComposeComponents composes components and their dependencies into a single Zarf package using an import chain.

@@ -39,12 +39,12 @@ export default defineConfig({
         SkipLink: "./src/components/SkipLink.astro",
       },
       social: {
-        github: "https://github.com/defenseunicorns/zarf",
+        github: "https://github.com/zarf-dev/zarf",
         slack: "https://kubernetes.slack.com/archives/C03B6BJAUJ3",
       },
       favicon: "/favicon.svg",
       editLink: {
-        baseUrl: "https://github.com/defenseunicorns/zarf/edit/main/site",
+        baseUrl: "https://github.com/zarf-dev/zarf/edit/main/site",
       },
       logo: {
         src: "./src/assets/zarf-logo-header.svg",

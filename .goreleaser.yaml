@@ -17,7 +17,7 @@ builds:
       - darwin
       - windows
     ldflags:
-      - -s -w -X github.com/defenseunicorns/zarf/src/config.CLIVersion={{.Tag}}
+      - -s -w -X github.com/zarf-dev/zarf/src/config.CLIVersion={{.Tag}}
       - -X k8s.io/component-base/version.gitVersion=v{{.Env.K8S_MODULES_MAJOR_VER}}.{{.Env.K8S_MODULES_MINOR_VER}}.{{.Env.K8S_MODULES_PATCH_VER}}
       - -X k8s.io/component-base/version.gitCommit={{.FullCommit}}
       - -X k8s.io/component-base/version.buildDate={{.Date}}
@@ -27,9 +27,9 @@ builds:
       - -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor={{.Env.K8S_MODULES_MINOR_VER}}
       - -X github.com/derailed/k9s/cmd.version={{.Env.K9S_VERSION}}
       - -X github.com/google/go-containerregistry/cmd/crane/cmd.Version={{.Env.CRANE_VERSION}}
-      - -X github.com/defenseunicorns/zarf/src/cmd/tools.syftVersion={{.Env.SYFT_VERSION}}
-      - -X github.com/defenseunicorns/zarf/src/cmd/tools.archiverVersion={{.Env.ARCHIVER_VERSION}}
-      - -X github.com/defenseunicorns/zarf/src/cmd/tools.helmVersion={{.Env.HELM_VERSION}}
+      - -X github.com/zarf-dev/zarf/src/cmd/tools.syftVersion={{.Env.SYFT_VERSION}}
+      - -X github.com/zarf-dev/zarf/src/cmd/tools.archiverVersion={{.Env.ARCHIVER_VERSION}}
+      - -X github.com/zarf-dev/zarf/src/cmd/tools.helmVersion={{.Env.HELM_VERSION}}
     goarch:
       - amd64
       - arm64

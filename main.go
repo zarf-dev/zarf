@@ -11,9 +11,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/defenseunicorns/zarf/src/cmd"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/lint"
+	"github.com/zarf-dev/zarf/src/cmd"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/packager/lint"
 )
 
 //go:embed cosign.pub

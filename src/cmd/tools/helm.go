@@ -7,12 +7,12 @@ package tools
 import (
 	"os"
 
-	"github.com/defenseunicorns/zarf/src/cmd/tools/helm"
-	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/cmd/tools/helm"
+	"github.com/zarf-dev/zarf/src/config/lang"
 	"helm.sh/helm/v3/pkg/action"
 )
 
-// ldflags github.com/defenseunicorns/zarf/src/cmd/tools.helmVersion=x.x.x
+// ldflags github.com/zarf-dev/zarf/src/cmd/tools.helmVersion=x.x.x
 var helmVersion string
 
 func init() {

@@ -1,16 +1,16 @@
 # Zarf - DevSecOps for Air Gap
 
-[![Latest Release](https://img.shields.io/github/v/release/defenseunicorns/zarf)](https://github.com/defenseunicorns/zarf/releases)
-[![Go version](https://img.shields.io/github/go-mod/go-version/defenseunicorns/zarf?filename=go.mod)](https://go.dev/)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/defenseunicorns/zarf/release.yml)](https://github.com/defenseunicorns/zarf/actions/workflows/release.yml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/zarf/badge)](https://securityscorecards.dev/viewer/?uri=github.com/defenseunicorns/zarf)
+[![Latest Release](https://img.shields.io/github/v/release/zarf-dev/zarf)](https://github.com/zarf-dev/zarf/releases)
+[![Go version](https://img.shields.io/github/go-mod/go-version/zarf-dev/zarf?filename=go.mod)](https://go.dev/)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/zarf-dev/zarf/release.yml)](https://github.com/zarf-dev/zarf/actions/workflows/release.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/zarf-dev/zarf/badge)](https://securityscorecards.dev/viewer/?uri=github.com/zarf-dev/zarf)
 
 <img align="right" alt="zarf logo" src="site/src/assets/zarf-logo.png"  height="256" />
 
 [![Zarf Website](https://img.shields.io/badge/web-zarf.dev-6d87c3)](https://zarf.dev/)
 [![Zarf Documentation](https://img.shields.io/badge/docs-docs.zarf.dev-775ba1)](https://docs.zarf.dev/)
 [![Zarf Slack Channel](https://img.shields.io/badge/k8s%20slack-zarf-40a3dd)](https://kubernetes.slack.com/archives/C03B6BJAUJ3)
-[![Community Meetups](https://img.shields.io/badge/community-meetups-22aebb)](https://github.com/defenseunicorns/zarf/issues/2202)
+[![Community Meetups](https://img.shields.io/badge/community-meetups-22aebb)](https://github.com/zarf-dev/zarf/issues/2202)
 
 Zarf eliminates the [complexity of air gap software delivery](https://www.itopstimes.com/contain/air-gap-kubernetes-considerations-for-running-cloud-native-applications-without-the-cloud/) for Kubernetes clusters and cloud-native workloads using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments.
 
@@ -77,8 +77,8 @@ Join us on the [Kubernetes Slack](https://kubernetes.slack.com/) in the [_#zarf_
 
 We are so grateful to our Zarf community for contributing bug fixes and collaborating on new features:
 
-<a href="https://github.com/defenseunicorns/zarf/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=defenseunicorns/zarf" alt="Zarf contributors" />
+<a href="https://github.com/zarf-dev/zarf/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=zarf-dev/zarf" alt="Zarf contributors" />
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks).

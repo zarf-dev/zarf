@@ -4,7 +4,7 @@
 // Package types contains all the types used by Zarf.
 package types
 
-import "github.com/defenseunicorns/zarf/src/pkg/variables"
+import "github.com/zarf-dev/zarf/src/pkg/variables"
 
 // ZarfPackageKind is an enum of the different kinds of Zarf packages.
 type ZarfPackageKind string

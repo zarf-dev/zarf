@@ -18,7 +18,7 @@ import (
 
 	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 const (
