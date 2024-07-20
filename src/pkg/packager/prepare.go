@@ -70,10 +70,10 @@ func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) 
 		message.Warn(warning)
 	}
 
-	return p.findImages()
+	return p.findImages(ctx)
 }
 
-func (p *Packager) findImages() (imgMap map[string][]string, err error) {
+func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, err error) {
 	repoHelmChartPath := p.cfg.FindImagesOpts.RepoHelmChartPath
 	kubeVersionOverride := p.cfg.FindImagesOpts.KubeVersionOverride
 	whyImage := p.cfg.FindImagesOpts.Why
@@ -172,7 +172,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 				helm.WithVariableConfig(p.variableConfig),
 			)
 
-			err = helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
+			err = helmCfg.PackageChart(ctx, component.DeprecatedCosignKeyPath)
 			if err != nil {
 				return nil, fmt.Errorf("unable to package the chart %s: %w", chart.Name, err)
 			}

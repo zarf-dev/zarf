@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,7 +20,7 @@ import (
 )
 
 // Generate generates a Zarf package definition.
-func (p *Packager) Generate() (err error) {
+func (p *Packager) Generate(ctx context.Context) (err error) {
 	generatedZarfYAMLPath := filepath.Join(p.cfg.GenerateOpts.Output, layout.ZarfYAML)
 	spinner := message.NewProgressSpinner("Generating package for %q at %s", p.cfg.GenerateOpts.Name, generatedZarfYAMLPath)
 
@@ -61,7 +62,7 @@ func (p *Packager) Generate() (err error) {
 		},
 	}
 
-	images, err := p.findImages()
+	images, err := p.findImages(ctx)
 	if err != nil {
 		// purposefully not returning error here, as we can still generate the package without images
 		message.Warnf("Unable to find images: %s", err.Error())
