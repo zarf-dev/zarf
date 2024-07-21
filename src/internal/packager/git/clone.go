@@ -18,7 +18,7 @@ import (
 )
 
 // clone performs a `git clone` of a given repo.
-func (g *Git) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) error {
+func (g *Git) clone(ctx context.Context, gitURL string, ref plumbing.ReferenceName, shallow bool) error {
 	cloneOptions := &git.CloneOptions{
 		URL:        gitURL,
 		Progress:   g.Spinner,
@@ -47,7 +47,7 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) err
 	repo, err := git.PlainClone(g.GitPath, false, cloneOptions)
 	if err != nil {
 		message.Notef("Falling back to host 'git', failed to clone the repo %q with Zarf: %s", gitURL, err.Error())
-		return g.gitCloneFallback(gitURL, ref, shallow)
+		return g.gitCloneFallback(ctx, gitURL, ref, shallow)
 	}
 
 	// If we're cloning the whole repo, we need to also fetch the other branches besides the default.
@@ -72,7 +72,7 @@ func (g *Git) clone(gitURL string, ref plumbing.ReferenceName, shallow bool) err
 }
 
 // gitCloneFallback is a fallback if go-git fails to clone a repo.
-func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName, shallow bool) error {
+func (g *Git) gitCloneFallback(ctx context.Context, gitURL string, ref plumbing.ReferenceName, shallow bool) error {
 	// If we can't clone with go-git, fallback to the host clone
 	// Only support "all tags" due to the azure clone url format including a username
 	cloneArgs := []string{"clone", "--origin", onlineRemoteName, gitURL, g.GitPath}
@@ -96,7 +96,7 @@ func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName, shallo
 
 	message.Command("git %s", strings.Join(cloneArgs, " "))
 
-	_, _, err := exec.CmdWithContext(context.TODO(), cloneExecConfig, "git", cloneArgs...)
+	_, _, err := exec.CmdWithContext(ctx, cloneExecConfig, "git", cloneArgs...)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (g *Git) gitCloneFallback(gitURL string, ref plumbing.ReferenceName, shallo
 
 		message.Command("git %s", strings.Join(fetchArgs, " "))
 
-		_, _, err := exec.CmdWithContext(context.TODO(), fetchExecConfig, "git", fetchArgs...)
+		_, _, err := exec.CmdWithContext(ctx, fetchExecConfig, "git", fetchArgs...)
 		if err != nil {
 			return err
 		}
