@@ -5,6 +5,7 @@
 package bigbang
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -42,7 +43,7 @@ var tenMins = metav1.Duration{
 
 // Run mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
-func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	cfg := c.Extensions.BigBang
 	manifests := []types.ZarfManifest{}
 
@@ -99,7 +100,7 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 	)
 
 	// Download the chart from Git and save it to a temporary directory.
-	err = helmCfg.PackageChartFromGit(c.DeprecatedCosignKeyPath)
+	err = helmCfg.PackageChartFromGit(ctx, c.DeprecatedCosignKeyPath)
 	if err != nil {
 		return c, fmt.Errorf("unable to download Big Bang Chart: %w", err)
 	}
@@ -220,7 +221,7 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 			gitRepo := gitRepos[hr.NamespacedSource]
 			values := hrValues[namespacedName]
 
-			images, err := findImagesforBBChartRepo(gitRepo, values)
+			images, err := findImagesforBBChartRepo(ctx, gitRepo, values)
 			if err != nil {
 				return c, fmt.Errorf("unable to find images for chart repo: %w", err)
 			}
@@ -523,7 +524,7 @@ func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang)
 }
 
 // findImagesforBBChartRepo finds and returns the images for the Big Bang chart repo
-func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []string, err error) {
+func findImagesforBBChartRepo(ctx context.Context, repo string, values chartutil.Values) (images []string, err error) {
 	matches := strings.Split(repo, "@")
 	if len(matches) < 2 {
 		return images, fmt.Errorf("cannot convert git repo %s to helm chart without a version tag", repo)
@@ -532,7 +533,7 @@ func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []st
 	spinner := message.NewProgressSpinner("Discovering images in %s", repo)
 	defer spinner.Stop()
 
-	gitPath, err := helm.DownloadChartFromGitToTemp(repo, spinner)
+	gitPath, err := helm.DownloadChartFromGitToTemp(ctx, repo, spinner)
 	if err != nil {
 		return images, err
 	}

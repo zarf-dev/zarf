@@ -71,7 +71,7 @@ var devGenerateCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdDevGenerateShort,
 	Example: lang.CmdDevGenerateExample,
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		pkgConfig.GenerateOpts.Name = args[0]
 
 		pkgConfig.CreateOpts.BaseDir = "."
@@ -83,7 +83,7 @@ var devGenerateCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		err = pkgClient.Generate()
+		err = pkgClient.Generate(cmd.Context())
 		if err != nil {
 			return err
 		}
