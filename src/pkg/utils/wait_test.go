@@ -7,9 +7,9 @@ package utils
 import (
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 type TestIsJSONPathWaitTypeSuite struct {

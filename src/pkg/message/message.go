@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/fatih/color"
 	"github.com/pterm/pterm"
+	"github.com/zarf-dev/zarf/src/config"
 )
 
 // LogLevel is the level of logging to display.

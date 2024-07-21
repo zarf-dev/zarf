@@ -7,7 +7,7 @@ package message
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // PrintConnectStringTable prints a table of connect strings.

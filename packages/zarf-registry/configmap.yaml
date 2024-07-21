@@ -7,4 +7,4 @@ metadata:
 data:
   localRegistryHosting.v1: |
     host: "###ZARF_REGISTRY###"
-    help: "https://github.com/defenseunicorns/zarf"
+    help: "https://github.com/zarf-dev/zarf"

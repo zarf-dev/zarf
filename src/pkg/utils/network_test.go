@@ -21,7 +21,7 @@ import (
 func TestParseChecksum(t *testing.T) {
 	t.Parallel()
 
-	adr := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/.adr-dir"
+	adr := "https://raw.githubusercontent.com/zarf-dev/zarf/main/.adr-dir"
 	sum := "930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3"
 
 	tests := []struct {

@@ -7,7 +7,7 @@ package filters
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ComponentFilterStrategy is a strategy interface for filtering components.

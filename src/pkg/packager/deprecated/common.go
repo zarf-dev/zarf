@@ -12,9 +12,9 @@ import (
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // BreakingChange represents a breaking change that happened on a specified Zarf version.
@@ -35,7 +35,7 @@ func (bc BreakingChange) String() string {
 
 // List of migrations tracked in the zarf.yaml build data.
 const (
-	// This should be updated when a breaking change is introduced to the Zarf package structure.  See: https://github.com/defenseunicorns/zarf/releases/tag/v0.27.0
+	// This should be updated when a breaking change is introduced to the Zarf package structure.  See: https://github.com/zarf-dev/zarf/releases/tag/v0.27.0
 	LastNonBreakingVersion   = "v0.27.0"
 	ScriptsToActionsMigrated = "scripts-to-actions"
 	PluralizeSetVariable     = "pluralize-set-variable"

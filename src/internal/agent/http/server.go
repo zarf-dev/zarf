@@ -10,11 +10,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/internal/agent/hooks"
-	"github.com/defenseunicorns/zarf/src/internal/agent/http/admission"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/zarf-dev/zarf/src/internal/agent/hooks"
+	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // NewAdmissionServer creates a http.Server for the mutating webhook admission handler.

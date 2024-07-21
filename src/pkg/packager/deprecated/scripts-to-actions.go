@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // migrateScriptsToActions coverts the deprecated scripts to the new actions

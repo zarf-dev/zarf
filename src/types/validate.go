@@ -12,7 +12,7 @@ import (
 	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
 const (
