@@ -2,7 +2,6 @@ name: Test EKS Cluster
 on:
   schedule:
    - cron: '0 7 * * *' ## Every day at 0700 UTC
-
   workflow_dispatch: ## Give us the ability to run this manually
     inputs:
       cluster_name:
@@ -36,12 +35,13 @@ jobs:
       - name: Build binary and zarf packages
         uses: ./.github/actions/packages
 
-      - name: Configure AWS Credentials
+      - name: Auth with AWS
         uses: aws-actions/configure-aws-credentials@010d0da01d0b5a38af31e9c3470dbfdabdecca3a # v4.0.1
         with:
           role-to-assume: ${{ secrets.AWS_NIGHTLY_ROLE }}
+          role-session-name: ${{ github.job || github.event.client_payload.pull_request.head.sha || github.sha }}
           aws-region: us-east-1
-          role-duration-seconds: 14400
+          role-duration-seconds: 3600
 
       - name: Build the eks package
         run: ./build/zarf package create packages/distros/eks -o build --confirm
@@ -55,7 +55,7 @@ jobs:
             --confirm
 
       - name: Run tests
-        run: make test-e2e ARCH=amd64
+        run: make test-e2e-with-cluster ARCH=amd64
 
       - name: Teardown the cluster
         if: always()
