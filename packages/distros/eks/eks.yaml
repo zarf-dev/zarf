@@ -20,12 +20,12 @@ addons:
     tags:
       PermissionsBoundary: "zarf_dev_base_policy"
 
-  # - name: vpc-cni
-  #   attachPolicyARNs:
-  #     - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
-  #   permissionsBoundary: "arn:aws:iam::173911864621:policy/zarf_dev_base_policy"
-  #   tags:
-  #     PermissionsBoundary: "arn:aws:iam::173911864621:policy/zarf_dev_base_policy"
+  - name: vpc-cni
+    attachPolicyARNs:
+      - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+    permissionsBoundary: "arn:aws:iam::173911864621:policy/zarf_dev_base_policy"
+    tags:
+      PermissionsBoundary: "zarf_dev_base_policy"
 
 managedNodeGroups:
 - instanceType: ###ZARF_VAR_EKS_INSTANCE_TYPE###
