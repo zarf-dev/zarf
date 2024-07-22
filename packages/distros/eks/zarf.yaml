@@ -52,9 +52,9 @@ components:
     actions:
       onDeploy:
         before:
-          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster --dry-run -f eks.yaml
+          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster --dry-run -f eks.yaml -v 5
           - cmd: sleep 15
-          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster -f eks.yaml
+          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster -f eks.yaml -v 5
           - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) utils write-kubeconfig -c ${ZARF_VAR_EKS_CLUSTER_NAME}
 
   - name: teardown-eks-cluster
