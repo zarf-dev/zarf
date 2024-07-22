@@ -8,6 +8,7 @@ metadata:
 
 iam:
   withOIDC: true
+  # serviceRolePermissionsBoundary: "arn:aws:iam::11111:policy/entity/boundary"
 
 addons:
   - name: aws-ebs-csi-driver
