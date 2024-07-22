@@ -192,7 +192,10 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) (err error) {
 	// Check for any breaking changes between the initialized Zarf version and this CLI
 	if existingInitPackage, _ := p.cluster.GetDeployedPackage(ctx, "init"); existingInitPackage != nil {
 		// Use the build version instead of the metadata since this will support older Zarf versions
-		deprecated.PrintBreakingChanges(os.Stderr, existingInitPackage.Data.Build.Version, config.CLIVersion)
+		err := deprecated.PrintBreakingChanges(os.Stderr, existingInitPackage.Data.Build.Version, config.CLIVersion)
+		if err != nil {
+			return err
+		}
 	}
 
 	spinner.Success()

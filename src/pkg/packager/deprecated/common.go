@@ -5,6 +5,7 @@
 package deprecated
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -78,11 +79,14 @@ func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) 
 }
 
 // PrintBreakingChanges prints the breaking changes between the provided version and the current CLIVersion.
-func PrintBreakingChanges(w io.Writer, deployedZarfVersion, cliVersion string) {
+func PrintBreakingChanges(w io.Writer, deployedZarfVersion, cliVersion string) error {
 	deployedSemver, err := semver.NewVersion(deployedZarfVersion)
+	// Dev versions of Zarf are not semver.
+	if errors.Is(err, semver.ErrInvalidSemVer) {
+		return nil
+	}
 	if err != nil {
-		message.Debugf("Unable to check for breaking changes between Zarf versions")
-		return
+		return fmt.Errorf("unable to check for breaking changes between Zarf versions: %w", err)
 	}
 
 	// List of breaking changes to warn the user of.
@@ -103,7 +107,7 @@ func PrintBreakingChanges(w io.Writer, deployedZarfVersion, cliVersion string) {
 	}
 
 	if len(applicableBreakingChanges) == 0 {
-		return
+		return nil
 	}
 
 	// Print header information
@@ -123,4 +127,5 @@ func PrintBreakingChanges(w io.Writer, deployedZarfVersion, cliVersion string) {
 	}
 
 	message.HorizontalRule()
+	return nil
 }
