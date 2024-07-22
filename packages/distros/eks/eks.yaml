@@ -6,7 +6,7 @@ metadata:
   region: ###ZARF_VAR_EKS_CLUSTER_REGION###
   version: "###ZARF_VAR_EKS_CLUSTER_VERSION###"
   tags:
-    PermissionsBoundary: "arn:aws:iam::173911864621:policy/zarf_dev_base_policy"
+    PermissionsBoundary: "zarf_dev_base_policy"
 
 iam:
   withOIDC: true
@@ -18,7 +18,7 @@ addons:
     attachPolicyARNs:
       - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
     tags:
-      PermissionsBoundary: "arn:aws:iam::173911864621:policy/zarf_dev_base_policy"
+      PermissionsBoundary: "zarf_dev_base_policy"
 
   # - name: vpc-cni
   #   attachPolicyARNs:
@@ -34,6 +34,6 @@ managedNodeGroups:
   maxSize: 6
   spot: true
   tags:
-    PermissionsBoundary: "arn:aws:iam::173911864621:policy/zarf_dev_base_policy"
+    PermissionsBoundary: "zarf_dev_base_policy"
   iam:
     instanceRolePermissionsBoundary: "arn:aws:iam::173911864621:policy/zarf_dev_base_policy"
