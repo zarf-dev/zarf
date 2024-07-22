@@ -2,7 +2,6 @@ name: Test EKS Cluster
 on:
   schedule:
    - cron: '0 7 * * *' ## Every day at 0700 UTC
-
   workflow_dispatch: ## Give us the ability to run this manually
     inputs:
       cluster_name:
@@ -33,8 +32,8 @@ jobs:
       - name: Setup golang
         uses: ./.github/actions/golang
 
-      - name: Build Zarf
-        run: make
+      - name: Build binary and zarf packages
+        uses: ./.github/actions/packages
 
       - name: Auth with AWS
         uses: aws-actions/configure-aws-credentials@010d0da01d0b5a38af31e9c3470dbfdabdecca3a # v4.0.1
@@ -56,7 +55,7 @@ jobs:
             --confirm
 
       - name: Run tests
-        run: make test-e2e ARCH=amd64
+        run: make test-e2e-with-cluster ARCH=amd64
 
       - name: Teardown the cluster
         if: always()
@@ -70,9 +69,8 @@ jobs:
         if: always()
         uses: ./.github/actions/save-logs
 
-      # UNCOMMENT BEFORE MERGE
-      # - name: Send trigger to Slack on workflow failure
-      #   if: failure()
-      #   uses: ./.github/actions/slack
-      #   with:
-      #     slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Send trigger to Slack on workflow failure
+        if: failure()
+        uses: ./.github/actions/slack
+        with:
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
