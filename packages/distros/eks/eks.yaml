@@ -17,6 +17,7 @@ addons:
     version: "###ZARF_VAR_EBS_DRIVER_VERSION###"
     attachPolicyARNs:
       - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
+    permissionsBoundary: "arn:aws:iam::173911864621:policy/zarf_dev_base_policy"
     tags:
       PermissionsBoundary: "zarf_dev_base_policy"
 
