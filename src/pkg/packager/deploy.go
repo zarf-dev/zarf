@@ -14,8 +14,9 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -293,7 +294,6 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
-	hasDataInjections := len(component.DataInjections) > 0
 	hasFiles := len(component.Files) > 0
 
 	onDeploy := component.Actions.OnDeploy
@@ -344,14 +344,11 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 		}
 	}
 
-	if hasDataInjections {
-		waitGroup := sync.WaitGroup{}
-		defer waitGroup.Wait()
-
-		for idx, data := range component.DataInjections {
-			waitGroup.Add(1)
-			go p.cluster.HandleDataInjection(ctx, &waitGroup, data, componentPath, idx)
-		}
+	g, gCtx := errgroup.WithContext(ctx)
+	for idx, data := range component.DataInjections {
+		g.Go(func() error {
+			return p.cluster.HandleDataInjection(gCtx, data, componentPath, idx)
+		})
 	}
 
 	if hasCharts || hasManifests {
@@ -364,6 +361,10 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
+	err = g.Wait()
+	if err != nil {
+		return nil, err
+	}
 	return charts, nil
 }
 
