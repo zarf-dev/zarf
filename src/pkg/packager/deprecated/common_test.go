@@ -48,7 +48,8 @@ func TestPrintBreakingChanges(t *testing.T) {
 			t.Parallel()
 			var output bytes.Buffer
 			message.InitializePTerm(&output)
-			PrintBreakingChanges(&output, tt.deployedVersion, tt.cliVersion)
+			err := PrintBreakingChanges(&output, tt.deployedVersion, tt.cliVersion)
+			require.NoError(t, err)
 			for _, bc := range tt.breakingChanges {
 				require.Contains(t, output.String(), bc.String())
 			}

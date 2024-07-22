@@ -5,23 +5,25 @@
 package utils
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/stretchr/testify/require"
-	mocks "github.com/zarf-dev/zarf/src/test/mocks"
 )
 
 func TestCredentialParser(t *testing.T) {
-	credentialsFile := &mocks.MockReadCloser{
-		MockData: []byte(
-			`https://wayne:password@github.com/
+	t.Parallel()
+
+	data := `https://wayne:password@github.com/
 bad line
 <really bad="line"/>
 https://wayne:p%40ss%20word%2520@zarf.dev
-http://google.com`,
-		),
-	}
+http://google.com`
+	path := filepath.Join(t.TempDir(), "file")
+	err := os.WriteFile(path, []byte(data), 0o644)
+	require.NoError(t, err)
 
 	expectedCreds := []Credential{
 		{
@@ -47,15 +49,15 @@ http://google.com`,
 		},
 	}
 
-	gitCredentials := credentialParser(credentialsFile)
+	gitCredentials, err := credentialParser(path)
+	require.NoError(t, err)
 	require.Equal(t, expectedCreds, gitCredentials)
 }
 
 func TestNetRCParser(t *testing.T) {
+	t.Parallel()
 
-	netrcFile := &mocks.MockReadCloser{
-		MockData: []byte(
-			`# top of file comment
+	data := `# top of file comment
 machine github.com
 	login wayne
     password password
@@ -70,9 +72,10 @@ machine google.com #comment password fun and login info!
 
 default
   login anonymous
-	password password`,
-		),
-	}
+	password password`
+	path := filepath.Join(t.TempDir(), "file")
+	err := os.WriteFile(path, []byte(data), 0o644)
+	require.NoError(t, err)
 
 	expectedCreds := []Credential{
 		{
@@ -105,6 +108,7 @@ default
 		},
 	}
 
-	netrcCredentials := netrcParser(netrcFile)
+	netrcCredentials, err := netrcParser(path)
+	require.NoError(t, err)
 	require.Equal(t, expectedCreds, netrcCredentials)
 }

@@ -68,7 +68,7 @@ var destroyCmd = &cobra.Command{
 					// Don't remove scripts we can't execute so the user can try to manually run
 					continue
 				} else if err != nil {
-					message.Debugf("Received error when trying to execute the script (%s): %#v", script, err)
+					return fmt.Errorf("received an error when executing the script %s: %w", script, err)
 				}
 
 				// Try to remove the script, but ignore any errors
