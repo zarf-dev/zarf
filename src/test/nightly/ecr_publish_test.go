@@ -46,7 +46,7 @@ func TestECRPublishing(t *testing.T) {
 	testPackageFileName := fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", testPackageName, e2e.Arch, testPackageVersion)
 	testPackageLocation := filepath.Join(tmpDir, testPackageFileName)
 	registryURL := "oci://public.ecr.aws/z6q5p6f7/zarf-nightly"
-	upstreamPackageURL := fmt.Sprintf("%s/%s:%s-%s", registryURL, testPackageName, testPackageVersion, e2e.Arch)
+	upstreamPackageURL := fmt.Sprintf("%s/%s:%s", registryURL, testPackageName, testPackageVersion)
 	keyFlag := fmt.Sprintf("--key=%s", "./src/test/packages/zarf-test.pub")
 
 	// Build the package with our test signature

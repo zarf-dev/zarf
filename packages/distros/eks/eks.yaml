@@ -8,7 +8,7 @@ metadata:
 
 iam:
   withOIDC: true
-  # serviceRolePermissionsBoundary: "arn:aws:iam::11111:policy/entity/boundary"
+  serviceRolePermissionsBoundary: "arn:aws:iam::173911864621:policy/zarf_dev_base_policy"
 
 addons:
   - name: aws-ebs-csi-driver
