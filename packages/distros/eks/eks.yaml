@@ -22,5 +22,5 @@ managedNodeGroups:
   minSize: 3
   maxSize: 6
   spot: true
-  # iam:
-  #   instanceRolePermissionsBoundary: "arn:aws:iam::173911864621:policy/zarf_dev_base_policy"
+  iam:
+    instanceRolePermissionsBoundary: "arn:aws:iam::173911864621:policy/zarf_dev_base_policy"
