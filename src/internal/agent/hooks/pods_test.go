@@ -136,7 +136,7 @@ func TestPodMutationWebhook(t *testing.T) {
 				operations.ReplacePatchOperation(
 					"/metadata/annotations",
 					map[string]string{
-						"zarf.dev/original-container-image[0]": "nginx",
+						"zarf.dev/original-container-image-0": "nginx",
 					},
 				),
 			},
