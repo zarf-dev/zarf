@@ -88,10 +88,10 @@ func TestPodMutationWebhook(t *testing.T) {
 				operations.ReplacePatchOperation(
 					"/metadata/annotations",
 					map[string]string{
-						"zarf.dev/original-container-image[0]": "nginx",
-						"zarf.dev/original-ephemeral-image[0]": "alpine",
-						"zarf.dev/original-init-image[0]":      "busybox",
-						"should-be":                            "mutated",
+						"zarf.dev/original-container-image-0": "nginx",
+						"zarf.dev/original-ephemeral-image-0": "alpine",
+						"zarf.dev/original-init-image-0":      "busybox",
+						"should-be":                           "mutated",
 					},
 				),
 			},

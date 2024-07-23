@@ -79,7 +79,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
-		updatedAnnotations[fmt.Sprintf("zarf.dev/original-init-image[%d]", idx)] = container.Image
+		updatedAnnotations[fmt.Sprintf("zarf.dev/original-init-image-%d", idx)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
@@ -91,7 +91,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
-		updatedAnnotations[fmt.Sprintf("zarf.dev/original-ephemeral-image[%d]", idx)] = container.Image
+		updatedAnnotations[fmt.Sprintf("zarf.dev/original-ephemeral-image-%d", idx)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
@@ -103,7 +103,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
-		updatedAnnotations[fmt.Sprintf("zarf.dev/original-container-image[%d]", idx)] = container.Image
+		updatedAnnotations[fmt.Sprintf("zarf.dev/original-container-image-%d", idx)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
