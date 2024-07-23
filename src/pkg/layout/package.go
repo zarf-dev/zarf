@@ -268,18 +268,22 @@ func (pp *PackagePaths) AddSBOMs() *PackagePaths {
 }
 
 // SetFromLayers maps layers to package paths.
-func (pp *PackagePaths) SetFromLayers(layers []ocispec.Descriptor) {
+func (pp *PackagePaths) SetFromLayers(layers []ocispec.Descriptor) error {
 	paths := []string{}
 	for _, layer := range layers {
 		if layer.Annotations[ocispec.AnnotationTitle] != "" {
 			paths = append(paths, layer.Annotations[ocispec.AnnotationTitle])
 		}
 	}
-	pp.SetFromPaths(paths)
+	err := pp.SetFromPaths(paths)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // SetFromPaths maps paths to package paths.
-func (pp *PackagePaths) SetFromPaths(paths []string) {
+func (pp *PackagePaths) SetFromPaths(paths []string) error {
 	for _, rel := range paths {
 		// Convert from the standard '/' to the OS path separator for Windows support
 		switch path := filepath.FromSlash(rel); {
@@ -310,9 +314,10 @@ func (pp *PackagePaths) SetFromPaths(paths []string) {
 			}
 			pp.Components.Tarballs[componentName] = filepath.Join(pp.Base, path)
 		default:
-			message.Debug("ignoring path", path)
+			return fmt.Errorf("unknown path %s", path)
 		}
 	}
+	return nil
 }
 
 // Files returns a map of all the files in the package.

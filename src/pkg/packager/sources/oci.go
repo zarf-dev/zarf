@@ -64,7 +64,10 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 	if err != nil {
 		return pkg, nil, fmt.Errorf("unable to pull the package: %w", err)
 	}
-	dst.SetFromLayers(layersFetched)
+	err = dst.SetFromLayers(layersFetched)
+	if err != nil {
+		return types.ZarfPackage{}, nil, err
+	}
 
 	if err := dst.MigrateLegacy(); err != nil {
 		return pkg, nil, err
@@ -119,7 +122,10 @@ func (s *OCISource) LoadPackageMetadata(ctx context.Context, dst *layout.Package
 	if err != nil {
 		return pkg, nil, err
 	}
-	dst.SetFromLayers(layersFetched)
+	err = dst.SetFromLayers(layersFetched)
+	if err != nil {
+		return types.ZarfPackage{}, nil, err
+	}
 
 	pkg, warnings, err = dst.ReadZarfYAML()
 	if err != nil {
@@ -174,7 +180,10 @@ func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 	}
 
 	loaded := layout.New(tmp)
-	loaded.SetFromLayers(fetched)
+	err = loaded.SetFromLayers(fetched)
+	if err != nil {
+		return "", err
+	}
 
 	var pkg types.ZarfPackage
 

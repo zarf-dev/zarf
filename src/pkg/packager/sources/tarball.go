@@ -81,7 +81,10 @@ func (s *TarballSource) LoadPackage(_ context.Context, dst *layout.PackagePaths,
 		return pkg, nil, err
 	}
 
-	dst.SetFromPaths(pathsExtracted)
+	err = dst.SetFromPaths(pathsExtracted)
+	if err != nil {
+		return types.ZarfPackage{}, nil, err
+	}
 
 	pkg, warnings, err = dst.ReadZarfYAML()
 	if err != nil {
@@ -161,7 +164,10 @@ func (s *TarballSource) LoadPackageMetadata(_ context.Context, dst *layout.Packa
 		}
 	}
 
-	dst.SetFromPaths(pathsExtracted)
+	err = dst.SetFromPaths(pathsExtracted)
+	if err != nil {
+		return types.ZarfPackage{}, nil, err
+	}
 
 	pkg, warnings, err = dst.ReadZarfYAML()
 	if err != nil {

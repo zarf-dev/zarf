@@ -115,7 +115,8 @@ func TestPackageFiles(t *testing.T) {
 			normalizePath("images/oci-layout"),
 			normalizePath("images/blobs/sha256/" + strings.Repeat("1", 64)),
 		}
-		pp.SetFromPaths(paths)
+		err := pp.SetFromPaths(paths)
+		require.NoError(t, err)
 
 		files := pp.Files()
 		expected := map[string]string{
@@ -150,7 +151,8 @@ func TestPackageFiles(t *testing.T) {
 			},
 		}
 		pp.AddImages()
-		pp.SetFromLayers(descs)
+		err := pp.SetFromLayers(descs)
+		require.NoError(t, err)
 
 		files := pp.Files()
 		expected := map[string]string{
@@ -163,6 +165,17 @@ func TestPackageFiles(t *testing.T) {
 		}
 		require.Equal(t, expected, files)
 	})
+}
+
+func TestInvalidSetPaths(t *testing.T) {
+	t.Parallel()
+
+	pp := New("test")
+	paths := []string{
+		"foo",
+	}
+	err := pp.SetFromPaths(paths)
+	require.EqualError(t, err, "unknown path foo")
 }
 
 // normalizePath ensures that the filepaths being generated are normalized to the host OS.
