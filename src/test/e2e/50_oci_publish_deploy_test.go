@@ -5,7 +5,6 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	testutil "github.com/zarf-dev/zarf/src/test/helpers"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 )
@@ -139,7 +139,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	suite.NoError(err)
 	reg.PlainHTTP = true
 	attempt := 0
-	ctx := context.TODO()
+	ctx := testutil.TestContext(t)
 	for attempt <= 5 {
 		err = reg.Ping(ctx)
 		if err == nil {

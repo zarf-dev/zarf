@@ -233,7 +233,7 @@ func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, 
 				if helpers.IsURL(f) {
 					mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
 					destination := filepath.Join(componentPaths.Manifests, mname)
-					if err := utils.DownloadToFile(f, destination, component.DeprecatedCosignKeyPath); err != nil {
+					if err := utils.DownloadToFile(ctx, f, destination, component.DeprecatedCosignKeyPath); err != nil {
 						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 					}
 					f = destination
