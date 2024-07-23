@@ -143,6 +143,7 @@ func TestUseCLI(t *testing.T) {
 		require.Greater(t, len(files), 1)
 	})
 
+	// TODO: Refactor test as it depends on debug log output for validation.
 	t.Run("zarf package inspect with tmpdir", func(t *testing.T) {
 		t.Parallel()
 		path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.Arch)
@@ -152,6 +153,7 @@ func TestUseCLI(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
+	// TODO: Refactor test as it depends on debug log output for validation.
 	t.Run("zarf package deploy with tmpdir", func(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()

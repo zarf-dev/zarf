@@ -38,8 +38,6 @@ type renderer struct {
 }
 
 func (h *Helm) newRenderer(ctx context.Context) (*renderer, error) {
-	message.Debugf("helm.NewRenderer()")
-
 	rend := &renderer{
 		Helm:           h,
 		connectStrings: types.ConnectStrings{},

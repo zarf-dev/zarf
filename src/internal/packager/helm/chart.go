@@ -61,7 +61,6 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	histClient := action.NewHistory(h.actionConfig)
 	tryHelm := func() error {
 		var err error
-		var output *release.Release
 
 		releases, histErr := histClient.Run(h.chart.ReleaseName)
 
@@ -71,14 +70,14 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 			// No prior release, try to install it.
 			spinner.Updatef("Attempting chart installation")
 
-			output, err = h.installChart(postRender)
+			_, err = h.installChart(postRender)
 		} else if histErr == nil && len(releases) > 0 {
 			// Otherwise, there is a prior release so upgrade it.
 			spinner.Updatef("Attempting chart upgrade")
 
 			lastRelease := releases[len(releases)-1]
 
-			output, err = h.upgradeChart(lastRelease, postRender)
+			_, err = h.upgradeChart(lastRelease, postRender)
 		} else {
 			// 😭 things aren't working
 			return fmt.Errorf("unable to verify the chart installation status: %w", histErr)
@@ -88,7 +87,6 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 			return err
 		}
 
-		message.Debug(output.Info.Description)
 		spinner.Success()
 		return nil
 	}
@@ -128,7 +126,6 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 
 // TemplateChart generates a helm template from a given chart.
 func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues chartutil.Values, err error) {
-	message.Debugf("helm.TemplateChart()")
 	spinner := message.NewProgressSpinner("Templating helm chart %s", h.chart.Name)
 	defer spinner.Stop()
 
@@ -324,7 +321,6 @@ func (h *Helm) upgradeChart(lastRelease *release.Release, postRender *renderer) 
 }
 
 func (h *Helm) rollbackChart(name string, version int) error {
-	message.Debugf("helm.rollbackChart(%s)", name)
 	client := action.NewRollback(h.actionConfig)
 	client.CleanupOnFail = true
 	client.Force = true
@@ -335,7 +331,6 @@ func (h *Helm) rollbackChart(name string, version int) error {
 }
 
 func (h *Helm) uninstallChart(name string) (*release.UninstallReleaseResponse, error) {
-	message.Debugf("helm.uninstallChart(%s)", name)
 	client := action.NewUninstall(h.actionConfig)
 	client.KeepHistory = false
 	client.Wait = true
@@ -344,7 +339,6 @@ func (h *Helm) uninstallChart(name string) (*release.UninstallReleaseResponse, e
 }
 
 func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
-	message.Debugf("helm.loadChartData()")
 	var (
 		loadedChart *chart.Chart
 		chartValues chartutil.Values

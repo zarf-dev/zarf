@@ -372,8 +372,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component types.Zarf
 	}
 
 	for filesIdx, file := range component.Files {
-		message.Debugf("Loading %#v", file)
-
 		rel := filepath.Join(layout.FilesDir, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(componentPaths.Base, rel)
 		destinationDir := filepath.Dir(dst)
