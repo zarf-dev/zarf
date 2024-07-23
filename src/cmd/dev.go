@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -269,6 +270,7 @@ var devLintCmd = &cobra.Command{
 	Short:   lang.CmdDevLintShort,
 	Long:    lang.CmdDevLintLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		config.CommonOptions.Confirm = true
 		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
@@ -280,7 +282,7 @@ var devLintCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		return pkgClient.Lint(cmd.Context())
+		return lint.Validate(cmd.Context(), pkgConfig.CreateOpts)
 	},
 }
 
