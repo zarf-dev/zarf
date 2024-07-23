@@ -85,6 +85,15 @@ func TestPodMutationWebhook(t *testing.T) {
 						"should-be":  "mutated",
 					},
 				),
+				operations.ReplacePatchOperation(
+					"/metadata/annotations",
+					map[string]string{
+						"zarf.dev/original-container-image[0]": "nginx",
+						"zarf.dev/original-ephemeral-image[0]": "alpine",
+						"zarf.dev/original-init-image[0]":      "busybox",
+						"should-be":                            "mutated",
+					},
+				),
 			},
 			code: http.StatusOK,
 		},
@@ -123,6 +132,12 @@ func TestPodMutationWebhook(t *testing.T) {
 				operations.ReplacePatchOperation(
 					"/metadata/labels",
 					map[string]string{"zarf-agent": "patched"},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/annotations",
+					map[string]string{
+						"zarf.dev/original-container-image[0]": "nginx",
+					},
 				),
 			},
 			code: http.StatusOK,

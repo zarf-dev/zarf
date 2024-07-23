@@ -66,6 +66,11 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 	zarfSecret := []corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}}
 	patches = append(patches, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
 
+	updatedAnnotations := pod.Annotations
+	if updatedAnnotations == nil {
+		updatedAnnotations = make(map[string]string)
+	}
+
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {
 		path := fmt.Sprintf("/spec/initContainers/%d/image", idx)
@@ -74,6 +79,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
+		updatedAnnotations[fmt.Sprintf("zarf.dev/original-init-image[%d]", idx)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
@@ -85,6 +91,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
+		updatedAnnotations[fmt.Sprintf("zarf.dev/original-ephemeral-image[%d]", idx)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
@@ -96,10 +103,13 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
+		updatedAnnotations[fmt.Sprintf("zarf.dev/original-container-image[%d]", idx)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
 	patches = append(patches, getLabelPatch(pod.Labels))
+
+	patches = append(patches, operations.ReplacePatchOperation("/metadata/annotations", updatedAnnotations))
 
 	return &operations.Result{
 		Allowed:  true,
