@@ -10,8 +10,8 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 	"oras.land/oras-go/v2/content"
 )
 

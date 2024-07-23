@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Zarf Global Configuration Constants.
 const (
-	GithubProject = "defenseunicorns/zarf"
+	GithubProject = "zarf-dev/zarf"
 
 	ZarfAgentHost = "agent-hook.zarf.svc"
 

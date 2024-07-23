@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
 
 func TestDataInjection(t *testing.T) {

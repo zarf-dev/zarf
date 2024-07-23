@@ -9,9 +9,9 @@ import (
 	"path"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	test "github.com/defenseunicorns/zarf/src/test"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	test "github.com/zarf-dev/zarf/src/test"
 )
 
 func kubectl(args ...string) (string, string, error) {

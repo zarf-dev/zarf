@@ -7,8 +7,8 @@ package creator
 import (
 	"context"
 
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Creator is an interface for creating Zarf packages.

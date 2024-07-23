@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"

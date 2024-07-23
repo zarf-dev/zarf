@@ -7,8 +7,8 @@ package deprecated
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func migrateSetVariableToSetVariables(c types.ZarfComponent) (types.ZarfComponent, string) {

@@ -49,7 +49,7 @@ func (i *Images) AddV1Image(img v1.Image) error {
 		return err
 	}
 	// Cannot use img.ConfigName to get this value because of an upstream bug in crane / docker using the containerd runtime
-	// https://github.com/defenseunicorns/zarf/issues/2584
+	// https://github.com/zarf-dev/zarf/issues/2584
 	i.AddBlob(manifest.Config.Digest.Hex)
 	manifestSha, err := img.Digest()
 	if err != nil {

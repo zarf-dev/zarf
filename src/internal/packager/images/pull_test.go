@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 func TestPull(t *testing.T) {

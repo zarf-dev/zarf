@@ -7,10 +7,10 @@ package git
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // CheckoutTag performs a `git checkout` of the provided tag to a detached HEAD.

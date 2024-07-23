@@ -14,10 +14,10 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 // ProxyHandler constructs a new httputil.ReverseProxy and returns an http handler.
@@ -112,7 +112,9 @@ func proxyResponseTransform(resp *http.Response) error {
 		message.Debugf("Before Resp Location %#v", resp.Header.Get("Location"))
 
 		locationURL, err := url.Parse(resp.Header.Get("Location"))
-		message.Debugf("%#v", err)
+		if err != nil {
+			return err
+		}
 		locationURL.Path = transform.NoTransform + locationURL.Path
 		locationURL.Host = resp.Request.Header.Get("X-Forwarded-Host")
 

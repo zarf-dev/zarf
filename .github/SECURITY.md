@@ -1,6 +1,6 @@
 # Reporting Security Issues
 
-To report a security issue or vulnerability in Zarf, please use the confidential GitHub Security Advisory ["Report a Vulnerability"](https://github.com/defenseunicorns/zarf/security/advisories) tab. The Zarf team will send a response indicating the next steps in handling your report. After the initial reply to your report, the team will keep you informed of the progress towards a fix and full announcement, and may ask for additional information or guidance.
+To report a security issue or vulnerability in Zarf, please use the confidential GitHub Security Advisory ["Report a Vulnerability"](https://github.com/zarf-dev/zarf/security/advisories) tab. The Zarf team will send a response indicating the next steps in handling your report. After the initial reply to your report, the team will keep you informed of the progress towards a fix and full announcement, and may ask for additional information or guidance.
 
 ### When Should I Report a Vulnerability?
 

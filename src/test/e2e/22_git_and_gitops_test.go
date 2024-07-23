@@ -13,10 +13,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/internal/packager/git"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/internal/packager/git"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestGit(t *testing.T) {
@@ -77,7 +77,7 @@ func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 	gitCfg := git.New(zarfState.GitServer)
 
 	// Get the repo as the readonly user
-	repoName := "zarf-public-test-2469062884"
+	repoName := "zarf-public-test-2363058019"
 	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, zarfState.GitServer.PushUsername, repoName), nil)
 	getRepoResponseBody, _, err := gitCfg.DoHTTPThings(getRepoRequest, types.ZarfGitReadUser, zarfState.GitServer.PullPassword)
 	require.NoError(t, err)
@@ -101,7 +101,7 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 	// Init the state variable
 	zarfState, err := c.LoadZarfState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
-	repoName := "zarf-public-test-2469062884"
+	repoName := "zarf-public-test-2363058019"
 
 	gitCfg := git.New(zarfState.GitServer)
 

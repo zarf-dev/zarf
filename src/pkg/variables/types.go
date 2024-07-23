@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
 // VariableType represents a type of a Zarf package variable

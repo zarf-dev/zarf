@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/registry"
 )
 
@@ -43,5 +43,5 @@ func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata
 
 // GetInitPackageURL returns the URL for the init package for the given version.
 func GetInitPackageURL(version string) string {
-	return fmt.Sprintf("ghcr.io/defenseunicorns/packages/init:%s", version)
+	return fmt.Sprintf("ghcr.io/zarf-dev/packages/init:%s", version)
 }

@@ -11,10 +11,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
-	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestZarfSchema(t *testing.T) {
@@ -196,7 +196,7 @@ func TestValidateComponent(t *testing.T) {
 
 	t.Run("Unpinnned repo warning", func(t *testing.T) {
 		t.Parallel()
-		unpinnedRepo := "https://github.com/defenseunicorns/zarf-public-test.git"
+		unpinnedRepo := "https://github.com/zarf-dev/zarf-public-test.git"
 		component := types.ZarfComponent{Repos: []string{
 			unpinnedRepo,
 			"https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1",

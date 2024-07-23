@@ -11,8 +11,8 @@ import (
 
 	"github.com/agnivade/levenshtein"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/pkg/interactive"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/interactive"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ForDeploy creates a new deployment filter.

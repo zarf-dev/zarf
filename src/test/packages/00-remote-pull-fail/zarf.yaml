@@ -5,4 +5,4 @@ components:
   - name: doesnotexist-docker
     required: true
     images:
-      - ghcr.io/defenseunicorns/doesnotexist:1.3.3.7
+      - ghcr.io/zarf-dev/doesnotexist:1.3.3.7

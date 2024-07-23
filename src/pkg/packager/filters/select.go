@@ -6,7 +6,7 @@ package filters
 
 import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // BySelectState creates a new simple included filter.

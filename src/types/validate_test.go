@@ -11,9 +11,9 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
 func TestZarfPackageValidate(t *testing.T) {

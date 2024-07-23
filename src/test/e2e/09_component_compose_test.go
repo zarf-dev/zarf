@@ -139,8 +139,8 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
   - ghcr.io/stefanprodan/podinfo:6.4.0
   - ghcr.io/stefanprodan/podinfo:6.4.1
   repos:
-  - https://github.com/defenseunicorns/zarf-public-test.git
-  - https://github.com/defenseunicorns/zarf-public-test.git@refs/heads/dragons
+  - https://github.com/zarf-dev/zarf-public-test.git
+  - https://github.com/zarf-dev/zarf-public-test.git@refs/heads/dragons
 `)
 
 	// Check dataInjections

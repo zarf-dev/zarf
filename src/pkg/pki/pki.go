@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Based off of https://github.com/dmcgowan/quicktls/blob/master/main.go

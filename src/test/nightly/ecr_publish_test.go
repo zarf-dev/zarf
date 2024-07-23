@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/test"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/test"
 )
 
 var (
@@ -45,8 +45,8 @@ func TestECRPublishing(t *testing.T) {
 	testPackageVersion := "0.0.1"
 	testPackageFileName := fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", testPackageName, e2e.Arch, testPackageVersion)
 	testPackageLocation := filepath.Join(tmpDir, testPackageFileName)
-	registryURL := "oci://public.ecr.aws/t8y5r5z5/zarf-nightly"
-	upstreamPackageURL := fmt.Sprintf("%s/%s:%s-%s", registryURL, testPackageName, testPackageVersion, e2e.Arch)
+	registryURL := "oci://public.ecr.aws/z6q5p6f7/zarf-nightly"
+	upstreamPackageURL := fmt.Sprintf("%s/%s:%s", registryURL, testPackageName, testPackageVersion)
 	keyFlag := fmt.Sprintf("--key=%s", "./src/test/packages/zarf-test.pub")
 
 	// Build the package with our test signature

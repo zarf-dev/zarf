@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 )
 
 type RegistryResponse struct {
@@ -88,7 +88,7 @@ func connectToZarfServices(ctx context.Context, t *testing.T) {
 	// We assert greater than or equal to since the base init has 8 images
 	// HOWEVER during an upgrade we could have mismatched versions/names resulting in more images
 	require.GreaterOrEqual(t, len(registryList), 3)
-	require.Contains(t, stdOut, "defenseunicorns/zarf/agent")
+	require.Contains(t, stdOut, "zarf-dev/zarf/agent")
 	require.Contains(t, stdOut, "gitea/gitea")
 	require.Contains(t, stdOut, "library/registry")
 

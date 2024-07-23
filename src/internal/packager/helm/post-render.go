@@ -14,11 +14,11 @@ import (
 	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
@@ -285,6 +285,10 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 					return err
 				}
 				resource, err := dc.Resource(mapping.Resource).Namespace(deployedNamespace).Get(ctx, rawData.GetName(), metav1.GetOptions{})
+				// Ignore resources that are yet to be created
+				if kerrors.IsNotFound(err) {
+					return nil
+				}
 				if err != nil {
 					return err
 				}
@@ -308,7 +312,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 				return nil
 			}()
 			if err != nil {
-				message.Debugf("Unable to adopt resource %s: %s", rawData.GetName(), err.Error())
+				return fmt.Errorf("unable to adopt the resource %s: %w", rawData.GetName(), err)
 			}
 		}
 		// Finally place this back onto the output buffer

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/defenseunicorns/zarf/src/types/zarf-package",
+  "$id": "https://github.com/zarf-dev/zarf/src/types/zarf-package",
   "$defs": {
     "BigBang": {
       "properties": {
@@ -1022,6 +1022,10 @@
         "url": {
           "type": "string",
           "description": "Link to package information when online"
+        },
+        "image": {
+          "type": "string",
+          "description": "An image URL to embed in this package (Reserved for future use in Zarf UI)"
         },
         "uncompressed": {
           "type": "boolean",

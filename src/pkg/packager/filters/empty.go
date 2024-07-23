@@ -4,7 +4,7 @@
 // Package filters contains core implementations of the ComponentFilterStrategy interface.
 package filters
 
-import "github.com/defenseunicorns/zarf/src/types"
+import "github.com/zarf-dev/zarf/src/types"
 
 // Empty returns a filter that does nothing.
 func Empty() ComponentFilterStrategy {

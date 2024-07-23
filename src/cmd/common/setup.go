@@ -10,10 +10,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/pterm/pterm"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // LogLevelCLI holds the log level as input from a command

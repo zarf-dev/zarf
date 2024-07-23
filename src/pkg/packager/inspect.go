@@ -10,8 +10,8 @@ import (
 	"os"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // Inspect list the contents of a package.
