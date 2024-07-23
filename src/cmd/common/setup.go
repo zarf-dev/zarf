@@ -5,43 +5,38 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"time"
 
 	"github.com/pterm/pterm"
-	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/config/lang"
+
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
-// LogLevelCLI holds the log level as input from a command
-var LogLevelCLI string
-
-// SetupCLI sets up the CLI logging, interrupt functions, and more
-func SetupCLI() {
-	match := map[string]message.LogLevel{
-		"warn":  message.WarnLevel,
-		"info":  message.InfoLevel,
-		"debug": message.DebugLevel,
-		"trace": message.TraceLevel,
-	}
-
-	if config.NoColor {
+// SetupCLI sets up the CLI logging
+func SetupCLI(logLevel string, skipLogFile, noColor bool) error {
+	if noColor {
 		message.DisableColor()
 	}
 
 	printViperConfigUsed()
 
-	// No log level set, so use the default
-	if LogLevelCLI != "" {
-		if lvl, ok := match[LogLevelCLI]; ok {
-			message.SetLogLevel(lvl)
-			message.Debug("Log level set to " + LogLevelCLI)
-		} else {
-			message.Warn(lang.RootCmdErrInvalidLogLevel)
+	if logLevel != "" {
+		match := map[string]message.LogLevel{
+			"warn":  message.WarnLevel,
+			"info":  message.InfoLevel,
+			"debug": message.DebugLevel,
+			"trace": message.TraceLevel,
 		}
+		lvl, ok := match[logLevel]
+		if !ok {
+			return errors.New("invalid log level, valid options are warn, info, debug, and trace")
+		}
+		message.SetLogLevel(lvl)
+		message.Debug("Log level set to " + logLevel)
 	}
 
 	// Disable progress bars for CI envs
@@ -50,21 +45,18 @@ func SetupCLI() {
 		message.NoProgress = true
 	}
 
-	if !config.SkipLogFile {
+	if !skipLogFile {
 		ts := time.Now().Format("2006-01-02-15-04-05")
-
 		f, err := os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts))
 		if err != nil {
-			message.WarnErr(err, "Error creating a log file in a temporary directory")
-			return
+			return fmt.Errorf("could not create a log file in a the temporary directory: %w", err)
 		}
 		logFile, err := message.UseLogFile(f)
 		if err != nil {
-			message.WarnErr(err, "Error saving a log file to a temporary directory")
-			return
+			return fmt.Errorf("could not save a log file to the temporary directory: %w", err)
 		}
-
 		pterm.SetDefaultOutput(io.MultiWriter(os.Stderr, logFile))
 		message.Notef("Saving log file to %s", f.Name())
 	}
+	return nil
 }
