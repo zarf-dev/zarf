@@ -139,7 +139,7 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	suite.Contains(string(gitBody), "podinfo", "git server did not contain the expected repo")
 }
 
-func (suite *ExtInClusterTestSuite) Test_1_Deploy(t *testing.T) {
+func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	// Use Zarf to initialize the cluster
 	initArgs := []string{"init", "--confirm"}
 	initArgs = append(initArgs, inClusterCredentialArgs...)
@@ -187,7 +187,7 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy(t *testing.T) {
 	err = pkgkubernetes.WaitForReady(waitCtx, c.Watcher, objs)
 	suite.NoError(err)
 
-	_, _, err = exec.CmdWithTesting(t, exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")
+	_, _, err = exec.CmdWithTesting(suite.T(), exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")
 	suite.NoError(err, "unable to teardown zarf")
 }
 
