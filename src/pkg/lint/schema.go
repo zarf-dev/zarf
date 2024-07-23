@@ -17,8 +17,8 @@ import (
 // ZarfSchema is exported so main.go can embed the schema file
 var ZarfSchema fs.ReadFileFS
 
-// ValidateSchema checks the Zarf package in the current directory against the Zarf schema
-func ValidateSchema() ([]PackageFinding, error) {
+// ValidatePackageSchema checks the Zarf package in the current directory against the Zarf schema
+func ValidatePackageSchema() ([]PackageFinding, error) {
 
 	var untypedZarfPackage interface{}
 	if err := utils.ReadYaml(layout.ZarfYAML, &untypedZarfPackage); err != nil {
@@ -54,17 +54,15 @@ func validateSchema(jsonSchema []byte, untypedZarfPackage interface{}) ([]Packag
 		return nil, err
 	}
 
-	if len(schemaErrors) != 0 {
-		for _, schemaErr := range schemaErrors {
-			findings = append(findings, PackageFinding{
-				YqPath:      makeFieldPathYqCompat(schemaErr.Field()),
-				Description: schemaErr.Description(),
-				Severity:    SevErr,
-			})
-		}
+	for _, schemaErr := range schemaErrors {
+		findings = append(findings, PackageFinding{
+			YqPath:      makeFieldPathYqCompat(schemaErr.Field()),
+			Description: schemaErr.Description(),
+			Severity:    SevErr,
+		})
 	}
 
-	return findings, err
+	return findings, nil
 }
 
 func runSchema(jsonSchema []byte, pkg interface{}) ([]gojsonschema.ResultError, error) {

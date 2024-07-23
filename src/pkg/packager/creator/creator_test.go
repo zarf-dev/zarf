@@ -48,7 +48,7 @@ func TestLoadPackageDefinition(t *testing.T) {
 		{
 			name:        "invalid package definition",
 			testDir:     "invalid",
-			expectedErr: "found errors in package",
+			expectedErr: "found errors in schema",
 			creator:     NewPackageCreator(types.ZarfCreateOptions{}, ""),
 		},
 		{
@@ -60,7 +60,7 @@ func TestLoadPackageDefinition(t *testing.T) {
 		{
 			name:        "invalid package definition",
 			testDir:     "invalid",
-			expectedErr: "found errors in package",
+			expectedErr: "found errors in schema",
 			creator:     NewSkeletonCreator(types.ZarfCreateOptions{}, types.ZarfPublishOptions{}),
 		},
 	}

@@ -23,13 +23,13 @@ func Validate(pkg types.ZarfPackage) ([]lint.PackageFinding, error) {
 		return nil, fmt.Errorf("package validation failed: %w", err)
 	}
 
-	findings, err := lint.ValidateSchema()
+	findings, err := lint.ValidatePackageSchema()
 	if err != nil {
 		return nil, fmt.Errorf("unable to check schema: %w", err)
 	}
 
 	if lint.HasSevOrHigher(findings, lint.SevErr) {
-		return findings, fmt.Errorf("found errors in package")
+		return findings, fmt.Errorf("found errors in schema")
 	}
 
 	return nil, nil

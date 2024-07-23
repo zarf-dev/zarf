@@ -35,7 +35,7 @@ func Validate(ctx context.Context, createOpts types.ZarfCreateOptions) error {
 		return err
 	}
 	findings = append(findings, compFindings...)
-	schemaFindings, err := ValidateSchema()
+	schemaFindings, err := ValidatePackageSchema()
 	if err != nil {
 		return err
 	}
