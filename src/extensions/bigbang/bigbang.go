@@ -107,7 +107,7 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c type
 
 	// Template the chart so we can see what GitRepositories are being referenced in the
 	// manifests created with the provided Helm.
-	template, _, err := helmCfg.TemplateChart()
+	template, _, err := helmCfg.TemplateChart(ctx)
 	if err != nil {
 		return c, fmt.Errorf("unable to template Big Bang Chart: %w", err)
 	}
