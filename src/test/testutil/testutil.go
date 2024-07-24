@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package helpers provides global testing helper functions
+// Package testutil provides global testing helper functions
 package testutil
 
 import (
