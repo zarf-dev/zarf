@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
-	testutil "github.com/zarf-dev/zarf/src/test/helpers"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
 )

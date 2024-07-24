@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
 // Package helpers provides global testing helper functions
-package helpers
+package testutil
 
 import (
 	"context"

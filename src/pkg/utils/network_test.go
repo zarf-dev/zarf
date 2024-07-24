@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	testutil "github.com/zarf-dev/zarf/src/test/helpers"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 
 	"github.com/stretchr/testify/require"
 

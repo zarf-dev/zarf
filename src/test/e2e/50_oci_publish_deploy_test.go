@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	testutil "github.com/zarf-dev/zarf/src/test/helpers"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 )

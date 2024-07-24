@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
-	testutil "github.com/zarf-dev/zarf/src/test/helpers"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	"helm.sh/helm/v3/pkg/repo"
 )
 
