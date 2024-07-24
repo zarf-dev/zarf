@@ -37,7 +37,7 @@ type renderer struct {
 	namespaces     map[string]*corev1.Namespace
 }
 
-func (h *Helm) newRenderer() (*renderer, error) {
+func (h *Helm) newRenderer(ctx context.Context) (*renderer, error) {
 	message.Debugf("helm.NewRenderer()")
 
 	rend := &renderer{
@@ -49,7 +49,7 @@ func (h *Helm) newRenderer() (*renderer, error) {
 		return rend, nil
 	}
 
-	namespace, err := h.cluster.Clientset.CoreV1().Namespaces().Get(context.TODO(), h.chart.Namespace, metav1.GetOptions{})
+	namespace, err := h.cluster.Clientset.CoreV1().Namespaces().Get(ctx, h.chart.Namespace, metav1.GetOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return nil, fmt.Errorf("unable to check for existing namespace %q in cluster: %w", h.chart.Namespace, err)
 	}

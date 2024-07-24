@@ -352,7 +352,7 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 	}
 
 	if hasCharts || hasManifests {
-		if charts, err = p.installChartAndManifests(componentPath, component); err != nil {
+		if charts, err = p.installChartAndManifests(ctx, componentPath, component); err != nil {
 			return charts, err
 		}
 	}
@@ -610,7 +610,7 @@ func (p *Packager) generateValuesOverrides(chart types.ZarfChart, componentName 
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
 		// Do not wait for the chart to be ready if data injections are present.
 		if len(component.DataInjections) > 0 {
@@ -646,7 +646,7 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 				p.cfg.PkgOpts.Retries),
 		)
 
-		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
+		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart(ctx)
 		if err != nil {
 			return installedCharts, err
 		}
@@ -699,7 +699,7 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 		}
 
 		// Install the chart.
-		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
+		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart(ctx)
 		if err != nil {
 			return installedCharts, err
 		}
