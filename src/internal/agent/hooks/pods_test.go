@@ -50,11 +50,12 @@ func TestPodMutationWebhook(t *testing.T) {
 					Annotations: map[string]string{"should-be": "mutated"},
 				},
 				Spec: corev1.PodSpec{
-					Containers:     []corev1.Container{{Image: "nginx"}},
-					InitContainers: []corev1.Container{{Image: "busybox"}},
+					Containers:     []corev1.Container{{Name: "nginx", Image: "nginx"}},
+					InitContainers: []corev1.Container{{Name: "different", Image: "busybox"}},
 					EphemeralContainers: []corev1.EphemeralContainer{
 						{
 							EphemeralContainerCommon: corev1.EphemeralContainerCommon{
+								Name:  "alpine",
 								Image: "alpine",
 							},
 						},
@@ -88,10 +89,10 @@ func TestPodMutationWebhook(t *testing.T) {
 				operations.ReplacePatchOperation(
 					"/metadata/annotations",
 					map[string]string{
-						"zarf.dev/original-container-image-0": "nginx",
-						"zarf.dev/original-ephemeral-image-0": "alpine",
-						"zarf.dev/original-init-image-0":      "busybox",
-						"should-be":                           "mutated",
+						"zarf.dev/original-image-nginx":     "nginx",
+						"zarf.dev/original-image-alpine":    "alpine",
+						"zarf.dev/original-image-different": "busybox",
+						"should-be":                         "mutated",
 					},
 				),
 			},
@@ -117,7 +118,7 @@ func TestPodMutationWebhook(t *testing.T) {
 					Labels: nil,
 				},
 				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{Image: "nginx"}},
+					Containers: []corev1.Container{{Name: "nginx", Image: "nginx"}},
 				},
 			}),
 			patch: []operations.PatchOperation{
@@ -136,7 +137,7 @@ func TestPodMutationWebhook(t *testing.T) {
 				operations.ReplacePatchOperation(
 					"/metadata/annotations",
 					map[string]string{
-						"zarf.dev/original-container-image-0": "nginx",
+						"zarf.dev/original-image-nginx": "nginx",
 					},
 				),
 			},
