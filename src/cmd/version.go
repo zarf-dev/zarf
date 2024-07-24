@@ -24,11 +24,8 @@ var outputFormat string
 var versionCmd = &cobra.Command{
 	Use:     "version",
 	Aliases: []string{"v"},
-	PersistentPreRun: func(_ *cobra.Command, _ []string) {
-		config.SkipLogFile = true
-	},
-	Short: lang.CmdVersionShort,
-	Long:  lang.CmdVersionLong,
+	Short:   lang.CmdVersionShort,
+	Long:    lang.CmdVersionLong,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if outputFormat == "" {
 			fmt.Println(config.CLIVersion)
