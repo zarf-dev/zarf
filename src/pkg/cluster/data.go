@@ -197,7 +197,7 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 				return nil, err
 			}
 
-			message.Debug("Found %d pods for target %#v", len(podList.Items), target)
+			message.Debugf("Found %d pods for target %#v", len(podList.Items), target)
 
 			var readyPods = []corev1.Pod{}
 
@@ -207,7 +207,7 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 			})
 
 			for _, pod := range podList.Items {
-				message.Debug("Testing pod %q", pod.Name)
+				message.Debugf("Testing pod %q", pod.Name)
 
 				// If an include function is provided, only keep pods that return true
 				if include != nil && !include(pod) {
@@ -216,7 +216,7 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 
 				// Handle container targeting
 				if target.Container != "" {
-					message.Debug("Testing pod %q for container %q", pod.Name, target.Container)
+					message.Debugf("Testing pod %q for container %q", pod.Name, target.Container)
 
 					// Check the status of initContainers for a running match
 					for _, initContainer := range pod.Status.InitContainerStatuses {
@@ -238,7 +238,7 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 					}
 				} else {
 					status := pod.Status.Phase
-					message.Debug("Testing pod %q phase, want (%q) got (%q)", pod.Name, corev1.PodRunning, status)
+					message.Debugf("Testing pod %q phase, want (%q) got (%q)", pod.Name, corev1.PodRunning, status)
 					// Regular status checking without a container
 					if status == corev1.PodRunning {
 						readyPods = append(readyPods, pod)
