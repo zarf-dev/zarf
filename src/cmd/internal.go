@@ -204,14 +204,12 @@ var createReadOnlyGiteaUser = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		// Load the state so we can get the credentials for the admin git user
 		state, err := c.LoadZarfState(cmd.Context())
 		if err != nil {
-			message.WarnErr(err, lang.ErrLoadState)
+			return err
 		}
-		// Create the non-admin user
 		if err = git.New(state.GitServer).CreateReadOnlyUser(cmd.Context()); err != nil {
-			message.WarnErr(err, lang.CmdInternalCreateReadOnlyGiteaUserErr)
+			return fmt.Errorf("unable to create a read only user in Gitea: %w", err)
 		}
 		return nil
 	},
@@ -228,25 +226,22 @@ var createPackageRegistryToken = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
 		ctx := cmd.Context()
 		state, err := c.LoadZarfState(ctx)
 		if err != nil {
-			message.WarnErr(err, lang.ErrLoadState)
+			return err
 		}
-
-		// If we are setup to use an internal artifact server, create the artifact registry token
-		if state.ArtifactServer.InternalServer {
-			token, err := git.New(state.GitServer).CreatePackageRegistryToken(ctx)
-			if err != nil {
-				message.WarnErr(err, lang.CmdInternalArtifactRegistryGiteaTokenErr)
-			}
-
-			state.ArtifactServer.PushToken = token.Sha1
-
-			if err := c.SaveZarfState(ctx, state); err != nil {
-				return err
-			}
+		if !state.ArtifactServer.InternalServer {
+			return nil
+		}
+		token, err := git.New(state.GitServer).CreatePackageRegistryToken(ctx)
+		if err != nil {
+			return fmt.Errorf("unable to create an artifact registry token for Gitea: %w", err)
+		}
+		state.ArtifactServer.PushToken = token.Sha1
+		err = c.SaveZarfState(ctx, state)
+		if err != nil {
+			return err
 		}
 		return nil
 	},
