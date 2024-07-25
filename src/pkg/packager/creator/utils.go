@@ -18,21 +18,22 @@ import (
 
 // Validate errors if a package violates the schema or any runtime validations
 // This must be run while in the parent directory of the zarf.yaml being validated
-func Validate(pkg types.ZarfPackage) ([]lint.PackageFinding, error) {
+func Validate(pkg types.ZarfPackage, baseDir string, pkgName string) error {
 	if err := pkg.Validate(); err != nil {
-		return nil, fmt.Errorf("package validation failed: %w", err)
+		return fmt.Errorf("package validation failed: %w", err)
 	}
 
 	findings, err := lint.ValidatePackageSchema()
 	if err != nil {
-		return nil, fmt.Errorf("unable to check schema: %w", err)
+		return fmt.Errorf("unable to check schema: %w", err)
 	}
 
 	if lint.HasSevOrHigher(findings, lint.SevErr) {
-		return findings, fmt.Errorf("found errors in schema")
+		lint.PrintFindings(findings, lint.SevErr, baseDir, pkgName)
+		return fmt.Errorf("found errors in schema")
 	}
 
-	return nil, nil
+	return nil
 }
 
 // recordPackageMetadata records various package metadata during package create.

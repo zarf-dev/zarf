@@ -27,7 +27,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -119,8 +118,7 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 		}
 	}
 
-	if findings, err := Validate(pkg); err != nil {
-		lint.PrintFindings(findings, lint.SevErr, pc.createOpts.BaseDir, pkg.Metadata.Name)
+	if err := Validate(pkg, pc.createOpts.BaseDir, pkg.Metadata.Name); err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
 

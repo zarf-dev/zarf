@@ -19,7 +19,6 @@ var ZarfSchema fs.ReadFileFS
 
 // ValidatePackageSchema checks the Zarf package in the current directory against the Zarf schema
 func ValidatePackageSchema() ([]PackageFinding, error) {
-
 	var untypedZarfPackage interface{}
 	if err := utils.ReadYaml(layout.ZarfYAML, &untypedZarfPackage); err != nil {
 		return nil, err
@@ -30,7 +29,7 @@ func ValidatePackageSchema() ([]PackageFinding, error) {
 		return nil, err
 	}
 
-	return validateSchema(jsonSchema, untypedZarfPackage)
+	return getSchemaFindings(jsonSchema, untypedZarfPackage)
 }
 
 func makeFieldPathYqCompat(field string) string {
@@ -46,10 +45,9 @@ func makeFieldPathYqCompat(field string) string {
 	return fmt.Sprintf(".%s", wrappedField)
 }
 
-func validateSchema(jsonSchema []byte, untypedZarfPackage interface{}) ([]PackageFinding, error) {
+func getSchemaFindings(jsonSchema []byte, obj interface{}) ([]PackageFinding, error) {
 	var findings []PackageFinding
-
-	schemaErrors, err := runSchema(jsonSchema, untypedZarfPackage)
+	schemaErrors, err := runSchema(jsonSchema, obj)
 	if err != nil {
 		return nil, err
 	}

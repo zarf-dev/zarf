@@ -170,7 +170,7 @@ components:
 
 	t.Run("test schema findings is created as expected", func(t *testing.T) {
 		t.Parallel()
-		findings, err := validateSchema(zarfSchema, types.ZarfPackage{
+		findings, err := getSchemaFindings(zarfSchema, types.ZarfPackage{
 			Kind: types.ZarfInitConfig,
 			Metadata: types.ZarfMetadata{
 				Name: "invalid",
