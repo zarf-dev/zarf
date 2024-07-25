@@ -45,7 +45,7 @@ func (suite *CompositionSuite) TearDownSuite() {
 func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 	suite.T().Log("E2E: Package Compose Example")
 
-	_, stdErr, err := e2e.Zarf("package", "create", composeExample, "-o", "build", "--no-color", "--confirm")
+	_, stdErr, err := e2e.Zarf(suite.T(), "package", "create", composeExample, "-o", "build", "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that common names merge
@@ -71,7 +71,7 @@ func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 func (suite *CompositionSuite) Test_1_FullComposability() {
 	suite.T().Log("E2E: Full Package Compose")
 
-	_, stdErr, err := e2e.Zarf("package", "create", composeTest, "-o", "build", "--no-color", "--confirm")
+	_, stdErr, err := e2e.Zarf(suite.T(), "package", "create", composeTest, "-o", "build", "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that names merge and that composition is added appropriately
@@ -183,7 +183,7 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 func (suite *CompositionSuite) Test_2_ComposabilityBadLocalOS() {
 	suite.T().Log("E2E: Package Compose Example")
 
-	_, stdErr, err := e2e.Zarf("package", "create", composeTestBadLocalOS, "-o", "build", "--no-color", "--confirm")
+	_, stdErr, err := e2e.Zarf(suite.T(), "package", "create", composeTestBadLocalOS, "-o", "build", "--no-color", "--confirm")
 	suite.Error(err)
 	suite.Contains(stdErr, "\"only.localOS\" \"linux\" cannot be redefined as \"windows\" during compose")
 }
