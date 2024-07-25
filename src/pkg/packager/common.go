@@ -107,23 +107,15 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 
 	// If the temp directory is not set, set it to the default
 	if pkgr.layout == nil {
-		if err = pkgr.setTempDirectory(config.CommonOptions.TempDirectory); err != nil {
+		dir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
 			return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 		}
+		message.Debug("Using temporary directory:", dir)
+		pkgr.layout = layout.New(dir)
 	}
 
 	return pkgr, nil
-}
-
-// setTempDirectory sets the temp directory for the packager.
-func (p *Packager) setTempDirectory(path string) error {
-	dir, err := utils.MakeTempDir(path)
-	if err != nil {
-		return fmt.Errorf("unable to create package temp paths: %w", err)
-	}
-
-	p.layout = layout.New(dir)
-	return nil
 }
 
 // ClearTempPaths removes the temp directory and any files within it.

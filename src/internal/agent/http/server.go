@@ -14,13 +14,10 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/hooks"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // NewAdmissionServer creates a http.Server for the mutating webhook admission handler.
 func NewAdmissionServer(ctx context.Context, port string) (*http.Server, error) {
-	message.Debugf("http.NewAdmissionServer(%s)", port)
-
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return nil, err
@@ -56,8 +53,6 @@ func NewAdmissionServer(ctx context.Context, port string) (*http.Server, error) 
 
 // NewProxyServer creates and returns an http proxy server.
 func NewProxyServer(port string) *http.Server {
-	message.Debugf("http.NewHTTPProxy(%s)", port)
-
 	mux := http.NewServeMux()
 	mux.Handle("/healthz", healthz())
 	mux.Handle("/", ProxyHandler())

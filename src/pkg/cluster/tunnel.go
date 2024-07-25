@@ -182,8 +182,6 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 	var err error
 	var zt TunnelInfo
 
-	message.Debugf("Looking for a Zarf Connect Label in the cluster")
-
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			ZarfConnectLabelName: name,

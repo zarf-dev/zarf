@@ -72,8 +72,6 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
-	message.Debugf("Data %v", string(r.Object.Raw))
-
 	patches := []operations.PatchOperation{}
 
 	if app.Spec.Source != nil {
