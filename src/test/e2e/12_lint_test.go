@@ -55,7 +55,5 @@ func TestLint(t *testing.T) {
 		// Check reported filepaths
 		require.Contains(t, strippedStderr, "Linting package \"dos-games\" at oci://🦄/dos-games:1.0.0")
 		require.Contains(t, strippedStderr, fmt.Sprintf("Linting package \"lint\" at %s", testPackagePath))
-
 	})
-
 }

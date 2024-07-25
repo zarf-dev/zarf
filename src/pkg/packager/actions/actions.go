@@ -97,7 +97,6 @@ func runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfCo
 	// Keep trying until the max retries is reached.
 retryCmd:
 	for remaining := actionDefaults.MaxRetries + 1; remaining > 0; remaining-- {
-
 		// Perform the action run.
 		tryCmd := func(ctx context.Context) error {
 			// Try running the command and continue the retry loop if it fails.

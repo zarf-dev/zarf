@@ -182,7 +182,6 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
-
 		if chart.LocalPath != "" {
 			rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			dst := filepath.Join(componentPaths.Base, rel)

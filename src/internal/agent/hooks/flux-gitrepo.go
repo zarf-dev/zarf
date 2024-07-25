@@ -38,7 +38,6 @@ func NewGitRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster)
 
 // mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
 func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (result *operations.Result, err error) {
-
 	var (
 		patches   []operations.PatchOperation
 		isPatched bool

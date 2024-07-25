@@ -35,7 +35,6 @@ func LoadOCIImage(imgPath string, refInfo transform.Image) (v1.Image, error) {
 		if manifest.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Reference ||
 			// A backwards compatibility shim for older Zarf versions that would leave docker.io off of image annotations
 			(manifest.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Path+refInfo.TagOrDigest && refInfo.Host == "docker.io") {
-
 			// This is the image we are looking for, load it and then return
 			return layoutPath.Image(manifest.Digest)
 		}

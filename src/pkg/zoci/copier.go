@@ -17,7 +17,6 @@ import (
 
 // CopyPackage copies a zarf package from one OCI registry to another
 func CopyPackage(ctx context.Context, src *Remote, dst *Remote, concurrency int) error {
-
 	srcManifest, err := src.FetchRoot(ctx)
 	if err != nil {
 		return err

@@ -185,7 +185,6 @@ func (suite *SkeletonSuite) DirOrFileExists(path string) {
 }
 
 func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components []types.ZarfComponent, isSkeleton bool) {
-
 	if isSkeleton {
 		suite.NoDirExists(filepath.Join(unpackedPath, "images"))
 		suite.NoDirExists(filepath.Join(unpackedPath, "sboms"))
@@ -280,10 +279,8 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 			}
 		}
 	}
-
 }
 
 func TestSkeletonSuite(t *testing.T) {
-
 	suite.Run(t, new(SkeletonSuite))
 }

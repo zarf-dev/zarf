@@ -60,7 +60,6 @@ func ByteFormat(inputNum float64, precision int) string {
 // RenderProgressBarForLocalDirWrite creates a progress bar that continuously tracks the progress of writing files to a local directory and all of its subdirectories.
 // NOTE: This function runs infinitely until either completeChan or errChan is triggered, this function should be run in a goroutine while a different thread/process is writing to the directory.
 func RenderProgressBarForLocalDirWrite(filepath string, expectedTotal int64, completeChan chan error, updateText string, successText string) {
-
 	// Create a progress bar
 	title := fmt.Sprintf("%s (%s of %s)", updateText, ByteFormat(float64(0), 2), ByteFormat(float64(expectedTotal), 2))
 	progressBar := message.NewProgressBar(expectedTotal, title)

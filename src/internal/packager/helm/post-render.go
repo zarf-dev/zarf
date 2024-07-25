@@ -125,7 +125,6 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		return err
 	}
 	for name, namespace := range r.namespaces {
-
 		// Check to see if this namespace already exists
 		var existingNamespace bool
 		for _, serverNamespace := range namespaceList.Items {
@@ -205,7 +204,6 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			if err != nil {
 				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
 			}
-
 		}
 	}
 	return nil

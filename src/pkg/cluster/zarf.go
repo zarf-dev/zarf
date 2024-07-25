@@ -105,7 +105,6 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 
 // PackageSecretNeedsWait checks if a package component has a running webhook that needs to be waited on.
 func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage, component types.ZarfComponent, skipWebhooks bool) (needsWait bool, waitSeconds int, hookName string) {
-
 	// Skip checking webhook status when '--skip-webhooks' flag is provided and for YOLO packages
 	if skipWebhooks || deployedPackage == nil || deployedPackage.Data.Metadata.YOLO {
 		return false, 0, ""

@@ -37,5 +37,4 @@ func TestCreateIndexShaErrors(t *testing.T) {
 			require.Contains(t, stderr, tc.expectedImageInStderr)
 		})
 	}
-
 }
