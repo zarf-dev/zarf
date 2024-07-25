@@ -109,8 +109,7 @@ type GitServerInfo struct {
 	PushPassword string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the git repository"`
 	PullUsername string `json:"pullUsername" jsonschema:"description=Username of a user with pull-only access to the git repository. If not provided for an external repository then the push-user is used"`
 	PullPassword string `json:"pullPassword" jsonschema:"description=Password of a user with pull-only access to the git repository. If not provided for an external repository then the push-user is used"`
-
-	Address string `json:"address" jsonschema:"description=URL address of the git server"`
+	Address      string `json:"address" jsonschema:"description=URL address of the git server"`
 }
 
 // IsInternal returns true if the git server has the Zarf init package git server URL
