@@ -17,13 +17,13 @@ variables:
     description: The AWS region to setup the cluster and associated networking
     default: us-east-1
 
-  - name: EKS_CLUSTER_VERSION
-    description: The Kubernetes version to use for the cluster
-    default: "1.27"
+  - name: PERMISSIONS_BOUNDARY_ARN
+    description: The ARN of the IAM permissions boundary to apply to the cluster resources
+    default: arn:aws:iam::173911864621:policy/zarf_dev_base_policy
 
-  - name: EBS_DRIVER_VERSION
-    description: The AEBS driver version to use for the cluster (must be available on the K8s version)
-    default: "v1.21.0-eksbuild.1"
+  - name: PERMISSIONS_BOUNDARY_TAG
+    description: The tag to apply to the cluster resources to indicate the permissions boundary
+    default: zarf_dev_base_policy
 
 components:
   - name: load-eksctl
