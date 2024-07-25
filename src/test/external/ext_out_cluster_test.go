@@ -54,7 +54,6 @@ type ExtOutClusterTestSuite struct {
 }
 
 func (suite *ExtOutClusterTestSuite) SetupSuite() {
-
 	suite.Assertions = require.New(suite.T())
 
 	// Teardown any leftovers from previous tests

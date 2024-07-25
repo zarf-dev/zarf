@@ -170,7 +170,6 @@ func (p *Packager) hasImages() bool {
 // attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
 // NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
 func (p *Packager) attemptClusterChecks(ctx context.Context) (err error) {
-
 	spinner := message.NewProgressSpinner("Gathering additional cluster information (if available)")
 	defer spinner.Stop()
 

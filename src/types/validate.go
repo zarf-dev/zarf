@@ -241,7 +241,6 @@ func (as ZarfComponentActionSet) Validate() error {
 			if actionErr := action.Validate(); actionErr != nil {
 				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrAction, actionErr))
 			}
-
 		}
 	}
 

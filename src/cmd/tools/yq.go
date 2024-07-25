@@ -10,7 +10,6 @@ import (
 )
 
 func init() {
-
 	yqCmd := yq.New()
 	yqCmd.Example = lang.CmdToolsYqExample
 	yqCmd.Use = "yq"

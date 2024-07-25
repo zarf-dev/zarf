@@ -142,7 +142,6 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 
 	// Process all the components we are deploying
 	for _, component := range p.cfg.Pkg.Components {
-
 		deployedComponent := types.DeployedComponent{
 			Name:               component.Name,
 			Status:             types.ComponentStatusDeploying,
@@ -716,7 +715,6 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 }
 
 func (p *Packager) printTablesForDeployment(ctx context.Context, componentsToDeploy []types.DeployedComponent) {
-
 	// If not init config, print the application connection table
 	if !p.cfg.Pkg.IsInitConfig() {
 		message.PrintConnectStringTable(p.connectStrings)

@@ -103,7 +103,6 @@ func (g *Git) CreateReadOnlyUser(ctx context.Context) error {
 
 // UpdateZarfGiteaUsers updates Zarf gitea users
 func (g *Git) UpdateZarfGiteaUsers(ctx context.Context, oldState *types.ZarfState) error {
-
 	//Update git read only user password
 	err := g.UpdateGitUser(ctx, oldState.GitServer.PushPassword, g.Server.PullUsername, g.Server.PullPassword)
 	if err != nil {

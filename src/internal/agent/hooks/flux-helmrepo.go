@@ -36,7 +36,6 @@ func NewHelmRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster
 
 // mutateHelmRepo mutates the repository url to point to the repository URL defined in the ZarfState.
 func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
-
 	src := &flux.HelmRepository{}
 	if err := json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)

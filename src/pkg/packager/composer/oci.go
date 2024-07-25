@@ -104,7 +104,6 @@ func (ic *ImportChain) fetchOCISkeleton(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-
 		}
 	}
 

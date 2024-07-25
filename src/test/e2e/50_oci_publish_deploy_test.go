@@ -164,6 +164,5 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 }
 
 func TestPublishDeploySuite(t *testing.T) {
-
 	suite.Run(t, new(PublishDeploySuiteTestSuite))
 }
