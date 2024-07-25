@@ -6,7 +6,6 @@ package test
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"os"
 	"regexp"
@@ -53,7 +52,7 @@ func GetCLIName() string {
 }
 
 // Zarf executes a Zarf command.
-func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
+func (e2e *ZarfE2ETest) Zarf(t *testing.T, args ...string) (string, string, error) {
 	if !slices.Contains(args, "--tmpdir") && !slices.Contains(args, "tools") {
 		tmpdir, err := os.MkdirTemp("", "zarf-")
 		if err != nil {
@@ -76,14 +75,14 @@ func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
 		args = append(args, "--zarf-cache", cacheDir)
 		defer os.RemoveAll(cacheDir)
 	}
-	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, args...)
+	return exec.CmdWithTesting(t, exec.PrintCfg(), e2e.ZarfBinPath, args...)
 }
 
 // Kubectl executes `zarf tools kubectl ...`
-func (e2e *ZarfE2ETest) Kubectl(args ...string) (string, string, error) {
+func (e2e *ZarfE2ETest) Kubectl(t *testing.T, args ...string) (string, string, error) {
 	tk := []string{"tools", "kubectl"}
 	args = append(tk, args...)
-	return e2e.Zarf(args...)
+	return e2e.Zarf(t, args...)
 }
 
 // CleanFiles removes files and directories that have been created during the test.
@@ -132,7 +131,7 @@ func (e2e *ZarfE2ETest) TeardownRegistry(t *testing.T, port int) {
 // GetZarfVersion returns the current build/zarf version
 func (e2e *ZarfE2ETest) GetZarfVersion(t *testing.T) string {
 	// Get the version of the CLI
-	stdOut, stdErr, err := e2e.Zarf("version")
+	stdOut, stdErr, err := e2e.Zarf(t, "version")
 	require.NoError(t, err, stdOut, stdErr)
 	return strings.Trim(stdOut, "\n")
 }

@@ -23,14 +23,14 @@ func TestGit(t *testing.T) {
 	t.Log("E2E: Git")
 
 	buildPath := filepath.Join("src", "test", "packages", "22-git-data")
-	stdOut, stdErr, err := e2e.Zarf("package", "create", buildPath, "-o=build", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", buildPath, "-o=build", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-git-data-test-%s-1.0.0.tar.zst", e2e.Arch)
 	defer e2e.CleanFiles(path)
 
 	// Deploy the git data example (with component globbing to test that as well)
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=full-repo,specific-*", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=full-repo,specific-*", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	c, err := cluster.NewCluster()
@@ -135,54 +135,54 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	require.NoError(t, err)
 	// Deploy the flux example and verify that it works
 	path := fmt.Sprintf("build/zarf-package-podinfo-flux-%s.tar.zst", e2e.Arch)
-	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Tests the URL mutation for GitRepository CRD for Flux.
-	stdOut, stdErr, err = e2e.Kubectl("get", "gitrepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "gitrepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
 	require.NoError(t, err, stdOut, stdErr)
 	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", types.ZarfInClusterGitServiceURL, types.ZarfGitPushUser)
 	require.Equal(t, expectedMutatedRepoURL, stdOut)
 
 	// Tests the URL mutation for HelmRepository CRD for Flux.
-	stdOut, stdErr, err = e2e.Kubectl("get", "helmrepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "helmrepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
 	require.NoError(t, err, stdOut, stdErr)
 	expectedMutatedRepoURL = fmt.Sprintf("oci://%s/stefanprodan/charts", registryAddress)
 	require.Equal(t, expectedMutatedRepoURL, stdOut)
-	stdOut, stdErr, err = e2e.Kubectl("get", "helmrelease", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.chart.spec.version}")
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "helmrelease", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.chart.spec.version}")
 	require.NoError(t, err, stdOut, stdErr)
 	expectedMutatedRepoTag := "6.4.0"
 	require.Equal(t, expectedMutatedRepoTag, stdOut)
 
 	// Tests the URL mutation for OCIRepository CRD for Flux.
-	stdOut, stdErr, err = e2e.Kubectl("get", "ocirepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "ocirepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
 	require.NoError(t, err, stdOut, stdErr)
 	expectedMutatedRepoURL = fmt.Sprintf("oci://%s/stefanprodan/manifests/podinfo", registryAddress)
 	require.Equal(t, expectedMutatedRepoURL, stdOut)
-	stdOut, stdErr, err = e2e.Kubectl("get", "ocirepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.ref.tag}")
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "ocirepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.ref.tag}")
 	require.NoError(t, err, stdOut, stdErr)
 	expectedMutatedRepoTag = "6.4.0-zarf-2823281104"
 	require.Equal(t, expectedMutatedRepoTag, stdOut)
 
 	// Remove the flux example when deployment completes
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "podinfo-flux", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "podinfo-flux", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Prune the flux images to reduce disk pressure
-	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "prune", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "registry", "prune", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
 func waitArgoDeployment(t *testing.T) {
 	// Deploy the argocd example and verify that it works
 	path := fmt.Sprintf("build/zarf-package-argocd-%s.tar.zst", e2e.Arch)
-	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--components=argocd-apps", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=argocd-apps", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", types.ZarfInClusterGitServiceURL, types.ZarfGitPushUser)
 
 	// Tests the mutation of the private repository Secret for ArgoCD.
-	stdOut, stdErr, err = e2e.Kubectl("get", "secret", "argocd-repo-github-podinfo", "-n", "argocd", "-o", "jsonpath={.data.url}")
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "secret", "argocd-repo-github-podinfo", "-n", "argocd", "-o", "jsonpath={.data.url}")
 	require.NoError(t, err, stdOut, stdErr)
 
 	expectedMutatedPrivateRepoURLSecret, err := base64.StdEncoding.DecodeString(stdOut)
@@ -190,15 +190,15 @@ func waitArgoDeployment(t *testing.T) {
 	require.Equal(t, expectedMutatedRepoURL, string(expectedMutatedPrivateRepoURLSecret))
 
 	// Tests the mutation of the repoURL for Application CRD source(s) for ArgoCD.
-	stdOut, stdErr, err = e2e.Kubectl("get", "application", "apps", "-n", "argocd", "-o", "jsonpath={.spec.sources[0].repoURL}")
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "application", "apps", "-n", "argocd", "-o", "jsonpath={.spec.sources[0].repoURL}")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Equal(t, expectedMutatedRepoURL, stdOut)
 
 	// Remove the argocd example when deployment completes
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "argocd", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "argocd", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Prune the ArgoCD images to reduce disk pressure
-	stdOut, stdErr, err = e2e.Zarf("tools", "registry", "prune", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "registry", "prune", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

@@ -24,7 +24,7 @@ func TestZarfDevGenerate(t *testing.T) {
 		version := "6.4.0"
 		gitPath := "charts/podinfo"
 
-		stdOut, stdErr, err := e2e.Zarf("dev", "generate", "podinfo", "--url", url, "--version", version, "--gitPath", gitPath, "--output-directory", tmpDir)
+		stdOut, stdErr, err := e2e.Zarf(t, "dev", "generate", "podinfo", "--url", url, "--version", version, "--gitPath", gitPath, "--output-directory", tmpDir)
 		require.NoError(t, err, stdOut, stdErr)
 
 		zarfPackage := types.ZarfPackage{}
