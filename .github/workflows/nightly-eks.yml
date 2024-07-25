@@ -41,7 +41,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_NIGHTLY_ROLE }}
           role-session-name: ${{ github.job || github.event.client_payload.pull_request.head.sha || github.sha }}
           aws-region: us-east-1
-          role-duration-seconds: 3600
+          role-duration-seconds: 7200
 
       - name: Build the eks package
         run: ./build/zarf package create packages/distros/eks -o build --confirm
@@ -56,6 +56,22 @@ jobs:
 
       - name: Run tests
         run: make test-e2e-with-cluster ARCH=amd64
+
+      - name: get pods
+        if: always()
+        run: kubectl get pods -n kiwix -o yaml
+
+      - name: describe pod
+        if: always()
+        run: kubectl describe pods -n kiwix
+
+      - name: get nodes
+        if: always()
+        run: kubectl get nodes -o yaml
+
+      - name: describe nodes
+        if: always()
+        run: kubectl describe nodes
 
       - name: Teardown the cluster
         if: always()
