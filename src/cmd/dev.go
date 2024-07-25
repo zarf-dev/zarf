@@ -142,7 +142,7 @@ var devSha256SumCmd = &cobra.Command{
 	Aliases: []string{"s"},
 	Short:   lang.CmdDevSha256sumShort,
 	Args:    cobra.ExactArgs(1),
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		hashErr := errors.New("unable to compute the SHA256SUM hash")
 
 		fileName := args[0]
@@ -169,7 +169,7 @@ var devSha256SumCmd = &cobra.Command{
 			}
 
 			downloadPath := filepath.Join(tmp, fileBase)
-			err = utils.DownloadToFile(fileName, downloadPath, "")
+			err = utils.DownloadToFile(cmd.Context(), fileName, downloadPath, "")
 			if err != nil {
 				return errors.Join(hashErr, err)
 			}
