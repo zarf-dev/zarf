@@ -18,7 +18,7 @@ import (
 
 // Validate errors if a package violates the schema or any runtime validations
 // This must be run while in the parent directory of the zarf.yaml being validated
-func Validate(pkg types.ZarfPackage, baseDir string, pkgName string) error {
+func Validate(pkg types.ZarfPackage, baseDir string) error {
 	if err := pkg.Validate(); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
@@ -29,7 +29,7 @@ func Validate(pkg types.ZarfPackage, baseDir string, pkgName string) error {
 	}
 
 	if lint.HasSevOrHigher(findings, lint.SevErr) {
-		lint.PrintFindings(findings, lint.SevErr, baseDir, pkgName)
+		lint.PrintFindings(findings, lint.SevErr, baseDir, pkg.Metadata.Name)
 		return fmt.Errorf("found errors in schema")
 	}
 

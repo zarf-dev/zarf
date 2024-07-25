@@ -118,7 +118,7 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 		}
 	}
 
-	if err := Validate(pkg, pc.createOpts.BaseDir, pkg.Metadata.Name); err != nil {
+	if err := Validate(pkg, pc.createOpts.BaseDir); err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
 

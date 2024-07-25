@@ -53,7 +53,7 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := creator.Validate(p.cfg.Pkg, p.cfg.CreateOpts.BaseDir, p.cfg.Pkg.Metadata.Name); err != nil {
+	if err := creator.Validate(p.cfg.Pkg, p.cfg.CreateOpts.BaseDir); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
 
