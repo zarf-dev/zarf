@@ -113,7 +113,7 @@ type GitServerInfo struct {
 	Address string `json:"address" jsonschema:"description=URL address of the git server"`
 }
 
-// IsInternal returns true if the git server is the Zarf git service deployed by the init package
+// IsInternal returns true if the git server has the Zarf init package git server URL
 func (gs GitServerInfo) IsInternal() bool {
 	return gs.Address == ZarfInClusterGitServiceURL
 }
