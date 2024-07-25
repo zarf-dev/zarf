@@ -58,7 +58,6 @@ func (h *Helm) PackageChart(ctx context.Context, cosignKeyPath string) error {
 				return fmt.Errorf("unable to download the published chart %q: %w", h.chart.Name, err)
 			}
 		}
-
 	} else {
 		err := h.PackageChartFromLocalFiles(cosignKeyPath)
 		if err != nil {

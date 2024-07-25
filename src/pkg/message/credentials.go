@@ -91,7 +91,6 @@ func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState
 	}
 
 	for _, service := range services {
-
 		HorizontalRule()
 
 		switch service {

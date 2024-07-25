@@ -85,7 +85,5 @@ func TestFindImages(t *testing.T) {
 		require.Contains(t, stdOut, "component: httpd-local")
 		require.Contains(t, stdOut, "manifest: simple-httpd-deployment")
 		require.Contains(t, stdOut, "image: httpd:alpine3.18")
-
 	})
-
 }

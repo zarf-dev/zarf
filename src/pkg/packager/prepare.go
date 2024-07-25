@@ -118,7 +118,6 @@ func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, 
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
-
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
 			continue
@@ -163,7 +162,6 @@ func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, 
 		}
 
 		for _, chart := range component.Charts {
-
 			helmCfg := helm.New(
 				chart,
 				componentPaths.Charts,

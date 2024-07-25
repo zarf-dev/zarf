@@ -88,7 +88,6 @@ func TestComponentActions(t *testing.T) {
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-variable", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdErr, "the dog says ruff")
-
 	})
 
 	t.Run("action on-deploy-with-dynamic-variable", func(t *testing.T) {
@@ -100,7 +99,6 @@ func TestComponentActions(t *testing.T) {
 		require.Contains(t, stdErr, "the dog says ruff")
 		require.Contains(t, stdErr, "the snake says hiss")
 		require.Contains(t, stdErr, "with a TF_VAR, the snake also says hiss")
-
 	})
 
 	t.Run("action on-deploy-with-env-var", func(t *testing.T) {
