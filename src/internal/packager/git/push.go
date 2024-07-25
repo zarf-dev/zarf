@@ -54,7 +54,7 @@ func (g *Git) PushRepo(srcURL, targetFolder string) error {
 	}
 
 	// Add the read-only user to this repo
-	if g.Server.InternalServer {
+	if g.Server.IsInternal() {
 		// Get the upstream URL
 		remote, err := repo.Remote(onlineRemoteName)
 		if err != nil {

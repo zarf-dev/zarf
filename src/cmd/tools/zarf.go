@@ -175,7 +175,7 @@ var updateCredsCmd = &cobra.Command{
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
 				}
 			}
-			if slices.Contains(args, message.GitKey) && newState.GitServer.InternalServer {
+			if slices.Contains(args, message.GitKey) && newState.GitServer.IsInternal() {
 				g := git.New(newState.GitServer)
 				err = g.UpdateZarfGiteaUsers(ctx, oldState)
 				if err != nil {

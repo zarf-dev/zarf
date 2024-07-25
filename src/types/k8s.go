@@ -110,8 +110,12 @@ type GitServerInfo struct {
 	PullUsername string `json:"pullUsername" jsonschema:"description=Username of a user with pull-only access to the git repository. If not provided for an external repository then the push-user is used"`
 	PullPassword string `json:"pullPassword" jsonschema:"description=Password of a user with pull-only access to the git repository. If not provided for an external repository then the push-user is used"`
 
-	Address        string `json:"address" jsonschema:"description=URL address of the git server"`
-	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a git server that Zarf is directly managing"`
+	Address string `json:"address" jsonschema:"description=URL address of the git server"`
+}
+
+// IsInternal returns true if the git server is the Zarf git service deployed by the init package
+func (gs GitServerInfo) IsInternal() bool {
+	return gs.Address == ZarfInClusterGitServiceURL
 }
 
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
@@ -120,7 +124,6 @@ func (gs *GitServerInfo) FillInEmptyValues() error {
 	// Set default svc url if an external repository was not provided
 	if gs.Address == "" {
 		gs.Address = ZarfInClusterGitServiceURL
-		gs.InternalServer = true
 	}
 
 	// Generate a push-user password if not provided by init flag
@@ -132,14 +135,14 @@ func (gs *GitServerInfo) FillInEmptyValues() error {
 
 	// Set read-user information if using an internal repository, otherwise copy from the push-user
 	if gs.PullUsername == "" {
-		if gs.InternalServer {
+		if gs.IsInternal() {
 			gs.PullUsername = ZarfGitReadUser
 		} else {
 			gs.PullUsername = gs.PushUsername
 		}
 	}
 	if gs.PullPassword == "" {
-		if gs.InternalServer {
+		if gs.IsInternal() {
 			if gs.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}

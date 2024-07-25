@@ -299,51 +299,46 @@ func TestMergeZarfStateGit(t *testing.T) {
 		{
 			name: "internal server auto generate",
 			oldGitServer: types.GitServerInfo{
-				Address:        types.ZarfInClusterGitServiceURL,
-				InternalServer: true,
+				Address: types.ZarfInClusterGitServiceURL,
 			},
 			expectedGitServer: types.GitServerInfo{
-				Address:        types.ZarfInClusterGitServiceURL,
-				InternalServer: true,
+				Address: types.ZarfInClusterGitServiceURL,
 			},
 		},
 		{
 			name: "external server",
 			oldGitServer: types.GitServerInfo{
-				Address:        "example.com",
-				InternalServer: false,
-				PushPassword:   "push",
-				PullPassword:   "pull",
+				Address: "example.com",
+
+				PushPassword: "push",
+				PullPassword: "pull",
 			},
 			expectedGitServer: types.GitServerInfo{
-				Address:        "example.com",
-				InternalServer: false,
-				PushPassword:   "push",
-				PullPassword:   "pull",
+				Address: "example.com",
+
+				PushPassword: "push",
+				PullPassword: "pull",
 			},
 		},
 		{
 			name: "init options merged",
 			initGitServer: types.GitServerInfo{
-				PushUsername:   "push-user",
-				PullUsername:   "pull-user",
-				Address:        "address",
-				InternalServer: false,
+				PushUsername: "push-user",
+				PullUsername: "pull-user",
+				Address:      "address",
 			},
 			expectedGitServer: types.GitServerInfo{
-				PushUsername:   "push-user",
-				PullUsername:   "pull-user",
-				Address:        "address",
-				InternalServer: false,
+				PushUsername: "push-user",
+				PullUsername: "pull-user",
+				Address:      "address",
 			},
 		},
 		{
 			name: "empty init options not merged",
 			expectedGitServer: types.GitServerInfo{
-				PushUsername:   "",
-				PullUsername:   "",
-				Address:        "",
-				InternalServer: false,
+				PushUsername: "",
+				PullUsername: "",
+				Address:      "",
 			},
 		},
 	}
@@ -360,7 +355,6 @@ func TestMergeZarfStateGit(t *testing.T) {
 			require.Equal(t, tt.expectedGitServer.PushUsername, newState.GitServer.PushUsername)
 			require.Equal(t, tt.expectedGitServer.PullUsername, newState.GitServer.PullUsername)
 			require.Equal(t, tt.expectedGitServer.Address, newState.GitServer.Address)
-			require.Equal(t, tt.expectedGitServer.InternalServer, newState.GitServer.InternalServer)
 		})
 	}
 }
@@ -386,14 +380,12 @@ func TestMergeZarfStateArtifact(t *testing.T) {
 		{
 			name: "old state is internal server auto generate push token",
 			oldArtifactServer: types.ArtifactServerInfo{
-				PushToken:      "foobar",
-				Address:        types.ZarfInClusterArtifactServiceURL,
-				InternalServer: true,
+				PushToken: "foobar",
+				Address:   types.ZarfInClusterArtifactServiceURL,
 			},
 			expectedArtifactServer: types.ArtifactServerInfo{
-				PushToken:      "",
-				Address:        types.ZarfInClusterArtifactServiceURL,
-				InternalServer: true,
+				PushToken: "",
+				Address:   types.ZarfInClusterArtifactServiceURL,
 			},
 		},
 		{
@@ -402,51 +394,44 @@ func TestMergeZarfStateArtifact(t *testing.T) {
 				PushToken: "hello world",
 			},
 			oldArtifactServer: types.ArtifactServerInfo{
-				PushToken:      "foobar",
-				Address:        types.ZarfInClusterArtifactServiceURL,
-				InternalServer: false,
+				PushToken: "foobar",
+				Address:   types.ZarfInClusterArtifactServiceURL,
 			},
 			expectedArtifactServer: types.ArtifactServerInfo{
-				PushToken:      "hello world",
-				Address:        types.ZarfInClusterArtifactServiceURL,
-				InternalServer: true,
+				PushToken: "hello world",
+				Address:   types.ZarfInClusterArtifactServiceURL,
 			},
 		},
 		{
 			name: "external server same push token",
 			oldArtifactServer: types.ArtifactServerInfo{
-				PushToken:      "foobar",
-				Address:        "http://example.com",
-				InternalServer: false,
+				PushToken: "foobar",
+				Address:   "http://example.com",
 			},
 			expectedArtifactServer: types.ArtifactServerInfo{
-				PushToken:      "foobar",
-				Address:        "http://example.com",
-				InternalServer: false,
+				PushToken: "foobar",
+				Address:   "http://example.com",
 			},
 		},
 		{
 			name: "init options merged",
 			initArtifactServer: types.ArtifactServerInfo{
-				PushUsername:   "user",
-				PushToken:      "token",
-				Address:        "address",
-				InternalServer: false,
+				PushUsername: "user",
+				PushToken:    "token",
+				Address:      "address",
 			},
 			expectedArtifactServer: types.ArtifactServerInfo{
-				PushUsername:   "user",
-				PushToken:      "token",
-				Address:        "address",
-				InternalServer: false,
+				PushUsername: "user",
+				PushToken:    "token",
+				Address:      "address",
 			},
 		},
 		{
 			name: "empty init options not merged",
 			expectedArtifactServer: types.ArtifactServerInfo{
-				PushUsername:   "",
-				PushToken:      "",
-				Address:        "",
-				InternalServer: false,
+				PushUsername: "",
+				PushToken:    "",
+				Address:      "",
 			},
 		},
 	}
