@@ -21,15 +21,14 @@ func TestCreateTemplating(t *testing.T) {
 	decompressPath := filepath.Join(tmpdir, ".package-decompressed")
 	sbomPath := filepath.Join(tmpdir, ".sbom-location")
 
-	pkgName := fmt.Sprintf("zarf-package-variables-%s.tar.zst", e2e.Arch)
+	pkgName := fmt.Sprintf("zarf-package-templating-%s.tar.zst", e2e.Arch)
 
 	// Test that not specifying a package variable results in an error
-	_, stdErr, _ := e2e.Zarf(t, "package", "create", "examples/variables", "--confirm")
-	expectedOutString := "variable 'NGINX_VERSION' must be '--set' when using the '--confirm' flag"
-	require.Contains(t, stdErr, "", expectedOutString)
+	_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/04-templating", "--confirm")
+	require.Error(t, err)
 
 	// Test a simple package variable example with `--set` (will fail to pull an image if this is not set correctly)
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/variables", "--set", "NGINX_VERSION=1.23.3", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/04-templating", "--set", "PODINFO_VERSION=6.4.0", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(t, "t", "archiver", "decompress", pkgName, decompressPath, "--unarchive-all")
@@ -38,7 +37,7 @@ func TestCreateTemplating(t *testing.T) {
 	// Check that the constant in the zarf.yaml is replaced correctly
 	builtConfig, err := os.ReadFile(decompressPath + "/zarf.yaml")
 	require.NoError(t, err)
-	require.Contains(t, string(builtConfig), "name: NGINX_VERSION\n  value: 1.23.3")
+	require.Contains(t, string(builtConfig), "name: PODINFO_VERSION\n  value: 6.4.0")
 
 	// Test that files and file folders template and handle SBOMs correctly
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", "src/test/packages/04-file-folders-templating-sbom/", "--sbom-out", sbomPath, "--confirm")

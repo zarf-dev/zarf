@@ -4,8 +4,8 @@ metadata:
   name: never-ready-zarf-wait-test
 spec:
   containers:
-  - name: alpine
-    image: alpine:latest
+  - name: podinfo
+    image: ghcr.io/stefanprodan/podinfo:6.4.0
     command:
       - "sleep"
       - "infinity"
