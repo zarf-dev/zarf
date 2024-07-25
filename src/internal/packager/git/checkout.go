@@ -10,7 +10,6 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // CheckoutTag performs a `git checkout` of the provided tag to a detached HEAD.
@@ -54,7 +53,6 @@ func (g *Git) checkoutHashAsBranch(hash plumbing.Hash, branch plumbing.Reference
 	if err != nil {
 		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
 	}
-
 	objRef, err := repo.Object(plumbing.AnyObject, hash)
 	if err != nil {
 		return fmt.Errorf("an error occurred when getting the repo's object reference: %w", err)
@@ -67,10 +65,7 @@ func (g *Git) checkoutHashAsBranch(hash plumbing.Hash, branch plumbing.Reference
 	case *object.Commit:
 		commitHash = objRef.Hash
 	default:
-		// This shouldn't ever hit, but we should at least log it if someday it
-		// does get hit
-		message.Warnf("Checkout failed. Hash type %s not supported.", objRef.Type().String())
-		return err
+		return fmt.Errorf("hash type %s not supported", objRef.Type().String())
 	}
 
 	options := &git.CheckoutOptions{

@@ -146,22 +146,15 @@ func replaceBodyLinks(resp *http.Response) error {
 	forwardedPrefix := fmt.Sprintf("%s%s%s", getTLSScheme(resp.Request.TLS), resp.Request.Header.Get("X-Forwarded-Host"), transform.NoTransform)
 	targetPrefix := fmt.Sprintf("%s%s", getTLSScheme(resp.TLS), resp.Request.Host)
 
-	body, err := io.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-
 	err = resp.Body.Close()
 	if err != nil {
 		return err
 	}
-
-	bodyString := string(body)
-	message.Warnf("%s", bodyString)
-
-	bodyString = strings.ReplaceAll(bodyString, targetPrefix, forwardedPrefix)
-
-	message.Warnf("%s", bodyString)
+	bodyString := strings.ReplaceAll(string(b), targetPrefix, forwardedPrefix)
 
 	// Setup the new reader, and correct the content length
 	resp.Body = io.NopCloser(strings.NewReader(bodyString))
