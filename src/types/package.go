@@ -43,6 +43,8 @@ func (pkg ZarfPackage) IsSBOMAble() bool {
 
 // ZarfMetadata lists information about the current ZarfPackage.
 type ZarfMetadata struct {
+	// The Name regex permits lowercase letters, numbers, and hyphens not at the start
+	// https://regex101.com/r/FLdG9G/2
 	Name              string `json:"name" jsonschema:"description=Name to identify this Zarf package,pattern=^[a-z0-9][a-z0-9\\-]*$"`
 	Description       string `json:"description,omitempty" jsonschema:"description=Additional information about this package"`
 	Version           string `json:"version,omitempty" jsonschema:"description=Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with)"`

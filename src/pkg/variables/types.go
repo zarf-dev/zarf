@@ -60,21 +60,8 @@ type SetVariable struct {
 	Value    string `json:"value" jsonschema:"description=The value the variable is currently set with"`
 }
 
-// Validate runs all validation checks on a package variable.
-func (v Variable) Validate() error {
-	if !IsUppercaseNumberUnderscore(v.Name) {
-		return fmt.Errorf(lang.PkgValidateMustBeUppercase, v.Name)
-	}
-	return nil
-}
-
 // Validate runs all validation checks on a package constant.
 func (c Constant) Validate() error {
-	// ensure the constant name is only capitals and underscores
-	if !IsUppercaseNumberUnderscore(c.Name) {
-		return fmt.Errorf(lang.PkgValidateErrPkgConstantName, c.Name)
-	}
-
 	if !regexp.MustCompile(c.Pattern).MatchString(c.Value) {
 		return fmt.Errorf(lang.PkgValidateErrPkgConstantPattern, c.Name, c.Pattern)
 	}

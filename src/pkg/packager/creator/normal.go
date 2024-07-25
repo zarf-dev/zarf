@@ -74,7 +74,6 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
-
 	warnings = append(warnings, composeWarnings...)
 
 	// After components are composed, template the active package.
@@ -119,7 +118,7 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 		}
 	}
 
-	if err := pkg.Validate(); err != nil {
+	if err := Validate(pkg, pc.createOpts.BaseDir); err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
 
