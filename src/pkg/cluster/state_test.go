@@ -208,20 +208,14 @@ func TestMergeZarfStateRegistry(t *testing.T) {
 			},
 		},
 		{
-			name: "external server",
-			oldRegistry: types.RegistryInfo{
-				Address:      "example.com",
-				PushPassword: "push",
-				PullPassword: "pull",
-			},
-			expectedRegistry: types.RegistryInfo{
-				Address:      "example.com",
-				PushPassword: "push",
-				PullPassword: "pull",
-			},
-		},
-		{
 			name: "init options merged",
+			oldRegistry: types.RegistryInfo{
+				PushUsername: "doesn't matter",
+				PullUsername: "doesn't matter",
+				Address:      "doesn't matter",
+				NodePort:     0,
+				Secret:       "doesn't matter",
+			},
 			initRegistry: types.RegistryInfo{
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
@@ -278,18 +272,34 @@ func TestMergeZarfStateGit(t *testing.T) {
 		expectedGitServer types.GitServerInfo
 	}{
 		{
-			name: "username is unmodified",
+			name: "address and usernames are unmodified",
 			oldGitServer: types.GitServerInfo{
+				Address:      "address",
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
 			},
 			expectedGitServer: types.GitServerInfo{
+				Address:      "address",
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
 			},
 		},
 		{
+			name: "internal server auto generate",
+			oldGitServer: types.GitServerInfo{
+				Address: types.ZarfInClusterGitServiceURL,
+			},
+			expectedGitServer: types.GitServerInfo{
+				Address: types.ZarfInClusterGitServiceURL,
+			},
+		},
+		{
 			name: "init options merged",
+			oldGitServer: types.GitServerInfo{
+				Address:      "doesn't matter",
+				PushUsername: "doesn't matter",
+				PullUsername: "doesn't matter",
+			},
 			initGitServer: types.GitServerInfo{
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
@@ -371,18 +381,12 @@ func TestMergeZarfStateArtifact(t *testing.T) {
 			},
 		},
 		{
-			name: "external server same push token",
-			oldArtifactServer: types.ArtifactServerInfo{
-				PushToken: "foobar",
-				Address:   "http://example.com",
-			},
-			expectedArtifactServer: types.ArtifactServerInfo{
-				PushToken: "foobar",
-				Address:   "http://example.com",
-			},
-		},
-		{
 			name: "init options merged",
+			oldArtifactServer: types.ArtifactServerInfo{
+				PushUsername: "doesn't matter",
+				PushToken:    "doesn't matter",
+				Address:      "doesn't matter",
+			},
 			initArtifactServer: types.ArtifactServerInfo{
 				PushUsername: "user",
 				PushToken:    "token",
