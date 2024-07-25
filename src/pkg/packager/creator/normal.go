@@ -390,7 +390,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component types.Zarf
 				compressedFile := filepath.Join(componentPaths.Temp, compressedFileName)
 
 				// If the file is an archive, download it to the componentPath.Temp
-				if err := utils.DownloadToFile(file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(ctx, file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 
@@ -399,7 +399,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component types.Zarf
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
 				}
 			} else {
-				if err := utils.DownloadToFile(file.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(ctx, file.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 			}
@@ -450,7 +450,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component types.Zarf
 			dst := filepath.Join(componentPaths.Base, rel)
 
 			if helpers.IsURL(data.Source) {
-				if err := utils.DownloadToFile(data.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(ctx, data.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 				}
 			} else {
@@ -483,7 +483,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component types.Zarf
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", path)
 				if helpers.IsURL(path) {
-					if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
+					if err := utils.DownloadToFile(ctx, path, dst, component.DeprecatedCosignKeyPath); err != nil {
 						return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 					}
 				} else {
