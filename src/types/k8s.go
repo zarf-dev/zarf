@@ -203,6 +203,11 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 		ri.NodePort = ZarfInClusterContainerRegistryNodePort
 	}
 
+	// Set default url if an external registry was not provided
+	if ri.Address == "" {
+		ri.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
+	}
+
 	// Generate a push-user password if not provided by init flag
 	if ri.PushPassword == "" {
 		if ri.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
