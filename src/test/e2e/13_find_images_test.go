@@ -48,7 +48,7 @@ func TestFindImages(t *testing.T) {
 
 	t.Run("zarf dev find-images with helm or manifest vars", func(t *testing.T) {
 		t.Parallel()
-		registry := "coolregistry.gov"
+		registry := "zarf.dev"
 		agentTag := "test"
 
 		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", ".", "--registry-url", registry, "--create-set", fmt.Sprintf("agent_image_tag=%s", agentTag), "--skip-cosign")
@@ -60,10 +60,10 @@ func TestFindImages(t *testing.T) {
 		require.Contains(t, stdOut, "busybox:latest")
 
 		path := filepath.Join("src", "test", "packages", "13-find-images-with-vars")
-		stdOut, _, err = e2e.Zarf(t, "dev", "find-images", path, "--deploy-set", "PODINFO_IMAGE=cool-image.com/agent:latest", "--skip-cosign")
+		stdOut, _, err = e2e.Zarf(t, "dev", "find-images", path, "--deploy-set", "PODINFO_IMAGE=zarf.dev/podinfo:latest", "--skip-cosign")
 		require.NoError(t, err)
 		require.Contains(t, stdOut, "ghcr.io/zarf-dev/zarf/agent:v0.36.1")
-		require.Contains(t, stdOut, "cool-image.com/agent:latest")
+		require.Contains(t, stdOut, "zarf.dev/podinfo:latest")
 	})
 
 	t.Run("zarf test find images --why w/ helm chart success", func(t *testing.T) {
