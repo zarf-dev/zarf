@@ -63,50 +63,50 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	ref := suite.Reference.String()
 
 	helmCharts := filepath.Join("examples", "helm-charts")
-	_, stdErr, err := e2e.Zarf("package", "publish", helmCharts, "oci://"+ref, "--insecure")
+	_, stdErr, err := e2e.Zarf(suite.T(), "package", "publish", helmCharts, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
 	bigBang := filepath.Join("src", "test", "packages", "51-import-everything", "big-bang-min")
-	_, stdErr, err = e2e.Zarf("package", "publish", bigBang, "oci://"+ref, "--insecure")
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", bigBang, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
 	composable := filepath.Join("src", "test", "packages", "09-composable-packages")
-	_, stdErr, err = e2e.Zarf("package", "publish", composable, "oci://"+ref, "--insecure")
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", composable, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
-	_, stdErr, err = e2e.Zarf("package", "publish", importEverything, "oci://"+ref, "--insecure")
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", importEverything, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
-	_, _, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/import-everything:0.0.1", "--insecure", "-a", "skeleton")
+	_, _, err = e2e.Zarf(suite.T(), "package", "inspect", "oci://"+ref+"/import-everything:0.0.1", "--insecure", "-a", "skeleton")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/import-everything:0.0.1", "-o", "build", "--insecure", "-a", "skeleton")
+	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/import-everything:0.0.1", "-o", "build", "--insecure", "-a", "skeleton")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "-o", "build", "--insecure", "-a", "skeleton")
+	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "-o", "build", "--insecure", "-a", "skeleton")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/big-bang-min:2.10.0", "-o", "build", "--insecure", "-a", "skeleton")
+	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/big-bang-min:2.10.0", "-o", "build", "--insecure", "-a", "skeleton")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf("package", "pull", "oci://"+ref+"/test-compose-package:0.0.1", "-o", "build", "--insecure", "-a", "skeleton")
+	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/test-compose-package:0.0.1", "-o", "build", "--insecure", "-a", "skeleton")
 	suite.NoError(err)
 }
 
 func (suite *SkeletonSuite) Test_1_Compose_Everything_Inception() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
-	_, _, err := e2e.Zarf("package", "create", importEverything, "-o", "build", "--insecure", "--confirm")
+	_, _, err := e2e.Zarf(suite.T(), "package", "create", importEverything, "-o", "build", "--insecure", "--confirm")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf("package", "create", importception, "-o", "build", "--insecure", "--confirm")
+	_, _, err = e2e.Zarf(suite.T(), "package", "create", importception, "-o", "build", "--insecure", "--confirm")
 	suite.NoError(err)
 
-	_, stdErr, err := e2e.Zarf("package", "inspect", importEverythingPath)
+	_, stdErr, err := e2e.Zarf(suite.T(), "package", "inspect", importEverythingPath)
 	suite.NoError(err)
 
 	targets := []string{
@@ -140,7 +140,7 @@ func (suite *SkeletonSuite) Test_2_FilePaths() {
 		unpacked := strings.TrimSuffix(pkgTar, ".tar.zst")
 		defer os.RemoveAll(unpacked)
 		defer os.RemoveAll(pkgTar)
-		_, _, err := e2e.Zarf("tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
+		_, _, err := e2e.Zarf(suite.T(), "tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
 		suite.NoError(err)
 		suite.DirExists(unpacked)
 

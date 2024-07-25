@@ -5,7 +5,6 @@
 package external
 
 import (
-	"context"
 	"path"
 	"path/filepath"
 	"strings"
@@ -47,7 +46,7 @@ func verifyWaitSuccess(t *testing.T, timeoutMinutes time.Duration, cmd string, a
 			// after delay, try running
 		default:
 			// Check information from the given command
-			stdOut, _, err := exec.CmdWithContext(context.TODO(), exec.PrintCfg(), cmd, args...)
+			stdOut, _, err := exec.CmdWithTesting(t, exec.PrintCfg(), cmd, args...)
 			// Log error
 			if err != nil {
 				t.Log(string(stdOut), err)

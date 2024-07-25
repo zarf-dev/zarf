@@ -20,6 +20,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const annotationPrefix = "zarf.dev"
+
 // NewPodMutationHook creates a new instance of pods mutation hook.
 func NewPodMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
 	return operations.Hook{
@@ -38,6 +40,10 @@ func parsePod(object []byte) (*corev1.Pod, error) {
 		return nil, err
 	}
 	return &pod, nil
+}
+
+func getImageAnnotationKey(containerName string) string {
+	return fmt.Sprintf("%s/original-image-%s", annotationPrefix, containerName)
 }
 
 func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
@@ -66,6 +72,11 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 	zarfSecret := []corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}}
 	patches = append(patches, operations.ReplacePatchOperation("/spec/imagePullSecrets", zarfSecret))
 
+	updatedAnnotations := pod.Annotations
+	if updatedAnnotations == nil {
+		updatedAnnotations = make(map[string]string)
+	}
+
 	// update the image host for each init container
 	for idx, container := range pod.Spec.InitContainers {
 		path := fmt.Sprintf("/spec/initContainers/%d/image", idx)
@@ -74,6 +85,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
+		updatedAnnotations[getImageAnnotationKey(container.Name)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
@@ -85,6 +97,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
+		updatedAnnotations[getImageAnnotationKey(container.Name)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
@@ -96,10 +109,13 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			message.Warnf(lang.AgentErrImageSwap, container.Image)
 			continue // Continue, because we might as well attempt to mutate the other containers for this pod
 		}
+		updatedAnnotations[getImageAnnotationKey(container.Name)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
 	patches = append(patches, getLabelPatch(pod.Labels))
+
+	patches = append(patches, operations.ReplacePatchOperation("/metadata/annotations", updatedAnnotations))
 
 	return &operations.Result{
 		Allowed:  true,

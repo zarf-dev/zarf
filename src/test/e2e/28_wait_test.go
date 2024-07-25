@@ -20,22 +20,22 @@ type zarfCommandResult struct {
 	err    error
 }
 
-func zarfCommandWStruct(e2e test.ZarfE2ETest, path string) (result zarfCommandResult) {
-	result.stdOut, result.stdErr, result.err = e2e.Zarf("package", "deploy", path, "--confirm")
+func zarfCommandWStruct(t *testing.T, e2e test.ZarfE2ETest, path string) (result zarfCommandResult) {
+	result.stdOut, result.stdErr, result.err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	return result
 }
 
 func TestNoWait(t *testing.T) {
 	t.Log("E2E: Helm Wait")
 
-	stdOut, stdErr, err := e2e.Zarf("package", "create", "src/test/packages/28-helm-no-wait", "-o=build", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/28-helm-no-wait", "-o=build", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-helm-no-wait-%s.tar.zst", e2e.Arch)
 
 	zarfChannel := make(chan zarfCommandResult, 1)
 	go func() {
-		zarfChannel <- zarfCommandWStruct(e2e, path)
+		zarfChannel <- zarfCommandWStruct(t, e2e, path)
 	}()
 
 	stdOut = ""
@@ -50,10 +50,10 @@ func TestNoWait(t *testing.T) {
 	case <-time.After(30 * time.Second):
 		t.Error("Timeout waiting for zarf deploy (it tried to wait)")
 		t.Log("Removing hanging namespace...")
-		_, _, _ = e2e.Kubectl("delete", "namespace", "no-wait", "--force=true", "--wait=false", "--grace-period=0")
+		_, _, _ = e2e.Kubectl(t, "delete", "namespace", "no-wait", "--force=true", "--wait=false", "--grace-period=0")
 	}
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "helm-no-wait", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "helm-no-wait", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

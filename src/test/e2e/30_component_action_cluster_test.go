@@ -17,10 +17,10 @@ func TestComponentActionRemove(t *testing.T) {
 
 	packagePath := filepath.Join("build", fmt.Sprintf("zarf-package-component-actions-%s.tar.zst", e2e.Arch))
 
-	stdOut, stdErr, err := e2e.Zarf("package", "deploy", packagePath, "--confirm", "--components=on-remove")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", packagePath, "--confirm", "--components=on-remove")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", packagePath, "--confirm", "--components=on-remove")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", packagePath, "--confirm", "--components=on-remove")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "NAME")
 	require.Contains(t, stdErr, "DATA")
@@ -34,10 +34,10 @@ func TestComponentActionEdgeCases(t *testing.T) {
 	sourcePath := filepath.Join("src", "test", "packages", "31-component-actions-edgecases")
 	packagePath := fmt.Sprintf("zarf-package-component-actions-edgecases-%s.tar.zst", e2e.Arch)
 
-	stdOut, stdErr, err := e2e.Zarf("package", "create", sourcePath, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", sourcePath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(packagePath)
 
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", packagePath, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

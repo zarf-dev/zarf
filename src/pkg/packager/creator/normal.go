@@ -320,7 +320,10 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		}
 
 		if pc.createOpts.ViewSBOM {
-			sbom.ViewSBOMFiles(sbomDir)
+			err := sbom.ViewSBOMFiles(sbomDir)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

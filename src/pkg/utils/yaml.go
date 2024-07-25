@@ -20,12 +20,12 @@ import (
 	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/printer"
 	"github.com/pterm/pterm"
-	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 	k8syaml "sigs.k8s.io/yaml"
+
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 const yamlEscape = "\x1b"
@@ -93,7 +93,7 @@ func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) {
 		outputYAML = strings.Replace(outputYAML, key, value, 1)
 	}
 
-	if config.NoColor {
+	if !message.ColorEnabled() {
 		// If no color is specified strip any color codes from the output - https://regex101.com/r/YFyIwC/2
 		ansiRegex := regexp.MustCompile(`\x1b\[(.*?)m`)
 		outputYAML = ansiRegex.ReplaceAllString(outputYAML, "")

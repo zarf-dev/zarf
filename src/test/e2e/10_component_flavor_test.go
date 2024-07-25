@@ -46,7 +46,7 @@ func (suite *FlavorSuite) TearDownSuite() {
 func (suite *FlavorSuite) Test_0_FlavorExample() {
 	suite.T().Log("E2E: Package Flavor Example")
 
-	_, stdErr, err := e2e.Zarf("package", "create", flavorExample, "-o", "build", "--flavor", "oracle-cookie-crunch", "--no-color", "--confirm")
+	_, stdErr, err := e2e.Zarf(suite.T(), "package", "create", flavorExample, "-o", "build", "--flavor", "oracle-cookie-crunch", "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that the oracle image is included
@@ -64,7 +64,7 @@ func (suite *FlavorSuite) Test_0_FlavorExample() {
 func (suite *FlavorSuite) Test_1_FlavorArchFiltering() {
 	suite.T().Log("E2E: Package Flavor + Arch Filtering")
 
-	_, stdErr, err := e2e.Zarf("package", "create", flavorTest, "-o", "build", "--flavor", "vanilla", "-a", "amd64", "--no-color", "--confirm")
+	_, stdErr, err := e2e.Zarf(suite.T(), "package", "create", flavorTest, "-o", "build", "--flavor", "vanilla", "-a", "amd64", "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that the initial filter was applied
@@ -82,7 +82,7 @@ func (suite *FlavorSuite) Test_1_FlavorArchFiltering() {
 	suite.NotContains(stdErr, `chocolate-amd`)
 	suite.NotContains(stdErr, `chocolate-arm`)
 
-	_, stdErr, err = e2e.Zarf("package", "create", flavorTest, "-o", "build", "--flavor", "chocolate", "-a", "amd64", "--no-color", "--confirm")
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "create", flavorTest, "-o", "build", "--flavor", "chocolate", "-a", "amd64", "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that the initial filter was applied
@@ -100,7 +100,7 @@ func (suite *FlavorSuite) Test_1_FlavorArchFiltering() {
 	suite.NotContains(stdErr, `vanilla-amd`)
 	suite.NotContains(stdErr, `chocolate-arm`)
 
-	_, stdErr, err = e2e.Zarf("package", "create", flavorTest, "-o", "build", "--flavor", "chocolate", "-a", "arm64", "--no-color", "--confirm")
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "create", flavorTest, "-o", "build", "--flavor", "chocolate", "-a", "arm64", "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that the initial filter was applied
