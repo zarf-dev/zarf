@@ -112,7 +112,7 @@ type GitServerInfo struct {
 	Address      string `json:"address" jsonschema:"description=URL address of the git server"`
 }
 
-// IsInternal returns true if the git server has the Zarf init package git server URL
+// IsInternal returns true if the git server URL is equivalent to a git server deployed through the default init package
 func (gs GitServerInfo) IsInternal() bool {
 	return gs.Address == ZarfInClusterGitServiceURL
 }
@@ -158,8 +158,12 @@ type ArtifactServerInfo struct {
 	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the artifact registry"`
 	PushToken    string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the artifact registry"`
 
-	Address        string `json:"address" jsonschema:"description=URL address of the artifact registry"`
-	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a artifact registry that Zarf is directly managing"`
+	Address string `json:"address" jsonschema:"description=URL address of the artifact registry"`
+}
+
+// IsInternal returns true if the artifact server URL is equivalent to the artifact server deployed through the default init package
+func (as ArtifactServerInfo) IsInternal() bool {
+	return as.Address == ZarfInClusterArtifactServiceURL
 }
 
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
@@ -167,7 +171,6 @@ func (as *ArtifactServerInfo) FillInEmptyValues() {
 	// Set default svc url if an external registry was not provided
 	if as.Address == "" {
 		as.Address = ZarfInClusterArtifactServiceURL
-		as.InternalServer = true
 	}
 
 	// Set the push username to the git push user if not specified
@@ -182,12 +185,14 @@ type RegistryInfo struct {
 	PushPassword string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the registry"`
 	PullUsername string `json:"pullUsername" jsonschema:"description=Username of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used"`
 	PullPassword string `json:"pullPassword" jsonschema:"description=Password of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used"`
+	Address      string `json:"address" jsonschema:"description=URL address of the registry"`
+	NodePort     int    `json:"nodePort" jsonschema:"description=Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster"`
+	Secret       string `json:"secret" jsonschema:"description=Secret value that the registry was seeded with"`
+}
 
-	Address          string `json:"address" jsonschema:"description=URL address of the registry"`
-	NodePort         int    `json:"nodePort" jsonschema:"description=Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster"`
-	InternalRegistry bool   `json:"internalRegistry" jsonschema:"description=Indicates if we are using a registry that Zarf is directly managing"`
-
-	Secret string `json:"secret" jsonschema:"description=Secret value that the registry was seeded with"`
+// IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
+func (ri RegistryInfo) IsInternal() bool {
+	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
@@ -196,12 +201,6 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 	// Set default NodePort if none was provided
 	if ri.NodePort == 0 {
 		ri.NodePort = ZarfInClusterContainerRegistryNodePort
-	}
-
-	// Set default url if an external registry was not provided
-	if ri.Address == "" {
-		ri.InternalRegistry = true
-		ri.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
 	}
 
 	// Generate a push-user password if not provided by init flag
@@ -213,7 +212,7 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 
 	// Set pull-username if not provided by init flag
 	if ri.PullUsername == "" {
-		if ri.InternalRegistry {
+		if ri.IsInternal() {
 			ri.PullUsername = ZarfRegistryPullUser
 		} else {
 			// If this is an external registry and a pull-user wasn't provided, use the same credentials as the push user
@@ -221,7 +220,7 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 		}
 	}
 	if ri.PullPassword == "" {
-		if ri.InternalRegistry {
+		if ri.IsInternal() {
 			if ri.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}

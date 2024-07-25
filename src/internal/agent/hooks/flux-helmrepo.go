@@ -80,7 +80,7 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 
 	message.Debugf("original HelmRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 
-	patches := populateHelmRepoPatchOperations(patchedURL, zarfState.RegistryInfo.InternalRegistry)
+	patches := populateHelmRepoPatchOperations(patchedURL, zarfState.RegistryInfo.IsInternal())
 
 	patches = append(patches, getLabelPatch(src.Labels))
 

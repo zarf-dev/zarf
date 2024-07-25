@@ -236,7 +236,7 @@ var createPackageRegistryToken = &cobra.Command{
 		}
 
 		// If we are setup to use an internal artifact server, create the artifact registry token
-		if state.ArtifactServer.InternalServer {
+		if state.ArtifactServer.IsInternal() {
 			token, err := git.New(state.GitServer).CreatePackageRegistryToken(ctx)
 			if err != nil {
 				message.WarnErr(err, lang.CmdInternalArtifactRegistryGiteaTokenErr)
