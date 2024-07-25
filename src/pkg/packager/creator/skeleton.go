@@ -209,8 +209,6 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 	}
 
 	for filesIdx, file := range component.Files {
-		message.Debugf("Loading %#v", file)
-
 		if helpers.IsURL(file.Source) {
 			continue
 		}

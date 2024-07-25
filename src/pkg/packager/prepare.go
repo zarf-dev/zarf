@@ -255,8 +255,7 @@ func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, 
 				}
 
 				// Break the manifest into separate resources
-				contentString := string(contents)
-				message.Debugf("%s", contentString)
+				// TODO: Do not dogsled error
 				yamls, _ := utils.SplitYAML(contents)
 				resources = append(resources, yamls...)
 

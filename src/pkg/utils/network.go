@@ -40,7 +40,6 @@ func parseChecksum(src string) (string, string, error) {
 
 // DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary).
 func DownloadToFile(ctx context.Context, src string, dst string, cosignKeyPath string) (err error) {
-	message.Debugf("Downloading %s to %s", src, dst)
 	// check if the parsed URL has a checksum
 	// if so, remove it and use the checksum to validate the file
 	src, checksum, err := parseChecksum(src)

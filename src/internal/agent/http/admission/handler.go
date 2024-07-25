@@ -117,9 +117,6 @@ func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 			return
 		}
 
-		message.Debug("PATCH: ", string(admissionResponse.Response.Patch))
-		message.Debug("RESPONSE: ", string(jsonResponse))
-
 		message.Infof(lang.AgentInfoWebhookAllowed, r.URL.Path, review.Request.Operation, result.Allowed)
 		w.WriteHeader(http.StatusOK)
 		//nolint: errcheck // ignore

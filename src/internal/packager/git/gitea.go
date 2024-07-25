@@ -32,8 +32,6 @@ type CreateTokenResponse struct {
 
 // CreateReadOnlyUser uses the Gitea API to create a non-admin Zarf user.
 func (g *Git) CreateReadOnlyUser(ctx context.Context) error {
-	message.Debugf("git.CreateReadOnlyUser()")
-
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return err
@@ -119,8 +117,6 @@ func (g *Git) UpdateZarfGiteaUsers(ctx context.Context, oldState *types.ZarfStat
 
 // UpdateGitUser updates Zarf git server users
 func (g *Git) UpdateGitUser(ctx context.Context, oldAdminPass string, username string, userpass string) error {
-	message.Debugf("git.UpdateGitUser()")
-
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return err
@@ -157,8 +153,6 @@ func (g *Git) UpdateGitUser(ctx context.Context, oldAdminPass string, username s
 
 // CreatePackageRegistryToken uses the Gitea API to create a package registry token.
 func (g *Git) CreatePackageRegistryToken(ctx context.Context) (CreateTokenResponse, error) {
-	message.Debugf("git.CreatePackageRegistryToken()")
-
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return CreateTokenResponse{}, err
@@ -287,8 +281,6 @@ func UpdateGiteaPVC(ctx context.Context, shouldRollBack bool) (string, error) {
 
 // DoHTTPThings adds http request boilerplate and perform the request, checking for a successful response.
 func (g *Git) DoHTTPThings(request *netHttp.Request, username, secret string) ([]byte, int, error) {
-	message.Debugf("git.DoHttpThings()")
-
 	// Prep the request with boilerplate
 	client := &netHttp.Client{Timeout: time.Second * 20}
 	request.SetBasicAuth(username, secret)
@@ -312,8 +304,6 @@ func (g *Git) DoHTTPThings(request *netHttp.Request, username, secret string) ([
 }
 
 func (g *Git) addReadOnlyUserToRepo(tunnelURL, repo string) error {
-	message.Debugf("git.addReadOnlyUserToRepo()")
-
 	// Add the readonly user to the repo
 	addCollabBody := map[string]string{
 		"permission": "read",
