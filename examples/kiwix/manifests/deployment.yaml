@@ -6,6 +6,8 @@ metadata:
   labels:
     app: kiwix-serve
 spec:
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: kiwix-serve
