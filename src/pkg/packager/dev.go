@@ -6,21 +6,16 @@ package packager
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/fatih/color"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
-	"github.com/zarf-dev/zarf/src/pkg/packager/lint"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -58,8 +53,8 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := p.cfg.Pkg.Validate(); err != nil {
-		return fmt.Errorf("unable to validate package: %w", err)
+	if err := creator.Validate(p.cfg.Pkg, p.cfg.CreateOpts.BaseDir); err != nil {
+		return fmt.Errorf("package validation failed: %w", err)
 	}
 
 	if err := p.populatePackageVariableConfig(); err != nil {
@@ -109,70 +104,4 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 
 	// cd back
 	return os.Chdir(cwd)
-}
-
-// Lint ensures a package is valid & follows suggested conventions
-func (p *Packager) Lint(ctx context.Context) error {
-	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
-	}
-
-	if err := utils.ReadYaml(layout.ZarfYAML, &p.cfg.Pkg); err != nil {
-		return err
-	}
-
-	findings, err := lint.Validate(ctx, p.cfg.Pkg, p.cfg.CreateOpts)
-	if err != nil {
-		return fmt.Errorf("linting failed: %w", err)
-	}
-
-	if len(findings) == 0 {
-		message.Successf("0 findings for %q", p.cfg.Pkg.Metadata.Name)
-		return nil
-	}
-
-	mapOfFindingsByPath := lint.GroupFindingsByPath(findings, types.SevWarn, p.cfg.Pkg.Metadata.Name)
-
-	header := []string{"Type", "Path", "Message"}
-
-	for _, findings := range mapOfFindingsByPath {
-		lintData := [][]string{}
-		for _, finding := range findings {
-			lintData = append(lintData, []string{
-				colorWrapSev(finding.Severity),
-				message.ColorWrap(finding.YqPath, color.FgCyan),
-				itemizedDescription(finding.Description, finding.Item),
-			})
-		}
-		var packagePathFromUser string
-		if helpers.IsOCIURL(findings[0].PackagePathOverride) {
-			packagePathFromUser = findings[0].PackagePathOverride
-		} else {
-			packagePathFromUser = filepath.Join(p.cfg.CreateOpts.BaseDir, findings[0].PackagePathOverride)
-		}
-		message.Notef("Linting package %q at %s", findings[0].PackageNameOverride, packagePathFromUser)
-		message.Table(header, lintData)
-	}
-
-	if lint.HasSeverity(findings, types.SevErr) {
-		return errors.New("errors during lint")
-	}
-
-	return nil
-}
-
-func itemizedDescription(description string, item string) string {
-	if item == "" {
-		return description
-	}
-	return fmt.Sprintf("%s - %s", description, item)
-}
-
-func colorWrapSev(s types.Severity) string {
-	if s == types.SevErr {
-		return message.ColorWrap("Error", color.FgRed)
-	} else if s == types.SevWarn {
-		return message.ColorWrap("Warning", color.FgYellow)
-	}
-	return "unknown"
 }

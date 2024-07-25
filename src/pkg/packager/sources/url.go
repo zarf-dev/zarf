@@ -30,7 +30,7 @@ type URLSource struct {
 }
 
 // Collect downloads a package from the source URL.
-func (s *URLSource) Collect(_ context.Context, dir string) (string, error) {
+func (s *URLSource) Collect(ctx context.Context, dir string) (string, error) {
 	if !config.CommonOptions.Insecure && s.Shasum == "" && !strings.HasPrefix(s.PackageSource, helpers.SGETURLPrefix) {
 		return "", fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
 	}
@@ -43,7 +43,7 @@ func (s *URLSource) Collect(_ context.Context, dir string) (string, error) {
 
 	dstTarball := filepath.Join(dir, "zarf-package-url-unknown")
 
-	if err := utils.DownloadToFile(packageURL, dstTarball, s.SGetKeyPath); err != nil {
+	if err := utils.DownloadToFile(ctx, packageURL, dstTarball, s.SGetKeyPath); err != nil {
 		return "", err
 	}
 

@@ -118,7 +118,6 @@ func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, 
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
-
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
 			continue
@@ -163,7 +162,6 @@ func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, 
 		}
 
 		for _, chart := range component.Charts {
-
 			helmCfg := helm.New(
 				chart,
 				componentPaths.Charts,
@@ -185,7 +183,7 @@ func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, 
 			}
 
 			// Generate helm templates for this chart
-			chartTemplate, chartValues, err := helmCfg.TemplateChart()
+			chartTemplate, chartValues, err := helmCfg.TemplateChart(ctx)
 			if err != nil {
 				message.WarnErrf(err, "Problem rendering the helm template for %s: %s", chart.Name, err.Error())
 				erroredCharts = append(erroredCharts, chart.Name)
@@ -233,7 +231,7 @@ func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, 
 				if helpers.IsURL(f) {
 					mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
 					destination := filepath.Join(componentPaths.Manifests, mname)
-					if err := utils.DownloadToFile(f, destination, component.DeprecatedCosignKeyPath); err != nil {
+					if err := utils.DownloadToFile(ctx, f, destination, component.DeprecatedCosignKeyPath); err != nil {
 						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 					}
 					f = destination
@@ -257,8 +255,7 @@ func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, 
 				}
 
 				// Break the manifest into separate resources
-				contentString := string(contents)
-				message.Debugf("%s", contentString)
+				// TODO: Do not dogsled error
 				yamls, _ := utils.SplitYAML(contents)
 				resources = append(resources, yamls...)
 

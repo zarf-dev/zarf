@@ -74,7 +74,6 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 	if err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
-
 	warnings = append(warnings, composeWarnings...)
 
 	// After components are composed, template the active package.
@@ -119,7 +118,7 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 		}
 	}
 
-	if err := pkg.Validate(); err != nil {
+	if err := Validate(pkg, pc.createOpts.BaseDir); err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
 
@@ -321,7 +320,10 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		}
 
 		if pc.createOpts.ViewSBOM {
-			sbom.ViewSBOMFiles(sbomDir)
+			err := sbom.ViewSBOMFiles(sbomDir)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -370,8 +372,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component types.Zarf
 	}
 
 	for filesIdx, file := range component.Files {
-		message.Debugf("Loading %#v", file)
-
 		rel := filepath.Join(layout.FilesDir, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(componentPaths.Base, rel)
 		destinationDir := filepath.Dir(dst)
@@ -387,7 +387,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component types.Zarf
 				compressedFile := filepath.Join(componentPaths.Temp, compressedFileName)
 
 				// If the file is an archive, download it to the componentPath.Temp
-				if err := utils.DownloadToFile(file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(ctx, file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 
@@ -396,7 +396,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component types.Zarf
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
 				}
 			} else {
-				if err := utils.DownloadToFile(file.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(ctx, file.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 			}
@@ -447,7 +447,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component types.Zarf
 			dst := filepath.Join(componentPaths.Base, rel)
 
 			if helpers.IsURL(data.Source) {
-				if err := utils.DownloadToFile(data.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(ctx, data.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 				}
 			} else {
@@ -480,7 +480,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component types.Zarf
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", path)
 				if helpers.IsURL(path) {
-					if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
+					if err := utils.DownloadToFile(ctx, path, dst, component.DeprecatedCosignKeyPath); err != nil {
 						return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 					}
 				} else {

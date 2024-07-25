@@ -120,7 +120,6 @@ func readFluxImages(localPath string) (images []string, err error) {
 			for _, container := range pod.Containers {
 				images = append(images, container.Image)
 			}
-
 		}
 	}
 

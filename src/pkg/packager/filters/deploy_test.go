@@ -111,7 +111,6 @@ func componentMatrix(_ *testing.T) []types.ZarfComponent {
 }
 
 func TestDeployFilter_Apply(t *testing.T) {
-
 	possibilities := componentMatrix(t)
 
 	tests := map[string]struct {

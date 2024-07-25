@@ -20,7 +20,7 @@ func TestCreateSBOM(t *testing.T) {
 
 	pkgName := fmt.Sprintf("zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
 
-	stdOut, stdErr, err := e2e.Zarf("package", "create", "examples/dos-games", "--sbom-out", sbomPath, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "--sbom-out", sbomPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Creating SBOMs for 1 images and 0 components with files.")
 	// Test that the game package generates the SBOMs we expect (images only)
@@ -31,7 +31,7 @@ func TestCreateSBOM(t *testing.T) {
 	// Clean the SBOM path so it is force to be recreated
 	e2e.CleanFiles(sbomPath)
 
-	stdOut, stdErr, err = e2e.Zarf("package", "inspect", pkgName, "--sbom-out", sbomPath)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName, "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 	// Test that the game package generates the SBOMs we expect (images only)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-docker.io_defenseunicorns_zarf-game_multi-tile-dark.html"))
@@ -41,17 +41,17 @@ func TestCreateSBOM(t *testing.T) {
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "docker.io_defenseunicorns_zarf-game_multi-tile-dark.json"))
 	require.NoError(t, err)
 
-	stdOut, _, err = e2e.Zarf("package", "inspect", pkgName, "--list-images")
+	stdOut, _, err = e2e.Zarf(t, "package", "inspect", pkgName, "--list-images")
 	require.NoError(t, err)
 	require.Equal(t, "- defenseunicorns/zarf-game:multi-tile-dark\n", stdOut)
 
 	// Pull the current zarf binary version to find the corresponding init package
-	version, stdErr, err := e2e.Zarf("version")
+	version, stdErr, err := e2e.Zarf(t, "version")
 	require.NoError(t, err, version, stdErr)
 
 	initName := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", e2e.Arch, strings.TrimSpace(version))
 
-	stdOut, stdErr, err = e2e.Zarf("package", "inspect", initName, "--sbom-out", sbomPath)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", initName, "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 	// Test that we preserve the filepath
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-docker.io_defenseunicorns_zarf-game_multi-tile-dark.html"))

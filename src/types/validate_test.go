@@ -39,29 +39,15 @@ func TestZarfPackageValidate(t *testing.T) {
 			expectedErrs: nil,
 		},
 		{
-			name: "no components",
-			pkg: ZarfPackage{
-				Kind: ZarfPackageConfig,
-				Metadata: ZarfMetadata{
-					Name: "empty-components",
-				},
-				Components: []ZarfComponent{},
-			},
-			expectedErrs: []string{"package must have at least 1 component"},
-		},
-		{
 			name: "invalid package",
 			pkg: ZarfPackage{
 				Kind: ZarfPackageConfig,
 				Metadata: ZarfMetadata{
-					Name: "-invalid-package",
+					Name: "invalid-package",
 				},
 				Components: []ZarfComponent{
 					{
-						Name: "-invalid",
-						Only: ZarfComponentOnlyTarget{
-							LocalOS: "unsupportedOS",
-						},
+						Name:     "invalid",
 						Required: helpers.BoolPtr(true),
 						Default:  true,
 						Charts: []ZarfChart{
@@ -95,15 +81,7 @@ func TestZarfPackageValidate(t *testing.T) {
 						Name: "duplicate",
 					},
 				},
-				Variables: []variables.InteractiveVariable{
-					{
-						Variable: variables.Variable{Name: "not_uppercase"},
-					},
-				},
 				Constants: []variables.Constant{
-					{
-						Name: "not_uppercase",
-					},
 					{
 						Name:    "BAD",
 						Pattern: "^good_val$",
@@ -112,13 +90,8 @@ func TestZarfPackageValidate(t *testing.T) {
 				},
 			},
 			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrPkgName, "-invalid-package"),
-				fmt.Errorf(lang.PkgValidateErrVariable, fmt.Errorf(lang.PkgValidateMustBeUppercase, "not_uppercase")).Error(),
-				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantName, "not_uppercase")).Error(),
 				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantPattern, "BAD", "^good_val$")).Error(),
-				fmt.Sprintf(lang.PkgValidateErrComponentName, "-invalid"),
-				fmt.Sprintf(lang.PkgValidateErrComponentLocalOS, "-invalid", "unsupportedOS", supportedOS),
-				fmt.Sprintf(lang.PkgValidateErrComponentReqDefault, "-invalid"),
+				fmt.Sprintf(lang.PkgValidateErrComponentReqDefault, "invalid"),
 				fmt.Sprintf(lang.PkgValidateErrChartNameNotUnique, "chart1"),
 				fmt.Sprintf(lang.PkgValidateErrManifestNameNotUnique, "manifest1"),
 				fmt.Sprintf(lang.PkgValidateErrComponentReqGrouped, "required-in-group"),
@@ -188,11 +161,6 @@ func TestValidateManifest(t *testing.T) {
 			expectedErrs: nil,
 		},
 		{
-			name:         "empty name",
-			manifest:     ZarfManifest{Name: "", Files: []string{"a-file"}},
-			expectedErrs: []string{lang.PkgValidateErrManifestNameMissing},
-		},
-		{
 			name:         "long name",
 			manifest:     ZarfManifest{Name: longName, Files: []string{"a-file"}},
 			expectedErrs: []string{fmt.Sprintf(lang.PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength)},
@@ -232,11 +200,6 @@ func TestValidateChart(t *testing.T) {
 			expectedErrs: nil,
 		},
 		{
-			name:         "empty name",
-			chart:        ZarfChart{Name: "", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
-			expectedErrs: []string{lang.PkgValidateErrChartNameMissing},
-		},
-		{
 			name:  "long name",
 			chart: ZarfChart{Name: longName, Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
 			expectedErrs: []string{
@@ -244,7 +207,7 @@ func TestValidateChart(t *testing.T) {
 			},
 		},
 		{
-			name:  "no url or local path",
+			name:  "no url, local path, version, or namespace",
 			chart: ZarfChart{Name: "invalid"},
 			expectedErrs: []string{
 				fmt.Sprintf(lang.PkgValidateErrChartNamespaceMissing, "invalid"),

@@ -53,14 +53,13 @@ func (h *Helm) PackageChart(ctx context.Context, cosignKeyPath string) error {
 				return fmt.Errorf("unable to pull the chart %q from git: %w", h.chart.Name, err)
 			}
 		} else {
-			err = h.DownloadPublishedChart(cosignKeyPath)
+			err = h.DownloadPublishedChart(ctx, cosignKeyPath)
 			if err != nil {
 				return fmt.Errorf("unable to download the published chart %q: %w", h.chart.Name, err)
 			}
 		}
-
 	} else {
-		err := h.PackageChartFromLocalFiles(cosignKeyPath)
+		err := h.PackageChartFromLocalFiles(ctx, cosignKeyPath)
 		if err != nil {
 			return fmt.Errorf("unable to package the %q chart: %w", h.chart.Name, err)
 		}
@@ -69,7 +68,7 @@ func (h *Helm) PackageChart(ctx context.Context, cosignKeyPath string) error {
 }
 
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
-func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
+func (h *Helm) PackageChartFromLocalFiles(ctx context.Context, cosignKeyPath string) error {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.chart.Name, h.chart.Version, h.chart.LocalPath)
 	defer spinner.Stop()
 
@@ -103,7 +102,7 @@ func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 	}
 
 	// Finalize the chart
-	err = h.finalizeChartPackage(saved, cosignKeyPath)
+	err = h.finalizeChartPackage(ctx, saved, cosignKeyPath)
 	if err != nil {
 		return err
 	}
@@ -127,11 +126,11 @@ func (h *Helm) PackageChartFromGit(ctx context.Context, cosignKeyPath string) er
 
 	// Set the directory for the chart and package it
 	h.chart.LocalPath = filepath.Join(gitPath, h.chart.GitPath)
-	return h.PackageChartFromLocalFiles(cosignKeyPath)
+	return h.PackageChartFromLocalFiles(ctx, cosignKeyPath)
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
-func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
+func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string) error {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.chart.Name, h.chart.Version, h.chart.URL)
 	defer spinner.Stop()
 
@@ -222,7 +221,7 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 	}
 
 	// Finalize the chart
-	err = h.finalizeChartPackage(saved, cosignKeyPath)
+	err = h.finalizeChartPackage(ctx, saved, cosignKeyPath)
 	if err != nil {
 		return err
 	}
@@ -246,7 +245,7 @@ func DownloadChartFromGitToTemp(ctx context.Context, url string, spinner *messag
 	return gitCfg.GitPath, nil
 }
 
-func (h *Helm) finalizeChartPackage(saved, cosignKeyPath string) error {
+func (h *Helm) finalizeChartPackage(ctx context.Context, saved, cosignKeyPath string) error {
 	// Ensure the name is consistent for deployments
 	destinationTarball := StandardName(h.chartPath, h.chart) + ".tgz"
 	err := os.Rename(saved, destinationTarball)
@@ -254,19 +253,19 @@ func (h *Helm) finalizeChartPackage(saved, cosignKeyPath string) error {
 		return fmt.Errorf("unable to save the final chart tarball: %w", err)
 	}
 
-	err = h.packageValues(cosignKeyPath)
+	err = h.packageValues(ctx, cosignKeyPath)
 	if err != nil {
 		return fmt.Errorf("unable to process the values for the package: %w", err)
 	}
 	return nil
 }
 
-func (h *Helm) packageValues(cosignKeyPath string) error {
+func (h *Helm) packageValues(ctx context.Context, cosignKeyPath string) error {
 	for valuesIdx, path := range h.chart.ValuesFiles {
 		dst := StandardValuesName(h.valuesPath, h.chart, valuesIdx)
 
 		if helpers.IsURL(path) {
-			if err := utils.DownloadToFile(path, dst, cosignKeyPath); err != nil {
+			if err := utils.DownloadToFile(ctx, path, dst, cosignKeyPath); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 			}
 		} else {

@@ -7,7 +7,6 @@ package creator
 import (
 	"context"
 
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/composer"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -37,7 +36,6 @@ func ComposeComponents(ctx context.Context, pkg types.ZarfPackage, flavor string
 		if err != nil {
 			return types.ZarfPackage{}, nil, err
 		}
-		message.Debugf("%s", chain)
 
 		// migrate any deprecated component configurations now
 		warning := chain.Migrate(pkg.Build)

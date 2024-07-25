@@ -99,8 +99,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 					return err
 				}
 
-				message.Debugf("push %s -> %s)", refInfo.Reference, offlineNameCRC)
-
 				if err = pushImage(img, offlineNameCRC); err != nil {
 					return err
 				}

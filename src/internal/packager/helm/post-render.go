@@ -37,9 +37,7 @@ type renderer struct {
 	namespaces     map[string]*corev1.Namespace
 }
 
-func (h *Helm) newRenderer() (*renderer, error) {
-	message.Debugf("helm.NewRenderer()")
-
+func (h *Helm) newRenderer(ctx context.Context) (*renderer, error) {
 	rend := &renderer{
 		Helm:           h,
 		connectStrings: types.ConnectStrings{},
@@ -49,7 +47,7 @@ func (h *Helm) newRenderer() (*renderer, error) {
 		return rend, nil
 	}
 
-	namespace, err := h.cluster.Clientset.CoreV1().Namespaces().Get(context.TODO(), h.chart.Namespace, metav1.GetOptions{})
+	namespace, err := h.cluster.Clientset.CoreV1().Namespaces().Get(ctx, h.chart.Namespace, metav1.GetOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return nil, fmt.Errorf("unable to check for existing namespace %q in cluster: %w", h.chart.Namespace, err)
 	}
@@ -125,7 +123,6 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		return err
 	}
 	for name, namespace := range r.namespaces {
-
 		// Check to see if this namespace already exists
 		var existingNamespace bool
 		for _, serverNamespace := range namespaceList.Items {
@@ -205,7 +202,6 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			if err != nil {
 				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
 			}
-
 		}
 	}
 	return nil
@@ -285,6 +281,10 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 					return err
 				}
 				resource, err := dc.Resource(mapping.Resource).Namespace(deployedNamespace).Get(ctx, rawData.GetName(), metav1.GetOptions{})
+				// Ignore resources that are yet to be created
+				if kerrors.IsNotFound(err) {
+					return nil
+				}
 				if err != nil {
 					return err
 				}
@@ -308,7 +308,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 				return nil
 			}()
 			if err != nil {
-				message.Debugf("Unable to adopt resource %s: %s", rawData.GetName(), err.Error())
+				return fmt.Errorf("unable to adopt the resource %s: %w", rawData.GetName(), err)
 			}
 		}
 		// Finally place this back onto the output buffer

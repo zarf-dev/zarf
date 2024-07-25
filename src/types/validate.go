@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
-	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -43,20 +42,6 @@ func (pkg ZarfPackage) Validate() error {
 	var err error
 	if pkg.Kind == ZarfInitConfig && pkg.Metadata.YOLO {
 		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrInitNoYOLO))
-	}
-
-	if !IsLowercaseNumberHyphenNoStartHyphen(pkg.Metadata.Name) {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrPkgName, pkg.Metadata.Name))
-	}
-
-	if len(pkg.Components) == 0 {
-		err = errors.Join(err, fmt.Errorf("package must have at least 1 component"))
-	}
-
-	for _, variable := range pkg.Variables {
-		if varErr := variable.Validate(); varErr != nil {
-			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrVariable, varErr))
-		}
 	}
 
 	for _, constant := range pkg.Constants {
@@ -95,14 +80,6 @@ func (pkg ZarfPackage) Validate() error {
 			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentNameNotUnique, component.Name))
 		}
 		uniqueComponentNames[component.Name] = true
-
-		if !IsLowercaseNumberHyphenNoStartHyphen(component.Name) {
-			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentName, component.Name))
-		}
-
-		if !slices.Contains(supportedOS, component.Only.LocalOS) {
-			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentLocalOS, component.Name, component.Only.LocalOS, supportedOS))
-		}
 
 		if component.IsRequired() {
 			if component.Default {
@@ -241,7 +218,6 @@ func (as ZarfComponentActionSet) Validate() error {
 			if actionErr := action.Validate(); actionErr != nil {
 				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrAction, actionErr))
 			}
-
 		}
 	}
 
@@ -255,9 +231,6 @@ func (as ZarfComponentActionSet) Validate() error {
 // Validate runs all validation checks on an action.
 func (action ZarfComponentAction) Validate() error {
 	var err error
-	for _, variable := range action.SetVariables {
-		err = errors.Join(err, variable.Validate())
-	}
 
 	if action.Wait != nil {
 		// Validate only cmd or wait, not both
@@ -282,10 +255,6 @@ func (action ZarfComponentAction) Validate() error {
 // Validate runs all validation checks on a chart.
 func (chart ZarfChart) Validate() error {
 	var err error
-
-	if chart.Name == "" {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartNameMissing))
-	}
 
 	if len(chart.Name) > ZarfMaxChartNameLength {
 		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartName, chart.Name, ZarfMaxChartNameLength))
@@ -314,10 +283,6 @@ func (chart ZarfChart) Validate() error {
 // Validate runs all validation checks on a manifest.
 func (manifest ZarfManifest) Validate() error {
 	var err error
-
-	if manifest.Name == "" {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifestNameMissing))
-	}
 
 	if len(manifest.Name) > ZarfMaxChartNameLength {
 		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))

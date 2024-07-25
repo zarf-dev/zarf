@@ -107,23 +107,15 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 
 	// If the temp directory is not set, set it to the default
 	if pkgr.layout == nil {
-		if err = pkgr.setTempDirectory(config.CommonOptions.TempDirectory); err != nil {
+		dir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
 			return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 		}
+		message.Debug("Using temporary directory:", dir)
+		pkgr.layout = layout.New(dir)
 	}
 
 	return pkgr, nil
-}
-
-// setTempDirectory sets the temp directory for the packager.
-func (p *Packager) setTempDirectory(path string) error {
-	dir, err := utils.MakeTempDir(path)
-	if err != nil {
-		return fmt.Errorf("unable to create package temp paths: %w", err)
-	}
-
-	p.layout = layout.New(dir)
-	return nil
 }
 
 // ClearTempPaths removes the temp directory and any files within it.
@@ -170,7 +162,6 @@ func (p *Packager) hasImages() bool {
 // attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
 // NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
 func (p *Packager) attemptClusterChecks(ctx context.Context) (err error) {
-
 	spinner := message.NewProgressSpinner("Gathering additional cluster information (if available)")
 	defer spinner.Stop()
 
@@ -192,7 +183,10 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) (err error) {
 	// Check for any breaking changes between the initialized Zarf version and this CLI
 	if existingInitPackage, _ := p.cluster.GetDeployedPackage(ctx, "init"); existingInitPackage != nil {
 		// Use the build version instead of the metadata since this will support older Zarf versions
-		deprecated.PrintBreakingChanges(os.Stderr, existingInitPackage.Data.Build.Version, config.CLIVersion)
+		err := deprecated.PrintBreakingChanges(os.Stderr, existingInitPackage.Data.Build.Version, config.CLIVersion)
+		if err != nil {
+			return err
+		}
 	}
 
 	spinner.Success()
