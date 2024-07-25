@@ -101,6 +101,11 @@ func Execute(ctx context.Context) {
 	os.Exit(1)
 }
 
+// NewRootCmd returns the root command.
+func NewRootCmd() *cobra.Command {
+	return rootCmd
+}
+
 func init() {
 	// Add the tools commands
 	tools.Include(rootCmd)
