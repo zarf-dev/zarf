@@ -19,32 +19,32 @@ func TestChecksumAndSignature(t *testing.T) {
 	privateKeyFlag := "--signing-key=src/test/packages/zarf-test.prv-key"
 	publicKeyFlag := "--key=src/test/packages/zarf-test.pub"
 
-	stdOut, stdErr, err := e2e.Zarf("package", "create", testPackageDirPath, privateKeyFlag, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", testPackageDirPath, privateKeyFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(pkgName)
 
 	/* Test operations during package inspect */
 	// Test that we can inspect the yaml of the package without the private key
-	stdOut, stdErr, err = e2e.Zarf("package", "inspect", pkgName)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName)
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Test that we don't get an error when we remember to provide the public key
-	stdOut, stdErr, err = e2e.Zarf("package", "inspect", pkgName, publicKeyFlag)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName, publicKeyFlag)
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Verified OK")
 
 	/* Test operations during package deploy */
 	// Test that we get an error when trying to deploy a package without providing the public key
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", pkgName, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgName, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "failed to deploy package: unable to load the package: package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
 
 	// Test that we don't get an error when we remember to provide the public key
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", pkgName, publicKeyFlag, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgName, publicKeyFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Zarf deployment complete")
 
 	// Remove the package
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", pkgName, publicKeyFlag, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", pkgName, publicKeyFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

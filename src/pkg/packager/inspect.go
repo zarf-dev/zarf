@@ -47,7 +47,10 @@ func (p *Packager) Inspect(ctx context.Context) (err error) {
 	}
 
 	if p.cfg.InspectOpts.ViewSBOM {
-		sbom.ViewSBOMFiles(sbomDir)
+		err := sbom.ViewSBOMFiles(sbomDir)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
