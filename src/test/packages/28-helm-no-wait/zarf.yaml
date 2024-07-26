@@ -13,4 +13,4 @@ components:
         files:
           - never-ready.pod.yaml
     images:
-      - alpine:latest
+      - ghcr.io/stefanprodan/podinfo:6.4.0
