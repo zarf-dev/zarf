@@ -45,8 +45,7 @@ func (g *Git) PushRepo(srcURL, targetFolder string) error {
 
 	repo, err := g.prepRepoForPush()
 	if err != nil {
-		message.Warnf("error when prepping the repo for push.. %v", err)
-		return err
+		return fmt.Errorf("could not prepare the repo for push: %w", err)
 	}
 
 	if err := g.push(repo, spinner); err != nil {
@@ -64,14 +63,11 @@ func (g *Git) PushRepo(srcURL, targetFolder string) error {
 		remoteURL := remote.Config().URLs[0]
 		repoName, err := transform.GitURLtoRepoName(remoteURL)
 		if err != nil {
-			message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
 			return err
 		}
-
 		err = g.addReadOnlyUserToRepo(g.Server.Address, repoName)
 		if err != nil {
-			message.Warnf("Unable to add the read-only user to the repo: %s\n", repoName)
-			return err
+			return fmt.Errorf("unable to add the read only user to the repo %s: %w", repoName, err)
 		}
 	}
 

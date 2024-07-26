@@ -13,7 +13,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 
@@ -82,8 +81,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		path := fmt.Sprintf("/spec/initContainers/%d/image", idx)
 		replacement, err := transform.ImageTransformHost(registryURL, container.Image)
 		if err != nil {
-			message.Warnf(lang.AgentErrImageSwap, container.Image)
-			continue // Continue, because we might as well attempt to mutate the other containers for this pod
+			return nil, err
 		}
 		updatedAnnotations[getImageAnnotationKey(container.Name)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
@@ -94,8 +92,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		path := fmt.Sprintf("/spec/ephemeralContainers/%d/image", idx)
 		replacement, err := transform.ImageTransformHost(registryURL, container.Image)
 		if err != nil {
-			message.Warnf(lang.AgentErrImageSwap, container.Image)
-			continue // Continue, because we might as well attempt to mutate the other containers for this pod
+			return nil, err
 		}
 		updatedAnnotations[getImageAnnotationKey(container.Name)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
@@ -106,8 +103,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		path := fmt.Sprintf("/spec/containers/%d/image", idx)
 		replacement, err := transform.ImageTransformHost(registryURL, container.Image)
 		if err != nil {
-			message.Warnf(lang.AgentErrImageSwap, container.Image)
-			continue // Continue, because we might as well attempt to mutate the other containers for this pod
+			return nil, err
 		}
 		updatedAnnotations[getImageAnnotationKey(container.Name)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))

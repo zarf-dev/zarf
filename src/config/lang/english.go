@@ -611,7 +611,6 @@ const (
 	AgentErrGetState               = "failed to load zarf state: %w"
 	AgentErrParsePod               = "failed to parse pod: %w"
 	AgentErrHostnameMatch          = "failed to complete hostname matching: %w"
-	AgentErrImageSwap              = "Unable to swap the host for (%s)"
 	AgentErrInvalidMethod          = "invalid method only POST requests are allowed"
 	AgentErrInvalidOp              = "invalid operation: %s"
 	AgentErrInvalidType            = "only content type 'application/json' is supported"
