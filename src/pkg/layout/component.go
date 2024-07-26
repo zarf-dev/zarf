@@ -38,12 +38,6 @@ type Components struct {
 // ErrNotLoaded is returned when a path is not loaded.
 var ErrNotLoaded = fmt.Errorf("not loaded")
 
-// IsNotLoaded checks if an error is ErrNotLoaded.
-func IsNotLoaded(err error) bool {
-	u, ok := err.(*fs.PathError)
-	return ok && u.Unwrap() == ErrNotLoaded
-}
-
 // Archive archives a component.
 func (c *Components) Archive(component types.ZarfComponent, cleanupTemp bool) (err error) {
 	name := component.Name

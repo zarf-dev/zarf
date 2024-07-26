@@ -36,7 +36,7 @@ func (s *SplitTarballSource) Collect(_ context.Context, dir string) (string, err
 	pattern := strings.Replace(s.PackageSource, ".part000", ".part*", 1)
 	fileList, err := filepath.Glob(pattern)
 	if err != nil {
-		return "", fmt.Errorf("unable to find split tarball files: %s", err)
+		return "", fmt.Errorf("unable to find split tarball files: %w", err)
 	}
 
 	// Ensure the files are in order so they are appended in the correct order
@@ -46,7 +46,7 @@ func (s *SplitTarballSource) Collect(_ context.Context, dir string) (string, err
 	// Create the new package
 	pkgFile, err := os.Create(reassembled)
 	if err != nil {
-		return "", fmt.Errorf("unable to create new package file: %s", err)
+		return "", fmt.Errorf("unable to create new package file: %w", err)
 	}
 	defer pkgFile.Close()
 

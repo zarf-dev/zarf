@@ -6,6 +6,7 @@ package helm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -307,18 +308,20 @@ func (h *Helm) buildChartDependencies() error {
 
 	// Build the deps from the helm chart
 	err = man.Build()
-	if e, ok := err.(downloader.ErrRepoNotFound); ok {
+	var notFoundErr *downloader.ErrRepoNotFound
+	if errors.As(err, &notFoundErr) {
 		// If we encounter a repo not found error point the user to `zarf tools helm repo add`
-		message.Warnf("%s. Please add the missing repo(s) via the following:", e.Error())
-		for _, repository := range e.Repos {
+		message.Warnf("%s. Please add the missing repo(s) via the following:", notFoundErr.Error())
+		for _, repository := range notFoundErr.Repos {
 			message.ZarfCommand(fmt.Sprintf("tools helm repo add <your-repo-name> %s", repository))
 		}
-	} else if err != nil {
-		// Warn the user of any issues but don't fail - any actual issues will cause a fail during packaging (e.g. the charts we are building may exist already, we just can't get updates)
+		return err
+	}
+	if err != nil {
 		message.ZarfCommand("tools helm dependency build --verify")
 		message.Warnf("Unable to perform a rebuild of Helm dependencies: %s", err.Error())
+		return err
 	}
-
 	return nil
 }
 
