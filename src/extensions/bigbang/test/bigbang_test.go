@@ -186,7 +186,10 @@ func getReleases() (latest, previous string, err error) {
 
 	// Iterate over the tags returned by the API, and filter out tags that don't match the regular expression
 	for _, tag := range data {
-		name := tag["name"].(string)
+		name, ok := tag["name"].(string)
+		if !ok {
+			return "", "", fmt.Errorf("name key is not of type string")
+		}
 		if re.MatchString(name) {
 			releases = append(releases, name)
 		}

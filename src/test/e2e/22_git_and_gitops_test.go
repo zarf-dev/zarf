@@ -86,7 +86,8 @@ func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 	var bodyMap map[string]interface{}
 	err = json.Unmarshal(getRepoResponseBody, &bodyMap)
 	require.NoError(t, err)
-	permissionsMap := bodyMap["permissions"].(map[string]interface{})
+	permissionsMap, ok := bodyMap["permissions"].(map[string]interface{})
+	require.True(t, ok, "permissions key is not of right type")
 	require.False(t, permissionsMap["admin"].(bool))
 	require.False(t, permissionsMap["push"].(bool))
 	require.True(t, permissionsMap["pull"].(bool))

@@ -1,0 +1,14 @@
+kind: ZarfPackageConfig
+metadata:
+  name: templating
+
+constants:
+  - name: PODINFO_VERSION
+    value: "###ZARF_PKG_TMPL_PODINFO_VERSION###"
+    pattern: "^[\\w\\-\\.]+$"
+
+components:
+  - name: variables-with-podinfo
+    images:
+      # This sets the nginx image tag to the same PKG_TMPL used for the constant above to keep the zarf.yaml and nginx-deployment.yaml in sync
+      - "ghcr.io/stefanprodan/podinfo:###ZARF_PKG_TMPL_PODINFO_VERSION###"

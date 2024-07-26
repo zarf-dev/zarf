@@ -110,7 +110,6 @@ retryCmd:
 			for _, v := range action.SetVariables {
 				variableConfig.SetVariable(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
 				if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
-					message.WarnErr(err, err.Error())
 					return err
 				}
 			}
