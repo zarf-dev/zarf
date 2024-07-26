@@ -15,6 +15,7 @@ linters:
     - nolintlint
     - testifylint
     - whitespace
+    - errorlint
 linters-settings:
   govet:
     enable-all: true
