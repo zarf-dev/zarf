@@ -107,10 +107,3 @@ brews:
     commit_msg_template: "build(release): {{ .ProjectName }}@{{ .Tag }}"
     homepage: "https://zarf.dev/"
     description: "DevSecOps for Air Gap"
-
-# Upload artifact backups to s3
-blobs:
-  - provider: s3
-    region: us-gov-west-1
-    bucket: zarf-public
-    directory: "release/{{.Version}}"
