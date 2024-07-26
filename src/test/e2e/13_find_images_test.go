@@ -48,20 +48,22 @@ func TestFindImages(t *testing.T) {
 
 	t.Run("zarf dev find-images with helm or manifest vars", func(t *testing.T) {
 		t.Parallel()
-		registry := "coolregistry.gov"
+		registry := "zarf.dev"
 		agentTag := "test"
 
-		stdOut, _, err := e2e.Zarf(t, "prepare", "find-images", ".", "--registry-url", registry, "--create-set", fmt.Sprintf("agent_image_tag=%s", agentTag))
+		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", ".", "--registry-url", registry, "--create-set", fmt.Sprintf("agent_image_tag=%s", agentTag), "--skip-cosign")
+
 		require.NoError(t, err)
 		internalRegistryImage := fmt.Sprintf("%s/%s:%s", registry, "zarf-dev/zarf/agent", agentTag)
-		require.Contains(t, stdOut, internalRegistryImage, "registry image should be found with registry url")
-		require.Contains(t, stdOut, "busybox:latest", "Busybox image should be found as long as helm chart doesn't error")
+		require.Contains(t, stdOut, internalRegistryImage)
+		// busybox image is in git init package
+		require.Contains(t, stdOut, "busybox:latest")
 
-		path := filepath.Join("src", "test", "packages", "00-find-images-with-vars")
-		stdOut, _, err = e2e.Zarf(t, "prepare", "find-images", path, "--deploy-set", "BUSYBOX_IMAGE=busybox:earliest")
+		path := filepath.Join("src", "test", "packages", "13-find-images-with-vars")
+		stdOut, _, err = e2e.Zarf(t, "dev", "find-images", path, "--deploy-set", "PODINFO_IMAGE=zarf.dev/podinfo:latest", "--skip-cosign")
 		require.NoError(t, err)
-		require.Contains(t, stdOut, "nginx:latest", "Manifests aren't interpreting vars")
-		require.Contains(t, stdOut, "busybox:earliest", "Values files aren't interpreting vars")
+		require.Contains(t, stdOut, "ghcr.io/zarf-dev/zarf/agent:v0.36.1")
+		require.Contains(t, stdOut, "zarf.dev/podinfo:latest")
 	})
 
 	t.Run("zarf test find images --why w/ helm chart success", func(t *testing.T) {

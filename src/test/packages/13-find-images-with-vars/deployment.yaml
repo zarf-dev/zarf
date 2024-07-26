@@ -15,5 +15,5 @@ spec:
         app: simple-deployment
     spec:
       containers:
-        - name: busybox
-          image: {{.Values.busybox}}
+        - name: server
+          image: "###ZARF_CONST_AGENT_IMAGE###"
