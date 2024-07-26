@@ -149,7 +149,7 @@ func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues 
 	if h.kubeVersion != "" {
 		parsedKubeVersion, err := chartutil.ParseKubeVersion(h.kubeVersion)
 		if err != nil {
-			return "", nil, fmt.Errorf("invalid kube version '%s': %s", h.kubeVersion, err)
+			return "", nil, fmt.Errorf("invalid kube version %s: %w", h.kubeVersion, err)
 		}
 		client.KubeVersion = parsedKubeVersion
 	}
@@ -392,13 +392,13 @@ func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 		// parse to unstructured to have access to more data than just the name
 		rawData := &unstructured.Unstructured{}
 		if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
-			return fmt.Errorf("failed to unmarshal manifest: %#v", err)
+			return fmt.Errorf("failed to unmarshal manifest: %w", err)
 		}
 
 		rawData, manifestModified, _ := handleDeprecations(rawData, *kubeGitVersion)
 		manifestContent, err := yaml.Marshal(rawData)
 		if err != nil {
-			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %#v", err)
+			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %w", err)
 		}
 
 		// If this is not a bad object, place it back into the manifest

@@ -50,12 +50,12 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c type
 	validVersionResponse, err := isValidVersion(cfg.Version)
 
 	if err != nil {
-		return c, fmt.Errorf("invalid Big Bang version: %s, parsing issue %s", cfg.Version, err)
+		return c, fmt.Errorf("could not parse the Big Bang version %s: %w", cfg.Version, err)
 	}
 
 	// Make sure the version is valid.
 	if !validVersionResponse {
-		return c, fmt.Errorf("invalid Big Bang version: %s, must be at least %s", cfg.Version, bbMinRequiredVersion)
+		return c, fmt.Errorf("Big Bang version %s must be at least %s", cfg.Version, bbMinRequiredVersion)
 	}
 
 	// Print the banner for Big Bang.
