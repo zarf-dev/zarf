@@ -153,9 +153,8 @@ func (gs *GitServerInfo) FillInEmptyValues() error {
 
 // ArtifactServerInfo contains information Zarf uses to communicate with a artifact registry to push/pull repositories to.
 type ArtifactServerInfo struct {
-	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the artifact registry"`
-	PushToken    string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the artifact registry"`
-
+	PushUsername   string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the artifact registry"`
+	PushToken      string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the artifact registry"`
 	Address        string `json:"address" jsonschema:"description=URL address of the artifact registry"`
 	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a artifact registry that Zarf is directly managing"`
 }

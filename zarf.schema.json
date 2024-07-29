@@ -528,7 +528,7 @@
         },
         "maxTotalSeconds": {
           "type": "integer",
-          "description": "Timeout in seconds for the command (default to 0"
+          "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 300, 5 minutes for wait actions)"
         },
         "maxRetries": {
           "type": "integer",
@@ -589,7 +589,7 @@
         },
         "maxTotalSeconds": {
           "type": "integer",
-          "description": "Default timeout in seconds for commands (default to 0"
+          "description": "Default timeout in seconds for commands (default to 0, no timeout)"
         },
         "maxRetries": {
           "type": "integer",
@@ -702,7 +702,7 @@
         },
         "condition": {
           "type": "string",
-          "description": "The condition or jsonpath state to wait for; defaults to exist",
+          "description": "The condition or jsonpath state to wait for; defaults to exist, a special condition that will wait for the resource to exist",
           "examples": [
             "Ready",
             "Available"
@@ -806,7 +806,7 @@
             "pattern": "###ZARF_PKG_TMPL_"
           },
           "type": "string",
-          "description": "The relative path to a directory containing a zarf.yaml to import from"
+          "description": "For further explanation see https://regex101.com/r/nxX8vx/1"
         },
         "url": {
           "not": {
@@ -814,7 +814,7 @@
           },
           "type": "string",
           "pattern": "^oci://.*$",
-          "description": "[beta] The URL to a Zarf package to import via OCI"
+          "description": "For further explanation see https://regex101.com/r/nxX8vx/1\n[beta] The URL to a Zarf package to import via OCI"
         }
       },
       "additionalProperties": false,
@@ -927,7 +927,7 @@
         },
         "compress": {
           "type": "boolean",
-          "description": "Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image."
+          "description": "Compress the data before transmitting using gzip. Note: this requires support for tar/gzip locally and in the target image."
         }
       },
       "additionalProperties": false,
