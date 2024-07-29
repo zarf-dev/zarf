@@ -64,7 +64,7 @@ changelog:
 # NOTE: We are explicitly adding the init-packages that are built prior to GoReleaser stage in the GitHub Actions workflow
 release:
   github:
-    owner: defenseunicorns
+    owner: zarf-dev
     name: zarf
   prerelease: auto
   mode: append
