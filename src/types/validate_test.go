@@ -186,17 +186,82 @@ func TestValidateManifest(t *testing.T) {
 	}
 }
 
+func TestValidateReleaseName(t *testing.T) {
+	tests := []struct {
+		name           string
+		chartName      string
+		releaseName    string
+		expectError    bool
+		errorSubstring string
+	}{
+		{
+			name:        "valid releaseName with hyphens",
+			chartName:   "chart",
+			releaseName: "valid-release-hyphenated",
+			expectError: false,
+		},
+		{
+			name:        "valid releaseName with numbers",
+			chartName:   "chart",
+			releaseName: "valid-0470",
+			expectError: false,
+		},
+		{
+			name:           "invalid releaseName with periods",
+			chartName:      "chart",
+			releaseName:    "namedwithperiods-a.b.c",
+			expectError:    true,
+			errorSubstring: "invalid release name 'namedwithperiods-a.b.c'",
+		},
+		{
+			name:        "empty releaseName, valid chartName",
+			chartName:   "valid-chart",
+			releaseName: "",
+			expectError: false,
+		},
+		{
+			name:           "empty releaseName and chartName",
+			chartName:      "",
+			releaseName:    "",
+			expectError:    true,
+			errorSubstring: errChartReleaseNameEmpty,
+		},
+		{
+			name:           "empty releaseName, invalid chartName",
+			chartName:      "invalid_chart!",
+			releaseName:    "",
+			expectError:    true,
+			errorSubstring: "invalid release name 'invalid_chart!'",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateReleaseName(tt.chartName, tt.releaseName)
+			if tt.expectError {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.errorSubstring)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestValidateChart(t *testing.T) {
 	t.Parallel()
 	longName := strings.Repeat("a", ZarfMaxChartNameLength+1)
 	tests := []struct {
+		name         string
 		chart        ZarfChart
 		expectedErrs []string
-		name         string
+		partialMatch bool
 	}{
 		{
 			name:         "valid",
-			chart:        ZarfChart{Name: "chart1", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
+			chart:        ZarfChart{Name: "chart1", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0", ReleaseName: "this-is-valid"},
 			expectedErrs: nil,
 		},
 		{
@@ -222,6 +287,22 @@ func TestValidateChart(t *testing.T) {
 				fmt.Sprintf(lang.PkgValidateErrChartURLOrPath, "invalid"),
 			},
 		},
+		{
+			name:         "invalid releaseName",
+			chart:        ZarfChart{ReleaseName: "namedwithperiods-0.47.0", Name: "releaseName", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
+			expectedErrs: []string{"invalid release name 'namedwithperiods-0.47.0'"},
+			partialMatch: true,
+		},
+		{
+			name:         "missing releaseName fallsback to name",
+			chart:        ZarfChart{Name: "chart3", Namespace: "namespace", URL: "http://whatever", Version: "v1.0.0"},
+			expectedErrs: nil,
+		},
+		{
+			name:         "missing name and releaseName",
+			chart:        ZarfChart{Namespace: "namespace", URL: "http://whatever", Version: "v1.0.0"},
+			expectedErrs: []string{errChartReleaseNameEmpty},
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -232,8 +313,16 @@ func TestValidateChart(t *testing.T) {
 				require.NoError(t, err)
 				return
 			}
-			errs := strings.Split(err.Error(), "\n")
-			require.ElementsMatch(t, tt.expectedErrs, errs)
+			require.Error(t, err)
+			errString := err.Error()
+			if tt.partialMatch {
+				for _, expectedErr := range tt.expectedErrs {
+					require.Contains(t, errString, expectedErr)
+				}
+			} else {
+				errs := strings.Split(errString, "\n")
+				require.ElementsMatch(t, tt.expectedErrs, errs)
+			}
 		})
 	}
 }
