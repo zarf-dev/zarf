@@ -21,7 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent"
-	"github.com/zarf-dev/zarf/src/internal/packager/git"
+	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
@@ -232,8 +232,29 @@ var createReadOnlyGiteaUser = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if err = git.New(state.GitServer).CreateReadOnlyUser(cmd.Context()); err != nil {
-			return fmt.Errorf("unable to create a read only user in Gitea: %w", err)
+		tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+		if err != nil {
+			return err
+		}
+		_, err = tunnel.Connect(cmd.Context())
+		if err != nil {
+			return err
+		}
+		defer tunnel.Close()
+		tunnelURL := tunnel.HTTPEndpoint()
+		giteaClient, err := gitea.NewClient(tunnelURL, state.GitServer.PushUsername, state.GitServer.PushPassword)
+		if err != nil {
+			return err
+		}
+		err = tunnel.Wrap(func() error {
+			err = giteaClient.CreateReadOnlyUser(cmd.Context(), state.GitServer.PullUsername, state.GitServer.PullPassword)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return err
 		}
 		return nil
 	},
@@ -255,17 +276,37 @@ var createPackageRegistryToken = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if !state.ArtifactServer.InternalServer {
-			return nil
-		}
-		token, err := git.New(state.GitServer).CreatePackageRegistryToken(ctx)
-		if err != nil {
-			return fmt.Errorf("unable to create an artifact registry token for Gitea: %w", err)
-		}
-		state.ArtifactServer.PushToken = token.Sha1
-		err = c.SaveZarfState(ctx, state)
-		if err != nil {
-			return err
+
+		// If we are setup to use an internal artifact server, create the artifact registry token
+		if state.ArtifactServer.InternalServer {
+			tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+			if err != nil {
+				return err
+			}
+			_, err = tunnel.Connect(cmd.Context())
+			if err != nil {
+				return err
+			}
+			defer tunnel.Close()
+			tunnelURL := tunnel.HTTPEndpoint()
+			giteaClient, err := gitea.NewClient(tunnelURL, state.GitServer.PushUsername, state.GitServer.PushPassword)
+			if err != nil {
+				return err
+			}
+			err = tunnel.Wrap(func() error {
+				tokenSha1, err := giteaClient.CreatePackageRegistryToken(ctx)
+				if err != nil {
+					return fmt.Errorf("unable to create an artifact registry token for Gitea: %w", err)
+				}
+				state.ArtifactServer.PushToken = tokenSha1
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			if err := c.SaveZarfState(ctx, state); err != nil {
+				return err
+			}
 		}
 		return nil
 	},
@@ -275,16 +316,21 @@ var updateGiteaPVC = &cobra.Command{
 	Use:   "update-gitea-pvc",
 	Short: lang.CmdInternalUpdateGiteaPVCShort,
 	Long:  lang.CmdInternalUpdateGiteaPVCLong,
-	Run: func(cmd *cobra.Command, _ []string) {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
+		pvcName := os.Getenv("ZARF_VAR_GIT_SERVER_EXISTING_PVC")
 
+		c, err := cluster.NewCluster()
+		if err != nil {
+			return err
+		}
 		// There is a possibility that the pvc does not yet exist and Gitea helm chart should create it
-		helmShouldCreate, err := git.UpdateGiteaPVC(ctx, rollback)
+		helmShouldCreate, err := c.UpdateGiteaPVC(ctx, pvcName, rollback)
 		if err != nil {
 			message.WarnErr(err, lang.CmdInternalUpdateGiteaPVCErr)
 		}
-
 		fmt.Print(helmShouldCreate)
+		return nil
 	},
 }
 
