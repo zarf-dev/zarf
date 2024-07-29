@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -171,7 +172,7 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 	onRemove := c.Actions.OnRemove
 	onFailure := func() {
 		if err := actions.Run(ctx, onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
-			message.Debugf("Unable to run the failure action: %s", err)
+			logging.FromContextOrDiscard(ctx).Error("unable to run the failure action", "error", err)
 		}
 	}
 

@@ -28,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -138,7 +139,7 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 
 		onFailure := func() {
 			if err := actions.Run(ctx, onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
-				message.Debugf("unable to run component failure action: %s", err.Error())
+				logging.FromContextOrDiscard(ctx).Debug("unable to run component failure action", "error", err)
 			}
 		}
 
@@ -213,10 +214,10 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 
 	// Ignore SBOM creation if the flag is set.
 	if skipSBOMFlagUsed {
-		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
+		logging.FromContextOrDiscard(ctx).Debug("Skipping image SBOm processing per --skip-sbom flag")
 	} else {
 		dst.AddSBOMs()
-		if err := sbom.Catalog(componentSBOMs, sbomImageList, dst); err != nil {
+		if err := sbom.Catalog(ctx, componentSBOMs, sbomImageList, dst); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}

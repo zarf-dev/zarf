@@ -5,6 +5,7 @@
 package template
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"log/slog"
@@ -16,6 +17,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
@@ -41,7 +43,7 @@ func GetZarfVariableConfig() *variables.VariableConfig {
 }
 
 // GetZarfTemplates returns the template keys and values to be used for templating.
-func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap map[string]*variables.TextTemplate, err error) {
+func GetZarfTemplates(ctx context.Context, componentName string, state *types.ZarfState) (templateMap map[string]*variables.TextTemplate, err error) {
 	templateMap = make(map[string]*variables.TextTemplate)
 
 	if state != nil {
@@ -100,7 +102,7 @@ func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap
 		}
 	}
 
-	debugPrintTemplateMap(templateMap)
+	debugPrintTemplateMap(ctx, templateMap)
 
 	return templateMap, nil
 }
@@ -125,7 +127,7 @@ func generateHtpasswd(regInfo *types.RegistryInfo) (string, error) {
 	return "", nil
 }
 
-func debugPrintTemplateMap(templateMap map[string]*variables.TextTemplate) {
+func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) {
 	debugText := "templateMap = { "
 
 	for key, template := range templateMap {
@@ -137,6 +139,5 @@ func debugPrintTemplateMap(templateMap map[string]*variables.TextTemplate) {
 	}
 
 	debugText += " }"
-
-	message.Debug(debugText)
+	logging.FromContextOrDiscard(ctx).Debug(debugText)
 }

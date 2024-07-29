@@ -63,7 +63,7 @@ var initCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig, packager.WithSource(src))
 		if err != nil {
 			return err
 		}

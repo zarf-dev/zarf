@@ -315,9 +315,8 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a ar
 $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a skeleton`
 	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
 
-	CmdPackageChoose                = "Choose or type the package file"
-	CmdPackageClusterSourceFallback = "%q does not satisfy any current sources, assuming it is a package deployed to a cluster"
-	CmdPackageInvalidSource         = "Unable to identify source from %q: %s"
+	CmdPackageChoose        = "Choose or type the package file"
+	CmdPackageInvalidSource = "Unable to identify source from %q: %s"
 
 	// zarf dev (prepare is an alias for dev)
 	CmdDevShort = "Commands useful for developing packages"

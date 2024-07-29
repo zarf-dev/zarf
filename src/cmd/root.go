@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"slices"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -87,6 +89,10 @@ var rootCmd = &cobra.Command{
 
 // Execute is the entrypoint for the CLI.
 func Execute(ctx context.Context) {
+	handler := logging.NewPtermHandler()
+	log := slog.New(handler)
+	ctx = logging.NewContext(ctx, log)
+
 	cmd, err := rootCmd.ExecuteContextC(ctx)
 	if err == nil {
 		return

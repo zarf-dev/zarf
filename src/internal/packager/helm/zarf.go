@@ -112,7 +112,7 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 					Value: agentImage.Tag,
 				},
 			})
-			applicationTemplates, err := template.GetZarfTemplates("zarf-agent", h.state)
+			applicationTemplates, err := template.GetZarfTemplates(ctx, "zarf-agent", h.state)
 			if err != nil {
 				return fmt.Errorf("error setting up the templates: %w", err)
 			}

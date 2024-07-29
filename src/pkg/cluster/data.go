@@ -15,16 +15,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/avast/retry-go/v4"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/avast/retry-go/v4"
-	"github.com/defenseunicorns/pkg/helpers/v2"
-
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
@@ -33,6 +33,8 @@ import (
 // HandleDataInjection waits for the target pod(s) to come up and inject the data into them
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now.
 func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDataInjection, componentPath *layout.ComponentPaths, dataIdx int) error {
+	log := logging.FromContextOrDiscard(ctx)
+
 	injectionCompletionMarker := filepath.Join(componentPath.DataInjections, config.GetDataInjectionMarker())
 	if err := os.WriteFile(injectionCompletionMarker, []byte("🦄"), helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("unable to create the data injection completion marker: %w", err)
@@ -60,7 +62,7 @@ func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDat
 		return fmt.Errorf("unable to execute tar, ensure it is installed in the $PATH: %w", err)
 	}
 
-	message.Debugf("Attempting to inject data into %s", data.Target)
+	log.Debug("Attempting to inject data", "target", data.Target)
 
 	source := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
 	if helpers.InvalidPath(source) {
@@ -171,6 +173,8 @@ type podFilter func(pod corev1.Pod) bool
 // If the timeout is reached, an empty list will be returned.
 // TODO: Test, refactor and/or remove.
 func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interface, target podLookup, include podFilter) ([]corev1.Pod, error) {
+	log := logging.FromContextOrDiscard(ctx)
+
 	readyPods, err := retry.DoWithData(func() ([]corev1.Pod, error) {
 		listOpts := metav1.ListOptions{
 			LabelSelector: target.Selector,
@@ -179,7 +183,7 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 		if err != nil {
 			return nil, err
 		}
-		message.Debugf("Found %d pods for target %#v", len(podList.Items), target)
+		log.Debug("found pods for container", "count", len(podList.Items), "target", target)
 		// Sort the pods from newest to oldest
 		sort.Slice(podList.Items, func(i, j int) bool {
 			return podList.Items[i].CreationTimestamp.After(podList.Items[j].CreationTimestamp.Time)
@@ -187,7 +191,7 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 
 		readyPods := []corev1.Pod{}
 		for _, pod := range podList.Items {
-			message.Debugf("Testing pod %q", pod.Name)
+			log.Debug("testing pod", "pod", pod.Name)
 
 			// If an include function is provided, only keep pods that return true
 			if include != nil && !include(pod) {
@@ -196,7 +200,7 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 
 			// Handle container targeting
 			if target.Container != "" {
-				message.Debugf("Testing pod %q for container %q", pod.Name, target.Container)
+				log.Debug("testing pod for container", "pod", pod.Name, "container", target.Container)
 
 				// Check the status of initContainers for a running match
 				for _, initContainer := range pod.Status.InitContainerStatuses {
@@ -218,7 +222,7 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 				}
 			} else {
 				status := pod.Status.Phase
-				message.Debugf("Testing pod %q phase, want (%q) got (%q)", pod.Name, corev1.PodRunning, status)
+				log.Debug("testing pod phase", "pod", pod.Name, "wanted", corev1.PodRunning, "got", status)
 				// Regular status checking without a container
 				if status == corev1.PodRunning {
 					readyPods = append(readyPods, pod)

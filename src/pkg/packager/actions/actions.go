@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
@@ -205,7 +206,7 @@ func convertWaitToCmd(_ context.Context, wait v1alpha1.ZarfComponentActionWait, 
 }
 
 // Perform some basic string mutations to make commands more useful.
-func actionCmdMutation(_ context.Context, cmd string, shellPref v1alpha1.Shell) (string, error) {
+func actionCmdMutation(ctx context.Context, cmd string, shellPref v1alpha1.Shell) (string, error) {
 	zarfCommand, err := utils.GetFinalExecutableCommand()
 	if err != nil {
 		return cmd, err
@@ -227,7 +228,7 @@ func actionCmdMutation(_ context.Context, cmd string, shellPref v1alpha1.Shell) 
 		get, err := helpers.MatchRegex(envVarRegex, cmd)
 		if err == nil {
 			newCmd := strings.ReplaceAll(cmd, get("envIndicator"), fmt.Sprintf("$Env:%s", get("varName")))
-			message.Debugf("Converted command \"%s\" to \"%s\" t", cmd, newCmd)
+			logging.FromContextOrDiscard(ctx).Debug("converted command", "old", cmd, "new", newCmd)
 			cmd = newCmd
 		}
 	}
@@ -278,7 +279,7 @@ func actionGetCfg(_ context.Context, cfg v1alpha1.ZarfComponentActionDefaults, a
 func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cmd string, shellPref v1alpha1.Shell, spinner *message.Spinner) (string, error) {
 	shell, shellArgs := exec.GetOSShell(shellPref)
 
-	message.Debugf("Running command in %s: %s", shell, cmd)
+	logging.FromContextOrDiscard(ctx).Debug("running command", "shell", shell, "command", cmd)
 
 	execCfg := exec.Config{
 		Env: cfg.Env,
@@ -293,7 +294,7 @@ func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cm
 	out, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, append(shellArgs, cmd)...)
 	// Dump final complete output (respect mute to prevent sensitive values from hitting the logs).
 	if !cfg.Mute {
-		message.Debug(cmd, out, errOut)
+		logging.FromContextOrDiscard(ctx).Debug(cmd, "stdout", out, "stderr", errOut)
 	}
 
 	return out, err

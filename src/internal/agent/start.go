@@ -58,7 +58,7 @@ func StartWebhook(ctx context.Context, cluster *cluster.Cluster) error {
 // StartHTTPProxy launches the zarf agent proxy in the cluster.
 func StartHTTPProxy(ctx context.Context, cluster *cluster.Cluster) error {
 	mux := http.NewServeMux()
-	mux.Handle("/", agentHttp.ProxyHandler(cluster))
+	mux.Handle("/", agentHttp.ProxyHandler(ctx, cluster))
 	return startServer(ctx, httpPort, mux)
 }
 

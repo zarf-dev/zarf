@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -198,7 +199,7 @@ func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, stateRe
 	// If this is an internal service then we need to look it up and
 	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, stateRegistryAddress)
 	if err != nil {
-		message.Debugf("registry appears to not be a nodeport service, using original address %q", stateRegistryAddress)
+		logging.FromContextOrDiscard(ctx).Debug("registry appears to not be a node port service, using original address", "address", stateRegistryAddress)
 		return stateRegistryAddress, nil
 	}
 

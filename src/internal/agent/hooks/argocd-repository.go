@@ -91,7 +91,6 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 			return nil, fmt.Errorf("unable the git url: %w", err)
 		}
 		patchedURL = transformedURL.String()
-		message.Debugf("original url of (%s) got mutated to (%s)", repoCreds.URL, patchedURL)
 	}
 
 	patches := populateArgoRepositoryPatchOperations(patchedURL, state.GitServer)

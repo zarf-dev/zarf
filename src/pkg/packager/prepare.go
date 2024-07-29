@@ -29,6 +29,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -75,6 +76,8 @@ func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) 
 
 // TODO: Refactor to return output string instead of printing inside of function.
 func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) {
+	log := logging.FromContextOrDiscard(ctx)
+
 	for _, component := range p.cfg.Pkg.Components {
 		if len(component.Repos) > 0 && p.cfg.FindImagesOpts.RepoHelmChartPath == "" {
 			message.Note("This Zarf package contains git repositories, " +
@@ -140,7 +143,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 		if err != nil {
 			return nil, err
 		}
-		err = p.populateComponentAndStateTemplates(component.Name)
+		err = p.populateComponentAndStateTemplates(ctx, component.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -288,10 +291,10 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			for _, image := range sortedExpectedImages {
 				if descriptor, err := crane.Head(image, images.WithGlobalInsecureFlag()...); err != nil {
 					// Test if this is a real image, if not just quiet log to debug, this is normal
-					message.Debugf("Suspected image does not appear to be valid: %#v", err)
+					log.Error("Suspected image does not appear to be valid", "error", err)
 				} else {
 					// Otherwise, add to the list of images
-					message.Debugf("Imaged digest found: %s", descriptor.Digest)
+					log.Debug("Image digest found", "digest", descriptor.Digest)
 					validImages = append(validImages, image)
 				}
 			}
@@ -395,7 +398,6 @@ func processUnstructuredImages(resource *unstructured.Unstructured, matchedImage
 		// Capture any custom images
 		matches := imageCheck.FindAllStringSubmatch(string(b), -1)
 		for _, group := range matches {
-			message.Debugf("Found unknown match, Kind: %s, Value: %s", resource.GetKind(), group[1])
 			matchedImages[group[1]] = true
 		}
 	}
@@ -403,7 +405,6 @@ func processUnstructuredImages(resource *unstructured.Unstructured, matchedImage
 	// Capture "maybe images" too for all kinds because they might be in unexpected places.... 👀
 	matches := imageFuzzyCheck.FindAllStringSubmatch(string(b), -1)
 	for _, group := range matches {
-		message.Debugf("Found possible fuzzy match, Kind: %s, Value: %s", resource.GetKind(), group[1])
 		maybeImages[group[1]] = true
 	}
 

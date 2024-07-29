@@ -12,15 +12,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	autoscalingV2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -181,7 +182,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 	var componentWebhooks map[string]map[string]types.Webhook
 	existingPackageSecret, err := c.GetDeployedPackage(ctx, packageName)
 	if err != nil {
-		message.Debugf("Unable to fetch existing secret for package '%s': %s", packageName, err.Error())
+		logging.FromContextOrDiscard(ctx).Debug("unable to fetch existing secret for package", "package", packageName, "error", err)
 	}
 	if existingPackageSecret != nil {
 		componentWebhooks = existingPackageSecret.ComponentWebhooks

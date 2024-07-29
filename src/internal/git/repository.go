@@ -18,6 +18,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -146,6 +147,8 @@ func (r *Repository) Path() string {
 
 // Push pushes the repository to the remote git server.
 func (r *Repository) Push(ctx context.Context, address, username, password string) error {
+	log := logging.FromContextOrDiscard(ctx)
+
 	repo, err := git.PlainOpen(r.path)
 	if err != nil {
 		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
@@ -194,11 +197,11 @@ func (r *Repository) Push(ctx context.Context, address, username, password strin
 	}
 	err = repo.FetchContext(ctx, fetchOptions)
 	if errors.Is(err, transport.ErrRepositoryNotFound) {
-		message.Debugf("Repo not yet available offline, skipping fetch...")
+		log.Debug("repository not yet available offling, skipping fetch")
 	} else if errors.Is(err, git.ErrForceNeeded) {
-		message.Debugf("Repo fetch requires force, skipping fetch...")
+		log.Debug("repositoy fetch requires force, skipping fetch")
 	} else if errors.Is(err, git.NoErrAlreadyUpToDate) {
-		message.Debugf("Repo already up-to-date, skipping fetch...")
+		log.Debug("repository already update-to date, skipping fetch")
 	} else if err != nil {
 		return fmt.Errorf("unable to fetch the git repo prior to push: %w", err)
 	}
@@ -216,7 +219,7 @@ func (r *Repository) Push(ctx context.Context, address, username, password strin
 		},
 	})
 	if errors.Is(err, git.NoErrAlreadyUpToDate) {
-		message.Debug("Repo already up-to-date")
+		logging.FromContextOrDiscard(ctx).Debug("Repository already up-to-date")
 	} else if errors.Is(err, plumbing.ErrObjectNotFound) {
 		return fmt.Errorf("unable to push repo due to likely shallow clone: %s", err.Error())
 	} else if err != nil {

@@ -16,7 +16,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 )
@@ -51,8 +50,6 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		return nil, err
 	}
 
-	message.Debugf("Using the url of (%s) to mutate the flux repository", state.GitServer.Address)
-
 	repo := flux.GitRepository{}
 	if err = json.Unmarshal(r.Object.Raw, &repo); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
@@ -78,7 +75,6 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			return nil, fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
 		}
 		patchedURL = transformedURL.String()
-		message.Debugf("original git URL of (%s) got mutated to (%s)", repo.Spec.URL, patchedURL)
 	}
 
 	// Patch updates of the repo spec

@@ -193,8 +193,7 @@ func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinn
 	// Establish a new actionConfig for the namespace.
 	_ = h.createActionConfig(namespace, spinner)
 	// Perform the uninstall.
-	response, err := h.uninstallChart(name)
-	message.Debug(response)
+	_, err := h.uninstallChart(name)
 	return err
 }
 

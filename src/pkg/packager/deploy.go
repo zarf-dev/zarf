@@ -33,6 +33,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -48,7 +49,7 @@ var (
 func (p *Packager) resetRegistryHPA(ctx context.Context) {
 	if p.isConnectedToCluster() && p.hpaModified {
 		if err := p.cluster.EnableRegHPAScaleDown(ctx); err != nil {
-			message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
+			logging.FromContextOrDiscard(ctx).Error("Unable to reenable the registry HPA scale down", "error", err)
 		}
 	}
 }
@@ -139,6 +140,8 @@ func (p *Packager) Deploy(ctx context.Context) error {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []types.DeployedComponent, err error) {
+	log := logging.FromContextOrDiscard(ctx)
+
 	// Process all the components we are deploying
 	for _, component := range p.cfg.Pkg.Components {
 		// Connect to cluster if a component requires it.
@@ -170,7 +173,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 		if p.isConnectedToCluster() {
 			deployedComponent.InstalledCharts, err = p.cluster.GetInstalledChartsForComponent(ctx, p.cfg.Pkg.Metadata.Name, component)
 			if err != nil {
-				message.Debugf("Unable to fetch installed Helm charts for component '%s': %s", component.Name, err.Error())
+				log.Debug("unable to fetch installed Helm charts for the component", "component", component.Name, "error", err)
 			}
 		}
 
@@ -180,7 +183,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 		// Update the package secret to indicate that we are attempting to deploy this component
 		if p.isConnectedToCluster() {
 			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, packageGeneration, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
-				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+				log.Debug("unable to record package deployment for component", "component", component.Name, "error", err)
 			}
 		}
 
@@ -197,7 +200,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 
 		onFailure := func() {
 			if err := actions.Run(ctx, onDeploy.Defaults, onDeploy.OnFailure, p.variableConfig); err != nil {
-				message.Debugf("unable to run component failure action: %s", err.Error())
+				log.Debug("unable to run component failure action", "error", err)
 			}
 		}
 
@@ -208,7 +211,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 			deployedComponents[idx].Status = types.ComponentStatusFailed
 			if p.isConnectedToCluster() {
 				if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, packageGeneration, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
-					message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+					log.Debug("unable to record package deployment for component", "component", component.Name, "error", err)
 				}
 			}
 
@@ -220,7 +223,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 		if p.isConnectedToCluster() {
 			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, packageGeneration, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
-				message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+				log.Debug("unable to record package deployment for component", "component", component.Name, "error", err)
 			}
 		}
 
@@ -288,6 +291,8 @@ func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.Z
 
 // Deploy a Zarf Component.
 func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
+	log := logging.FromContextOrDiscard(ctx)
+
 	// Toggles for general deploy operations
 	componentPath := p.layout.Components.Dirs[component.Name]
 
@@ -314,14 +319,14 @@ func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfC
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
 		if hasImages && !p.hpaModified && p.state.RegistryInfo.IsInternal() {
 			if err := p.cluster.DisableRegHPAScaleDown(ctx); err != nil {
-				message.Debugf("unable to disable the registry HPA scale down: %s", err.Error())
+				log.Error("Unable to disable the registry HPA scale down", "error", err.Error())
 			} else {
 				p.hpaModified = true
 			}
 		}
 	}
 
-	err = p.populateComponentAndStateTemplates(component.Name)
+	err = p.populateComponentAndStateTemplates(ctx, component.Name)
 	if err != nil {
 		return charts, err
 	}
@@ -505,8 +510,8 @@ func (p *Packager) setupState(ctx context.Context) (err error) {
 	return nil
 }
 
-func (p *Packager) populateComponentAndStateTemplates(componentName string) error {
-	applicationTemplates, err := template.GetZarfTemplates(componentName, p.state)
+func (p *Packager) populateComponentAndStateTemplates(ctx context.Context, componentName string) error {
+	applicationTemplates, err := template.GetZarfTemplates(ctx, componentName, p.state)
 	if err != nil {
 		return err
 	}
