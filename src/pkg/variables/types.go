@@ -30,47 +30,47 @@ var (
 // Variable represents a variable that has a value set programmatically
 type Variable struct {
 	// The name to be used for the variable
-	Name string `jsonschema:"required,pattern=^[A-Z0-9_]+$"`
+	Name string `json:"name" jsonschema:"required,pattern=^[A-Z0-9_]+$"`
 	// Whether to mark this variable as sensitive to not print it in the log
-	Sensitive bool
+	Sensitive bool `json:"sensitive"`
 	// Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_.
-	AutoIndent bool
+	AutoIndent bool `json:"autoIndent"`
 	// An optional regex pattern that a variable value must match before a package deployment can continue.
-	Pattern string
+	Pattern string `json:"pattern"`
 	// Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)
-	Type VariableType `jsonschema:"enum=raw,enum=file"`
+	Type VariableType `json:"type" jsonschema:"enum=raw,enum=file"`
 }
 
 // InteractiveVariable is a variable that can be used to prompt a user for more information
 type InteractiveVariable struct {
 	Variable
 	// A description of the variable to be used when prompting the user a value
-	Description string
+	Description string `json:"description"`
 	// The default value to use for the variable
-	Default string
+	Default string `json:"default"`
 	// Whether to prompt the user for input for this variable
-	Prompt bool
+	Prompt bool `json:"prompt"`
 }
 
 // Constant are constants that can be used to dynamically template K8s resources or run in actions.
 type Constant struct {
 	// The name to be used for the constant
-	Name string `jsonschema:"required,pattern=^[A-Z0-9_]+$"`
+	Name string `json:"name" jsonschema:"required,pattern=^[A-Z0-9_]+$"`
 	// The value to set for the constant during deploy
-	Value string `jsonschema:"required"`
+	Value string `json:"value" jsonschema:"required"`
 	// A description of the constant to explain its purpose on package create or deploy confirmation prompts
-	Description string
+	Description string `json:"description"`
 	// Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_CONST_.
-	AutoIndent bool
+	AutoIndent bool `json:"autoIndent"`
 	// An optional regex pattern that a constant value must match before a package can be created.
-	Pattern string
+	Pattern string `json:"pattern"`
 }
 
 // SetVariable tracks internal variables that have been set during this run of Zarf
 type SetVariable struct {
 	Variable
 	// The value the variable is currently set with
-	Value string `jsonschema:"required"`
+	Value string `json:"value" jsonschema:"required"`
 }
 
 // Validate runs all validation checks on a package constant.
