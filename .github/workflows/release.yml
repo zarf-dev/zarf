@@ -63,7 +63,7 @@ jobs:
 
       - name: Publish Init Package as OCI and Skeleton
         run: |
-          make publish-init-package ARCH=amd64 REPOSITORY_URL=ghcr.io/zerf-dev/packages
+          make publish-init-package ARCH=amd64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
           make publish-init-package ARCH=arm64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
 
       # Create a CVE report based on this build
