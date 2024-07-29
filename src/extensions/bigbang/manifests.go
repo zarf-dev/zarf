@@ -166,7 +166,7 @@ func manifestHelmRelease(values []fluxHelmCtrl.ValuesReference) fluxHelmCtrl.Hel
 		},
 		Spec: fluxHelmCtrl.HelmReleaseSpec{
 			Timeout: &tenMins,
-			Chart: fluxHelmCtrl.HelmChartTemplate{
+			Chart: &fluxHelmCtrl.HelmChartTemplate{
 				Spec: fluxHelmCtrl.HelmChartTemplateSpec{
 					Chart: "./chart",
 					SourceRef: fluxHelmCtrl.CrossNamespaceObjectReference{
