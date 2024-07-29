@@ -17,7 +17,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 	"github.com/spf13/pflag"
-	strcase "github.com/stoewer/go-strcase"
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent"
@@ -172,7 +171,6 @@ var genConfigSchemaCmd = &cobra.Command{
 			return fmt.Errorf("this command must be called from the root of the Zarf repo: %w", err)
 		}
 
-		reflector.KeyNamer = strcase.LowerCamelCase
 		reflector.RequiredFromJSONSchemaTags = true
 		schema := reflector.Reflect(&types.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
@@ -205,7 +203,6 @@ var genTypesSchemaCmd = &cobra.Command{
 			return fmt.Errorf("this command must be called from the root of the Zarf repo: %w", err)
 		}
 
-		reflector.KeyNamer = strcase.LowerCamelCase
 		reflector.RequiredFromJSONSchemaTags = true
 		schema := reflector.Reflect(&zarfTypes{})
 		output, err := json.MarshalIndent(schema, "", "  ")
