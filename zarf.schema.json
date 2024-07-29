@@ -859,15 +859,6 @@
     },
     "ZarfComponentOnlyTarget": {
       "properties": {
-        "localOs": {
-          "type": "string",
-          "enum": [
-            "linux",
-            "darwin",
-            "windows"
-          ],
-          "description": "Only deploy component to specified OS"
-        },
         "cluster": {
           "$ref": "#/$defs/ZarfComponentOnlyCluster",
           "description": "Only deploy component to specified clusters"
@@ -875,6 +866,15 @@
         "flavor": {
           "type": "string",
           "description": "Only include this component when a matching '--flavor' is specified on 'zarf package create'"
+        },
+        "localOS": {
+          "type": "string",
+          "enum": [
+            "linux",
+            "darwin",
+            "windows"
+          ],
+          "description": "Only deploy component to specified OS"
         }
       },
       "additionalProperties": false,

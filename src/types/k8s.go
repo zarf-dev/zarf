@@ -85,8 +85,8 @@ type DeployedPackage struct {
 	CLIVersion         string
 	Generation         int
 	DeployedComponents []DeployedComponent
-	ComponentWebhooks  map[string]map[string]Webhook `jsonschema:"required"`
-	ConnectStrings     ConnectStrings                `jsonschema:"required"`
+	ComponentWebhooks  map[string]map[string]Webhook
+	ConnectStrings     ConnectStrings
 }
 
 // DeployedComponent contains information about a Zarf Package Component that has been deployed to a cluster.
@@ -100,7 +100,7 @@ type DeployedComponent struct {
 // Webhook contains information about a Component Webhook operating on a Zarf package secret.
 type Webhook struct {
 	Name                string
-	WaitDurationSeconds int `jsonschema:"required"`
+	WaitDurationSeconds int
 	Status              WebhookStatus
 	ObservedGeneration  int
 }
@@ -201,14 +201,12 @@ type RegistryInfo struct {
 	PullUsername string
 	// Password of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used
 	PullPassword string
-
 	// URL address of the registry
 	Address string
 	// Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster
 	NodePort int
 	// Indicates if we are using a registry that Zarf is directly managing
 	InternalRegistry bool
-
 	// Secret value that the registry was seeded with
 	Secret string
 }

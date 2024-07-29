@@ -92,11 +92,20 @@ func (c ZarfComponent) IsRequired() bool {
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
 type ZarfComponentOnlyTarget struct {
 	// Only deploy component to specified OS
-	LocalOS string `json:"localOS" jsonschema:"enum=linux,enum=darwin,enum=windows"`
+	LocalOS string `jsonschema:"enum=linux,enum=darwin,enum=windows"`
 	// Only deploy component to specified clusters
 	Cluster ZarfComponentOnlyCluster
 	// Only include this component when a matching '--flavor' is specified on 'zarf package create'
 	Flavor string
+}
+
+// JSONSchemaExtend extends the generated json schema during `zarf internal gen-config-schema`
+func (ZarfComponentOnlyTarget) JSONSchemaExtend(schema *jsonschema.Schema) {
+	// Need this since it auto camel cases the acronym
+	localOS := schema.Properties.GetPair("localOs")
+	localOS.Key = "localOS"
+	schema.Properties.Delete("localOs")
+	schema.Properties.AddPairs(*localOS)
 }
 
 // ZarfComponentOnlyCluster represents the architecture and K8s cluster distribution to filter on.
