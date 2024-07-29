@@ -101,40 +101,62 @@ type ZarfComponentOnlyTarget struct {
 
 // ZarfComponentOnlyCluster represents the architecture and K8s cluster distribution to filter on.
 type ZarfComponentOnlyCluster struct {
-	Architecture string   `json:"architecture,omitempty" jsonschema:"description=Only create and deploy to clusters of the given architecture,enum=amd64,enum=arm64"`
-	Distros      []string `json:"distros,omitempty" jsonschema:"description=A list of kubernetes distros this package works with (Reserved for future use),example=k3s,example=eks"`
+	// Only create and deploy to clusters of the given architecture
+	Architecture string `json:"architecture,omitempty" jsonschema:"enum=amd64,enum=arm64"`
+	// A list of kubernetes distros this package works with (Reserved for future use)
+	Distros []string `json:"distros,omitempty" jsonschema:"example=k3s,example=eks"`
 }
 
 // ZarfFile defines a file to deploy.
 type ZarfFile struct {
-	Source      string   `json:"source" jsonschema:"description=Local folder or file path or remote URL to pull into the package"`
-	Shasum      string   `json:"shasum,omitempty" jsonschema:"description=(files only) Optional SHA256 checksum of the file"`
-	Target      string   `json:"target" jsonschema:"description=The absolute or relative path where the file or folder should be copied to during package deploy"`
-	Executable  bool     `json:"executable,omitempty" jsonschema:"description=(files only) Determines if the file should be made executable during package deploy"`
-	Symlinks    []string `json:"symlinks,omitempty" jsonschema:"description=List of symlinks to create during package deploy"`
-	ExtractPath string   `json:"extractPath,omitempty" jsonschema:"description=Local folder or file to be extracted from a 'source' archive"`
+	// Local folder or file path or remote URL to pull into the package
+	Source string `json:"source"`
+	// (files only) Optional SHA256 checksum of the file
+	Shasum string `json:"shasum,omitempty"`
+	// The absolute or relative path where the file or folder should be copied to during package deploy
+	Target string `json:"target"`
+	// (files only) Determines if the file should be made executable during package deploy
+	Executable bool `json:"executable,omitempty"`
+	// List of symlinks to create during package deploy
+	Symlinks []string `json:"symlinks,omitempty"`
+	// Local folder or file to be extracted from a 'source' archive
+	ExtractPath string `json:"extractPath,omitempty"`
 }
 
 // ZarfChart defines a helm chart to be deployed.
 type ZarfChart struct {
-	Name        string              `json:"name" jsonschema:"description=The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo"`
-	Version     string              `json:"version,omitempty" jsonschema:"description=The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos')"`
-	URL         string              `json:"url,omitempty" jsonschema:"example=OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo,example=helm chart repo: https://stefanprodan.github.io/podinfo,example=git repo: https://github.com/stefanprodan/podinfo (note the '@' syntax for 'repos' is supported here too)" jsonschema_description:"The URL of the OCI registry, chart repository, or git repo where the helm chart is stored"`
-	RepoName    string              `json:"repoName,omitempty" jsonschema:"description=The name of a chart within a Helm repository (defaults to the Zarf name of the chart)"`
-	GitPath     string              `json:"gitPath,omitempty" jsonschema:"description=(git repo only) The sub directory to the chart within a git repo,example=charts/your-chart"`
-	LocalPath   string              `json:"localPath,omitempty" jsonschema:"description=The path to a local chart's folder or .tgz archive"`
-	Namespace   string              `json:"namespace,omitempty" jsonschema:"description=The namespace to deploy the chart to"`
-	ReleaseName string              `json:"releaseName,omitempty" jsonschema:"description=The name of the Helm release to create (defaults to the Zarf name of the chart)"`
-	NoWait      bool                `json:"noWait,omitempty" jsonschema:"description=Whether to not wait for chart resources to be ready before continuing"`
-	ValuesFiles []string            `json:"valuesFiles,omitempty" jsonschema:"description=List of local values file paths or remote URLs to include in the package; these will be merged together when deployed"`
-	Variables   []ZarfChartVariable `json:"variables,omitempty" jsonschema:"description=[alpha] List of variables to set in the Helm chart"`
+	// The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo
+	Name string `json:"name"`
+	// The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos')
+	Version string `json:"version,omitempty"`
+	// The URL of the OCI registry, chart repository, or git repo where the helm chart is stored
+	URL string `json:"url,omitempty" jsonschema:"example=OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo,example=helm chart repo: https://stefanprodan.github.io/podinfo,example=git repo: https://github.com/stefanprodan/podinfo (note the '@' syntax for 'repos' is supported here too)"`
+	// The name of a chart within a Helm repository (defaults to the Zarf name of the chart)
+	RepoName string `json:"repoName,omitempty"`
+	// (git repo only) The sub directory to the chart within a git repo
+	GitPath string `json:"gitPath,omitempty" jsonschema:"example=charts/your-chart"`
+	// The path to a local chart's folder or .tgz archive
+	LocalPath string `json:"localPath,omitempty"`
+	// The namespace to deploy the chart to
+	Namespace string `json:"namespace,omitempty"`
+	// The name of the Helm release to create (defaults to the Zarf name of the chart)
+	ReleaseName string `json:"releaseName,omitempty"`
+	// Whether to not wait for chart resources to be ready before continuing
+	NoWait bool `json:"noWait,omitempty"`
+	// List of local values file paths or remote URLs to include in the package; these will be merged together when deployed
+	ValuesFiles []string `json:"valuesFiles,omitempty"`
+	// [alpha] List of variables to set in the Helm chart
+	Variables []ZarfChartVariable `json:"variables,omitempty"`
 }
 
 // ZarfChartVariable represents a variable that can be set for a Helm chart overrides.
 type ZarfChartVariable struct {
-	Name        string `json:"name" jsonschema:"description=The name of the variable,pattern=^[A-Z0-9_]+$"`
-	Description string `json:"description" jsonschema:"description=A brief description of what the variable controls"`
-	Path        string `json:"path" jsonschema:"description=The path within the Helm chart values where this variable applies"`
+	// The name of the variable
+	Name string `json:"name" jsonschema:"pattern=^[A-Z0-9_]+$"`
+	// A brief description of what the variable controls
+	Description string `json:"description"`
+	// The path within the Helm chart values where this variable applies
+	Path string `json:"path"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
