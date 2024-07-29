@@ -18,22 +18,34 @@ const (
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
-	Confirm        bool   `json:"confirm" jsonschema:"description=Verify that Zarf should perform an action"`
-	Insecure       bool   `json:"insecure" jsonschema:"description=Allow insecure connections for remote packages"`
-	CachePath      string `json:"cachePath" jsonschema:"description=Path to use to cache images and git repos on package create"`
-	TempDirectory  string `json:"tempDirectory" jsonschema:"description=Location Zarf should use as a staging ground when managing files and images for package creation and deployment"`
-	OCIConcurrency int    `jsonschema:"description=Number of concurrent layer operations to perform when interacting with a remote package"`
+	// Verify that Zarf should perform an action
+	Confirm bool
+	// Allow insecure connections for remote packages
+	Insecure bool
+	// Path to use to cache images and git repos on package create
+	CachePath string
+	// Location Zarf should use as a staging ground when managing files and images for package creation and deployment
+	TempDirectory string
+	// Number of concurrent layer operations to perform when interacting with a remote package
+	OCIConcurrency int
 }
 
 // ZarfPackageOptions tracks the user-defined preferences during common package operations.
 type ZarfPackageOptions struct {
-	Shasum             string            `json:"shasum" jsonschema:"description=The SHA256 checksum of the package"`
-	PackageSource      string            `json:"packageSource" jsonschema:"description=Location where a Zarf package can be found"`
-	OptionalComponents string            `json:"optionalComponents" jsonschema:"description=Comma separated list of optional components"`
-	SGetKeyPath        string            `json:"sGetKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
-	SetVariables       map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package"`
-	PublicKeyPath      string            `json:"publicKeyPath" jsonschema:"description=Location where the public key component of a cosign key-pair can be found"`
-	Retries            int               `json:"retries" jsonschema:"description=The number of retries to perform for Zarf deploy operations like image pushes or Helm installs"`
+	// The SHA256 checksum of the package
+	Shasum string
+	// Location where a Zarf package can be found
+	PackageSource string
+	// Comma separated list of optional components
+	OptionalComponents string
+	// Location where the public key component of a cosign key-pair can be found
+	SGetKeyPath string
+	// Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package
+	SetVariables map[string]string
+	// Location where the public key component of a cosign key-pair can be found
+	PublicKeyPath string
+	// The number of retries to perform for Zarf deploy operations like image pushes or Helm installs
+	Retries int
 }
 
 // ZarfInspectOptions tracks the user-defined preferences during a package inspection.
@@ -48,91 +60,128 @@ type ZarfInspectOptions struct {
 
 // ZarfFindImagesOptions tracks the user-defined preferences during a prepare find-images search.
 type ZarfFindImagesOptions struct {
-	RepoHelmChartPath   string `json:"repoHelmChartPath" jsonschema:"description=Path to the helm chart directory"`
-	KubeVersionOverride string `json:"kubeVersionOverride" jsonschema:"description=Kubernetes version to use for the helm chart"`
-	RegistryURL         string `json:"registryURL" jsonschema:"description=Manual override for ###ZARF_REGISTRY###"`
-	Why                 string `json:"why" jsonschema:"description=Find the location of the image given as an argument and print it to the console"`
-	SkipCosign          bool   `json:"skip-cosign" jsonschema:"description=Optionally skip lookup of cosign artifacts when finding images"`
+	// Path to the helm chart directory
+	RepoHelmChartPath string
+	// Kubernetes version to use for the helm chart
+	KubeVersionOverride string
+	// Manual override for ###ZARF_REGISTRY###
+	RegistryURL string
+	// Find the location of the image given as an argument and print it to the console
+	Why string
+	// Optionally skip lookup of cosign artifacts when finding images
+	SkipCosign bool
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.
 type ZarfDeployOptions struct {
-	AdoptExistingResources bool          `json:"adoptExistingResources" jsonschema:"description=Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf"`
-	SkipWebhooks           bool          `json:"componentWebhooks" jsonschema:"description=Skip waiting for external webhooks to execute as each package component is deployed"`
-	Timeout                time.Duration `json:"timeout" jsonschema:"description=Timeout for performing Helm operations"`
-
-	// TODO (@WSTARR): This is a library only addition to Zarf and should be refactored in the future (potentially to utilize component composability). As is it should NOT be exposed directly on the CLI
-	ValuesOverridesMap map[string]map[string]map[string]interface{} `json:"valuesOverridesMap" jsonschema:"description=[Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy"`
+	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
+	AdoptExistingResources bool
+	// Skip waiting for external webhooks to execute as each package component is deployed
+	SkipWebhooks bool
+	// Timeout for performing Helm operations
+	Timeout time.Duration
+	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
+	ValuesOverridesMap map[string]map[string]map[string]interface{}
 }
 
 // ZarfMirrorOptions tracks the user-defined preferences during a package mirror.
 type ZarfMirrorOptions struct {
-	NoImgChecksum bool `json:"noImgChecksum" jsonschema:"description=Whether to skip adding a Zarf checksum to image references."`
+	// Whether to skip adding a Zarf checksum to image references
+	NoImgChecksum bool
 }
 
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
 type ZarfPublishOptions struct {
-	PackageDestination string `json:"packageDestination" jsonschema:"description=Location where the Zarf package will be published to"`
-	SigningKeyPassword string `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sign the published package"`
-	SigningKeyPath     string `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
+	// Location where the Zarf package will be published to
+	PackageDestination string
+	// Password to the private key signature file that will be used to sign the published package
+	SigningKeyPassword string
+	// Location where the private key component of a cosign key-pair can be found
+	SigningKeyPath string
 }
 
 // ZarfPullOptions tracks the user-defined preferences during a package pull.
 type ZarfPullOptions struct {
-	OutputDirectory string `json:"outputDirectory" jsonschema:"description=Location where the pulled Zarf package will be placed"`
+	// Location where the pulled Zarf package will be placed
+	OutputDirectory string
 }
 
 // ZarfGenerateOptions tracks the user-defined options during package generation.
 type ZarfGenerateOptions struct {
-	Name    string `json:"name" jsonschema:"description=Name of the package being generated"`
-	URL     string `json:"url" jsonschema:"description=URL to the source git repository"`
-	Version string `json:"version" jsonschema:"description=Version of the chart to use"`
-	GitPath string `json:"gitPath" jsonschema:"description=Relative path to the chart in the git repository"`
-	Output  string `json:"output" jsonschema:"description=Location where the finalized zarf.yaml will be placed"`
+	// Name of the package being generated
+	Name string
+	// URL to the source git repository
+	URL string
+	// Version of the chart to use
+	Version string
+	// Relative path to the chart in the git repository
+	GitPath string
+	// Location where the finalized zarf.yaml will be placed
+	Output string
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
 type ZarfInitOptions struct {
-	// Zarf init is installing the k3s component
-	ApplianceMode bool `json:"applianceMode" jsonschema:"description=Indicates if Zarf was initialized while deploying its own k8s cluster"`
-
-	// Using alternative services
-	GitServer      GitServerInfo      `json:"gitServer" jsonschema:"description=Information about the repository Zarf is going to be using"`
-	RegistryInfo   RegistryInfo       `json:"registryInfo" jsonschema:"description=Information about the container registry Zarf is going to be using"`
-	ArtifactServer ArtifactServerInfo `json:"artifactServer" jsonschema:"description=Information about the artifact registry Zarf is going to be using"`
-
-	StorageClass string `json:"storageClass" jsonschema:"description=StorageClass of the k8s cluster Zarf is initializing"`
+	// Indicates if Zarf was initialized while deploying its own k8s cluster
+	ApplianceMode bool
+	// Information about the repository Zarf is going to be using
+	GitServer GitServerInfo
+	// Information about the container registry Zarf is going to be using
+	RegistryInfo RegistryInfo
+	// Information about the artifact registry Zarf is going to be using
+	ArtifactServer ArtifactServerInfo
+	// StorageClass of the k8s cluster Zarf is initializing
+	StorageClass string
 }
 
 // ZarfCreateOptions tracks the user-defined options used to create the package.
 type ZarfCreateOptions struct {
-	SkipSBOM                bool              `json:"skipSBOM" jsonschema:"description=Disable the generation of SBOM materials during package creation"`
-	BaseDir                 string            `json:"baseDir" jsonschema:"description=Location where the Zarf package will be created from"`
-	Output                  string            `json:"output" jsonschema:"description=Location where the finalized Zarf package will be placed"`
-	ViewSBOM                bool              `json:"sbom" jsonschema:"description=Whether to pause to allow for viewing the SBOM post-creation"`
-	SBOMOutputDir           string            `json:"sbomOutput" jsonschema:"description=Location to output an SBOM into after package creation"`
-	SetVariables            map[string]string `json:"setVariables" jsonschema:"description=Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used"`
-	MaxPackageSizeMB        int               `json:"maxPackageSizeMB" jsonschema:"description=Size of chunks to use when splitting a zarf package into multiple files in megabytes"`
-	SigningKeyPath          string            `json:"signingKeyPath" jsonschema:"description=Location where the private key component of a cosign key-pair can be found"`
-	SigningKeyPassword      string            `json:"signingKeyPassword" jsonschema:"description=Password to the private key signature file that will be used to sigh the created package"`
-	DifferentialPackagePath string            `json:"differentialPackagePath" jsonschema:"description=Path to a previously built package used as the basis for creating a differential package"`
-	RegistryOverrides       map[string]string `json:"registryOverrides" jsonschema:"description=A map of domains to override on package create when pulling images"`
-	Flavor                  string            `json:"flavor" jsonschema:"description=An optional variant that controls which components will be included in a package"`
-	IsSkeleton              bool              `json:"isSkeleton" jsonschema:"description=Whether to create a skeleton package"`
-	NoYOLO                  bool              `json:"noYOLO" jsonschema:"description=Whether to create a YOLO package"`
+	// Disable the generation of SBOM materials during package creation
+	SkipSBOM bool
+	// Location where the Zarf package will be created from
+	BaseDir string
+	// Location where the finalized Zarf package will be placed
+	Output string
+	// Whether to pause to allow for viewing the SBOM post-creation
+	ViewSBOM bool
+	// Location to output an SBOM into after package creation
+	SBOMOutputDir string
+	// Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used
+	SetVariables map[string]string
+	// Size of chunks to use when splitting a zarf package into multiple files in megabytes
+	MaxPackageSizeMB int
+	// Location where the private key component of a cosign key-pair can be found
+	SigningKeyPath string
+	// Password to the private key signature file that will be used to sigh the created package
+	SigningKeyPassword string
+	// Path to a previously built package used as the basis for creating a differential package
+	DifferentialPackagePath string
+	// A map of domains to override on package create when pulling images
+	RegistryOverrides map[string]string
+	// An optional variant that controls which components will be included in a package
+	Flavor string
+	// Whether to create a skeleton package
+	IsSkeleton bool
+	// Whether to create a YOLO package
+	NoYOLO bool
 }
 
 // ZarfSplitPackageData contains info about a split package.
 type ZarfSplitPackageData struct {
-	Sha256Sum string `json:"sha256Sum" jsonschema:"description=The sha256sum of the package"`
-	Bytes     int64  `json:"bytes" jsonschema:"description=The size of the package in bytes"`
-	Count     int    `json:"count" jsonschema:"description=The number of parts the package is split into"`
+	// The sha256sum of the package
+	Sha256Sum string
+	// The size of the package in bytes
+	Bytes int64
+	// The number of parts the package is split into
+	Count int
 }
 
 // ConnectString contains information about a connection made with Zarf connect.
 type ConnectString struct {
-	Description string `json:"description" jsonschema:"description=Descriptive text that explains what the resource you would be connecting to is used for"`
-	URL         string `json:"url" jsonschema:"description=URL path that gets appended to the k8s port-forward result"`
+	// Descriptive text that explains what the resource you would be connecting to is used for
+	Description string
+	// URL path that gets appended to the k8s port-forward result
+	URL string
 }
 
 // ConnectStrings is a map of connect names to connection information.
@@ -144,29 +193,3 @@ type DifferentialData struct {
 	DifferentialRepos          map[string]bool
 	DifferentialPackageVersion string
 }
-
-// PackageFinding is a struct that contains a finding about something wrong with a package
-type PackageFinding struct {
-	// YqPath is the path to the key where the error originated from, this is sometimes empty in the case of a general error
-	YqPath      string
-	Description string
-	// Item is the value of a key that is causing an error, for example a bad image name
-	Item string
-	// PackageNameOverride shows the name of the package that the error originated from
-	// If it is not set the base package will be used when displaying the error
-	PackageNameOverride string
-	// PackagePathOverride shows the path to the package that the error originated from
-	// If it is not set the base package will be used when displaying the error
-	PackagePathOverride string
-	Severity            Severity
-}
-
-// Severity is the type of package error
-// Either Err or Warning
-type Severity int
-
-// different severities of package errors
-const (
-	SevErr Severity = iota + 1
-	SevWarn
-)

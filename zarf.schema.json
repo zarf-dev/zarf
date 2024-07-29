@@ -71,6 +71,7 @@
         "name",
         "value"
       ],
+      "description": "Constant are constants that can be used to dynamically template K8s resources or run in actions.",
       "patternProperties": {
         "^x-": {}
       }
@@ -163,6 +164,7 @@
       "required": [
         "name"
       ],
+      "description": "InteractiveVariable is a variable that can be used to prompt a user for more information",
       "patternProperties": {
         "^x-": {}
       }
@@ -243,6 +245,7 @@
       "required": [
         "name"
       ],
+      "description": "Variable represents a variable that has a value set programmatically",
       "patternProperties": {
         "^x-": {}
       }
@@ -503,7 +506,7 @@
         },
         "scripts": {
           "$ref": "#/$defs/DeprecatedZarfComponentScripts",
-          "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0."
+          "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0."
         },
         "actions": {
           "$ref": "#/$defs/ZarfComponentActions",
@@ -685,7 +688,7 @@
           "description": "The kind of resource to wait for",
           "examples": [
             "Pod",
-            "Deployment)"
+            "Deployment"
           ]
         },
         "name": {
@@ -693,7 +696,7 @@
           "description": "The name of the resource or selector to wait for",
           "examples": [
             "podinfo",
-            "app&#61;podinfo"
+            "app=podinfo"
           ]
         },
         "namespace": {
@@ -752,7 +755,8 @@
       "type": "object",
       "required": [
         "protocol",
-        "address"
+        "address",
+        "code"
       ],
       "description": "ZarfComponentActionWaitNetwork specifies a condition to wait for before continuing",
       "patternProperties": {
@@ -806,7 +810,7 @@
             "pattern": "###ZARF_PKG_TMPL_"
           },
           "type": "string",
-          "description": "For further explanation see https://regex101.com/r/nxX8vx/1"
+          "description": "The path to the directory containing a zarf.yaml to import"
         },
         "url": {
           "not": {
@@ -814,7 +818,7 @@
           },
           "type": "string",
           "pattern": "^oci://.*$",
-          "description": "For further explanation see https://regex101.com/r/nxX8vx/1\n[beta] The URL to a Zarf package to import via OCI"
+          "description": "[beta] The URL to a Zarf package to import via OCI"
         }
       },
       "additionalProperties": false,
@@ -855,7 +859,7 @@
     },
     "ZarfComponentOnlyTarget": {
       "properties": {
-        "localOS": {
+        "localOs": {
           "type": "string",
           "enum": [
             "linux",
@@ -890,7 +894,7 @@
           "type": "string",
           "description": "The K8s selector to target for data injection",
           "examples": [
-            "app&#61;data-injection"
+            "app=data-injection"
           ]
         },
         "container": {
@@ -1081,11 +1085,11 @@
         },
         "vendor": {
           "type": "string",
-          "description": "Name of the distributing entity, organization or individual."
+          "description": "Name of the distributing entity, organization or individual"
         },
         "aggregateChecksum": {
           "type": "string",
-          "description": "Checksum of a checksums.txt file that contains checksums all the layers within the package."
+          "description": "Checksum of a checksums.txt file that contains checksums all the layers within the package"
         }
       },
       "additionalProperties": false,

@@ -51,67 +51,81 @@ const (
 
 // GeneratedPKI is a struct for storing generated PKI data.
 type GeneratedPKI struct {
-	CA   []byte `json:"ca"`
-	Cert []byte `json:"cert"`
-	Key  []byte `json:"key"`
+	CA   []byte
+	Cert []byte
+	Key  []byte
 }
 
 // ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data.
 type ZarfState struct {
-	ZarfAppliance bool         `json:"zarfAppliance" jsonschema:"description=Indicates if Zarf was initialized while deploying its own k8s cluster"`
-	Distro        string       `json:"distro" jsonschema:"description=K8s distribution of the cluster Zarf was deployed to"`
-	Architecture  string       `json:"architecture" jsonschema:"description=Machine architecture of the k8s node(s)"`
-	StorageClass  string       `json:"storageClass" jsonschema:"Default StorageClass value Zarf uses for variable templating"`
-	AgentTLS      GeneratedPKI `json:"agentTLS" jsonschema:"PKI certificate information for the agent pods Zarf manages"`
+	// Indicates if Zarf was initialized while deploying its own k8s cluster
+	ZarfAppliance bool
+	// K8s distribution of the cluster Zarf was deployed to
+	Distro string
+	// Machine architecture of the k8s node(s)
+	Architecture string
+	// Default StorageClass value Zarf uses for variable templating
+	StorageClass string
+	// PKI certificate information for the agent pods Zarf manages
+	AgentTLS GeneratedPKI
 
-	GitServer      GitServerInfo      `json:"gitServer" jsonschema:"description=Information about the repository Zarf is configured to use"`
-	RegistryInfo   RegistryInfo       `json:"registryInfo" jsonschema:"description=Information about the container registry Zarf is configured to use"`
-	ArtifactServer ArtifactServerInfo `json:"artifactServer" jsonschema:"description=Information about the artifact registry Zarf is configured to use"`
+	// Information about the repository Zarf is configured to use
+	GitServer GitServerInfo
+	// Information about the container registry Zarf is configured to use
+	RegistryInfo RegistryInfo
+	// Information about the artifact registry Zarf is configured to use
+	ArtifactServer ArtifactServerInfo
 }
 
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
-	Name               string                        `json:"name"`
-	Data               ZarfPackage                   `json:"data"`
-	CLIVersion         string                        `json:"cliVersion"`
-	Generation         int                           `json:"generation"`
-	DeployedComponents []DeployedComponent           `json:"deployedComponents"`
-	ComponentWebhooks  map[string]map[string]Webhook `json:"componentWebhooks,omitempty"`
-	ConnectStrings     ConnectStrings                `json:"connectStrings,omitempty"`
+	Name               string
+	Data               ZarfPackage
+	CLIVersion         string
+	Generation         int
+	DeployedComponents []DeployedComponent
+	ComponentWebhooks  map[string]map[string]Webhook `jsonschema:"required"`
+	ConnectStrings     ConnectStrings                `jsonschema:"required"`
 }
 
 // DeployedComponent contains information about a Zarf Package Component that has been deployed to a cluster.
 type DeployedComponent struct {
-	Name               string           `json:"name"`
-	InstalledCharts    []InstalledChart `json:"installedCharts"`
-	Status             ComponentStatus  `json:"status"`
-	ObservedGeneration int              `json:"observedGeneration"`
+	Name               string
+	InstalledCharts    []InstalledChart
+	Status             ComponentStatus
+	ObservedGeneration int
 }
 
 // Webhook contains information about a Component Webhook operating on a Zarf package secret.
 type Webhook struct {
-	Name                string        `json:"name"`
-	WaitDurationSeconds int           `json:"waitDurationSeconds,omitempty"`
-	Status              WebhookStatus `json:"status"`
-	ObservedGeneration  int           `json:"observedGeneration"`
+	Name                string
+	WaitDurationSeconds int `jsonschema:"required"`
+	Status              WebhookStatus
+	ObservedGeneration  int
 }
 
 // InstalledChart contains information about a Helm Chart that has been deployed to a cluster.
 type InstalledChart struct {
-	Namespace string `json:"namespace"`
-	ChartName string `json:"chartName"`
+	Namespace string
+	ChartName string
 }
 
 // GitServerInfo contains information Zarf uses to communicate with a git repository to push/pull repositories to.
 type GitServerInfo struct {
-	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the git repository"`
-	PushPassword string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the git repository"`
-	PullUsername string `json:"pullUsername" jsonschema:"description=Username of a user with pull-only access to the git repository. If not provided for an external repository then the push-user is used"`
-	PullPassword string `json:"pullPassword" jsonschema:"description=Password of a user with pull-only access to the git repository. If not provided for an external repository then the push-user is used"`
+	// Username of a user with push access to the git repository
+	PushUsername string
+	// Password of a user with push access to the git repository
+	PushPassword string
+	// Username of a user with pull-only access to the git repository. If not provided for an external repository then the push-user is used
+	PullUsername string
+	// Password of a user with pull-only access to the git repository. If not provided for an external repository then the push-user is used
+	PullPassword string
 
-	Address        string `json:"address" jsonschema:"description=URL address of the git server"`
-	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a git server that Zarf is directly managing"`
+	// URL address of the git server
+	Address string
+	// Indicates if we are using a git server that Zarf is directly managing
+	InternalServer bool
 }
 
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
@@ -153,10 +167,14 @@ func (gs *GitServerInfo) FillInEmptyValues() error {
 
 // ArtifactServerInfo contains information Zarf uses to communicate with a artifact registry to push/pull repositories to.
 type ArtifactServerInfo struct {
-	PushUsername   string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the artifact registry"`
-	PushToken      string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the artifact registry"`
-	Address        string `json:"address" jsonschema:"description=URL address of the artifact registry"`
-	InternalServer bool   `json:"internalServer" jsonschema:"description=Indicates if we are using a artifact registry that Zarf is directly managing"`
+	// Username of a user with push access to the artifact registry
+	PushUsername string
+	// Password of a user with push access to the artifact registry
+	PushToken string
+	// URL address of the artifact registry
+	Address string
+	// Indicates if we are using a artifact registry that Zarf is directly managing
+	InternalServer bool
 }
 
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
@@ -175,16 +193,24 @@ func (as *ArtifactServerInfo) FillInEmptyValues() {
 
 // RegistryInfo contains information Zarf uses to communicate with a container registry to push/pull images.
 type RegistryInfo struct {
-	PushUsername string `json:"pushUsername" jsonschema:"description=Username of a user with push access to the registry"`
-	PushPassword string `json:"pushPassword" jsonschema:"description=Password of a user with push access to the registry"`
-	PullUsername string `json:"pullUsername" jsonschema:"description=Username of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used"`
-	PullPassword string `json:"pullPassword" jsonschema:"description=Password of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used"`
+	// Username of a user with push access to the registry
+	PushUsername string
+	// Password of a user with push access to the registry
+	PushPassword string
+	// Username of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used
+	PullUsername string
+	// Password of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used
+	PullPassword string
 
-	Address          string `json:"address" jsonschema:"description=URL address of the registry"`
-	NodePort         int    `json:"nodePort" jsonschema:"description=Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster"`
-	InternalRegistry bool   `json:"internalRegistry" jsonschema:"description=Indicates if we are using a registry that Zarf is directly managing"`
+	// URL address of the registry
+	Address string
+	// Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster
+	NodePort int
+	// Indicates if we are using a registry that Zarf is directly managing
+	InternalRegistry bool
 
-	Secret string `json:"secret" jsonschema:"description=Secret value that the registry was seeded with"`
+	// Secret value that the registry was seeded with
+	Secret string
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default

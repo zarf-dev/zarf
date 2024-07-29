@@ -6,9 +6,14 @@ package extensions
 
 // BigBang holds the configuration for the Big Bang extension
 type BigBang struct {
-	Version        string   `json:"version" jsonschema:"description=The version of Big Bang to use"`
-	Repo           string   `json:"repo,omitempty" jsonschema:"description=Override repo to pull Big Bang from instead of Repo One"`
-	ValuesFiles    []string `json:"valuesFiles,omitempty" jsonschema:"description=The list of values files to pass to Big Bang; these will be merged together"`
-	SkipFlux       bool     `json:"skipFlux,omitempty" jsonschema:"description=Whether to skip deploying flux; Defaults to false"`
-	FluxPatchFiles []string `json:"fluxPatchFiles,omitempty" jsonschema:"description=Optional paths to Flux kustomize strategic merge patch files"`
+	// The version of Big Bang to use
+	Version string `jsonschema:"required"`
+	// Override repo to pull Big Bang from instead of Repo One
+	Repo string
+	// The list of values files to pass to Big Bang; these will be merged together
+	ValuesFiles []string
+	// Whether to skip deploying flux; Defaults to false
+	SkipFlux bool
+	// Optional paths to Flux kustomize strategic merge patch files
+	FluxPatchFiles []string
 }
