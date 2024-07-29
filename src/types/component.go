@@ -322,7 +322,7 @@ type ZarfDataInjection struct {
 type ZarfComponentImport struct {
 	// The name of the component to import from the referenced zarf.yaml
 	Name string
-	// The path to the directory containing a zarf.yaml to import
+	// The path to the directory containing the zarf.yaml to import
 	Path string
 	// [beta] The URL to a Zarf package to import via OCI
 	URL string `jsonschema:"pattern=^oci://.*$"`
