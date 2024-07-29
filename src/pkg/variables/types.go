@@ -43,7 +43,7 @@ type Variable struct {
 
 // InteractiveVariable is a variable that can be used to prompt a user for more information
 type InteractiveVariable struct {
-	Variable
+	Variable `json:",inline"`
 	// A description of the variable to be used when prompting the user a value
 	Description string `json:"description"`
 	// The default value to use for the variable
@@ -68,7 +68,7 @@ type Constant struct {
 
 // SetVariable tracks internal variables that have been set during this run of Zarf
 type SetVariable struct {
-	Variable
+	Variable `json:",inline"`
 	// The value the variable is currently set with
 	Value string `json:"value" jsonschema:"required"`
 }
