@@ -18,12 +18,18 @@ const (
 
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
-	Kind       ZarfPackageKind                 `json:"kind" jsonschema:"description=The kind of Zarf package,enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
-	Metadata   ZarfMetadata                    `json:"metadata,omitempty" jsonschema:"description=Package metadata"`
-	Build      ZarfBuildData                   `json:"build,omitempty" jsonschema:"description=Zarf-generated package build data"`
-	Components []ZarfComponent                 `json:"components" jsonschema:"description=List of components to deploy in this package,minItems=1"`
-	Constants  []variables.Constant            `json:"constants,omitempty" jsonschema:"description=Constant template values applied on deploy for K8s resources"`
-	Variables  []variables.InteractiveVariable `json:"variables,omitempty" jsonschema:"description=Variable template values applied on deploy for K8s resources"`
+	// The kind of Zarf package
+	Kind ZarfPackageKind `json:"kind" jsonschema:"enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
+	// Package metadata
+	Metadata ZarfMetadata `json:"metadata,omitempty"`
+	// Zarf-generated package build data
+	Build ZarfBuildData `json:"build,omitempty"`
+	// List of components to deploy in this package
+	Components []ZarfComponent `json:"components" jsonschema:"minItems=1"`
+	// Constant template values applied on deploy for K8s resources
+	Constants []variables.Constant `json:"constants,omitempty"`
+	// Variable template values applied on deploy for K8s resources
+	Variables []variables.InteractiveVariable `json:"variables,omitempty"`
 }
 
 // IsInitConfig returns whether a Zarf package is an init config.

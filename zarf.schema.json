@@ -36,6 +36,7 @@
       "required": [
         "version"
       ],
+      "description": "BigBang holds the configuration for the Big Bang extension",
       "patternProperties": {
         "^x-": {}
       }
@@ -112,6 +113,7 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "DeprecatedZarfComponentScripts are scripts that run before or after a component is deployed",
       "patternProperties": {
         "^x-": {}
       }
@@ -314,6 +316,7 @@
         "timestamp",
         "version"
       ],
+      "description": "ZarfBuildData is written during the packager.Create() operation to track details of the created package.",
       "patternProperties": {
         "^x-": {}
       }
@@ -384,6 +387,7 @@
       "required": [
         "name"
       ],
+      "description": "ZarfChart defines a helm chart to be deployed.",
       "patternProperties": {
         "^x-": {}
       }
@@ -411,6 +415,7 @@
         "description",
         "path"
       ],
+      "description": "ZarfChartVariable represents a variable that can be set for a Helm chart overrides.",
       "patternProperties": {
         "^x-": {}
       }
@@ -510,6 +515,7 @@
       "required": [
         "name"
       ],
+      "description": "ZarfComponent is the primary functional grouping of assets to deploy by Zarf.",
       "patternProperties": {
         "^x-": {}
       }
@@ -570,6 +576,7 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentAction represents a single action to run during a zarf package operation",
       "patternProperties": {
         "^x-": {}
       }
@@ -606,6 +613,7 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentActionDefaults sets the default configs for child actions",
       "patternProperties": {
         "^x-": {}
       }
@@ -647,6 +655,7 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentActionSet is a set of actions to run during a zarf package operation",
       "patternProperties": {
         "^x-": {}
       }
@@ -664,6 +673,7 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentActionWait specifies a condition to wait for before continuing",
       "patternProperties": {
         "^x-": {}
       }
@@ -705,6 +715,7 @@
         "kind",
         "name"
       ],
+      "description": "ZarfComponentActionWaitCluster specifies a condition to wait for before continuing",
       "patternProperties": {
         "^x-": {}
       }
@@ -743,6 +754,7 @@
         "protocol",
         "address"
       ],
+      "description": "ZarfComponentActionWaitNetwork specifies a condition to wait for before continuing",
       "patternProperties": {
         "^x-": {}
       }
@@ -764,6 +776,7 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentActions are ActionSets that map to different zarf package operations",
       "patternProperties": {
         "^x-": {}
       }
@@ -777,6 +790,7 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentExtensions is a struct that contains all the official extensions",
       "patternProperties": {
         "^x-": {}
       }
@@ -805,6 +819,7 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentImport structure for including imported Zarf components.",
       "patternProperties": {
         "^x-": {}
       }
@@ -833,6 +848,7 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentOnlyCluster represents the architecture and K8s cluster distribution to filter on.",
       "patternProperties": {
         "^x-": {}
       }
@@ -859,6 +875,7 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.",
       "patternProperties": {
         "^x-": {}
       }
@@ -893,6 +910,7 @@
         "container",
         "path"
       ],
+      "description": "ZarfContainerTarget defines the destination info for a ZarfData target",
       "patternProperties": {
         "^x-": {}
       }
@@ -918,6 +936,7 @@
         "source",
         "target"
       ],
+      "description": "ZarfDataInjection is a data-injection definition.",
       "patternProperties": {
         "^x-": {}
       }
@@ -958,6 +977,7 @@
         "source",
         "target"
       ],
+      "description": "ZarfFile defines a file to deploy.",
       "patternProperties": {
         "^x-": {}
       }
@@ -1000,6 +1020,7 @@
       "required": [
         "name"
       ],
+      "description": "ZarfManifest defines raw manifests Zarf will deploy as a helm chart.",
       "patternProperties": {
         "^x-": {}
       }
@@ -1072,6 +1093,7 @@
       "required": [
         "name"
       ],
+      "description": "ZarfMetadata lists information about the current ZarfPackage.",
       "patternProperties": {
         "^x-": {}
       }
@@ -1124,6 +1146,7 @@
     "kind",
     "components"
   ],
+  "description": "ZarfPackage the top-level structure of a Zarf config file.",
   "patternProperties": {
     "^x-": {}
   }

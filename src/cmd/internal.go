@@ -162,6 +162,10 @@ var genConfigSchemaCmd = &cobra.Command{
 	Short:   lang.CmdInternalConfigSchemaShort,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		reflector := jsonschema.Reflector(jsonschema.Reflector{ExpandedStruct: true})
+		typePackagePath := filepath.Join("src", "types")
+		if err := reflector.AddGoComments("github.com/zarf-dev/zarf", typePackagePath); err != nil {
+			return fmt.Errorf("this command must be called from the root of the Zarf repo: %w", err)
+		}
 		schema := reflector.Reflect(&types.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {

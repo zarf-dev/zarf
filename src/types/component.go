@@ -13,58 +13,56 @@ import (
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
 type ZarfComponent struct {
-	// Name is the unique identifier for this component
-	Name string `json:"name" jsonschema:"description=The name of the component,pattern=^[a-z0-9][a-z0-9\\-]*$"`
+	// The name of the component
+	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
 
-	// Description is a message given to a user when deciding to enable this component or not
-	Description string `json:"description,omitempty" jsonschema:"description=Message to include during package deploy describing the purpose of this component"`
+	// Message to include during package deploy describing the purpose of this component
+	Description string `json:"description,omitempty"`
 
-	// Default changes the default option when deploying this component
-	Default bool `json:"default,omitempty" jsonschema:"description=Determines the default Y/N state for installing this component on package deploy"`
+	// Determines the default Y/N state for installing this component on package deploy
+	Default bool `json:"default,omitempty"`
 
-	// Required makes this component mandatory for package deployment
-	Required *bool `json:"required,omitempty" jsonschema:"description=Do not prompt user to install this component, always install on package deploy."`
+	// Do not prompt user to install this component
+	Required *bool `json:"required,omitempty"`
 
-	// Only include compatible components during package deployment
-	Only ZarfComponentOnlyTarget `json:"only,omitempty" jsonschema:"description=Filter when this component is included in package creation or deployment"`
+	// Filter when this component is included in package creation or deployment
+	Only ZarfComponentOnlyTarget `json:"only,omitempty"`
 
-	// DeprecatedGroup is a key to match other components to produce a user selector field, used to create a BOOLEAN XOR for a set of components
-	//
-	// Note: ignores default and required flags
-	DeprecatedGroup string `json:"group,omitempty" jsonschema:"description=[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.,deprecated=true"`
+	// [Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.
+	DeprecatedGroup string `json:"group,omitempty" jsonschema:"deprecated=true"`
 
-	// DeprecatedCosignKeyPath to cosign public key for signed online resources
-	DeprecatedCosignKeyPath string `json:"cosignKeyPath,omitempty" jsonschema:"description=[Deprecated] Specify a path to a public key to validate signed online resources. This will be removed in Zarf v1.0.0.,deprecated=true"`
+	// [Deprecated] Specify a path to a public key to validate signed online resources. This will be removed in Zarf v1.0.0.
+	DeprecatedCosignKeyPath string `json:"cosignKeyPath,omitempty" jsonschema:"deprecated=true"`
 
-	// Import refers to another zarf.yaml package component.
-	Import ZarfComponentImport `json:"import,omitempty" jsonschema:"description=Import a component from another Zarf package"`
+	// Import a component from another Zarf package
+	Import ZarfComponentImport `json:"import,omitempty"`
 
-	// Manifests are raw manifests that get converted into zarf-generated helm charts during deploy
-	Manifests []ZarfManifest `json:"manifests,omitempty" jsonschema:"description=Kubernetes manifests to be included in a generated Helm chart on package deploy"`
+	// Kubernetes manifests to be included in a generated Helm chart on package deploy
+	Manifests []ZarfManifest `json:"manifests,omitempty"`
 
-	// Charts are helm charts to install during package deploy
-	Charts []ZarfChart `json:"charts,omitempty" jsonschema:"description=Helm charts to install during package deploy"`
+	// Helm charts to install during package deploy
+	Charts []ZarfChart `json:"charts,omitempty"`
 
-	// Data packages to push into a running cluster
-	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"description=Datasets to inject into a container in the target cluster"`
+	// Datasets to inject into a container in the target cluster
+	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty"`
 
-	// Files are files to place on disk during deploy
-	Files []ZarfFile `json:"files,omitempty" jsonschema:"description=Files or folders to place on disk during package deployment"`
+	// Files or folders to place on disk during package deployment
+	Files []ZarfFile `json:"files,omitempty"`
 
-	// Images are the online images needed to be included in the zarf package
-	Images []string `json:"images,omitempty" jsonschema:"description=List of OCI images to include in the package"`
+	// List of OCI images to include in the package
+	Images []string `json:"images,omitempty"`
 
-	// Repos are any git repos that need to be pushed into the git server
-	Repos []string `json:"repos,omitempty" jsonschema:"description=List of git repos to include in the package"`
+	// List of git repos to include in the package
+	Repos []string `json:"repos,omitempty"`
 
-	// Extensions provide additional functionality to a component
-	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"description=Extend component functionality with additional features"`
+	// Extend component functionality with additional features
+	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty"`
 
-	// DeprecatedScripts are custom commands that run before or after package deployment
-	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"description=[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0.,deprecated=true"`
+	// [Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0.
+	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"deprecated=true"`
 
-	// Replaces scripts, fine-grained control over commands to run at various stages of a package lifecycle
-	Actions ZarfComponentActions `json:"actions,omitempty" jsonschema:"description=Custom commands to run at various stages of a package lifecycle"`
+	// Custom commands to run at various stages of a package lifecycle
+	Actions ZarfComponentActions `json:"actions,omitempty"`
 }
 
 // RequiresCluster returns if the component requires a cluster connection to deploy
@@ -93,9 +91,12 @@ func (c ZarfComponent) IsRequired() bool {
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
 type ZarfComponentOnlyTarget struct {
-	LocalOS string                   `json:"localOS,omitempty" jsonschema:"description=Only deploy component to specified OS,enum=linux,enum=darwin,enum=windows"`
-	Cluster ZarfComponentOnlyCluster `json:"cluster,omitempty" jsonschema:"description=Only deploy component to specified clusters"`
-	Flavor  string                   `json:"flavor,omitempty" jsonschema:"description=Only include this component when a matching '--flavor' is specified on 'zarf package create'"`
+	// Only deploy component to specified OS
+	LocalOS string `json:"localOS,omitempty" jsonschema:"enum=linux,enum=darwin,enum=windows"`
+	// Only deploy component to specified clusters
+	Cluster ZarfComponentOnlyCluster `json:"cluster,omitempty"`
+	// Only include this component when a matching '--flavor' is specified on 'zarf package create'
+	Flavor string `json:"flavor,omitempty"`
 }
 
 // ZarfComponentOnlyCluster represents the architecture and K8s cluster distribution to filter on.
