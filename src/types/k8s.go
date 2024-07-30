@@ -89,6 +89,17 @@ type DeployedPackage struct {
 	ConnectStrings     ConnectStrings                `json:"connectStrings,omitempty"`
 }
 
+// ConnectString contains information about a connection made with Zarf connect.
+type ConnectString struct {
+	// Descriptive text that explains what the resource you would be connecting to is used for
+	Description string `json:"description"`
+	// URL path that gets appended to the k8s port-forward result
+	URL string `json:"url"`
+}
+
+// ConnectStrings is a map of connect names to connection information.
+type ConnectStrings map[string]ConnectString
+
 // DeployedComponent contains information about a Zarf Package Component that has been deployed to a cluster.
 type DeployedComponent struct {
 	Name               string           `json:"name"`

@@ -176,17 +176,6 @@ type ZarfSplitPackageData struct {
 	Count int
 }
 
-// ConnectString contains information about a connection made with Zarf connect.
-type ConnectString struct {
-	// Descriptive text that explains what the resource you would be connecting to is used for
-	Description string `json:"description"`
-	// URL path that gets appended to the k8s port-forward result
-	URL string `json:"url"`
-}
-
-// ConnectStrings is a map of connect names to connection information.
-type ConnectStrings map[string]ConnectString
-
 // DifferentialData contains image and repository information about the package a Differential Package is Based on.
 type DifferentialData struct {
 	DifferentialImages         map[string]bool
