@@ -179,9 +179,9 @@ type ZarfSplitPackageData struct {
 // ConnectString contains information about a connection made with Zarf connect.
 type ConnectString struct {
 	// Descriptive text that explains what the resource you would be connecting to is used for
-	Description string
+	Description string `json:"description"`
 	// URL path that gets appended to the k8s port-forward result
-	URL string
+	URL string `json:"url"`
 }
 
 // ConnectStrings is a map of connect names to connection information.
