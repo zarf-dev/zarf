@@ -92,11 +92,21 @@ func (c ZarfComponent) IsRequired() bool {
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
 type ZarfComponentOnlyTarget struct {
 	// Only deploy component to specified OS.
-	LocalOS string `json:"localOS,omitempty" jsonschema:"enum=linux,enum=darwin,enum=windows"`
+	LocalOS string `json:"localOS,omitempty"`
 	// Only deploy component to specified clusters.
 	Cluster ZarfComponentOnlyCluster `json:"cluster,omitempty"`
 	// Only include this component when a matching '--flavor' is specified on 'zarf package create'.
 	Flavor string `json:"flavor,omitempty"`
+}
+
+// JSONSchemaExtend extends the generated json schema during `zarf internal gen-config-schema`
+func (ZarfComponentOnlyTarget) JSONSchemaExtend(schema *jsonschema.Schema) {
+	kind, _ := schema.Properties.Get("localOS")
+	supportOSEnum := []any{}
+	for _, os := range supportedOS {
+		supportOSEnum = append(supportOSEnum, os)
+	}
+	kind.Enum = supportOSEnum
 }
 
 // ZarfComponentOnlyCluster represents the architecture and K8s cluster distribution to filter on.
@@ -152,11 +162,17 @@ type ZarfChart struct {
 // ZarfChartVariable represents a variable that can be set for a Helm chart overrides.
 type ZarfChartVariable struct {
 	// The name of the variable.
-	Name string `json:"name" jsonschema:"pattern=^[A-Z0-9_]+$"`
+	Name string `json:"name"`
 	// A brief description of what the variable controls.
 	Description string `json:"description"`
 	// The path within the Helm chart values where this variable applies.
 	Path string `json:"path"`
+}
+
+// JSONSchemaExtend extends the generated json schema during `zarf internal gen-config-schema`
+func (ZarfChartVariable) JSONSchemaExtend(schema *jsonschema.Schema) {
+	name, _ := schema.Properties.Get("name")
+	name.Pattern = variables.UppercaseNumberUnderscorePattern
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
@@ -248,13 +264,19 @@ type ZarfComponentAction struct {
 	// (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.
 	Shell *exec.Shell `json:"shell,omitempty"`
 	// [Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.
-	DeprecatedSetVariable string `json:"setVariable,omitempty" jsonschema:"pattern=^[A-Z0-9_]+$"`
+	DeprecatedSetVariable string `json:"setVariable,omitempty"`
 	// (onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.
 	SetVariables []variables.Variable `json:"setVariables,omitempty"`
 	// Description of the action to be displayed during package execution instead of the command.
 	Description string `json:"description,omitempty"`
 	// Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.
 	Wait *ZarfComponentActionWait `json:"wait,omitempty"`
+}
+
+// JSONSchemaExtend extends the generated json schema during `zarf internal gen-config-schema`
+func (ZarfComponentAction) JSONSchemaExtend(schema *jsonschema.Schema) {
+	name, _ := schema.Properties.Get("setVariable")
+	name.Pattern = variables.UppercaseNumberUnderscorePattern
 }
 
 // ZarfComponentActionWait specifies a condition to wait for before continuing

@@ -25,7 +25,7 @@ var (
 	IsLowercaseNumberHyphenNoStartHyphen = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*$`).MatchString
 	// Define allowed OS, an empty string means it is allowed on all operating systems
 	// same as enums on ZarfComponentOnlyTarget
-	supportedOS = []string{"linux", "darwin", "windows", ""}
+	supportedOS = []string{"linux", "darwin", "windows"}
 )
 
 // SupportedOS returns the supported operating systems.
