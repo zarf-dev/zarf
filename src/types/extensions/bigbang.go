@@ -7,7 +7,7 @@ package extensions
 // BigBang holds the configuration for the Big Bang extension
 type BigBang struct {
 	// The version of Big Bang to use
-	Version string `json:"version" jsonschema:"required"`
+	Version string `json:"version"`
 	// Override repo to pull Big Bang from instead of Repo One
 	Repo string `json:"repo,omitempty"`
 	// The list of values files to pass to Big Bang; these will be merged together
