@@ -19,169 +19,169 @@ const (
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
 	// Verify that Zarf should perform an action
-	Confirm bool `json:"confirm"`
+	Confirm bool
 	// Allow insecure connections for remote packages
-	Insecure bool `json:"insecure"`
+	Insecure bool
 	// Path to use to cache images and git repos on package create
-	CachePath string `json:"cachePath"`
+	CachePath string
 	// Location Zarf should use as a staging ground when managing files and images for package creation and deployment
-	TempDirectory string `json:"tempDirectory"`
+	TempDirectory string
 	// Number of concurrent layer operations to perform when interacting with a remote package
-	OCIConcurrency int `json:"ociConcurrency"`
+	OCIConcurrency int
 }
 
 // ZarfPackageOptions tracks the user-defined preferences during common package operations.
 type ZarfPackageOptions struct {
 	// The SHA256 checksum of the package
-	Shasum string `json:"shasum"`
+	Shasum string
 	// Location where a Zarf package can be found
-	PackageSource string `json:"packageSource"`
+	PackageSource string
 	// Comma separated list of optional components
-	OptionalComponents string `json:"optionalComponents"`
+	OptionalComponents string
 	// Location where the public key component of a cosign key-pair can be found
-	SGetKeyPath string `json:"sGetKeyPath"`
+	SGetKeyPath string
 	// Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package
-	SetVariables map[string]string `json:"setVariables"`
+	SetVariables map[string]string
 	// Location where the public key component of a cosign key-pair can be found
-	PublicKeyPath string `json:"publicKeyPath"`
+	PublicKeyPath string
 	// The number of retries to perform for Zarf deploy operations like image pushes or Helm installs
-	Retries int `json:"retries"`
+	Retries int
 }
 
 // ZarfInspectOptions tracks the user-defined preferences during a package inspection.
 type ZarfInspectOptions struct {
 	// View SBOM contents while inspecting the package
-	ViewSBOM bool `json:"viewSBOM"`
+	ViewSBOM bool
 	// Location to output an SBOM into after package inspection
-	SBOMOutputDir string `json:"sbomOutputDir"`
+	SBOMOutputDir string
 	// ListImages will list the images in the package
-	ListImages bool `json:"listImages"`
+	ListImages bool
 }
 
 // ZarfFindImagesOptions tracks the user-defined preferences during a prepare find-images search.
 type ZarfFindImagesOptions struct {
 	// Path to the helm chart directory
-	RepoHelmChartPath string `json:"repoHelmChartPath"`
+	RepoHelmChartPath string
 	// Kubernetes version to use for the helm chart
-	KubeVersionOverride string `json:"kubeVersionOverride"`
+	KubeVersionOverride string
 	// Manual override for ###ZARF_REGISTRY###
-	RegistryURL string `json:"registryUrl"`
+	RegistryURL string
 	// Find the location of the image given as an argument and print it to the console
-	Why string `json:"why"`
+	Why string
 	// Optionally skip lookup of cosign artifacts when finding images
-	SkipCosign bool `json:"skipCosign"`
+	SkipCosign bool
 }
 
 // ZarfDeployOptions tracks the user-defined preferences during a package deploy.
 type ZarfDeployOptions struct {
 	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
-	AdoptExistingResources bool `json:"adoptExistingResources"`
+	AdoptExistingResources bool
 	// Skip waiting for external webhooks to execute as each package component is deployed
-	SkipWebhooks bool `json:"skipWebhooks"`
+	SkipWebhooks bool
 	// Timeout for performing Helm operations
-	Timeout time.Duration `json:"timeout"`
+	Timeout time.Duration
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
-	ValuesOverridesMap map[string]map[string]map[string]interface{} `json:"valuesOverridesMap"`
+	ValuesOverridesMap map[string]map[string]map[string]interface{}
 }
 
 // ZarfMirrorOptions tracks the user-defined preferences during a package mirror.
 type ZarfMirrorOptions struct {
 	// Whether to skip adding a Zarf checksum to image references
-	NoImgChecksum bool `json:"noImgChecksum"`
+	NoImgChecksum bool
 }
 
 // ZarfPublishOptions tracks the user-defined preferences during a package publish.
 type ZarfPublishOptions struct {
 	// Location where the Zarf package will be published to
-	PackageDestination string `json:"packageDestination"`
+	PackageDestination string
 	// Password to the private key signature file that will be used to sign the published package
-	SigningKeyPassword string `json:"signingKeyPassword"`
+	SigningKeyPassword string
 	// Location where the private key component of a cosign key-pair can be found
-	SigningKeyPath string `json:"signingKeyPath"`
+	SigningKeyPath string
 }
 
 // ZarfPullOptions tracks the user-defined preferences during a package pull.
 type ZarfPullOptions struct {
 	// Location where the pulled Zarf package will be placed
-	OutputDirectory string `json:"outputDirectory"`
+	OutputDirectory string
 }
 
 // ZarfGenerateOptions tracks the user-defined options during package generation.
 type ZarfGenerateOptions struct {
 	// Name of the package being generated
-	Name string `json:"name"`
+	Name string
 	// URL to the source git repository
-	URL string `json:"url"`
+	URL string
 	// Version of the chart to use
-	Version string `json:"version"`
+	Version string
 	// Relative path to the chart in the git repository
-	GitPath string `json:"gitPath"`
+	GitPath string
 	// Location where the finalized zarf.yaml will be placed
-	Output string `json:"output"`
+	Output string
 }
 
 // ZarfInitOptions tracks the user-defined options during cluster initialization.
 type ZarfInitOptions struct {
 	// Indicates if Zarf was initialized while deploying its own k8s cluster
-	ApplianceMode bool `json:"applianceMode"`
+	ApplianceMode bool
 	// Information about the repository Zarf is going to be using
-	GitServer GitServerInfo `json:"gitServer"`
+	GitServer GitServerInfo
 	// Information about the container registry Zarf is going to be using
-	RegistryInfo RegistryInfo `json:"registryInfo"`
+	RegistryInfo RegistryInfo
 	// Information about the artifact registry Zarf is going to be using
-	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
+	ArtifactServer ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
-	StorageClass string `json:"storageClass"`
+	StorageClass string
 }
 
 // ZarfCreateOptions tracks the user-defined options used to create the package.
 type ZarfCreateOptions struct {
 	// Disable the generation of SBOM materials during package creation
-	SkipSBOM bool `json:"skipSBOM"`
+	SkipSBOM bool
 	// Location where the Zarf package will be created from
-	BaseDir string `json:"baseDir"`
+	BaseDir string
 	// Location where the finalized Zarf package will be placed
-	Output string `json:"output"`
+	Output string
 	// Whether to pause to allow for viewing the SBOM post-creation
-	ViewSBOM bool `json:"viewSBOM"`
+	ViewSBOM bool
 	// Location to output an SBOM into after package creation
-	SBOMOutputDir string `json:"sbomOutputDir"`
+	SBOMOutputDir string
 	// Key-Value map of variable names and their corresponding values that will be used to template against the Zarf package being used
-	SetVariables map[string]string `json:"setVariables"`
+	SetVariables map[string]string
 	// Size of chunks to use when splitting a zarf package into multiple files in megabytes
-	MaxPackageSizeMB int `json:"maxPackageSizeMB"`
+	MaxPackageSizeMB int
 	// Location where the private key component of a cosign key-pair can be found
-	SigningKeyPath string `json:"signingKeyPath"`
+	SigningKeyPath string
 	// Password to the private key signature file that will be used to sigh the created package
-	SigningKeyPassword string `json:"signingKeyPassword"`
+	SigningKeyPassword string
 	// Path to a previously built package used as the basis for creating a differential package
-	DifferentialPackagePath string `json:"differentialPackagePath"`
+	DifferentialPackagePath string
 	// A map of domains to override on package create when pulling images
-	RegistryOverrides map[string]string `json:"registryOverrides"`
+	RegistryOverrides map[string]string
 	// An optional variant that controls which components will be included in a package
-	Flavor string `json:"flavor"`
+	Flavor string
 	// Whether to create a skeleton package
-	IsSkeleton bool `json:"isSkeleton"`
+	IsSkeleton bool
 	// Whether to create a YOLO package
-	NoYOLO bool `json:"noYOLO"`
+	NoYOLO bool
 }
 
 // ZarfSplitPackageData contains info about a split package.
 type ZarfSplitPackageData struct {
 	// The sha256sum of the package
-	Sha256Sum string `json:"sha256Sum"`
+	Sha256Sum string
 	// The size of the package in bytes
-	Bytes int64 `json:"bytes"`
+	Bytes int64
 	// The number of parts the package is split into
-	Count int `json:"count"`
+	Count int
 }
 
 // ConnectString contains information about a connection made with Zarf connect.
 type ConnectString struct {
 	// Descriptive text that explains what the resource you would be connecting to is used for
-	Description string `json:"description"`
+	Description string
 	// URL path that gets appended to the k8s port-forward result
-	URL string `json:"url"`
+	URL string
 }
 
 // ConnectStrings is a map of connect names to connection information.
@@ -189,7 +189,7 @@ type ConnectStrings map[string]ConnectString
 
 // DifferentialData contains image and repository information about the package a Differential Package is Based on.
 type DifferentialData struct {
-	DifferentialImages         map[string]bool `json:"differentialImages"`
-	DifferentialRepos          map[string]bool `json:"differentialRepos"`
-	DifferentialPackageVersion string          `json:"differentialPackageVersion"`
+	DifferentialImages         map[string]bool
+	DifferentialRepos          map[string]bool
+	DifferentialPackageVersion string
 }
