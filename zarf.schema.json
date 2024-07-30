@@ -4,26 +4,26 @@
   "$defs": {
     "BigBang": {
       "properties": {
-        "Version": {
+        "version": {
           "type": "string",
           "description": "The version of Big Bang to use"
         },
-        "Repo": {
+        "repo": {
           "type": "string",
           "description": "Override repo to pull Big Bang from instead of Repo One"
         },
-        "ValuesFiles": {
+        "valuesFiles": {
           "items": {
             "type": "string"
           },
           "type": "array",
           "description": "The list of values files to pass to Big Bang; these will be merged together"
         },
-        "SkipFlux": {
+        "skipFlux": {
           "type": "boolean",
           "description": "Whether to skip deploying flux; Defaults to false"
         },
-        "FluxPatchFiles": {
+        "fluxPatchFiles": {
           "items": {
             "type": "string"
           },
@@ -34,7 +34,7 @@
       "additionalProperties": false,
       "type": "object",
       "required": [
-        "Version"
+        "version"
       ],
       "description": "BigBang holds the configuration for the Big Bang extension",
       "patternProperties": {
@@ -755,8 +755,7 @@
       "type": "object",
       "required": [
         "protocol",
-        "address",
-        "code"
+        "address"
       ],
       "description": "ZarfComponentActionWaitNetwork specifies a condition to wait for before continuing",
       "patternProperties": {

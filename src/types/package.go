@@ -19,17 +19,17 @@ const (
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
 	// The kind of Zarf package
-	Kind ZarfPackageKind `json:"kind" jsonschema:"required,enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
+	Kind ZarfPackageKind `json:"kind" jsonschema:"enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	// Package metadata
-	Metadata ZarfMetadata `json:"metadata"`
+	Metadata ZarfMetadata `json:"metadata,omitempty"`
 	// Zarf-generated package build data
-	Build ZarfBuildData `json:"build"`
+	Build ZarfBuildData `json:"build,omitempty"`
 	// List of components to deploy in this package
-	Components []ZarfComponent `json:"components" jsonschema:"required,minItems=1"`
+	Components []ZarfComponent `json:"components" jsonschema:"minItems=1"`
 	// Constant template values applied on deploy for K8s resources
-	Constants []variables.Constant `json:"constants"`
+	Constants []variables.Constant `json:"constants,omitempty"`
 	// Variable template values applied on deploy for K8s resources
-	Variables []variables.InteractiveVariable `json:"variables"`
+	Variables []variables.InteractiveVariable `json:"variables,omitempty"`
 }
 
 // IsInitConfig returns whether a Zarf package is an init config.
@@ -50,57 +50,57 @@ func (pkg ZarfPackage) IsSBOMAble() bool {
 // ZarfMetadata lists information about the current ZarfPackage.
 type ZarfMetadata struct {
 	// Name to identify this Zarf package
-	Name string `json:"name" jsonschema:"required,pattern=^[a-z0-9][a-z0-9\\-]*$"`
+	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
 	// Additional information about this package
-	Description string `json:"description"`
+	Description string `json:"description,omitempty"`
 	// Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with)
-	Version string `json:"version"`
+	Version string `json:"version,omitempty"`
 	// Link to package information when online
-	URL string `json:"url"`
+	URL string `json:"url,omitempty"`
 	// An image URL to embed in this package (Reserved for future use in Zarf UI)
-	Image string `json:"image"`
+	Image string `json:"image,omitempty"`
 	// Disable compression of this package
-	Uncompressed bool `json:"uncompressed"`
+	Uncompressed bool `json:"uncompressed,omitempty"`
 	// The target cluster architecture for this package
-	Architecture string `json:"architecture" jsonschema:"example=arm64,example=amd64"`
+	Architecture string `json:"architecture,omitempty" jsonschema:"example=arm64,example=amd64"`
 	// Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.
-	YOLO bool `json:"yolo"`
+	YOLO bool `json:"yolo,omitempty"`
 	// Comma-separated list of package authors (including contact info)
-	Authors string `json:"authors" jsonschema:"example=Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"`
+	Authors string `json:"authors,omitempty" jsonschema:"example=Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"`
 	// Link to package documentation when online
-	Documentation string `json:"documentation"`
+	Documentation string `json:"documentation,omitempty"`
 	// Link to package source code when online
-	Source string `json:"source"`
+	Source string `json:"source,omitempty"`
 	// Name of the distributing entity, organization or individual
-	Vendor string `json:"vendor"`
+	Vendor string `json:"vendor,omitempty"`
 	// Checksum of a checksums.txt file that contains checksums all the layers within the package
-	AggregateChecksum string `json:"aggregateChecksum"`
+	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
 }
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
 type ZarfBuildData struct {
 	// The machine name that created this package
-	Terminal string `json:"terminal" jsonschema:"required"`
+	Terminal string `json:"terminal"`
 	// The username who created this package
-	User string `json:"user" jsonschema:"required"`
+	User string `json:"user"`
 	// The architecture this package was created on
-	Architecture string `json:"architecture" jsonschema:"required"`
+	Architecture string `json:"architecture"`
 	// The timestamp when this package was created
-	Timestamp string `json:"timestamp" jsonschema:"required"`
+	Timestamp string `json:"timestamp"`
 	// The version of Zarf used to build this package
-	Version string `json:"version" jsonschema:"required"`
+	Version string `json:"version"`
 	// Any migrations that have been run on this package
-	Migrations []string `json:"migrations"`
+	Migrations []string `json:"migrations,omitempty"`
 	// Any registry domains that were overridden on package create when pulling images
-	RegistryOverrides map[string]string `json:"registryOverrides"`
+	RegistryOverrides map[string]string `json:"registryOverrides,omitempty"`
 	// Whether this package was created with differential components
-	Differential bool `json:"differential"`
+	Differential bool `json:"differential,omitempty"`
 	// Version of a previously built package used as the basis for creating this differential package
-	DifferentialPackageVersion string `json:"differentialPackageVersion"`
+	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty"`
 	// List of components that were not included in this package due to differential packaging
-	DifferentialMissing []string `json:"differentialMissing"`
+	DifferentialMissing []string `json:"differentialMissing,omitempty"`
 	// The minimum version of Zarf that does not have breaking package structure changes
-	LastNonBreakingVersion string `json:"lastNonBreakingVersion"`
+	LastNonBreakingVersion string `json:"lastNonBreakingVersion,omitempty"`
 	// The flavor of Zarf used to build this package
-	Flavor string `json:"flavor"`
+	Flavor string `json:"flavor,omitempty"`
 }

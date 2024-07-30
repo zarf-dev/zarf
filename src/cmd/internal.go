@@ -171,7 +171,6 @@ var genConfigSchemaCmd = &cobra.Command{
 			return fmt.Errorf("this command must be called from the root of the Zarf repo: %w", err)
 		}
 
-		reflector.RequiredFromJSONSchemaTags = true
 		schema := reflector.Reflect(&types.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
@@ -203,7 +202,6 @@ var genTypesSchemaCmd = &cobra.Command{
 			return fmt.Errorf("this command must be called from the root of the Zarf repo: %w", err)
 		}
 
-		reflector.RequiredFromJSONSchemaTags = true
 		schema := reflector.Reflect(&zarfTypes{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
