@@ -44,7 +44,7 @@ var destroyCmd = &cobra.Command{
 		//       the scripts to remove k3s, we will still try to remove a locally installed k3s cluster
 		state, err := c.LoadZarfState(ctx)
 		if err != nil {
-			message.WarnErr(err, lang.ErrLoadState)
+			message.WarnErr(err, err.Error())
 		}
 
 		// If Zarf deployed the cluster, burn it all down

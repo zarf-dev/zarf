@@ -176,7 +176,7 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 
 		zarfState, err := c.LoadZarfState(ctx)
 		if err != nil {
-			message.Warnf(lang.CmdToolsCraneConnectedButBadStateErr, err.Error())
+			message.Warnf("could not get Zarf state from Kubernetes cluster, continuing without state information %s", err.Error())
 			return originalListFn(cmd, args)
 		}
 
