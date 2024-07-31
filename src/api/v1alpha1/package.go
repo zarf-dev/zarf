@@ -27,8 +27,12 @@ const (
 	ZarfPackageConfig ZarfPackageKind = "ZarfPackageConfig"
 )
 
+const apiVersion = "zarf.dev/v1alpha1"
+
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
+	// The API version of the Zarf package.
+	ApiVersion string `json:"apiVersion"`
 	// The kind of Zarf package.
 	Kind ZarfPackageKind `json:"kind"`
 	// Package metadata.
@@ -48,6 +52,9 @@ func (ZarfPackage) JSONSchemaExtend(schema *jsonschema.Schema) {
 	kind, _ := schema.Properties.Get("kind")
 	kind.Enum = []interface{}{ZarfInitConfig, ZarfPackageConfig}
 	kind.Default = ZarfPackageConfig
+
+	apiVersionSchema, _ := schema.Properties.Get("apiVersion")
+	apiVersionSchema.Enum = []interface{}{apiVersion}
 }
 
 // IsInitConfig returns whether a Zarf package is an init config.
