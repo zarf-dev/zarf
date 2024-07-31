@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package v1alpha1 contains all the structs for the v1alpha1 ZarfPackageConfig
+// Package v1alpha1 holds the definition of the v1alpha1 Zarf Package
 package v1alpha1
 
 import (
