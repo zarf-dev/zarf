@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -156,12 +157,30 @@ tableOfContents: false
 	},
 }
 
+func addGoComments(reflector *jsonschema.Reflector) error {
+	addCommentErr := errors.New("this command must be called from the root of the Zarf repo")
+
+	typePackagePath := filepath.Join("src", "types")
+	if err := reflector.AddGoComments("github.com/zarf-dev/zarf", typePackagePath); err != nil {
+		return fmt.Errorf("%w: %w", addCommentErr, err)
+	}
+	varPackagePath := filepath.Join("src", "pkg", "variables")
+	if err := reflector.AddGoComments("github.com/zarf-dev/zarf", varPackagePath); err != nil {
+		return fmt.Errorf("%w: %w", addCommentErr, err)
+	}
+	return nil
+}
+
 var genConfigSchemaCmd = &cobra.Command{
 	Use:     "gen-config-schema",
 	Aliases: []string{"gc"},
 	Short:   lang.CmdInternalConfigSchemaShort,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		reflector := jsonschema.Reflector(jsonschema.Reflector{ExpandedStruct: true})
+		if err := addGoComments(&reflector); err != nil {
+			return err
+		}
+
 		schema := reflector.Reflect(&types.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
@@ -183,7 +202,12 @@ var genTypesSchemaCmd = &cobra.Command{
 	Aliases: []string{"gt"},
 	Short:   lang.CmdInternalTypesSchemaShort,
 	RunE: func(_ *cobra.Command, _ []string) error {
-		schema := jsonschema.Reflect(&zarfTypes{})
+		reflector := jsonschema.Reflector(jsonschema.Reflector{ExpandedStruct: true})
+		if err := addGoComments(&reflector); err != nil {
+			return err
+		}
+
+		schema := reflector.Reflect(&zarfTypes{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
 			return fmt.Errorf("unable to generate the JSON schema for the Zarf types DeployedPackage, ZarfPackage, and ZarfState: %w", err)

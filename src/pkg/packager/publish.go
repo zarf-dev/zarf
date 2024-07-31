@@ -112,8 +112,8 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 			ex = append(ex, types.ZarfComponent{
 				Name: fmt.Sprintf("import-%s", c.Name),
 				Import: types.ZarfComponentImport{
-					ComponentName: c.Name,
-					URL:           helpers.OCIURLPrefix + remote.Repo().Reference.String(),
+					Name: c.Name,
+					URL:  helpers.OCIURLPrefix + remote.Repo().Reference.String(),
 				},
 			})
 		}
