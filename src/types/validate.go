@@ -27,16 +27,10 @@ var (
 	// IsLowercaseNumberHyphenNoStartHyphen is a regex for lowercase, numbers and hyphens that cannot start with a hyphen.
 	// https://regex101.com/r/FLdG9G/2
 	IsLowercaseNumberHyphenNoStartHyphen = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*$`).MatchString
-	// Define allowed OS, an empty string means it is allowed on all operating systems
-	// same as enums on ZarfComponentOnlyTarget
-	supportedOS = []string{"linux", "darwin", "windows"}
+	supportedOS                          = []string{"linux", "darwin", "windows"}
 )
 
-// SupportedOS returns the supported operating systems.
-//
-// The supported operating systems are: linux, darwin, windows.
-//
-// An empty string signifies no OS restrictions.
+// SupportedOS returns the Zarf supported operating systems.
 func SupportedOS() []string {
 	return supportedOS
 }
