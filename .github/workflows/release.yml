@@ -72,7 +72,7 @@ jobs:
 
       # Upload the contents of the build directory for later stages to use
       - name: Upload build artifacts
-        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
         with:
           name: build-artifacts
           path: build/
@@ -186,7 +186,7 @@ jobs:
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ steps.brew-tap-token.outputs.token }}
 
       - name: Save CVE report
-        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
         with:
           name: cve-report
           path: build/zarf-known-cves.csv
