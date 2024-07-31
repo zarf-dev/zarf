@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/internal/packager/git"
+	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -71,20 +71,20 @@ func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 	require.NoError(t, err)
 
 	// Init the state variable
-	zarfState, err := c.LoadZarfState(ctx)
+	state, err := c.LoadZarfState(ctx)
 	require.NoError(t, err)
-
-	gitCfg := git.New(zarfState.GitServer)
+	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, state.GitServer.PullPassword)
+	require.NoError(t, err)
+	repoName := "zarf-public-test-2363058019"
 
 	// Get the repo as the readonly user
-	repoName := "zarf-public-test-2363058019"
-	getRepoRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s", gitURL, zarfState.GitServer.PushUsername, repoName), nil)
-	getRepoResponseBody, _, err := gitCfg.DoHTTPThings(getRepoRequest, types.ZarfGitReadUser, zarfState.GitServer.PullPassword)
+	b, statusCode, err := giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s", state.GitServer.PushUsername, repoName), nil)
 	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, statusCode)
 
 	// Make sure the only permissions are pull (read)
 	var bodyMap map[string]interface{}
-	err = json.Unmarshal(getRepoResponseBody, &bodyMap)
+	err = json.Unmarshal(b, &bodyMap)
 	require.NoError(t, err)
 	permissionsMap, ok := bodyMap["permissions"].(map[string]interface{})
 	require.True(t, ok, "permissions key is not of right type")
@@ -100,30 +100,29 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 	require.NoError(t, err)
 
 	// Init the state variable
-	zarfState, err := c.LoadZarfState(ctx)
+	state, err := c.LoadZarfState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
+	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, state.GitServer.PullPassword)
+	require.NoError(t, err)
 	repoName := "zarf-public-test-2363058019"
 
-	gitCfg := git.New(zarfState.GitServer)
-
-	// Get the Zarf repo tag
-	repoTag := "v0.0.1"
-	getRepoTagsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/tags/%s", gitURL, types.ZarfGitPushUser, repoName, repoTag), nil)
-	getRepoTagsResponseBody, _, err := gitCfg.DoHTTPThings(getRepoTagsRequest, types.ZarfGitReadUser, zarfState.GitServer.PullPassword)
-	require.NoError(t, err)
-
 	// Make sure the pushed tag exists
+	repoTag := "v0.0.1"
+	b, statusCode, err := giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s/tags/%s", types.ZarfGitPushUser, repoName, repoTag), nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, statusCode)
 	var tagMap map[string]interface{}
-	err = json.Unmarshal(getRepoTagsResponseBody, &tagMap)
+	err = json.Unmarshal(b, &tagMap)
 	require.NoError(t, err)
 	require.Equal(t, repoTag, tagMap["name"])
 
 	// Get the Zarf repo commit
 	repoHash := "01a23218923f24194133b5eb11268cf8d73ff1bb"
-	getRepoCommitsRequest, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/repos/%s/%s/git/commits/%s", gitURL, types.ZarfGitPushUser, repoName, repoHash), nil)
-	getRepoCommitsResponseBody, _, err := gitCfg.DoHTTPThings(getRepoCommitsRequest, types.ZarfGitReadUser, zarfState.GitServer.PullPassword)
+	b, statusCode, err = giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s/git/commits/%s", types.ZarfGitPushUser, repoName, repoHash), nil)
 	require.NoError(t, err)
-	require.Contains(t, string(getRepoCommitsResponseBody), repoHash)
+	require.Equal(t, http.StatusOK, statusCode)
+	require.NoError(t, err)
+	require.Contains(t, string(b), repoHash)
 }
 
 func waitFluxPodInfoDeployment(t *testing.T) {

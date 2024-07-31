@@ -32,8 +32,6 @@ const (
 
 // Zarf Constants for In-Cluster Services.
 const (
-	ZarfArtifactTokenName = "zarf-artifact-registry-token"
-
 	ZarfImagePullSecretName = "private-registry"
 	ZarfGitServerSecretName = "private-git-server"
 

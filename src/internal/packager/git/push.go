@@ -52,25 +52,6 @@ func (g *Git) PushRepo(srcURL, targetFolder string) error {
 		return fmt.Errorf("failed to push the git repo %q: %w", repoFolder, err)
 	}
 
-	// Add the read-only user to this repo
-	if g.Server.InternalServer {
-		// Get the upstream URL
-		remote, err := repo.Remote(onlineRemoteName)
-		if err != nil {
-			message.Warn("unable to get the information needed to add the read-only user to the repo")
-			return err
-		}
-		remoteURL := remote.Config().URLs[0]
-		repoName, err := transform.GitURLtoRepoName(remoteURL)
-		if err != nil {
-			return err
-		}
-		err = g.addReadOnlyUserToRepo(g.Server.Address, repoName)
-		if err != nil {
-			return fmt.Errorf("unable to add the read only user to the repo %s: %w", repoName, err)
-		}
-	}
-
 	spinner.Success()
 	return nil
 }
