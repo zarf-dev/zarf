@@ -29,7 +29,7 @@ require (
 	github.com/gosuri/uitable v0.0.4
 	github.com/invopop/jsonschema v0.12.0
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/moby/moby v24.0.9+incompatible
+	github.com/moby/moby v27.1.1+incompatible
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.18.0
@@ -65,6 +65,7 @@ require (
 require (
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/moby/docker-image-spec v1.3.1 // indirect
 )
 
 require (
@@ -213,7 +214,7 @@ require (
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/cli v26.0.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker v24.0.9+incompatible // indirect
+	github.com/docker/docker v27.1.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
