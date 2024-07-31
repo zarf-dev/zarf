@@ -46,7 +46,7 @@ jobs:
           build-examples: "false"
 
       - name: Login to Iron Bank
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         if: ${{ env.IRON_BANK_ROBOT_USERNAME != '' }}
         env:
           IRON_BANK_ROBOT_USERNAME: ${{ secrets.IRON_BANK_ROBOT_USERNAME }}
@@ -97,7 +97,7 @@ jobs:
         uses: ./.github/actions/k3d
 
       - name: Login to Iron Bank
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         if: ${{ env.IRON_BANK_ROBOT_USERNAME != '' }}
         env:
           IRON_BANK_ROBOT_USERNAME: ${{ secrets.IRON_BANK_ROBOT_USERNAME }}
