@@ -3,41 +3,14 @@
     "config:base",
     "group:allNonMajor"
   ],
-  "ignoreDeps": [
-    "sigs.k8s.io/kustomize/kyaml"
-  ],
-  "ignorePaths": [
-    "**/node_modules/**",
-    "**/bower_components/**",
-    "**/vendor/**",
-    "**/__tests__/**",
-    "**/test/**",
-    "**/tests/**",
-    "**/__fixtures__/**"
-  ],
   "packageRules": [
     {
-      "matchUpdateTypes": [
-        "patch",
-        "pin",
-        "digest"
-      ],
-      "automerge": true,
-      "automergeType": "pr"
-    },
-    {
-      "matchDepTypes": [
-        "devDependencies"
-      ],
-      "automerge": true,
-      "automergeType": "pr"
+      "matchManagers": ["*"],
+      "enabled": false
     }
   ],
   "platformAutomerge": true,
   "platformCommit": true,
-  "postUpdateOptions": [
-    "gomodTidy"
-  ],
   "regexManagers": [
     {
       "fileMatch": [
