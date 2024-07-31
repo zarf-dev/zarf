@@ -11,7 +11,7 @@ require (
 	github.com/agnivade/levenshtein v1.1.1
 	github.com/anchore/clio v0.0.0-20240705045624-ac88e09ad9d0
 	github.com/anchore/stereoscope v0.0.1
-	github.com/anchore/syft v0.100.0
+	github.com/anchore/syft v1.10.0
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.1
 	github.com/defenseunicorns/pkg/kubernetes v0.2.0
 	github.com/defenseunicorns/pkg/oci v1.0.1
