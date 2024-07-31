@@ -17,13 +17,13 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
@@ -41,7 +41,7 @@ func (h *Helm) UpdateZarfRegistryValues(ctx context.Context) error {
 			"htpasswd": fmt.Sprintf("%s\n%s", pushUser, pullUser),
 		},
 	}
-	h.chart = types.ZarfChart{
+	h.chart = v1alpha1.ZarfChart{
 		Namespace:   "zarf",
 		ReleaseName: "zarf-docker-registry",
 	}
@@ -99,7 +99,7 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 	for _, release := range releases {
 		// Update the Zarf Agent release with the new values
 		if release.Chart.Name() == "raw-init-zarf-agent-zarf-agent" {
-			h.chart = types.ZarfChart{
+			h.chart = v1alpha1.ZarfChart{
 				Namespace:   "zarf",
 				ReleaseName: release.Name,
 			}

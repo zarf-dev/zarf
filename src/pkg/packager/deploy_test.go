@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/types"
@@ -17,7 +18,7 @@ func TestGenerateValuesOverrides(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		chart         types.ZarfChart
+		chart         v1alpha1.ZarfChart
 		setVariables  map[string]string
 		deployOpts    types.ZarfDeployOptions
 		componentName string
@@ -25,7 +26,7 @@ func TestGenerateValuesOverrides(t *testing.T) {
 	}{
 		{
 			name:          "Empty inputs",
-			chart:         types.ZarfChart{},
+			chart:         v1alpha1.ZarfChart{},
 			setVariables:  map[string]string{},
 			deployOpts:    types.ZarfDeployOptions{},
 			componentName: "",
@@ -33,9 +34,9 @@ func TestGenerateValuesOverrides(t *testing.T) {
 		},
 		{
 			name: "Single variable",
-			chart: types.ZarfChart{
+			chart: v1alpha1.ZarfChart{
 				Name:      "test-chart",
-				Variables: []types.ZarfChartVariable{{Name: "TEST_VAR", Path: "testVar"}},
+				Variables: []v1alpha1.ZarfChartVariable{{Name: "TEST_VAR", Path: "testVar"}},
 			},
 			setVariables:  map[string]string{"TEST_VAR": "testValue"},
 			deployOpts:    types.ZarfDeployOptions{},
@@ -44,9 +45,9 @@ func TestGenerateValuesOverrides(t *testing.T) {
 		},
 		{
 			name: "Non-matching setVariable",
-			chart: types.ZarfChart{
+			chart: v1alpha1.ZarfChart{
 				Name:      "test-chart",
-				Variables: []types.ZarfChartVariable{{Name: "EXPECTED_VAR", Path: "path.to.expectedVar"}},
+				Variables: []v1alpha1.ZarfChartVariable{{Name: "EXPECTED_VAR", Path: "path.to.expectedVar"}},
 			},
 			setVariables:  map[string]string{"UNEXPECTED_VAR": "unexpectedValue"},
 			deployOpts:    types.ZarfDeployOptions{},
@@ -55,9 +56,9 @@ func TestGenerateValuesOverrides(t *testing.T) {
 		},
 		{
 			name: "Nested 3 level setVariables",
-			chart: types.ZarfChart{
+			chart: v1alpha1.ZarfChart{
 				Name: "nested-chart",
-				Variables: []types.ZarfChartVariable{
+				Variables: []v1alpha1.ZarfChartVariable{
 					{Name: "LEVEL1_LEVEL2_LEVEL3_VAR", Path: "level1.level2.level3Var"},
 				},
 			},
@@ -74,9 +75,9 @@ func TestGenerateValuesOverrides(t *testing.T) {
 		},
 		{
 			name: "Multiple variables with nested and non-nested paths, distinct values",
-			chart: types.ZarfChart{
+			chart: v1alpha1.ZarfChart{
 				Name: "mixed-chart",
-				Variables: []types.ZarfChartVariable{
+				Variables: []v1alpha1.ZarfChartVariable{
 					{Name: "NESTED_VAR_LEVEL2", Path: "nestedVar.level2"},
 					{Name: "SIMPLE_VAR", Path: "simpleVar"},
 				},
@@ -96,9 +97,9 @@ func TestGenerateValuesOverrides(t *testing.T) {
 		},
 		{
 			name: "Values override test",
-			chart: types.ZarfChart{
+			chart: v1alpha1.ZarfChart{
 				Name: "test-chart",
-				Variables: []types.ZarfChartVariable{
+				Variables: []v1alpha1.ZarfChartVariable{
 					{Name: "OVERRIDE_VAR", Path: "path"},
 				},
 			},
@@ -119,9 +120,9 @@ func TestGenerateValuesOverrides(t *testing.T) {
 		},
 		{
 			name: "Missing variable in setVariables but present in ValuesOverridesMap",
-			chart: types.ZarfChart{
+			chart: v1alpha1.ZarfChart{
 				Name: "test-chart",
-				Variables: []types.ZarfChartVariable{
+				Variables: []v1alpha1.ZarfChartVariable{
 					{Name: "MISSING_VAR", Path: "missingVarPath"},
 				},
 			},
@@ -142,9 +143,9 @@ func TestGenerateValuesOverrides(t *testing.T) {
 		},
 		{
 			name: "Non-existent component or chart",
-			chart: types.ZarfChart{
+			chart: v1alpha1.ZarfChart{
 				Name:      "actual-chart",
-				Variables: []types.ZarfChartVariable{{Name: "SOME_VAR", Path: "someVar"}},
+				Variables: []v1alpha1.ZarfChartVariable{{Name: "SOME_VAR", Path: "someVar"}},
 			},
 			setVariables: map[string]string{"SOME_VAR": "value"},
 			deployOpts: types.ZarfDeployOptions{
@@ -161,7 +162,7 @@ func TestGenerateValuesOverrides(t *testing.T) {
 		},
 		{
 			name:          "Variable in setVariables but not in chartVariables",
-			chart:         types.ZarfChart{Name: "orphan-chart"},
+			chart:         v1alpha1.ZarfChart{Name: "orphan-chart"},
 			setVariables:  map[string]string{"ORPHAN_VAR": "orphanValue"},
 			deployOpts:    types.ZarfDeployOptions{},
 			componentName: "orphan-component",
@@ -169,9 +170,9 @@ func TestGenerateValuesOverrides(t *testing.T) {
 		},
 		{
 			name: "Empty ValuesOverridesMap with non-empty setVariableMap and chartVariables",
-			chart: types.ZarfChart{
+			chart: v1alpha1.ZarfChart{
 				Name: "chart-with-vars",
-				Variables: []types.ZarfChartVariable{
+				Variables: []v1alpha1.ZarfChartVariable{
 					{Name: "VAR1", Path: "path.to.var1"},
 					{Name: "VAR2", Path: "path.to.var2"},
 					{Name: "VAR3", Path: "path.to3.var3"},
@@ -198,7 +199,7 @@ func TestGenerateValuesOverrides(t *testing.T) {
 		},
 		{
 			name:  "Empty chartVariables and non-empty setVariableMap",
-			chart: types.ZarfChart{Name: "chart-with-vars"},
+			chart: v1alpha1.ZarfChart{Name: "chart-with-vars"},
 			setVariables: map[string]string{
 				"VAR1": "value1",
 				"VAR2": "value2",

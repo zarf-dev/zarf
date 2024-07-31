@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -21,7 +22,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Publish publishes the package to a registry
@@ -107,11 +107,11 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 	}
 	if p.cfg.CreateOpts.IsSkeleton {
 		message.Title("How to import components from this skeleton:", "")
-		ex := []types.ZarfComponent{}
+		ex := []v1alpha1.ZarfComponent{}
 		for _, c := range p.cfg.Pkg.Components {
-			ex = append(ex, types.ZarfComponent{
+			ex = append(ex, v1alpha1.ZarfComponent{
 				Name: fmt.Sprintf("import-%s", c.Name),
-				Import: types.ZarfComponentImport{
+				Import: v1alpha1.ZarfComponentImport{
 					Name: c.Name,
 					URL:  helpers.OCIURLPrefix + remote.Repo().Reference.String(),
 				},

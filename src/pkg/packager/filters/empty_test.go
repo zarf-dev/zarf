@@ -8,11 +8,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 func TestEmptyFilter_Apply(t *testing.T) {
-	components := []types.ZarfComponent{
+	components := []v1alpha1.ZarfComponent{
 		{
 			Name: "component1",
 		},
@@ -20,7 +20,7 @@ func TestEmptyFilter_Apply(t *testing.T) {
 			Name: "component2",
 		},
 	}
-	pkg := types.ZarfPackage{
+	pkg := v1alpha1.ZarfPackage{
 		Components: components,
 	}
 	filter := Empty()

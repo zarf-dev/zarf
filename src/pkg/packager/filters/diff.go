@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/git"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
@@ -23,8 +24,8 @@ type differentialDataFilter struct {
 	diffData *types.DifferentialData
 }
 
-func (f *differentialDataFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
-	diffComponents := []types.ZarfComponent{}
+func (f *differentialDataFilter) Apply(pkg v1alpha1.ZarfPackage) ([]v1alpha1.ZarfComponent, error) {
+	diffComponents := []v1alpha1.ZarfComponent{}
 	for _, component := range pkg.Components {
 		filteredImages := []string{}
 		for _, img := range component.Images {

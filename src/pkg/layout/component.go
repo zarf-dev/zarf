@@ -12,8 +12,8 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/mholt/archiver/v3"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ComponentPaths contains paths for a component.
@@ -39,7 +39,7 @@ type Components struct {
 var ErrNotLoaded = fmt.Errorf("not loaded")
 
 // Archive archives a component.
-func (c *Components) Archive(component types.ZarfComponent, cleanupTemp bool) (err error) {
+func (c *Components) Archive(component v1alpha1.ZarfComponent, cleanupTemp bool) (err error) {
 	name := component.Name
 	if _, ok := c.Dirs[name]; !ok {
 		return &fs.PathError{
@@ -75,7 +75,7 @@ func (c *Components) Archive(component types.ZarfComponent, cleanupTemp bool) (e
 }
 
 // Unarchive unarchives a component.
-func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
+func (c *Components) Unarchive(component v1alpha1.ZarfComponent) (err error) {
 	name := component.Name
 	tb, ok := c.Tarballs[name]
 	if !ok {
@@ -138,7 +138,7 @@ func (c *Components) Unarchive(component types.ZarfComponent) (err error) {
 }
 
 // Create creates a new component directory structure.
-func (c *Components) Create(component types.ZarfComponent) (cp *ComponentPaths, err error) {
+func (c *Components) Create(component v1alpha1.ZarfComponent) (cp *ComponentPaths, err error) {
 	name := component.Name
 
 	_, ok := c.Tarballs[name]

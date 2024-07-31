@@ -13,6 +13,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
@@ -93,7 +94,7 @@ func TestReproducibleTarballs(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "tools", "archiver", "decompress", tb, unpack1)
 	require.NoError(t, err, stdOut, stdErr)
 
-	var pkg1 types.ZarfPackage
+	var pkg1 v1alpha1.ZarfPackage
 	err = utils.ReadYaml(filepath.Join(unpack1, layout.ZarfYAML), &pkg1)
 	require.NoError(t, err)
 
@@ -105,7 +106,7 @@ func TestReproducibleTarballs(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "tools", "archiver", "decompress", tb, unpack2)
 	require.NoError(t, err, stdOut, stdErr)
 
-	var pkg2 types.ZarfPackage
+	var pkg2 v1alpha1.ZarfPackage
 	err = utils.ReadYaml(filepath.Join(unpack2, layout.ZarfYAML), &pkg2)
 	require.NoError(t, err)
 

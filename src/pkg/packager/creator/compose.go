@@ -7,13 +7,13 @@ package creator
 import (
 	"context"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/composer"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ComposeComponents composes components and their dependencies into a single Zarf package using an import chain.
-func ComposeComponents(ctx context.Context, pkg types.ZarfPackage, flavor string) (types.ZarfPackage, []string, error) {
-	components := []types.ZarfComponent{}
+func ComposeComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, flavor string) (v1alpha1.ZarfPackage, []string, error) {
+	components := []v1alpha1.ZarfComponent{}
 	warnings := []string{}
 
 	pkgVars := pkg.Variables
@@ -34,7 +34,7 @@ func ComposeComponents(ctx context.Context, pkg types.ZarfPackage, flavor string
 		// build the import chain
 		chain, err := composer.NewImportChain(ctx, component, i, pkg.Metadata.Name, arch, flavor)
 		if err != nil {
-			return types.ZarfPackage{}, nil, err
+			return v1alpha1.ZarfPackage{}, nil, err
 		}
 
 		// migrate any deprecated component configurations now
@@ -44,7 +44,7 @@ func ComposeComponents(ctx context.Context, pkg types.ZarfPackage, flavor string
 		// get the composed component
 		composed, err := chain.Compose(ctx)
 		if err != nil {
-			return types.ZarfPackage{}, nil, err
+			return v1alpha1.ZarfPackage{}, nil, err
 		}
 		components = append(components, *composed)
 

@@ -14,8 +14,8 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/pterm/pterm"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // BreakingChange represents a breaking change that happened on a specified Zarf version.
@@ -44,12 +44,12 @@ const (
 
 // MigrateComponent runs all migrations on a component.
 // Build should be empty on package create, but include just in case someone copied a zarf.yaml from a zarf package.
-func MigrateComponent(build types.ZarfBuildData, component types.ZarfComponent) (migratedComponent types.ZarfComponent, warnings []string) {
+func MigrateComponent(build v1alpha1.ZarfBuildData, component v1alpha1.ZarfComponent) (migratedComponent v1alpha1.ZarfComponent, warnings []string) {
 	migratedComponent = component
 
 	// If the component has already been migrated, clear the deprecated scripts.
 	if slices.Contains(build.Migrations, ScriptsToActionsMigrated) {
-		migratedComponent.DeprecatedScripts = types.DeprecatedZarfComponentScripts{}
+		migratedComponent.DeprecatedScripts = v1alpha1.DeprecatedZarfComponentScripts{}
 	} else {
 		// Otherwise, run the migration.
 		var warning string

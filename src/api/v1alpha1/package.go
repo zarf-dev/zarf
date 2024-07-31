@@ -1,12 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package types contains all the types used by Zarf.
-package types
+// Package v1alpha1 contains all the structs for the v1alpha1 ZarfPackageConfig
+package v1alpha1
 
 import (
 	"github.com/invopop/jsonschema"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+)
+
+// Zarf looks for these strings in zarf.yaml to make dynamic changes
+const (
+	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
+	ZarfPackageVariablePrefix = "###ZARF_PKG_VAR_"
+	ZarfPackageArch           = "###ZARF_PKG_ARCH###"
+	ZarfComponentName         = "###ZARF_COMPONENT_NAME###"
 )
 
 // ZarfPackageKind is an enum of the different kinds of Zarf packages.

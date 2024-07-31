@@ -11,8 +11,8 @@ import (
 
 	"github.com/agnivade/levenshtein"
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ForDeploy creates a new deployment filter.
@@ -40,9 +40,9 @@ var (
 )
 
 // Apply applies the filter.
-func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
-	var selectedComponents []types.ZarfComponent
-	groupedComponents := map[string][]types.ZarfComponent{}
+func (f *deploymentFilter) Apply(pkg v1alpha1.ZarfPackage) ([]v1alpha1.ZarfComponent, error) {
+	var selectedComponents []v1alpha1.ZarfComponent
+	groupedComponents := map[string][]v1alpha1.ZarfComponent{}
 	orderedComponentGroups := []string{}
 
 	// Group the components by Name and Group while maintaining order
@@ -66,8 +66,8 @@ func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, 
 
 		// NOTE: This does not use forIncludedComponents as it takes group, default and required status into account.
 		for _, groupKey := range orderedComponentGroups {
-			var groupDefault *types.ZarfComponent
-			var groupSelected *types.ZarfComponent
+			var groupDefault *v1alpha1.ZarfComponent
+			var groupSelected *v1alpha1.ZarfComponent
 
 			for _, component := range groupedComponents[groupKey] {
 				// Ensure we have a local version of the component to point to (otherwise the pointer might change on us)

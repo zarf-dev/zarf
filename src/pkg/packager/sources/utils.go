@@ -14,10 +14,10 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/mholt/archiver/v3"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // GetValidPackageExtensions returns the valid package extensions.
@@ -79,7 +79,7 @@ func identifyUnknownTarball(path string) (string, error) {
 
 // RenameFromMetadata renames a tarball based on its metadata.
 func RenameFromMetadata(path string) (string, error) {
-	var pkg types.ZarfPackage
+	var pkg v1alpha1.ZarfPackage
 
 	ext := filepath.Ext(path)
 	if ext == "" {
@@ -123,7 +123,7 @@ func RenameFromMetadata(path string) (string, error) {
 }
 
 // NameFromMetadata generates a name from a package's metadata.
-func NameFromMetadata(pkg *types.ZarfPackage, isSkeleton bool) string {
+func NameFromMetadata(pkg *v1alpha1.ZarfPackage, isSkeleton bool) string {
 	var name string
 
 	arch := config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
@@ -133,9 +133,9 @@ func NameFromMetadata(pkg *types.ZarfPackage, isSkeleton bool) string {
 	}
 
 	switch pkg.Kind {
-	case types.ZarfInitConfig:
+	case v1alpha1.ZarfInitConfig:
 		name = fmt.Sprintf("zarf-init-%s", arch)
-	case types.ZarfPackageConfig:
+	case v1alpha1.ZarfPackageConfig:
 		name = fmt.Sprintf("zarf-package-%s-%s", pkg.Metadata.Name, arch)
 	default:
 		name = fmt.Sprintf("zarf-%s-%s", strings.ToLower(string(pkg.Kind)), arch)

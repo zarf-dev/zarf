@@ -21,17 +21,17 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // HandleDataInjection waits for the target pod(s) to come up and inject the data into them
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now.
-func (c *Cluster) HandleDataInjection(ctx context.Context, data types.ZarfDataInjection, componentPath *layout.ComponentPaths, dataIdx int) error {
+func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDataInjection, componentPath *layout.ComponentPaths, dataIdx int) error {
 	injectionCompletionMarker := filepath.Join(componentPath.DataInjections, config.GetDataInjectionMarker())
 	if err := os.WriteFile(injectionCompletionMarker, []byte("🦄"), helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("unable to create the data injection completion marker: %w", err)

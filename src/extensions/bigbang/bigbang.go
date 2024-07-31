@@ -17,12 +17,12 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1beta2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"github.com/zarf-dev/zarf/src/types"
 	"github.com/zarf-dev/zarf/src/types/extensions"
 	"helm.sh/helm/v3/pkg/chartutil"
 	corev1 "k8s.io/api/core/v1"
@@ -43,9 +43,9 @@ var tenMins = metav1.Duration{
 
 // Run mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
-func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, error) {
 	cfg := c.Extensions.BigBang
-	manifests := []types.ZarfManifest{}
+	manifests := []v1alpha1.ZarfManifest{}
 
 	validVersionResponse, err := isValidVersion(cfg.Version)
 
@@ -86,7 +86,7 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c type
 
 	// Configure helm to pull down the Big Bang chart.
 	helmCfg := helm.New(
-		types.ZarfChart{
+		v1alpha1.ZarfChart{
 			Name:        bb,
 			Namespace:   bb,
 			URL:         bbRepo,
@@ -149,11 +149,11 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c type
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
 	for _, hrNamespacedName := range namespacedHelmReleaseNames {
 		hr := hrDependencies[hrNamespacedName]
-		action := types.ZarfComponentAction{
+		action := v1alpha1.ZarfComponentAction{
 			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hrNamespacedName),
 			MaxTotalSeconds: &maxTotalSeconds,
-			Wait: &types.ZarfComponentActionWait{
-				Cluster: &types.ZarfComponentActionWaitCluster{
+			Wait: &v1alpha1.ZarfComponentActionWait{
+				Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
 					Kind:      "HelmRelease",
 					Name:      hr.Metadata.Name,
 					Namespace: hr.Metadata.Namespace,
@@ -168,7 +168,7 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c type
 		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.54.0/chart/templates/metrics-server/helmrelease.yaml
 		if hr.Metadata.Name == "metrics-server" {
 			action.Description = "K8s metric server to exist or be deployed by Big Bang"
-			action.Wait.Cluster = &types.ZarfComponentActionWaitCluster{
+			action.Wait.Cluster = &v1alpha1.ZarfComponentActionWaitCluster{
 				Kind: "APIService",
 				// https://github.com/kubernetes-sigs/metrics-server#compatibility-matrix
 				Name: "v1beta1.metrics.k8s.io",
@@ -195,13 +195,13 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c type
 
 	// Add onFailure actions with additional troubleshooting information.
 	for _, cmd := range failureGeneral {
-		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, types.ZarfComponentAction{
+		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, v1alpha1.ZarfComponentAction{
 			Cmd: fmt.Sprintf("./zarf tools kubectl %s", cmd),
 		})
 	}
 
 	for _, cmd := range failureDebug {
-		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, types.ZarfComponentAction{
+		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, v1alpha1.ZarfComponentAction{
 			Mute:        &t,
 			Description: "Storing debug information to the log for troubleshooting.",
 			Cmd:         fmt.Sprintf("./zarf tools kubectl %s", cmd),
@@ -209,7 +209,7 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c type
 	}
 
 	// Add a pre-remove action to suspend the Big Bang HelmReleases to prevent reconciliation during removal.
-	c.Actions.OnRemove.Before = append(c.Actions.OnRemove.Before, types.ZarfComponentAction{
+	c.Actions.OnRemove.Before = append(c.Actions.OnRemove.Before, v1alpha1.ZarfComponentAction{
 		Description: "Suspend Big Bang HelmReleases to prevent reconciliation during removal.",
 		Cmd:         `./zarf tools kubectl patch helmrelease -n bigbang bigbang --type=merge -p '{"spec":{"suspend":true}}'`,
 	})
@@ -250,7 +250,7 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c type
 }
 
 // Skeletonize mutates a component so that the valuesFiles can be contained inside a skeleton package
-func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+func Skeletonize(tmpPaths *layout.ComponentPaths, c v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, error) {
 	for valuesIdx, valuesFile := range c.Extensions.BigBang.ValuesFiles {
 		// Get the base file name for this file.
 		baseName := filepath.Base(valuesFile)
@@ -297,7 +297,7 @@ func Skeletonize(tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.
 // Compose mutates a component so that its local paths are relative to the provided path
 //
 // additionally, it will merge any overrides
-func Compose(c *types.ZarfComponent, override types.ZarfComponent, relativeTo string) {
+func Compose(c *v1alpha1.ZarfComponent, override v1alpha1.ZarfComponent, relativeTo string) {
 	// perform any overrides
 	if override.Extensions.BigBang != nil {
 		for valuesIdx, valuesFile := range override.Extensions.BigBang.ValuesFiles {
@@ -453,9 +453,9 @@ func findBBResources(t string) (gitRepos map[string]string, helmReleaseDeps map[
 }
 
 // addBigBangManifests creates the manifests component for deploying Big Bang.
-func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang) (types.ZarfManifest, error) {
+func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang) (v1alpha1.ZarfManifest, error) {
 	// Create a manifest component that we add to the zarf package for bigbang.
-	manifest := types.ZarfManifest{
+	manifest := v1alpha1.ZarfManifest{
 		Name:      bb,
 		Namespace: bb,
 	}

@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -54,7 +55,7 @@ func (p *Packager) Mirror(ctx context.Context) error {
 }
 
 // mirrorComponent mirrors a Zarf Component.
-func (p *Packager) mirrorComponent(ctx context.Context, component types.ZarfComponent) error {
+func (p *Packager) mirrorComponent(ctx context.Context, component v1alpha1.ZarfComponent) error {
 	componentPaths := p.layout.Components.Dirs[component.Name]
 
 	// All components now require a name

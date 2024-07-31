@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -17,13 +18,13 @@ import (
 func TestLintComponents(t *testing.T) {
 	t.Run("Test composable components with bad path", func(t *testing.T) {
 		t.Parallel()
-		zarfPackage := types.ZarfPackage{
-			Components: []types.ZarfComponent{
+		zarfPackage := v1alpha1.ZarfPackage{
+			Components: []v1alpha1.ZarfComponent{
 				{
-					Import: types.ZarfComponentImport{Path: "bad-path"},
+					Import: v1alpha1.ZarfComponentImport{Path: "bad-path"},
 				},
 			},
-			Metadata: types.ZarfMetadata{Name: "test-zarf-package"},
+			Metadata: v1alpha1.ZarfMetadata{Name: "test-zarf-package"},
 		}
 
 		createOpts := types.ZarfCreateOptions{Flavor: "", BaseDir: "."}
@@ -39,11 +40,11 @@ func TestFillComponentTemplate(t *testing.T) {
 		},
 	}
 
-	component := types.ZarfComponent{
+	component := v1alpha1.ZarfComponent{
 		Images: []string{
-			fmt.Sprintf("%s%s###", types.ZarfPackageTemplatePrefix, "KEY1"),
-			fmt.Sprintf("%s%s###", types.ZarfPackageVariablePrefix, "KEY2"),
-			fmt.Sprintf("%s%s###", types.ZarfPackageTemplatePrefix, "KEY3"),
+			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY1"),
+			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageVariablePrefix, "KEY2"),
+			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY3"),
 		},
 	}
 
@@ -59,11 +60,11 @@ func TestFillComponentTemplate(t *testing.T) {
 			Description: fmt.Sprintf(lang.PkgValidateTemplateDeprecation, "KEY2", "KEY2", "KEY2"),
 		},
 	}
-	expectedComponent := types.ZarfComponent{
+	expectedComponent := v1alpha1.ZarfComponent{
 		Images: []string{
 			"value1",
 			"value2",
-			fmt.Sprintf("%s%s###", types.ZarfPackageTemplatePrefix, "KEY3"),
+			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY3"),
 		},
 	}
 	require.ElementsMatch(t, expectedFindings, findings)

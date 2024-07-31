@@ -17,6 +17,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
@@ -136,7 +137,7 @@ func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, 
 				repoHelmChartPath = strings.TrimPrefix(repoHelmChartPath, "/")
 
 				// If a repo helm chart path is specified,
-				component.Charts = append(component.Charts, types.ZarfChart{
+				component.Charts = append(component.Charts, v1alpha1.ZarfChart{
 					Name:    repo,
 					URL:     matches[0],
 					Version: matches[1],

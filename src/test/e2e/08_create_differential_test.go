@@ -11,10 +11,10 @@ import (
 
 	"github.com/mholt/archiver/v3"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // TestCreateDifferential creates several differential packages and ensures the reference package images and repos are not included in the new package.
@@ -47,7 +47,7 @@ func TestCreateDifferential(t *testing.T) {
 	require.NoError(t, err, "unable to extract zarf.yaml from the differential git package")
 
 	// Load the extracted zarf.yaml specification
-	var differentialZarfConfig types.ZarfPackage
+	var differentialZarfConfig v1alpha1.ZarfPackage
 	err = utils.ReadYaml(filepath.Join(tmpdir, layout.ZarfYAML), &differentialZarfConfig)
 	require.NoError(t, err, "unable to read zarf.yaml from the differential git package")
 

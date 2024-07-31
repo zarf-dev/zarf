@@ -13,10 +13,10 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Generate generates a Zarf package definition.
@@ -36,10 +36,10 @@ func (p *Packager) Generate(ctx context.Context) (err error) {
 		}
 	}
 
-	generatedComponent := types.ZarfComponent{
+	generatedComponent := v1alpha1.ZarfComponent{
 		Name:     p.cfg.GenerateOpts.Name,
 		Required: helpers.BoolPtr(true),
-		Charts: []types.ZarfChart{
+		Charts: []v1alpha1.ZarfChart{
 			{
 				Name:      p.cfg.GenerateOpts.Name,
 				Version:   p.cfg.GenerateOpts.Version,
@@ -50,14 +50,14 @@ func (p *Packager) Generate(ctx context.Context) (err error) {
 		},
 	}
 
-	p.cfg.Pkg = types.ZarfPackage{
-		Kind: types.ZarfPackageConfig,
-		Metadata: types.ZarfMetadata{
+	p.cfg.Pkg = v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
 			Name:        p.cfg.GenerateOpts.Name,
 			Version:     p.cfg.GenerateOpts.Version,
 			Description: "auto-generated using `zarf dev generate`",
 		},
-		Components: []types.ZarfComponent{
+		Components: []v1alpha1.ZarfComponent{
 			generatedComponent,
 		},
 	}

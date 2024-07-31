@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
@@ -18,7 +19,7 @@ import (
 
 // Validate errors if a package violates the schema or any runtime validations
 // This must be run while in the parent directory of the zarf.yaml being validated
-func Validate(pkg types.ZarfPackage, baseDir string) error {
+func Validate(pkg v1alpha1.ZarfPackage, baseDir string) error {
 	if err := pkg.Validate(); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
@@ -37,7 +38,7 @@ func Validate(pkg types.ZarfPackage, baseDir string) error {
 }
 
 // recordPackageMetadata records various package metadata during package create.
-func recordPackageMetadata(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptions) error {
+func recordPackageMetadata(pkg *v1alpha1.ZarfPackage, createOpts types.ZarfCreateOptions) error {
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue.
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.

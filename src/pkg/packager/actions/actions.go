@@ -13,16 +13,16 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Run runs all provided actions.
-func Run(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func Run(defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
 	if variableConfig == nil {
 		variableConfig = template.GetZarfVariableConfig()
 	}
@@ -36,7 +36,7 @@ func Run(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfCompo
 }
 
 // Run commands that a component has provided.
-func runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func runAction(defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
 	var (
 		ctx        context.Context
 		cancel     context.CancelFunc
@@ -169,7 +169,7 @@ retryCmd:
 }
 
 // convertWaitToCmd will return the wait command if it exists, otherwise it will return the original command.
-func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string, error) {
+func convertWaitToCmd(wait v1alpha1.ZarfComponentActionWait, timeout *int) (string, error) {
 	// Build the timeout string.
 	timeoutString := fmt.Sprintf("--timeout %ds", *timeout)
 
@@ -236,7 +236,7 @@ func actionCmdMutation(cmd string, shellPref exec.Shell) (string, error) {
 }
 
 // Merge the ActionSet defaults with the action config.
-func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]*variables.TextTemplate) types.ZarfComponentActionDefaults {
+func actionGetCfg(cfg v1alpha1.ZarfComponentActionDefaults, a v1alpha1.ZarfComponentAction, vars map[string]*variables.TextTemplate) v1alpha1.ZarfComponentActionDefaults {
 	if a.Mute != nil {
 		cfg.Mute = *a.Mute
 	}
@@ -275,7 +275,7 @@ func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAc
 	return cfg
 }
 
-func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, shellPref exec.Shell, spinner *message.Spinner) (string, error) {
+func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cmd string, shellPref exec.Shell, spinner *message.Spinner) (string, error) {
 	shell, shellArgs := exec.GetOSShell(shellPref)
 
 	message.Debugf("Running command in %s: %s", shell, cmd)

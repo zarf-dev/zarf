@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/types"
@@ -83,9 +84,9 @@ func TestValidatePackageArchitecture(t *testing.T) {
 					Clientset: cs,
 				},
 				cfg: &types.PackagerConfig{
-					Pkg: types.ZarfPackage{
-						Metadata: types.ZarfMetadata{Architecture: tt.pkgArch},
-						Components: []types.ZarfComponent{
+					Pkg: v1alpha1.ZarfPackage{
+						Metadata: v1alpha1.ZarfMetadata{Architecture: tt.pkgArch},
+						Components: []v1alpha1.ZarfComponent{
 							{
 								Images: tt.images,
 							},

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package types contains all the types used by Zarf.
-package types
+// Package v1alpha1 contains all the structs for the v1alpha1 ZarfPackageConfig
+package v1alpha1
 
 import (
 	"errors"
@@ -23,19 +23,7 @@ var (
 	// IsLowercaseNumberHyphenNoStartHyphen is a regex for lowercase, numbers and hyphens that cannot start with a hyphen.
 	// https://regex101.com/r/FLdG9G/2
 	IsLowercaseNumberHyphenNoStartHyphen = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*$`).MatchString
-	// Define allowed OS, an empty string means it is allowed on all operating systems
-	// same as enums on ZarfComponentOnlyTarget
-	supportedOS = []string{"linux", "darwin", "windows"}
 )
-
-// SupportedOS returns the supported operating systems.
-//
-// The supported operating systems are: linux, darwin, windows.
-//
-// An empty string signifies no OS restrictions.
-func SupportedOS() []string {
-	return supportedOS
-}
 
 // Validate runs all validation checks on the package.
 func (pkg ZarfPackage) Validate() error {
