@@ -161,8 +161,8 @@ tableOfContents: false
 func addGoComments(reflector *jsonschema.Reflector) error {
 	addCommentErr := errors.New("this command must be called from the root of the Zarf repo")
 
-	typePackagePath := filepath.Join("src", "types")
-	if err := reflector.AddGoComments("github.com/zarf-dev/zarf", typePackagePath); err != nil {
+	// typePackagePath := filepath.Join("src", "types")
+	if err := reflector.AddGoComments("github.com/zarf-dev/zarf", "./src/api/v1alpha1"); err != nil {
 		return fmt.Errorf("%w: %w", addCommentErr, err)
 	}
 	varPackagePath := filepath.Join("src", "pkg", "variables")

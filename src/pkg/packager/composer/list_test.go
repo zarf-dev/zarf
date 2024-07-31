@@ -13,8 +13,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"github.com/zarf-dev/zarf/src/types/extensions"
 )
 
 func TestNewImportChain(t *testing.T) {

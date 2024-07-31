@@ -6,9 +6,9 @@ package v1alpha1
 
 import (
 	"github.com/invopop/jsonschema"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"github.com/zarf-dev/zarf/src/types/extensions"
 )
 
 var (
