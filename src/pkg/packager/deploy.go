@@ -26,6 +26,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/internal/packager/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
@@ -547,8 +548,7 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 	for _, repoURL := range repos {
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
-			gitClient := git.New(p.state.GitServer)
-			namespace, name, port, err := serviceInfoFromServiceURL(gitClient.Server.Address)
+			namespace, name, port, err := serviceInfoFromServiceURL(p.state.GitServer.Address)
 
 			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
 			// TODO: Find a better way as ignoring the error is not a good solution to decide to port forward.
@@ -566,17 +566,37 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 				if err != nil {
 					return err
 				}
-
 				_, err = tunnel.Connect(ctx)
 				if err != nil {
 					return err
 				}
 				defer tunnel.Close()
+				gitClient := git.New(p.state.GitServer)
 				gitClient.Server.Address = tunnel.HTTPEndpoint()
+				giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+				if err != nil {
+					return err
+				}
+				return tunnel.Wrap(func() error {
+					err = gitClient.PushRepo(repoURL, reposPath)
+					if err != nil {
+						return err
+					}
 
-				return tunnel.Wrap(func() error { return gitClient.PushRepo(repoURL, reposPath) })
+					// Add the read-only user to this repo
+					repoName, err := transform.GitURLtoRepoName(repoURL)
+					if err != nil {
+						return err
+					}
+					err = giteaClient.AddReadOnlyUserToRepository(ctx, repoName, p.state.GitServer.PullUsername)
+					if err != nil {
+						return fmt.Errorf("unable to add the read only user to the repo %s: %w", repoName, err)
+					}
+					return nil
+				})
 			}
 
+			gitClient := git.New(p.state.GitServer)
 			return gitClient.PushRepo(repoURL, reposPath)
 		}
 
@@ -585,7 +605,6 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}
 	}
-
 	return nil
 }
 
