@@ -32,7 +32,7 @@ const apiVersion = "zarf.dev/v1alpha1"
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
 	// The API version of the Zarf package.
-	ApiVersion string `json:"apiVersion"`
+	ApiVersion string `json:"apiVersion,omitempty"`
 	// The kind of Zarf package.
 	Kind ZarfPackageKind `json:"kind"`
 	// Package metadata.

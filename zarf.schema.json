@@ -1153,7 +1153,6 @@
   "additionalProperties": false,
   "type": "object",
   "required": [
-    "apiVersion",
     "kind",
     "components"
   ],
