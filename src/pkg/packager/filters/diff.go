@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/zarf-dev/zarf/src/internal/packager/git"
+	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
 )

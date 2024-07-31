@@ -19,6 +19,7 @@ require (
 	github.com/distribution/reference v0.5.0
 	github.com/fairwindsops/pluto/v5 v5.18.4
 	github.com/fatih/color v1.17.0
+	github.com/fluxcd/gitkit v0.6.0
 	github.com/fluxcd/helm-controller/api v1.0.1
 	github.com/fluxcd/pkg/apis/meta v1.5.0
 	github.com/fluxcd/source-controller/api v1.3.0
@@ -65,6 +66,7 @@ require (
 require (
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/gofrs/uuid v4.2.0+incompatible // indirect
 )
 
 require (
@@ -244,7 +246,7 @@ require (
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
-	github.com/go-git/go-billy/v5 v5.5.0 // indirect
+	github.com/go-git/go-billy/v5 v5.5.0
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
