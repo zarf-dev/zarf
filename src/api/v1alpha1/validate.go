@@ -9,14 +9,18 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 const (
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
-	ZarfMaxChartNameLength = 40
+	ZarfMaxChartNameLength     = 40
+	errChartReleaseNameEmpty   = "release name empty, unable to fallback to chart name"
+	errChartReleaseNameInvalid = "invalid release name %s: a DNS-1035 label must consist of lower case alphanumeric characters or -, start with an alphabetic character, and end with an alphanumeric character"
 )
 
 var (
@@ -240,6 +244,29 @@ func (action ZarfComponentAction) Validate() error {
 	return err
 }
 
+// validateReleaseName validates a release name against DNS 1035 spec, using chartName as fallback.
+// https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names
+func validateReleaseName(chartName, releaseName string) (err error) {
+	// Fallback to chartName if releaseName is empty
+	// NOTE: Similar fallback mechanism happens in src/internal/packager/helm/chart.go:InstallOrUpgradeChart
+	if releaseName == "" {
+		releaseName = chartName
+	}
+
+	// Check if the final releaseName is empty and return an error if so
+	if releaseName == "" {
+		err = fmt.Errorf(errChartReleaseNameEmpty)
+		return
+	}
+
+	// Validate the releaseName against DNS 1035 label spec
+	if errs := validation.IsDNS1035Label(releaseName); len(errs) > 0 {
+		err = fmt.Errorf("invalid release name '%s': %s", releaseName, strings.Join(errs, "; "))
+	}
+
+	return
+}
+
 // Validate runs all validation checks on a chart.
 func (chart ZarfChart) Validate() error {
 	var err error
@@ -263,6 +290,10 @@ func (chart ZarfChart) Validate() error {
 
 	if chart.Version == "" {
 		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartVersion, chart.Name))
+	}
+
+	if nameErr := validateReleaseName(chart.Name, chart.ReleaseName); nameErr != nil {
+		err = errors.Join(err, nameErr)
 	}
 
 	return err
