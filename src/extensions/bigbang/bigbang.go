@@ -154,10 +154,10 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c type
 			MaxTotalSeconds: &maxTotalSeconds,
 			Wait: &types.ZarfComponentActionWait{
 				Cluster: &types.ZarfComponentActionWaitCluster{
-					Kind:       "HelmRelease",
-					Identifier: hr.Metadata.Name,
-					Namespace:  hr.Metadata.Namespace,
-					Condition:  "ready",
+					Kind:      "HelmRelease",
+					Name:      hr.Metadata.Name,
+					Namespace: hr.Metadata.Namespace,
+					Condition: "ready",
 				},
 			},
 		}
@@ -171,7 +171,7 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c type
 			action.Wait.Cluster = &types.ZarfComponentActionWaitCluster{
 				Kind: "APIService",
 				// https://github.com/kubernetes-sigs/metrics-server#compatibility-matrix
-				Identifier: "v1beta1.metrics.k8s.io",
+				Name: "v1beta1.metrics.k8s.io",
 			}
 		}
 
