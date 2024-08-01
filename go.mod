@@ -5,8 +5,8 @@ go 1.22.4
 // TODO (@AABRO): Pending merge into github.com/gojsonschema/gojsonschema (https://github.com/gojsonschema/gojsonschema/pull/5)
 replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
 
-// TODO once helm updates to use v25.0.6 we can delete this
-replace github.com/docker/docker => github.com/docker/docker v25.0.6+incompatible
+// TODO once helm updates to use v25.0.6 we can delete this (moby is the new name, docker redirects to it)
+replace github.com/docker/docker => github.com/moby/moby v25.0.6+incompatible
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
