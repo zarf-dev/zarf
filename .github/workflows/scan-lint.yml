@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
