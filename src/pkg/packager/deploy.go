@@ -25,7 +25,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/internal/packager/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
@@ -128,7 +128,10 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	// Notify all the things about the successful deployment
 	message.Successf("Zarf deployment complete")
 
-	p.printTablesForDeployment(ctx, deployedComponents)
+	err = p.printTablesForDeployment(ctx, deployedComponents)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -453,10 +456,15 @@ func (p *Packager) setupState(ctx context.Context) (err error) {
 	defer spinner.Stop()
 
 	state, err := p.cluster.LoadZarfState(ctx)
-	// Return on error if we are not in YOLO mode
+	// We ignore the error if in YOLO mode because Zarf should not be initiated.
 	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
-		return fmt.Errorf("%s %w", lang.ErrLoadState, err)
-	} else if state == nil && p.cfg.Pkg.Metadata.YOLO {
+		return err
+	}
+	// Only ignore state load error in yolo mode when secret could not be found.
+	if err != nil && !kerrors.IsNotFound(err) && p.cfg.Pkg.Metadata.YOLO {
+		return err
+	}
+	if state == nil && p.cfg.Pkg.Metadata.YOLO {
 		state = &types.ZarfState{}
 		// YOLO mode, so minimal state needed
 		state.Distro = "YOLO"
@@ -539,8 +547,7 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 	for _, repoURL := range repos {
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
-			gitClient := git.New(p.state.GitServer)
-			namespace, name, port, err := serviceInfoFromServiceURL(gitClient.Server.Address)
+			namespace, name, port, err := serviceInfoFromServiceURL(p.state.GitServer.Address)
 
 			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
 			// TODO: Find a better way as ignoring the error is not a good solution to decide to port forward.
@@ -558,17 +565,37 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 				if err != nil {
 					return err
 				}
-
 				_, err = tunnel.Connect(ctx)
 				if err != nil {
 					return err
 				}
 				defer tunnel.Close()
+				gitClient := git.New(p.state.GitServer)
 				gitClient.Server.Address = tunnel.HTTPEndpoint()
+				giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+				if err != nil {
+					return err
+				}
+				return tunnel.Wrap(func() error {
+					err = gitClient.PushRepo(repoURL, reposPath)
+					if err != nil {
+						return err
+					}
 
-				return tunnel.Wrap(func() error { return gitClient.PushRepo(repoURL, reposPath) })
+					// Add the read-only user to this repo
+					repoName, err := transform.GitURLtoRepoName(repoURL)
+					if err != nil {
+						return err
+					}
+					err = giteaClient.AddReadOnlyUserToRepository(ctx, repoName, p.state.GitServer.PullUsername)
+					if err != nil {
+						return fmt.Errorf("unable to add the read only user to the repo %s: %w", repoName, err)
+					}
+					return nil
+				})
 			}
 
+			gitClient := git.New(p.state.GitServer)
 			return gitClient.PushRepo(repoURL, reposPath)
 		}
 
@@ -577,7 +604,6 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}
 	}
-
 	return nil
 }
 
@@ -714,21 +740,23 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 	return installedCharts, nil
 }
 
-func (p *Packager) printTablesForDeployment(ctx context.Context, componentsToDeploy []types.DeployedComponent) {
+func (p *Packager) printTablesForDeployment(ctx context.Context, componentsToDeploy []types.DeployedComponent) error {
 	// If not init config, print the application connection table
 	if !p.cfg.Pkg.IsInitConfig() {
 		message.PrintConnectStringTable(p.connectStrings)
-	} else {
-		if p.cluster != nil {
-			// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds
-			freshState, err := p.cluster.LoadZarfState(ctx)
-			if err != nil {
-				freshState = p.state
-			}
-			// otherwise, print the init config connection and passwords
-			message.PrintCredentialTable(freshState, componentsToDeploy)
-		}
+		return nil
 	}
+	// Don't print if cluster is not configured
+	if p.cluster == nil {
+		return nil
+	}
+	// Grab a fresh copy of the state to print the most up-to-date version of the creds
+	latestState, err := p.cluster.LoadZarfState(ctx)
+	if err != nil {
+		return err
+	}
+	message.PrintCredentialTable(latestState, componentsToDeploy)
+	return nil
 }
 
 // ServiceInfoFromServiceURL takes a serviceURL and parses it to find the service info for connecting to the cluster. The string is expected to follow the following format:

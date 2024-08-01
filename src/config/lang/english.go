@@ -17,14 +17,12 @@ import (
 // Debug messages will not be a part of the language strings since they are not intended to be user facing
 // Include sprintf formatting directives in the string if needed.
 const (
-	ErrLoadState                    = "Failed to load the Zarf State from the cluster."
 	ErrUnmarshal                    = "failed to unmarshal file: %w"
 	ErrWritingFile                  = "failed to write file %s: %s"
 	ErrDownloading                  = "failed to download %s: %s"
 	ErrCreatingDir                  = "failed to create directory %s: %s"
 	ErrRemoveFile                   = "failed to remove file %s: %s"
 	ErrUnarchive                    = "failed to unarchive %s: %s"
-	ErrConfirmCancel                = "confirm selection canceled: %s"
 	ErrFileExtract                  = "failed to extract filename %s from archive %s: %s"
 	ErrFileNameExtract              = "failed to extract filename from URL %s: %s"
 	ErrUnableToGenerateRandomSecret = "unable to generate a random secret"
@@ -199,7 +197,6 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInternalArtifactRegistryGiteaTokenShort = "Creates an artifact registry token for Gitea"
 	CmdInternalArtifactRegistryGiteaTokenLong  = "Creates an artifact registry token in Gitea using the Gitea API. " +
 		"This is called internally by the supported Gitea package component."
-	CmdInternalArtifactRegistryGiteaTokenErr = "Unable to create an artifact registry token for the Gitea service."
 
 	CmdInternalUpdateGiteaPVCShort = "Updates an existing Gitea persistent volume claim"
 	CmdInternalUpdateGiteaPVCLong  = "Updates an existing Gitea persistent volume claim by assessing if claim is a custom user provided claim or default." +
@@ -489,8 +486,6 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
-	CmdToolsCraneConnectedButBadStateErr = "Detected a K8s cluster but was unable to get Zarf state - continuing without state information: %s"
-
 	CmdToolsDownloadInitShort               = "Downloads the init package for the current Zarf version into the specified directory"
 	CmdToolsDownloadInitFlagOutputDirectory = "Specify a directory to place the init package in."
 
@@ -608,7 +603,6 @@ const (
 	AgentErrBadRequest             = "could not read request body: %s"
 	AgentErrBindHandler            = "Unable to bind the webhook handler"
 	AgentErrCouldNotDeserializeReq = "could not deserialize request: %s"
-	AgentErrGetState               = "failed to load zarf state: %w"
 	AgentErrParsePod               = "failed to parse pod: %w"
 	AgentErrHostnameMatch          = "failed to complete hostname matching: %w"
 	AgentErrInvalidMethod          = "invalid method only POST requests are allowed"

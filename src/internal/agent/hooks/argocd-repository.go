@@ -54,7 +54,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 
 	state, err := cluster.LoadZarfState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(lang.AgentErrGetState, err)
+		return nil, err
 	}
 
 	message.Infof("Using the url of (%s) to mutate the ArgoCD Repository Secret", state.GitServer.Address)

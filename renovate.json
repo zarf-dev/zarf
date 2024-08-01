@@ -3,41 +3,14 @@
     "config:base",
     "group:allNonMajor"
   ],
-  "ignoreDeps": [
-    "sigs.k8s.io/kustomize/kyaml"
-  ],
-  "ignorePaths": [
-    "**/node_modules/**",
-    "**/bower_components/**",
-    "**/vendor/**",
-    "**/__tests__/**",
-    "**/test/**",
-    "**/tests/**",
-    "**/__fixtures__/**"
-  ],
   "packageRules": [
     {
-      "matchUpdateTypes": [
-        "patch",
-        "pin",
-        "digest"
-      ],
-      "automerge": true,
-      "automergeType": "pr"
-    },
-    {
-      "matchDepTypes": [
-        "devDependencies"
-      ],
-      "automerge": true,
-      "automergeType": "pr"
+      "matchManagers": ["gomod","npm","github-actions", "cargo"],
+      "enabled": false
     }
   ],
   "platformAutomerge": true,
   "platformCommit": true,
-  "postUpdateOptions": [
-    "gomodTidy"
-  ],
   "regexManagers": [
     {
       "fileMatch": [
@@ -82,16 +55,6 @@
         "https:\\/\\/github.com\\/(?<depName>[\\w\\/\\-\\.\\+\\%]+?)\\/releases\\/download\\/(?<currentValue>[\\w\\/\\-\\.\\+\\%]+?)\\/"
       ],
       "datasourceTemplate": "github-releases"
-    },
-    {
-      "fileMatch": [
-        "\\.*\\.ya?ml$"
-      ],
-      "matchStrings": [
-        "# renovate: datasource=github-tags depName=anchore/grype versioning=semver\n\\s*VERSION: (?<currentValue>v[\\d.]+)"
-      ],
-      "datasourceTemplate": "github-tags",
-      "depNameTemplate": "anchore/grype"
     }
   ]
 }

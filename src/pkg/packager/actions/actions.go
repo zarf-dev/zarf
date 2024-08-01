@@ -183,7 +183,7 @@ func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string,
 
 		// Build a call to the zarf tools wait-for command.
 		return fmt.Sprintf("./zarf tools wait-for %s %s %s %s %s",
-			cluster.Kind, cluster.Identifier, cluster.Condition, ns, timeoutString), nil
+			cluster.Kind, cluster.Name, cluster.Condition, ns, timeoutString), nil
 	}
 
 	network := wait.Network

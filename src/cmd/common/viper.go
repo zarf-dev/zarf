@@ -5,6 +5,7 @@
 package common
 
 import (
+	"errors"
 	"os"
 	"strings"
 
@@ -166,16 +167,13 @@ func printViperConfigUsed() {
 	if !vInitialized {
 		return
 	}
-
 	// Optional, so ignore file not found errors
-	if vConfigError != nil {
-		// Config file not found; ignore
-		if _, ok := vConfigError.(viper.ConfigFileNotFoundError); !ok {
-			message.WarnErrf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
-		}
-	} else {
-		message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
+	var notFoundErr *viper.ConfigFileNotFoundError
+	if vConfigError != nil && !errors.As(vConfigError, &notFoundErr) {
+		message.WarnErrf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
+		return
 	}
+	message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
 }
 
 func setDefaults() {

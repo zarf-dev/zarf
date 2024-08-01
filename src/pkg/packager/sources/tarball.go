@@ -114,7 +114,7 @@ func (s *TarballSource) LoadPackage(_ context.Context, dst *layout.PackagePaths,
 	if unarchiveAll {
 		for _, component := range pkg.Components {
 			if err := dst.Components.Unarchive(component); err != nil {
-				if layout.IsNotLoaded(err) {
+				if errors.Is(err, layout.ErrNotLoaded) {
 					_, err := dst.Components.Create(component)
 					if err != nil {
 						return pkg, nil, err
