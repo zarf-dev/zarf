@@ -134,8 +134,6 @@ type GitServerInfo struct {
 	PullPassword string `json:"pullPassword"`
 	// URL address of the git server
 	Address string `json:"address"`
-	// Indicates if we are using a git server that Zarf is directly managing
-	InternalServer bool `json:"internalServer"`
 }
 
 // IsInternal returns true if the git server URL is equivalent to a git server deployed through the default init package
@@ -187,8 +185,6 @@ type ArtifactServerInfo struct {
 	PushToken string `json:"pushPassword"`
 	// URL address of the artifact registry
 	Address string `json:"address"`
-	// Indicates if we are using a artifact registry that Zarf is directly managing
-	InternalServer bool `json:"internalServer"`
 }
 
 // IsInternal returns true if the artifact server URL is equivalent to the artifact server deployed through the default init package
@@ -223,8 +219,6 @@ type RegistryInfo struct {
 	Address string `json:"address"`
 	// Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster
 	NodePort int `json:"nodePort"`
-	// Indicates if we are using a registry that Zarf is directly managing
-	InternalRegistry bool `json:"internalRegistry"`
 	// Secret value that the registry was seeded with
 	Secret string `json:"secret"`
 }
