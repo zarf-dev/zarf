@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   # Build the binary and init package
-  build:
+  build-e2e:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -55,7 +55,7 @@ jobs:
 
   validate-without-cluster:
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-e2e
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -90,7 +90,7 @@ jobs:
   # Run the tests on k3d
   validate-k3d:
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-e2e
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -128,7 +128,7 @@ jobs:
   # Run the tests on k3s
   validate-k3s:
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-e2e
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -166,7 +166,7 @@ jobs:
   # Run the tests on kind
   validate-kind:
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-e2e
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -206,7 +206,7 @@ jobs:
   # Run the tests on minikube
   validate-minikube:
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-e2e
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
