@@ -23,7 +23,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  eks-nightly-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

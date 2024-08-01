@@ -30,7 +30,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-upgrade:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -52,7 +52,7 @@ jobs:
           path: build/
           retention-days: 1
 
-  validate:
+  validate-upgrade:
     runs-on: ubuntu-latest
     needs: build
     steps:

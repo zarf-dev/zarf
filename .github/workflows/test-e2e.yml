@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   # Build the binary and init package
-  build:
+  build-e2e:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

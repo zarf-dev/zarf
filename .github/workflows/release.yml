@@ -9,7 +9,7 @@ on:
       - "v*"
 
 jobs:
-  build:
+  build-release:
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -78,7 +78,7 @@ jobs:
           path: build/
           retention-days: 1
 
-  validate:
+  validate-release:
     runs-on: ubuntu-latest
     needs: build
     steps:
