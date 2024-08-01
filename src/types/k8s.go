@@ -231,8 +231,8 @@ func (ri RegistryInfo) IsInternal() bool {
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
 func (ri *RegistryInfo) FillInEmptyValues() error {
 	var err error
-	// Set default NodePort if none was provided
-	if ri.NodePort == 0 {
+	// Set default NodePort if none was provided and the registry is internal
+	if ri.NodePort == 0 && ri.Address == "" {
 		ri.NodePort = ZarfInClusterContainerRegistryNodePort
 	}
 
