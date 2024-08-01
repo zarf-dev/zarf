@@ -16,6 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
@@ -73,7 +74,7 @@ func (p *Packager) Generate(ctx context.Context) (err error) {
 		p.cfg.Pkg.Components[i].Images = images[name]
 	}
 
-	if err := p.cfg.Pkg.Validate(); err != nil {
+	if err := lint.ValidatePackage(p.cfg.Pkg); err != nil {
 		return err
 	}
 

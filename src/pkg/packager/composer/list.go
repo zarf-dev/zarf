@@ -141,10 +141,10 @@ func NewImportChain(ctx context.Context, head v1alpha1.ZarfComponent, index int,
 			return ic, nil
 		}
 
-		// TODO: stuff like this should also happen in linting
-		if err := node.ZarfComponent.Validate(); err != nil {
-			return ic, err
-		}
+		// TODO figure out how to deal with cyclic import before merge
+		// if err := Validate(); err != nil {
+		// 	return ic, err
+		// }
 
 		// ensure that remote components are not importing other remote components
 		if node.prev != nil && node.prev.Import.URL != "" && isRemote {

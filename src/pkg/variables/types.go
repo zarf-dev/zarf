@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/invopop/jsonschema"
 	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
@@ -22,14 +21,10 @@ const (
 	FileVariableType VariableType = "file"
 )
 
-// UppercaseNumberUnderscorePattern is a regex for uppercase, numbers and underscores.
-// https://regex101.com/r/tfsEuZ/1
-const UppercaseNumberUnderscorePattern = `^[A-Z0-9_]+$`
-
 // Variable represents a variable that has a value set programmatically
 type Variable struct {
 	// The name to be used for the variable
-	Name string `json:"name"`
+	Name string `json:"name" jsonschema:"pattern=^[A-Z0-9_]+$"`
 	// Whether to mark this variable as sensitive to not print it in the log
 	Sensitive bool `json:"sensitive,omitempty"`
 	// Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_.
@@ -37,16 +32,7 @@ type Variable struct {
 	// An optional regex pattern that a variable value must match before a package deployment can continue.
 	Pattern string `json:"pattern,omitempty"`
 	// Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)
-	Type VariableType `json:"type,omitempty"`
-}
-
-// JSONSchemaExtend extends the generated json schema during `zarf internal gen-config-schema`
-func (Variable) JSONSchemaExtend(schema *jsonschema.Schema) {
-	kind, _ := schema.Properties.Get("type")
-	kind.Enum = []any{RawVariableType, FileVariableType}
-
-	name, _ := schema.Properties.Get("name")
-	name.Pattern = UppercaseNumberUnderscorePattern
+	Type VariableType `json:"type,omitempty" jsonschema:"enum=raw,enum=file"`
 }
 
 // InteractiveVariable is a variable that can be used to prompt a user for more information
@@ -63,7 +49,7 @@ type InteractiveVariable struct {
 // Constant are constants that can be used to dynamically template K8s resources or run in actions.
 type Constant struct {
 	// The name to be used for the constant
-	Name string `json:"name"`
+	Name string `json:"name" jsonschema:"pattern=^[A-Z0-9_]+$"`
 	// The value to set for the constant during deploy
 	Value string `json:"value"`
 	// A description of the constant to explain its purpose on package create or deploy confirmation prompts
@@ -72,12 +58,6 @@ type Constant struct {
 	AutoIndent bool `json:"autoIndent,omitempty"`
 	// An optional regex pattern that a constant value must match before a package can be created.
 	Pattern string `json:"pattern,omitempty"`
-}
-
-// JSONSchemaExtend extends the generated json schema during `zarf internal gen-config-schema`
-func (Constant) JSONSchemaExtend(schema *jsonschema.Schema) {
-	name, _ := schema.Properties.Get("name")
-	name.Pattern = UppercaseNumberUnderscorePattern
 }
 
 // SetVariable tracks internal variables that have been set during this run of Zarf
