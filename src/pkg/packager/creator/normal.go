@@ -21,7 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/extensions/bigbang"
-	"github.com/zarf-dev/zarf/src/internal/packager/git"
+	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
@@ -513,8 +513,8 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component types.Zarf
 
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
-			gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
-			if err := gitCfg.Pull(ctx, url, componentPaths.Repos, false); err != nil {
+			_, err := git.Clone(ctx, componentPaths.Repos, url, false)
+			if err != nil {
 				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
