@@ -167,7 +167,7 @@ jobs:
 
       - name: Get Brew tap repo token
         id: brew-tap-token
-        uses: actions/create-github-app-token@f2acddfb5195534d487896a656232b016a682f3c # v1.9.0
+        uses: actions/create-github-app-token@31c86eb3b33c9b601a1f60f98dcbfd1d70f379b4 # v1.10.3
         with:
           app-id: ${{ secrets.HOMEBREW_TAP_WORKFLOW_GITHUB_APP_ID }}
           private-key: ${{ secrets.HOMEBREW_TAP_WORKFLOW_GITHUB_APP_SECRET }}
