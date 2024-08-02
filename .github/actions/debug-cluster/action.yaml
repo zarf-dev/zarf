@@ -1,0 +1,16 @@
+name: debug-cluster
+description: "Setup Go binary and caching"
+
+runs:
+  using: composite
+  steps:
+    - run: |
+        echo "***** Getting pods *****"
+        kubectl get pods -A -o yaml
+        echo "***** Describing pods *****"
+        kubectl describe pods -A
+        echo "***** Getting nodes *****"
+        kubectl describe nodes -A -o yaml
+        echo "***** Getting nodes *****"
+        kubectl describe nodes
+      shell: bash

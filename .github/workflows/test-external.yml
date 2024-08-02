@@ -51,6 +51,10 @@ jobs:
       - name: Run external service test
         run: make test-external
 
+      - name: Teardown k3d
+        uses: ./.github/actions/debug-cluster
+        if: always()
+
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
