@@ -6,6 +6,7 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -23,6 +24,25 @@ import (
 )
 
 func TestInitZarfState(t *testing.T) {
+	emptyState := types.ZarfState{}
+	emptyStateData, err := json.Marshal(emptyState)
+	require.NoError(t, err)
+
+	existingState := types.ZarfState{
+		Distro: DistroIsK3d,
+		RegistryInfo: types.RegistryInfo{
+			PushUsername:     "push-user",
+			PullUsername:     "pull-user",
+			Address:          "address",
+			NodePort:         1,
+			InternalRegistry: false,
+			Secret:           "secret",
+		},
+	}
+
+	existingStateData, err := json.Marshal(existingState)
+	require.NoError(t, err)
+
 	tests := []struct {
 		name        string
 		initOpts    types.ZarfInitOptions
@@ -86,6 +106,34 @@ func TestInitZarfState(t *testing.T) {
 			},
 		},
 		{
+			name: "empty Zarf state exists",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "node",
+					},
+				},
+			},
+			namespaces: []corev1.Namespace{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: ZarfNamespaceName,
+					},
+				},
+			},
+			secrets: []corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: ZarfNamespaceName,
+						Name:      ZarfStateSecretName,
+					},
+					Data: map[string][]byte{
+						ZarfStateDataKey: emptyStateData,
+					},
+				},
+			},
+		},
+		{
 			name: "Zarf state exists",
 			nodes: []corev1.Node{
 				{
@@ -106,6 +154,9 @@ func TestInitZarfState(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: ZarfNamespaceName,
 						Name:      ZarfStateSecretName,
+					},
+					Data: map[string][]byte{
+						ZarfStateDataKey: existingStateData,
 					},
 				},
 			},
@@ -158,11 +209,15 @@ func TestInitZarfState(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+			state, err := cs.CoreV1().Secrets(ZarfNamespaceName).Get(ctx, ZarfStateSecretName, metav1.GetOptions{})
+			require.NoError(t, err)
+			require.Equal(t, map[string]string{"app.kubernetes.io/managed-by": "zarf"}, state.Labels)
+			if tt.secrets != nil {
+				return
+			}
 			zarfNs, err := cs.CoreV1().Namespaces().Get(ctx, ZarfNamespaceName, metav1.GetOptions{})
 			require.NoError(t, err)
 			require.Equal(t, map[string]string{"app.kubernetes.io/managed-by": "zarf"}, zarfNs.Labels)
-			_, err = cs.CoreV1().Secrets(zarfNs.Name).Get(ctx, ZarfStateSecretName, metav1.GetOptions{})
-			require.NoError(t, err)
 			for _, ns := range tt.namespaces {
 				if ns.Name == zarfNs.Name {
 					continue
