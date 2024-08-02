@@ -19,14 +19,11 @@ runs:
         lsblk -f
         echo "haskell: Current time: $(date +"%T")"
 
-        sudo docker system prune --all --force
-        lsblk -f
-        echo "docker prune: Current time: $(date +"%T")"
-
         sudo rm -rf /opt/hostedtoolcache/CodeQL
         lsblk -f
         echo "codeql: Current time: $(date +"%T")"
 
+        sudo docker system prune --all --force
 
         echo "removing zarf sboms, packages, cache"
         sudo rm -rf zarf-sbom /tmp/zarf-*
