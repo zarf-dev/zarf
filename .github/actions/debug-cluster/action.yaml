@@ -7,10 +7,13 @@ runs:
     - run: |
         echo "***** Getting pods *****"
         kubectl get pods -A -o yaml
+
         echo "***** Describing pods *****"
         kubectl describe pods -A
+
         echo "***** Getting nodes *****"
         kubectl describe nodes -A -o yaml
-        echo "***** Getting nodes *****"
-        kubectl describe nodes
+
+        echo "***** describing nodes *****"
+        kubectl describe nodes -A
       shell: bash
