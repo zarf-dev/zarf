@@ -12,19 +12,25 @@ runs:
 
         sudo rm -rf /usr/share/dotnet
         lsblk -f
-        echo "Current time: $(date +"%T")"
+        echo "dotnet: Current time: $(date +"%T")"
 
         sudo rm -rf /usr/local/lib/android
         lsblk -f
-        echo "Current time: $(date +"%T")"
+        echo "android: Current time: $(date +"%T")"
 
         # Remove haskell
         sudo rm -rf /opt/ghc
-        echo "Current time: $(date +"%T")"
+        lsblk -f
+        echo "haskell: Current time: $(date +"%T")"
 
         sudo docker system prune --all --force
         lsblk -f
-        echo "Current time: $(date +"%T")"
+        echo "docker prune: Current time: $(date +"%T")"
+
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        lsblk -f
+        echo "codeql: Current time: $(date +"%T")"
+
 
         echo "removing zarf sboms, packages, cache"
         sudo rm -rf zarf-sbom /tmp/zarf-*

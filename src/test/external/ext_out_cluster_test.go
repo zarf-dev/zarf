@@ -109,7 +109,7 @@ func (suite *ExtOutClusterTestSuite) TearDownSuite() {
 }
 
 func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
-	createPackageArgs := []string{"package", "create", "/examples/argocd", "--confirm", "--output"}
+	createPackageArgs := []string{"package", "create", "examples/argocd", "--confirm"}
 	err := exec.CmdWithPrint(zarfBinPath, createPackageArgs...)
 	suite.NoError(err, "unable to create argo package")
 	// Use Zarf to mirror a package to the services (do this as test 0 so that the registry is unpolluted)
