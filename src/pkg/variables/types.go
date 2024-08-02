@@ -49,7 +49,7 @@ type InteractiveVariable struct {
 	// The default value to use for the variable
 	Default string `json:"default,omitempty"`
 	// Whether to prompt the user for input for this variable
-	Prompt bool `json:"prompt,omitempty" jsonschema:"enum=raw,enum=file"`
+	Prompt bool `json:"prompt,omitempty"`
 }
 
 // Constant are constants that can be used to dynamically template K8s resources or run in actions.
