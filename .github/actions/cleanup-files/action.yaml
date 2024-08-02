@@ -7,16 +7,29 @@ runs:
     - run: |
         lsblk -f
 
+        echo "removing github actions pre-installed files"
+        echo "Current time: $(date +"%T")"
+
         sudo rm -rf /usr/share/dotnet
+        lsblk -f
+        echo "Current time: $(date +"%T")"
+
         sudo rm -rf /usr/local/lib/android
+        lsblk -f
+        echo "Current time: $(date +"%T")"
+
         # Remove haskell
         sudo rm -rf /opt/ghc
-        lsblk -f
+        echo "Current time: $(date +"%T")"
 
+        sudo docker system prune --all --force
+        lsblk -f
+        echo "Current time: $(date +"%T")"
+
+        echo "removing zarf sboms, packages, cache"
         sudo rm -rf zarf-sbom /tmp/zarf-*
         sudo env "PATH=$PATH" CI=true make delete-packages
         sudo build/zarf tools clear-cache
-        sudo docker system prune --all --force
 
         lsblk -f
       shell: bash

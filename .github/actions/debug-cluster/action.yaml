@@ -12,7 +12,7 @@ runs:
         kubectl describe pods -A
 
         echo "***** Getting nodes *****"
-        kubectl describe nodes -A -o yaml
+        kubectl describe nodes -A
 
         echo "***** describing nodes *****"
         kubectl describe nodes -A
