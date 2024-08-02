@@ -6,13 +6,16 @@ runs:
   steps:
     - run: |
         echo "***** Getting pods *****"
+        kubectl get pods -A
+
+        echo "***** Getting pods yaml *****"
         kubectl get pods -A -o yaml
 
         echo "***** Describing pods *****"
         kubectl describe pods -A
 
         echo "***** Getting nodes *****"
-        kubectl describe nodes -A
+        kubectl get nodes -A
 
         echo "***** describing nodes *****"
         kubectl describe nodes -A
