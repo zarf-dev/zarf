@@ -31,7 +31,7 @@ $ zarf tools registry ls reg.example.com/stefanprodan/podinfo
 ```
       --full-ref           (Optional) if true, print the full image reference
   -h, --help               help for ls
-      --omit-digest-tags   (Optional), if true, omit digest tags (e.g., ':sha256-...')
+  -O, --omit-digest-tags   (Optional), if true, omit digest tags (e.g., ':sha256-...')
 ```
 
 ### Options inherited from parent commands
