@@ -7,14 +7,13 @@ runs:
     - run: |
         lsblk -f
 
-        echo "removing github actions pre-installed files"
+        echo "removing some github actions pre-installed tools to save space"
         echo "Current time: $(date +"%T")"
 
         sudo rm -rf /usr/share/dotnet
         lsblk -f
         echo "dotnet: Current time: $(date +"%T")"
 
-        # Remove haskell
         sudo rm -rf /opt/ghc
         lsblk -f
         echo "haskell: Current time: $(date +"%T")"
