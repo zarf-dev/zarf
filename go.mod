@@ -29,7 +29,7 @@ require (
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/goccy/go-yaml v1.12.0
 	github.com/gofrs/flock v0.8.1
-	github.com/google/go-containerregistry v0.19.0
+	github.com/google/go-containerregistry v0.20.1
 	github.com/gosuri/uitable v0.0.4
 	github.com/invopop/jsonschema v0.12.0
 	github.com/mholt/archiver/v3 v3.5.1
