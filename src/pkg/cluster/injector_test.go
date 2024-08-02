@@ -34,7 +34,10 @@ func TestInjector(t *testing.T) {
 		Watcher:   pkgkubernetes.NewImmediateWatcher(status.CurrentStatus),
 	}
 	cs.PrependReactor("delete-collection", "configmaps", func(action k8stesting.Action) (bool, runtime.Object, error) {
-		delAction := action.(k8stesting.DeleteCollectionActionImpl)
+		delAction, ok := action.(k8stesting.DeleteCollectionActionImpl)
+		if !ok {
+			return false, nil, fmt.Errorf("action is not of type DeleteCollectionActionImpl")
+		}
 		if delAction.GetListRestrictions().Labels.String() != "zarf-injector=payload" {
 			return false, nil, nil
 		}

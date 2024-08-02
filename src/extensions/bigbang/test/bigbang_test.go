@@ -14,10 +14,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	test "github.com/defenseunicorns/zarf/src/test"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	test "github.com/zarf-dev/zarf/src/test"
 )
 
 // The Big Bang project ID on Repo1
@@ -186,7 +186,10 @@ func getReleases() (latest, previous string, err error) {
 
 	// Iterate over the tags returned by the API, and filter out tags that don't match the regular expression
 	for _, tag := range data {
-		name := tag["name"].(string)
+		name, ok := tag["name"].(string)
+		if !ok {
+			return "", "", fmt.Errorf("name key is not of type string")
+		}
 		if re.MatchString(name) {
 			releases = append(releases, name)
 		}

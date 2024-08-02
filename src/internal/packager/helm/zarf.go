@@ -17,13 +17,13 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/defenseunicorns/zarf/src/internal/packager/template"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
@@ -45,7 +45,7 @@ func (h *Helm) UpdateZarfRegistryValues(ctx context.Context) error {
 		Namespace:   "zarf",
 		ReleaseName: "zarf-docker-registry",
 	}
-	err = h.UpdateReleaseValues(registryValues)
+	err = h.UpdateReleaseValues(ctx, registryValues)
 	if err != nil {
 		return fmt.Errorf("error updating the release values: %w", err)
 	}
@@ -119,7 +119,7 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 			}
 			h.variableConfig.SetApplicationTemplates(applicationTemplates)
 
-			err = h.UpdateReleaseValues(map[string]interface{}{})
+			err = h.UpdateReleaseValues(ctx, map[string]interface{}{})
 			if err != nil {
 				return fmt.Errorf("error updating the release values: %w", err)
 			}

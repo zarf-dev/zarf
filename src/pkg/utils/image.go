@@ -11,10 +11,10 @@ import (
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 // LoadOCIImage returns a v1.Image with the image ref specified from a location provided, or an error if the image cannot be found.
@@ -35,7 +35,6 @@ func LoadOCIImage(imgPath string, refInfo transform.Image) (v1.Image, error) {
 		if manifest.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Reference ||
 			// A backwards compatibility shim for older Zarf versions that would leave docker.io off of image annotations
 			(manifest.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Path+refInfo.TagOrDigest && refInfo.Host == "docker.io") {
-
 			// This is the image we are looking for, load it and then return
 			return layoutPath.Image(manifest.Digest)
 		}

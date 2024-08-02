@@ -15,8 +15,8 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
 var outputFormat string
@@ -24,11 +24,8 @@ var outputFormat string
 var versionCmd = &cobra.Command{
 	Use:     "version",
 	Aliases: []string{"v"},
-	PersistentPreRun: func(_ *cobra.Command, _ []string) {
-		config.SkipLogFile = true
-	},
-	Short: lang.CmdVersionShort,
-	Long:  lang.CmdVersionLong,
+	Short:   lang.CmdVersionShort,
+	Long:    lang.CmdVersionLong,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if outputFormat == "" {
 			fmt.Println(config.CLIVersion)

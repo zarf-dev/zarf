@@ -7,21 +7,21 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
 
-	"github.com/fatih/color"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/pki"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Zarf Cluster Constants.
@@ -210,13 +210,14 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.
 func (c *Cluster) LoadZarfState(ctx context.Context) (state *types.ZarfState, err error) {
+	stateErr := errors.New("failed to load the Zarf State from the cluster, has Zarf been initiated?")
 	secret, err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).Get(ctx, ZarfStateSecretName, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("%w. %s", err, message.ColorWrap("Did you remember to zarf init?", color.Bold))
+		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
 	err = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
 	c.debugPrintZarfState(state)
 	return state, nil

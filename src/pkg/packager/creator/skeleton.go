@@ -13,17 +13,17 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/zoci"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/extensions/bigbang"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 var (
@@ -70,7 +70,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(ctx context.Context, src *layou
 		message.Warn(warning)
 	}
 
-	if err := pkg.Validate(); err != nil {
+	if err := Validate(pkg, sc.createOpts.BaseDir); err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
 
@@ -182,7 +182,6 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
-
 		if chart.LocalPath != "" {
 			rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			dst := filepath.Join(componentPaths.Base, rel)
@@ -210,8 +209,6 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 	}
 
 	for filesIdx, file := range component.Files {
-		message.Debugf("Loading %#v", file)
-
 		if helpers.IsURL(file.Source) {
 			continue
 		}

@@ -5,17 +5,16 @@
 package external
 
 import (
-	"context"
 	"path"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/defenseunicorns/zarf/src/test"
 	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/test"
 )
 
 var zarfBinPath = path.Join("../../../build", test.GetCLIName())
@@ -47,7 +46,7 @@ func verifyWaitSuccess(t *testing.T, timeoutMinutes time.Duration, cmd string, a
 			// after delay, try running
 		default:
 			// Check information from the given command
-			stdOut, _, err := exec.CmdWithContext(context.TODO(), exec.PrintCfg(), cmd, args...)
+			stdOut, _, err := exec.CmdWithTesting(t, exec.PrintCfg(), cmd, args...)
 			// Log error
 			if err != nil {
 				t.Log(string(stdOut), err)

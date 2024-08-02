@@ -16,16 +16,16 @@ import (
 	"github.com/goccy/go-yaml"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/internal/packager/images"
-	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -70,10 +70,10 @@ func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) 
 		message.Warn(warning)
 	}
 
-	return p.findImages()
+	return p.findImages(ctx)
 }
 
-func (p *Packager) findImages() (imgMap map[string][]string, err error) {
+func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, err error) {
 	repoHelmChartPath := p.cfg.FindImagesOpts.RepoHelmChartPath
 	kubeVersionOverride := p.cfg.FindImagesOpts.KubeVersionOverride
 	whyImage := p.cfg.FindImagesOpts.Why
@@ -118,7 +118,6 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 	}
 
 	for _, component := range p.cfg.Pkg.Components {
-
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if it doesn't have what we need
 			continue
@@ -163,7 +162,6 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 		}
 
 		for _, chart := range component.Charts {
-
 			helmCfg := helm.New(
 				chart,
 				componentPaths.Charts,
@@ -172,7 +170,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 				helm.WithVariableConfig(p.variableConfig),
 			)
 
-			err = helmCfg.PackageChart(component.DeprecatedCosignKeyPath)
+			err = helmCfg.PackageChart(ctx, component.DeprecatedCosignKeyPath)
 			if err != nil {
 				return nil, fmt.Errorf("unable to package the chart %s: %w", chart.Name, err)
 			}
@@ -185,7 +183,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 			}
 
 			// Generate helm templates for this chart
-			chartTemplate, chartValues, err := helmCfg.TemplateChart()
+			chartTemplate, chartValues, err := helmCfg.TemplateChart(ctx)
 			if err != nil {
 				message.WarnErrf(err, "Problem rendering the helm template for %s: %s", chart.Name, err.Error())
 				erroredCharts = append(erroredCharts, chart.Name)
@@ -233,7 +231,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 				if helpers.IsURL(f) {
 					mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
 					destination := filepath.Join(componentPaths.Manifests, mname)
-					if err := utils.DownloadToFile(f, destination, component.DeprecatedCosignKeyPath); err != nil {
+					if err := utils.DownloadToFile(ctx, f, destination, component.DeprecatedCosignKeyPath); err != nil {
 						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 					}
 					f = destination
@@ -257,8 +255,7 @@ func (p *Packager) findImages() (imgMap map[string][]string, err error) {
 				}
 
 				// Break the manifest into separate resources
-				contentString := string(contents)
-				message.Debugf("%s", contentString)
+				// TODO: Do not dogsled error
 				yamls, _ := utils.SplitYAML(contents)
 				resources = append(resources, yamls...)
 

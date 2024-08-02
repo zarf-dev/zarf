@@ -7,12 +7,11 @@ package filters
 import (
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestLocalOSFilter(t *testing.T) {
-
 	pkg := types.ZarfPackage{}
 	for _, os := range types.SupportedOS() {
 		pkg.Components = append(pkg.Components, types.ZarfComponent{

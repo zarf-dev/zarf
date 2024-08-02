@@ -26,11 +26,11 @@ func TestComponentChoice(t *testing.T) {
 
 	// Try to deploy both and expect failure due to only one component allowed at a time
 	// We currently don't have a pattern to actually test the interactive prompt, so just testing automation for now
-	stdOut, stdErr, err := e2e.Zarf("package", "deploy", path, "--components=first-choice,second-choice", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=first-choice,second-choice", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 
 	// Deploy a single choice and expect success
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--components=first-choice", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=first-choice", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Component first-choice is using group which has been deprecated", "output should show a warning for group being deprecated.")
 
@@ -40,7 +40,7 @@ func TestComponentChoice(t *testing.T) {
 	require.NoFileExists(t, secondFile)
 
 	// Deploy using default choice
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the file was created

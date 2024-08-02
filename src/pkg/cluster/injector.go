@@ -26,10 +26,10 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // StartInjection initializes a Zarf injection into the cluster.

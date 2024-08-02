@@ -14,8 +14,9 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -23,19 +24,24 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/git"
-	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/internal/packager/images"
-	"github.com/defenseunicorns/zarf/src/internal/packager/template"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/git"
+	"github.com/zarf-dev/zarf/src/internal/gitea"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/types"
+)
+
+var (
+	// localClusterServiceRegex is used to match the local cluster service format:
+	localClusterServiceRegex = regexp.MustCompile(`^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`)
 )
 
 func (p *Packager) resetRegistryHPA(ctx context.Context) {
@@ -122,7 +128,10 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	// Notify all the things about the successful deployment
 	message.Successf("Zarf deployment complete")
 
-	p.printTablesForDeployment(ctx, deployedComponents)
+	err = p.printTablesForDeployment(ctx, deployedComponents)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -136,7 +145,6 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 
 	// Process all the components we are deploying
 	for _, component := range p.cfg.Pkg.Components {
-
 		deployedComponent := types.DeployedComponent{
 			Name:               component.Name,
 			Status:             types.ComponentStatusDeploying,
@@ -186,7 +194,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := actions.Run(onDeploy.Defaults, onDeploy.OnFailure, p.variableConfig); err != nil {
+			if err := actions.Run(ctx, onDeploy.Defaults, onDeploy.OnFailure, p.variableConfig); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -214,7 +222,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 			}
 		}
 
-		if err := actions.Run(onDeploy.Defaults, onDeploy.OnSuccess, p.variableConfig); err != nil {
+		if err := actions.Run(ctx, onDeploy.Defaults, onDeploy.OnSuccess, p.variableConfig); err != nil {
 			onFailure()
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -288,7 +296,6 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
-	hasDataInjections := len(component.DataInjections) > 0
 	hasFiles := len(component.Files) > 0
 
 	onDeploy := component.Actions.OnDeploy
@@ -317,7 +324,7 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 		return charts, err
 	}
 
-	if err = actions.Run(onDeploy.Defaults, onDeploy.Before, p.variableConfig); err != nil {
+	if err = actions.Run(ctx, onDeploy.Defaults, onDeploy.Before, p.variableConfig); err != nil {
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -339,26 +346,27 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 		}
 	}
 
-	if hasDataInjections {
-		waitGroup := sync.WaitGroup{}
-		defer waitGroup.Wait()
-
-		for idx, data := range component.DataInjections {
-			waitGroup.Add(1)
-			go p.cluster.HandleDataInjection(ctx, &waitGroup, data, componentPath, idx)
-		}
+	g, gCtx := errgroup.WithContext(ctx)
+	for idx, data := range component.DataInjections {
+		g.Go(func() error {
+			return p.cluster.HandleDataInjection(gCtx, data, componentPath, idx)
+		})
 	}
 
 	if hasCharts || hasManifests {
-		if charts, err = p.installChartAndManifests(componentPath, component); err != nil {
+		if charts, err = p.installChartAndManifests(ctx, componentPath, component); err != nil {
 			return charts, err
 		}
 	}
 
-	if err = actions.Run(onDeploy.Defaults, onDeploy.After, p.variableConfig); err != nil {
+	if err = actions.Run(ctx, onDeploy.Defaults, onDeploy.After, p.variableConfig); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
+	err = g.Wait()
+	if err != nil {
+		return nil, err
+	}
 	return charts, nil
 }
 
@@ -448,10 +456,15 @@ func (p *Packager) setupState(ctx context.Context) (err error) {
 	defer spinner.Stop()
 
 	state, err := p.cluster.LoadZarfState(ctx)
-	// Return on error if we are not in YOLO mode
+	// We ignore the error if in YOLO mode because Zarf should not be initiated.
 	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
-		return fmt.Errorf("%s %w", lang.ErrLoadState, err)
-	} else if state == nil && p.cfg.Pkg.Metadata.YOLO {
+		return err
+	}
+	// Only ignore state load error in yolo mode when secret could not be found.
+	if err != nil && !kerrors.IsNotFound(err) && p.cfg.Pkg.Metadata.YOLO {
+		return err
+	}
+	if state == nil && p.cfg.Pkg.Metadata.YOLO {
 		state = &types.ZarfState{}
 		// YOLO mode, so minimal state needed
 		state.Distro = "YOLO"
@@ -532,10 +545,14 @@ func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []s
 // Push all of the components git repos to the configured git server.
 func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, repos []string) error {
 	for _, repoURL := range repos {
+		repository, err := git.Open(reposPath, repoURL)
+		if err != nil {
+			return err
+		}
+
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
-			gitClient := git.New(p.state.GitServer)
-			namespace, name, port, err := serviceInfoFromServiceURL(gitClient.Server.Address)
+			namespace, name, port, err := serviceInfoFromServiceURL(p.state.GitServer.Address)
 
 			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
 			// TODO: Find a better way as ignoring the error is not a good solution to decide to port forward.
@@ -548,23 +565,42 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 						return err
 					}
 				}
-
 				tunnel, err := p.cluster.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
 				if err != nil {
 					return err
 				}
-
 				_, err = tunnel.Connect(ctx)
 				if err != nil {
 					return err
 				}
 				defer tunnel.Close()
-				gitClient.Server.Address = tunnel.HTTPEndpoint()
-
-				return tunnel.Wrap(func() error { return gitClient.PushRepo(repoURL, reposPath) })
+				giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+				if err != nil {
+					return err
+				}
+				return tunnel.Wrap(func() error {
+					err = repository.Push(ctx, tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+					if err != nil {
+						return err
+					}
+					// Add the read-only user to this repo
+					repoName, err := transform.GitURLtoRepoName(repoURL)
+					if err != nil {
+						return err
+					}
+					err = giteaClient.AddReadOnlyUserToRepository(ctx, repoName, p.state.GitServer.PullUsername)
+					if err != nil {
+						return fmt.Errorf("unable to add the read only user to the repo %s: %w", repoName, err)
+					}
+					return nil
+				})
 			}
 
-			return gitClient.PushRepo(repoURL, reposPath)
+			err = repository.Push(ctx, p.state.GitServer.Address, p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
 
 		// Try repo push up to retry limit
@@ -572,7 +608,6 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}
 	}
-
 	return nil
 }
 
@@ -604,7 +639,7 @@ func (p *Packager) generateValuesOverrides(chart types.ZarfChart, componentName 
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
 		// Do not wait for the chart to be ready if data injections are present.
 		if len(component.DataInjections) > 0 {
@@ -640,7 +675,7 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 				p.cfg.PkgOpts.Retries),
 		)
 
-		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
+		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart(ctx)
 		if err != nil {
 			return installedCharts, err
 		}
@@ -693,7 +728,7 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 		}
 
 		// Install the chart.
-		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart()
+		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart(ctx)
 		if err != nil {
 			return installedCharts, err
 		}
@@ -709,22 +744,23 @@ func (p *Packager) installChartAndManifests(componentPaths *layout.ComponentPath
 	return installedCharts, nil
 }
 
-func (p *Packager) printTablesForDeployment(ctx context.Context, componentsToDeploy []types.DeployedComponent) {
-
+func (p *Packager) printTablesForDeployment(ctx context.Context, componentsToDeploy []types.DeployedComponent) error {
 	// If not init config, print the application connection table
 	if !p.cfg.Pkg.IsInitConfig() {
 		message.PrintConnectStringTable(p.connectStrings)
-	} else {
-		if p.cluster != nil {
-			// Grab a fresh copy of the state (if we are able) to print the most up-to-date version of the creds
-			freshState, err := p.cluster.LoadZarfState(ctx)
-			if err != nil {
-				freshState = p.state
-			}
-			// otherwise, print the init config connection and passwords
-			message.PrintCredentialTable(freshState, componentsToDeploy)
-		}
+		return nil
 	}
+	// Don't print if cluster is not configured
+	if p.cluster == nil {
+		return nil
+	}
+	// Grab a fresh copy of the state to print the most up-to-date version of the creds
+	latestState, err := p.cluster.LoadZarfState(ctx)
+	if err != nil {
+		return err
+	}
+	message.PrintCredentialTable(latestState, componentsToDeploy)
+	return nil
 }
 
 // ServiceInfoFromServiceURL takes a serviceURL and parses it to find the service info for connecting to the cluster. The string is expected to follow the following format:
@@ -742,11 +778,7 @@ func serviceInfoFromServiceURL(serviceURL string) (string, string, int, error) {
 	}
 
 	// Match hostname against local cluster service format.
-	pattern, err := regexp.Compile(`^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`)
-	if err != nil {
-		return "", "", 0, err
-	}
-	get, err := helpers.MatchRegex(pattern, parsedURL.Hostname())
+	get, err := helpers.MatchRegex(localClusterServiceRegex, parsedURL.Hostname())
 
 	// If incomplete match, return an error.
 	if err != nil {

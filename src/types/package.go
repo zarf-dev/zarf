@@ -4,7 +4,7 @@
 // Package types contains all the types used by Zarf.
 package types
 
-import "github.com/defenseunicorns/zarf/src/pkg/variables"
+import "github.com/zarf-dev/zarf/src/pkg/variables"
 
 // ZarfPackageKind is an enum of the different kinds of Zarf packages.
 type ZarfPackageKind string
@@ -18,17 +18,33 @@ const (
 
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
-	Kind       ZarfPackageKind                 `json:"kind" jsonschema:"description=The kind of Zarf package,enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
-	Metadata   ZarfMetadata                    `json:"metadata,omitempty" jsonschema:"description=Package metadata"`
-	Build      ZarfBuildData                   `json:"build,omitempty" jsonschema:"description=Zarf-generated package build data"`
-	Components []ZarfComponent                 `json:"components" jsonschema:"description=List of components to deploy in this package,minItems=1"`
-	Constants  []variables.Constant            `json:"constants,omitempty" jsonschema:"description=Constant template values applied on deploy for K8s resources"`
-	Variables  []variables.InteractiveVariable `json:"variables,omitempty" jsonschema:"description=Variable template values applied on deploy for K8s resources"`
+	// The kind of Zarf package.
+	Kind ZarfPackageKind `json:"kind" jsonschema:"enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
+	// Package metadata.
+	Metadata ZarfMetadata `json:"metadata,omitempty"`
+	// Zarf-generated package build data.
+	Build ZarfBuildData `json:"build,omitempty"`
+	// List of components to deploy in this package.
+	Components []ZarfComponent `json:"components" jsonschema:"minItems=1"`
+	// Constant template values applied on deploy for K8s resources.
+	Constants []variables.Constant `json:"constants,omitempty"`
+	// Variable template values applied on deploy for K8s resources.
+	Variables []variables.InteractiveVariable `json:"variables,omitempty"`
 }
 
 // IsInitConfig returns whether a Zarf package is an init config.
 func (pkg ZarfPackage) IsInitConfig() bool {
 	return pkg.Kind == ZarfInitConfig
+}
+
+// HasImages returns true if one of the components contains an image.
+func (pkg ZarfPackage) HasImages() bool {
+	for _, component := range pkg.Components {
+		if len(component.Images) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections).
@@ -43,32 +59,58 @@ func (pkg ZarfPackage) IsSBOMAble() bool {
 
 // ZarfMetadata lists information about the current ZarfPackage.
 type ZarfMetadata struct {
-	Name              string `json:"name" jsonschema:"description=Name to identify this Zarf package,pattern=^[a-z0-9][a-z0-9\\-]*$"`
-	Description       string `json:"description,omitempty" jsonschema:"description=Additional information about this package"`
-	Version           string `json:"version,omitempty" jsonschema:"description=Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with)"`
-	URL               string `json:"url,omitempty" jsonschema:"description=Link to package information when online"`
-	Uncompressed      bool   `json:"uncompressed,omitempty" jsonschema:"description=Disable compression of this package"`
-	Architecture      string `json:"architecture,omitempty" jsonschema:"description=The target cluster architecture for this package,example=arm64,example=amd64"`
-	YOLO              bool   `json:"yolo,omitempty" jsonschema:"description=Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries."`
-	Authors           string `json:"authors,omitempty" jsonschema:"description=Comma-separated list of package authors (including contact info),example=Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"`
-	Documentation     string `json:"documentation,omitempty" jsonschema:"description=Link to package documentation when online"`
-	Source            string `json:"source,omitempty" jsonschema:"description=Link to package source code when online"`
-	Vendor            string `json:"vendor,omitempty" jsonschema_description:"Name of the distributing entity, organization or individual."`
-	AggregateChecksum string `json:"aggregateChecksum,omitempty" jsonschema:"description=Checksum of a checksums.txt file that contains checksums all the layers within the package."`
+	// Name to identify this Zarf package.
+	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
+	// Additional information about this package.
+	Description string `json:"description,omitempty"`
+	// Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with).
+	Version string `json:"version,omitempty"`
+	// Link to package information when online.
+	URL string `json:"url,omitempty"`
+	// An image URL to embed in this package (Reserved for future use in Zarf UI).
+	Image string `json:"image,omitempty"`
+	// Disable compression of this package.
+	Uncompressed bool `json:"uncompressed,omitempty"`
+	// The target cluster architecture for this package.
+	Architecture string `json:"architecture,omitempty" jsonschema:"example=arm64,example=amd64"`
+	// Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.
+	YOLO bool `json:"yolo,omitempty"`
+	// Comma-separated list of package authors (including contact info).
+	Authors string `json:"authors,omitempty" jsonschema:"example=Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"`
+	// Link to package documentation when online.
+	Documentation string `json:"documentation,omitempty"`
+	// Link to package source code when online.
+	Source string `json:"source,omitempty"`
+	// Name of the distributing entity, organization or individual.
+	Vendor string `json:"vendor,omitempty"`
+	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
+	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
 }
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
 type ZarfBuildData struct {
-	Terminal                   string            `json:"terminal" jsonschema:"description=The machine name that created this package"`
-	User                       string            `json:"user" jsonschema:"description=The username who created this package"`
-	Architecture               string            `json:"architecture" jsonschema:"description=The architecture this package was created on"`
-	Timestamp                  string            `json:"timestamp" jsonschema:"description=The timestamp when this package was created"`
-	Version                    string            `json:"version" jsonschema:"description=The version of Zarf used to build this package"`
-	Migrations                 []string          `json:"migrations,omitempty" jsonschema:"description=Any migrations that have been run on this package"`
-	RegistryOverrides          map[string]string `json:"registryOverrides,omitempty" jsonschema:"description=Any registry domains that were overridden on package create when pulling images"`
-	Differential               bool              `json:"differential,omitempty" jsonschema:"description=Whether this package was created with differential components"`
-	DifferentialPackageVersion string            `json:"differentialPackageVersion,omitempty" jsonschema:"description=Version of a previously built package used as the basis for creating this differential package"`
-	DifferentialMissing        []string          `json:"differentialMissing,omitempty" jsonschema:"description=List of components that were not included in this package due to differential packaging"`
-	LastNonBreakingVersion     string            `json:"lastNonBreakingVersion,omitempty" jsonschema:"description=The minimum version of Zarf that does not have breaking package structure changes"`
-	Flavor                     string            `json:"flavor,omitempty" jsonschema:"description=The flavor of Zarf used to build this package"`
+	// The machine name that created this package.
+	Terminal string `json:"terminal"`
+	// The username who created this package.
+	User string `json:"user"`
+	// The architecture this package was created on.
+	Architecture string `json:"architecture"`
+	// The timestamp when this package was created.
+	Timestamp string `json:"timestamp"`
+	// The version of Zarf used to build this package.
+	Version string `json:"version"`
+	// Any migrations that have been run on this package.
+	Migrations []string `json:"migrations,omitempty"`
+	// Any registry domains that were overridden on package create when pulling images.
+	RegistryOverrides map[string]string `json:"registryOverrides,omitempty"`
+	// Whether this package was created with differential components.
+	Differential bool `json:"differential,omitempty"`
+	// Version of a previously built package used as the basis for creating this differential package.
+	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty"`
+	// List of components that were not included in this package due to differential packaging.
+	DifferentialMissing []string `json:"differentialMissing,omitempty"`
+	// The minimum version of Zarf that does not have breaking package structure changes.
+	LastNonBreakingVersion string `json:"lastNonBreakingVersion,omitempty"`
+	// The flavor of Zarf used to build this package.
+	Flavor string `json:"flavor,omitempty"`
 }

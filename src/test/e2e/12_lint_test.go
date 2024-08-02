@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
 func TestLint(t *testing.T) {
@@ -20,7 +20,7 @@ func TestLint(t *testing.T) {
 		t.Log("E2E: Test lint on schema success")
 
 		// This runs lint on the zarf.yaml in the base directory of the repo
-		_, _, err := e2e.Zarf("dev", "lint")
+		_, _, err := e2e.Zarf(t, "dev", "lint")
 		require.NoError(t, err, "Expect no error here because the yaml file is following schema")
 	})
 
@@ -30,7 +30,7 @@ func TestLint(t *testing.T) {
 		testPackagePath := filepath.Join("src", "test", "packages", "12-lint")
 		configPath := filepath.Join(testPackagePath, "zarf-config.toml")
 		os.Setenv("ZARF_CONFIG", configPath)
-		_, stderr, err := e2e.Zarf("dev", "lint", testPackagePath, "-f", "good-flavor")
+		_, stderr, err := e2e.Zarf(t, "dev", "lint", testPackagePath, "-f", "good-flavor")
 		os.Unsetenv("ZARF_CONFIG")
 		require.Error(t, err, "Require an exit code since there was warnings / errors")
 		strippedStderr := e2e.StripMessageFormatting(stderr)
@@ -55,7 +55,5 @@ func TestLint(t *testing.T) {
 		// Check reported filepaths
 		require.Contains(t, strippedStderr, "Linting package \"dos-games\" at oci://🦄/dos-games:1.0.0")
 		require.Contains(t, strippedStderr, fmt.Sprintf("Linting package \"lint\" at %s", testPackagePath))
-
 	})
-
 }

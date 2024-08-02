@@ -12,12 +12,12 @@ import (
 	"regexp"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 
 	"github.com/spf13/cobra"
 )
@@ -44,7 +44,7 @@ var destroyCmd = &cobra.Command{
 		//       the scripts to remove k3s, we will still try to remove a locally installed k3s cluster
 		state, err := c.LoadZarfState(ctx)
 		if err != nil {
-			message.WarnErr(err, lang.ErrLoadState)
+			message.WarnErr(err, err.Error())
 		}
 
 		// If Zarf deployed the cluster, burn it all down
@@ -68,7 +68,7 @@ var destroyCmd = &cobra.Command{
 					// Don't remove scripts we can't execute so the user can try to manually run
 					continue
 				} else if err != nil {
-					message.Debugf("Received error when trying to execute the script (%s): %#v", script, err)
+					return fmt.Errorf("received an error when executing the script %s: %w", script, err)
 				}
 
 				// Try to remove the script, but ignore any errors

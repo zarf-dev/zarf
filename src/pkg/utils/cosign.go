@@ -12,13 +12,13 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -179,7 +179,7 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 }
 
 // CosignVerifyBlob verifies the zarf.yaml.sig was signed with the key provided by the flag
-func CosignVerifyBlob(blobRef string, sigRef string, keyPath string) error {
+func CosignVerifyBlob(ctx context.Context, blobRef string, sigRef string, keyPath string) error {
 	keyOptions := options.KeyOpts{KeyRef: keyPath}
 	cmd := &verify.VerifyBlobCmd{
 		KeyOpts:    keyOptions,
@@ -188,7 +188,7 @@ func CosignVerifyBlob(blobRef string, sigRef string, keyPath string) error {
 		Offline:    true,
 		IgnoreTlog: true,
 	}
-	err := cmd.Exec(context.TODO(), blobRef)
+	err := cmd.Exec(ctx, blobRef)
 	if err == nil {
 		message.Successf("Package signature validated!")
 	}

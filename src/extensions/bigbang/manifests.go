@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1"
+	"github.com/zarf-dev/zarf/src/types/extensions"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -166,7 +166,7 @@ func manifestHelmRelease(values []fluxHelmCtrl.ValuesReference) fluxHelmCtrl.Hel
 		},
 		Spec: fluxHelmCtrl.HelmReleaseSpec{
 			Timeout: &tenMins,
-			Chart: fluxHelmCtrl.HelmChartTemplate{
+			Chart: &fluxHelmCtrl.HelmChartTemplate{
 				Spec: fluxHelmCtrl.HelmChartTemplateSpec{
 					Chart: "./chart",
 					SourceRef: fluxHelmCtrl.CrossNamespaceObjectReference{

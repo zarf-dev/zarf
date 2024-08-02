@@ -4,16 +4,27 @@ kind: ClusterConfig
 metadata:
   name: ###ZARF_VAR_EKS_CLUSTER_NAME###
   region: ###ZARF_VAR_EKS_CLUSTER_REGION###
-  version: "###ZARF_VAR_EKS_CLUSTER_VERSION###"
+  tags:
+    PermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_TAG###"
 
 iam:
   withOIDC: true
+  serviceRolePermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_ARN###"
 
 addons:
   - name: aws-ebs-csi-driver
-    version: "###ZARF_VAR_EBS_DRIVER_VERSION###"
     attachPolicyARNs:
       - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
+    permissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_ARN###"
+    tags:
+      PermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_TAG###"
+
+  - name: vpc-cni
+    attachPolicyARNs:
+      - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+    permissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_ARN###"
+    tags:
+      PermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_TAG###"
 
 managedNodeGroups:
 - instanceType: ###ZARF_VAR_EKS_INSTANCE_TYPE###
@@ -21,3 +32,7 @@ managedNodeGroups:
   minSize: 3
   maxSize: 6
   spot: true
+  tags:
+    PermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_TAG###"
+  iam:
+    instanceRolePermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_ARN###"

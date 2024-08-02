@@ -21,7 +21,7 @@ func TestCreateIndexShaErrors(t *testing.T) {
 		{
 			name:                  "Image Index",
 			packagePath:           "src/test/packages/14-index-sha/image-index",
-			expectedImageInStderr: "ghcr.io/defenseunicorns/zarf/agent:v0.32.6@sha256:b3fabdc7d4ecd0f396016ef78da19002c39e3ace352ea0ae4baa2ce9d5958376",
+			expectedImageInStderr: "ghcr.io/zarf-dev/zarf/agent:v0.32.6@sha256:b3fabdc7d4ecd0f396016ef78da19002c39e3ace352ea0ae4baa2ce9d5958376",
 		},
 		{
 			name:                  "Manifest List",
@@ -32,10 +32,9 @@ func TestCreateIndexShaErrors(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, stderr, err := e2e.Zarf("package", "create", tc.packagePath, "--confirm")
+			_, stderr, err := e2e.Zarf(t, "package", "create", tc.packagePath, "--confirm")
 			require.Error(t, err)
 			require.Contains(t, stderr, tc.expectedImageInStderr)
 		})
 	}
-
 }

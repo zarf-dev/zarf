@@ -10,14 +10,14 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
 	fluxmeta "github.com/fluxcd/pkg/apis/meta"
 	flux "github.com/fluxcd/source-controller/api/v1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 )
 
@@ -38,7 +38,6 @@ func NewGitRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster)
 
 // mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
 func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (result *operations.Result, err error) {
-
 	var (
 		patches   []operations.PatchOperation
 		isPatched bool
@@ -49,7 +48,7 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 
 	state, err := cluster.LoadZarfState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(lang.AgentErrGetState, err)
+		return nil, err
 	}
 
 	message.Debugf("Using the url of (%s) to mutate the flux repository", state.GitServer.Address)

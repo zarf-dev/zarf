@@ -5,6 +5,7 @@
 package bigbang
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -14,15 +15,15 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
-	"github.com/defenseunicorns/zarf/src/types"
-	"github.com/defenseunicorns/zarf/src/types/extensions"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1beta2"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/types/extensions"
 	"helm.sh/helm/v3/pkg/chartutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,19 +43,19 @@ var tenMins = metav1.Duration{
 
 // Run mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
-func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
 	cfg := c.Extensions.BigBang
 	manifests := []types.ZarfManifest{}
 
 	validVersionResponse, err := isValidVersion(cfg.Version)
 
 	if err != nil {
-		return c, fmt.Errorf("invalid Big Bang version: %s, parsing issue %s", cfg.Version, err)
+		return c, fmt.Errorf("could not parse the Big Bang version %s: %w", cfg.Version, err)
 	}
 
 	// Make sure the version is valid.
 	if !validVersionResponse {
-		return c, fmt.Errorf("invalid Big Bang version: %s, must be at least %s", cfg.Version, bbMinRequiredVersion)
+		return c, fmt.Errorf("Big Bang version %s must be at least %s", cfg.Version, bbMinRequiredVersion)
 	}
 
 	// Print the banner for Big Bang.
@@ -99,14 +100,14 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 	)
 
 	// Download the chart from Git and save it to a temporary directory.
-	err = helmCfg.PackageChartFromGit(c.DeprecatedCosignKeyPath)
+	err = helmCfg.PackageChartFromGit(ctx, c.DeprecatedCosignKeyPath)
 	if err != nil {
 		return c, fmt.Errorf("unable to download Big Bang Chart: %w", err)
 	}
 
 	// Template the chart so we can see what GitRepositories are being referenced in the
 	// manifests created with the provided Helm.
-	template, _, err := helmCfg.TemplateChart()
+	template, _, err := helmCfg.TemplateChart(ctx)
 	if err != nil {
 		return c, fmt.Errorf("unable to template Big Bang Chart: %w", err)
 	}
@@ -153,10 +154,10 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 			MaxTotalSeconds: &maxTotalSeconds,
 			Wait: &types.ZarfComponentActionWait{
 				Cluster: &types.ZarfComponentActionWaitCluster{
-					Kind:       "HelmRelease",
-					Identifier: hr.Metadata.Name,
-					Namespace:  hr.Metadata.Namespace,
-					Condition:  "ready",
+					Kind:      "HelmRelease",
+					Name:      hr.Metadata.Name,
+					Namespace: hr.Metadata.Namespace,
+					Condition: "ready",
 				},
 			},
 		}
@@ -170,7 +171,7 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 			action.Wait.Cluster = &types.ZarfComponentActionWaitCluster{
 				Kind: "APIService",
 				// https://github.com/kubernetes-sigs/metrics-server#compatibility-matrix
-				Identifier: "v1beta1.metrics.k8s.io",
+				Name: "v1beta1.metrics.k8s.io",
 			}
 		}
 
@@ -220,7 +221,7 @@ func Run(YOLO bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (typ
 			gitRepo := gitRepos[hr.NamespacedSource]
 			values := hrValues[namespacedName]
 
-			images, err := findImagesforBBChartRepo(gitRepo, values)
+			images, err := findImagesforBBChartRepo(ctx, gitRepo, values)
 			if err != nil {
 				return c, fmt.Errorf("unable to find images for chart repo: %w", err)
 			}
@@ -523,7 +524,7 @@ func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang)
 }
 
 // findImagesforBBChartRepo finds and returns the images for the Big Bang chart repo
-func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []string, err error) {
+func findImagesforBBChartRepo(ctx context.Context, repo string, values chartutil.Values) (images []string, err error) {
 	matches := strings.Split(repo, "@")
 	if len(matches) < 2 {
 		return images, fmt.Errorf("cannot convert git repo %s to helm chart without a version tag", repo)
@@ -532,7 +533,7 @@ func findImagesforBBChartRepo(repo string, values chartutil.Values) (images []st
 	spinner := message.NewProgressSpinner("Discovering images in %s", repo)
 	defer spinner.Stop()
 
-	gitPath, err := helm.DownloadChartFromGitToTemp(repo, spinner)
+	gitPath, err := helm.DownloadChartFromGitToTemp(ctx, repo)
 	if err != nil {
 		return images, err
 	}

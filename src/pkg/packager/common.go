@@ -15,17 +15,17 @@ import (
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/template"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Packager is the main struct for managing packages.
@@ -107,23 +107,15 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 
 	// If the temp directory is not set, set it to the default
 	if pkgr.layout == nil {
-		if err = pkgr.setTempDirectory(config.CommonOptions.TempDirectory); err != nil {
+		dir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
 			return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 		}
+		message.Debug("Using temporary directory:", dir)
+		pkgr.layout = layout.New(dir)
 	}
 
 	return pkgr, nil
-}
-
-// setTempDirectory sets the temp directory for the packager.
-func (p *Packager) setTempDirectory(path string) error {
-	dir, err := utils.MakeTempDir(path)
-	if err != nil {
-		return fmt.Errorf("unable to create package temp paths: %w", err)
-	}
-
-	p.layout = layout.New(dir)
-	return nil
 }
 
 // ClearTempPaths removes the temp directory and any files within it.
@@ -157,20 +149,9 @@ func (p *Packager) isConnectedToCluster() bool {
 	return p.cluster != nil
 }
 
-// hasImages returns whether the current package contains images
-func (p *Packager) hasImages() bool {
-	for _, component := range p.cfg.Pkg.Components {
-		if len(component.Images) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
 // attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
 // NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
 func (p *Packager) attemptClusterChecks(ctx context.Context) (err error) {
-
 	spinner := message.NewProgressSpinner("Gathering additional cluster information (if available)")
 	defer spinner.Stop()
 
@@ -192,7 +173,10 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) (err error) {
 	// Check for any breaking changes between the initialized Zarf version and this CLI
 	if existingInitPackage, _ := p.cluster.GetDeployedPackage(ctx, "init"); existingInitPackage != nil {
 		// Use the build version instead of the metadata since this will support older Zarf versions
-		deprecated.PrintBreakingChanges(os.Stderr, existingInitPackage.Data.Build.Version, config.CLIVersion)
+		err := deprecated.PrintBreakingChanges(os.Stderr, existingInitPackage.Data.Build.Version, config.CLIVersion)
+		if err != nil {
+			return err
+		}
 	}
 
 	spinner.Success()
@@ -203,7 +187,7 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) (err error) {
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture(ctx context.Context) error {
 	// Ignore this check if we don't have a cluster connection, or the package contains no images
-	if !p.isConnectedToCluster() || !p.hasImages() {
+	if !p.isConnectedToCluster() || !p.cfg.Pkg.HasImages() {
 		return nil
 	}
 

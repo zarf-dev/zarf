@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/fatih/color"
 	"github.com/pterm/pterm"
 )
@@ -97,6 +96,11 @@ func SetLogLevel(lvl LogLevel) {
 // DisableColor disables color in output
 func DisableColor() {
 	pterm.DisableColor()
+}
+
+// ColorEnabled returns true if color printing is enabled.
+func ColorEnabled() bool {
+	return pterm.PrintColor
 }
 
 // ZarfCommand prints a zarf terminal command.
@@ -276,7 +280,7 @@ func Table(header []string, data [][]string) {
 // preventing future characters from taking on the given color
 // returns string as normal if color is disabled
 func ColorWrap(str string, attr color.Attribute) string {
-	if config.NoColor || str == "" {
+	if !ColorEnabled() || str == "" {
 		return str
 	}
 	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", attr, str)

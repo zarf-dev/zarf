@@ -42,10 +42,10 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	out := fmt.Sprintf("zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
 
 	// Build the fully qualified reference.
-	ref := fmt.Sprintf("oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0-%s", e2e.Arch)
+	ref := fmt.Sprintf("oci://ghcr.io/zarf-dev/packages/dos-games:1.0.0-%s", e2e.Arch)
 
 	// Pull the package via OCI.
-	stdOut, stdErr, err := e2e.Zarf("package", "pull", ref)
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "pull", ref)
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, fmt.Sprintf("Pulling %q", ref))
 	suite.Contains(stdErr, "Validating full package checksums")
@@ -55,13 +55,13 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 
 	// Verify the package was pulled correctly.
 	suite.FileExists(out)
-	stdOut, stdErr, err = e2e.Zarf("package", "inspect", out, "--key", "https://zarf.dev/cosign.pub", "--sbom-out", sbomTmp)
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", out, "--key", "https://zarf.dev/cosign.pub", "--sbom-out", sbomTmp)
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, "Validating SBOM checksums")
 	suite.Contains(stdErr, "Package signature validated!")
 
 	// Test pull w/ bad ref.
-	stdOut, stdErr, err = e2e.Zarf("package", "pull", "oci://"+badPullInspectRef.String(), "--insecure")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+badPullInspectRef.String(), "--insecure")
 	suite.Error(err, stdOut, stdErr)
 }
 
@@ -69,13 +69,13 @@ func (suite *PullInspectTestSuite) Test_1_Remote_Inspect() {
 	suite.T().Log("E2E: Package Inspect oci://")
 
 	// Test inspect w/ bad ref.
-	_, stdErr, err := e2e.Zarf("package", "inspect", "oci://"+badPullInspectRef.String(), "--insecure")
+	_, stdErr, err := e2e.Zarf(suite.T(), "package", "inspect", "oci://"+badPullInspectRef.String(), "--insecure")
 	suite.Error(err, stdErr)
 
 	// Test inspect on a public package.
 	// NOTE: This also makes sure that Zarf does not attempt auth when inspecting a public package.
-	ref := fmt.Sprintf("oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0-%s", e2e.Arch)
-	_, stdErr, err = e2e.Zarf("package", "inspect", ref)
+	ref := fmt.Sprintf("oci://ghcr.io/zarf-dev/packages/dos-games:1.0.0-%s", e2e.Arch)
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", ref)
 	suite.NoError(err, stdErr)
 }
 

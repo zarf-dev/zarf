@@ -39,7 +39,7 @@ components:
       - source: ../09-composable-packages/files/coffee-ipsum.txt
         target: ../09-composable-packages/coffee-ipsum.txt
         # Import of a file from a URL
-      - source: https://raw.githubusercontent.com/defenseunicorns/zarf/main/README.md
+      - source: https://raw.githubusercontent.com/zarf-dev/zarf/main/README.md
         target: files/zarf-readme.md
     actions:
       onDeploy:

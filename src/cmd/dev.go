@@ -14,19 +14,20 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/cmd/common"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 	"github.com/pterm/pterm"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/cmd/common"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 var extractPath string
@@ -71,7 +72,7 @@ var devGenerateCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	Short:   lang.CmdDevGenerateShort,
 	Example: lang.CmdDevGenerateExample,
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		pkgConfig.GenerateOpts.Name = args[0]
 
 		pkgConfig.CreateOpts.BaseDir = "."
@@ -83,7 +84,7 @@ var devGenerateCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		err = pkgClient.Generate()
+		err = pkgClient.Generate(cmd.Context())
 		if err != nil {
 			return err
 		}
@@ -142,7 +143,7 @@ var devSha256SumCmd = &cobra.Command{
 	Aliases: []string{"s"},
 	Short:   lang.CmdDevSha256sumShort,
 	Args:    cobra.ExactArgs(1),
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		hashErr := errors.New("unable to compute the SHA256SUM hash")
 
 		fileName := args[0]
@@ -169,7 +170,7 @@ var devSha256SumCmd = &cobra.Command{
 			}
 
 			downloadPath := filepath.Join(tmp, fileBase)
-			err = utils.DownloadToFile(fileName, downloadPath, "")
+			err = utils.DownloadToFile(cmd.Context(), fileName, downloadPath, "")
 			if err != nil {
 				return errors.Join(hashErr, err)
 			}
@@ -269,6 +270,7 @@ var devLintCmd = &cobra.Command{
 	Short:   lang.CmdDevLintShort,
 	Long:    lang.CmdDevLintLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		config.CommonOptions.Confirm = true
 		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
@@ -280,7 +282,7 @@ var devLintCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		return pkgClient.Lint(cmd.Context())
+		return lint.Validate(cmd.Context(), pkgConfig.CreateOpts)
 	},
 }
 

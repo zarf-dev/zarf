@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ComponentPaths contains paths for a component.
@@ -37,12 +37,6 @@ type Components struct {
 
 // ErrNotLoaded is returned when a path is not loaded.
 var ErrNotLoaded = fmt.Errorf("not loaded")
-
-// IsNotLoaded checks if an error is ErrNotLoaded.
-func IsNotLoaded(err error) bool {
-	u, ok := err.(*fs.PathError)
-	return ok && u.Unwrap() == ErrNotLoaded
-}
 
 // Archive archives a component.
 func (c *Components) Archive(component types.ZarfComponent, cleanupTemp bool) (err error) {

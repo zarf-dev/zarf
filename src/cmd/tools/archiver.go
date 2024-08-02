@@ -10,13 +10,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
 	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
 )
 
-// ldflags github.com/defenseunicorns/zarf/src/cmd/tools.archiverVersion=x.x.x
+// ldflags github.com/zarf-dev/zarf/src/cmd/tools.archiverVersion=x.x.x
 var archiverVersion string
 
 var archiverCmd = &cobra.Command{

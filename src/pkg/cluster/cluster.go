@@ -18,7 +18,7 @@ import (
 
 	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 const (
@@ -93,7 +93,7 @@ func waitForHealthyCluster(ctx context.Context, client kubernetes.Interface) err
 			// Make sure there is at least one running Node
 			nodeList, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 			if err != nil || len(nodeList.Items) < 1 {
-				message.Debug("No nodes reporting healthy yet: %v\n", err)
+				message.Debugf("No nodes reporting healthy yet: %v\n", err)
 				timer.Reset(waitDuration)
 				continue
 			}
@@ -101,7 +101,7 @@ func waitForHealthyCluster(ctx context.Context, client kubernetes.Interface) err
 			// Get the cluster pod list
 			pods, err := client.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{})
 			if err != nil {
-				message.Debug("Could not get the pod list: %w", err)
+				message.Debugf("Could not get the pod list: %v", err)
 				timer.Reset(waitDuration)
 				continue
 			}

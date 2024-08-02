@@ -5,12 +5,11 @@
 package tools
 
 import (
-	"github.com/defenseunicorns/zarf/src/config/lang"
 	yq "github.com/mikefarah/yq/v4/cmd"
+	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
 func init() {
-
 	yqCmd := yq.New()
 	yqCmd.Example = lang.CmdToolsYqExample
 	yqCmd.Use = "yq"

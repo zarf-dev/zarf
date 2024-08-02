@@ -7,10 +7,10 @@ package tools
 import (
 	"os"
 
-	"github.com/defenseunicorns/zarf/src/cmd/common"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/cmd/common"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 	kubeCLI "k8s.io/component-base/cli"
 	kubeCmd "k8s.io/kubectl/pkg/cmd"
 

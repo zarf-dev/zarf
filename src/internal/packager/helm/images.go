@@ -5,7 +5,6 @@ package helm
 
 import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/goccy/go-yaml"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -45,7 +44,6 @@ func FindAnnotatedImagesForChart(chartPath string, values chartutil.Values) (ima
 		// Only include the image if the current values/condition specify it should be included
 		if i.Condition != "" {
 			value, err := values.PathValue(i.Condition)
-			message.Debugf("%#v - %#v - %#v\n", value, i.Condition, err)
 			// We intentionally ignore the error here because the key could be missing from the values.yaml
 			if err == nil && value == true {
 				images = append(images, i.Image)

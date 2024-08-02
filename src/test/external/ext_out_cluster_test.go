@@ -16,10 +16,11 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	"helm.sh/helm/v3/pkg/repo"
 )
 
@@ -54,7 +55,6 @@ type ExtOutClusterTestSuite struct {
 }
 
 func (suite *ExtOutClusterTestSuite) SetupSuite() {
-
 	suite.Assertions = require.New(suite.T())
 
 	// Teardown any leftovers from previous tests
@@ -207,7 +207,7 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 	podinfoTarballPath := filepath.Join(tempDir, fmt.Sprintf("podinfo-%s.tgz", podInfoVersion))
 	suite.NoError(err, "Unable to package chart")
 
-	err = utils.DownloadToFile(fmt.Sprintf("https://stefanprodan.github.io/podinfo/podinfo-%s.tgz", podInfoVersion), podinfoTarballPath, "")
+	err = utils.DownloadToFile(testutil.TestContext(suite.T()), fmt.Sprintf("https://stefanprodan.github.io/podinfo/podinfo-%s.tgz", podInfoVersion), podinfoTarballPath, "")
 	suite.NoError(err)
 	url := fmt.Sprintf("%s/api/packages/%s/helm/api/charts", baseURL, username)
 

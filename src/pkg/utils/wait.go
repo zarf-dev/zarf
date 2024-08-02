@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // isJSONPathWaitType checks if the condition is a JSONPath or condition.
@@ -153,10 +153,8 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 		select {
 		case <-expired:
 			return errors.New("wait timed out")
-
 		default:
 			switch resource {
-
 			case "http", "https":
 				// Handle HTTP and HTTPS endpoints.
 				url := fmt.Sprintf("%s://%s", resource, name)
@@ -191,7 +189,6 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 					message.Debug(err)
 					continue
 				}
-
 			default:
 				// Fallback to any generic protocol using net.Dial
 				conn, err := net.Dial(resource, name)

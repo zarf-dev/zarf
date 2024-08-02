@@ -18,18 +18,18 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 
-	"github.com/defenseunicorns/zarf/src/cmd/common"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/git"
-	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/internal/packager/template"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
-	"github.com/defenseunicorns/zarf/src/pkg/pki"
-	"github.com/defenseunicorns/zarf/src/pkg/zoci"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/cmd/common"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/gitea"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 var subAltNames []string
@@ -149,13 +149,31 @@ var updateCredsCmd = &cobra.Command{
 
 			// Update artifact token (if internal)
 			if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.InternalServer {
-				g := git.New(oldState.GitServer)
-				tokenResponse, err := g.CreatePackageRegistryToken(ctx)
+				tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+				if err != nil {
+					return err
+				}
+				_, err = tunnel.Connect(cmd.Context())
+				if err != nil {
+					return err
+				}
+				defer tunnel.Close()
+				tunnelURL := tunnel.HTTPEndpoint()
+				giteaClient, err := gitea.NewClient(tunnelURL, oldState.GitServer.PushUsername, oldState.GitServer.PushPassword)
+				if err != nil {
+					return err
+				}
+				err = tunnel.Wrap(func() error {
+					tokenSha1, err := giteaClient.CreatePackageRegistryToken(ctx)
+					if err != nil {
+						return err
+					}
+					newState.ArtifactServer.PushToken = tokenSha1
+					return nil
+				})
 				if err != nil {
 					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableCreateToken, err.Error())
-				} else {
-					newState.ArtifactServer.PushToken = tokenResponse.Sha1
 				}
 			}
 
@@ -176,8 +194,31 @@ var updateCredsCmd = &cobra.Command{
 				}
 			}
 			if slices.Contains(args, message.GitKey) && newState.GitServer.InternalServer {
-				g := git.New(newState.GitServer)
-				err = g.UpdateZarfGiteaUsers(ctx, oldState)
+				tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+				if err != nil {
+					return err
+				}
+				_, err = tunnel.Connect(cmd.Context())
+				if err != nil {
+					return err
+				}
+				defer tunnel.Close()
+				tunnelURL := tunnel.HTTPEndpoint()
+				giteaClient, err := gitea.NewClient(tunnelURL, oldState.GitServer.PushUsername, oldState.GitServer.PushPassword)
+				if err != nil {
+					return err
+				}
+				err = tunnel.Wrap(func() error {
+					err := giteaClient.UpdateGitUser(ctx, newState.GitServer.PullUsername, newState.GitServer.PullPassword)
+					if err != nil {
+						return err
+					}
+					err = giteaClient.UpdateGitUser(ctx, newState.GitServer.PushUsername, newState.GitServer.PushPassword)
+					if err != nil {
+						return err
+					}
+					return nil
+				})
 				if err != nil {
 					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateGit, err.Error())

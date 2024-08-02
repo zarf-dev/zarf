@@ -14,12 +14,12 @@ import (
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
-	"github.com/defenseunicorns/zarf/src/pkg/zoci"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 var (
@@ -33,7 +33,7 @@ type TarballSource struct {
 }
 
 // LoadPackage loads a package from a tarball.
-func (s *TarballSource) LoadPackage(_ context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
+func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	spinner := message.NewProgressSpinner("Loading package from %q", s.PackageSource)
 	defer spinner.Stop()
 
@@ -106,7 +106,7 @@ func (s *TarballSource) LoadPackage(_ context.Context, dst *layout.PackagePaths,
 
 		spinner.Success()
 
-		if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
+		if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
 			return pkg, nil, err
 		}
 	}
@@ -114,7 +114,7 @@ func (s *TarballSource) LoadPackage(_ context.Context, dst *layout.PackagePaths,
 	if unarchiveAll {
 		for _, component := range pkg.Components {
 			if err := dst.Components.Unarchive(component); err != nil {
-				if layout.IsNotLoaded(err) {
+				if errors.Is(err, layout.ErrNotLoaded) {
 					_, err := dst.Components.Create(component)
 					if err != nil {
 						return pkg, nil, err
@@ -138,7 +138,7 @@ func (s *TarballSource) LoadPackage(_ context.Context, dst *layout.PackagePaths,
 }
 
 // LoadPackageMetadata loads a package's metadata from a tarball.
-func (s *TarballSource) LoadPackageMetadata(_ context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
+func (s *TarballSource) LoadPackageMetadata(ctx context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
 	if s.Shasum != "" {
 		if err := helpers.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
 			return pkg, nil, err
@@ -184,7 +184,7 @@ func (s *TarballSource) LoadPackageMetadata(_ context.Context, dst *layout.Packa
 			spinner.Success()
 		}
 
-		if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
+		if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
 			if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
 				message.Warn("The package was signed but no public key was provided, skipping signature validation")
 			} else {

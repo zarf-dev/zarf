@@ -12,9 +12,9 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	agentHttp "github.com/defenseunicorns/zarf/src/internal/agent/http"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	agentHttp "github.com/zarf-dev/zarf/src/internal/agent/http"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // Heavily influenced by https://github.com/douglasmakey/admissioncontroller and

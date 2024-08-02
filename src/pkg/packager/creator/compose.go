@@ -7,9 +7,8 @@ package creator
 import (
 	"context"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/composer"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/packager/composer"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ComposeComponents composes components and their dependencies into a single Zarf package using an import chain.
@@ -37,7 +36,6 @@ func ComposeComponents(ctx context.Context, pkg types.ZarfPackage, flavor string
 		if err != nil {
 			return types.ZarfPackage{}, nil, err
 		}
-		message.Debugf("%s", chain)
 
 		// migrate any deprecated component configurations now
 		warning := chain.Migrate(pkg.Build)

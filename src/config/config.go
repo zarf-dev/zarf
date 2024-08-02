@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Zarf Global Configuration Constants.
 const (
-	GithubProject = "defenseunicorns/zarf"
+	GithubProject = "zarf-dev/zarf"
 
 	ZarfAgentHost = "agent-hook.zarf.svc"
 
@@ -32,8 +32,6 @@ const (
 
 // Zarf Constants for In-Cluster Services.
 const (
-	ZarfArtifactTokenName = "zarf-artifact-registry-token"
-
 	ZarfImagePullSecretName = "private-registry"
 	ZarfGitServerSecretName = "private-git-server"
 
@@ -59,12 +57,6 @@ var (
 
 	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'
 	ZarfSeedPort string
-
-	// SkipLogFile is a flag to skip logging to a file
-	SkipLogFile bool
-
-	// NoColor is a flag to disable colors in output
-	NoColor bool
 
 	CosignPublicKey string
 

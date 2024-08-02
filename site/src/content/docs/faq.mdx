@@ -10,7 +10,7 @@ Defense Unicorns' mission is to advance freedom and independence globally throug
 
 ## What license is Zarf under?
 
-Zarf is under the [Apache License 2.0](https://github.com/defenseunicorns/zarf/blob/main/LICENSE). This is one of the most commonly used licenses for open-source software.
+Zarf is under the [Apache License 2.0](https://github.com/zarf-dev/zarf/blob/main/LICENSE). This is one of the most commonly used licenses for open-source software.
 
 ## Is Zarf free to use?
 
@@ -18,7 +18,7 @@ Yes! Zarf is Free and Open-Source Software (FOSS). And will remain free forever.
 
 ## Do I have to use Homebrew to install Zarf?
 
-No, the Zarf binary and init package can be downloaded from the [Releases Page](https://github.com/defenseunicorns/zarf/releases). Zarf does not need to be installed or available to all users on the system, but it does need to be executable for the current user (i.e. `chmod +x zarf` for Linux/Mac).
+No, the Zarf binary and init package can be downloaded from the [Releases Page](https://github.com/zarf-dev/zarf/releases). Zarf does not need to be installed or available to all users on the system, but it does need to be executable for the current user (i.e. `chmod +x zarf` for Linux/Mac).
 
 ## What dependencies does Zarf have?
 
@@ -26,7 +26,7 @@ Zarf is statically compiled and written in [Go](https://golang.org/) and [Rust](
 
 ## How can I improve the speed of loading large images from Docker on `zarf package create`?
 
-Due to some limitations with how Docker provides access to local image layers, `zarf package create` has to rely on `docker save` under the hood which is [very slow overall](https://github.com/defenseunicorns/zarf/issues/1214) and also takes a long time to report progress. We experimented with many ways to improve this, but for now recommend leveraging a local docker registry to speed up the process.
+Due to some limitations with how Docker provides access to local image layers, `zarf package create` has to rely on `docker save` under the hood which is [very slow overall](https://github.com/zarf-dev/zarf/issues/1214) and also takes a long time to report progress. We experimented with many ways to improve this, but for now recommend leveraging a local docker registry to speed up the process.
 
 This can be done by running a local registry and pushing the images to it before running `zarf package create`. This will allow `zarf package create` to pull the images from the local registry instead of Docker. This can also be combined with [component actions](/ref/actions/) and [`--registry-override`](/commands/zarf_package_create/) to make the process automatic. Given an example image of `registry.enterprise.corp/my-giant-image:v2` you could do something like this:
 
@@ -74,8 +74,8 @@ metadata:
 
 components:
   repos:
-    - https://github.com/defenseunicorns/zarf.git
-    - ssh://git@github.com/defenseunicorns/zarf.git
+    - https://github.com/zarf-dev/zarf.git
+    - ssh://git@github.com/zarf-dev/zarf.git
     - file:///home/zarf/workspace/zarf
     - git://somegithost.com/zarf.git
 ```

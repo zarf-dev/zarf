@@ -15,5 +15,5 @@ spec:
         app: simple-deployment
     spec:
       containers:
-        - name: server
-          image: "###ZARF_CONST_SAMPLE_IMAGE###"
+        - name: podinfo
+          image: {{.Values.podinfo}}

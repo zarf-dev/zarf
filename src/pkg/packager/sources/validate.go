@@ -6,6 +6,7 @@ package sources
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -14,10 +15,10 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 var (
@@ -28,7 +29,7 @@ var (
 )
 
 // ValidatePackageSignature validates the signature of a package
-func ValidatePackageSignature(paths *layout.PackagePaths, publicKeyPath string) error {
+func ValidatePackageSignature(ctx context.Context, paths *layout.PackagePaths, publicKeyPath string) error {
 	// If the insecure flag was provided ignore the signature validation
 	if config.CommonOptions.Insecure {
 		return nil
@@ -52,7 +53,7 @@ func ValidatePackageSignature(paths *layout.PackagePaths, publicKeyPath string) 
 	}
 
 	// Validate the signature with the key we were provided
-	if err := utils.CosignVerifyBlob(paths.ZarfYAML, paths.Signature, publicKeyPath); err != nil {
+	if err := utils.CosignVerifyBlob(ctx, paths.ZarfYAML, paths.Signature, publicKeyPath); err != nil {
 		return fmt.Errorf("package signature did not match the provided key: %w", err)
 	}
 
