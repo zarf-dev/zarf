@@ -14,10 +14,6 @@ runs:
         lsblk -f
         echo "dotnet: Current time: $(date +"%T")"
 
-        sudo rm -rf /usr/local/lib/android
-        lsblk -f
-        echo "android: Current time: $(date +"%T")"
-
         # Remove haskell
         sudo rm -rf /opt/ghc
         lsblk -f
