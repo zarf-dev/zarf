@@ -1116,8 +1116,7 @@
         "ZarfInitConfig",
         "ZarfPackageConfig"
       ],
-      "description": "The kind of Zarf package.",
-      "default": "ZarfPackageConfig"
+      "description": "The kind of Zarf package."
     },
     "metadata": {
       "$ref": "#/$defs/ZarfMetadata",

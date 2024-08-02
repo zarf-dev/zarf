@@ -31,7 +31,7 @@ type ZarfPackage struct {
 	// The API version of the Zarf package.
 	ApiVersion string `json:"apiVersion,omitempty," jsonschema:"enum=zarf.dev/v1alpha1"`
 	// The kind of Zarf package.
-	Kind ZarfPackageKind `json:"kind" jsonschema:"enum=ZarfInitConfig,enum=ZarfPackageConfig"`
+	Kind ZarfPackageKind `json:"kind" jsonschema:"enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	// Package metadata.
 	Metadata ZarfMetadata `json:"metadata,omitempty"`
 	// Zarf-generated package build data.
