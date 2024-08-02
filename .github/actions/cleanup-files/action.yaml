@@ -7,9 +7,14 @@ runs:
     - run: |
         lsblk -f
 
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        # Remove haskell
+        sudo rm -rf /opt/ghc
+        lsblk -f
+
         sudo rm -rf zarf-sbom /tmp/zarf-*
         sudo env "PATH=$PATH" CI=true make delete-packages
-        sudo rm -rf /usr/share/dotnet
         sudo build/zarf tools clear-cache
         sudo docker system prune --all --force
 
