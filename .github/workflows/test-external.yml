@@ -30,7 +30,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  validate-external:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

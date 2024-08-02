@@ -26,8 +26,8 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
-	"github.com/zarf-dev/zarf/src/internal/packager/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
@@ -195,7 +195,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := actions.Run(onDeploy.Defaults, onDeploy.OnFailure, p.variableConfig); err != nil {
+			if err := actions.Run(ctx, onDeploy.Defaults, onDeploy.OnFailure, p.variableConfig); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -223,7 +223,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 			}
 		}
 
-		if err := actions.Run(onDeploy.Defaults, onDeploy.OnSuccess, p.variableConfig); err != nil {
+		if err := actions.Run(ctx, onDeploy.Defaults, onDeploy.OnSuccess, p.variableConfig); err != nil {
 			onFailure()
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -325,7 +325,7 @@ func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfC
 		return charts, err
 	}
 
-	if err = actions.Run(onDeploy.Defaults, onDeploy.Before, p.variableConfig); err != nil {
+	if err = actions.Run(ctx, onDeploy.Defaults, onDeploy.Before, p.variableConfig); err != nil {
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -360,7 +360,7 @@ func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfC
 		}
 	}
 
-	if err = actions.Run(onDeploy.Defaults, onDeploy.After, p.variableConfig); err != nil {
+	if err = actions.Run(ctx, onDeploy.Defaults, onDeploy.After, p.variableConfig); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -546,6 +546,11 @@ func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []s
 // Push all of the components git repos to the configured git server.
 func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, repos []string) error {
 	for _, repoURL := range repos {
+		repository, err := git.Open(reposPath, repoURL)
+		if err != nil {
+			return err
+		}
+
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
 			namespace, name, port, err := serviceInfoFromServiceURL(p.state.GitServer.Address)
@@ -561,7 +566,6 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 						return err
 					}
 				}
-
 				tunnel, err := p.cluster.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
 				if err != nil {
 					return err
@@ -571,18 +575,15 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 					return err
 				}
 				defer tunnel.Close()
-				gitClient := git.New(p.state.GitServer)
-				gitClient.Server.Address = tunnel.HTTPEndpoint()
 				giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
 				if err != nil {
 					return err
 				}
 				return tunnel.Wrap(func() error {
-					err = gitClient.PushRepo(repoURL, reposPath)
+					err = repository.Push(ctx, tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
 					if err != nil {
 						return err
 					}
-
 					// Add the read-only user to this repo
 					repoName, err := transform.GitURLtoRepoName(repoURL)
 					if err != nil {
@@ -596,8 +597,11 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 				})
 			}
 
-			gitClient := git.New(p.state.GitServer)
-			return gitClient.PushRepo(repoURL, reposPath)
+			err = repository.Push(ctx, p.state.GitServer.Address, p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
 
 		// Try repo push up to retry limit

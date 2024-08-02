@@ -30,7 +30,7 @@ on:
     - cron: "32 2 * * 5"
 
 jobs:
-  validate:
+  codeql-scan:
     runs-on: ubuntu-latest
     permissions:
       actions: read

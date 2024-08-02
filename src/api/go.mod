@@ -9,7 +9,7 @@ require (
 	github.com/invopop/jsonschema v0.12.0
 	github.com/stretchr/testify v1.9.0
 	github.com/zarf-dev/zarf v0.37.0
-	k8s.io/apimachinery v0.30.0
+	k8s.io/apimachinery v0.30.3
 )
 
 require (

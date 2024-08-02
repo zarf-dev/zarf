@@ -170,12 +170,12 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 
 	onRemove := c.Actions.OnRemove
 	onFailure := func() {
-		if err := actions.Run(onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
+		if err := actions.Run(ctx, onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
 			message.Debugf("Unable to run the failure action: %s", err)
 		}
 	}
 
-	if err := actions.Run(onRemove.Defaults, onRemove.Before, nil); err != nil {
+	if err := actions.Run(ctx, onRemove.Defaults, onRemove.Before, nil); err != nil {
 		onFailure()
 		return nil, fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
 	}
@@ -207,12 +207,12 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 		}
 	}
 
-	if err := actions.Run(onRemove.Defaults, onRemove.After, nil); err != nil {
+	if err := actions.Run(ctx, onRemove.Defaults, onRemove.After, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the after action: %w", err)
 	}
 
-	if err := actions.Run(onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
+	if err := actions.Run(ctx, onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the success action: %w", err)
 	}

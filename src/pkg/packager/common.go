@@ -149,16 +149,6 @@ func (p *Packager) isConnectedToCluster() bool {
 	return p.cluster != nil
 }
 
-// hasImages returns whether the current package contains images
-func (p *Packager) hasImages() bool {
-	for _, component := range p.cfg.Pkg.Components {
-		if len(component.Images) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
 // attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
 // NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
 func (p *Packager) attemptClusterChecks(ctx context.Context) (err error) {
@@ -197,7 +187,7 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) (err error) {
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
 func (p *Packager) validatePackageArchitecture(ctx context.Context) error {
 	// Ignore this check if we don't have a cluster connection, or the package contains no images
-	if !p.isConnectedToCluster() || !p.hasImages() {
+	if !p.isConnectedToCluster() || !p.cfg.Pkg.HasImages() {
 		return nil
 	}
 
