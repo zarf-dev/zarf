@@ -260,11 +260,13 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, spinner *message.
 	return cmNames, shasum, nil
 }
 
-var zarfImageRegex = regexp.MustCompile(`(?m)^127\.0\.0\.1:`)
-
 // getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
 func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq corev1.ResourceRequirements) (string, string, error) {
 	// Regex for Zarf seed image
+	zarfImageRegex, err := regexp.Compile(`(?m)^127\.0\.0\.1:`)
+	if err != nil {
+		return "", "", err
+	}
 	listOpts := metav1.ListOptions{
 		FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
 	}

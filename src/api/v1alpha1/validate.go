@@ -16,6 +16,21 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
+var (
+	// Define allowed OS, an empty string means it is allowed on all operating systems
+	// same as enums on ZarfComponentOnlyTarget
+	supportedOS = []string{"linux", "darwin", "windows", ""}
+)
+
+// SupportedOS returns the supported operating systems.
+//
+// The supported operating systems are: linux, darwin, windows.
+//
+// An empty string signifies no OS restrictions.
+func SupportedOS() []string {
+	return supportedOS
+}
+
 const (
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
 	ZarfMaxChartNameLength     = 40
