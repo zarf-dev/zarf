@@ -22,13 +22,13 @@ import (
 )
 
 // Run runs all provided actions.
-func Run(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func Run(ctx context.Context, defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
 	if variableConfig == nil {
 		variableConfig = template.GetZarfVariableConfig()
 	}
 
 	for _, a := range actions {
-		if err := runAction(defaultCfg, a, variableConfig); err != nil {
+		if err := runAction(ctx, defaultCfg, a, variableConfig); err != nil {
 			return err
 		}
 	}
@@ -36,10 +36,8 @@ func Run(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfCompo
 }
 
 // Run commands that a component has provided.
-func runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func runAction(ctx context.Context, defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
 	var (
-		ctx        context.Context
-		cancel     context.CancelFunc
 		cmdEscaped string
 		out        string
 		err        error
@@ -56,7 +54,7 @@ func runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfCo
 		}
 
 		// Convert the wait to a command.
-		if cmd, err = convertWaitToCmd(*action.Wait, action.MaxTotalSeconds); err != nil {
+		if cmd, err = convertWaitToCmd(ctx, *action.Wait, action.MaxTotalSeconds); err != nil {
 			return err
 		}
 
@@ -85,9 +83,9 @@ func runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfCo
 	// Persist the spinner output so it doesn't get overwritten by the command output.
 	spinner.EnablePreserveWrites()
 
-	actionDefaults := actionGetCfg(defaultCfg, action, variableConfig.GetAllTemplates())
+	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates())
 
-	if cmd, err = actionCmdMutation(cmd, actionDefaults.Shell); err != nil {
+	if cmd, err = actionCmdMutation(ctx, cmd, actionDefaults.Shell); err != nil {
 		spinner.Errorf(err, "Error mutating command: %s", cmdEscaped)
 	}
 
@@ -128,7 +126,8 @@ retryCmd:
 		// If no timeout is set, run the command and return or continue retrying.
 		if actionDefaults.MaxTotalSeconds < 1 {
 			spinner.Updatef("Waiting for \"%s\" (no timeout)", cmdEscaped)
-			if err := tryCmd(context.TODO()); err != nil {
+			//TODO (schristoff): Make it so tryCmd can take a normal ctx
+			if err := tryCmd(context.Background()); err != nil {
 				continue retryCmd
 			}
 
@@ -144,7 +143,7 @@ retryCmd:
 
 		// Otherwise, try running the command.
 		default:
-			ctx, cancel = context.WithTimeout(context.Background(), duration)
+			ctx, cancel := context.WithTimeout(ctx, duration)
 			defer cancel()
 			if err := tryCmd(ctx); err != nil {
 				continue retryCmd
@@ -169,7 +168,7 @@ retryCmd:
 }
 
 // convertWaitToCmd will return the wait command if it exists, otherwise it will return the original command.
-func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string, error) {
+func convertWaitToCmd(_ context.Context, wait types.ZarfComponentActionWait, timeout *int) (string, error) {
 	// Build the timeout string.
 	timeoutString := fmt.Sprintf("--timeout %ds", *timeout)
 
@@ -205,7 +204,7 @@ func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string,
 }
 
 // Perform some basic string mutations to make commands more useful.
-func actionCmdMutation(cmd string, shellPref exec.Shell) (string, error) {
+func actionCmdMutation(_ context.Context, cmd string, shellPref exec.Shell) (string, error) {
 	zarfCommand, err := utils.GetFinalExecutableCommand()
 	if err != nil {
 		return cmd, err
@@ -236,7 +235,7 @@ func actionCmdMutation(cmd string, shellPref exec.Shell) (string, error) {
 }
 
 // Merge the ActionSet defaults with the action config.
-func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]*variables.TextTemplate) types.ZarfComponentActionDefaults {
+func actionGetCfg(_ context.Context, cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]*variables.TextTemplate) types.ZarfComponentActionDefaults {
 	if a.Mute != nil {
 		cfg.Mute = *a.Mute
 	}

@@ -179,7 +179,7 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 }
 
 // CosignVerifyBlob verifies the zarf.yaml.sig was signed with the key provided by the flag
-func CosignVerifyBlob(blobRef string, sigRef string, keyPath string) error {
+func CosignVerifyBlob(ctx context.Context, blobRef string, sigRef string, keyPath string) error {
 	keyOptions := options.KeyOpts{KeyRef: keyPath}
 	cmd := &verify.VerifyBlobCmd{
 		KeyOpts:    keyOptions,
@@ -188,7 +188,7 @@ func CosignVerifyBlob(blobRef string, sigRef string, keyPath string) error {
 		Offline:    true,
 		IgnoreTlog: true,
 	}
-	err := cmd.Exec(context.TODO(), blobRef)
+	err := cmd.Exec(ctx, blobRef)
 	if err == nil {
 		message.Successf("Package signature validated!")
 	}
