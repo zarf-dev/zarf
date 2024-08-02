@@ -43,7 +43,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
 	state, err := c.LoadZarfState(ctx)
 	if err != nil && !kerrors.IsNotFound(err) {
-		return fmt.Errorf("failed to init Zarf state: %w", err)
+		return fmt.Errorf("failed to check for existing state: %w", err)
 	}
 
 	// If state is nil, this is a new cluster.
