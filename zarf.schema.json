@@ -6,29 +6,29 @@
       "properties": {
         "version": {
           "type": "string",
-          "description": "The version of Big Bang to use"
+          "description": "The version of Big Bang to use."
         },
         "repo": {
           "type": "string",
-          "description": "Override repo to pull Big Bang from instead of Repo One"
+          "description": "Override repo to pull Big Bang from instead of Repo One."
         },
         "valuesFiles": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "The list of values files to pass to Big Bang; these will be merged together"
+          "description": "The list of values files to pass to Big Bang; these will be merged together."
         },
         "skipFlux": {
           "type": "boolean",
-          "description": "Whether to skip deploying flux; Defaults to false"
+          "description": "Whether to skip deploying flux; Defaults to false."
         },
         "fluxPatchFiles": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Optional paths to Flux kustomize strategic merge patch files"
+          "description": "Optional paths to Flux kustomize strategic merge patch files."
         }
       },
       "additionalProperties": false,
@@ -36,6 +36,7 @@
       "required": [
         "version"
       ],
+      "description": "BigBang holds the configuration for the Big Bang extension.",
       "patternProperties": {
         "^x-": {}
       }
@@ -70,6 +71,7 @@
         "name",
         "value"
       ],
+      "description": "Constant are constants that can be used to dynamically template K8s resources or run in actions.",
       "patternProperties": {
         "^x-": {}
       }
@@ -78,40 +80,41 @@
       "properties": {
         "showOutput": {
           "type": "boolean",
-          "description": "Show the output of the script during package deployment"
+          "description": "Show the output of the script during package deployment."
         },
         "timeoutSeconds": {
           "type": "integer",
-          "description": "Timeout in seconds for the script"
+          "description": "Timeout in seconds for the script."
         },
         "retry": {
           "type": "boolean",
-          "description": "Retry the script if it fails"
+          "description": "Retry the script if it fails."
         },
         "prepare": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Scripts to run before the component is added during package create"
+          "description": "Scripts to run before the component is added during package create."
         },
         "before": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Scripts to run before the component is deployed"
+          "description": "Scripts to run before the component is deployed."
         },
         "after": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Scripts to run after the component successfully deploys"
+          "description": "Scripts to run after the component successfully deploys."
         }
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "DeprecatedZarfComponentScripts are scripts that run before or after a component is deployed.",
       "patternProperties": {
         "^x-": {}
       }
@@ -161,6 +164,7 @@
       "required": [
         "name"
       ],
+      "description": "InteractiveVariable is a variable that can be used to prompt a user for more information",
       "patternProperties": {
         "^x-": {}
       }
@@ -241,6 +245,7 @@
       "required": [
         "name"
       ],
+      "description": "Variable represents a variable that has a value set programmatically",
       "patternProperties": {
         "^x-": {}
       }
@@ -249,60 +254,60 @@
       "properties": {
         "terminal": {
           "type": "string",
-          "description": "The machine name that created this package"
+          "description": "The machine name that created this package."
         },
         "user": {
           "type": "string",
-          "description": "The username who created this package"
+          "description": "The username who created this package."
         },
         "architecture": {
           "type": "string",
-          "description": "The architecture this package was created on"
+          "description": "The architecture this package was created on."
         },
         "timestamp": {
           "type": "string",
-          "description": "The timestamp when this package was created"
+          "description": "The timestamp when this package was created."
         },
         "version": {
           "type": "string",
-          "description": "The version of Zarf used to build this package"
+          "description": "The version of Zarf used to build this package."
         },
         "migrations": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Any migrations that have been run on this package"
+          "description": "Any migrations that have been run on this package."
         },
         "registryOverrides": {
           "additionalProperties": {
             "type": "string"
           },
           "type": "object",
-          "description": "Any registry domains that were overridden on package create when pulling images"
+          "description": "Any registry domains that were overridden on package create when pulling images."
         },
         "differential": {
           "type": "boolean",
-          "description": "Whether this package was created with differential components"
+          "description": "Whether this package was created with differential components."
         },
         "differentialPackageVersion": {
           "type": "string",
-          "description": "Version of a previously built package used as the basis for creating this differential package"
+          "description": "Version of a previously built package used as the basis for creating this differential package."
         },
         "differentialMissing": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "List of components that were not included in this package due to differential packaging"
+          "description": "List of components that were not included in this package due to differential packaging."
         },
         "lastNonBreakingVersion": {
           "type": "string",
-          "description": "The minimum version of Zarf that does not have breaking package structure changes"
+          "description": "The minimum version of Zarf that does not have breaking package structure changes."
         },
         "flavor": {
           "type": "string",
-          "description": "The flavor of Zarf used to build this package"
+          "description": "The flavor of Zarf used to build this package."
         }
       },
       "additionalProperties": false,
@@ -314,6 +319,7 @@
         "timestamp",
         "version"
       ],
+      "description": "ZarfBuildData is written during the packager.Create() operation to track details of the created package.",
       "patternProperties": {
         "^x-": {}
       }
@@ -322,15 +328,15 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo"
+          "description": "The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo."
         },
         "version": {
           "type": "string",
-          "description": "The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos')"
+          "description": "The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos')."
         },
         "url": {
           "type": "string",
-          "description": "The URL of the OCI registry, chart repository, or git repo where the helm chart is stored",
+          "description": "The URL of the OCI registry, chart repository, or git repo where the helm chart is stored.",
           "examples": [
             "OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo",
             "helm chart repo: https://stefanprodan.github.io/podinfo",
@@ -339,44 +345,44 @@
         },
         "repoName": {
           "type": "string",
-          "description": "The name of a chart within a Helm repository (defaults to the Zarf name of the chart)"
+          "description": "The name of a chart within a Helm repository (defaults to the Zarf name of the chart)."
         },
         "gitPath": {
           "type": "string",
-          "description": "(git repo only) The sub directory to the chart within a git repo",
+          "description": "(git repo only) The sub directory to the chart within a git repo.",
           "examples": [
             "charts/your-chart"
           ]
         },
         "localPath": {
           "type": "string",
-          "description": "The path to a local chart's folder or .tgz archive"
+          "description": "The path to a local chart's folder or .tgz archive."
         },
         "namespace": {
           "type": "string",
-          "description": "The namespace to deploy the chart to"
+          "description": "The namespace to deploy the chart to."
         },
         "releaseName": {
           "type": "string",
-          "description": "The name of the Helm release to create (defaults to the Zarf name of the chart)"
+          "description": "The name of the Helm release to create (defaults to the Zarf name of the chart)."
         },
         "noWait": {
           "type": "boolean",
-          "description": "Whether to not wait for chart resources to be ready before continuing"
+          "description": "Whether to not wait for chart resources to be ready before continuing."
         },
         "valuesFiles": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "List of local values file paths or remote URLs to include in the package; these will be merged together when deployed"
+          "description": "List of local values file paths or remote URLs to include in the package; these will be merged together when deployed."
         },
         "variables": {
           "items": {
             "$ref": "#/$defs/ZarfChartVariable"
           },
           "type": "array",
-          "description": "[alpha] List of variables to set in the Helm chart"
+          "description": "[alpha] List of variables to set in the Helm chart."
         }
       },
       "additionalProperties": false,
@@ -384,6 +390,7 @@
       "required": [
         "name"
       ],
+      "description": "ZarfChart defines a helm chart to be deployed.",
       "patternProperties": {
         "^x-": {}
       }
@@ -393,15 +400,15 @@
         "name": {
           "type": "string",
           "pattern": "^[A-Z0-9_]+$",
-          "description": "The name of the variable"
+          "description": "The name of the variable."
         },
         "description": {
           "type": "string",
-          "description": "A brief description of what the variable controls"
+          "description": "A brief description of what the variable controls."
         },
         "path": {
           "type": "string",
-          "description": "The path within the Helm chart values where this variable applies"
+          "description": "The path within the Helm chart values where this variable applies."
         }
       },
       "additionalProperties": false,
@@ -411,6 +418,7 @@
         "description",
         "path"
       ],
+      "description": "ZarfChartVariable represents a variable that can be set for a Helm chart overrides.",
       "patternProperties": {
         "^x-": {}
       }
@@ -420,23 +428,23 @@
         "name": {
           "type": "string",
           "pattern": "^[a-z0-9][a-z0-9\\-]*$",
-          "description": "The name of the component"
+          "description": "The name of the component."
         },
         "description": {
           "type": "string",
-          "description": "Message to include during package deploy describing the purpose of this component"
+          "description": "Message to include during package deploy describing the purpose of this component."
         },
         "default": {
           "type": "boolean",
-          "description": "Determines the default Y/N state for installing this component on package deploy"
+          "description": "Determines the default Y/N state for installing this component on package deploy."
         },
         "required": {
           "type": "boolean",
-          "description": "Do not prompt user to install this component"
+          "description": "Do not prompt user to install this component."
         },
         "only": {
           "$ref": "#/$defs/ZarfComponentOnlyTarget",
-          "description": "Filter when this component is included in package creation or deployment"
+          "description": "Filter when this component is included in package creation or deployment."
         },
         "group": {
           "type": "string",
@@ -448,61 +456,61 @@
         },
         "import": {
           "$ref": "#/$defs/ZarfComponentImport",
-          "description": "Import a component from another Zarf package"
+          "description": "Import a component from another Zarf package."
         },
         "manifests": {
           "items": {
             "$ref": "#/$defs/ZarfManifest"
           },
           "type": "array",
-          "description": "Kubernetes manifests to be included in a generated Helm chart on package deploy"
+          "description": "Kubernetes manifests to be included in a generated Helm chart on package deploy."
         },
         "charts": {
           "items": {
             "$ref": "#/$defs/ZarfChart"
           },
           "type": "array",
-          "description": "Helm charts to install during package deploy"
+          "description": "Helm charts to install during package deploy."
         },
         "dataInjections": {
           "items": {
             "$ref": "#/$defs/ZarfDataInjection"
           },
           "type": "array",
-          "description": "Datasets to inject into a container in the target cluster"
+          "description": "Datasets to inject into a container in the target cluster."
         },
         "files": {
           "items": {
             "$ref": "#/$defs/ZarfFile"
           },
           "type": "array",
-          "description": "Files or folders to place on disk during package deployment"
+          "description": "Files or folders to place on disk during package deployment."
         },
         "images": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "List of OCI images to include in the package"
+          "description": "List of OCI images to include in the package."
         },
         "repos": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "List of git repos to include in the package"
+          "description": "List of git repos to include in the package."
         },
         "extensions": {
           "$ref": "#/$defs/ZarfComponentExtensions",
-          "description": "Extend component functionality with additional features"
+          "description": "Extend component functionality with additional features."
         },
         "scripts": {
           "$ref": "#/$defs/DeprecatedZarfComponentScripts",
-          "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment.  This will be removed in Zarf v1.0.0."
+          "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0."
         },
         "actions": {
           "$ref": "#/$defs/ZarfComponentActions",
-          "description": "Custom commands to run at various stages of a package lifecycle"
+          "description": "Custom commands to run at various stages of a package lifecycle."
         }
       },
       "additionalProperties": false,
@@ -510,6 +518,7 @@
       "required": [
         "name"
       ],
+      "description": "ZarfComponent is the primary functional grouping of assets to deploy by Zarf.",
       "patternProperties": {
         "^x-": {}
       }
@@ -518,26 +527,26 @@
       "properties": {
         "mute": {
           "type": "boolean",
-          "description": "Hide the output of the command during package deployment (default false)"
+          "description": "Hide the output of the command during package deployment (default false)."
         },
         "maxTotalSeconds": {
           "type": "integer",
-          "description": "Timeout in seconds for the command (default to 0"
+          "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 300, 5 minutes for wait actions)."
         },
         "maxRetries": {
           "type": "integer",
-          "description": "Retry the command if it fails up to given number of times (default 0)"
+          "description": "Retry the command if it fails up to given number of times (default 0)."
         },
         "dir": {
           "type": "string",
-          "description": "The working directory to run the command in (default is CWD)"
+          "description": "The working directory to run the command in (default is CWD)."
         },
         "env": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Additional environment variables to set for the command"
+          "description": "Additional environment variables to set for the command."
         },
         "cmd": {
           "type": "string",
@@ -545,12 +554,12 @@
         },
         "shell": {
           "$ref": "#/$defs/Shell",
-          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
+          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
         },
         "setVariable": {
           "type": "string",
           "pattern": "^[A-Z0-9_]+$",
-          "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0"
+          "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0."
         },
         "setVariables": {
           "items": {
@@ -561,7 +570,7 @@
         },
         "description": {
           "type": "string",
-          "description": "Description of the action to be displayed during package execution instead of the command"
+          "description": "Description of the action to be displayed during package execution instead of the command."
         },
         "wait": {
           "$ref": "#/$defs/ZarfComponentActionWait",
@@ -570,6 +579,7 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
       "patternProperties": {
         "^x-": {}
       }
@@ -578,34 +588,35 @@
       "properties": {
         "mute": {
           "type": "boolean",
-          "description": "Hide the output of commands during execution (default false)"
+          "description": "Hide the output of commands during execution (default false)."
         },
         "maxTotalSeconds": {
           "type": "integer",
-          "description": "Default timeout in seconds for commands (default to 0"
+          "description": "Default timeout in seconds for commands (default to 0, no timeout)."
         },
         "maxRetries": {
           "type": "integer",
-          "description": "Retry commands given number of times if they fail (default 0)"
+          "description": "Retry commands given number of times if they fail (default 0)."
         },
         "dir": {
           "type": "string",
-          "description": "Working directory for commands (default CWD)"
+          "description": "Working directory for commands (default CWD)."
         },
         "env": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "Additional environment variables for commands"
+          "description": "Additional environment variables for commands."
         },
         "shell": {
           "$ref": "#/$defs/Shell",
-          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems"
+          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
         }
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentActionDefaults sets the default configs for child actions.",
       "patternProperties": {
         "^x-": {}
       }
@@ -614,39 +625,40 @@
       "properties": {
         "defaults": {
           "$ref": "#/$defs/ZarfComponentActionDefaults",
-          "description": "Default configuration for all actions in this set"
+          "description": "Default configuration for all actions in this set."
         },
         "before": {
           "items": {
             "$ref": "#/$defs/ZarfComponentAction"
           },
           "type": "array",
-          "description": "Actions to run at the start of an operation"
+          "description": "Actions to run at the start of an operation."
         },
         "after": {
           "items": {
             "$ref": "#/$defs/ZarfComponentAction"
           },
           "type": "array",
-          "description": "Actions to run at the end of an operation"
+          "description": "Actions to run at the end of an operation."
         },
         "onSuccess": {
           "items": {
             "$ref": "#/$defs/ZarfComponentAction"
           },
           "type": "array",
-          "description": "Actions to run if all operations succeed"
+          "description": "Actions to run if all operations succeed."
         },
         "onFailure": {
           "items": {
             "$ref": "#/$defs/ZarfComponentAction"
           },
           "type": "array",
-          "description": "Actions to run if all operations fail"
+          "description": "Actions to run if all operations fail."
         }
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentActionSet is a set of actions to run during a zarf package operation.",
       "patternProperties": {
         "^x-": {}
       }
@@ -664,6 +676,7 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentActionWait specifies a condition to wait for before continuing",
       "patternProperties": {
         "^x-": {}
       }
@@ -672,27 +685,27 @@
       "properties": {
         "kind": {
           "type": "string",
-          "description": "The kind of resource to wait for",
+          "description": "The kind of resource to wait for.",
           "examples": [
             "Pod",
-            "Deployment)"
+            "Deployment"
           ]
         },
         "name": {
           "type": "string",
-          "description": "The name of the resource or selector to wait for",
+          "description": "The name of the resource or selector to wait for.",
           "examples": [
             "podinfo",
-            "app&#61;podinfo"
+            "app=podinfo"
           ]
         },
         "namespace": {
           "type": "string",
-          "description": "The namespace of the resource to wait for"
+          "description": "The namespace of the resource to wait for."
         },
         "condition": {
           "type": "string",
-          "description": "The condition or jsonpath state to wait for; defaults to exist",
+          "description": "The condition or jsonpath state to wait for; defaults to exist, a special condition that will wait for the resource to exist.",
           "examples": [
             "Ready",
             "Available"
@@ -705,6 +718,7 @@
         "kind",
         "name"
       ],
+      "description": "ZarfComponentActionWaitCluster specifies a condition to wait for before continuing",
       "patternProperties": {
         "^x-": {}
       }
@@ -718,11 +732,11 @@
             "http",
             "https"
           ],
-          "description": "The protocol to wait for"
+          "description": "The protocol to wait for."
         },
         "address": {
           "type": "string",
-          "description": "The address to wait for",
+          "description": "The address to wait for.",
           "examples": [
             "localhost:8080",
             "1.1.1.1"
@@ -730,7 +744,7 @@
         },
         "code": {
           "type": "integer",
-          "description": "The HTTP status code to wait for if using http or https",
+          "description": "The HTTP status code to wait for if using http or https.",
           "examples": [
             200,
             404
@@ -743,6 +757,7 @@
         "protocol",
         "address"
       ],
+      "description": "ZarfComponentActionWaitNetwork specifies a condition to wait for before continuing",
       "patternProperties": {
         "^x-": {}
       }
@@ -751,19 +766,20 @@
       "properties": {
         "onCreate": {
           "$ref": "#/$defs/ZarfComponentActionSet",
-          "description": "Actions to run during package creation"
+          "description": "Actions to run during package creation."
         },
         "onDeploy": {
           "$ref": "#/$defs/ZarfComponentActionSet",
-          "description": "Actions to run during package deployment"
+          "description": "Actions to run during package deployment."
         },
         "onRemove": {
           "$ref": "#/$defs/ZarfComponentActionSet",
-          "description": "Actions to run during package removal"
+          "description": "Actions to run during package removal."
         }
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentActions are ActionSets that map to different zarf package operations.",
       "patternProperties": {
         "^x-": {}
       }
@@ -772,11 +788,12 @@
       "properties": {
         "bigbang": {
           "$ref": "#/$defs/BigBang",
-          "description": "Configurations for installing Big Bang and Flux in the cluster"
+          "description": "Configurations for installing Big Bang and Flux in the cluster."
         }
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentExtensions is a struct that contains all the official extensions.",
       "patternProperties": {
         "^x-": {}
       }
@@ -785,14 +802,14 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "The name of the component to import from the referenced zarf.yaml"
+          "description": "The name of the component to import from the referenced zarf.yaml."
         },
         "path": {
           "not": {
             "pattern": "###ZARF_PKG_TMPL_"
           },
           "type": "string",
-          "description": "The relative path to a directory containing a zarf.yaml to import from"
+          "description": "The path to the directory containing the zarf.yaml to import."
         },
         "url": {
           "not": {
@@ -800,11 +817,12 @@
           },
           "type": "string",
           "pattern": "^oci://.*$",
-          "description": "[beta] The URL to a Zarf package to import via OCI"
+          "description": "[beta] The URL to a Zarf package to import via OCI."
         }
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentImport structure for including imported Zarf components.",
       "patternProperties": {
         "^x-": {}
       }
@@ -817,7 +835,7 @@
             "amd64",
             "arm64"
           ],
-          "description": "Only create and deploy to clusters of the given architecture"
+          "description": "Only create and deploy to clusters of the given architecture."
         },
         "distros": {
           "items": {
@@ -828,11 +846,12 @@
             ]
           },
           "type": "array",
-          "description": "A list of kubernetes distros this package works with (Reserved for future use)"
+          "description": "A list of kubernetes distros this package works with (Reserved for future use)."
         }
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentOnlyCluster represents the architecture and K8s cluster distribution to filter on.",
       "patternProperties": {
         "^x-": {}
       }
@@ -846,19 +865,20 @@
             "darwin",
             "windows"
           ],
-          "description": "Only deploy component to specified OS"
+          "description": "Only deploy component to specified OS."
         },
         "cluster": {
           "$ref": "#/$defs/ZarfComponentOnlyCluster",
-          "description": "Only deploy component to specified clusters"
+          "description": "Only deploy component to specified clusters."
         },
         "flavor": {
           "type": "string",
-          "description": "Only include this component when a matching '--flavor' is specified on 'zarf package create'"
+          "description": "Only include this component when a matching '--flavor' is specified on 'zarf package create'."
         }
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.",
       "patternProperties": {
         "^x-": {}
       }
@@ -867,22 +887,22 @@
       "properties": {
         "namespace": {
           "type": "string",
-          "description": "The namespace to target for data injection"
+          "description": "The namespace to target for data injection."
         },
         "selector": {
           "type": "string",
-          "description": "The K8s selector to target for data injection",
+          "description": "The K8s selector to target for data injection.",
           "examples": [
-            "app&#61;data-injection"
+            "app=data-injection"
           ]
         },
         "container": {
           "type": "string",
-          "description": "The container name to target for data injection"
+          "description": "The container name to target for data injection."
         },
         "path": {
           "type": "string",
-          "description": "The path within the container to copy the data into"
+          "description": "The path within the container to copy the data into."
         }
       },
       "additionalProperties": false,
@@ -893,6 +913,7 @@
         "container",
         "path"
       ],
+      "description": "ZarfContainerTarget defines the destination info for a ZarfData target",
       "patternProperties": {
         "^x-": {}
       }
@@ -901,15 +922,15 @@
       "properties": {
         "source": {
           "type": "string",
-          "description": "Either a path to a local folder/file or a remote URL of a file to inject into the given target pod + container"
+          "description": "Either a path to a local folder/file or a remote URL of a file to inject into the given target pod + container."
         },
         "target": {
           "$ref": "#/$defs/ZarfContainerTarget",
-          "description": "The target pod + container to inject the data into"
+          "description": "The target pod + container to inject the data into."
         },
         "compress": {
           "type": "boolean",
-          "description": "Compress the data before transmitting using gzip.  Note: this requires support for tar/gzip locally and in the target image."
+          "description": "Compress the data before transmitting using gzip. Note: this requires support for tar/gzip locally and in the target image."
         }
       },
       "additionalProperties": false,
@@ -918,6 +939,7 @@
         "source",
         "target"
       ],
+      "description": "ZarfDataInjection is a data-injection definition.",
       "patternProperties": {
         "^x-": {}
       }
@@ -926,30 +948,30 @@
       "properties": {
         "source": {
           "type": "string",
-          "description": "Local folder or file path or remote URL to pull into the package"
+          "description": "Local folder or file path or remote URL to pull into the package."
         },
         "shasum": {
           "type": "string",
-          "description": "(files only) Optional SHA256 checksum of the file"
+          "description": "(files only) Optional SHA256 checksum of the file."
         },
         "target": {
           "type": "string",
-          "description": "The absolute or relative path where the file or folder should be copied to during package deploy"
+          "description": "The absolute or relative path where the file or folder should be copied to during package deploy."
         },
         "executable": {
           "type": "boolean",
-          "description": "(files only) Determines if the file should be made executable during package deploy"
+          "description": "(files only) Determines if the file should be made executable during package deploy."
         },
         "symlinks": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "List of symlinks to create during package deploy"
+          "description": "List of symlinks to create during package deploy."
         },
         "extractPath": {
           "type": "string",
-          "description": "Local folder or file to be extracted from a 'source' archive"
+          "description": "Local folder or file to be extracted from a 'source' archive."
         }
       },
       "additionalProperties": false,
@@ -958,6 +980,7 @@
         "source",
         "target"
       ],
+      "description": "ZarfFile defines a file to deploy.",
       "patternProperties": {
         "^x-": {}
       }
@@ -966,33 +989,33 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "A name to give this collection of manifests; this will become the name of the dynamically-created helm chart"
+          "description": "A name to give this collection of manifests; this will become the name of the dynamically-created helm chart."
         },
         "namespace": {
           "type": "string",
-          "description": "The namespace to deploy the manifests to"
+          "description": "The namespace to deploy the manifests to."
         },
         "files": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "List of local K8s YAML files or remote URLs to deploy (in order)"
+          "description": "List of local K8s YAML files or remote URLs to deploy (in order)."
         },
         "kustomizeAllowAnyDirectory": {
           "type": "boolean",
-          "description": "Allow traversing directory above the current directory if needed for kustomization"
+          "description": "Allow traversing directory above the current directory if needed for kustomization."
         },
         "kustomizations": {
           "items": {
             "type": "string"
           },
           "type": "array",
-          "description": "List of local kustomization paths or remote URLs to include in the package"
+          "description": "List of local kustomization paths or remote URLs to include in the package."
         },
         "noWait": {
           "type": "boolean",
-          "description": "Whether to not wait for manifest resources to be ready before continuing"
+          "description": "Whether to not wait for manifest resources to be ready before continuing."
         }
       },
       "additionalProperties": false,
@@ -1000,6 +1023,7 @@
       "required": [
         "name"
       ],
+      "description": "ZarfManifest defines raw manifests Zarf will deploy as a helm chart.",
       "patternProperties": {
         "^x-": {}
       }
@@ -1009,31 +1033,31 @@
         "name": {
           "type": "string",
           "pattern": "^[a-z0-9][a-z0-9\\-]*$",
-          "description": "Name to identify this Zarf package"
+          "description": "Name to identify this Zarf package."
         },
         "description": {
           "type": "string",
-          "description": "Additional information about this package"
+          "description": "Additional information about this package."
         },
         "version": {
           "type": "string",
-          "description": "Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with)"
+          "description": "Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with)."
         },
         "url": {
           "type": "string",
-          "description": "Link to package information when online"
+          "description": "Link to package information when online."
         },
         "image": {
           "type": "string",
-          "description": "An image URL to embed in this package (Reserved for future use in Zarf UI)"
+          "description": "An image URL to embed in this package (Reserved for future use in Zarf UI)."
         },
         "uncompressed": {
           "type": "boolean",
-          "description": "Disable compression of this package"
+          "description": "Disable compression of this package."
         },
         "architecture": {
           "type": "string",
-          "description": "The target cluster architecture for this package",
+          "description": "The target cluster architecture for this package.",
           "examples": [
             "arm64",
             "amd64"
@@ -1045,18 +1069,18 @@
         },
         "authors": {
           "type": "string",
-          "description": "Comma-separated list of package authors (including contact info)",
+          "description": "Comma-separated list of package authors (including contact info).",
           "examples": [
             "Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"
           ]
         },
         "documentation": {
           "type": "string",
-          "description": "Link to package documentation when online"
+          "description": "Link to package documentation when online."
         },
         "source": {
           "type": "string",
-          "description": "Link to package source code when online"
+          "description": "Link to package source code when online."
         },
         "vendor": {
           "type": "string",
@@ -1072,6 +1096,7 @@
       "required": [
         "name"
       ],
+      "description": "ZarfMetadata lists information about the current ZarfPackage.",
       "patternProperties": {
         "^x-": {}
       }
@@ -1084,16 +1109,16 @@
         "ZarfInitConfig",
         "ZarfPackageConfig"
       ],
-      "description": "The kind of Zarf package",
+      "description": "The kind of Zarf package.",
       "default": "ZarfPackageConfig"
     },
     "metadata": {
       "$ref": "#/$defs/ZarfMetadata",
-      "description": "Package metadata"
+      "description": "Package metadata."
     },
     "build": {
       "$ref": "#/$defs/ZarfBuildData",
-      "description": "Zarf-generated package build data"
+      "description": "Zarf-generated package build data."
     },
     "components": {
       "items": {
@@ -1101,21 +1126,21 @@
       },
       "type": "array",
       "minItems": 1,
-      "description": "List of components to deploy in this package"
+      "description": "List of components to deploy in this package."
     },
     "constants": {
       "items": {
         "$ref": "#/$defs/Constant"
       },
       "type": "array",
-      "description": "Constant template values applied on deploy for K8s resources"
+      "description": "Constant template values applied on deploy for K8s resources."
     },
     "variables": {
       "items": {
         "$ref": "#/$defs/InteractiveVariable"
       },
       "type": "array",
-      "description": "Variable template values applied on deploy for K8s resources"
+      "description": "Variable template values applied on deploy for K8s resources."
     }
   },
   "additionalProperties": false,
@@ -1124,6 +1149,7 @@
     "kind",
     "components"
   ],
+  "description": "ZarfPackage the top-level structure of a Zarf config file.",
   "patternProperties": {
     "^x-": {}
   }

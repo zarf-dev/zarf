@@ -95,7 +95,6 @@ func runAction(ctx context.Context, defaultCfg types.ZarfComponentActionDefaults
 	// Keep trying until the max retries is reached.
 retryCmd:
 	for remaining := actionDefaults.MaxRetries + 1; remaining > 0; remaining-- {
-
 		// Perform the action run.
 		tryCmd := func(ctx context.Context) error {
 			// Try running the command and continue the retry loop if it fails.
@@ -109,7 +108,6 @@ retryCmd:
 			for _, v := range action.SetVariables {
 				variableConfig.SetVariable(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
 				if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
-					message.WarnErr(err, err.Error())
 					return err
 				}
 			}
@@ -184,7 +182,7 @@ func convertWaitToCmd(_ context.Context, wait types.ZarfComponentActionWait, tim
 
 		// Build a call to the zarf tools wait-for command.
 		return fmt.Sprintf("./zarf tools wait-for %s %s %s %s %s",
-			cluster.Kind, cluster.Identifier, cluster.Condition, ns, timeoutString), nil
+			cluster.Kind, cluster.Name, cluster.Condition, ns, timeoutString), nil
 	}
 
 	network := wait.Network

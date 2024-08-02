@@ -14,7 +14,6 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -84,8 +83,6 @@ func New(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 	default:
 		return nil, fmt.Errorf("could not identify source type for %q", pkgSrc)
 	}
-
-	message.Debugf("Using %T for %q", source, pkgSrc)
 
 	return source, nil
 }

@@ -32,10 +32,9 @@ func TestCreateIndexShaErrors(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, stderr, err := e2e.Zarf("package", "create", tc.packagePath, "--confirm")
+			_, stderr, err := e2e.Zarf(t, "package", "create", tc.packagePath, "--confirm")
 			require.Error(t, err)
 			require.Contains(t, stderr, tc.expectedImageInStderr)
 		})
 	}
-
 }

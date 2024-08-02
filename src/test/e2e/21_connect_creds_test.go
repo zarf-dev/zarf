@@ -24,17 +24,17 @@ type RegistryResponse struct {
 func TestConnectAndCreds(t *testing.T) {
 	t.Log("E2E: Connect")
 
-	prevAgentSecretData, _, err := e2e.Kubectl("get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
+	prevAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
 
 	ctx := context.Background()
 
 	connectToZarfServices(ctx, t)
 
-	stdOut, stdErr, err := e2e.Zarf("tools", "update-creds", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	newAgentSecretData, _, err := e2e.Kubectl("get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
+	newAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
 	require.NotEqual(t, prevAgentSecretData, newAgentSecretData, "agent secrets should not be the same")
 
@@ -81,7 +81,7 @@ func TestMetrics(t *testing.T) {
 
 func connectToZarfServices(ctx context.Context, t *testing.T) {
 	// Make the Registry contains the images we expect
-	stdOut, stdErr, err := e2e.Zarf("tools", "registry", "catalog")
+	stdOut, stdErr, err := e2e.Zarf(t, "tools", "registry", "catalog")
 	require.NoError(t, err, stdOut, stdErr)
 	registryList := strings.Split(strings.Trim(stdOut, "\n "), "\n")
 
@@ -93,13 +93,13 @@ func connectToZarfServices(ctx context.Context, t *testing.T) {
 	require.Contains(t, stdOut, "library/registry")
 
 	// Get the git credentials
-	stdOut, stdErr, err = e2e.Zarf("tools", "get-creds", "git")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "git")
 	require.NoError(t, err, stdOut, stdErr)
 	gitPushPassword := strings.TrimSpace(stdOut)
-	stdOut, stdErr, err = e2e.Zarf("tools", "get-creds", "git-readonly")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "git-readonly")
 	require.NoError(t, err, stdOut, stdErr)
 	gitPullPassword := strings.TrimSpace(stdOut)
-	stdOut, stdErr, err = e2e.Zarf("tools", "get-creds", "artifact")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "artifact")
 	require.NoError(t, err, stdOut, stdErr)
 	gitArtifactToken := strings.TrimSpace(stdOut)
 

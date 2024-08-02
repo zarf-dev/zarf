@@ -5,6 +5,7 @@
 package helm
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -30,7 +31,7 @@ import (
 )
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
-func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
+func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings, string, error) {
 	fromMessage := h.chart.URL
 	if fromMessage == "" {
 		fromMessage = "Zarf-generated helm chart"
@@ -52,7 +53,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 		return nil, "", fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
-	postRender, err := h.newRenderer()
+	postRender, err := h.newRenderer(ctx)
 	if err != nil {
 		return nil, "", fmt.Errorf("unable to create helm renderer: %w", err)
 	}
@@ -60,7 +61,6 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 	histClient := action.NewHistory(h.actionConfig)
 	tryHelm := func() error {
 		var err error
-		var output *release.Release
 
 		releases, histErr := histClient.Run(h.chart.ReleaseName)
 
@@ -70,14 +70,14 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 			// No prior release, try to install it.
 			spinner.Updatef("Attempting chart installation")
 
-			output, err = h.installChart(postRender)
+			_, err = h.installChart(postRender)
 		} else if histErr == nil && len(releases) > 0 {
 			// Otherwise, there is a prior release so upgrade it.
 			spinner.Updatef("Attempting chart upgrade")
 
 			lastRelease := releases[len(releases)-1]
 
-			output, err = h.upgradeChart(lastRelease, postRender)
+			_, err = h.upgradeChart(lastRelease, postRender)
 		} else {
 			// 😭 things aren't working
 			return fmt.Errorf("unable to verify the chart installation status: %w", histErr)
@@ -87,7 +87,6 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 			return err
 		}
 
-		message.Debug(output.Info.Description)
 		spinner.Success()
 		return nil
 	}
@@ -126,8 +125,7 @@ func (h *Helm) InstallOrUpgradeChart() (types.ConnectStrings, string, error) {
 }
 
 // TemplateChart generates a helm template from a given chart.
-func (h *Helm) TemplateChart() (manifest string, chartValues chartutil.Values, err error) {
-	message.Debugf("helm.TemplateChart()")
+func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues chartutil.Values, err error) {
 	spinner := message.NewProgressSpinner("Templating helm chart %s", h.chart.Name)
 	defer spinner.Stop()
 
@@ -151,7 +149,7 @@ func (h *Helm) TemplateChart() (manifest string, chartValues chartutil.Values, e
 	if h.kubeVersion != "" {
 		parsedKubeVersion, err := chartutil.ParseKubeVersion(h.kubeVersion)
 		if err != nil {
-			return "", nil, fmt.Errorf("invalid kube version '%s': %s", h.kubeVersion, err)
+			return "", nil, fmt.Errorf("invalid kube version %s: %w", h.kubeVersion, err)
 		}
 		client.KubeVersion = parsedKubeVersion
 	}
@@ -170,7 +168,7 @@ func (h *Helm) TemplateChart() (manifest string, chartValues chartutil.Values, e
 		return "", nil, fmt.Errorf("unable to load chart data: %w", err)
 	}
 
-	client.PostRenderer, err = h.newRenderer()
+	client.PostRenderer, err = h.newRenderer(ctx)
 	if err != nil {
 		return "", nil, fmt.Errorf("unable to create helm renderer: %w", err)
 	}
@@ -204,7 +202,7 @@ func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinn
 
 // UpdateReleaseValues updates values for a given chart release
 // (note: this only works on single-deep charts, charts with dependencies (like loki-stack) will not work)
-func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
+func (h *Helm) UpdateReleaseValues(ctx context.Context, updatedValues map[string]interface{}) error {
 	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.chart.ReleaseName)
 	defer spinner.Stop()
 
@@ -213,7 +211,7 @@ func (h *Helm) UpdateReleaseValues(updatedValues map[string]interface{}) error {
 		return fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
-	postRender, err := h.newRenderer()
+	postRender, err := h.newRenderer(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to create helm renderer: %w", err)
 	}
@@ -323,7 +321,6 @@ func (h *Helm) upgradeChart(lastRelease *release.Release, postRender *renderer) 
 }
 
 func (h *Helm) rollbackChart(name string, version int) error {
-	message.Debugf("helm.rollbackChart(%s)", name)
 	client := action.NewRollback(h.actionConfig)
 	client.CleanupOnFail = true
 	client.Force = true
@@ -334,7 +331,6 @@ func (h *Helm) rollbackChart(name string, version int) error {
 }
 
 func (h *Helm) uninstallChart(name string) (*release.UninstallReleaseResponse, error) {
-	message.Debugf("helm.uninstallChart(%s)", name)
 	client := action.NewUninstall(h.actionConfig)
 	client.KeepHistory = false
 	client.Wait = true
@@ -343,7 +339,6 @@ func (h *Helm) uninstallChart(name string) (*release.UninstallReleaseResponse, e
 }
 
 func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
-	message.Debugf("helm.loadChartData()")
 	var (
 		loadedChart *chart.Chart
 		chartValues chartutil.Values
@@ -397,13 +392,13 @@ func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 		// parse to unstructured to have access to more data than just the name
 		rawData := &unstructured.Unstructured{}
 		if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
-			return fmt.Errorf("failed to unmarshal manifest: %#v", err)
+			return fmt.Errorf("failed to unmarshal manifest: %w", err)
 		}
 
 		rawData, manifestModified, _ := handleDeprecations(rawData, *kubeGitVersion)
 		manifestContent, err := yaml.Marshal(rawData)
 		if err != nil {
-			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %#v", err)
+			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %w", err)
 		}
 
 		// If this is not a bad object, place it back into the manifest

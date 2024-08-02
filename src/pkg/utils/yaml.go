@@ -8,6 +8,7 @@ package utils
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -20,12 +21,12 @@ import (
 	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/printer"
 	"github.com/pterm/pterm"
-	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 	k8syaml "sigs.k8s.io/yaml"
+
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 const yamlEscape = "\x1b"
@@ -93,7 +94,7 @@ func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) {
 		outputYAML = strings.Replace(outputYAML, key, value, 1)
 	}
 
-	if config.NoColor {
+	if !message.ColorEnabled() {
 		// If no color is specified strip any color codes from the output - https://regex101.com/r/YFyIwC/2
 		ansiRegex := regexp.MustCompile(`\x1b\[(.*?)m`)
 		outputYAML = ansiRegex.ReplaceAllString(outputYAML, "")
@@ -196,7 +197,7 @@ func SplitYAML(yamlData []byte) ([]*unstructured.Unstructured, error) {
 	for _, yml := range ymls {
 		u := &unstructured.Unstructured{}
 		if err := k8syaml.Unmarshal([]byte(yml), u); err != nil {
-			return objs, fmt.Errorf("failed to unmarshal manifest: %#v", err)
+			return objs, fmt.Errorf("failed to unmarshal manifest: %w", err)
 		}
 		objs = append(objs, u)
 	}
@@ -216,10 +217,10 @@ func SplitYAMLToString(yamlData []byte) ([]string, error) {
 	for {
 		ext := runtime.RawExtension{}
 		if err := d.Decode(&ext); err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
-			return objs, fmt.Errorf("failed to unmarshal manifest: %#v", err)
+			return objs, fmt.Errorf("failed to unmarshal manifest: %w", err)
 		}
 		ext.Raw = bytes.TrimSpace(ext.Raw)
 		if len(ext.Raw) == 0 || bytes.Equal(ext.Raw, []byte("null")) {

@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,7 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent"
-	"github.com/zarf-dev/zarf/src/internal/packager/git"
+	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
@@ -156,12 +157,30 @@ tableOfContents: false
 	},
 }
 
+func addGoComments(reflector *jsonschema.Reflector) error {
+	addCommentErr := errors.New("this command must be called from the root of the Zarf repo")
+
+	typePackagePath := filepath.Join("src", "types")
+	if err := reflector.AddGoComments("github.com/zarf-dev/zarf", typePackagePath); err != nil {
+		return fmt.Errorf("%w: %w", addCommentErr, err)
+	}
+	varPackagePath := filepath.Join("src", "pkg", "variables")
+	if err := reflector.AddGoComments("github.com/zarf-dev/zarf", varPackagePath); err != nil {
+		return fmt.Errorf("%w: %w", addCommentErr, err)
+	}
+	return nil
+}
+
 var genConfigSchemaCmd = &cobra.Command{
 	Use:     "gen-config-schema",
 	Aliases: []string{"gc"},
 	Short:   lang.CmdInternalConfigSchemaShort,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		reflector := jsonschema.Reflector(jsonschema.Reflector{ExpandedStruct: true})
+		if err := addGoComments(&reflector); err != nil {
+			return err
+		}
+
 		schema := reflector.Reflect(&types.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
@@ -183,7 +202,12 @@ var genTypesSchemaCmd = &cobra.Command{
 	Aliases: []string{"gt"},
 	Short:   lang.CmdInternalTypesSchemaShort,
 	RunE: func(_ *cobra.Command, _ []string) error {
-		schema := jsonschema.Reflect(&zarfTypes{})
+		reflector := jsonschema.Reflector(jsonschema.Reflector{ExpandedStruct: true})
+		if err := addGoComments(&reflector); err != nil {
+			return err
+		}
+
+		schema := reflector.Reflect(&zarfTypes{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
 			return fmt.Errorf("unable to generate the JSON schema for the Zarf types DeployedPackage, ZarfPackage, and ZarfState: %w", err)
@@ -204,14 +228,33 @@ var createReadOnlyGiteaUser = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		// Load the state so we can get the credentials for the admin git user
 		state, err := c.LoadZarfState(cmd.Context())
 		if err != nil {
-			message.WarnErr(err, lang.ErrLoadState)
+			return err
 		}
-		// Create the non-admin user
-		if err = git.New(state.GitServer).CreateReadOnlyUser(cmd.Context()); err != nil {
-			message.WarnErr(err, lang.CmdInternalCreateReadOnlyGiteaUserErr)
+		tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+		if err != nil {
+			return err
+		}
+		_, err = tunnel.Connect(cmd.Context())
+		if err != nil {
+			return err
+		}
+		defer tunnel.Close()
+		tunnelURL := tunnel.HTTPEndpoint()
+		giteaClient, err := gitea.NewClient(tunnelURL, state.GitServer.PushUsername, state.GitServer.PushPassword)
+		if err != nil {
+			return err
+		}
+		err = tunnel.Wrap(func() error {
+			err = giteaClient.CreateReadOnlyUser(cmd.Context(), state.GitServer.PullUsername, state.GitServer.PullPassword)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return err
 		}
 		return nil
 	},
@@ -228,22 +271,39 @@ var createPackageRegistryToken = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
 		ctx := cmd.Context()
 		state, err := c.LoadZarfState(ctx)
 		if err != nil {
-			message.WarnErr(err, lang.ErrLoadState)
+			return err
 		}
 
 		// If we are setup to use an internal artifact server, create the artifact registry token
 		if state.ArtifactServer.InternalServer {
-			token, err := git.New(state.GitServer).CreatePackageRegistryToken(ctx)
+			tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 			if err != nil {
-				message.WarnErr(err, lang.CmdInternalArtifactRegistryGiteaTokenErr)
+				return err
 			}
-
-			state.ArtifactServer.PushToken = token.Sha1
-
+			_, err = tunnel.Connect(cmd.Context())
+			if err != nil {
+				return err
+			}
+			defer tunnel.Close()
+			tunnelURL := tunnel.HTTPEndpoint()
+			giteaClient, err := gitea.NewClient(tunnelURL, state.GitServer.PushUsername, state.GitServer.PushPassword)
+			if err != nil {
+				return err
+			}
+			err = tunnel.Wrap(func() error {
+				tokenSha1, err := giteaClient.CreatePackageRegistryToken(ctx)
+				if err != nil {
+					return fmt.Errorf("unable to create an artifact registry token for Gitea: %w", err)
+				}
+				state.ArtifactServer.PushToken = tokenSha1
+				return nil
+			})
+			if err != nil {
+				return err
+			}
 			if err := c.SaveZarfState(ctx, state); err != nil {
 				return err
 			}
@@ -256,16 +316,21 @@ var updateGiteaPVC = &cobra.Command{
 	Use:   "update-gitea-pvc",
 	Short: lang.CmdInternalUpdateGiteaPVCShort,
 	Long:  lang.CmdInternalUpdateGiteaPVCLong,
-	Run: func(cmd *cobra.Command, _ []string) {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
+		pvcName := os.Getenv("ZARF_VAR_GIT_SERVER_EXISTING_PVC")
 
+		c, err := cluster.NewCluster()
+		if err != nil {
+			return err
+		}
 		// There is a possibility that the pvc does not yet exist and Gitea helm chart should create it
-		helmShouldCreate, err := git.UpdateGiteaPVC(ctx, rollback)
+		helmShouldCreate, err := c.UpdateGiteaPVC(ctx, pvcName, rollback)
 		if err != nil {
 			message.WarnErr(err, lang.CmdInternalUpdateGiteaPVCErr)
 		}
-
 		fmt.Print(helmShouldCreate)
+		return nil
 	},
 }
 

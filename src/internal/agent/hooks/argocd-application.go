@@ -62,7 +62,7 @@ func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster) o
 func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (result *operations.Result, err error) {
 	state, err := cluster.LoadZarfState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(lang.AgentErrGetState, err)
+		return nil, err
 	}
 
 	message.Debugf("Using the url of (%s) to mutate the ArgoCD Application", state.GitServer.Address)
@@ -71,8 +71,6 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	if err = json.Unmarshal(r.Object.Raw, &app); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
-
-	message.Debugf("Data %v", string(r.Object.Raw))
 
 	patches := []operations.PatchOperation{}
 

@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
 )
@@ -103,7 +104,7 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	c, err := cluster.NewCluster()
 	suite.NoError(err)
 
-	ctx := context.TODO()
+	ctx := testutil.TestContext(suite.T())
 
 	// Check that the registry contains the images we want
 	tunnelReg, err := c.NewTunnel("external-registry", "svc", "external-registry-docker-registry", "", 0, 5000)
@@ -187,7 +188,7 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	err = pkgkubernetes.WaitForReady(waitCtx, c.Watcher, objs)
 	suite.NoError(err)
 
-	_, _, err = exec.CmdWithContext(context.TODO(), exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")
+	_, _, err = exec.CmdWithTesting(suite.T(), exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")
 	suite.NoError(err, "unable to teardown zarf")
 }
 

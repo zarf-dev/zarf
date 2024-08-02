@@ -6,6 +6,7 @@ package helm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,11 +15,10 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/packager/git"
+	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/cli"
@@ -53,14 +53,13 @@ func (h *Helm) PackageChart(ctx context.Context, cosignKeyPath string) error {
 				return fmt.Errorf("unable to pull the chart %q from git: %w", h.chart.Name, err)
 			}
 		} else {
-			err = h.DownloadPublishedChart(cosignKeyPath)
+			err = h.DownloadPublishedChart(ctx, cosignKeyPath)
 			if err != nil {
 				return fmt.Errorf("unable to download the published chart %q: %w", h.chart.Name, err)
 			}
 		}
-
 	} else {
-		err := h.PackageChartFromLocalFiles(cosignKeyPath)
+		err := h.PackageChartFromLocalFiles(ctx, cosignKeyPath)
 		if err != nil {
 			return fmt.Errorf("unable to package the %q chart: %w", h.chart.Name, err)
 		}
@@ -69,7 +68,7 @@ func (h *Helm) PackageChart(ctx context.Context, cosignKeyPath string) error {
 }
 
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
-func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
+func (h *Helm) PackageChartFromLocalFiles(ctx context.Context, cosignKeyPath string) error {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.chart.Name, h.chart.Version, h.chart.LocalPath)
 	defer spinner.Stop()
 
@@ -103,7 +102,7 @@ func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 	}
 
 	// Finalize the chart
-	err = h.finalizeChartPackage(saved, cosignKeyPath)
+	err = h.finalizeChartPackage(ctx, saved, cosignKeyPath)
 	if err != nil {
 		return err
 	}
@@ -119,7 +118,7 @@ func (h *Helm) PackageChartFromGit(ctx context.Context, cosignKeyPath string) er
 	defer spinner.Stop()
 
 	// Retrieve the repo containing the chart
-	gitPath, err := DownloadChartFromGitToTemp(ctx, h.chart.URL, spinner)
+	gitPath, err := DownloadChartFromGitToTemp(ctx, h.chart.URL)
 	if err != nil {
 		return err
 	}
@@ -127,11 +126,11 @@ func (h *Helm) PackageChartFromGit(ctx context.Context, cosignKeyPath string) er
 
 	// Set the directory for the chart and package it
 	h.chart.LocalPath = filepath.Join(gitPath, h.chart.GitPath)
-	return h.PackageChartFromLocalFiles(cosignKeyPath)
+	return h.PackageChartFromLocalFiles(ctx, cosignKeyPath)
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
-func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
+func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string) error {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.chart.Name, h.chart.Version, h.chart.URL)
 	defer spinner.Stop()
 
@@ -222,7 +221,7 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 	}
 
 	// Finalize the chart
-	err = h.finalizeChartPackage(saved, cosignKeyPath)
+	err = h.finalizeChartPackage(ctx, saved, cosignKeyPath)
 	if err != nil {
 		return err
 	}
@@ -233,20 +232,19 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 }
 
 // DownloadChartFromGitToTemp downloads a chart from git into a temp directory
-func DownloadChartFromGitToTemp(ctx context.Context, url string, spinner *message.Spinner) (string, error) {
-	// Create the Git configuration and download the repo
-	gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
-
-	// Download the git repo to a temporary directory
-	err := gitCfg.DownloadRepoToTemp(ctx, url)
+func DownloadChartFromGitToTemp(ctx context.Context, url string) (string, error) {
+	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return "", fmt.Errorf("unable to download the git repo %s: %w", url, err)
+		return "", fmt.Errorf("unable to create tmpdir: %w", err)
 	}
-
-	return gitCfg.GitPath, nil
+	repository, err := git.Clone(ctx, path, url, true)
+	if err != nil {
+		return "", err
+	}
+	return repository.Path(), nil
 }
 
-func (h *Helm) finalizeChartPackage(saved, cosignKeyPath string) error {
+func (h *Helm) finalizeChartPackage(ctx context.Context, saved, cosignKeyPath string) error {
 	// Ensure the name is consistent for deployments
 	destinationTarball := StandardName(h.chartPath, h.chart) + ".tgz"
 	err := os.Rename(saved, destinationTarball)
@@ -254,19 +252,19 @@ func (h *Helm) finalizeChartPackage(saved, cosignKeyPath string) error {
 		return fmt.Errorf("unable to save the final chart tarball: %w", err)
 	}
 
-	err = h.packageValues(cosignKeyPath)
+	err = h.packageValues(ctx, cosignKeyPath)
 	if err != nil {
 		return fmt.Errorf("unable to process the values for the package: %w", err)
 	}
 	return nil
 }
 
-func (h *Helm) packageValues(cosignKeyPath string) error {
+func (h *Helm) packageValues(ctx context.Context, cosignKeyPath string) error {
 	for valuesIdx, path := range h.chart.ValuesFiles {
 		dst := StandardValuesName(h.valuesPath, h.chart, valuesIdx)
 
 		if helpers.IsURL(path) {
-			if err := utils.DownloadToFile(path, dst, cosignKeyPath); err != nil {
+			if err := utils.DownloadToFile(ctx, path, dst, cosignKeyPath); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 			}
 		} else {
@@ -308,18 +306,20 @@ func (h *Helm) buildChartDependencies() error {
 
 	// Build the deps from the helm chart
 	err = man.Build()
-	if e, ok := err.(downloader.ErrRepoNotFound); ok {
+	var notFoundErr *downloader.ErrRepoNotFound
+	if errors.As(err, &notFoundErr) {
 		// If we encounter a repo not found error point the user to `zarf tools helm repo add`
-		message.Warnf("%s. Please add the missing repo(s) via the following:", e.Error())
-		for _, repository := range e.Repos {
+		message.Warnf("%s. Please add the missing repo(s) via the following:", notFoundErr.Error())
+		for _, repository := range notFoundErr.Repos {
 			message.ZarfCommand(fmt.Sprintf("tools helm repo add <your-repo-name> %s", repository))
 		}
-	} else if err != nil {
-		// Warn the user of any issues but don't fail - any actual issues will cause a fail during packaging (e.g. the charts we are building may exist already, we just can't get updates)
+		return err
+	}
+	if err != nil {
 		message.ZarfCommand("tools helm dependency build --verify")
 		message.Warnf("Unable to perform a rebuild of Helm dependencies: %s", err.Error())
+		return err
 	}
-
 	return nil
 }
 

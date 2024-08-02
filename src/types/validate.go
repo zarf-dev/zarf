@@ -9,15 +9,18 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
-	"slices"
+	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 const (
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
-	ZarfMaxChartNameLength = 40
+	ZarfMaxChartNameLength     = 40
+	errChartReleaseNameEmpty   = "release name empty, unable to fallback to chart name"
+	errChartReleaseNameInvalid = "invalid release name %s: a DNS-1035 label must consist of lower case alphanumeric characters or -, start with an alphabetic character, and end with an alphanumeric character"
 )
 
 var (
@@ -43,20 +46,6 @@ func (pkg ZarfPackage) Validate() error {
 	var err error
 	if pkg.Kind == ZarfInitConfig && pkg.Metadata.YOLO {
 		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrInitNoYOLO))
-	}
-
-	if !IsLowercaseNumberHyphenNoStartHyphen(pkg.Metadata.Name) {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrPkgName, pkg.Metadata.Name))
-	}
-
-	if len(pkg.Components) == 0 {
-		err = errors.Join(err, fmt.Errorf("package must have at least 1 component"))
-	}
-
-	for _, variable := range pkg.Variables {
-		if varErr := variable.Validate(); varErr != nil {
-			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrVariable, varErr))
-		}
 	}
 
 	for _, constant := range pkg.Constants {
@@ -95,14 +84,6 @@ func (pkg ZarfPackage) Validate() error {
 			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentNameNotUnique, component.Name))
 		}
 		uniqueComponentNames[component.Name] = true
-
-		if !IsLowercaseNumberHyphenNoStartHyphen(component.Name) {
-			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentName, component.Name))
-		}
-
-		if !slices.Contains(supportedOS, component.Only.LocalOS) {
-			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentLocalOS, component.Name, component.Only.LocalOS, supportedOS))
-		}
 
 		if component.IsRequired() {
 			if component.Default {
@@ -241,7 +222,6 @@ func (as ZarfComponentActionSet) Validate() error {
 			if actionErr := action.Validate(); actionErr != nil {
 				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrAction, actionErr))
 			}
-
 		}
 	}
 
@@ -255,9 +235,6 @@ func (as ZarfComponentActionSet) Validate() error {
 // Validate runs all validation checks on an action.
 func (action ZarfComponentAction) Validate() error {
 	var err error
-	for _, variable := range action.SetVariables {
-		err = errors.Join(err, variable.Validate())
-	}
 
 	if action.Wait != nil {
 		// Validate only cmd or wait, not both
@@ -279,13 +256,32 @@ func (action ZarfComponentAction) Validate() error {
 	return err
 }
 
+// validateReleaseName validates a release name against DNS 1035 spec, using chartName as fallback.
+// https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names
+func validateReleaseName(chartName, releaseName string) (err error) {
+	// Fallback to chartName if releaseName is empty
+	// NOTE: Similar fallback mechanism happens in src/internal/packager/helm/chart.go:InstallOrUpgradeChart
+	if releaseName == "" {
+		releaseName = chartName
+	}
+
+	// Check if the final releaseName is empty and return an error if so
+	if releaseName == "" {
+		err = fmt.Errorf(errChartReleaseNameEmpty)
+		return
+	}
+
+	// Validate the releaseName against DNS 1035 label spec
+	if errs := validation.IsDNS1035Label(releaseName); len(errs) > 0 {
+		err = fmt.Errorf("invalid release name '%s': %s", releaseName, strings.Join(errs, "; "))
+	}
+
+	return
+}
+
 // Validate runs all validation checks on a chart.
 func (chart ZarfChart) Validate() error {
 	var err error
-
-	if chart.Name == "" {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartNameMissing))
-	}
 
 	if len(chart.Name) > ZarfMaxChartNameLength {
 		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartName, chart.Name, ZarfMaxChartNameLength))
@@ -308,16 +304,16 @@ func (chart ZarfChart) Validate() error {
 		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartVersion, chart.Name))
 	}
 
+	if nameErr := validateReleaseName(chart.Name, chart.ReleaseName); nameErr != nil {
+		err = errors.Join(err, nameErr)
+	}
+
 	return err
 }
 
 // Validate runs all validation checks on a manifest.
 func (manifest ZarfManifest) Validate() error {
 	var err error
-
-	if manifest.Name == "" {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifestNameMissing))
-	}
 
 	if len(manifest.Name) > ZarfMaxChartNameLength {
 		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))

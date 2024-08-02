@@ -4,11 +4,16 @@
 // Package extensions contains the types for all official extensions.
 package extensions
 
-// BigBang defines a file to deploy.
+// BigBang holds the configuration for the Big Bang extension.
 type BigBang struct {
-	Version        string   `json:"version" jsonschema:"description=The version of Big Bang to use"`
-	Repo           string   `json:"repo,omitempty" jsonschema:"description=Override repo to pull Big Bang from instead of Repo One"`
-	ValuesFiles    []string `json:"valuesFiles,omitempty" jsonschema:"description=The list of values files to pass to Big Bang; these will be merged together"`
-	SkipFlux       bool     `json:"skipFlux,omitempty" jsonschema:"description=Whether to skip deploying flux; Defaults to false"`
-	FluxPatchFiles []string `json:"fluxPatchFiles,omitempty" jsonschema:"description=Optional paths to Flux kustomize strategic merge patch files"`
+	// The version of Big Bang to use.
+	Version string `json:"version"`
+	// Override repo to pull Big Bang from instead of Repo One.
+	Repo string `json:"repo,omitempty"`
+	// The list of values files to pass to Big Bang; these will be merged together.
+	ValuesFiles []string `json:"valuesFiles,omitempty"`
+	// Whether to skip deploying flux; Defaults to false.
+	SkipFlux bool `json:"skipFlux,omitempty"`
+	// Optional paths to Flux kustomize strategic merge patch files.
+	FluxPatchFiles []string `json:"fluxPatchFiles,omitempty"`
 }

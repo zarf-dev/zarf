@@ -50,12 +50,12 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c type
 	validVersionResponse, err := isValidVersion(cfg.Version)
 
 	if err != nil {
-		return c, fmt.Errorf("invalid Big Bang version: %s, parsing issue %s", cfg.Version, err)
+		return c, fmt.Errorf("could not parse the Big Bang version %s: %w", cfg.Version, err)
 	}
 
 	// Make sure the version is valid.
 	if !validVersionResponse {
-		return c, fmt.Errorf("invalid Big Bang version: %s, must be at least %s", cfg.Version, bbMinRequiredVersion)
+		return c, fmt.Errorf("Big Bang version %s must be at least %s", cfg.Version, bbMinRequiredVersion)
 	}
 
 	// Print the banner for Big Bang.
@@ -107,7 +107,7 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c type
 
 	// Template the chart so we can see what GitRepositories are being referenced in the
 	// manifests created with the provided Helm.
-	template, _, err := helmCfg.TemplateChart()
+	template, _, err := helmCfg.TemplateChart(ctx)
 	if err != nil {
 		return c, fmt.Errorf("unable to template Big Bang Chart: %w", err)
 	}
@@ -154,10 +154,10 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c type
 			MaxTotalSeconds: &maxTotalSeconds,
 			Wait: &types.ZarfComponentActionWait{
 				Cluster: &types.ZarfComponentActionWaitCluster{
-					Kind:       "HelmRelease",
-					Identifier: hr.Metadata.Name,
-					Namespace:  hr.Metadata.Namespace,
-					Condition:  "ready",
+					Kind:      "HelmRelease",
+					Name:      hr.Metadata.Name,
+					Namespace: hr.Metadata.Namespace,
+					Condition: "ready",
 				},
 			},
 		}
@@ -171,7 +171,7 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c type
 			action.Wait.Cluster = &types.ZarfComponentActionWaitCluster{
 				Kind: "APIService",
 				// https://github.com/kubernetes-sigs/metrics-server#compatibility-matrix
-				Identifier: "v1beta1.metrics.k8s.io",
+				Name: "v1beta1.metrics.k8s.io",
 			}
 		}
 
@@ -533,7 +533,7 @@ func findImagesforBBChartRepo(ctx context.Context, repo string, values chartutil
 	spinner := message.NewProgressSpinner("Discovering images in %s", repo)
 	defer spinner.Stop()
 
-	gitPath, err := helm.DownloadChartFromGitToTemp(ctx, repo, spinner)
+	gitPath, err := helm.DownloadChartFromGitToTemp(ctx, repo)
 	if err != nil {
 		return images, err
 	}

@@ -71,8 +71,8 @@ func (n *Node) Prev() *Node {
 // otherwise the name of the component will be used
 func (n *Node) ImportName() string {
 	name := n.ZarfComponent.Name
-	if n.Import.ComponentName != "" {
-		name = n.Import.ComponentName
+	if n.Import.Name != "" {
+		name = n.Import.Name
 	}
 	return name
 }

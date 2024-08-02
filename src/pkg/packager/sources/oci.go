@@ -35,8 +35,6 @@ type OCISource struct {
 
 // LoadPackage loads a package from an OCI registry.
 func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
-	message.Debugf("Loading package from %q", s.PackageSource)
-
 	pkg, err = s.FetchZarfYAML(ctx)
 	if err != nil {
 		return pkg, nil, err
@@ -88,7 +86,7 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 	if unarchiveAll {
 		for _, component := range pkg.Components {
 			if err := dst.Components.Unarchive(component); err != nil {
-				if layout.IsNotLoaded(err) {
+				if errors.Is(err, layout.ErrNotLoaded) {
 					_, err := dst.Components.Create(component)
 					if err != nil {
 						return pkg, nil, err

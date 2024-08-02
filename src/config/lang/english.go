@@ -17,14 +17,12 @@ import (
 // Debug messages will not be a part of the language strings since they are not intended to be user facing
 // Include sprintf formatting directives in the string if needed.
 const (
-	ErrLoadState                    = "Failed to load the Zarf State from the cluster."
 	ErrUnmarshal                    = "failed to unmarshal file: %w"
 	ErrWritingFile                  = "failed to write file %s: %s"
 	ErrDownloading                  = "failed to download %s: %s"
 	ErrCreatingDir                  = "failed to create directory %s: %s"
 	ErrRemoveFile                   = "failed to remove file %s: %s"
 	ErrUnarchive                    = "failed to unarchive %s: %s"
-	ErrConfirmCancel                = "confirm selection canceled: %s"
 	ErrFileExtract                  = "failed to extract filename %s from archive %s: %s"
 	ErrFileNameExtract              = "failed to extract filename from URL %s: %s"
 	ErrUnableToGenerateRandomSecret = "unable to generate a random secret"
@@ -57,8 +55,6 @@ const (
 
 	RootCmdDeprecatedDeploy = "Deprecated: Please use \"zarf package deploy %s\" to deploy this package.  This warning will be removed in Zarf v1.0.0."
 	RootCmdDeprecatedCreate = "Deprecated: Please use \"zarf package create\" to create this package.  This warning will be removed in Zarf v1.0.0."
-
-	RootCmdErrInvalidLogLevel = "Invalid log level. Valid options are: warn, info, debug, trace."
 
 	// zarf connect
 	CmdConnectShort = "Accesses services or pods deployed in the cluster"
@@ -201,7 +197,6 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInternalArtifactRegistryGiteaTokenShort = "Creates an artifact registry token for Gitea"
 	CmdInternalArtifactRegistryGiteaTokenLong  = "Creates an artifact registry token in Gitea using the Gitea API. " +
 		"This is called internally by the supported Gitea package component."
-	CmdInternalArtifactRegistryGiteaTokenErr = "Unable to create an artifact registry token for the Gitea service."
 
 	CmdInternalUpdateGiteaPVCShort = "Updates an existing Gitea persistent volume claim"
 	CmdInternalUpdateGiteaPVCLong  = "Updates an existing Gitea persistent volume claim by assessing if claim is a custom user provided claim or default." +
@@ -491,8 +486,6 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
-	CmdToolsCraneConnectedButBadStateErr = "Detected a K8s cluster but was unable to get Zarf state - continuing without state information: %s"
-
 	CmdToolsDownloadInitShort               = "Downloads the init package for the current Zarf version into the specified directory"
 	CmdToolsDownloadInitFlagOutputDirectory = "Specify a directory to place the init package in."
 
@@ -610,10 +603,8 @@ const (
 	AgentErrBadRequest             = "could not read request body: %s"
 	AgentErrBindHandler            = "Unable to bind the webhook handler"
 	AgentErrCouldNotDeserializeReq = "could not deserialize request: %s"
-	AgentErrGetState               = "failed to load zarf state: %w"
 	AgentErrParsePod               = "failed to parse pod: %w"
 	AgentErrHostnameMatch          = "failed to complete hostname matching: %w"
-	AgentErrImageSwap              = "Unable to swap the host for (%s)"
 	AgentErrInvalidMethod          = "invalid method only POST requests are allowed"
 	AgentErrInvalidOp              = "invalid operation: %s"
 	AgentErrInvalidType            = "only content type 'application/json' is supported"
@@ -632,19 +623,15 @@ const (
 // Package validate
 const (
 	PkgValidateTemplateDeprecation        = "Package template %q is using the deprecated syntax ###ZARF_PKG_VAR_%s###. This will be removed in Zarf v1.0.0. Please update to ###ZARF_PKG_TMPL_%s###."
-	PkgValidateMustBeUppercase            = "variable name %q must be all uppercase and contain no special characters except _"
 	PkgValidateErrAction                  = "invalid action: %w"
 	PkgValidateErrActionCmdWait           = "action %q cannot be both a command and wait action"
 	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
 	PkgValidateErrChart                   = "invalid chart definition: %w"
 	PkgValidateErrChartName               = "chart %q exceed the maximum length of %d characters"
-	PkgValidateErrChartNameMissing        = "chart must include a name"
 	PkgValidateErrChartNameNotUnique      = "chart name %q is not unique"
 	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
 	PkgValidateErrChartURLOrPath          = "chart %q must have either a url or localPath"
 	PkgValidateErrChartVersion            = "chart %q must include a chart version"
-	PkgValidateErrComponentName           = "component name %q must be all lowercase and contain no special characters except '-' and cannot start with a '-'"
-	PkgValidateErrComponentLocalOS        = "component %q contains a localOS value that is not supported: %s (supported: %s)"
 	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
 	PkgValidateErrComponentReqDefault     = "component %q cannot be both required and default"
 	PkgValidateErrComponentReqGrouped     = "component %q cannot be both required and grouped"
@@ -656,11 +643,8 @@ const (
 	PkgValidateErrManifest                = "invalid manifest definition: %w"
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
-	PkgValidateErrManifestNameMissing     = "manifest must include a name"
 	PkgValidateErrManifestNameNotUnique   = "manifest name %q is not unique"
-	PkgValidateErrPkgConstantName         = "constant name %q must be all uppercase and contain no special characters except _"
 	PkgValidateErrPkgConstantPattern      = "provided value for constant %q does not match pattern %q"
-	PkgValidateErrPkgName                 = "package name %q must be all lowercase and contain no special characters except '-' and cannot start with a '-'"
 	PkgValidateErrVariable                = "invalid package variable: %w"
 	PkgValidateErrYOLONoArch              = "cluster architecture not allowed in YOLO"
 	PkgValidateErrYOLONoDistro            = "cluster distros not allowed in YOLO"

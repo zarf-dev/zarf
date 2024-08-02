@@ -5,7 +5,6 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 )
@@ -54,35 +54,35 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	// Publish package.
 	example := filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
 	ref := suite.Reference.String()
-	stdOut, stdErr, err := e2e.Zarf("package", "publish", example, "oci://"+ref, "--insecure")
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "publish", example, "oci://"+ref, "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, "Published "+ref)
 
 	// Pull the package via OCI.
-	stdOut, stdErr, err = e2e.Zarf("package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "--insecure")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Publish w/ package missing `metadata.version` field.
 	example = filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-component-actions-%s.tar.zst", e2e.Arch))
-	_, stdErr, err = e2e.Zarf("package", "publish", example, "oci://"+ref, "--insecure")
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", example, "oci://"+ref, "--insecure")
 	suite.Error(err, stdErr)
 
 	// Inline publish package.
 	dir := filepath.Join("examples", "helm-charts")
-	stdOut, stdErr, err = e2e.Zarf("package", "create", dir, "-o", "oci://"+ref, "--insecure", "--oci-concurrency=5", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "create", dir, "-o", "oci://"+ref, "--insecure", "--oci-concurrency=5", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Inline publish flavor.
 	dir = filepath.Join("examples", "package-flavors")
-	stdOut, stdErr, err = e2e.Zarf("package", "create", dir, "-o", "oci://"+ref, "--flavor", "oracle-cookie-crunch", "--insecure", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "create", dir, "-o", "oci://"+ref, "--flavor", "oracle-cookie-crunch", "--insecure", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Inspect published flavor.
-	stdOut, stdErr, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/package-flavors:1.0.0-oracle-cookie-crunch", "--insecure")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "oci://"+ref+"/package-flavors:1.0.0-oracle-cookie-crunch", "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Inspect the published package.
-	stdOut, stdErr, err = e2e.Zarf("package", "inspect", "oci://"+ref+"/helm-charts:0.0.1", "--insecure")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "oci://"+ref+"/helm-charts:0.0.1", "--insecure")
 	suite.NoError(err, stdOut, stdErr)
 }
 
@@ -95,15 +95,15 @@ func (suite *PublishDeploySuiteTestSuite) Test_1_Deploy() {
 	ref := suite.Reference.String()
 
 	// Deploy the package via OCI.
-	stdOut, stdErr, err := e2e.Zarf("package", "deploy", "oci://"+ref, "--insecure", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "deploy", "oci://"+ref, "--insecure", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Remove the package via OCI.
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "oci://"+ref, "--insecure", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "remove", "oci://"+ref, "--insecure", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Test deploy w/ bad ref.
-	_, stdErr, err = e2e.Zarf("package", "deploy", "oci://"+badDeployRef.String(), "--insecure", "--confirm")
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "deploy", "oci://"+badDeployRef.String(), "--insecure", "--confirm")
 	suite.Error(err, stdErr)
 }
 
@@ -116,7 +116,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_2_Pull_And_Deploy() {
 	suite.FileExists(local)
 
 	// Deploy the local package.
-	stdOut, stdErr, err := e2e.Zarf("package", "deploy", local, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "deploy", local, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 }
 
@@ -139,7 +139,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	suite.NoError(err)
 	reg.PlainHTTP = true
 	attempt := 0
-	ctx := context.TODO()
+	ctx := testutil.TestContext(t)
 	for attempt <= 5 {
 		err = reg.Ping(ctx)
 		if err == nil {
@@ -164,6 +164,5 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 }
 
 func TestPublishDeploySuite(t *testing.T) {
-
 	suite.Run(t, new(PublishDeploySuiteTestSuite))
 }

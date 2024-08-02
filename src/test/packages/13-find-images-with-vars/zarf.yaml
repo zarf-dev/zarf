@@ -4,12 +4,12 @@ metadata:
   description: Simple zarf package with variables
 
 variables:
-  - name: BUSYBOX_IMAGE
-    default: "busybox:latest"
+  - name: PODINFO_IMAGE
+    default: "ghcr.io/stefanprodan/podinfo:latest"
 
 constants:
-  - name: SAMPLE_IMAGE
-    value: "nginx:latest"
+  - name: AGENT_IMAGE
+    value: "ghcr.io/zarf-dev/zarf/agent:v0.36.1"
 
 components:
 - name: simple-var

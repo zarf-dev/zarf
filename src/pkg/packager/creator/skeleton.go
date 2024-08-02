@@ -70,7 +70,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(ctx context.Context, src *layou
 		message.Warn(warning)
 	}
 
-	if err := pkg.Validate(); err != nil {
+	if err := Validate(pkg, sc.createOpts.BaseDir); err != nil {
 		return types.ZarfPackage{}, nil, err
 	}
 
@@ -182,7 +182,6 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
-
 		if chart.LocalPath != "" {
 			rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			dst := filepath.Join(componentPaths.Base, rel)
@@ -210,8 +209,6 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 	}
 
 	for filesIdx, file := range component.Files {
-		message.Debugf("Loading %#v", file)
-
 		if helpers.IsURL(file.Source) {
 			continue
 		}

@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/zarf-dev/zarf/src/test/testutil"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -136,7 +138,7 @@ func TestDownloadToFile(t *testing.T) {
 			}
 			fmt.Println(src)
 			dst := filepath.Join(t.TempDir(), tt.fileName)
-			err := DownloadToFile(src, dst, "")
+			err := DownloadToFile(testutil.TestContext(t), src, dst, "")
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
 				return

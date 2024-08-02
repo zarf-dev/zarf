@@ -11,7 +11,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 const (
@@ -25,14 +24,10 @@ func MakeTempDir(basePath string) (string, error) {
 			return "", err
 		}
 	}
-
 	tmp, err := os.MkdirTemp(basePath, tmpPathPrefix)
 	if err != nil {
 		return "", err
 	}
-
-	message.Debug("Using temporary directory:", tmp)
-
 	return tmp, nil
 }
 

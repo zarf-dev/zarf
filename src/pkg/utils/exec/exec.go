@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"testing"
 )
 
 // Config is a struct for configuring the Cmd function.
@@ -48,6 +49,13 @@ func Cmd(command string, args ...string) (string, string, error) {
 func CmdWithPrint(command string, args ...string) error {
 	_, _, err := CmdWithContext(context.Background(), PrintCfg(), command, args...)
 	return err
+}
+
+// CmdWithTesting takes a *testing.T and generates a context the cancels on cleanup
+func CmdWithTesting(t *testing.T, config Config, command string, args ...string) (string, string, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	return CmdWithContext(ctx, config, command, args...)
 }
 
 // CmdWithContext executes a given command with given config.

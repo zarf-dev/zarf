@@ -12,7 +12,6 @@ import (
 )
 
 func TestLocalOSFilter(t *testing.T) {
-
 	pkg := types.ZarfPackage{}
 	for _, os := range types.SupportedOS() {
 		pkg.Components = append(pkg.Components, types.ZarfComponent{

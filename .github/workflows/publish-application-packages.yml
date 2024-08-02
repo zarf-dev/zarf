@@ -18,7 +18,7 @@ jobs:
       packages: write
     steps:
       - name: "Checkout Repo"
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           ref: ${{ github.event.inputs.branchName }}
 
@@ -26,7 +26,7 @@ jobs:
         uses: defenseunicorns/setup-zarf@10e539efed02f75ec39eb8823e22a5c795f492ae #v1.0.1
 
       - name: "Login to GHCR"
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         with:
           registry: ghcr.io
           username: dummy

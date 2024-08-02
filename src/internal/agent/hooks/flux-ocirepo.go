@@ -35,7 +35,6 @@ func NewOCIRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster)
 
 // mutateOCIRepo mutates the oci repository url to point to the repository URL defined in the ZarfState.
 func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
-
 	src := &flux.OCIRepository{}
 	if err := json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
@@ -60,7 +59,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 
 	zarfState, err := cluster.LoadZarfState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(lang.AgentErrGetState, err)
+		return nil, err
 	}
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
