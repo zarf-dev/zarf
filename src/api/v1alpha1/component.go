@@ -107,21 +107,11 @@ func (c ZarfComponent) IsRequired() bool {
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
 type ZarfComponentOnlyTarget struct {
 	// Only deploy component to specified OS.
-	LocalOS string `json:"localOS,omitempty"`
+	LocalOS string `json:"localOS,omitempty" jsonschema:"enum=linux,enum=darwin,enum=windows"`
 	// Only deploy component to specified clusters.
 	Cluster ZarfComponentOnlyCluster `json:"cluster,omitempty"`
 	// Only include this component when a matching '--flavor' is specified on 'zarf package create'.
 	Flavor string `json:"flavor,omitempty"`
-}
-
-// JSONSchemaExtend extends the generated json schema during `zarf internal gen-config-schema`
-func (ZarfComponentOnlyTarget) JSONSchemaExtend(schema *jsonschema.Schema) {
-	kind, _ := schema.Properties.Get("localOS")
-	supportOSEnum := []any{}
-	for _, os := range supportedOS {
-		supportOSEnum = append(supportOSEnum, os)
-	}
-	kind.Enum = supportOSEnum
 }
 
 // ZarfComponentOnlyCluster represents the architecture and K8s cluster distribution to filter on.
@@ -177,17 +167,11 @@ type ZarfChart struct {
 // ZarfChartVariable represents a variable that can be set for a Helm chart overrides.
 type ZarfChartVariable struct {
 	// The name of the variable.
-	Name string `json:"name"`
+	Name string `json:"name" jsonschema:"pattern=^[A-Z0-9_]+$"`
 	// A brief description of what the variable controls.
 	Description string `json:"description"`
 	// The path within the Helm chart values where this variable applies.
 	Path string `json:"path"`
-}
-
-// JSONSchemaExtend extends the generated json schema during `zarf internal gen-config-schema`
-func (ZarfChartVariable) JSONSchemaExtend(schema *jsonschema.Schema) {
-	name, _ := schema.Properties.Get("name")
-	name.Pattern = variables.UppercaseNumberUnderscorePattern
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
