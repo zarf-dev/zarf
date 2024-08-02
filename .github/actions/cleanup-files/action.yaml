@@ -9,6 +9,7 @@ runs:
 
         sudo rm -rf zarf-sbom /tmp/zarf-*
         sudo env "PATH=$PATH" CI=true make delete-packages
+        sudo rm -rf /usr/share/dotnet
         sudo build/zarf tools clear-cache
         sudo docker system prune --all --force
 

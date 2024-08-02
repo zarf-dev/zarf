@@ -51,7 +51,7 @@ jobs:
       - name: Run external service test
         run: make test-external
 
-      - name: show cluster logs
+      - name: get cluster info
         uses: ./.github/actions/debug-cluster
         if: always()
 
