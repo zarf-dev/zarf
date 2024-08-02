@@ -80,7 +80,7 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 
 		spinner.Success()
 
-		if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
+		if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
 			return pkg, nil, err
 		}
 	}
@@ -142,7 +142,7 @@ func (s *OCISource) LoadPackageMetadata(ctx context.Context, dst *layout.Package
 			spinner.Success()
 		}
 
-		if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
+		if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
 			if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
 				message.Warn("The package was signed but no public key was provided, skipping signature validation")
 			} else {

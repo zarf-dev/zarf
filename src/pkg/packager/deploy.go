@@ -192,7 +192,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := actions.Run(onDeploy.Defaults, onDeploy.OnFailure, p.variableConfig); err != nil {
+			if err := actions.Run(ctx, onDeploy.Defaults, onDeploy.OnFailure, p.variableConfig); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -220,7 +220,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 			}
 		}
 
-		if err := actions.Run(onDeploy.Defaults, onDeploy.OnSuccess, p.variableConfig); err != nil {
+		if err := actions.Run(ctx, onDeploy.Defaults, onDeploy.OnSuccess, p.variableConfig); err != nil {
 			onFailure()
 			return deployedComponents, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -322,7 +322,7 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 		return charts, err
 	}
 
-	if err = actions.Run(onDeploy.Defaults, onDeploy.Before, p.variableConfig); err != nil {
+	if err = actions.Run(ctx, onDeploy.Defaults, onDeploy.Before, p.variableConfig); err != nil {
 		return charts, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -357,7 +357,7 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 		}
 	}
 
-	if err = actions.Run(onDeploy.Defaults, onDeploy.After, p.variableConfig); err != nil {
+	if err = actions.Run(ctx, onDeploy.Defaults, onDeploy.After, p.variableConfig); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
