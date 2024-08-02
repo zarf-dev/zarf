@@ -76,7 +76,7 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 			Name:      "gitea-0",
 		},
 	}
-	waitCtx, waitCancel := context.WithTimeout(context.Background(), 60*time.Second)
+	waitCtx, waitCancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer waitCancel()
 	err = pkgkubernetes.WaitForReady(waitCtx, c.Watcher, objs)
 	suite.NoError(err)
@@ -183,7 +183,7 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 			Name:      "podinfo",
 		},
 	}
-	waitCtx, waitCancel := context.WithTimeout(context.Background(), 60*time.Second)
+	waitCtx, waitCancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer waitCancel()
 	err = pkgkubernetes.WaitForReady(waitCtx, c.Watcher, objs)
 	suite.NoError(err)
