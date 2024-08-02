@@ -8,14 +8,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
-// Zarf looks for these strings in zarf.yaml to make dynamic changes
-const (
-	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
-	ZarfPackageVariablePrefix = "###ZARF_PKG_VAR_"
-	ZarfPackageArch           = "###ZARF_PKG_ARCH###"
-	ZarfComponentName         = "###ZARF_COMPONENT_NAME###"
-)
-
 // ZarfPackageKind is an enum of the different kinds of Zarf packages.
 type ZarfPackageKind string
 
