@@ -161,10 +161,6 @@ jobs:
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e-with-cluster ARCH=amd64
 
-      - name: get cluster info
-        uses: ./.github/actions/debug-cluster
-        if: always()
-
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
