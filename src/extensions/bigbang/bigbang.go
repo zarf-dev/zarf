@@ -533,7 +533,7 @@ func findImagesforBBChartRepo(ctx context.Context, repo string, values chartutil
 	spinner := message.NewProgressSpinner("Discovering images in %s", repo)
 	defer spinner.Stop()
 
-	gitPath, err := helm.DownloadChartFromGitToTemp(ctx, repo, spinner)
+	gitPath, err := helm.DownloadChartFromGitToTemp(ctx, repo)
 	if err != nil {
 		return images, err
 	}
