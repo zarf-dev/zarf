@@ -21,7 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/extensions/bigbang"
-	"github.com/zarf-dev/zarf/src/internal/packager/git"
+	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
@@ -136,7 +136,7 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 		onCreate := component.Actions.OnCreate
 
 		onFailure := func() {
-			if err := actions.Run(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
+			if err := actions.Run(ctx, onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
@@ -146,7 +146,7 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
 		}
 
-		if err := actions.Run(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
+		if err := actions.Run(ctx, onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -359,7 +359,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component types.Zarf
 	}
 
 	onCreate := component.Actions.OnCreate
-	if err := actions.Run(onCreate.Defaults, onCreate.Before, nil); err != nil {
+	if err := actions.Run(ctx, onCreate.Defaults, onCreate.Before, nil); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -513,15 +513,15 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component types.Zarf
 
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
-			gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
-			if err := gitCfg.Pull(ctx, url, componentPaths.Repos, false); err != nil {
+			_, err := git.Clone(ctx, componentPaths.Repos, url, false)
+			if err != nil {
 				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
 		spinner.Success()
 	}
 
-	if err := actions.Run(onCreate.Defaults, onCreate.After, nil); err != nil {
+	if err := actions.Run(ctx, onCreate.Defaults, onCreate.After, nil); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 

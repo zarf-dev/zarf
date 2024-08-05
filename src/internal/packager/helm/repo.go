@@ -15,11 +15,10 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/packager/git"
+	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/cli"
@@ -119,7 +118,7 @@ func (h *Helm) PackageChartFromGit(ctx context.Context, cosignKeyPath string) er
 	defer spinner.Stop()
 
 	// Retrieve the repo containing the chart
-	gitPath, err := DownloadChartFromGitToTemp(ctx, h.chart.URL, spinner)
+	gitPath, err := DownloadChartFromGitToTemp(ctx, h.chart.URL)
 	if err != nil {
 		return err
 	}
@@ -233,17 +232,16 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 }
 
 // DownloadChartFromGitToTemp downloads a chart from git into a temp directory
-func DownloadChartFromGitToTemp(ctx context.Context, url string, spinner *message.Spinner) (string, error) {
-	// Create the Git configuration and download the repo
-	gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
-
-	// Download the git repo to a temporary directory
-	err := gitCfg.DownloadRepoToTemp(ctx, url)
+func DownloadChartFromGitToTemp(ctx context.Context, url string) (string, error) {
+	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return "", fmt.Errorf("unable to download the git repo %s: %w", url, err)
+		return "", fmt.Errorf("unable to create tmpdir: %w", err)
 	}
-
-	return gitCfg.GitPath, nil
+	repository, err := git.Clone(ctx, path, url, true)
+	if err != nil {
+		return "", err
+	}
+	return repository.Path(), nil
 }
 
 func (h *Helm) finalizeChartPackage(ctx context.Context, saved, cosignKeyPath string) error {
