@@ -167,7 +167,6 @@ func printViperConfigUsed() {
 	if !vInitialized {
 		return
 	}
-	// Optional, so ignore file not found errors
 	var notFoundErr viper.ConfigFileNotFoundError
 	if errors.As(vConfigError, &notFoundErr) {
 		return
