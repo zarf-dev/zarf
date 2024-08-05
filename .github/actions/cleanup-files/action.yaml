@@ -7,10 +7,16 @@ runs:
     - run: |
         lsblk -f
 
+        echo "removing some github actions pre-installed tools to save space"
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo docker system prune --all --force
+
+        echo "removing zarf sboms, packages, cache"
         sudo rm -rf zarf-sbom /tmp/zarf-*
         sudo env "PATH=$PATH" CI=true make delete-packages
         sudo build/zarf tools clear-cache
-        sudo docker system prune --all --force
 
         lsblk -f
       shell: bash
