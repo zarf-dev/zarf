@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/rules"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -50,13 +51,13 @@ func TestFillComponentTemplate(t *testing.T) {
 
 	findings, err := fillComponentTemplate(&component, createOpts)
 	require.NoError(t, err)
-	expectedFindings := []PackageFinding{
+	expectedFindings := []rules.PackageFinding{
 		{
-			Severity:    SevWarn,
+			Severity:    rules.SevWarn,
 			Description: "There are templates that are not set and won't be evaluated during lint",
 		},
 		{
-			Severity:    SevWarn,
+			Severity:    rules.SevWarn,
 			Description: fmt.Sprintf(lang.PkgValidateTemplateDeprecation, "KEY2", "KEY2", "KEY2"),
 		},
 	}

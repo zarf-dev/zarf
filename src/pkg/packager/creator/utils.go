@@ -12,25 +12,25 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
+	"github.com/zarf-dev/zarf/src/pkg/rules"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Validate errors if a package violates the schema or any runtime validations
 // This must be run while in the parent directory of the zarf.yaml being validated
 func Validate(pkg v1alpha1.ZarfPackage, baseDir string) error {
-	if err := lint.ValidatePackage(pkg); err != nil {
+	if err := rules.ValidatePackage(pkg); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
 
-	findings, err := lint.ValidatePackageSchema()
+	findings, err := rules.ValidatePackageSchema()
 	if err != nil {
 		return fmt.Errorf("unable to check schema: %w", err)
 	}
 
-	if lint.HasSevOrHigher(findings, lint.SevErr) {
-		lint.PrintFindings(findings, lint.SevErr, baseDir, pkg.Metadata.Name)
+	if rules.HasSevOrHigher(findings, rules.SevErr) {
+		rules.PrintFindings(findings, rules.SevErr, baseDir, pkg.Metadata.Name)
 		return fmt.Errorf("found errors in schema")
 	}
 

@@ -13,7 +13,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/cmd"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/rules"
 )
 
 //go:embed cosign.pub
@@ -41,6 +41,6 @@ func main() {
 	}()
 
 	config.CosignPublicKey = cosignPublicKey
-	lint.ZarfSchema = zarfSchema
+	rules.ZarfSchema = zarfSchema
 	cmd.Execute(ctx)
 }

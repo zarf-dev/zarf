@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/rules"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -66,7 +66,7 @@ func TestLoadPackageDefinition(t *testing.T) {
 	}
 	b, err := os.ReadFile("../../../../zarf.schema.json")
 	require.NoError(t, err)
-	lint.ZarfSchema = &mockSchemaLoader{b: b}
+	rules.ZarfSchema = &mockSchemaLoader{b: b}
 
 	for _, tt := range tests {
 		tt := tt
