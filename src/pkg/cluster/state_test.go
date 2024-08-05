@@ -254,59 +254,46 @@ func TestMergeZarfStateRegistry(t *testing.T) {
 		{
 			name: "internal server auto generate",
 			oldRegistry: types.RegistryInfo{
-				Address:          fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
-				NodePort:         1,
-				InternalRegistry: true,
+				Address:  fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
+				NodePort: 1,
 			},
 			expectedRegistry: types.RegistryInfo{
-				Address:          fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
-				NodePort:         1,
-				InternalRegistry: true,
-			},
-		},
-		{
-			name: "external server",
-			oldRegistry: types.RegistryInfo{
-				Address:          "example.com",
-				InternalRegistry: false,
-				PushPassword:     "push",
-				PullPassword:     "pull",
-			},
-			expectedRegistry: types.RegistryInfo{
-				Address:          "example.com",
-				InternalRegistry: false,
-				PushPassword:     "push",
-				PullPassword:     "pull",
+				Address:  fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
+				NodePort: 1,
 			},
 		},
 		{
 			name: "init options merged",
+			oldRegistry: types.RegistryInfo{
+				PushUsername: "doesn't matter",
+				PullUsername: "doesn't matter",
+				Address:      "doesn't matter",
+				NodePort:     0,
+				Secret:       "doesn't matter",
+			},
 			initRegistry: types.RegistryInfo{
-				PushUsername:     "push-user",
-				PullUsername:     "pull-user",
-				Address:          "address",
-				NodePort:         1,
-				InternalRegistry: false,
-				Secret:           "secret",
+				PushUsername: "push-user",
+				PullUsername: "pull-user",
+				Address:      "address",
+				NodePort:     1,
+				Secret:       "secret",
 			},
 			expectedRegistry: types.RegistryInfo{
-				PushUsername:     "push-user",
-				PullUsername:     "pull-user",
-				Address:          "address",
-				NodePort:         1,
-				InternalRegistry: false,
-				Secret:           "secret",
+				PushUsername: "push-user",
+				PullUsername: "pull-user",
+				Address:      "address",
+				NodePort:     1,
+				Secret:       "secret",
 			},
 		},
 		{
 			name: "init options not merged",
 			expectedRegistry: types.RegistryInfo{
-				PushUsername:     "",
-				PullUsername:     "",
-				Address:          "",
-				NodePort:         0,
-				InternalRegistry: false,
-				Secret:           "",
+				PushUsername: "",
+				PullUsername: "",
+				Address:      "",
+				NodePort:     0,
+				Secret:       "",
 			},
 		},
 	}
@@ -324,7 +311,6 @@ func TestMergeZarfStateRegistry(t *testing.T) {
 			require.Equal(t, tt.expectedRegistry.PullUsername, newState.RegistryInfo.PullUsername)
 			require.Equal(t, tt.expectedRegistry.Address, newState.RegistryInfo.Address)
 			require.Equal(t, tt.expectedRegistry.NodePort, newState.RegistryInfo.NodePort)
-			require.Equal(t, tt.expectedRegistry.InternalRegistry, newState.RegistryInfo.InternalRegistry)
 			require.Equal(t, tt.expectedRegistry.Secret, newState.RegistryInfo.Secret)
 		})
 	}
@@ -341,12 +327,14 @@ func TestMergeZarfStateGit(t *testing.T) {
 		expectedGitServer types.GitServerInfo
 	}{
 		{
-			name: "username is unmodified",
+			name: "address and usernames are unmodified",
 			oldGitServer: types.GitServerInfo{
+				Address:      "address",
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
 			},
 			expectedGitServer: types.GitServerInfo{
+				Address:      "address",
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
 			},
@@ -354,51 +342,36 @@ func TestMergeZarfStateGit(t *testing.T) {
 		{
 			name: "internal server auto generate",
 			oldGitServer: types.GitServerInfo{
-				Address:        types.ZarfInClusterGitServiceURL,
-				InternalServer: true,
+				Address: types.ZarfInClusterGitServiceURL,
 			},
 			expectedGitServer: types.GitServerInfo{
-				Address:        types.ZarfInClusterGitServiceURL,
-				InternalServer: true,
-			},
-		},
-		{
-			name: "external server",
-			oldGitServer: types.GitServerInfo{
-				Address:        "example.com",
-				InternalServer: false,
-				PushPassword:   "push",
-				PullPassword:   "pull",
-			},
-			expectedGitServer: types.GitServerInfo{
-				Address:        "example.com",
-				InternalServer: false,
-				PushPassword:   "push",
-				PullPassword:   "pull",
+				Address: types.ZarfInClusterGitServiceURL,
 			},
 		},
 		{
 			name: "init options merged",
+			oldGitServer: types.GitServerInfo{
+				Address:      "doesn't matter",
+				PushUsername: "doesn't matter",
+				PullUsername: "doesn't matter",
+			},
 			initGitServer: types.GitServerInfo{
-				PushUsername:   "push-user",
-				PullUsername:   "pull-user",
-				Address:        "address",
-				InternalServer: false,
+				PushUsername: "push-user",
+				PullUsername: "pull-user",
+				Address:      "address",
 			},
 			expectedGitServer: types.GitServerInfo{
-				PushUsername:   "push-user",
-				PullUsername:   "pull-user",
-				Address:        "address",
-				InternalServer: false,
+				PushUsername: "push-user",
+				PullUsername: "pull-user",
+				Address:      "address",
 			},
 		},
 		{
 			name: "empty init options not merged",
 			expectedGitServer: types.GitServerInfo{
-				PushUsername:   "",
-				PullUsername:   "",
-				Address:        "",
-				InternalServer: false,
+				PushUsername: "",
+				PullUsername: "",
+				Address:      "",
 			},
 		},
 	}
@@ -415,7 +388,6 @@ func TestMergeZarfStateGit(t *testing.T) {
 			require.Equal(t, tt.expectedGitServer.PushUsername, newState.GitServer.PushUsername)
 			require.Equal(t, tt.expectedGitServer.PullUsername, newState.GitServer.PullUsername)
 			require.Equal(t, tt.expectedGitServer.Address, newState.GitServer.Address)
-			require.Equal(t, tt.expectedGitServer.InternalServer, newState.GitServer.InternalServer)
 		})
 	}
 }
@@ -441,14 +413,12 @@ func TestMergeZarfStateArtifact(t *testing.T) {
 		{
 			name: "old state is internal server auto generate push token",
 			oldArtifactServer: types.ArtifactServerInfo{
-				PushToken:      "foobar",
-				Address:        types.ZarfInClusterArtifactServiceURL,
-				InternalServer: true,
+				PushToken: "foobar",
+				Address:   types.ZarfInClusterArtifactServiceURL,
 			},
 			expectedArtifactServer: types.ArtifactServerInfo{
-				PushToken:      "",
-				Address:        types.ZarfInClusterArtifactServiceURL,
-				InternalServer: true,
+				PushToken: "",
+				Address:   types.ZarfInClusterArtifactServiceURL,
 			},
 		},
 		{
@@ -457,51 +427,38 @@ func TestMergeZarfStateArtifact(t *testing.T) {
 				PushToken: "hello world",
 			},
 			oldArtifactServer: types.ArtifactServerInfo{
-				PushToken:      "foobar",
-				Address:        types.ZarfInClusterArtifactServiceURL,
-				InternalServer: false,
+				PushToken: "foobar",
+				Address:   types.ZarfInClusterArtifactServiceURL,
 			},
 			expectedArtifactServer: types.ArtifactServerInfo{
-				PushToken:      "hello world",
-				Address:        types.ZarfInClusterArtifactServiceURL,
-				InternalServer: true,
-			},
-		},
-		{
-			name: "external server same push token",
-			oldArtifactServer: types.ArtifactServerInfo{
-				PushToken:      "foobar",
-				Address:        "http://example.com",
-				InternalServer: false,
-			},
-			expectedArtifactServer: types.ArtifactServerInfo{
-				PushToken:      "foobar",
-				Address:        "http://example.com",
-				InternalServer: false,
+				PushToken: "hello world",
+				Address:   types.ZarfInClusterArtifactServiceURL,
 			},
 		},
 		{
 			name: "init options merged",
+			oldArtifactServer: types.ArtifactServerInfo{
+				PushUsername: "doesn't matter",
+				PushToken:    "doesn't matter",
+				Address:      "doesn't matter",
+			},
 			initArtifactServer: types.ArtifactServerInfo{
-				PushUsername:   "user",
-				PushToken:      "token",
-				Address:        "address",
-				InternalServer: false,
+				PushUsername: "user",
+				PushToken:    "token",
+				Address:      "address",
 			},
 			expectedArtifactServer: types.ArtifactServerInfo{
-				PushUsername:   "user",
-				PushToken:      "token",
-				Address:        "address",
-				InternalServer: false,
+				PushUsername: "user",
+				PushToken:    "token",
+				Address:      "address",
 			},
 		},
 		{
 			name: "empty init options not merged",
 			expectedArtifactServer: types.ArtifactServerInfo{
-				PushUsername:   "",
-				PushToken:      "",
-				Address:        "",
-				InternalServer: false,
+				PushUsername: "",
+				PushToken:    "",
+				Address:      "",
 			},
 		},
 	}

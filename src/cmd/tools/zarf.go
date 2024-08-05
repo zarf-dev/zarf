@@ -148,7 +148,7 @@ var updateCredsCmd = &cobra.Command{
 			}
 
 			// Update artifact token (if internal)
-			if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.InternalServer {
+			if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() {
 				tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 				if err != nil {
 					return err
@@ -186,14 +186,14 @@ var updateCredsCmd = &cobra.Command{
 			// Update Zarf 'init' component Helm releases if present
 			h := helm.NewClusterOnly(&types.PackagerConfig{}, template.GetZarfVariableConfig(), newState, c)
 
-			if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
+			if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.IsInternal() {
 				err = h.UpdateZarfRegistryValues(ctx)
 				if err != nil {
 					// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
 				}
 			}
-			if slices.Contains(args, message.GitKey) && newState.GitServer.InternalServer {
+			if slices.Contains(args, message.GitKey) && newState.GitServer.IsInternal() {
 				tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 				if err != nil {
 					return err
