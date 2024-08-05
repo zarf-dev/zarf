@@ -279,7 +279,7 @@ var createPackageRegistryToken = &cobra.Command{
 		}
 
 		// If we are setup to use an internal artifact server, create the artifact registry token
-		if state.ArtifactServer.InternalServer {
+		if state.ArtifactServer.IsInternal() {
 			tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 			if err != nil {
 				return err

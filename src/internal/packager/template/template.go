@@ -107,7 +107,7 @@ func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap
 // generateHtpasswd returns an htpasswd string for the current state's RegistryInfo.
 func generateHtpasswd(regInfo *types.RegistryInfo) (string, error) {
 	// Only calculate this for internal registries to allow longer external passwords
-	if regInfo.InternalRegistry {
+	if regInfo.IsInternal() {
 		pushUser, err := utils.GetHtpasswdString(regInfo.PushUsername, regInfo.PushPassword)
 		if err != nil {
 			return "", fmt.Errorf("error generating htpasswd string: %w", err)
