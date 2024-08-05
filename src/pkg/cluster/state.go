@@ -35,15 +35,16 @@ const (
 
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
 func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitOptions) error {
-	var distro string
-
 	spinner := message.NewProgressSpinner("Gathering cluster state information")
 	defer spinner.Stop()
 
 	// Attempt to load an existing state prior to init.
 	// NOTE: We are ignoring the error here because we don't really expect a state to exist yet.
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
-	state, _ := c.LoadZarfState(ctx)
+	state, err := c.LoadZarfState(ctx)
+	if err != nil && !kerrors.IsNotFound(err) {
+		return fmt.Errorf("failed to check for existing state: %w", err)
+	}
 
 	// If state is nil, this is a new cluster.
 	if state == nil {
@@ -52,7 +53,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 
 		if initOptions.ApplianceMode {
 			// If the K3s component is being deployed, skip distro detection.
-			distro = DistroIsK3s
+			state.Distro = DistroIsK3s
 			state.ZarfAppliance = true
 		} else {
 			// Otherwise, trying to detect the K8s distro type.
@@ -67,15 +68,12 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 			if err != nil {
 				return err
 			}
-			distro = detectDistro(nodeList.Items[0], namespaceList.Items)
+			state.Distro = detectDistro(nodeList.Items[0], namespaceList.Items)
 		}
 
-		if distro != DistroIsUnknown {
-			spinner.Updatef("Detected K8s distro %s", distro)
+		if state.Distro != DistroIsUnknown {
+			spinner.Updatef("Detected K8s distro %s", state.Distro)
 		}
-
-		// Defaults
-		state.Distro = distro
 
 		// Setup zarf agent PKI
 		agentTLS, err := pki.GeneratePKI(config.ZarfAgentHost)
@@ -100,8 +98,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 			namespaceCopy := namespace
 			_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
 			if err != nil {
-				// This is not a hard failure, but we should log it.
-				message.WarnErrf(err, "Unable to mark the namespace %s as ignored by Zarf Agent", namespace.Name)
+				return fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
 			}
 		}
 
