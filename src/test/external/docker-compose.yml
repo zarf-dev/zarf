@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   server:
     image: gitea/gitea:1.18.1
