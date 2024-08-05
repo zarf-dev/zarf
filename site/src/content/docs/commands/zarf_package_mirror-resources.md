@@ -49,7 +49,7 @@ $ zarf package mirror-resources <your-package.tar.zst> \
       --components string               Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported.
       --confirm                         Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
       --git-push-password string        Password for the push-user to access the git server
-      --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push' (default "zarf-git-user")
+      --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'
       --git-url string                  External git server url to use for this Zarf cluster
   -h, --help                            help for mirror-resources
       --no-img-checksum                 Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images.

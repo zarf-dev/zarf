@@ -116,6 +116,13 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	// Reset registry HPA scale down whether an error occurs or not
 	defer p.resetRegistryHPA(ctx)
 
+	if p.cfg.Pkg.IsInitConfig() {
+		err := p.initZarfState(ctx, p.cfg.Pkg.Components)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents(ctx)
 	if err != nil {
@@ -231,6 +238,37 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 	return deployedComponents, nil
 }
 
+func (p *Packager) initZarfState(ctx context.Context, components []types.ZarfComponent) error {
+	requiresCluster := false
+	for _, component := range components {
+		if component.RequiresCluster() && p.state == nil {
+			requiresCluster = true
+			// TODO de duplicate
+			timeout := 5 * time.Minute
+			connectCtx, cancel := context.WithTimeout(ctx, timeout)
+			defer cancel()
+			if err := p.connectToCluster(connectCtx); err != nil {
+				return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+			}
+		}
+		if component.Name == "git-server" && p.cfg.InitOpts.GitServer.Address == "" {
+			var err error
+			p.cfg.InitOpts.GitServer, err = types.GenerateNewInternalGitServerInfo()
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if requiresCluster && p.state == nil {
+		err := p.cluster.InitZarfState(ctx, p.cfg.InitOpts)
+		if err != nil {
+			return fmt.Errorf("unable to initialize Zarf state: %w", err)
+		}
+	}
+	return nil
+}
+
 func (p *Packager) deployInitComponent(ctx context.Context, component types.ZarfComponent) (charts []types.InstalledChart, err error) {
 	hasExternalRegistry := p.cfg.InitOpts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "zarf-seed-registry"
@@ -241,14 +279,6 @@ func (p *Packager) deployInitComponent(ctx context.Context, component types.Zarf
 
 	if isK3s {
 		p.cfg.InitOpts.ApplianceMode = true
-	}
-
-	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
-	if component.RequiresCluster() && p.state == nil {
-		err = p.cluster.InitZarfState(ctx, p.cfg.InitOpts)
-		if err != nil {
-			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
-		}
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {

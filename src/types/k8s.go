@@ -141,40 +141,41 @@ func (gs GitServerInfo) IsInternal() bool {
 	return gs.Address == ZarfInClusterGitServiceURL
 }
 
-// FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
-func (gs *GitServerInfo) FillInEmptyValues() error {
-	var err error
-	// Set default svc url if an external repository was not provided
-	if gs.Address == "" {
-		gs.Address = ZarfInClusterGitServiceURL
+// GenerateNewInternalGitServerInfo generates a new GitServerInfo for the Zarf internal git server.
+func GenerateNewInternalGitServerInfo() (GitServerInfo, error) {
+	pushPassword, err := helpers.RandomString(ZarfGeneratedPasswordLen)
+	if err != nil {
+		return GitServerInfo{}, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 	}
 
-	// Generate a push-user password if not provided by init flag
-	if gs.PushPassword == "" {
-		if gs.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
-			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
-		}
+	pullPassword, err := helpers.RandomString(ZarfGeneratedPasswordLen)
+	if err != nil {
+		return GitServerInfo{}, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 	}
 
-	// Set read-user information if using an internal repository, otherwise copy from the push-user
+	return GitServerInfo{
+		Address:      ZarfInClusterGitServiceURL,
+		PushPassword: pushPassword,
+		PushUsername: ZarfGitPushUser,
+		PullPassword: pullPassword,
+		PullUsername: ZarfGitReadUser,
+	}, nil
+}
+
+// FillInEmptyPullValues sets every necessary value that's currently empty to a reasonable default
+func (gs GitServerInfo) FillInEmptyPullValues() GitServerInfo {
+	if gs.Address == "" || gs.PushPassword == "" || gs.PushUsername == "" {
+		return gs
+	}
+
 	if gs.PullUsername == "" {
-		if gs.IsInternal() {
-			gs.PullUsername = ZarfGitReadUser
-		} else {
-			gs.PullUsername = gs.PushUsername
-		}
-	}
-	if gs.PullPassword == "" {
-		if gs.IsInternal() {
-			if gs.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
-				return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
-			}
-		} else {
-			gs.PullPassword = gs.PushPassword
-		}
+		gs.PullUsername = gs.PushUsername
 	}
 
-	return nil
+	if gs.PullPassword == "" {
+		gs.PullPassword = gs.PushPassword
+	}
+	return gs
 }
 
 // ArtifactServerInfo contains information Zarf uses to communicate with a artifact registry to push/pull repositories to.

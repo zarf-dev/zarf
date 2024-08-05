@@ -24,7 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/spf13/cobra"
 )
@@ -180,11 +179,6 @@ func init() {
 	v := common.InitViper()
 
 	rootCmd.AddCommand(initCmd)
-
-	// Init package variable defaults that are non-zero values
-	// NOTE: these are not in common.setDefaults so that zarf tools update-creds does not erroneously update values back to the default
-	v.SetDefault(common.VInitGitPushUser, types.ZarfGitPushUser)
-	v.SetDefault(common.VInitRegistryPushUser, types.ZarfRegistryPushUser)
 
 	// Init package set variable flags
 	initCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdInitFlagSet)

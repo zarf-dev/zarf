@@ -104,8 +104,7 @@ func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, 
 	if err != nil {
 		return nil, err
 	}
-	gitServer := types.GitServerInfo{}
-	err = gitServer.FillInEmptyValues()
+	gitServer, err := types.GenerateNewInternalGitServerInfo()
 	if err != nil {
 		return nil, err
 	}
