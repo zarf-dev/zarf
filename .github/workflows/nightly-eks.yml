@@ -57,21 +57,9 @@ jobs:
       - name: Run tests
         run: make test-e2e-with-cluster ARCH=amd64
 
-      - name: get pods
+      - name: show cluster logs
+        uses: ./.github/actions/debug-cluster
         if: always()
-        run: kubectl get pods -n kiwix -o yaml
-
-      - name: describe pod
-        if: always()
-        run: kubectl describe pods -n kiwix
-
-      - name: get nodes
-        if: always()
-        run: kubectl get nodes -o yaml
-
-      - name: describe nodes
-        if: always()
-        run: kubectl describe nodes
 
       - name: Teardown the cluster
         if: always()
