@@ -146,7 +146,7 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 
 	var err error
 	var tunnel *Tunnel
-	if registryInfo.InternalRegistry {
+	if registryInfo.IsInternal() {
 		// Establish a registry tunnel to send the images to the zarf registry
 		if tunnel, err = c.NewTunnel(ZarfNamespaceName, SvcResource, ZarfRegistryName, "", 0, ZarfRegistryPort); err != nil {
 			return "", tunnel, err
