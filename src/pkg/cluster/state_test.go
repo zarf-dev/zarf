@@ -31,12 +31,11 @@ func TestInitZarfState(t *testing.T) {
 	existingState := types.ZarfState{
 		Distro: DistroIsK3d,
 		RegistryInfo: types.RegistryInfo{
-			PushUsername:     "push-user",
-			PullUsername:     "pull-user",
-			Address:          "address",
-			NodePort:         1,
-			InternalRegistry: false,
-			Secret:           "secret",
+			PushUsername: "push-user",
+			PullUsername: "pull-user",
+			Address:      "address",
+			NodePort:     1,
+			Secret:       "secret",
 		},
 	}
 
