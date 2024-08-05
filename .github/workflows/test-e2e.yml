@@ -47,7 +47,7 @@ jobs:
 
       # Upload the contents of the build directory for later stages to use
       - name: Upload build artifacts
-        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
+        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4.3.5
         with:
           name: build-artifacts
           path: build/
@@ -118,6 +118,10 @@ jobs:
       - name: Run tests
         run: |
           make test-e2e-with-cluster ARCH=amd64
+
+      - name: get cluster info
+        uses: ./.github/actions/debug-cluster
+        if: always()
 
       - name: Save logs
         if: always()
@@ -197,6 +201,10 @@ jobs:
         run: |
           make test-e2e-with-cluster ARCH=amd64
 
+      - name: get cluster info
+        uses: ./.github/actions/debug-cluster
+        if: always()
+
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
@@ -234,6 +242,10 @@ jobs:
       - name: Run tests
         run: |
           make test-e2e-with-cluster ARCH=amd64
+
+      - name: get cluster info
+        uses: ./.github/actions/debug-cluster
+        if: always()
 
       - name: Save logs
         if: always()
