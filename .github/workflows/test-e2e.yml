@@ -119,6 +119,10 @@ jobs:
         run: |
           make test-e2e-with-cluster ARCH=amd64
 
+      - name: get cluster info
+        uses: ./.github/actions/debug-cluster
+        if: always()
+
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
@@ -197,6 +201,10 @@ jobs:
         run: |
           make test-e2e-with-cluster ARCH=amd64
 
+      - name: get cluster info
+        uses: ./.github/actions/debug-cluster
+        if: always()
+
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
@@ -234,6 +242,10 @@ jobs:
       - name: Run tests
         run: |
           make test-e2e-with-cluster ARCH=amd64
+
+      - name: get cluster info
+        uses: ./.github/actions/debug-cluster
+        if: always()
 
       - name: Save logs
         if: always()
