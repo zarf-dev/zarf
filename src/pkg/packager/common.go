@@ -32,7 +32,6 @@ import (
 type Packager struct {
 	cfg            *types.PackagerConfig
 	variableConfig *variables.VariableConfig
-	state          *types.ZarfState
 	cluster        *cluster.Cluster
 	layout         *layout.PackagePaths
 	hpaModified    bool

@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,7 +33,7 @@ const (
 )
 
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
-func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitOptions) error {
+func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitOptions) (*types.ZarfState, error) {
 	spinner := message.NewProgressSpinner("Gathering cluster state information")
 	defer spinner.Stop()
 
@@ -43,7 +42,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
 	state, err := c.LoadZarfState(ctx)
 	if err != nil && !kerrors.IsNotFound(err) {
-		return fmt.Errorf("failed to check for existing state: %w", err)
+		return nil, fmt.Errorf("failed to check for existing state: %w", err)
 	}
 
 	// If state is nil, this is a new cluster.
@@ -59,14 +58,14 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 			// Otherwise, trying to detect the K8s distro type.
 			nodeList, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if len(nodeList.Items) == 0 {
-				return fmt.Errorf("cannot init Zarf state in empty cluster")
+				return nil, fmt.Errorf("cannot init Zarf state in empty cluster")
 			}
 			namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 			if err != nil {
-				return err
+				return nil, err
 			}
 			state.Distro = detectDistro(nodeList.Items[0], namespaceList.Items)
 		}
@@ -78,13 +77,13 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		// Setup zarf agent PKI
 		agentTLS, err := pki.GeneratePKI(config.ZarfAgentHost)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		state.AgentTLS = agentTLS
 
 		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
-			return fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
+			return nil, fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
 		}
 		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
 		for _, namespace := range namespaceList.Items {
@@ -98,69 +97,18 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 			namespaceCopy := namespace
 			_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
 			if err != nil {
-				return fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
+				return nil, fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
 			}
-		}
-
-		// Try to create the zarf namespace.
-		spinner.Updatef("Creating the Zarf namespace")
-		zarfNamespace := NewZarfManagedNamespace(ZarfNamespaceName)
-		err = func() error {
-			_, err := c.Clientset.CoreV1().Namespaces().Create(ctx, zarfNamespace, metav1.CreateOptions{})
-			if err != nil && !kerrors.IsAlreadyExists(err) {
-				return fmt.Errorf("unable to create the Zarf namespace: %w", err)
-			}
-			if err == nil {
-				return nil
-			}
-			_, err = c.Clientset.CoreV1().Namespaces().Update(ctx, zarfNamespace, metav1.UpdateOptions{})
-			if err != nil {
-				return fmt.Errorf("unable to update the Zarf namespace: %w", err)
-			}
-			return nil
-		}()
-		if err != nil {
-			return err
-		}
-
-		// Wait up to 2 minutes for the default service account to be created.
-		// Some clusters seem to take a while to create this, see https://github.com/kubernetes/kubernetes/issues/66689.
-		// The default SA is required for pods to start properly.
-		saCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-		defer cancel()
-		err = func(ctx context.Context, ns, name string) error {
-			timer := time.NewTimer(0)
-			defer timer.Stop()
-			for {
-				select {
-				case <-ctx.Done():
-					return fmt.Errorf("failed to get service account %s/%s: %w", ns, name, ctx.Err())
-				case <-timer.C:
-					_, err := c.Clientset.CoreV1().ServiceAccounts(ns).Get(ctx, name, metav1.GetOptions{})
-					if err != nil && !kerrors.IsNotFound(err) {
-						return err
-					}
-					if kerrors.IsNotFound(err) {
-						message.Debug("Service account %s/%s not found, retrying...", ns, name)
-						timer.Reset(1 * time.Second)
-						continue
-					}
-					return nil
-				}
-			}
-		}(saCtx, ZarfNamespaceName, "default")
-		if err != nil {
-			return fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 
 		err = initOptions.GitServer.FillInEmptyValues()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		state.GitServer = initOptions.GitServer
 		err = initOptions.RegistryInfo.FillInEmptyValues()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		state.RegistryInfo = initOptions.RegistryInfo
 		initOptions.ArtifactServer.FillInEmptyValues()
@@ -199,10 +147,10 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 
 	// Save the state back to K8s
 	if err := c.SaveZarfState(ctx, state); err != nil {
-		return fmt.Errorf("unable to save the Zarf state: %w", err)
+		return nil, fmt.Errorf("unable to save the Zarf state: %w", err)
 	}
 
-	return nil
+	return state, nil
 }
 
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.

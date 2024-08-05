@@ -12,11 +12,12 @@ import (
 	"runtime"
 	"slices"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
@@ -182,7 +183,7 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 	for _, chart := range helpers.Reverse(deployedComponent.InstalledCharts) {
 		spinner.Updatef("Uninstalling chart '%s' from the '%s' component", chart.ChartName, deployedComponent.Name)
 
-		helmCfg := helm.NewClusterOnly(p.cfg, p.variableConfig, p.state, p.cluster)
+		helmCfg := helm.NewClusterOnly(p.cfg, p.variableConfig, nil, p.cluster)
 		if err := helmCfg.RemoveChart(chart.Namespace, chart.ChartName, spinner); err != nil {
 			if !errors.Is(err, driver.ErrReleaseNotFound) {
 				onFailure()

@@ -40,62 +40,56 @@ func GetZarfVariableConfig() *variables.VariableConfig {
 }
 
 // GetZarfTemplates returns the template keys and values to be used for templating.
-func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap map[string]*variables.TextTemplate, err error) {
+func GetZarfTemplates(componentName string, regInfo types.RegistryInfo, gitInfo types.GitServerInfo, agentTLS types.GeneratedPKI, storageClass string) (templateMap map[string]*variables.TextTemplate, err error) {
 	templateMap = make(map[string]*variables.TextTemplate)
 
-	if state != nil {
-		regInfo := state.RegistryInfo
-		gitInfo := state.GitServer
+	builtinMap := map[string]string{
+		"STORAGE_CLASS": storageClass,
 
-		builtinMap := map[string]string{
-			"STORAGE_CLASS": state.StorageClass,
+		// Registry info
+		"REGISTRY":           regInfo.Address,
+		"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
+		"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
+		"REGISTRY_AUTH_PULL": regInfo.PullPassword,
 
-			// Registry info
-			"REGISTRY":           regInfo.Address,
-			"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
-			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
-			"REGISTRY_AUTH_PULL": regInfo.PullPassword,
+		// Git server info
+		"GIT_PUSH":      gitInfo.PushUsername,
+		"GIT_AUTH_PUSH": gitInfo.PushPassword,
+		"GIT_PULL":      gitInfo.PullUsername,
+		"GIT_AUTH_PULL": gitInfo.PullPassword,
+	}
 
-			// Git server info
-			"GIT_PUSH":      gitInfo.PushUsername,
-			"GIT_AUTH_PUSH": gitInfo.PushPassword,
-			"GIT_PULL":      gitInfo.PullUsername,
-			"GIT_AUTH_PULL": gitInfo.PullPassword,
+	builtinMap[depMarker] = config.GetDataInjectionMarker()
+
+	// Don't template component-specific variables for every component
+	switch componentName {
+	case "zarf-agent":
+		builtinMap["AGENT_CRT"] = base64.StdEncoding.EncodeToString(agentTLS.Cert)
+		builtinMap["AGENT_KEY"] = base64.StdEncoding.EncodeToString(agentTLS.Key)
+		builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
+
+	case "zarf-seed-registry", "zarf-registry":
+		builtinMap["SEED_REGISTRY"] = fmt.Sprintf("%s:%s", helpers.IPV4Localhost, config.ZarfSeedPort)
+		htpasswd, err := generateHtpasswd(&regInfo)
+		if err != nil {
+			return templateMap, err
+		}
+		builtinMap["HTPASSWD"] = htpasswd
+		builtinMap["REGISTRY_SECRET"] = regInfo.Secret
+	}
+
+	// Iterate over any custom variables and add them to the mappings for templating
+	for key, value := range builtinMap {
+		// Builtin keys are always uppercase in the format ###ZARF_KEY###
+		templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = &variables.TextTemplate{
+			Value: value,
 		}
 
-		builtinMap[depMarker] = config.GetDataInjectionMarker()
-
-		// Don't template component-specific variables for every component
-		switch componentName {
-		case "zarf-agent":
-			agentTLS := state.AgentTLS
-			builtinMap["AGENT_CRT"] = base64.StdEncoding.EncodeToString(agentTLS.Cert)
-			builtinMap["AGENT_KEY"] = base64.StdEncoding.EncodeToString(agentTLS.Key)
-			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
-
-		case "zarf-seed-registry", "zarf-registry":
-			builtinMap["SEED_REGISTRY"] = fmt.Sprintf("%s:%s", helpers.IPV4Localhost, config.ZarfSeedPort)
-			htpasswd, err := generateHtpasswd(&regInfo)
-			if err != nil {
-				return templateMap, err
-			}
-			builtinMap["HTPASSWD"] = htpasswd
-			builtinMap["REGISTRY_SECRET"] = regInfo.Secret
-		}
-
-		// Iterate over any custom variables and add them to the mappings for templating
-		for key, value := range builtinMap {
-			// Builtin keys are always uppercase in the format ###ZARF_KEY###
-			templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))] = &variables.TextTemplate{
-				Value: value,
-			}
-
-			if key == "REGISTRY_SECRET" || key == "HTPASSWD" ||
-				key == "AGENT_CA" || key == "AGENT_KEY" || key == "AGENT_CRT" || key == "GIT_AUTH_PULL" ||
-				key == "GIT_AUTH_PUSH" || key == "REGISTRY_AUTH_PULL" || key == "REGISTRY_AUTH_PUSH" {
-				// Sanitize any builtin templates that are sensitive
-				templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))].Sensitive = true
-			}
+		if key == "REGISTRY_SECRET" || key == "HTPASSWD" ||
+			key == "AGENT_CA" || key == "AGENT_KEY" || key == "AGENT_CRT" || key == "GIT_AUTH_PULL" ||
+			key == "GIT_AUTH_PUSH" || key == "REGISTRY_AUTH_PULL" || key == "REGISTRY_AUTH_PUSH" {
+			// Sanitize any builtin templates that are sensitive
+			templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))].Sensitive = true
 		}
 	}
 

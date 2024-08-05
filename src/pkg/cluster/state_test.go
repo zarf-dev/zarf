@@ -202,7 +202,7 @@ func TestInitZarfState(t *testing.T) {
 				}
 			}()
 
-			err := c.InitZarfState(ctx, tt.initOpts)
+			_, err := c.InitZarfState(ctx, tt.initOpts)
 			if tt.expectedErr != "" {
 				require.EqualError(t, err, tt.expectedErr)
 				return

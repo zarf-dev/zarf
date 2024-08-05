@@ -20,7 +20,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
@@ -43,6 +42,37 @@ var (
 	// localClusterServiceRegex is used to match the local cluster service format:
 	localClusterServiceRegex = regexp.MustCompile(`^(?P<name>[^\.]+)\.(?P<namespace>[^\.]+)\.svc\.cluster\.local$`)
 )
+
+func (p *Packager) getZarfState(ctx context.Context) (*types.ZarfState, error) {
+	err := p.cluster.CreateZarfNamespace(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if p.cfg.Pkg.IsInitConfig() {
+		state, err := p.cluster.InitZarfState(ctx, p.cfg.InitOpts)
+		if err != nil {
+			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
+		}
+		return state, nil
+	}
+	state, err := p.cluster.LoadZarfState(ctx)
+	// State does not have to exist when running in YOLO mode.
+	if kerrors.IsNotFound(err) && p.cfg.Pkg.Metadata.YOLO {
+		state := &types.ZarfState{
+			Distro: "YOLO",
+		}
+		return state, nil
+	}
+	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
+		return nil, err
+	}
+	if p.cfg.Pkg.Metadata.YOLO && state.Distro != "YOLO" {
+		message.Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
+			"This may cause issues if the package does not exclude any charts or manifests from the Zarf Agent using " +
+			"the pod or namespace label `zarf.dev/agent: ignore'.")
+	}
+	return state, nil
+}
 
 func (p *Packager) resetRegistryHPA(ctx context.Context) {
 	if p.isConnectedToCluster() && p.hpaModified {
@@ -143,6 +173,11 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 		p.generation = 1 // If this is the first deployment, set the generation to 1
 	}
 
+	state, err := p.getZarfState(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	// Process all the components we are deploying
 	for _, component := range p.cfg.Pkg.Components {
 		deployedComponent := types.DeployedComponent{
@@ -186,9 +221,9 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 		var charts []types.InstalledChart
 		var deployErr error
 		if p.cfg.Pkg.IsInitConfig() {
-			charts, deployErr = p.deployInitComponent(ctx, component)
+			charts, deployErr = p.deployInitComponent(ctx, state, component)
 		} else {
-			charts, deployErr = p.deployComponent(ctx, component, false /* keep img checksum */, false /* always push images */)
+			charts, deployErr = p.deployComponent(ctx, state, component, false, false)
 		}
 
 		onDeploy := component.Actions.OnDeploy
@@ -231,7 +266,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 	return deployedComponents, nil
 }
 
-func (p *Packager) deployInitComponent(ctx context.Context, component types.ZarfComponent) (charts []types.InstalledChart, err error) {
+func (p *Packager) deployInitComponent(ctx context.Context, state *types.ZarfState, component types.ZarfComponent) (charts []types.InstalledChart, err error) {
 	hasExternalRegistry := p.cfg.InitOpts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "zarf-seed-registry"
 	isRegistry := component.Name == "zarf-registry"
@@ -241,14 +276,6 @@ func (p *Packager) deployInitComponent(ctx context.Context, component types.Zarf
 
 	if isK3s {
 		p.cfg.InitOpts.ApplianceMode = true
-	}
-
-	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
-	if component.RequiresCluster() && p.state == nil {
-		err = p.cluster.InitZarfState(ctx, p.cfg.InitOpts)
-		if err != nil {
-			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
-		}
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
@@ -269,7 +296,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component types.Zarf
 		}
 	}
 
-	charts, err = p.deployComponent(ctx, component, isAgent /* skip img checksum if isAgent */, isSeedRegistry /* skip image push if isSeedRegistry */)
+	charts, err = p.deployComponent(ctx, state, component, isAgent, isSeedRegistry)
 	if err != nil {
 		return nil, err
 	}
@@ -285,7 +312,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component types.Zarf
 }
 
 // Deploy a Zarf Component.
-func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
+func (p *Packager) deployComponent(ctx context.Context, state *types.ZarfState, component types.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
 	// Toggles for general deploy operations
 	componentPath := p.layout.Components.Dirs[component.Name]
 
@@ -301,16 +328,8 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 	onDeploy := component.Actions.OnDeploy
 
 	if component.RequiresCluster() {
-		// Setup the state in the config
-		if p.state == nil {
-			err = p.setupState(ctx)
-			if err != nil {
-				return charts, err
-			}
-		}
-
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
-		if hasImages && !p.hpaModified && p.state.RegistryInfo.IsInternal() {
+		if hasImages && !p.hpaModified && state.RegistryInfo.IsInternal() {
 			if err := p.cluster.DisableRegHPAScaleDown(ctx); err != nil {
 				message.Debugf("unable to disable the registry HPA scale down: %s", err.Error())
 			} else {
@@ -319,7 +338,7 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 		}
 	}
 
-	err = p.populateComponentAndStateTemplates(component.Name)
+	err = p.populateComponentAndStateTemplates(component.Name, state.RegistryInfo, state.GitServer, state.AgentTLS, state.StorageClass)
 	if err != nil {
 		return charts, err
 	}
@@ -335,13 +354,13 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 	}
 
 	if hasImages {
-		if err := p.pushImagesToRegistry(ctx, component.Images, noImgChecksum); err != nil {
+		if err := p.pushImagesToRegistry(ctx, state.RegistryInfo, component.Images, noImgChecksum); err != nil {
 			return charts, fmt.Errorf("unable to push images to the registry: %w", err)
 		}
 	}
 
 	if hasRepos {
-		if err = p.pushReposToRepository(ctx, componentPath.Repos, component.Repos); err != nil {
+		if err = p.pushReposToRepository(ctx, state.GitServer, componentPath.Repos, component.Repos); err != nil {
 			return charts, fmt.Errorf("unable to push the repos to the repository: %w", err)
 		}
 	}
@@ -354,7 +373,7 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 	}
 
 	if hasCharts || hasManifests {
-		if charts, err = p.installChartAndManifests(ctx, componentPath, component); err != nil {
+		if charts, err = p.installChartAndManifests(ctx, state, componentPath, component); err != nil {
 			return charts, err
 		}
 	}
@@ -449,62 +468,8 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 	return nil
 }
 
-// setupState fetches the current ZarfState from the k8s cluster and sets the packager to use it
-func (p *Packager) setupState(ctx context.Context) (err error) {
-	// If we are touching K8s, make sure we can talk to it once per deployment
-	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
-	defer spinner.Stop()
-
-	state, err := p.cluster.LoadZarfState(ctx)
-	// We ignore the error if in YOLO mode because Zarf should not be initiated.
-	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
-		return err
-	}
-	// Only ignore state load error in yolo mode when secret could not be found.
-	if err != nil && !kerrors.IsNotFound(err) && p.cfg.Pkg.Metadata.YOLO {
-		return err
-	}
-	if state == nil && p.cfg.Pkg.Metadata.YOLO {
-		state = &types.ZarfState{}
-		// YOLO mode, so minimal state needed
-		state.Distro = "YOLO"
-
-		// Try to create the zarf namespace
-		spinner.Updatef("Creating the Zarf namespace")
-		zarfNamespace := cluster.NewZarfManagedNamespace(cluster.ZarfNamespaceName)
-		err := func() error {
-			_, err := p.cluster.Clientset.CoreV1().Namespaces().Create(ctx, zarfNamespace, metav1.CreateOptions{})
-			if err != nil && !kerrors.IsAlreadyExists(err) {
-				return err
-			}
-			if err == nil {
-				return nil
-			}
-			_, err = p.cluster.Clientset.CoreV1().Namespaces().Update(ctx, zarfNamespace, metav1.UpdateOptions{})
-			if err != nil {
-				return err
-			}
-			return nil
-		}()
-		if err != nil {
-			return fmt.Errorf("unable to create the Zarf namespace: %w", err)
-		}
-	}
-
-	if p.cfg.Pkg.Metadata.YOLO && state.Distro != "YOLO" {
-		message.Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
-			"This may cause issues if the package does not exclude any charts or manifests from the Zarf Agent using " +
-			"the pod or namespace label `zarf.dev/agent: ignore'.")
-	}
-
-	p.state = state
-
-	spinner.Success()
-	return nil
-}
-
-func (p *Packager) populateComponentAndStateTemplates(componentName string) error {
-	applicationTemplates, err := template.GetZarfTemplates(componentName, p.state)
+func (p *Packager) populateComponentAndStateTemplates(componentName string, regInfo types.RegistryInfo, gitInfo types.GitServerInfo, agentTLS types.GeneratedPKI, storageClass string) error {
+	applicationTemplates, err := template.GetZarfTemplates(componentName, regInfo, gitInfo, agentTLS, storageClass)
 	if err != nil {
 		return err
 	}
@@ -518,7 +483,7 @@ func (p *Packager) populatePackageVariableConfig() error {
 }
 
 // Push all of the components images to the configured container registry.
-func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []string, noImgChecksum bool) error {
+func (p *Packager) pushImagesToRegistry(ctx context.Context, regInfo types.RegistryInfo, componentImages []string, noImgChecksum bool) error {
 	var combinedImageList []transform.Image
 	for _, src := range componentImages {
 		ref, err := transform.ParseImageRef(src)
@@ -533,7 +498,7 @@ func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []s
 	pushCfg := images.PushConfig{
 		SourceDirectory: p.layout.Images.Base,
 		ImageList:       imageList,
-		RegInfo:         p.state.RegistryInfo,
+		RegInfo:         regInfo,
 		NoChecksum:      noImgChecksum,
 		Arch:            p.cfg.Pkg.Build.Architecture,
 		Retries:         p.cfg.PkgOpts.Retries,
@@ -543,7 +508,7 @@ func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []s
 }
 
 // Push all of the components git repos to the configured git server.
-func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, repos []string) error {
+func (p *Packager) pushReposToRepository(ctx context.Context, gitInfo types.GitServerInfo, reposPath string, repos []string) error {
 	for _, repoURL := range repos {
 		repository, err := git.Open(reposPath, repoURL)
 		if err != nil {
@@ -552,7 +517,7 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 
 		// Create an anonymous function to push the repo to the Zarf git server
 		tryPush := func() error {
-			namespace, name, port, err := serviceInfoFromServiceURL(p.state.GitServer.Address)
+			namespace, name, port, err := serviceInfoFromServiceURL(gitInfo.Address)
 
 			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
 			// TODO: Find a better way as ignoring the error is not a good solution to decide to port forward.
@@ -574,12 +539,12 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 					return err
 				}
 				defer tunnel.Close()
-				giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+				giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), gitInfo.PushUsername, gitInfo.PushPassword)
 				if err != nil {
 					return err
 				}
 				return tunnel.Wrap(func() error {
-					err = repository.Push(ctx, tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+					err = repository.Push(ctx, tunnel.HTTPEndpoint(), gitInfo.PushUsername, gitInfo.PushPassword)
 					if err != nil {
 						return err
 					}
@@ -588,7 +553,7 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 					if err != nil {
 						return err
 					}
-					err = giteaClient.AddReadOnlyUserToRepository(ctx, repoName, p.state.GitServer.PullUsername)
+					err = giteaClient.AddReadOnlyUserToRepository(ctx, repoName, gitInfo.PullUsername)
 					if err != nil {
 						return fmt.Errorf("unable to add the read only user to the repo %s: %w", repoName, err)
 					}
@@ -596,7 +561,7 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 				})
 			}
 
-			err = repository.Push(ctx, p.state.GitServer.Address, p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+			err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword)
 			if err != nil {
 				return err
 			}
@@ -639,7 +604,7 @@ func (p *Packager) generateValuesOverrides(chart types.ZarfChart, componentName 
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (p *Packager) installChartAndManifests(ctx context.Context, state *types.ZarfState, componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
 		// Do not wait for the chart to be ready if data injections are present.
 		if len(component.DataInjections) > 0 {
@@ -668,7 +633,7 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 			helm.WithDeployInfo(
 				p.cfg,
 				p.variableConfig,
-				p.state,
+				state,
 				p.cluster,
 				valuesOverrides,
 				p.cfg.DeployOpts.Timeout,
@@ -717,7 +682,7 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 			helm.WithDeployInfo(
 				p.cfg,
 				p.variableConfig,
-				p.state,
+				state,
 				p.cluster,
 				nil,
 				p.cfg.DeployOpts.Timeout,

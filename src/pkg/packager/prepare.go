@@ -109,13 +109,6 @@ func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, 
 	if err != nil {
 		return nil, err
 	}
-	artifactServer := types.ArtifactServerInfo{}
-	artifactServer.FillInEmptyValues()
-	p.state = &types.ZarfState{
-		RegistryInfo:   registryInfo,
-		GitServer:      gitServer,
-		ArtifactServer: artifactServer,
-	}
 
 	for _, component := range p.cfg.Pkg.Components {
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
@@ -156,7 +149,7 @@ func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, 
 		if err != nil {
 			return nil, err
 		}
-		err = p.populateComponentAndStateTemplates(component.Name)
+		err = p.populateComponentAndStateTemplates(component.Name, registryInfo, gitServer, types.GeneratedPKI{}, "")
 		if err != nil {
 			return nil, err
 		}
