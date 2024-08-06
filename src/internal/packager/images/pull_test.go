@@ -6,13 +6,66 @@ package images
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
+
+func TestCheckForIndex(t *testing.T) {
+	testData := []struct {
+		name        string
+		ref         string
+		file        string
+		expectedErr string
+	}{
+		{
+			name:        "valid image",
+			ref:         "ghcr.io/zarf-dev/zarf/agent:v0.32.6@sha256:05a82656df5466ce17c3e364c16792ae21ce68438bfe06eeab309d0520c16b48",
+			file:        "agent-index.json",
+			expectedErr: pullIndexShaErr,
+		},
+		{
+			name:        "invalid image",
+			ref:         "defenseunicorns/zarf-game@sha256:0b694ca1c33afae97b7471488e07968599f1d2470c629f76af67145ca64428af",
+			file:        "game-index.json",
+			expectedErr: pullIndexShaErr,
+		},
+	}
+
+	for _, tc := range testData {
+		t.Run(tc.name, func(t *testing.T) {
+			refInfo, err := transform.ParseImageRef(tc.ref)
+			require.NoError(t, err)
+			file := filepath.Join("testdata", tc.file)
+			agentIndex, err := os.ReadFile(file)
+			require.NoError(t, err)
+			var idx v1.IndexManifest
+			jsonErr := json.Unmarshal(agentIndex, &idx)
+			require.NoError(t, jsonErr)
+			desc := remote.Descriptor{
+				Descriptor: v1.Descriptor{
+					MediaType: idx.MediaType,
+				},
+				Manifest: agentIndex,
+			}
+			err = checkForIndex(refInfo, desc)
+			if err != nil {
+				require.ErrorContains(t, err, fmt.Errorf(tc.expectedErr, refInfo.Reference, "").Error())
+				// Ensure the error message contains the digest of the manifests the user can use
+				for _, manifest := range idx.Manifests {
+					require.ErrorContains(t, err, manifest.Digest.String())
+				}
+			}
+		})
+	}
+}
 
 func TestPull(t *testing.T) {
 	t.Run("pulling a cosign image is successful and doesn't add anything to the cache", func(t *testing.T) {

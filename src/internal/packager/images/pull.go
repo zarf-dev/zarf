@@ -40,6 +40,28 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var pullIndexShaErr = "%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s"
+
+func checkForIndex(refInfo transform.Image, desc remote.Descriptor) error {
+	if refInfo.Digest != "" && types.MediaType(desc.MediaType).IsIndex() {
+		var idx v1.IndexManifest
+		if err := json.Unmarshal(desc.Manifest, &idx); err != nil {
+			return fmt.Errorf("unable to unmarshal index.json: %w", err)
+		}
+		lines := []string{"The following images are available in the index:"}
+		name := refInfo.Name
+		if refInfo.Tag != "" {
+			name += ":" + refInfo.Tag
+		}
+		for _, desc := range idx.Manifests {
+			lines = append(lines, fmt.Sprintf("image - %s@%s with platform %s", name, desc.Digest.String(), desc.Platform.String()))
+		}
+		imageOptions := strings.Join(lines, "\n")
+		return fmt.Errorf(pullIndexShaErr, refInfo.Reference, imageOptions)
+	}
+	return nil
+}
+
 // Pull pulls all of the images from the given config.
 func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, error) {
 	var longer string
@@ -146,23 +168,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 				}
 			}
 
-			if refInfo.Digest != "" && desc != nil && types.MediaType(desc.MediaType).IsIndex() {
-				message.Warn("Zarf does not currently support direct consumption of OCI image indexes or Docker manifest lists")
-
-				var idx v1.IndexManifest
-				if err := json.Unmarshal(desc.Manifest, &idx); err != nil {
-					return fmt.Errorf("unable to unmarshal index manifest: %w", err)
-				}
-				lines := []string{"The following images are available in the index:"}
-				name := refInfo.Name
-				if refInfo.Tag != "" {
-					name += ":" + refInfo.Tag
-				}
-				for _, desc := range idx.Manifests {
-					lines = append(lines, fmt.Sprintf("\n(%s) %s@%s", desc.Platform, name, desc.Digest))
-				}
-				message.Warn(strings.Join(lines, "\n"))
-				return fmt.Errorf("%s resolved to an index, please select a specific platform to use", refInfo.Reference)
+			if err := checkForIndex(refInfo, *desc); err != nil {
+				return err
 			}
 
 			cacheImg, err := utils.OnlyHasImageLayers(img)
