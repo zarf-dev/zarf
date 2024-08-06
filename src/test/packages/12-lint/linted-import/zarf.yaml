@@ -19,5 +19,5 @@ components:
 
   - name: oci-games-url
     import:
-      url: oci://🦄/dos-games:1.0.0
+      url: oci://ghcr.io/zarf-dev/dos-games:1.0.0
       name: baseline

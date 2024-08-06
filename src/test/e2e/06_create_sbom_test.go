@@ -24,9 +24,9 @@ func TestCreateSBOM(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Creating SBOMs for 1 images and 0 components with files.")
 	// Test that the game package generates the SBOMs we expect (images only)
-	require.FileExists(t, filepath.Join(sbomPath, "dos-games", "sbom-viewer-docker.io_defenseunicorns_zarf-game_multi-tile-dark.html"))
+	require.FileExists(t, filepath.Join(sbomPath, "dos-games", "sbom-viewer-docker.io_defenseunicorns_zarf-game_0.0.1.html"))
 	require.FileExists(t, filepath.Join(sbomPath, "dos-games", "compare.html"))
-	require.FileExists(t, filepath.Join(sbomPath, "dos-games", "docker.io_defenseunicorns_zarf-game_multi-tile-dark.json"))
+	require.FileExists(t, filepath.Join(sbomPath, "dos-games", "docker.io_defenseunicorns_zarf-game_0.0.1.json"))
 
 	// Clean the SBOM path so it is force to be recreated
 	e2e.CleanFiles(sbomPath)
@@ -34,16 +34,16 @@ func TestCreateSBOM(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName, "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 	// Test that the game package generates the SBOMs we expect (images only)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-docker.io_defenseunicorns_zarf-game_multi-tile-dark.html"))
+	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-docker.io_defenseunicorns_zarf-game_0.0.1.html"))
 	require.NoError(t, err)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "compare.html"))
 	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "docker.io_defenseunicorns_zarf-game_multi-tile-dark.json"))
+	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "docker.io_defenseunicorns_zarf-game_0.0.1.json"))
 	require.NoError(t, err)
 
 	stdOut, _, err = e2e.Zarf(t, "package", "inspect", pkgName, "--list-images")
 	require.NoError(t, err)
-	require.Equal(t, "- defenseunicorns/zarf-game:multi-tile-dark\n", stdOut)
+	require.Equal(t, "- defenseunicorns/zarf-game:0.0.1\n", stdOut)
 
 	// Pull the current zarf binary version to find the corresponding init package
 	version, stdErr, err := e2e.Zarf(t, "version")
@@ -54,7 +54,7 @@ func TestCreateSBOM(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", initName, "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 	// Test that we preserve the filepath
-	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-docker.io_defenseunicorns_zarf-game_multi-tile-dark.html"))
+	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-docker.io_defenseunicorns_zarf-game_0.0.1.html"))
 	require.NoError(t, err)
 	// Test that the init package generates the SBOMs we expect (images + component files)
 	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-docker.io_gitea_gitea_1.21.5-rootless.html"))

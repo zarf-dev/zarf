@@ -13,4 +13,4 @@ components:
           - manifests/evil-deployment.yaml
           - manifests/service.yaml
     images:
-      - defenseunicorns/zarf-game:multi-tile-dark
+      - defenseunicorns/zarf-game:0.0.1
