@@ -9,17 +9,17 @@ import (
 
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // FetchZarfYAML fetches the zarf.yaml file from the remote repository.
-func (r *Remote) FetchZarfYAML(ctx context.Context) (pkg types.ZarfPackage, err error) {
+func (r *Remote) FetchZarfYAML(ctx context.Context) (pkg v1alpha1.ZarfPackage, err error) {
 	manifest, err := r.FetchRoot(ctx)
 	if err != nil {
 		return pkg, err
 	}
-	return oci.FetchYAMLFile[types.ZarfPackage](ctx, r.FetchLayer, manifest, layout.ZarfYAML)
+	return oci.FetchYAMLFile[v1alpha1.ZarfPackage](ctx, r.FetchLayer, manifest, layout.ZarfYAML)
 }
 
 // FetchImagesIndex fetches the images/index.json file from the remote repository.

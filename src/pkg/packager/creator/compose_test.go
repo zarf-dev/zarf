@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 func TestComposeComponents(t *testing.T) {
@@ -17,36 +17,36 @@ func TestComposeComponents(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		pkg         types.ZarfPackage
+		pkg         v1alpha1.ZarfPackage
 		flavor      string
-		expectedPkg types.ZarfPackage
+		expectedPkg v1alpha1.ZarfPackage
 		expectedErr string
 	}{
 		{
 			name: "filter by architecture match",
-			pkg: types.ZarfPackage{
-				Metadata: types.ZarfMetadata{Architecture: "amd64"},
-				Components: []types.ZarfComponent{
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Architecture: "amd64"},
+				Components: []v1alpha1.ZarfComponent{
 					{
 						Name: "component1",
-						Only: types.ZarfComponentOnlyTarget{
-							Cluster: types.ZarfComponentOnlyCluster{
+						Only: v1alpha1.ZarfComponentOnlyTarget{
+							Cluster: v1alpha1.ZarfComponentOnlyCluster{
 								Architecture: "amd64",
 							},
 						},
 					},
 					{
 						Name: "component2",
-						Only: types.ZarfComponentOnlyTarget{
-							Cluster: types.ZarfComponentOnlyCluster{
+						Only: v1alpha1.ZarfComponentOnlyTarget{
+							Cluster: v1alpha1.ZarfComponentOnlyCluster{
 								Architecture: "amd64",
 							},
 						},
 					},
 				},
 			},
-			expectedPkg: types.ZarfPackage{
-				Components: []types.ZarfComponent{
+			expectedPkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
 					{Name: "component1"},
 					{Name: "component2"},
 				},
@@ -55,29 +55,29 @@ func TestComposeComponents(t *testing.T) {
 		},
 		{
 			name: "filter by architecture mismatch",
-			pkg: types.ZarfPackage{
-				Metadata: types.ZarfMetadata{Architecture: "amd64"},
-				Components: []types.ZarfComponent{
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Architecture: "amd64"},
+				Components: []v1alpha1.ZarfComponent{
 					{
 						Name: "component1",
-						Only: types.ZarfComponentOnlyTarget{
-							Cluster: types.ZarfComponentOnlyCluster{
+						Only: v1alpha1.ZarfComponentOnlyTarget{
+							Cluster: v1alpha1.ZarfComponentOnlyCluster{
 								Architecture: "amd64",
 							},
 						},
 					},
 					{
 						Name: "component2",
-						Only: types.ZarfComponentOnlyTarget{
-							Cluster: types.ZarfComponentOnlyCluster{
+						Only: v1alpha1.ZarfComponentOnlyTarget{
+							Cluster: v1alpha1.ZarfComponentOnlyCluster{
 								Architecture: "arm64",
 							},
 						},
 					},
 				},
 			},
-			expectedPkg: types.ZarfPackage{
-				Components: []types.ZarfComponent{
+			expectedPkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
 					{Name: "component1"},
 				},
 			},
@@ -85,26 +85,26 @@ func TestComposeComponents(t *testing.T) {
 		},
 		{
 			name: "filter by flavor match",
-			pkg: types.ZarfPackage{
-				Metadata: types.ZarfMetadata{Architecture: "amd64"},
-				Components: []types.ZarfComponent{
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Architecture: "amd64"},
+				Components: []v1alpha1.ZarfComponent{
 					{
 						Name: "component1",
-						Only: types.ZarfComponentOnlyTarget{
+						Only: v1alpha1.ZarfComponentOnlyTarget{
 							Flavor: "default",
 						},
 					},
 					{
 						Name: "component2",
-						Only: types.ZarfComponentOnlyTarget{
+						Only: v1alpha1.ZarfComponentOnlyTarget{
 							Flavor: "default",
 						},
 					},
 				},
 			},
 			flavor: "default",
-			expectedPkg: types.ZarfPackage{
-				Components: []types.ZarfComponent{
+			expectedPkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
 					{Name: "component1"},
 					{Name: "component2"},
 				},
@@ -113,26 +113,26 @@ func TestComposeComponents(t *testing.T) {
 		},
 		{
 			name: "filter by flavor mismatch",
-			pkg: types.ZarfPackage{
-				Metadata: types.ZarfMetadata{Architecture: "amd64"},
-				Components: []types.ZarfComponent{
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Architecture: "amd64"},
+				Components: []v1alpha1.ZarfComponent{
 					{
 						Name: "component1",
-						Only: types.ZarfComponentOnlyTarget{
+						Only: v1alpha1.ZarfComponentOnlyTarget{
 							Flavor: "default",
 						},
 					},
 					{
 						Name: "component2",
-						Only: types.ZarfComponentOnlyTarget{
+						Only: v1alpha1.ZarfComponentOnlyTarget{
 							Flavor: "special",
 						},
 					},
 				},
 			},
 			flavor: "default",
-			expectedPkg: types.ZarfPackage{
-				Components: []types.ZarfComponent{
+			expectedPkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
 					{Name: "component1"},
 				},
 			},
@@ -140,18 +140,18 @@ func TestComposeComponents(t *testing.T) {
 		},
 		{
 			name: "no architecture set error",
-			pkg: types.ZarfPackage{
-				Components: []types.ZarfComponent{
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
 					{
 						Name: "component1",
-						Only: types.ZarfComponentOnlyTarget{
+						Only: v1alpha1.ZarfComponentOnlyTarget{
 							Flavor: "default",
 						},
 					},
 				},
 			},
 			flavor:      "default",
-			expectedPkg: types.ZarfPackage{},
+			expectedPkg: v1alpha1.ZarfPackage{},
 			expectedErr: "cannot build import chain: architecture must be provided",
 		},
 	}

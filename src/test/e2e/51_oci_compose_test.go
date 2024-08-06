@@ -15,10 +15,10 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 	"oras.land/oras-go/v2/registry"
 )
@@ -135,7 +135,7 @@ func (suite *SkeletonSuite) Test_2_FilePaths() {
 	}
 
 	for _, pkgTar := range pkgTars {
-		var pkg types.ZarfPackage
+		var pkg v1alpha1.ZarfPackage
 
 		unpacked := strings.TrimSuffix(pkgTar, ".tar.zst")
 		defer os.RemoveAll(unpacked)
@@ -184,7 +184,7 @@ func (suite *SkeletonSuite) DirOrFileExists(path string) {
 	suite.Falsef(invalid, "path specified does not exist: %s", path)
 }
 
-func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components []types.ZarfComponent, isSkeleton bool) {
+func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components []v1alpha1.ZarfComponent, isSkeleton bool) {
 	if isSkeleton {
 		suite.NoDirExists(filepath.Join(unpackedPath, "images"))
 		suite.NoDirExists(filepath.Join(unpackedPath, "sboms"))

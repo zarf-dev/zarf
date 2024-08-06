@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -23,7 +24,7 @@ var (
 
 // NewClusterSource creates a new cluster source.
 func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
-	if !types.IsLowercaseNumberHyphenNoStartHyphen(pkgOpts.PackageSource) {
+	if !v1alpha1.IsLowercaseNumberHyphenNoStartHyphen(pkgOpts.PackageSource) {
 		return nil, fmt.Errorf("invalid package name %q", pkgOpts.PackageSource)
 	}
 
@@ -46,8 +47,8 @@ type ClusterSource struct {
 // LoadPackage loads a package from a cluster.
 //
 // This is not implemented.
-func (s *ClusterSource) LoadPackage(_ context.Context, _ *layout.PackagePaths, _ filters.ComponentFilterStrategy, _ bool) (types.ZarfPackage, []string, error) {
-	return types.ZarfPackage{}, nil, fmt.Errorf("not implemented")
+func (s *ClusterSource) LoadPackage(_ context.Context, _ *layout.PackagePaths, _ filters.ComponentFilterStrategy, _ bool) (v1alpha1.ZarfPackage, []string, error) {
+	return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("not implemented")
 }
 
 // Collect collects a package from a cluster.
@@ -58,14 +59,14 @@ func (s *ClusterSource) Collect(_ context.Context, _ string) (string, error) {
 }
 
 // LoadPackageMetadata loads package metadata from a cluster.
-func (s *ClusterSource) LoadPackageMetadata(ctx context.Context, dst *layout.PackagePaths, _ bool, _ bool) (types.ZarfPackage, []string, error) {
+func (s *ClusterSource) LoadPackageMetadata(ctx context.Context, dst *layout.PackagePaths, _ bool, _ bool) (v1alpha1.ZarfPackage, []string, error) {
 	dpkg, err := s.GetDeployedPackage(ctx, s.PackageSource)
 	if err != nil {
-		return types.ZarfPackage{}, nil, err
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
 	if err := utils.WriteYaml(dst.ZarfYAML, dpkg.Data, helpers.ReadUser); err != nil {
-		return types.ZarfPackage{}, nil, err
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
 	return dpkg.Data, nil, nil

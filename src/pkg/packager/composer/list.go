@@ -11,18 +11,18 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/extensions/bigbang"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Node is a node in the import chain
 type Node struct {
-	types.ZarfComponent
+	v1alpha1.ZarfComponent
 
 	index int
 
@@ -95,7 +95,7 @@ func (ic *ImportChain) Tail() *Node {
 	return ic.tail
 }
 
-func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageName string,
+func (ic *ImportChain) append(c v1alpha1.ZarfComponent, index int, originalPackageName string,
 	relativeToHead string, vars []variables.InteractiveVariable, consts []variables.Constant) {
 	node := &Node{
 		ZarfComponent:       c,
@@ -120,7 +120,7 @@ func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageN
 
 // NewImportChain creates a new import chain from a component
 // Returning the chain on error so we can have additional information to use during lint
-func NewImportChain(ctx context.Context, head types.ZarfComponent, index int, originalPackageName, arch, flavor string) (*ImportChain, error) {
+func NewImportChain(ctx context.Context, head v1alpha1.ZarfComponent, index int, originalPackageName, arch, flavor string) (*ImportChain, error) {
 	ic := &ImportChain{}
 	if arch == "" {
 		return ic, fmt.Errorf("cannot build import chain: architecture must be provided")
@@ -155,7 +155,7 @@ func NewImportChain(ctx context.Context, head types.ZarfComponent, index int, or
 			return ic, fmt.Errorf("detected malformed import chain, cannot import local components from remote components")
 		}
 
-		var pkg types.ZarfPackage
+		var pkg v1alpha1.ZarfPackage
 
 		var relativeToHead string
 		var importURL string
@@ -193,7 +193,7 @@ func NewImportChain(ctx context.Context, head types.ZarfComponent, index int, or
 
 		// 'found' and 'index' are parallel slices. Each element in found[x] corresponds to pkg[index[x]]
 		// found[0] and pkg[index[0]] would be the same component for example
-		found := []types.ZarfComponent{}
+		found := []v1alpha1.ZarfComponent{}
 		index := []int{}
 		for i, component := range pkg.Components {
 			if component.Name == name && CompatibleComponent(component, arch, flavor) {
@@ -257,7 +257,7 @@ func (ic *ImportChain) String() string {
 }
 
 // Migrate performs migrations on the import chain
-func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
+func (ic *ImportChain) Migrate(build v1alpha1.ZarfBuildData) (warnings []string) {
 	node := ic.head
 	for node != nil {
 		migrated, w := deprecated.MigrateComponent(build, node.ZarfComponent)
@@ -274,7 +274,7 @@ func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 
 // Compose merges the import chain into a single component
 // fixing paths, overriding metadata, etc
-func (ic *ImportChain) Compose(ctx context.Context) (composed *types.ZarfComponent, err error) {
+func (ic *ImportChain) Compose(ctx context.Context) (composed *v1alpha1.ZarfComponent, err error) {
 	composed = &ic.tail.ZarfComponent
 
 	if ic.tail.prev == nil {
@@ -287,7 +287,7 @@ func (ic *ImportChain) Compose(ctx context.Context) (composed *types.ZarfCompone
 	}
 
 	// start with an empty component to compose into
-	composed = &types.ZarfComponent{}
+	composed = &v1alpha1.ZarfComponent{}
 
 	// start overriding with the tail node
 	node := ic.tail
@@ -347,7 +347,7 @@ func (ic *ImportChain) MergeConstants(existing []variables.Constant) (merged []v
 }
 
 // CompatibleComponent determines if this component is compatible with the given create options
-func CompatibleComponent(c types.ZarfComponent, arch, flavor string) bool {
+func CompatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
 	satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
 	satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor
 	return satisfiesArch && satisfiesFlavor

@@ -7,10 +7,10 @@ package composer
 import (
 	"fmt"
 
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
-func overrideMetadata(c *types.ZarfComponent, override types.ZarfComponent) error {
+func overrideMetadata(c *v1alpha1.ZarfComponent, override v1alpha1.ZarfComponent) error {
 	c.Name = override.Name
 	c.Default = override.Default
 	c.Required = override.Required
@@ -31,7 +31,7 @@ func overrideMetadata(c *types.ZarfComponent, override types.ZarfComponent) erro
 	return nil
 }
 
-func overrideDeprecated(c *types.ZarfComponent, override types.ZarfComponent) {
+func overrideDeprecated(c *v1alpha1.ZarfComponent, override v1alpha1.ZarfComponent) {
 	// Override cosign key path if it was provided.
 	if override.DeprecatedCosignKeyPath != "" {
 		c.DeprecatedCosignKeyPath = override.DeprecatedCosignKeyPath
@@ -54,7 +54,7 @@ func overrideDeprecated(c *types.ZarfComponent, override types.ZarfComponent) {
 	}
 }
 
-func overrideActions(c *types.ZarfComponent, override types.ZarfComponent) {
+func overrideActions(c *v1alpha1.ZarfComponent, override v1alpha1.ZarfComponent) {
 	// Merge create actions.
 	c.Actions.OnCreate.Defaults = override.Actions.OnCreate.Defaults
 	c.Actions.OnCreate.Before = append(c.Actions.OnCreate.Before, override.Actions.OnCreate.Before...)
@@ -77,7 +77,7 @@ func overrideActions(c *types.ZarfComponent, override types.ZarfComponent) {
 	c.Actions.OnRemove.OnSuccess = append(c.Actions.OnRemove.OnSuccess, override.Actions.OnRemove.OnSuccess...)
 }
 
-func overrideResources(c *types.ZarfComponent, override types.ZarfComponent) {
+func overrideResources(c *v1alpha1.ZarfComponent, override v1alpha1.ZarfComponent) {
 	c.DataInjections = append(c.DataInjections, override.DataInjections...)
 	c.Files = append(c.Files, override.Files...)
 	c.Images = append(c.Images, override.Images...)

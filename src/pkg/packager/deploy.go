@@ -24,6 +24,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
@@ -232,7 +233,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 	return deployedComponents, nil
 }
 
-func (p *Packager) deployInitComponent(ctx context.Context, component types.ZarfComponent) (charts []types.InstalledChart, err error) {
+func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.ZarfComponent) (charts []types.InstalledChart, err error) {
 	hasExternalRegistry := p.cfg.InitOpts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "zarf-seed-registry"
 	isRegistry := component.Name == "zarf-registry"
@@ -286,7 +287,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component types.Zarf
 }
 
 // Deploy a Zarf Component.
-func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
+func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool) (charts []types.InstalledChart, err error) {
 	// Toggles for general deploy operations
 	componentPath := p.layout.Components.Dirs[component.Name]
 
@@ -372,7 +373,7 @@ func (p *Packager) deployComponent(ctx context.Context, component types.ZarfComp
 }
 
 // Move files onto the host of the machine performing the deployment.
-func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocation string) error {
+func (p *Packager) processComponentFiles(component v1alpha1.ZarfComponent, pkgLocation string) error {
 	spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
 	defer spinner.Stop()
 
@@ -614,7 +615,7 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 
 // generateValuesOverrides creates a map containing overrides for chart values based on the chart and component
 // Specifically it merges DeployOpts.ValuesOverridesMap over Zarf `variables` for a given component/chart combination
-func (p *Packager) generateValuesOverrides(chart types.ZarfChart, componentName string) (map[string]any, error) {
+func (p *Packager) generateValuesOverrides(chart v1alpha1.ZarfChart, componentName string) (map[string]any, error) {
 	valuesOverrides := make(map[string]any)
 	chartOverrides := make(map[string]any)
 
@@ -640,7 +641,7 @@ func (p *Packager) generateValuesOverrides(chart types.ZarfChart, componentName 
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths *layout.ComponentPaths, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths *layout.ComponentPaths, component v1alpha1.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	for _, chart := range component.Charts {
 		// Do not wait for the chart to be ready if data injections are present.
 		if len(component.DataInjections) > 0 {

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package types contains all the types used by Zarf.
-package types
+// Package v1alpha1 holds the definition of the v1alpha1 Zarf Package
+package v1alpha1
 
 import (
 	"fmt"

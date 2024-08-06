@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -27,7 +28,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 	type testCase struct {
 		name            string
 		deployedPackage *types.DeployedPackage
-		component       types.ZarfComponent
+		component       v1alpha1.ZarfComponent
 		skipWebhooks    bool
 		needsWait       bool
 		waitSeconds     int
@@ -43,7 +44,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:      "NoWebhooks",
-			component: types.ZarfComponent{Name: componentName},
+			component: v1alpha1.ZarfComponent{Name: componentName},
 			deployedPackage: &types.DeployedPackage{
 				Name:              packageName,
 				ComponentWebhooks: map[string]map[string]types.Webhook{},
@@ -54,7 +55,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:      "WebhookRunning",
-			component: types.ZarfComponent{Name: componentName},
+			component: v1alpha1.ZarfComponent{Name: componentName},
 			deployedPackage: &types.DeployedPackage{
 				Name: packageName,
 				ComponentWebhooks: map[string]map[string]types.Webhook{
@@ -73,7 +74,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		// Ensure we only wait on running webhooks for the provided component
 		{
 			name:      "WebhookRunningOnDifferentComponent",
-			component: types.ZarfComponent{Name: componentName},
+			component: v1alpha1.ZarfComponent{Name: componentName},
 			deployedPackage: &types.DeployedPackage{
 				Name: packageName,
 				ComponentWebhooks: map[string]map[string]types.Webhook{
@@ -91,7 +92,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:      "WebhookSucceeded",
-			component: types.ZarfComponent{Name: componentName},
+			component: v1alpha1.ZarfComponent{Name: componentName},
 			deployedPackage: &types.DeployedPackage{
 				Name: packageName,
 				ComponentWebhooks: map[string]map[string]types.Webhook{
@@ -108,7 +109,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:      "WebhookFailed",
-			component: types.ZarfComponent{Name: componentName},
+			component: v1alpha1.ZarfComponent{Name: componentName},
 			deployedPackage: &types.DeployedPackage{
 				Name: packageName,
 				ComponentWebhooks: map[string]map[string]types.Webhook{
@@ -125,7 +126,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:      "WebhookRemoving",
-			component: types.ZarfComponent{Name: componentName},
+			component: v1alpha1.ZarfComponent{Name: componentName},
 			deployedPackage: &types.DeployedPackage{
 				Name: packageName,
 				ComponentWebhooks: map[string]map[string]types.Webhook{
@@ -142,11 +143,11 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:      "SkipWaitForYOLO",
-			component: types.ZarfComponent{Name: componentName},
+			component: v1alpha1.ZarfComponent{Name: componentName},
 			deployedPackage: &types.DeployedPackage{
 				Name: packageName,
-				Data: types.ZarfPackage{
-					Metadata: types.ZarfMetadata{
+				Data: v1alpha1.ZarfPackage{
+					Metadata: v1alpha1.ZarfMetadata{
 						YOLO: true,
 					},
 				},
@@ -165,7 +166,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:         "SkipWebhooksFlagUsed",
-			component:    types.ZarfComponent{Name: componentName},
+			component:    v1alpha1.ZarfComponent{Name: componentName},
 			skipWebhooks: true,
 			deployedPackage: &types.DeployedPackage{
 				Name: packageName,

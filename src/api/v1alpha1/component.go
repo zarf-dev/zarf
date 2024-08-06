@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package types contains all the types used by Zarf.
-package types
+// Package v1alpha1 holds the definition of the v1alpha1 Zarf Package
+package v1alpha1
 
 import (
 	"github.com/invopop/jsonschema"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"github.com/zarf-dev/zarf/src/types/extensions"
 )
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
