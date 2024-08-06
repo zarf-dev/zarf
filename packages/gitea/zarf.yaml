@@ -59,7 +59,7 @@ components:
       - name: gitea
         releaseName: zarf-gitea
         url: https://dl.gitea.io/charts
-        version: 10.1.1
+        version: 10.4.0
         namespace: zarf
         valuesFiles:
           - gitea-values.yaml
