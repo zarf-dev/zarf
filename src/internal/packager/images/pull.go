@@ -42,8 +42,8 @@ import (
 
 var pullIndexShaErr = "%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s"
 
-func checkForIndex(refInfo transform.Image, desc remote.Descriptor) error {
-	if refInfo.Digest != "" && types.MediaType(desc.MediaType).IsIndex() {
+func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
+	if refInfo.Digest != "" && desc != nil && types.MediaType(desc.MediaType).IsIndex() {
 		var idx v1.IndexManifest
 		if err := json.Unmarshal(desc.Manifest, &idx); err != nil {
 			return fmt.Errorf("unable to unmarshal index.json: %w", err)
@@ -168,7 +168,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 				}
 			}
 
-			if err := checkForIndex(refInfo, *desc); err != nil {
+			if err := checkForIndex(refInfo, desc); err != nil {
 				return err
 			}
 

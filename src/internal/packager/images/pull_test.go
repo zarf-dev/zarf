@@ -63,7 +63,7 @@ func TestCheckForIndex(t *testing.T) {
 			var idx v1.IndexManifest
 			jsonErr := json.Unmarshal(manifest, &idx)
 			require.NoError(t, jsonErr)
-			desc := remote.Descriptor{
+			desc := &remote.Descriptor{
 				Descriptor: v1.Descriptor{
 					MediaType: idx.MediaType,
 				},
