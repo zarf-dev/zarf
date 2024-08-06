@@ -43,7 +43,11 @@ var agentCmd = &cobra.Command{
 	Short: lang.CmdInternalAgentShort,
 	Long:  lang.CmdInternalAgentLong,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		return agent.StartWebhook(cmd.Context())
+		cluster, err := cluster.NewCluster()
+		if err != nil {
+			return err
+		}
+		return agent.StartWebhook(cmd.Context(), cluster)
 	},
 }
 
@@ -52,7 +56,11 @@ var httpProxyCmd = &cobra.Command{
 	Short: lang.CmdInternalProxyShort,
 	Long:  lang.CmdInternalProxyLong,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		return agent.StartHTTPProxy(cmd.Context())
+		cluster, err := cluster.NewCluster()
+		if err != nil {
+			return err
+		}
+		return agent.StartHTTPProxy(cmd.Context(), cluster)
 	},
 }
 

@@ -611,7 +611,6 @@ const (
 	AgentErrMarshallJSONPatch      = "unable to marshall the json patch"
 	AgentErrMarshalResponse        = "unable to marshal the response"
 	AgentErrNilReq                 = "malformed admission review: request is nil"
-	AgentErrUnableTransform        = "unable to transform the provided request; see zarf http proxy logs for more details"
 )
 
 // Package create
