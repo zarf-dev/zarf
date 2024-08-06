@@ -407,7 +407,7 @@ func (p *Packager) processComponentFiles(component types.ZarfComponent, pkgLocat
 			// Check if the file looks like a text file
 			isText, err := helpers.IsTextFile(subFile)
 			if err != nil {
-				message.Debugf("unable to determine if file %s is a text file: %s", subFile, err)
+				return err
 			}
 
 			// If the file is a text file, template it

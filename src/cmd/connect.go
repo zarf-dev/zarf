@@ -65,7 +65,7 @@ var connectCmd = &cobra.Command{
 		} else {
 			spinner.Updatef(lang.CmdConnectEstablishedWeb, tunnel.FullURL())
 			if err := exec.LaunchURL(tunnel.FullURL()); err != nil {
-				message.Debug(err)
+				return err
 			}
 		}
 
