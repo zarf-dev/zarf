@@ -4,6 +4,8 @@
 // Package types contains all the types used by Zarf.
 package types
 
+import "github.com/zarf-dev/zarf/src/api/v1alpha1"
+
 // PackagerConfig is the main struct that the packager uses to hold high-level options.
 type PackagerConfig struct {
 	// CreateOpts tracks the user-defined options used to create the package
@@ -37,5 +39,5 @@ type PackagerConfig struct {
 	GenerateOpts ZarfGenerateOptions
 
 	// The package data
-	Pkg ZarfPackage
+	Pkg v1alpha1.ZarfPackage
 }

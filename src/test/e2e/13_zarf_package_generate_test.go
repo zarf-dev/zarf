@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestZarfDevGenerate(t *testing.T) {
@@ -27,7 +27,7 @@ func TestZarfDevGenerate(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "dev", "generate", "podinfo", "--url", url, "--version", version, "--gitPath", gitPath, "--output-directory", tmpDir)
 		require.NoError(t, err, stdOut, stdErr)
 
-		zarfPackage := types.ZarfPackage{}
+		zarfPackage := v1alpha1.ZarfPackage{}
 		packageLocation := filepath.Join(tmpDir, layout.ZarfYAML)
 		err = utils.ReadYaml(packageLocation, &zarfPackage)
 		require.NoError(t, err)

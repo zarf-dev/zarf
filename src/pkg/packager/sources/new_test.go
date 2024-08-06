@@ -17,6 +17,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/types"
@@ -117,7 +118,7 @@ func TestPackageSource(t *testing.T) {
 
 	b, err := os.ReadFile("./testdata/expected-pkg.json")
 	require.NoError(t, err)
-	expectedPkg := types.ZarfPackage{}
+	expectedPkg := v1alpha1.ZarfPackage{}
 	err = json.Unmarshal(b, &expectedPkg)
 	require.NoError(t, err)
 

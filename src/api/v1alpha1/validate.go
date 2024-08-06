@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package types contains all the types used by Zarf.
-package types
+// Package v1alpha1 holds the definition of the v1alpha1 Zarf Package
+package v1alpha1
 
 import (
 	"errors"
@@ -16,11 +16,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
+// Zarf looks for these strings in zarf.yaml to make dynamic changes
 const (
-	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
-	ZarfMaxChartNameLength     = 40
-	errChartReleaseNameEmpty   = "release name empty, unable to fallback to chart name"
-	errChartReleaseNameInvalid = "invalid release name %s: a DNS-1035 label must consist of lower case alphanumeric characters or -, start with an alphabetic character, and end with an alphanumeric character"
+	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
+	ZarfPackageVariablePrefix = "###ZARF_PKG_VAR_"
+	ZarfPackageArch           = "###ZARF_PKG_ARCH###"
+	ZarfComponentName         = "###ZARF_COMPONENT_NAME###"
 )
 
 var (
@@ -40,6 +41,12 @@ var (
 func SupportedOS() []string {
 	return supportedOS
 }
+
+const (
+	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
+	ZarfMaxChartNameLength   = 40
+	errChartReleaseNameEmpty = "release name empty, unable to fallback to chart name"
+)
 
 // Validate runs all validation checks on the package.
 func (pkg ZarfPackage) Validate() error {

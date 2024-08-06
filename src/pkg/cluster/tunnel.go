@@ -47,24 +47,12 @@ const (
 
 // TunnelInfo is a struct that contains the necessary info to create a new Tunnel
 type TunnelInfo struct {
-	localPort    int
-	remotePort   int
-	namespace    string
-	resourceType string
-	resourceName string
+	LocalPort    int
+	RemotePort   int
+	Namespace    string
+	ResourceType string
+	ResourceName string
 	urlSuffix    string
-}
-
-// NewTunnelInfo returns a new TunnelInfo object for connecting to a cluster
-func NewTunnelInfo(namespace, resourceType, resourceName, urlSuffix string, localPort, remotePort int) TunnelInfo {
-	return TunnelInfo{
-		namespace:    namespace,
-		resourceType: resourceType,
-		resourceName: resourceName,
-		urlSuffix:    urlSuffix,
-		localPort:    localPort,
-		remotePort:   remotePort,
-	}
 }
 
 // ListConnections will return a list of all Zarf connect matches found in the cluster.
@@ -93,44 +81,53 @@ func (c *Cluster) ListConnections(ctx context.Context) (types.ConnectStrings, er
 	return connections, nil
 }
 
-// Connect will establish a tunnel to the specified target.
-func (c *Cluster) Connect(ctx context.Context, target string) (*Tunnel, error) {
+// NewTargetTunnelInfo returns a new TunnelInfo object for the specified target.
+func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (TunnelInfo, error) {
 	var err error
 	zt := TunnelInfo{
-		namespace:    ZarfNamespaceName,
-		resourceType: SvcResource,
+		Namespace:    ZarfNamespaceName,
+		ResourceType: SvcResource,
 	}
 
 	switch strings.ToUpper(target) {
 	case ZarfRegistry:
-		zt.resourceName = ZarfRegistryName
-		zt.remotePort = ZarfRegistryPort
+		zt.ResourceName = ZarfRegistryName
+		zt.RemotePort = ZarfRegistryPort
 		zt.urlSuffix = `/v2/_catalog`
 	case ZarfGit:
-		zt.resourceName = ZarfGitServerName
-		zt.remotePort = ZarfGitServerPort
+		zt.ResourceName = ZarfGitServerName
+		zt.RemotePort = ZarfGitServerPort
 	case ZarfInjector:
-		zt.resourceName = ZarfInjectorName
-		zt.remotePort = ZarfInjectorPort
+		zt.ResourceName = ZarfInjectorName
+		zt.RemotePort = ZarfInjectorPort
 	default:
 		if target != "" {
 			if zt, err = c.checkForZarfConnectLabel(ctx, target); err != nil {
-				return nil, fmt.Errorf("problem looking for a zarf connect label in the cluster: %s", err.Error())
+				return TunnelInfo{}, fmt.Errorf("problem looking for a zarf connect label in the cluster: %s", err.Error())
 			}
 		}
-		if zt.resourceName == "" {
-			return nil, fmt.Errorf("missing resource name")
+		if zt.ResourceName == "" {
+			return TunnelInfo{}, fmt.Errorf("missing resource name")
 		}
-		if zt.remotePort < 1 {
-			return nil, fmt.Errorf("missing remote port")
+		if zt.RemotePort < 1 {
+			return TunnelInfo{}, fmt.Errorf("missing remote port")
 		}
+	}
+	return zt, err
+}
+
+// Connect will establish a tunnel to the specified target.
+func (c *Cluster) Connect(ctx context.Context, target string) (*Tunnel, error) {
+	zt, err := c.NewTargetTunnelInfo(ctx, target)
+	if err != nil {
+		return nil, err
 	}
 	return c.ConnectTunnelInfo(ctx, zt)
 }
 
 // ConnectTunnelInfo connects to the cluster with the provided TunnelInfo
 func (c *Cluster) ConnectTunnelInfo(ctx context.Context, zt TunnelInfo) (*Tunnel, error) {
-	tunnel, err := c.NewTunnel(zt.namespace, zt.resourceType, zt.resourceName, zt.urlSuffix, zt.localPort, zt.remotePort)
+	tunnel, err := c.NewTunnel(zt.Namespace, zt.ResourceType, zt.ResourceName, zt.urlSuffix, zt.LocalPort, zt.RemotePort)
 	if err != nil {
 		return nil, err
 	}
@@ -204,25 +201,25 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 		svc := serviceList.Items[0]
 
 		// Reset based on the matched params.
-		zt.resourceType = SvcResource
-		zt.resourceName = svc.Name
-		zt.namespace = svc.Namespace
+		zt.ResourceType = SvcResource
+		zt.ResourceName = svc.Name
+		zt.Namespace = svc.Namespace
 		// Only support a service with a single port.
-		zt.remotePort = svc.Spec.Ports[0].TargetPort.IntValue()
+		zt.RemotePort = svc.Spec.Ports[0].TargetPort.IntValue()
 		// if targetPort == 0, look for Port (which is required)
-		if zt.remotePort == 0 {
+		if zt.RemotePort == 0 {
 			// TODO: Need a check for if container port is not found
 			remotePort, err := c.findPodContainerPort(ctx, svc)
 			if err != nil {
 				return TunnelInfo{}, err
 			}
-			zt.remotePort = remotePort
+			zt.RemotePort = remotePort
 		}
 
 		// Add the url suffix too.
 		zt.urlSuffix = svc.Annotations[ZarfConnectAnnotationURL]
 
-		message.Debugf("tunnel connection match: %s/%s on port %d", svc.Namespace, svc.Name, zt.remotePort)
+		message.Debugf("tunnel connection match: %s/%s on port %d", svc.Namespace, svc.Name, zt.RemotePort)
 	} else {
 		return zt, fmt.Errorf("no matching services found for %s", name)
 	}

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
@@ -25,7 +26,7 @@ func Validate(ctx context.Context, createOpts types.ZarfCreateOptions) error {
 	if err := os.Chdir(createOpts.BaseDir); err != nil {
 		return fmt.Errorf("unable to access directory %q: %w", createOpts.BaseDir, err)
 	}
-	var pkg types.ZarfPackage
+	var pkg v1alpha1.ZarfPackage
 	if err := utils.ReadYaml(layout.ZarfYAML, &pkg); err != nil {
 		return err
 	}
@@ -52,7 +53,7 @@ func Validate(ctx context.Context, createOpts types.ZarfCreateOptions) error {
 	return nil
 }
 
-func lintComponents(ctx context.Context, pkg types.ZarfPackage, createOpts types.ZarfCreateOptions) ([]PackageFinding, error) {
+func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, createOpts types.ZarfCreateOptions) ([]PackageFinding, error) {
 	var findings []PackageFinding
 
 	for i, component := range pkg.Components {
@@ -86,7 +87,7 @@ func lintComponents(ctx context.Context, pkg types.ZarfPackage, createOpts types
 	return findings, nil
 }
 
-func fillComponentTemplate(c *types.ZarfComponent, createOpts types.ZarfCreateOptions) ([]PackageFinding, error) {
+func fillComponentTemplate(c *v1alpha1.ZarfComponent, createOpts types.ZarfCreateOptions) ([]PackageFinding, error) {
 	var findings []PackageFinding
 	templateMap := map[string]string{}
 
@@ -120,12 +121,12 @@ func fillComponentTemplate(c *types.ZarfComponent, createOpts types.ZarfCreateOp
 		return nil
 	}
 
-	if err := setVarsAndWarn(types.ZarfPackageTemplatePrefix, false); err != nil {
+	if err := setVarsAndWarn(v1alpha1.ZarfPackageTemplatePrefix, false); err != nil {
 		return nil, err
 	}
 
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
-	if err := setVarsAndWarn(types.ZarfPackageVariablePrefix, true); err != nil {
+	if err := setVarsAndWarn(v1alpha1.ZarfPackageVariablePrefix, true); err != nil {
 		return nil, err
 	}
 

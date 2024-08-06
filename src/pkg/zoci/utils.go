@@ -10,12 +10,12 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"oras.land/oras-go/v2/registry"
 )
 
 // ReferenceFromMetadata returns a reference for the given metadata.
-func ReferenceFromMetadata(registryLocation string, metadata *types.ZarfMetadata, build *types.ZarfBuildData) (string, error) {
+func ReferenceFromMetadata(registryLocation string, metadata *v1alpha1.ZarfMetadata, build *v1alpha1.ZarfBuildData) (string, error) {
 	ver := metadata.Version
 	if len(ver) == 0 {
 		return "", errors.New("version is required for publishing")

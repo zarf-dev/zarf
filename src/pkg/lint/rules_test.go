@@ -9,13 +9,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 func TestUnpinnedRepo(t *testing.T) {
 	t.Parallel()
 	unpinnedRepo := "https://github.com/zarf-dev/zarf-public-test.git"
-	component := types.ZarfComponent{Repos: []string{
+	component := v1alpha1.ZarfComponent{Repos: []string{
 		unpinnedRepo,
 		"https://dev.azure.com/zarf-dev/zarf-public-test/_git/zarf-public-test@v0.0.1",
 	}}
@@ -37,7 +37,7 @@ func TestUnpinnedImageWarning(t *testing.T) {
 	badImage := "badimage:badimage@@sha256:3fbc632167424a6d997e74f5"
 	cosignSignature := "ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig"
 	cosignAttestation := "ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.att"
-	component := types.ZarfComponent{Images: []string{
+	component := v1alpha1.ZarfComponent{Images: []string{
 		unpinnedImage,
 		"busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
 		badImage,
@@ -66,7 +66,7 @@ func TestUnpinnnedFileWarning(t *testing.T) {
 	t.Parallel()
 	fileURL := "http://example.com/file.zip"
 	localFile := "local.txt"
-	zarfFiles := []types.ZarfFile{
+	zarfFiles := []v1alpha1.ZarfFile{
 		{
 			Source: fileURL,
 		},
@@ -78,7 +78,7 @@ func TestUnpinnnedFileWarning(t *testing.T) {
 			Shasum: "fake-shasum",
 		},
 	}
-	component := types.ZarfComponent{Files: zarfFiles}
+	component := v1alpha1.ZarfComponent{Files: zarfFiles}
 	findings := checkForUnpinnedFiles(component, 0)
 	expected := []PackageFinding{
 		{

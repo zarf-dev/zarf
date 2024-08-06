@@ -11,8 +11,8 @@ import (
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestZarfSchema(t *testing.T) {
@@ -22,17 +22,18 @@ func TestZarfSchema(t *testing.T) {
 
 	tests := []struct {
 		name                  string
-		pkg                   types.ZarfPackage
+		pkg                   v1alpha1.ZarfPackage
 		expectedSchemaStrings []string
 	}{
 		{
 			name: "valid package",
-			pkg: types.ZarfPackage{
-				Kind: types.ZarfInitConfig,
-				Metadata: types.ZarfMetadata{
+			pkg: v1alpha1.ZarfPackage{
+				ApiVersion: v1alpha1.ApiVersion,
+				Kind:       v1alpha1.ZarfInitConfig,
+				Metadata: v1alpha1.ZarfMetadata{
 					Name: "valid-name",
 				},
-				Components: []types.ZarfComponent{
+				Components: []v1alpha1.ZarfComponent{
 					{
 						Name: "valid-comp",
 					},
@@ -42,11 +43,11 @@ func TestZarfSchema(t *testing.T) {
 		},
 		{
 			name: "no comp or kind",
-			pkg: types.ZarfPackage{
-				Metadata: types.ZarfMetadata{
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{
 					Name: "no-comp-or-kind",
 				},
-				Components: []types.ZarfComponent{},
+				Components: []v1alpha1.ZarfComponent{},
 			},
 			expectedSchemaStrings: []string{
 				"kind: kind must be one of the following: \"ZarfInitConfig\", \"ZarfPackageConfig\"",
@@ -55,35 +56,36 @@ func TestZarfSchema(t *testing.T) {
 		},
 		{
 			name: "invalid package",
-			pkg: types.ZarfPackage{
-				Kind: types.ZarfInitConfig,
-				Metadata: types.ZarfMetadata{
+			pkg: v1alpha1.ZarfPackage{
+				ApiVersion: "bad-api-version/wrong",
+				Kind:       v1alpha1.ZarfInitConfig,
+				Metadata: v1alpha1.ZarfMetadata{
 					Name: "-invalid-name",
 				},
-				Components: []types.ZarfComponent{
+				Components: []v1alpha1.ZarfComponent{
 					{
 						Name: "invalid-name",
-						Only: types.ZarfComponentOnlyTarget{
+						Only: v1alpha1.ZarfComponentOnlyTarget{
 							LocalOS: "unsupportedOS",
 						},
-						Import: types.ZarfComponentImport{
-							Path: fmt.Sprintf("start%send", types.ZarfPackageTemplatePrefix),
-							URL:  fmt.Sprintf("oci://start%send", types.ZarfPackageTemplatePrefix),
+						Import: v1alpha1.ZarfComponentImport{
+							Path: fmt.Sprintf("start%send", v1alpha1.ZarfPackageTemplatePrefix),
+							URL:  fmt.Sprintf("oci://start%send", v1alpha1.ZarfPackageTemplatePrefix),
 						},
 					},
 					{
 						Name: "actions",
-						Actions: types.ZarfComponentActions{
-							OnCreate: types.ZarfComponentActionSet{
-								Before: []types.ZarfComponentAction{
+						Actions: v1alpha1.ZarfComponentActions{
+							OnCreate: v1alpha1.ZarfComponentActionSet{
+								Before: []v1alpha1.ZarfComponentAction{
 									{
 										Cmd:          "echo 'invalid setVariable'",
 										SetVariables: []variables.Variable{{Name: "not_uppercase"}},
 									},
 								},
 							},
-							OnRemove: types.ZarfComponentActionSet{
-								OnSuccess: []types.ZarfComponentAction{
+							OnRemove: v1alpha1.ZarfComponentActionSet{
+								OnSuccess: []v1alpha1.ZarfComponentAction{
 									{
 										Cmd:          "echo 'invalid setVariable'",
 										SetVariables: []variables.Variable{{Name: "not_uppercase"}},
@@ -113,6 +115,7 @@ func TestZarfSchema(t *testing.T) {
 				"components.1.actions.onRemove.onSuccess.0.setVariables.0.name: Does not match pattern '^[A-Z0-9_]+$'",
 				"components.0.import.path: Must not validate the schema (not)",
 				"components.0.import.url: Must not validate the schema (not)",
+				"apiVersion: apiVersion must be one of the following: \"zarf.dev/v1alpha1\"",
 			},
 		},
 	}
@@ -170,9 +173,9 @@ components:
 
 	t.Run("test schema findings is created as expected", func(t *testing.T) {
 		t.Parallel()
-		findings, err := getSchemaFindings(zarfSchema, types.ZarfPackage{
-			Kind: types.ZarfInitConfig,
-			Metadata: types.ZarfMetadata{
+		findings, err := getSchemaFindings(zarfSchema, v1alpha1.ZarfPackage{
+			Kind: v1alpha1.ZarfInitConfig,
+			Metadata: v1alpha1.ZarfMetadata{
 				Name: "invalid",
 			},
 		})

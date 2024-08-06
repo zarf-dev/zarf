@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/mholt/archiver/v3"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -34,7 +35,7 @@ type OCISource struct {
 }
 
 // LoadPackage loads a package from an OCI registry.
-func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
+func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
 	pkg, err = s.FetchZarfYAML(ctx)
 	if err != nil {
 		return pkg, nil, err
@@ -108,7 +109,7 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 }
 
 // LoadPackageMetadata loads a package's metadata from an OCI registry.
-func (s *OCISource) LoadPackageMetadata(ctx context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
+func (s *OCISource) LoadPackageMetadata(ctx context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
 	toPull := zoci.PackageAlwaysPull
 	if wantSBOM {
 		toPull = append(toPull, layout.SBOMTar)
@@ -174,7 +175,7 @@ func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 	loaded := layout.New(tmp)
 	loaded.SetFromLayers(fetched)
 
-	var pkg types.ZarfPackage
+	var pkg v1alpha1.ZarfPackage
 
 	if err := utils.ReadYaml(loaded.ZarfYAML, &pkg); err != nil {
 		return "", err

@@ -7,14 +7,14 @@ package deprecated
 import (
 	"fmt"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
-func migrateSetVariableToSetVariables(c types.ZarfComponent) (types.ZarfComponent, string) {
+func migrateSetVariableToSetVariables(c v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, string) {
 	hasSetVariable := false
 
-	migrate := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
+	migrate := func(actions []v1alpha1.ZarfComponentAction) []v1alpha1.ZarfComponentAction {
 		for i := range actions {
 			if actions[i].DeprecatedSetVariable != "" && len(actions[i].SetVariables) < 1 {
 				hasSetVariable = true
@@ -56,8 +56,8 @@ func migrateSetVariableToSetVariables(c types.ZarfComponent) (types.ZarfComponen
 	return c, ""
 }
 
-func clearSetVariables(c types.ZarfComponent) types.ZarfComponent {
-	clear := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
+func clearSetVariables(c v1alpha1.ZarfComponent) v1alpha1.ZarfComponent {
+	clear := func(actions []v1alpha1.ZarfComponentAction) []v1alpha1.ZarfComponentAction {
 		for i := range actions {
 			actions[i].DeprecatedSetVariable = ""
 		}

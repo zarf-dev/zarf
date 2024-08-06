@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 	"github.com/spf13/pflag"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent"
@@ -168,7 +169,7 @@ tableOfContents: false
 func addGoComments(reflector *jsonschema.Reflector) error {
 	addCommentErr := errors.New("this command must be called from the root of the Zarf repo")
 
-	typePackagePath := filepath.Join("src", "types")
+	typePackagePath := filepath.Join("src", "api", "v1alpha1")
 	if err := reflector.AddGoComments("github.com/zarf-dev/zarf", typePackagePath); err != nil {
 		return fmt.Errorf("%w: %w", addCommentErr, err)
 	}
@@ -189,7 +190,7 @@ var genConfigSchemaCmd = &cobra.Command{
 			return err
 		}
 
-		schema := reflector.Reflect(&types.ZarfPackage{})
+		schema := reflector.Reflect(&v1alpha1.ZarfPackage{})
 		output, err := json.MarshalIndent(schema, "", "  ")
 		if err != nil {
 			return fmt.Errorf("unable to generate the Zarf config schema: %w", err)
@@ -201,7 +202,7 @@ var genConfigSchemaCmd = &cobra.Command{
 
 type zarfTypes struct {
 	DeployedPackage types.DeployedPackage
-	ZarfPackage     types.ZarfPackage
+	ZarfPackage     v1alpha1.ZarfPackage
 	ZarfState       types.ZarfState
 }
 

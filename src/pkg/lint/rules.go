@@ -9,15 +9,15 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func isPinnedImage(image string) (bool, error) {
 	transformedImage, err := transform.ParseImageRef(image)
 	if err != nil {
-		if strings.Contains(image, types.ZarfPackageTemplatePrefix) ||
-			strings.Contains(image, types.ZarfPackageVariablePrefix) {
+		if strings.Contains(image, v1alpha1.ZarfPackageTemplatePrefix) ||
+			strings.Contains(image, v1alpha1.ZarfPackageVariablePrefix) {
 			return true, nil
 		}
 		return false, err
@@ -41,7 +41,7 @@ func isPinnedRepo(repo string) bool {
 }
 
 // CheckComponentValues runs lint rules validating values on component keys, should be run after templating
-func CheckComponentValues(c types.ZarfComponent, i int) []PackageFinding {
+func CheckComponentValues(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	var findings []PackageFinding
 	findings = append(findings, checkForUnpinnedRepos(c, i)...)
 	findings = append(findings, checkForUnpinnedImages(c, i)...)
@@ -49,7 +49,7 @@ func CheckComponentValues(c types.ZarfComponent, i int) []PackageFinding {
 	return findings
 }
 
-func checkForUnpinnedRepos(c types.ZarfComponent, i int) []PackageFinding {
+func checkForUnpinnedRepos(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	var findings []PackageFinding
 	for j, repo := range c.Repos {
 		repoYqPath := fmt.Sprintf(".components.[%d].repos.[%d]", i, j)
@@ -65,7 +65,7 @@ func checkForUnpinnedRepos(c types.ZarfComponent, i int) []PackageFinding {
 	return findings
 }
 
-func checkForUnpinnedImages(c types.ZarfComponent, i int) []PackageFinding {
+func checkForUnpinnedImages(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	var findings []PackageFinding
 	for j, image := range c.Images {
 		imageYqPath := fmt.Sprintf(".components.[%d].images.[%d]", i, j)
@@ -91,7 +91,7 @@ func checkForUnpinnedImages(c types.ZarfComponent, i int) []PackageFinding {
 	return findings
 }
 
-func checkForUnpinnedFiles(c types.ZarfComponent, i int) []PackageFinding {
+func checkForUnpinnedFiles(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	var findings []PackageFinding
 	for j, file := range c.Files {
 		fileYqPath := fmt.Sprintf(".components.[%d].files.[%d]", i, j)

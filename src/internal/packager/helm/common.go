@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -26,7 +27,7 @@ import (
 
 // Helm is a config object for working with helm charts.
 type Helm struct {
-	chart      types.ZarfChart
+	chart      v1alpha1.ZarfChart
 	chartPath  string
 	valuesPath string
 
@@ -50,7 +51,7 @@ type Helm struct {
 type Modifier func(*Helm)
 
 // New returns a new Helm config struct.
-func New(chart types.ZarfChart, chartPath string, valuesPath string, mods ...Modifier) *Helm {
+func New(chart v1alpha1.ZarfChart, chartPath string, valuesPath string, mods ...Modifier) *Helm {
 	h := &Helm{
 		chart:      chart,
 		chartPath:  chartPath,
@@ -78,7 +79,7 @@ func NewClusterOnly(cfg *types.PackagerConfig, variableConfig *variables.Variabl
 }
 
 // NewFromZarfManifest generates a helm chart and config from a given Zarf manifest.
-func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName, componentName string, mods ...Modifier) (h *Helm, err error) {
+func NewFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageName, componentName string, mods ...Modifier) (h *Helm, err error) {
 	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
 	defer spinner.Stop()
 
@@ -115,7 +116,7 @@ func NewFromZarfManifest(manifest types.ZarfManifest, manifestPath, packageName,
 
 	// Generate the struct to pass to InstallOrUpgradeChart().
 	h = &Helm{
-		chart: types.ZarfChart{
+		chart: v1alpha1.ZarfChart{
 			Name: tmpChart.Metadata.Name,
 			// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior.
 			ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
@@ -164,11 +165,11 @@ func WithVariableConfig(variableConfig *variables.VariableConfig) Modifier {
 }
 
 // StandardName generates a predictable full path for a helm chart for Zarf.
-func StandardName(destination string, chart types.ZarfChart) string {
+func StandardName(destination string, chart v1alpha1.ZarfChart) string {
 	return filepath.Join(destination, chart.Name+"-"+chart.Version)
 }
 
 // StandardValuesName generates a predictable full path for the values file for a helm chart for zarf
-func StandardValuesName(destination string, chart types.ZarfChart, idx int) string {
+func StandardValuesName(destination string, chart v1alpha1.ZarfChart, idx int) string {
 	return fmt.Sprintf("%s-%d", StandardName(destination, chart), idx)
 }

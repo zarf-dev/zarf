@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package types contains all the types used by Zarf.
-package types
+// Package v1alpha1 holds the definition of the v1alpha1 Zarf Package
+package v1alpha1
 
-import "github.com/zarf-dev/zarf/src/pkg/variables"
+import (
+	"github.com/zarf-dev/zarf/src/pkg/variables"
+)
 
 // ZarfPackageKind is an enum of the different kinds of Zarf packages.
 type ZarfPackageKind string
@@ -14,10 +16,13 @@ const (
 	ZarfInitConfig ZarfPackageKind = "ZarfInitConfig"
 	// ZarfPackageConfig is the default kind of Zarf package, primarily used during `zarf package`.
 	ZarfPackageConfig ZarfPackageKind = "ZarfPackageConfig"
+	ApiVersion        string          = "zarf.dev/v1alpha1"
 )
 
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
+	// The API version of the Zarf package.
+	ApiVersion string `json:"apiVersion,omitempty," jsonschema:"enum=zarf.dev/v1alpha1"`
 	// The kind of Zarf package.
 	Kind ZarfPackageKind `json:"kind" jsonschema:"enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	// Package metadata.

@@ -18,6 +18,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -163,7 +164,7 @@ func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage type
 func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.DeployedPackage, deployedComponent types.DeployedComponent, spinner *message.Spinner) (*types.DeployedPackage, error) {
 	components := deployedPackage.Data.Components
 
-	c := helpers.Find(components, func(t types.ZarfComponent) bool {
+	c := helpers.Find(components, func(t v1alpha1.ZarfComponent) bool {
 		return t.Name == deployedComponent.Name
 	})
 
