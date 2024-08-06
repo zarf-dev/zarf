@@ -54,14 +54,17 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
-func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string) (deployedPackage *types.DeployedPackage, err error) {
-	// Get the secret that describes the deployed package
+func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string) (*types.DeployedPackage, error) {
 	secret, err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).Get(ctx, config.ZarfPackagePrefix+packageName, metav1.GetOptions{})
 	if err != nil {
-		return deployedPackage, err
+		return nil, err
 	}
-
-	return deployedPackage, json.Unmarshal(secret.Data["data"], &deployedPackage)
+	deployedPackage := &types.DeployedPackage{}
+	err = json.Unmarshal(secret.Data["data"], deployedPackage)
+	if err != nil {
+		return nil, err
+	}
+	return deployedPackage, nil
 }
 
 // StripZarfLabelsAndSecretsFromNamespaces removes metadata and secrets from existing namespaces no longer manged by Zarf.

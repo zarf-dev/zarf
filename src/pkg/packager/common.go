@@ -38,7 +38,6 @@ type Packager struct {
 	hpaModified    bool
 	connectStrings types.ConnectStrings
 	source         sources.PackageSource
-	generation     int
 }
 
 // Modifier is a function that modifies the packager.
@@ -154,12 +153,6 @@ func (p *Packager) isConnectedToCluster() bool {
 func (p *Packager) attemptClusterChecks(ctx context.Context) (err error) {
 	spinner := message.NewProgressSpinner("Gathering additional cluster information (if available)")
 	defer spinner.Stop()
-
-	// Check if the package has already been deployed and get its generation
-	if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(ctx, p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
-		// If this package has been deployed before, increment the package generation within the secret
-		p.generation = existingDeployedPackage.Generation + 1
-	}
 
 	// Check the clusters architecture matches the package spec
 	if err := p.validatePackageArchitecture(ctx); err != nil {

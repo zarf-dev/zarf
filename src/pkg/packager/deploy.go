@@ -138,20 +138,10 @@ func (p *Packager) Deploy(ctx context.Context) error {
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
 func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []types.DeployedComponent, err error) {
-	// Check if this package has been deployed before and grab relevant information about already deployed components
-	if p.generation == 0 {
-		p.generation = 1 // If this is the first deployment, set the generation to 1
-	}
-
 	// Process all the components we are deploying
 	for _, component := range p.cfg.Pkg.Components {
-		deployedComponent := types.DeployedComponent{
-			Name:               component.Name,
-			Status:             types.ComponentStatusDeploying,
-			ObservedGeneration: p.generation,
-		}
-
-		// If this component requires a cluster, connect to one
+		// Connect to cluster if a component requires it.
+		packageGeneration := 1
 		if component.RequiresCluster() {
 			timeout := cluster.DefaultTimeout
 			if p.cfg.Pkg.IsInitConfig() {
@@ -160,8 +150,19 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 			connectCtx, cancel := context.WithTimeout(ctx, timeout)
 			defer cancel()
 			if err := p.connectToCluster(connectCtx); err != nil {
-				return deployedComponents, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+				return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}
+
+			// If this package has been deployed before, increment the package generation within the secret
+			if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(ctx, p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
+				packageGeneration = existingDeployedPackage.Generation + 1
+			}
+		}
+
+		deployedComponent := types.DeployedComponent{
+			Name:               component.Name,
+			Status:             types.ComponentStatusDeploying,
+			ObservedGeneration: packageGeneration,
 		}
 
 		// Ensure we don't overwrite any installedCharts data when updating the package secret
@@ -177,7 +178,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 
 		// Update the package secret to indicate that we are attempting to deploy this component
 		if p.isConnectedToCluster() {
-			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
+			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, packageGeneration, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
 				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
@@ -205,7 +206,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 			// Update the package secret to indicate that we failed to deploy this component
 			deployedComponents[idx].Status = types.ComponentStatusFailed
 			if p.isConnectedToCluster() {
-				if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
+				if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, packageGeneration, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
 					message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 				}
 			}
@@ -217,7 +218,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 		deployedComponents[idx].InstalledCharts = charts
 		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 		if p.isConnectedToCluster() {
-			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, p.generation, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
+			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, packageGeneration, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
 				message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
