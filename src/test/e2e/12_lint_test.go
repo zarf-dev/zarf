@@ -46,14 +46,14 @@ func TestLint(t *testing.T) {
 		// Testing import / compose + variables are working
 		require.Contains(t, strippedStderr, ".components.[2].images.[3] | Image not pinned with digest - busybox:latest")
 		// Testing OCI imports get linted
-		require.Contains(t, strippedStderr, ".components.[0].images.[0] | Image not pinned with digest - ghcr.io/zarf-dev/zarf-game:0.0.1")
+		require.Contains(t, strippedStderr, ".components.[0].images.[0] | Image not pinned with digest - defenseunicorns/zarf-game:multi-tile-dark")
 
 		// Check flavors
 		require.NotContains(t, strippedStderr, "image-in-bad-flavor-component:unpinned")
 		require.Contains(t, strippedStderr, "image-in-good-flavor-component:unpinned")
 
 		// Check reported filepaths
-		require.Contains(t, strippedStderr, "Linting package \"dos-games\" at oci://ghcr.io/zarf-dev/dos-games:1.0.0")
+		require.Contains(t, strippedStderr, "Linting package \"dos-games\" at oci://🦄/dos-games:1.0.0")
 		require.Contains(t, strippedStderr, fmt.Sprintf("Linting package \"lint\" at %s", testPackagePath))
 	})
 }
