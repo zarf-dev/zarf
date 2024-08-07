@@ -9,4 +9,4 @@ components:
     images:
       - ghcr.io/zarf-dev/doom-game:0.0.1
       - ghcr.io/zarf-dev/doom-game:0.0.1@sha256:0a44b759e219d9d6f3c7cbbf40c57ede71a1f9bf54da65767c4137be74727662
-      - ghcr.io/zarf-dev/zarf-game@sha256:0a44b759e219d9d6f3c7cbbf40c57ede71a1f9bf54da65767c4137be74727662
+      - ghcr.io/zarf-dev/doom-game@sha256:0a44b759e219d9d6f3c7cbbf40c57ede71a1f9bf54da65767c4137be74727662
