@@ -5,8 +5,15 @@
 package v1alpha1
 
 import (
-	"github.com/invopop/jsonschema"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+)
+
+// Zarf looks for these strings in zarf.yaml to make dynamic changes
+const (
+	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
+	ZarfPackageVariablePrefix = "###ZARF_PKG_VAR_"
+	ZarfPackageArch           = "###ZARF_PKG_ARCH###"
+	ZarfComponentName         = "###ZARF_COMPONENT_NAME###"
 )
 
 // ZarfPackageKind is an enum of the different kinds of Zarf packages.
@@ -20,22 +27,12 @@ const (
 	ApiVersion        string          = "zarf.dev/v1alpha1"
 )
 
-// Zarf looks for these strings in zarf.yaml to make dynamic changes
-const (
-	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
-	ZarfPackageVariablePrefix = "###ZARF_PKG_VAR_"
-	ZarfPackageArch           = "###ZARF_PKG_ARCH###"
-	ZarfComponentName         = "###ZARF_COMPONENT_NAME###"
-)
-
-const apiVersion = "zarf.dev/v1alpha1"
-
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
 	// The API version of the Zarf package.
 	ApiVersion string `json:"apiVersion,omitempty," jsonschema:"enum=zarf.dev/v1alpha1"`
 	// The kind of Zarf package.
-	Kind ZarfPackageKind `json:"kind"`
+	Kind ZarfPackageKind `json:"kind" jsonschema:"enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	// Package metadata.
 	Metadata ZarfMetadata `json:"metadata,omitempty"`
 	// Zarf-generated package build data.
@@ -46,16 +43,6 @@ type ZarfPackage struct {
 	Constants []variables.Constant `json:"constants,omitempty"`
 	// Variable template values applied on deploy for K8s resources.
 	Variables []variables.InteractiveVariable `json:"variables,omitempty"`
-}
-
-// JSONSchemaExtend extends the generated json schema during `zarf internal gen-config-schema`
-func (ZarfPackage) JSONSchemaExtend(schema *jsonschema.Schema) {
-	kind, _ := schema.Properties.Get("kind")
-	kind.Enum = []interface{}{ZarfInitConfig, ZarfPackageConfig}
-	kind.Default = ZarfPackageConfig
-
-	apiVersionSchema, _ := schema.Properties.Get("apiVersion")
-	apiVersionSchema.Enum = []interface{}{apiVersion}
 }
 
 // IsInitConfig returns whether a Zarf package is an init config.

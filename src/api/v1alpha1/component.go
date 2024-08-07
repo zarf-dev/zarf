@@ -11,21 +11,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
-var (
-	// Define allowed OS, an empty string means it is allowed on all operating systems
-	// same as enums on ZarfComponentOnlyTarget
-	supportedOS = []string{"linux", "darwin", "windows"}
-)
-
-// SupportedOS returns the supported operating systems.
-//
-// The supported operating systems are: linux, darwin, windows.
-//
-// An empty string signifies no OS restrictions.
-func SupportedOS() []string {
-	return supportedOS
-}
-
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
 type ZarfComponent struct {
 	// The name of the component.
