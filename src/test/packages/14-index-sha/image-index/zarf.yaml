@@ -1,9 +1,0 @@
-kind: ZarfPackageConfig
-metadata:
-  name: image-index
-
-components:
-  - name: baseline
-    required: true
-    images:
-      - ghcr.io/zarf-dev/zarf/agent:v0.32.6@sha256:05a82656df5466ce17c3e364c16792ae21ce68438bfe06eeab309d0520c16b48
