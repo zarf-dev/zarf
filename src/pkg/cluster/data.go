@@ -25,7 +25,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logging"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
@@ -92,7 +91,7 @@ func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDat
 		zarfCommand, err := utils.GetFinalExecutableCommand()
 		kubectlBinPath := "kubectl"
 		if err != nil {
-			message.Warnf("Unable to get the zarf executable path, falling back to host kubectl: %s", err)
+			log.Warn("unable to get the zarf executable path falling back to host kubectl", "error", err)
 		} else {
 			kubectlBinPath = fmt.Sprintf("%s tools kubectl", zarfCommand)
 		}

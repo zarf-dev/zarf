@@ -76,12 +76,13 @@ var rootCmd = &cobra.Command{
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 		cmd.Help()
 
+		log := logging.FromContextOrDiscard(cmd.Context())
 		if len(args) > 0 {
 			if strings.Contains(args[0], config.ZarfPackagePrefix) || strings.Contains(args[0], "zarf-init") {
-				message.Warnf(lang.RootCmdDeprecatedDeploy, args[0])
+				log.Warn("Deprecated: Please use \"zarf package deploy\" to deploy this package.  This warning will be removed in Zarf v1.0.0.")
 			}
 			if args[0] == layout.ZarfYAML {
-				message.Warn(lang.RootCmdDeprecatedCreate)
+				log.Warn("Deprecated: Please use \"zarf package create\" to create this package.  This warning will be removed in Zarf v1.0.0.")
 			}
 		}
 	},

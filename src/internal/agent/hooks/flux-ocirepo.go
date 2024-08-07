@@ -12,13 +12,14 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/fluxcd/pkg/apis/meta"
 	flux "github.com/fluxcd/source-controller/api/v1beta2"
+	v1 "k8s.io/api/admission/v1"
+
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	v1 "k8s.io/api/admission/v1"
 )
 
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
@@ -47,7 +48,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	// If we have a semver we want to continue since we will still have the upstream tag
 	// but should warn that we can't guarantee there won't be collisions
 	if src.Spec.Reference.SemVer != "" {
-		message.Warnf(lang.AgentWarnSemVerRef, src.Spec.Reference.SemVer)
+		logging.FromContextOrDiscard(ctx).Warn("Detected a smever OCI ref, continuing but will be unable to guarantee against collisions if multiple OCI artifacts with the same name are broudt in from different registries", "semver", src.Spec.Reference.SemVer)
 	}
 
 	if src.Labels != nil && src.Labels["zarf-agent"] == "patched" {

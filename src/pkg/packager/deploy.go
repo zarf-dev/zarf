@@ -97,7 +97,7 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	warnings = append(warnings, sbomWarnings...)
 
 	// Confirm the overall package deployment
-	if !p.confirmAction(config.ZarfDeployStage, warnings, sbomViewFiles) {
+	if !p.confirmAction(ctx, config.ZarfDeployStage, warnings, sbomViewFiles) {
 		return fmt.Errorf("deployment cancelled")
 	}
 
@@ -124,7 +124,7 @@ func (p *Packager) Deploy(ctx context.Context) error {
 		return err
 	}
 	if len(deployedComponents) == 0 {
-		message.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
+		logging.FromContextOrDiscard(ctx).Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
 	}
 
 	// Notify all the things about the successful deployment
@@ -499,7 +499,7 @@ func (p *Packager) setupState(ctx context.Context) (err error) {
 	}
 
 	if p.cfg.Pkg.Metadata.YOLO && state.Distro != "YOLO" {
-		message.Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
+		logging.FromContextOrDiscard(ctx).Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
 			"This may cause issues if the package does not exclude any charts or manifests from the Zarf Agent using " +
 			"the pod or namespace label `zarf.dev/agent: ignore'.")
 	}

@@ -20,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
@@ -176,7 +177,7 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 
 		zarfState, err := c.LoadZarfState(ctx)
 		if err != nil {
-			message.Warnf("could not get Zarf state from Kubernetes cluster, continuing without state information %s", err.Error())
+			logging.FromContextOrDiscard(cmd.Context()).Warn("could not get Zarf state from Kubernetes cluster, continuing without state information", "error", err)
 			return originalListFn(cmd, args)
 		}
 

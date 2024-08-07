@@ -4,7 +4,6 @@
 package hooks
 
 import (
-	"context"
 	b64 "encoding/base64"
 	"encoding/json"
 	"net/http"
@@ -13,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -35,7 +35,8 @@ func createArgoRepoAdmissionRequest(t *testing.T, op v1.Operation, argoRepo *cor
 func TestArgoRepoWebhook(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := testutil.TestContext(t)
+
 	state := &types.ZarfState{GitServer: types.GitServerInfo{
 		Address:      "https://git-server.com",
 		PushUsername: "a-push-user",
@@ -43,7 +44,7 @@ func TestArgoRepoWebhook(t *testing.T) {
 		PullUsername: "a-pull-user",
 	}}
 	c := createTestClientWithZarfState(ctx, t, state)
-	handler := admission.NewHandler().Serve(NewRepositorySecretMutationHook(ctx, c))
+	handler := admission.NewHandler().Serve(ctx, NewRepositorySecretMutationHook(ctx, c))
 
 	tests := []admissionTest{
 		{

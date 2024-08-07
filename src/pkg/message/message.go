@@ -131,12 +131,6 @@ func Warnf(format string, a ...any) {
 	pterm.Warning.Println(message)
 }
 
-// WarnErr prints an error message as a warning.
-func WarnErr(err any, message string) {
-	debugPrinter(2, err)
-	Warnf(message)
-}
-
 // WarnErrf prints an error message as a warning with a given format.
 func WarnErrf(err any, format string, a ...any) {
 	debugPrinter(2, err)

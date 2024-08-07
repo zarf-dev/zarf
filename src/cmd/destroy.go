@@ -11,15 +11,16 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/spf13/cobra"
+
 	"github.com/defenseunicorns/pkg/helpers/v2"
+
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
-
-	"github.com/spf13/cobra"
 )
 
 var confirmDestroy bool
@@ -32,6 +33,8 @@ var destroyCmd = &cobra.Command{
 	Long:    lang.CmdDestroyLong,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
+		log := logging.FromContextOrDiscard(ctx)
+
 		timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
 		defer cancel()
 		c, err := cluster.NewClusterWithWait(timeoutCtx)
@@ -44,7 +47,7 @@ var destroyCmd = &cobra.Command{
 		//       the scripts to remove k3s, we will still try to remove a locally installed k3s cluster
 		state, err := c.LoadZarfState(ctx)
 		if err != nil {
-			message.WarnErr(err, err.Error())
+			log.Warn("could not load Zarf state", "error", err)
 		}
 
 		// If Zarf deployed the cluster, burn it all down
@@ -63,7 +66,7 @@ var destroyCmd = &cobra.Command{
 				// Run the matched script
 				err := exec.CmdWithPrint(script)
 				if errors.Is(err, os.ErrPermission) {
-					message.Warnf(lang.CmdDestroyErrScriptPermissionDenied, script)
+					log.Warn("Received 'permission denied' when trying to execute the script (%s). Please double-check you have the correct kube-context.", "script", script)
 
 					// Don't remove scripts we can't execute so the user can try to manually run
 					continue

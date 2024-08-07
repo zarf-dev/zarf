@@ -41,6 +41,8 @@ var imageFuzzyCheck = regexp.MustCompile(`(?mi)["|=]([a-z0-9\-.\/:]+:[\w.\-]*[a-
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
 func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) {
+	log := logging.FromContextOrDiscard(ctx)
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -48,7 +50,7 @@ func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) 
 	defer func() {
 		// Return to the original working directory
 		if err := os.Chdir(cwd); err != nil {
-			message.Warnf("Unable to return to the original working directory: %s", err.Error())
+			log.Warn("Unable to return the original working directory", "error", err)
 		}
 	}()
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
@@ -67,7 +69,7 @@ func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) 
 		return nil, err
 	}
 	for _, warning := range warnings {
-		message.Warn(warning)
+		log.Warn(warning)
 	}
 	p.cfg.Pkg = pkg
 

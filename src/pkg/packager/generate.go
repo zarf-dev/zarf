@@ -17,18 +17,21 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // Generate generates a Zarf package definition.
 func (p *Packager) Generate(ctx context.Context) (err error) {
+	log := logging.FromContextOrDiscard(ctx)
+
 	generatedZarfYAMLPath := filepath.Join(p.cfg.GenerateOpts.Output, layout.ZarfYAML)
 	spinner := message.NewProgressSpinner("Generating package for %q at %s", p.cfg.GenerateOpts.Name, generatedZarfYAMLPath)
 
 	if !helpers.InvalidPath(generatedZarfYAMLPath) {
 		prefixed := filepath.Join(p.cfg.GenerateOpts.Output, fmt.Sprintf("%s-%s", p.cfg.GenerateOpts.Name, layout.ZarfYAML))
 
-		message.Warnf("%s already exists, writing to %s", generatedZarfYAMLPath, prefixed)
+		log.Warn("path already exist, writing to alternative path", "original", generatedZarfYAMLPath, "alternative", prefixed)
 
 		generatedZarfYAMLPath = prefixed
 
@@ -66,7 +69,7 @@ func (p *Packager) Generate(ctx context.Context) (err error) {
 	images, err := p.findImages(ctx)
 	if err != nil {
 		// purposefully not returning error here, as we can still generate the package without images
-		message.Warnf("Unable to find images: %s", err.Error())
+		log.Warn("Unable to find images", "error", err)
 	}
 
 	for i := range p.cfg.Pkg.Components {

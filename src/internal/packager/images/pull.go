@@ -34,6 +34,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -62,6 +63,8 @@ func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
 
 // Pull pulls all of the images from the given config.
 func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, error) {
+	log := logging.FromContextOrDiscard(ctx)
+
 	var longer string
 	imageCount := len(cfg.ImageList)
 	// Give some additional user feedback on larger image sets
@@ -130,7 +133,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 						return fmt.Errorf("rate limited by registry: %w", err)
 					}
 
-					message.Warnf("Falling back to local 'docker', failed to find the manifest on a remote: %s", err.Error())
+					log.Warn("Falling back to local 'docker', failed to find the manifest on a remote", "error", err.Error())
 
 					// Attempt to connect to the local docker daemon.
 					cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -147,9 +150,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 					// Warn the user if the image is large.
 					if rawImg.Size > 750*1000*1000 {
-						message.Warnf("%s is %s and may take a very long time to load via docker. "+
-							"See https://docs.zarf.dev/faq for suggestions on how to improve large local image loading operations.",
-							ref, utils.ByteFormat(float64(rawImg.Size), 2))
+						log.Warn("Image is large and may yake a long time to load via docker. See https://docs.zarf.dev/faq for suggestions on how to improve large local image loading operations.", "image", ref, "size", utils.ByteFormat(float64(rawImg.Size), 2))
 					}
 
 					// Use unbuffered opener to avoid OOM Kill issues https://github.com/zarf-dev/zarf/issues/1214.
@@ -237,7 +238,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		return err
 	}, retry.Context(ctx), retry.Attempts(2))
 	if err != nil {
-		message.Warnf("Failed to save images in parallel, falling back to sequential save: %s", err.Error())
+		logging.FromContextOrDiscard(ctx).Warn("failed to save images in parallel, falling back to sequential save", "error", err)
 		err = retry.Do(func() error {
 			saved, err := SaveSequential(ctx, cranePath, toPull)
 			for k := range saved {
@@ -329,7 +330,7 @@ func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]
 		}
 		if err := cl.AppendImage(img, clayout.WithAnnotations(annotations)); err != nil {
 			if err := CleanupInProgressLayers(ctx, img); err != nil {
-				message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
+				logging.FromContextOrDiscard(ctx).Warn("failed to clean up in-progress layers, please run `zarf tools clear-cache`", "error", err)
 			}
 			return saved, err
 		}
@@ -361,7 +362,7 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 
 				if err := cl.WriteImage(img); err != nil {
 					if err := CleanupInProgressLayers(ectx, img); err != nil {
-						message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
+						logging.FromContextOrDiscard(ctx).Warn("failed to clean up in-progress layers, please run `zarf tools clear-cache`", "error", err)
 					}
 					return err
 				}

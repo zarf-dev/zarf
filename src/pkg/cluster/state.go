@@ -37,6 +37,8 @@ const (
 
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
 func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitOptions) error {
+	log := logging.FromContextOrDiscard(ctx)
+
 	spinner := message.NewProgressSpinner("Gathering cluster state information")
 	defer spinner.Stop()
 
@@ -155,16 +157,13 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		state.ArtifactServer = initOptions.ArtifactServer
 	} else {
 		if helpers.IsNotZeroAndNotEqual(initOptions.GitServer, state.GitServer) {
-			message.Warn("Detected a change in Git Server init options on a re-init. Ignoring... To update run:")
-			message.ZarfCommand("tools update-creds git")
+			log.Warn("Detected a change in Git Server init options on a re-init. Ignoring... To update run: zarf tools update-creds git")
 		}
 		if helpers.IsNotZeroAndNotEqual(initOptions.RegistryInfo, state.RegistryInfo) {
-			message.Warn("Detected a change in Image Registry init options on a re-init. Ignoring... To update run:")
-			message.ZarfCommand("tools update-creds registry")
+			log.Warn("Detected a change in Image Registry init options on a re-init. Ignoring... To update run: zarf tools update-creds registry")
 		}
 		if helpers.IsNotZeroAndNotEqual(initOptions.ArtifactServer, state.ArtifactServer) {
-			message.Warn("Detected a change in Artifact Server init options on a re-init. Ignoring... To update run:")
-			message.ZarfCommand("tools update-creds artifact")
+			log.Warn("Detected a change in Artifact Server init options on a re-init. Ignoring... To update run: zarf tools update-creds artifact")
 		}
 	}
 

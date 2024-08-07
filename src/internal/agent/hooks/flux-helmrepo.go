@@ -13,13 +13,14 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/fluxcd/pkg/apis/meta"
 	flux "github.com/fluxcd/source-controller/api/v1"
+	v1 "k8s.io/api/admission/v1"
+
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	v1 "k8s.io/api/admission/v1"
 )
 
 // NewHelmRepositoryMutationHook creates a new instance of the helm repo mutation hook.
@@ -43,7 +44,7 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 
 	// If we see a type of helm repo other than OCI we should flag a warning and return
 	if strings.ToLower(src.Spec.Type) != "oci" {
-		message.Warnf(lang.AgentWarnNotOCIType, src.Spec.Type)
+		logging.FromContextOrDiscard(ctx).Warn("Skipping HelmRepo mutation because the type is not OCI", "type", src.Spec.Type)
 		return &operations.Result{Allowed: true}, nil
 	}
 

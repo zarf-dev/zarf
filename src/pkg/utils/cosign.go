@@ -15,9 +15,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
-	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/logging"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -32,6 +29,9 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
+
+	"github.com/zarf-dev/zarf/src/pkg/logging"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // Sget performs a cosign signature verification on a given image using the specified public key.
@@ -40,7 +40,7 @@ import (
 func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	log := logging.FromContextOrDiscard(ctx)
 
-	message.Warnf(lang.WarnSGetDeprecation)
+	logging.FromContextOrDiscard(ctx).Warn("Using sget to download resources is being deprecated and will removed in the v1.0.0 release of Zarf. Please publish the packages as OCI artifacts instead.")
 
 	// Remove the custom protocol header from the url
 	image = strings.TrimPrefix(image, helpers.SGETURLPrefix)

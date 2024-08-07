@@ -54,9 +54,6 @@ const (
 	RootCmdFlagTempDir     = "Specify the temporary directory to use for intermediate files"
 	RootCmdFlagInsecure    = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
-	RootCmdDeprecatedDeploy = "Deprecated: Please use \"zarf package deploy %s\" to deploy this package.  This warning will be removed in Zarf v1.0.0."
-	RootCmdDeprecatedCreate = "Deprecated: Please use \"zarf package create\" to create this package.  This warning will be removed in Zarf v1.0.0."
-
 	// zarf connect
 	CmdConnectShort = "Accesses services or pods deployed in the cluster"
 	CmdConnectLong  = "Uses a k8s port-forward to connect to resources within the cluster referenced by your kube-context.\n" +
@@ -100,8 +97,6 @@ const (
 
 	CmdDestroyFlagConfirm          = "REQUIRED. Confirm the destroy action to prevent accidental deletions"
 	CmdDestroyFlagRemoveComponents = "Also remove any installed components outside the zarf namespace"
-
-	CmdDestroyErrScriptPermissionDenied = "Received 'permission denied' when trying to execute the script (%s). Please double-check you have the correct kube-context."
 
 	// zarf init
 	CmdInitShort = "Prepares a k8s cluster for the deployment of Zarf packages"
@@ -202,7 +197,6 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInternalUpdateGiteaPVCShort = "Updates an existing Gitea persistent volume claim"
 	CmdInternalUpdateGiteaPVCLong  = "Updates an existing Gitea persistent volume claim by assessing if claim is a custom user provided claim or default." +
 		"This is called internally by the supported Gitea package component."
-	CmdInternalUpdateGiteaPVCErr          = "Unable to update the existing Gitea persistent volume claim."
 	CmdInternalFlagUpdateGiteaPVCRollback = "Roll back previous Gitea persistent volume claim updates."
 
 	CmdInternalIsValidHostnameShort = "Checks if the current machine's hostname is RFC1123 compliant"
@@ -267,7 +261,6 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	CmdPackageCreateFlagDifferential          = "[beta] Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package"
 	CmdPackageCreateFlagRegistryOverride      = "Specify a map of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)"
 	CmdPackageCreateFlagFlavor                = "The flavor of components to include in the resulting package (i.e. have a matching or empty \"only.flavor\" key)"
-	CmdPackageCreateCleanPathErr              = "Invalid characters in Zarf cache path, defaulting to %s"
 
 	CmdPackageDeployFlagConfirm                        = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdPackageDeployFlagAdoptExistingResources         = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
@@ -332,8 +325,7 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
 	CmdDevPatchGitOverwritePrompt = "Overwrite the file %s with these changes?"
 
-	CmdDevSha256sumShort         = "Generates a SHA256SUM for the given file"
-	CmdDevSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
+	CmdDevSha256sumShort = "Generates a SHA256SUM for the given file"
 
 	CmdDevFindImagesShort = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests"
 	CmdDevFindImagesLong  = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.\n\n" +
@@ -429,10 +421,9 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 	CmdToolsRegistryFlagNonDist  = "Allow pushing non-distributable (foreign) layers"
 	CmdToolsRegistryFlagPlatform = "Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64)."
 
-	CmdToolsGetGitPasswdShort       = "[Deprecated] Returns the push user's password for the Git server"
-	CmdToolsGetGitPasswdLong        = "[Deprecated] Reads the password for a user with push access to the configured Git server in Zarf State. Note that this command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
-	CmdToolsGetGitPasswdDeprecation = "Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
-	CmdToolsYqExample               = `
+	CmdToolsGetGitPasswdShort = "[Deprecated] Returns the push user's password for the Git server"
+	CmdToolsGetGitPasswdLong  = "[Deprecated] Reads the password for a user with push access to the configured Git server in Zarf State. Note that this command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0."
+	CmdToolsYqExample         = `
 # yq defaults to 'eval' command if no command is specified. See "zarf tools yq eval --help" for more examples.
 
 # read the "stuff" node from "myfile.yml"
@@ -622,9 +613,4 @@ var (
 	ErrInitNotFound        = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
 	ErrUnableToCheckArch   = errors.New("unable to get the configured cluster's architecture")
 	ErrUnableToGetPackages = errors.New("unable to load the Zarf Package data from the cluster")
-)
-
-// Collection of reusable warn messages.
-var (
-	WarnSGetDeprecation = "Using sget to download resources is being deprecated and will removed in the v1.0.0 release of Zarf. Please publish the packages as OCI artifacts instead."
 )

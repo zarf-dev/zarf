@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 var gitURLs = []string{
@@ -44,7 +45,8 @@ var badGitURLs = []string{
 }
 
 func TestMutateGitURLsInText(t *testing.T) {
-	dummyLogger := func(_ string, _ ...any) {}
+	ctx := testutil.TestContext(t)
+
 	originalText := `
 	# Here we handle invalid URLs (see below comment)
 	# We transform https://*/*.git URLs
@@ -69,7 +71,7 @@ func TestMutateGitURLsInText(t *testing.T) {
 	https://www.defenseunicorns.com/
 	`
 
-	resultingText := MutateGitURLsInText(dummyLogger, "https://gitlab.com", originalText, "repo-owner")
+	resultingText := MutateGitURLsInText(ctx, "https://gitlab.com", originalText, "repo-owner")
 	require.Equal(t, expectedText, resultingText)
 }
 

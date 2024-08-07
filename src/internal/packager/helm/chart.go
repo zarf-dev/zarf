@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -77,7 +78,7 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 
 			lastRelease := releases[len(releases)-1]
 
-			_, err = h.upgradeChart(lastRelease, postRender)
+			_, err = h.upgradeChart(ctx, lastRelease, postRender)
 		} else {
 			// 😭 things aren't working
 			return fmt.Errorf("unable to verify the chart installation status: %w", histErr)
@@ -284,9 +285,9 @@ func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 	return client.Run(loadedChart, chartValues)
 }
 
-func (h *Helm) upgradeChart(lastRelease *release.Release, postRender *renderer) (*release.Release, error) {
+func (h *Helm) upgradeChart(ctx context.Context, lastRelease *release.Release, postRender *renderer) (*release.Release, error) {
 	// Migrate any deprecated APIs (if applicable)
-	err := h.migrateDeprecatedAPIs(lastRelease)
+	err := h.migrateDeprecatedAPIs(ctx, lastRelease)
 	if err != nil {
 		return nil, fmt.Errorf("unable to check for API deprecations: %w", err)
 	}
@@ -362,7 +363,7 @@ func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
 	return loadedChart, chartValues, nil
 }
 
-func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
+func (h *Helm) migrateDeprecatedAPIs(ctx context.Context, latestRelease *release.Release) error {
 	// Get the Kubernetes version from the current cluster
 	kubeVersion, err := h.cluster.Clientset.Discovery().ServerVersion()
 	if err != nil {
@@ -408,7 +409,7 @@ func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 
 	// If the release was modified in the above loop, save it back to the cluster
 	if modified {
-		message.Warnf("Zarf detected deprecated APIs for the '%s' helm release.  Attempting automatic upgrade.", latestRelease.Name)
+		logging.FromContextOrDiscard(ctx).Warn("Zarf detected deprecated APIs for the Helm release. Attempting automatic upgrade.", "release", latestRelease.Name)
 
 		// Update current release version to be superseded (same as the helm mapkubeapis plugin)
 		latestRelease.Info.Status = release.StatusSuperseded

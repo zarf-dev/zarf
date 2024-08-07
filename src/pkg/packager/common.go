@@ -73,6 +73,8 @@ New creates a new package instance with the provided config.
 Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
 */
 func New(ctx context.Context, cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
+	log := logging.FromContextOrDiscard(ctx)
+
 	if cfg == nil {
 		return nil, fmt.Errorf("no config provided")
 	}
@@ -89,7 +91,7 @@ func New(ctx context.Context, cfg *types.PackagerConfig, mods ...Modifier) (*Pac
 	if config.CommonOptions.TempDirectory != "" {
 		// If the cache directory is within the temp directory, warn the user
 		if strings.HasPrefix(config.CommonOptions.CachePath, config.CommonOptions.TempDirectory) {
-			message.Warnf("The cache directory (%q) is within the temp directory (%q) and will be removed when the temp directory is cleaned up", config.CommonOptions.CachePath, config.CommonOptions.TempDirectory)
+			log.Warn("The cache directory is within the temp directory and will be removed when the temp directory is cleaned up", "cache", config.CommonOptions.CachePath, "temp", config.CommonOptions.TempDirectory)
 		}
 	}
 
@@ -111,7 +113,7 @@ func New(ctx context.Context, cfg *types.PackagerConfig, mods ...Modifier) (*Pac
 		if err != nil {
 			return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 		}
-		logging.FromContextOrDiscard(ctx).Debug("Using temporary directory", "directory", dir)
+		log.Debug("Using temporary directory", "directory", dir)
 		pkgr.layout = layout.New(dir)
 	}
 
@@ -158,7 +160,7 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) (err error) {
 	// Check the clusters architecture matches the package spec
 	if err := p.validatePackageArchitecture(ctx); err != nil {
 		if errors.Is(err, lang.ErrUnableToCheckArch) {
-			message.Warnf("Unable to validate package architecture: %s", err.Error())
+			logging.FromContextOrDiscard(ctx).Warn("Unable to validate package architecture", "error", err)
 		} else {
 			return err
 		}

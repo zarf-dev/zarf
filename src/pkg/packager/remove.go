@@ -156,13 +156,15 @@ func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage type
 		}()
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
-			message.Warnf("Unable to update the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
+			logging.FromContextOrDiscard(ctx).Warn("Unable to update the package secret, this may be normal if the cluster was removed", "secret", secretName, "error", err)
 		}
 	}
 	return nil
 }
 
 func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.DeployedPackage, deployedComponent types.DeployedComponent, spinner *message.Spinner) (*types.DeployedPackage, error) {
+	log := logging.FromContextOrDiscard(ctx)
+
 	components := deployedPackage.Data.Components
 
 	c := helpers.Find(components, func(t v1alpha1.ZarfComponent) bool {
@@ -188,11 +190,9 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 		if err := helmCfg.RemoveChart(chart.Namespace, chart.ChartName, spinner); err != nil {
 			if !errors.Is(err, driver.ErrReleaseNotFound) {
 				onFailure()
-				return deployedPackage, fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w",
-					chart.ChartName, chart.Namespace, err)
+				return deployedPackage, fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w", chart.ChartName, chart.Namespace, err)
 			}
-			message.Warnf("Helm release for helm chart '%s' in the namespace '%s' was not found.  Was it already removed?",
-				chart.ChartName, chart.Namespace)
+			log.Warn("Helm release for Helm chart was not found, has it already been removed?", "chart", chart.ChartName, "namespace", chart.Namespace)
 		}
 
 		// Remove the uninstalled chart from the list of installed charts
@@ -231,11 +231,11 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
-			message.Warnf("Unable to delete the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
+			log.Warn("Unable to get the package secret, this may be normal if the cluster was removed", "secret", secretName, "error", err)
 		} else {
 			err = p.cluster.Clientset.CoreV1().Secrets(packageSecret.Namespace).Delete(ctx, packageSecret.Name, metav1.DeleteOptions{})
 			if err != nil {
-				message.Warnf("Unable to delete the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
+				log.Warn("Unable to delete the package secret, this may be normal if the cluster was removed", "secret", secretName, "error", err)
 			}
 		}
 	} else {

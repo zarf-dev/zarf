@@ -45,12 +45,12 @@ func StartWebhook(ctx context.Context, cluster *cluster.Cluster) error {
 
 	// Routers
 	mux := http.NewServeMux()
-	mux.Handle("/mutate/pod", admissionHandler.Serve(podsMutation))
-	mux.Handle("/mutate/flux-gitrepository", admissionHandler.Serve(fluxGitRepositoryMutation))
-	mux.Handle("/mutate/flux-helmrepository", admissionHandler.Serve(fluxHelmRepositoryMutation))
-	mux.Handle("/mutate/flux-ocirepository", admissionHandler.Serve(fluxOCIRepositoryMutation))
-	mux.Handle("/mutate/argocd-application", admissionHandler.Serve(argocdApplicationMutation))
-	mux.Handle("/mutate/argocd-repository", admissionHandler.Serve(argocdRepositoryMutation))
+	mux.Handle("/mutate/pod", admissionHandler.Serve(ctx, podsMutation))
+	mux.Handle("/mutate/flux-gitrepository", admissionHandler.Serve(ctx, fluxGitRepositoryMutation))
+	mux.Handle("/mutate/flux-helmrepository", admissionHandler.Serve(ctx, fluxHelmRepositoryMutation))
+	mux.Handle("/mutate/flux-ocirepository", admissionHandler.Serve(ctx, fluxOCIRepositoryMutation))
+	mux.Handle("/mutate/argocd-application", admissionHandler.Serve(ctx, argocdApplicationMutation))
+	mux.Handle("/mutate/argocd-repository", admissionHandler.Serve(ctx, argocdRepositoryMutation))
 
 	return startServer(ctx, httpPort, mux)
 }
