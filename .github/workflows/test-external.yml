@@ -30,7 +30,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  validate-external:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -48,8 +48,15 @@ jobs:
       - name: Setup k3d
         uses: ./.github/actions/k3d
 
+      - name: Cleanup files
+        uses: ./.github/actions/cleanup-files
+
       - name: Run external service test
         run: make test-external
+
+      - name: get cluster info
+        uses: ./.github/actions/debug-cluster
+        if: always()
 
       - name: Save logs
         if: always()

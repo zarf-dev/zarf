@@ -9,7 +9,7 @@ on:
       - "v*"
 
 jobs:
-  build:
+  build-release:
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -72,15 +72,15 @@ jobs:
 
       # Upload the contents of the build directory for later stages to use
       - name: Upload build artifacts
-        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
+        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4.3.5
         with:
           name: build-artifacts
           path: build/
           retention-days: 1
 
-  validate:
+  validate-release:
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-release
     steps:
       # Checkout the repo and setup the tooling for this job
       - name: Checkout
@@ -114,9 +114,9 @@ jobs:
         if: always()
         uses: ./.github/actions/save-logs
 
-  push:
+  create-release:
     runs-on: ubuntu-latest
-    needs: validate
+    needs: validate-release
     environment: release
     permissions:
       contents: write
@@ -186,7 +186,7 @@ jobs:
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ steps.brew-tap-token.outputs.token }}
 
       - name: Save CVE report
-        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
+        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4.3.5
         with:
           name: cve-report
           path: build/zarf-known-cves.csv

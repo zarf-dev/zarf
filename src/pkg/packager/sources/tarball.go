@@ -34,7 +34,7 @@ type TarballSource struct {
 }
 
 // LoadPackage loads a package from a tarball.
-func (s *TarballSource) LoadPackage(_ context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
+func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
 	spinner := message.NewProgressSpinner("Loading package from %q", s.PackageSource)
 	defer spinner.Stop()
 
@@ -107,7 +107,7 @@ func (s *TarballSource) LoadPackage(_ context.Context, dst *layout.PackagePaths,
 
 		spinner.Success()
 
-		if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
+		if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
 			return pkg, nil, err
 		}
 	}
@@ -139,7 +139,7 @@ func (s *TarballSource) LoadPackage(_ context.Context, dst *layout.PackagePaths,
 }
 
 // LoadPackageMetadata loads a package's metadata from a tarball.
-func (s *TarballSource) LoadPackageMetadata(_ context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
+func (s *TarballSource) LoadPackageMetadata(ctx context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
 	if s.Shasum != "" {
 		if err := helpers.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
 			return pkg, nil, err
@@ -185,7 +185,7 @@ func (s *TarballSource) LoadPackageMetadata(_ context.Context, dst *layout.Packa
 			spinner.Success()
 		}
 
-		if err := ValidatePackageSignature(dst, s.PublicKeyPath); err != nil {
+		if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
 			if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
 				message.Warn("The package was signed but no public key was provided, skipping signature validation")
 			} else {

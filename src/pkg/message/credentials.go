@@ -35,7 +35,7 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 	}
 
 	loginData := [][]string{}
-	if state.RegistryInfo.InternalRegistry {
+	if state.RegistryInfo.IsInternal() {
 		loginData = append(loginData,
 			[]string{"Registry", state.RegistryInfo.PushUsername, state.RegistryInfo.PushPassword, "zarf connect registry", RegistryKey},
 			[]string{"Registry (read-only)", state.RegistryInfo.PullUsername, state.RegistryInfo.PullPassword, "zarf connect registry", RegistryReadKey},

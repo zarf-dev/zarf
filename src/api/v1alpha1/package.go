@@ -62,6 +62,16 @@ func (pkg ZarfPackage) IsInitConfig() bool {
 	return pkg.Kind == ZarfInitConfig
 }
 
+// HasImages returns true if one of the components contains an image.
+func (pkg ZarfPackage) HasImages() bool {
+	for _, component := range pkg.Components {
+		if len(component.Images) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections).
 func (pkg ZarfPackage) IsSBOMAble() bool {
 	for _, c := range pkg.Components {
