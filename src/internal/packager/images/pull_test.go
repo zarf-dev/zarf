@@ -20,7 +20,7 @@ import (
 
 func TestCheckForIndex(t *testing.T) {
 	t.Parallel()
-	testData := []struct {
+	testCases := []struct {
 		name        string
 		ref         string
 		file        string
@@ -52,7 +52,7 @@ func TestCheckForIndex(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testData {
+	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			refInfo, err := transform.ParseImageRef(tc.ref)
