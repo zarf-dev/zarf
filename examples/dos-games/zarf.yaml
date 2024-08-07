@@ -14,7 +14,7 @@ components:
           - manifests/deployment.yaml
           - manifests/service.yaml
     images:
-      - ghcr.io/zarf-dev/zarf-game:0.0.1
+      - ghcr.io/zarf-dev/doom-game:0.0.1
     actions:
       onDeploy:
         after:

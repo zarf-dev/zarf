@@ -24,4 +24,4 @@ COPY --from=0 /binary /binary
 WORKDIR /site
 ENTRYPOINT ["/binary/darkhttpd", "/site", "--port", "8000"]
 
-# docker buildx build --push --platform linux/arm64/v8,linux/amd64 --tag ghcr.io/zarf-dev/zarf-game:0.0.1 .
+# docker buildx build --push --platform linux/arm64/v8,linux/amd64 --tag ghcr.io/zarf-dev/doom-game:0.0.1 .
