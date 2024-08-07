@@ -13,10 +13,15 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/goccy/go-yaml"
-
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
@@ -27,12 +32,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
-	v1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // imageMap is a map of image/boolean pairs.
