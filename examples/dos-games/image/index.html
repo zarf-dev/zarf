@@ -47,9 +47,10 @@
     }
 
     .column img {
-      margin-top: 8px;
+      margin-top: 16px;
       vertical-align: middle;
       width: 100%;
+      height: auto;
     }
 
     /* Responsive layout - makes a two column-layout instead of four columns */
@@ -70,7 +71,6 @@
       }
     }
   </style>
-  </style>
 </head>
 
 <body>
@@ -78,14 +78,7 @@
   <script>
     const game = location.search.substr(1)
     const gamePaths = {
-      'aladdin': 'ALADDIN.EXE',
       'doom': 'DOOM.EXE',
-      'mario-brothers': 'MARIO.BAT',
-      'mega-man-x': 'MMXDEMO.EXE',
-      'prince-of-persia': 'pop1demo.exe',
-      'quake': 'QUAKE.EXE',
-      'sim-city-2k': 'SC2000.EXE',
-      'warcraft-ii': 'WAR2.EXE',
     }
 
     if (gamePaths[game]) {
@@ -101,15 +94,6 @@
 
   <div class="row">
     <div class="column">
-      <a href="?aladdin"><img src="aladdin.png" style="width:100%"></a>
-      <a href="?doom"><img src="doom.png" style="width:100%"></a>
-    </div>
-    <div class="column">
-      <a href="?mario-brothers"><img src="mario-brothers.png" style="width:100%"></a>
-      <a href="?prince-of-persia"><img src="prince-of-persia.png" style="width:100%"></a>
-    </div>
-    <div class="column">
-      <a href="?quake"><img src="quake.png" style="width:100%"></a>
-      <a href="?warcraft-ii"><img src="warcraft-ii.png" style="width:100%"></a>
+      <a href="?doom"><img src="doom.png" ></a>
     </div>
   </div>

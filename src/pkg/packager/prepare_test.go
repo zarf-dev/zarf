@@ -31,8 +31,8 @@ func TestFindImages(t *testing.T) {
 	require.NoError(t, err)
 	expectedImages := map[string][]string{
 		"baseline": {
-			"defenseunicorns/zarf-game:multi-tile-dark",
-			"index.docker.io/defenseunicorns/zarf-game:sha256-0b694ca1c33afae97b7471488e07968599f1d2470c629f76af67145ca64428af.sig",
+			"ghcr.io/zarf-dev/doom-game:0.0.1",
+			"ghcr.io/zarf-dev/doom-game:sha256-7464ecc8a7172fce5c2ad631fc2a1b8572c686f4bf15c4bd51d7d6c9f0c460a7.sig",
 		},
 	}
 	require.Equal(t, len(expectedImages), len(images))
