@@ -12,6 +12,8 @@ import (
 // TestContext takes a testing.T and returns a context that is
 // attached to the test by t.Cleanup()
 func TestContext(t *testing.T) context.Context {
+	t.Helper()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	return ctx
