@@ -30,13 +30,13 @@ func TestCheckForIndex(t *testing.T) {
 			name:        "index sha",
 			ref:         "ghcr.io/zarf-dev/zarf/agent:v0.32.6@sha256:05a82656df5466ce17c3e364c16792ae21ce68438bfe06eeab309d0520c16b48",
 			file:        "agent-index.json",
-			expectedErr: pullIndexShaErr,
+			expectedErr: "%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use",
 		},
 		{
 			name:        "docker manifest list",
 			ref:         "defenseunicorns/zarf-game@sha256:0b694ca1c33afae97b7471488e07968599f1d2470c629f76af67145ca64428af",
 			file:        "game-index.json",
-			expectedErr: pullIndexShaErr,
+			expectedErr: "%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use",
 		},
 		{
 			name:        "image manifest",
@@ -61,8 +61,8 @@ func TestCheckForIndex(t *testing.T) {
 			manifest, err := os.ReadFile(file)
 			require.NoError(t, err)
 			var idx v1.IndexManifest
-			jsonErr := json.Unmarshal(manifest, &idx)
-			require.NoError(t, jsonErr)
+			err = json.Unmarshal(manifest, &idx)
+			require.NoError(t, err)
 			desc := &remote.Descriptor{
 				Descriptor: v1.Descriptor{
 					MediaType: idx.MediaType,
@@ -70,8 +70,8 @@ func TestCheckForIndex(t *testing.T) {
 				Manifest: manifest,
 			}
 			err = checkForIndex(refInfo, desc)
-			if err != nil {
-				require.ErrorContains(t, err, fmt.Errorf(tc.expectedErr, refInfo.Reference, "").Error())
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, fmt.Sprintf(tc.expectedErr, refInfo.Reference))
 				// Ensure the error message contains the digest of the manifests the user can use
 				for _, manifest := range idx.Manifests {
 					require.ErrorContains(t, err, manifest.Digest.String())

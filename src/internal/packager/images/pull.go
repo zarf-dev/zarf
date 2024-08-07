@@ -40,8 +40,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var pullIndexShaErr = "%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s"
-
 func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
 	if refInfo.Digest != "" && desc != nil && types.MediaType(desc.MediaType).IsIndex() {
 		var idx v1.IndexManifest
@@ -57,7 +55,7 @@ func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
 			lines = append(lines, fmt.Sprintf("image - %s@%s with platform %s", name, desc.Digest.String(), desc.Platform.String()))
 		}
 		imageOptions := strings.Join(lines, "\n")
-		return fmt.Errorf(pullIndexShaErr, refInfo.Reference, imageOptions)
+		return fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", refInfo.Reference, imageOptions)
 	}
 	return nil
 }
