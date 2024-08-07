@@ -43,7 +43,11 @@ var agentCmd = &cobra.Command{
 	Short: lang.CmdInternalAgentShort,
 	Long:  lang.CmdInternalAgentLong,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		return agent.StartWebhook(cmd.Context())
+		cluster, err := cluster.NewCluster()
+		if err != nil {
+			return err
+		}
+		return agent.StartWebhook(cmd.Context(), cluster)
 	},
 }
 
@@ -52,7 +56,11 @@ var httpProxyCmd = &cobra.Command{
 	Short: lang.CmdInternalProxyShort,
 	Long:  lang.CmdInternalProxyLong,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		return agent.StartHTTPProxy(cmd.Context())
+		cluster, err := cluster.NewCluster()
+		if err != nil {
+			return err
+		}
+		return agent.StartHTTPProxy(cmd.Context(), cluster)
 	},
 }
 
@@ -161,8 +169,8 @@ tableOfContents: false
 func addGoComments(reflector *jsonschema.Reflector) error {
 	addCommentErr := errors.New("this command must be called from the root of the Zarf repo")
 
-	// typePackagePath := filepath.Join("src", "types")
-	if err := reflector.AddGoComments("github.com/zarf-dev/zarf", "./src/api/v1alpha1"); err != nil {
+	typePackagePath := filepath.Join("src", "api", "v1alpha1")
+	if err := reflector.AddGoComments("github.com/zarf-dev/zarf", typePackagePath); err != nil {
 		return fmt.Errorf("%w: %w", addCommentErr, err)
 	}
 	varPackagePath := filepath.Join("src", "pkg", "variables")

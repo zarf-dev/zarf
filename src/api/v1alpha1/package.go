@@ -9,14 +9,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
-// Zarf looks for these strings in zarf.yaml to make dynamic changes
-const (
-	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
-	ZarfPackageVariablePrefix = "###ZARF_PKG_VAR_"
-	ZarfPackageArch           = "###ZARF_PKG_ARCH###"
-	ZarfComponentName         = "###ZARF_COMPONENT_NAME###"
-)
-
 // ZarfPackageKind is an enum of the different kinds of Zarf packages.
 type ZarfPackageKind string
 
@@ -25,6 +17,15 @@ const (
 	ZarfInitConfig ZarfPackageKind = "ZarfInitConfig"
 	// ZarfPackageConfig is the default kind of Zarf package, primarily used during `zarf package`.
 	ZarfPackageConfig ZarfPackageKind = "ZarfPackageConfig"
+	ApiVersion        string          = "zarf.dev/v1alpha1"
+)
+
+// Zarf looks for these strings in zarf.yaml to make dynamic changes
+const (
+	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
+	ZarfPackageVariablePrefix = "###ZARF_PKG_VAR_"
+	ZarfPackageArch           = "###ZARF_PKG_ARCH###"
+	ZarfComponentName         = "###ZARF_COMPONENT_NAME###"
 )
 
 const apiVersion = "zarf.dev/v1alpha1"
@@ -32,7 +33,7 @@ const apiVersion = "zarf.dev/v1alpha1"
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
 	// The API version of the Zarf package.
-	ApiVersion string `json:"apiVersion,omitempty"`
+	ApiVersion string `json:"apiVersion,omitempty," jsonschema:"enum=zarf.dev/v1alpha1"`
 	// The kind of Zarf package.
 	Kind ZarfPackageKind `json:"kind"`
 	// Package metadata.

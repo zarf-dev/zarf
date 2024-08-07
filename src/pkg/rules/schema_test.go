@@ -28,7 +28,8 @@ func TestZarfSchema(t *testing.T) {
 		{
 			name: "valid package",
 			pkg: v1alpha1.ZarfPackage{
-				Kind: v1alpha1.ZarfInitConfig,
+				ApiVersion: v1alpha1.ApiVersion,
+				Kind:       v1alpha1.ZarfInitConfig,
 				Metadata: v1alpha1.ZarfMetadata{
 					Name: "valid-name",
 				},
@@ -56,7 +57,8 @@ func TestZarfSchema(t *testing.T) {
 		{
 			name: "invalid package",
 			pkg: v1alpha1.ZarfPackage{
-				Kind: v1alpha1.ZarfInitConfig,
+				ApiVersion: "bad-api-version/wrong",
+				Kind:       v1alpha1.ZarfInitConfig,
 				Metadata: v1alpha1.ZarfMetadata{
 					Name: "-invalid-name",
 				},
@@ -113,6 +115,7 @@ func TestZarfSchema(t *testing.T) {
 				"components.1.actions.onRemove.onSuccess.0.setVariables.0.name: Does not match pattern '^[A-Z0-9_]+$'",
 				"components.0.import.path: Must not validate the schema (not)",
 				"components.0.import.url: Must not validate the schema (not)",
+				"apiVersion: apiVersion must be one of the following: \"zarf.dev/v1alpha1\"",
 			},
 		},
 	}
