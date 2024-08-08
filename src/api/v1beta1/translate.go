@@ -78,27 +78,38 @@ func TranslateAlphaPackage(alphaPkg v1alpha1.ZarfPackage) (ZarfPackage, error) {
 			betaPkg.Components[i].Charts[j].Local.Path = alphaPkg.Components[i].Charts[j].LocalPath
 		}
 
-		betaPkg.Components[i].Actions = transformActions(betaPkg.Components[i].Actions, alphaPkg.Components[i].Actions)
+		betaPkg.Components[i].Actions.OnCreate = transformActionSet(betaPkg.Components[i].Actions.OnCreate, alphaPkg.Components[i].Actions.OnCreate)
+		betaPkg.Components[i].Actions.OnDeploy = transformActionSet(betaPkg.Components[i].Actions.OnDeploy, alphaPkg.Components[i].Actions.OnDeploy)
+		betaPkg.Components[i].Actions.OnRemove = transformActionSet(betaPkg.Components[i].Actions.OnRemove, alphaPkg.Components[i].Actions.OnRemove)
 
 	}
 
 	return betaPkg, nil
 }
 
+func transformActionSet(betaActions ZarfComponentActionSet, alphaActions v1alpha1.ZarfComponentActionSet) ZarfComponentActionSet {
+	if alphaActions.Defaults.MaxTotalSeconds != 0 {
+		betaActions.Defaults.Timeout = &v1.Duration{Duration: time.Duration(alphaActions.Defaults.MaxTotalSeconds) * time.Second}
+	}
+	betaActions.Defaults.Retries = alphaActions.Defaults.MaxRetries
 
-func transformActions(betaActions ZarfComponentActions, alphaActions v1alpha1.ZarfComponentActions) ZarfComponentActions{
-	transform := func(betaActions ZarfComponentActionDefaults, alphaActions v1alpha1.ZarfComponentActionDefaults) ZarfComponentActionDefaults {
-		if alphaActions.MaxTotalSeconds != 0 {
-			betaActions.Timeout = &v1.Duration{Duration: time.Duration(alphaActions.MaxTotalSeconds) * time.Second}
+	transformActions := func(betaActions []ZarfComponentAction, alphaActions []v1alpha1.ZarfComponentAction) []ZarfComponentAction {
+		for i := range betaActions {
+			if alphaActions[i].MaxTotalSeconds != nil && *alphaActions[i].MaxTotalSeconds != 0 {
+				betaActions[i].Timeout = &v1.Duration{Duration: time.Duration(*alphaActions[i].MaxTotalSeconds) * time.Second}
+			}
+
+			if alphaActions[i].MaxRetries != nil {
+				betaActions[i].Retries = *alphaActions[i].MaxRetries
+			}
 		}
-
-		if alphaActions.MaxRetries != 0 {
-			betaActions.Retries = alphaActions.MaxRetries
-		}
-
 		return betaActions
 	}
 
-	betaActions.OnCreate.Defaults = transform(betaActions.OnCreate.Defaults, alphaActions.OnCreate.Defaults)
+	betaActions.After = transformActions(betaActions.After, alphaActions.After)
+	betaActions.Before = transformActions(betaActions.Before, alphaActions.Before)
+	betaActions.OnFailure = transformActions(betaActions.OnFailure, alphaActions.OnFailure)
+	betaActions.OnSuccess = transformActions(betaActions.OnSuccess, alphaActions.OnSuccess)
+
 	return betaActions
 }

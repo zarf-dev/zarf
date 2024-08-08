@@ -17,6 +17,8 @@ import (
 func TestTranslate(t *testing.T) {
 	t.Parallel()
 
+	value := 60
+
 	tests := []struct {
 		name   string
 		oldPkg v1alpha1.ZarfPackage
@@ -40,6 +42,46 @@ func TestTranslate(t *testing.T) {
 						Name: "actions",
 						Actions: v1alpha1.ZarfComponentActions{
 							OnCreate: v1alpha1.ZarfComponentActionSet{
+								Defaults: v1alpha1.ZarfComponentActionDefaults{
+									MaxTotalSeconds: 30,
+									MaxRetries:      5,
+								},
+								Before: []v1alpha1.ZarfComponentAction{
+									{
+										MaxTotalSeconds: &value,
+										MaxRetries:      &value,
+									},
+								},
+								After: []v1alpha1.ZarfComponentAction{
+									{
+										MaxTotalSeconds: &value,
+										MaxRetries:      &value,
+									},
+									{
+										MaxTotalSeconds: &value,
+										MaxRetries:      &value,
+									},
+								},
+								OnSuccess: []v1alpha1.ZarfComponentAction{
+									{
+										MaxTotalSeconds: &value,
+										MaxRetries:      &value,
+									},
+								},
+								OnFailure: []v1alpha1.ZarfComponentAction{
+									{
+										MaxTotalSeconds: &value,
+										MaxRetries:      &value,
+									},
+								},
+							},
+							OnDeploy: v1alpha1.ZarfComponentActionSet{
+								Defaults: v1alpha1.ZarfComponentActionDefaults{
+									MaxTotalSeconds: 30,
+									MaxRetries:      5,
+								},
+							},
+							OnRemove: v1alpha1.ZarfComponentActionSet{
 								Defaults: v1alpha1.ZarfComponentActionDefaults{
 									MaxTotalSeconds: 30,
 									MaxRetries:      5,
@@ -88,6 +130,46 @@ func TestTranslate(t *testing.T) {
 						Optional: helpers.BoolPtr(true),
 						Actions: ZarfComponentActions{
 							OnCreate: ZarfComponentActionSet{
+								Defaults: ZarfComponentActionDefaults{
+									Timeout: &v1.Duration{Duration: time.Duration(time.Second * 30)},
+									Retries: 5,
+								},
+								Before: []ZarfComponentAction{
+									{
+										Timeout: &v1.Duration{Duration: time.Duration(time.Second * 60)},
+										Retries: 60,
+									},
+								},
+								After: []ZarfComponentAction{
+									{
+										Timeout: &v1.Duration{Duration: time.Duration(time.Second * 60)},
+										Retries: 60,
+									},
+									{
+										Timeout: &v1.Duration{Duration: time.Duration(time.Second * 60)},
+										Retries: 60,
+									},
+								},
+								OnSuccess: []ZarfComponentAction{
+									{
+										Timeout: &v1.Duration{Duration: time.Duration(time.Second * 60)},
+										Retries: 60,
+									},
+								},
+								OnFailure: []ZarfComponentAction{
+									{
+										Timeout: &v1.Duration{Duration: time.Duration(time.Second * 60)},
+										Retries: 60,
+									},
+								},
+							},
+							OnDeploy: ZarfComponentActionSet{
+								Defaults: ZarfComponentActionDefaults{
+									Timeout: &v1.Duration{Duration: time.Duration(time.Second * 30)},
+									Retries: 5,
+								},
+							},
+							OnRemove: ZarfComponentActionSet{
 								Defaults: ZarfComponentActionDefaults{
 									Timeout: &v1.Duration{Duration: time.Duration(time.Second * 30)},
 									Retries: 5,
