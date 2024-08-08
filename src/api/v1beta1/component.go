@@ -214,8 +214,8 @@ type ZarfComponentActionSet struct {
 type ZarfComponentActionDefaults struct {
 	// Hide the output of commands during execution (default false).
 	Mute bool `json:"mute,omitempty"`
-	// Default timeout in seconds for commands (default to 0, no timeout).
-	Timeout metav1.Duration `json:"timeout,omitempty"`
+	// Default timeout in seconds for commands (default no timeout).
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 	// Retry commands given number of times if they fail (default 0).
 	Retries int `json:"retries,omitempty"`
 	// Working directory for commands (default CWD).
@@ -230,7 +230,7 @@ type ZarfComponentActionDefaults struct {
 type ZarfComponentAction struct {
 	// Hide the output of the command during package deployment (default false).
 	Mute *bool `json:"mute,omitempty"`
-	// Timeout in seconds for the command (default to 0, no timeout for cmd actions and 300, 5 minutes for wait actions).
+	// Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
 	// Retry the command if it fails up to given number of times (default 0).
 	Retries int `json:"retries,omitempty"`

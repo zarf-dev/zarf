@@ -8,9 +8,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TranslateAlphaPackage(alphaPkg v1alpha1.ZarfPackage) (ZarfPackage, error) {
@@ -75,7 +77,28 @@ func TranslateAlphaPackage(alphaPkg v1alpha1.ZarfPackage) (ZarfPackage, error) {
 
 			betaPkg.Components[i].Charts[j].Local.Path = alphaPkg.Components[i].Charts[j].LocalPath
 		}
+
+		betaPkg.Components[i].Actions = transformActions(betaPkg.Components[i].Actions, alphaPkg.Components[i].Actions)
+
 	}
 
 	return betaPkg, nil
+}
+
+
+func transformActions(betaActions ZarfComponentActions, alphaActions v1alpha1.ZarfComponentActions) ZarfComponentActions{
+	transform := func(betaActions ZarfComponentActionDefaults, alphaActions v1alpha1.ZarfComponentActionDefaults) ZarfComponentActionDefaults {
+		if alphaActions.MaxTotalSeconds != 0 {
+			betaActions.Timeout = &v1.Duration{Duration: time.Duration(alphaActions.MaxTotalSeconds) * time.Second}
+		}
+
+		if alphaActions.MaxRetries != 0 {
+			betaActions.Retries = alphaActions.MaxRetries
+		}
+
+		return betaActions
+	}
+
+	betaActions.OnCreate.Defaults = transform(betaActions.OnCreate.Defaults, alphaActions.OnCreate.Defaults)
+	return betaActions
 }

@@ -6,10 +6,12 @@ package v1beta1
 
 import (
 	"testing"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestTranslate(t *testing.T) {
@@ -33,6 +35,17 @@ func TestTranslate(t *testing.T) {
 					{
 						Name:     "not-optional",
 						Required: helpers.BoolPtr(true),
+					},
+					{
+						Name: "actions",
+						Actions: v1alpha1.ZarfComponentActions{
+							OnCreate: v1alpha1.ZarfComponentActionSet{
+								Defaults: v1alpha1.ZarfComponentActionDefaults{
+									MaxTotalSeconds: 30,
+									MaxRetries:      5,
+								},
+							},
+						},
 					},
 					{
 						Name: "helm-chart",
@@ -63,15 +76,27 @@ func TestTranslate(t *testing.T) {
 				},
 				Components: []ZarfComponent{
 					{
-						Name: "optional",
+						Name:     "optional",
 						Optional: helpers.BoolPtr(true),
 					},
 					{
-						Name: "not-optional",
+						Name:     "not-optional",
 						Optional: helpers.BoolPtr(false),
 					},
 					{
-						Name: "helm-chart",
+						Name:     "actions",
+						Optional: helpers.BoolPtr(true),
+						Actions: ZarfComponentActions{
+							OnCreate: ZarfComponentActionSet{
+								Defaults: ZarfComponentActionDefaults{
+									Timeout: &v1.Duration{Duration: time.Duration(time.Second * 30)},
+									Retries: 5,
+								},
+							},
+						},
+					},
+					{
+						Name:     "helm-chart",
 						Optional: helpers.BoolPtr(true),
 						Charts: []ZarfChart{
 							{
