@@ -18,6 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
@@ -229,26 +230,23 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 	toPull := maps.Clone(fetched)
 
-	sc := func() error {
+	err = retry.Do(func() error {
 		saved, err := SaveConcurrent(ctx, cranePath, toPull)
 		for k := range saved {
 			delete(toPull, k)
 		}
 		return err
-	}
-
-	ss := func() error {
-		saved, err := SaveSequential(ctx, cranePath, toPull)
-		for k := range saved {
-			delete(toPull, k)
-		}
-		return err
-	}
-
-	if err := helpers.RetryWithContext(ctx, sc, 2, 5*time.Second, message.Warnf); err != nil {
+	}, retry.Context(ctx), retry.Attempts(2), retry.Delay(100*time.Millisecond))
+	if err != nil {
 		message.Warnf("Failed to save images in parallel, falling back to sequential save: %s", err.Error())
-
-		if err := helpers.RetryWithContext(ctx, ss, 2, 5*time.Second, message.Warnf); err != nil {
+		err = retry.Do(func() error {
+			saved, err := SaveSequential(ctx, cranePath, toPull)
+			for k := range saved {
+				delete(toPull, k)
+			}
+			return err
+		}, retry.Context(ctx), retry.Attempts(2), retry.Delay(100*time.Millisecond))
+		if err != nil {
 			return nil, err
 		}
 	}

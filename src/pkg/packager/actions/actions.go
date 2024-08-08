@@ -93,6 +93,7 @@ func runAction(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefau
 	timeout := time.After(duration)
 
 	// Keep trying until the max retries is reached.
+	// TODO: Refactor using go-retry
 retryCmd:
 	for remaining := actionDefaults.MaxRetries + 1; remaining > 0; remaining-- {
 		// Perform the action run.
