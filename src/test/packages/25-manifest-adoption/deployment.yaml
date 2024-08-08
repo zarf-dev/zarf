@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: multi-game
-          image: "defenseunicorns/zarf-game:multi-tile-dark"
+          image: "ghcr.io/zarf-dev/doom-game:0.0.1"
           ports:
             - name: http
               containerPort: 8000

@@ -6,7 +6,6 @@ package creator
 
 import (
 	"context"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,21 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/rules"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 )
-
-type mockSchemaLoader struct {
-	b []byte
-}
-
-func (m *mockSchemaLoader) ReadFile(_ string) ([]byte, error) {
-	return m.b, nil
-}
-
-// Satisfy fs.ReadFileFS interface
-func (m *mockSchemaLoader) Open(_ string) (fs.File, error) {
-	return nil, nil
-}
 
 func TestLoadPackageDefinition(t *testing.T) {
 	// TODO once creator is refactored to not expect to be in the same directory as the zarf.yaml file
@@ -64,9 +51,7 @@ func TestLoadPackageDefinition(t *testing.T) {
 			creator:     NewSkeletonCreator(types.ZarfCreateOptions{}, types.ZarfPublishOptions{}),
 		},
 	}
-	b, err := os.ReadFile("../../../../zarf.schema.json")
-	require.NoError(t, err)
-	rules.ZarfSchema = &mockSchemaLoader{b: b}
+	rules.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
 	for _, tt := range tests {
 		tt := tt
