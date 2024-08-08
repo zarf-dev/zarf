@@ -12,7 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/rules"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -51,7 +51,7 @@ func TestLoadPackageDefinition(t *testing.T) {
 			creator:     NewSkeletonCreator(types.ZarfCreateOptions{}, types.ZarfPublishOptions{}),
 		},
 	}
-	rules.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
 	for _, tt := range tests {
 		tt := tt

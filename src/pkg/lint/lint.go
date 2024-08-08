@@ -16,14 +16,13 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/composer"
-	"github.com/zarf-dev/zarf/src/pkg/rules"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Validate lints the given Zarf package
 func Validate(ctx context.Context, createOpts types.ZarfCreateOptions) error {
-	var findings []rules.PackageFinding
+	var findings []PackageFinding
 	if err := os.Chdir(createOpts.BaseDir); err != nil {
 		return fmt.Errorf("unable to access directory %q: %w", createOpts.BaseDir, err)
 	}
@@ -37,7 +36,7 @@ func Validate(ctx context.Context, createOpts types.ZarfCreateOptions) error {
 		return err
 	}
 	findings = append(findings, compFindings...)
-	schemaFindings, err := rules.ValidatePackageSchema()
+	schemaFindings, err := ValidatePackageSchema()
 	if err != nil {
 		return err
 	}
@@ -47,15 +46,15 @@ func Validate(ctx context.Context, createOpts types.ZarfCreateOptions) error {
 		message.Successf("0 findings for %q", pkg.Metadata.Name)
 		return nil
 	}
-	rules.PrintFindings(findings, rules.SevWarn, createOpts.BaseDir, pkg.Metadata.Name)
-	if rules.HasSevOrHigher(findings, rules.SevErr) {
+	PrintFindings(findings, SevWarn, createOpts.BaseDir, pkg.Metadata.Name)
+	if HasSevOrHigher(findings, SevErr) {
 		return errors.New("errors during lint")
 	}
 	return nil
 }
 
-func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, createOpts types.ZarfCreateOptions) ([]rules.PackageFinding, error) {
-	var findings []rules.PackageFinding
+func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, createOpts types.ZarfCreateOptions) ([]PackageFinding, error) {
+	var findings []PackageFinding
 
 	for i, component := range pkg.Components {
 		arch := config.GetArch(pkg.Metadata.Architecture)
@@ -76,7 +75,7 @@ func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, createOpts ty
 			if err != nil {
 				return nil, err
 			}
-			compFindings = append(compFindings, rules.CheckComponentValues(component, node.Index())...)
+			compFindings = append(compFindings, CheckComponentValues(component, node.Index())...)
 			for i := range compFindings {
 				compFindings[i].PackagePathOverride = node.ImportLocation()
 				compFindings[i].PackageNameOverride = node.OriginalPackageName()
@@ -88,8 +87,8 @@ func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, createOpts ty
 	return findings, nil
 }
 
-func fillComponentTemplate(c *v1alpha1.ZarfComponent, createOpts types.ZarfCreateOptions) ([]rules.PackageFinding, error) {
-	var findings []rules.PackageFinding
+func fillComponentTemplate(c *v1alpha1.ZarfComponent, createOpts types.ZarfCreateOptions) ([]PackageFinding, error) {
+	var findings []PackageFinding
 	templateMap := map[string]string{}
 
 	setVarsAndWarn := func(templatePrefix string, deprecated bool) error {
@@ -101,9 +100,9 @@ func fillComponentTemplate(c *v1alpha1.ZarfComponent, createOpts types.ZarfCreat
 		var unSetTemplates bool
 		for key := range yamlTemplates {
 			if deprecated {
-				findings = append(findings, rules.PackageFinding{
+				findings = append(findings, PackageFinding{
 					Description: fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key),
-					Severity:    rules.SevWarn,
+					Severity:    SevWarn,
 				})
 			}
 			if _, present := createOpts.SetVariables[key]; !present {
@@ -111,9 +110,9 @@ func fillComponentTemplate(c *v1alpha1.ZarfComponent, createOpts types.ZarfCreat
 			}
 		}
 		if unSetTemplates {
-			findings = append(findings, rules.PackageFinding{
+			findings = append(findings, PackageFinding{
 				Description: lang.UnsetVarLintWarning,
-				Severity:    rules.SevWarn,
+				Severity:    SevWarn,
 			})
 		}
 		for key, value := range createOpts.SetVariables {

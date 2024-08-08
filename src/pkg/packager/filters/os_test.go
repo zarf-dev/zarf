@@ -9,12 +9,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/rules"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 )
 
 func TestLocalOSFilter(t *testing.T) {
 	pkg := v1alpha1.ZarfPackage{}
-	for _, os := range rules.SupportedOS() {
+	for _, os := range lint.SupportedOS() {
 		pkg.Components = append(pkg.Components, v1alpha1.ZarfComponent{
 			Only: v1alpha1.ZarfComponentOnlyTarget{
 				LocalOS: os,
@@ -22,7 +22,7 @@ func TestLocalOSFilter(t *testing.T) {
 		})
 	}
 
-	for _, os := range rules.SupportedOS() {
+	for _, os := range lint.SupportedOS() {
 		filter := ByLocalOS(os)
 		result, err := filter.Apply(pkg)
 		if os == "" {

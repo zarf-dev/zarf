@@ -15,7 +15,6 @@ import (
 	"github.com/zarf-dev/zarf/src/extensions/bigbang"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
-	"github.com/zarf-dev/zarf/src/pkg/rules"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -140,10 +139,6 @@ func NewImportChain(ctx context.Context, head v1alpha1.ZarfComponent, index int,
 			// This is the end of the import chain,
 			// as the current node/component is not importing anything
 			return ic, nil
-		}
-
-		if err := rules.ValidateComponent(node.ZarfComponent); err != nil {
-			return ic, err
 		}
 
 		// ensure that remote components are not importing other remote components

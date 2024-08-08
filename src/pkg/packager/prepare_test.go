@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/zarf-dev/zarf/src/pkg/rules"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -18,7 +18,7 @@ func TestFindImages(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 
-	rules.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
 	cfg := &types.PackagerConfig{
 		CreateOpts: types.ZarfCreateOptions{
