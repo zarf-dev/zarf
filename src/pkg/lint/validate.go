@@ -73,6 +73,9 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 		}
 	}
 	for _, component := range pkg.Components {
+		if compErr := ValidateComponent(component); compErr != nil {
+			err = errors.Join(err, compErr)
+		}
 		// ensure component name is unique
 		if _, ok := uniqueComponentNames[component.Name]; ok {
 			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentNameNotUnique, component.Name))
