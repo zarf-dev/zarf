@@ -17,7 +17,8 @@ import (
 func TestTranslate(t *testing.T) {
 	t.Parallel()
 
-	value := 60
+	maxSeconds := 60
+	maxRetries := 10
 
 	tests := []struct {
 		name   string
@@ -59,30 +60,30 @@ func TestTranslate(t *testing.T) {
 								},
 								Before: []v1alpha1.ZarfComponentAction{
 									{
-										MaxTotalSeconds: &value,
-										MaxRetries:      &value,
+										MaxTotalSeconds: &maxSeconds,
+										MaxRetries:      &maxRetries,
 									},
 								},
 								After: []v1alpha1.ZarfComponentAction{
 									{
-										MaxTotalSeconds: &value,
-										MaxRetries:      &value,
+										MaxTotalSeconds: &maxSeconds,
+										MaxRetries:      &maxRetries,
 									},
 									{
-										MaxTotalSeconds: &value,
-										MaxRetries:      &value,
+										MaxTotalSeconds: &maxSeconds,
+										MaxRetries:      &maxRetries,
 									},
 								},
 								OnSuccess: []v1alpha1.ZarfComponentAction{
 									{
-										MaxTotalSeconds: &value,
-										MaxRetries:      &value,
+										MaxTotalSeconds: &maxSeconds,
+										MaxRetries:      &maxRetries,
 									},
 								},
 								OnFailure: []v1alpha1.ZarfComponentAction{
 									{
-										MaxTotalSeconds: &value,
-										MaxRetries:      &value,
+										MaxTotalSeconds: &maxSeconds,
+										MaxRetries:      &maxRetries,
 									},
 								},
 							},
@@ -162,29 +163,29 @@ func TestTranslate(t *testing.T) {
 								Before: []ZarfComponentAction{
 									{
 										Timeout: &v1.Duration{Duration: time.Duration(time.Second * 60)},
-										Retries: 60,
+										Retries: 10,
 									},
 								},
 								After: []ZarfComponentAction{
 									{
 										Timeout: &v1.Duration{Duration: time.Duration(time.Second * 60)},
-										Retries: 60,
+										Retries: 10,
 									},
 									{
 										Timeout: &v1.Duration{Duration: time.Duration(time.Second * 60)},
-										Retries: 60,
+										Retries: 10,
 									},
 								},
 								OnSuccess: []ZarfComponentAction{
 									{
 										Timeout: &v1.Duration{Duration: time.Duration(time.Second * 60)},
-										Retries: 60,
+										Retries: 10,
 									},
 								},
 								OnFailure: []ZarfComponentAction{
 									{
 										Timeout: &v1.Duration{Duration: time.Duration(time.Second * 60)},
-										Retries: 60,
+										Retries: 10,
 									},
 								},
 							},

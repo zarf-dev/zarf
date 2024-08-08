@@ -74,12 +74,12 @@ func (c ZarfComponent) RequiresCluster() bool {
 	return false
 }
 
-// IsRequired returns if the component is required or not.
-func (c ZarfComponent) IsRequired() bool {
+// IsOptional returns if the component is optional.
+func (c ZarfComponent) IsOptional() bool {
 	if c.Optional == nil {
-		return true
+		return false
 	}
-	return !*c.Optional
+	return *c.Optional
 }
 
 type ZarfHealthCheck struct {
