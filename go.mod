@@ -39,7 +39,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.18.0
-	github.com/pterm/pterm v0.12.78
+	github.com/pterm/pterm v0.12.79
 	github.com/sergi/go-diff v1.3.1
 	github.com/sigstore/cosign/v2 v2.2.3
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.1
