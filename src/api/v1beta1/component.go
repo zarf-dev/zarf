@@ -51,6 +51,12 @@ type ZarfComponent struct {
 
 	// Custom commands to run at various stages of a package lifecycle.
 	Actions ZarfComponentActions `json:"actions,omitempty"`
+
+	// Whether or not to wait for every resource to be ready after deployment. (Defaults to true)
+	Wait *bool `json:"wait,omitempty"`
+
+	// Health checks to run after deployment.
+	HealthChecks []ZarfHealthCheck `json:"healthChecks,omitempty"`
 }
 
 // RequiresCluster returns if the component requires a cluster connection to deploy.
@@ -74,6 +80,17 @@ func (c ZarfComponent) IsRequired() bool {
 		return true
 	}
 	return !*c.Optional
+}
+
+type ZarfHealthCheck struct {
+	// The APIVersion of the resource to wait for.
+	APIVersion string `json:"apiVersion" jsonschema:"example=v1"`
+	// The kind of resource to wait for.
+	Kind string `json:"kind" jsonschema:"example=Pod,example=Deployment"`
+	// The name of the resource or selector to wait for.
+	Name string `json:"name" jsonschema:"example=podinfo,example=app=podinfo"`
+	// The namespace of the resource to wait for.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
