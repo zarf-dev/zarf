@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 var start = `
@@ -79,7 +80,7 @@ func TestReplaceTextTemplate(t *testing.T) {
 				setVariableMap: SetVariableMap{
 					"REPLACE_ME": {Value: "VAR_REPLACED"},
 				},
-				constants: []Constant{{Name: "REPLACE_ME", Value: "CONST_REPLACED"}},
+				constants: []v1alpha1.Constant{{Name: "REPLACE_ME", Value: "CONST_REPLACED"}},
 				applicationTemplates: map[string]*TextTemplate{
 					"###PREFIX_APP_REPLACE_ME###": {Value: "APP_REPLACED"},
 				},
@@ -92,7 +93,7 @@ func TestReplaceTextTemplate(t *testing.T) {
 				setVariableMap: SetVariableMap{
 					"REPLACE_ME": {Value: "VAR_REPLACED\nVAR_SECOND"},
 				},
-				constants: []Constant{{Name: "REPLACE_ME", Value: "CONST_REPLACED\nCONST_SECOND"}},
+				constants: []v1alpha1.Constant{{Name: "REPLACE_ME", Value: "CONST_REPLACED\nCONST_SECOND"}},
 				applicationTemplates: map[string]*TextTemplate{
 					"###PREFIX_APP_REPLACE_ME###": {Value: "APP_REPLACED\nAPP_SECOND"},
 				},
@@ -103,9 +104,9 @@ func TestReplaceTextTemplate(t *testing.T) {
 			vc: VariableConfig{
 				templatePrefix: "PREFIX",
 				setVariableMap: SetVariableMap{
-					"REPLACE_ME": {Value: "VAR_REPLACED\nVAR_SECOND", Variable: Variable{AutoIndent: true}},
+					"REPLACE_ME": {Value: "VAR_REPLACED\nVAR_SECOND", Variable: v1alpha1.Variable{AutoIndent: true}},
 				},
-				constants: []Constant{{Name: "REPLACE_ME", Value: "CONST_REPLACED\nCONST_SECOND", AutoIndent: true}},
+				constants: []v1alpha1.Constant{{Name: "REPLACE_ME", Value: "CONST_REPLACED\nCONST_SECOND", AutoIndent: true}},
 				applicationTemplates: map[string]*TextTemplate{
 					"###PREFIX_APP_REPLACE_ME###": {Value: "APP_REPLACED\nAPP_SECOND", AutoIndent: true},
 				},
@@ -116,11 +117,11 @@ func TestReplaceTextTemplate(t *testing.T) {
 			vc: VariableConfig{
 				templatePrefix: "PREFIX",
 				setVariableMap: SetVariableMap{
-					"REPLACE_ME": {Value: "testdata/file.txt", Variable: Variable{Type: FileVariableType}},
+					"REPLACE_ME": {Value: "testdata/file.txt", Variable: v1alpha1.Variable{Type: v1alpha1.FileVariableType}},
 				},
-				constants: []Constant{{Name: "REPLACE_ME", Value: "CONSTs Don't Support File"}},
+				constants: []v1alpha1.Constant{{Name: "REPLACE_ME", Value: "CONSTs Don't Support File"}},
 				applicationTemplates: map[string]*TextTemplate{
-					"###PREFIX_APP_REPLACE_ME###": {Value: "testdata/file.txt", Type: FileVariableType},
+					"###PREFIX_APP_REPLACE_ME###": {Value: "testdata/file.txt", Type: v1alpha1.FileVariableType},
 				},
 			},
 			wantContents: file,

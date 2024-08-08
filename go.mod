@@ -2,8 +2,6 @@ module github.com/zarf-dev/zarf
 
 go 1.22.4
 
-replace github.com/zarf-dev/zarf/src/api => ./src/api
-
 // TODO (@AABRO): Pending merge into github.com/gojsonschema/gojsonschema (https://github.com/gojsonschema/gojsonschema/pull/5)
 replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
 
@@ -51,7 +49,6 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	github.com/xeipuuv/gojsonschema v1.2.0
-	github.com/zarf-dev/zarf/src/api v0.0.0-00010101000000-000000000000
 	golang.org/x/crypto v0.25.0
 	golang.org/x/sync v0.7.0
 	golang.org/x/term v0.22.0

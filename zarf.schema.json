@@ -208,6 +208,7 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "description": "Shell represents the desired shell to use for a given command",
       "patternProperties": {
         "^x-": {}
       }

@@ -30,7 +30,8 @@ const (
 
 // Lint messages
 const (
-	UnsetVarLintWarning = "There are templates that are not set and won't be evaluated during lint"
+	UnsetVarLintWarning            = "There are templates that are not set and won't be evaluated during lint"
+	PkgValidateTemplateDeprecation = "Package template %q is using the deprecated syntax ###ZARF_PKG_VAR_%s###. This will be removed in Zarf v1.0.0. Please update to ###ZARF_PKG_TMPL_%s###."
 )
 
 // Zarf CLI commands.
@@ -617,38 +618,6 @@ const (
 const (
 	PkgCreateErrDifferentialSameVersion = "unable to create differential package. Please ensure the differential package version and reference package version are not the same. The package version must be incremented"
 	PkgCreateErrDifferentialNoVersion   = "unable to create differential package. Please ensure both package versions are set"
-)
-
-// Package validate
-const (
-	PkgValidateTemplateDeprecation        = "Package template %q is using the deprecated syntax ###ZARF_PKG_VAR_%s###. This will be removed in Zarf v1.0.0. Please update to ###ZARF_PKG_TMPL_%s###."
-	PkgValidateErrAction                  = "invalid action: %w"
-	PkgValidateErrActionCmdWait           = "action %q cannot be both a command and wait action"
-	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
-	PkgValidateErrChart                   = "invalid chart definition: %w"
-	PkgValidateErrChartName               = "chart %q exceed the maximum length of %d characters"
-	PkgValidateErrChartNameNotUnique      = "chart name %q is not unique"
-	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
-	PkgValidateErrChartURLOrPath          = "chart %q must have either a url or localPath"
-	PkgValidateErrChartVersion            = "chart %q must include a chart version"
-	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
-	PkgValidateErrComponentReqDefault     = "component %q cannot be both required and default"
-	PkgValidateErrComponentReqGrouped     = "component %q cannot be both required and grouped"
-	PkgValidateErrGroupMultipleDefaults   = "group %q has multiple defaults (%q, %q)"
-	PkgValidateErrGroupOneComponent       = "group %q only has one component (%q)"
-	PkgValidateErrConstant                = "invalid package constant: %w"
-	PkgValidateErrImportDefinition        = "invalid imported definition for %s: %s"
-	PkgValidateErrInitNoYOLO              = "sorry, you can't YOLO an init package"
-	PkgValidateErrManifest                = "invalid manifest definition: %w"
-	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
-	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
-	PkgValidateErrManifestNameNotUnique   = "manifest name %q is not unique"
-	PkgValidateErrPkgConstantPattern      = "provided value for constant %q does not match pattern %q"
-	PkgValidateErrVariable                = "invalid package variable: %w"
-	PkgValidateErrYOLONoArch              = "cluster architecture not allowed in YOLO"
-	PkgValidateErrYOLONoDistro            = "cluster distros not allowed in YOLO"
-	PkgValidateErrYOLONoGit               = "git repos not allowed in YOLO"
-	PkgValidateErrYOLONoOCI               = "OCI images not allowed in YOLO"
 )
 
 // Collection of reusable error messages.

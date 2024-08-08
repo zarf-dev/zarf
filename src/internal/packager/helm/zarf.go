@@ -23,7 +23,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
 // UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
@@ -103,7 +102,7 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 				Namespace:   "zarf",
 				ReleaseName: release.Name,
 			}
-			h.variableConfig.SetConstants([]variables.Constant{
+			h.variableConfig.SetConstants([]v1alpha1.Constant{
 				{
 					Name:  "AGENT_IMAGE",
 					Value: agentImage.Path,
