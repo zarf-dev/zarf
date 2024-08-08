@@ -114,16 +114,16 @@ type ZarfFile struct {
 type ZarfChart struct {
 	// The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo.
 	Name string `json:"name"`
+	// The Helm repo where the chart is stored
+	Helm HelmRepoSource `json:"helm,omitempty"`
+	// The Git repo where the chart is stored
+	Git GitRepoSource `json:"git,omitempty"`
+	// The local path where the chart is stored
+	Local LocalRepoSource `json:"local,omitempty"`
+	// The OCI registry where the chart is stored
+	OCI OCISource `json:"oci,omitempty"`
 	// The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos').
 	Version string `json:"version,omitempty"`
-	// The URL of the OCI registry, chart repository, or git repo where the helm chart is stored.
-	URL string `json:"url,omitempty" jsonschema:"example=OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo,example=helm chart repo: https://stefanprodan.github.io/podinfo,example=git repo: https://github.com/stefanprodan/podinfo (note the '@' syntax for 'repos' is supported here too)"`
-	// The name of a chart within a Helm repository (defaults to the Zarf name of the chart).
-	RepoName string `json:"repoName,omitempty"`
-	// (git repo only) The sub directory to the chart within a git repo.
-	GitPath string `json:"gitPath,omitempty" jsonschema:"example=charts/your-chart"`
-	// The path to a local chart's folder or .tgz archive.
-	LocalPath string `json:"localPath,omitempty"`
 	// The namespace to deploy the chart to.
 	Namespace string `json:"namespace,omitempty"`
 	// The name of the Helm release to create (defaults to the Zarf name of the chart).
@@ -134,6 +134,30 @@ type ZarfChart struct {
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
 	// [alpha] List of variables to set in the Helm chart.
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
+}
+
+type HelmRepoSource struct {
+	// The name of a chart within a Helm repository (defaults to the Zarf name of the chart).
+	RepoName string `json:"repoName,omitempty"`
+	// The URL of the chart repository where the helm chart is stored.
+	Url string `json:"url"`
+}
+
+type GitRepoSource struct {
+	// The URL of the git repository where the helm chart is stored.
+	Url string `json:"url"`
+	// The sub directory to the chart within a git repo.
+	Path string `json:"path,omitempty"`
+}
+
+type LocalRepoSource struct {
+	// The path to a local chart's folder or .tgz archive.
+	Path string `json:"path,omitempty"`
+}
+
+type OCISource struct {
+	// The URL of the OCI registry where the helm chart is stored.
+	Url string `json:"url"`
 }
 
 // ZarfChartVariable represents a variable that can be set for a Helm chart overrides.
