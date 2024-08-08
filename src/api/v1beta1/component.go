@@ -8,6 +8,7 @@ import (
 	"github.com/invopop/jsonschema"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
@@ -190,9 +191,9 @@ type ZarfComponentActionDefaults struct {
 	// Hide the output of commands during execution (default false).
 	Mute bool `json:"mute,omitempty"`
 	// Default timeout in seconds for commands (default to 0, no timeout).
-	MaxTotalSeconds int `json:"maxTotalSeconds,omitempty"`
+	Timeout metav1.Duration `json:"timeout,omitempty"`
 	// Retry commands given number of times if they fail (default 0).
-	MaxRetries int `json:"maxRetries,omitempty"`
+	Retries int `json:"retries,omitempty"`
 	// Working directory for commands (default CWD).
 	Dir string `json:"dir,omitempty"`
 	// Additional environment variables for commands.
@@ -206,9 +207,9 @@ type ZarfComponentAction struct {
 	// Hide the output of the command during package deployment (default false).
 	Mute *bool `json:"mute,omitempty"`
 	// Timeout in seconds for the command (default to 0, no timeout for cmd actions and 300, 5 minutes for wait actions).
-	MaxTotalSeconds *int `json:"maxTotalSeconds,omitempty"`
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 	// Retry the command if it fails up to given number of times (default 0).
-	MaxRetries *int `json:"maxRetries,omitempty"`
+	Retries int `json:"retries,omitempty"`
 	// The working directory to run the command in (default is CWD).
 	Dir *string `json:"dir,omitempty"`
 	// Additional environment variables to set for the command.
