@@ -48,7 +48,7 @@ There are several other keys Zarf will deprecate which will have automated migra
 ```yaml
   helm:
     url: https://stefanprodan.github.io/podinfo
-    name: podinfo # replaces repoName since it's only applicable for helm repos
+    RepoName: podinfo # replaces repoName since it's only applicable for helm repos
 
   git:
     url: https://stefanprodan.github.io/podinfo
@@ -60,7 +60,8 @@ There are several other keys Zarf will deprecate which will have automated migra
   local:
    path: chart
 ```
-- Starting in v1 `.components.[x].actions.[default/onAny].wait.cluster` will use [kstatus](https://github.com/kubernetes-sigs/cli-utils/blob/master/pkg/kstatus/README.md). This means it will not need nor accept the `condition` field. This will work for every built in k8s resource but will only work for CRDs if they implement kstatus. `apiVersion` will be a required field on `wait.cluster`. During `zarf dev migrate-schema` the `apiVersion` will be automatically set to the most recent `apiVersion` if it's not a custom resource.
+- A new field called `.components.[x].healthChecks` will be introduced and will utilize [kstatus](https://github.com/kubernetes-sigs/cli-utils/blob/master/pkg/kstatus/README.md) to wait for resources after deployment. Read [#2718](https://github.com/zarf-dev/zarf/issues/2718) for more detail.
+- a new field `.components.[x].wait` will be introduced. It will default to true, and automatically run `healthchecks` for every object in the cluster.
 
 ### BDD scenarios
 The following are [behavior driven development](https://en.wikipedia.org/wiki/Behavior-driven_development) scenarios to provide context of what Zarf will do in specific situations given the above decisions.
