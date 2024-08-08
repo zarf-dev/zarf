@@ -12,7 +12,6 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
 func TestZarfSchema(t *testing.T) {
@@ -28,7 +27,7 @@ func TestZarfSchema(t *testing.T) {
 		{
 			name: "valid package",
 			pkg: v1alpha1.ZarfPackage{
-				ApiVersion: v1alpha1.ApiVersion,
+				APIVersion: v1alpha1.APIVersion,
 				Kind:       v1alpha1.ZarfInitConfig,
 				Metadata: v1alpha1.ZarfMetadata{
 					Name: "valid-name",
@@ -57,7 +56,7 @@ func TestZarfSchema(t *testing.T) {
 		{
 			name: "invalid package",
 			pkg: v1alpha1.ZarfPackage{
-				ApiVersion: "bad-api-version/wrong",
+				APIVersion: "bad-api-version/wrong",
 				Kind:       v1alpha1.ZarfInitConfig,
 				Metadata: v1alpha1.ZarfMetadata{
 					Name: "-invalid-name",
@@ -80,7 +79,7 @@ func TestZarfSchema(t *testing.T) {
 								Before: []v1alpha1.ZarfComponentAction{
 									{
 										Cmd:          "echo 'invalid setVariable'",
-										SetVariables: []variables.Variable{{Name: "not_uppercase"}},
+										SetVariables: []v1alpha1.Variable{{Name: "not_uppercase"}},
 									},
 								},
 							},
@@ -88,19 +87,19 @@ func TestZarfSchema(t *testing.T) {
 								OnSuccess: []v1alpha1.ZarfComponentAction{
 									{
 										Cmd:          "echo 'invalid setVariable'",
-										SetVariables: []variables.Variable{{Name: "not_uppercase"}},
+										SetVariables: []v1alpha1.Variable{{Name: "not_uppercase"}},
 									},
 								},
 							},
 						},
 					},
 				},
-				Variables: []variables.InteractiveVariable{
+				Variables: []v1alpha1.InteractiveVariable{
 					{
-						Variable: variables.Variable{Name: "not_uppercase"},
+						Variable: v1alpha1.Variable{Name: "not_uppercase"},
 					},
 				},
-				Constants: []variables.Constant{
+				Constants: []v1alpha1.Constant{
 					{
 						Name: "not_uppercase",
 					},
