@@ -73,7 +73,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 		}
 	}
 	for _, component := range pkg.Components {
-		if compErr := ValidateComponent(component); compErr != nil {
+		if compErr := validateComponent(component); compErr != nil {
 			err = errors.Join(err, compErr)
 		}
 		// ensure component name is unique
@@ -96,7 +96,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartNameNotUnique, chart.Name))
 			}
 			uniqueChartNames[chart.Name] = true
-			if chartErr := ValidateChart(chart); chartErr != nil {
+			if chartErr := validateChart(chart); chartErr != nil {
 				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChart, chartErr))
 			}
 		}
@@ -107,11 +107,11 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifestNameNotUnique, manifest.Name))
 			}
 			uniqueManifestNames[manifest.Name] = true
-			if manifestErr := ValidateManifest(manifest); manifestErr != nil {
+			if manifestErr := validateManifest(manifest); manifestErr != nil {
 				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifest, manifestErr))
 			}
 		}
-		if actionsErr := ValidateActions(component.Actions); actionsErr != nil {
+		if actionsErr := validateActions(component.Actions); actionsErr != nil {
 			err = errors.Join(err, fmt.Errorf("%q: %w", component.Name, actionsErr))
 		}
 		// ensure groups don't have multiple defaults or only one component
@@ -133,29 +133,29 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	return err
 }
 
-// ValidateActions validates the actions of a component.
-func ValidateActions(a v1alpha1.ZarfComponentActions) error {
+// validateActions validates the actions of a component.
+func validateActions(a v1alpha1.ZarfComponentActions) error {
 	var err error
 
-	err = errors.Join(err, ValidateActionSet(a.OnCreate))
+	err = errors.Join(err, validateActionSet(a.OnCreate))
 
-	if HasSetVariables(a.OnCreate) {
+	if hasSetVariables(a.OnCreate) {
 		err = errors.Join(err, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
 	}
 
-	err = errors.Join(err, ValidateActionSet(a.OnDeploy))
+	err = errors.Join(err, validateActionSet(a.OnDeploy))
 
-	if HasSetVariables(a.OnRemove) {
+	if hasSetVariables(a.OnRemove) {
 		err = errors.Join(err, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
 	}
 
-	err = errors.Join(err, ValidateActionSet(a.OnRemove))
+	err = errors.Join(err, validateActionSet(a.OnRemove))
 
 	return err
 }
 
-// ValidateComponent validates the component trying to be imported.
-func ValidateComponent(c v1alpha1.ZarfComponent) error {
+// validateComponent validates the component trying to be imported.
+func validateComponent(c v1alpha1.ZarfComponent) error {
 	var err error
 	path := c.Import.Path
 	url := c.Import.URL
@@ -189,8 +189,8 @@ func ValidateComponent(c v1alpha1.ZarfComponent) error {
 	return err
 }
 
-// HasSetVariables returns true if any of the actions contain setVariables.
-func HasSetVariables(as v1alpha1.ZarfComponentActionSet) bool {
+// hasSetVariables returns true if any of the actions contain setVariables.
+func hasSetVariables(as v1alpha1.ZarfComponentActionSet) bool {
 	check := func(actions []v1alpha1.ZarfComponentAction) bool {
 		for _, action := range actions {
 			if len(action.SetVariables) > 0 {
@@ -203,12 +203,12 @@ func HasSetVariables(as v1alpha1.ZarfComponentActionSet) bool {
 	return check(as.Before) || check(as.After) || check(as.OnSuccess) || check(as.OnFailure)
 }
 
-// ValidateActionSet runs all validation checks on component action sets.
-func ValidateActionSet(as v1alpha1.ZarfComponentActionSet) error {
+// validateActionSet runs all validation checks on component action sets.
+func validateActionSet(as v1alpha1.ZarfComponentActionSet) error {
 	var err error
 	validate := func(actions []v1alpha1.ZarfComponentAction) {
 		for _, action := range actions {
-			if actionErr := ValidateAction(action); actionErr != nil {
+			if actionErr := validateAction(action); actionErr != nil {
 				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrAction, actionErr))
 			}
 		}
@@ -221,8 +221,8 @@ func ValidateActionSet(as v1alpha1.ZarfComponentActionSet) error {
 	return err
 }
 
-// ValidateAction runs all validation checks on an action.
-func ValidateAction(action v1alpha1.ZarfComponentAction) error {
+// validateAction runs all validation checks on an action.
+func validateAction(action v1alpha1.ZarfComponentAction) error {
 	var err error
 
 	if action.Wait != nil {
@@ -268,8 +268,8 @@ func validateReleaseName(chartName, releaseName string) (err error) {
 	return
 }
 
-// ValidateChart runs all validation checks on a chart.
-func ValidateChart(chart v1alpha1.ZarfChart) error {
+// validateChart runs all validation checks on a chart.
+func validateChart(chart v1alpha1.ZarfChart) error {
 	var err error
 
 	if len(chart.Name) > ZarfMaxChartNameLength {
@@ -300,8 +300,8 @@ func ValidateChart(chart v1alpha1.ZarfChart) error {
 	return err
 }
 
-// ValidateManifest runs all validation checks on a manifest.
-func ValidateManifest(manifest v1alpha1.ZarfManifest) error {
+// validateManifest runs all validation checks on a manifest.
+func validateManifest(manifest v1alpha1.ZarfManifest) error {
 	var err error
 
 	if len(manifest.Name) > ZarfMaxChartNameLength {

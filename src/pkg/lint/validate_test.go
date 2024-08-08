@@ -176,7 +176,7 @@ func TestValidateManifest(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := ValidateManifest(tt.manifest)
+			err := validateManifest(tt.manifest)
 			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
@@ -309,7 +309,7 @@ func TestValidateChart(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := ValidateChart(tt.chart)
+			err := validateChart(tt.chart)
 			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
@@ -416,7 +416,7 @@ func TestValidateComponentActions(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := ValidateActions(tt.actions)
+			err := validateActions(tt.actions)
 			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
@@ -462,7 +462,7 @@ func TestValidateComponentAction(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := ValidateAction(tt.action)
+			err := validateAction(tt.action)
 			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
@@ -554,7 +554,7 @@ func TestValidateZarfComponent(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := ValidateComponent(tt.component)
+			err := validateComponent(tt.component)
 			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
