@@ -93,23 +93,23 @@ func transformActionSet(betaActions ZarfComponentActionSet, alphaActions v1alpha
 	}
 	betaActions.Defaults.Retries = alphaActions.Defaults.MaxRetries
 
-	transformActions := func(betaActions []ZarfComponentAction, alphaActions []v1alpha1.ZarfComponentAction) []ZarfComponentAction {
-		for i := range betaActions {
-			if alphaActions[i].MaxTotalSeconds != nil && *alphaActions[i].MaxTotalSeconds != 0 {
-				betaActions[i].Timeout = &v1.Duration{Duration: time.Duration(*alphaActions[i].MaxTotalSeconds) * time.Second}
-			}
-
-			if alphaActions[i].MaxRetries != nil {
-				betaActions[i].Retries = *alphaActions[i].MaxRetries
-			}
-		}
-		return betaActions
-	}
-
 	betaActions.After = transformActions(betaActions.After, alphaActions.After)
 	betaActions.Before = transformActions(betaActions.Before, alphaActions.Before)
 	betaActions.OnFailure = transformActions(betaActions.OnFailure, alphaActions.OnFailure)
 	betaActions.OnSuccess = transformActions(betaActions.OnSuccess, alphaActions.OnSuccess)
 
+	return betaActions
+}
+
+func transformActions(betaActions []ZarfComponentAction, alphaActions []v1alpha1.ZarfComponentAction) []ZarfComponentAction {
+	for i := range betaActions {
+		if alphaActions[i].MaxTotalSeconds != nil && *alphaActions[i].MaxTotalSeconds != 0 {
+			betaActions[i].Timeout = &v1.Duration{Duration: time.Duration(*alphaActions[i].MaxTotalSeconds) * time.Second}
+		}
+
+		if alphaActions[i].MaxRetries != nil {
+			betaActions[i].Retries = *alphaActions[i].MaxRetries
+		}
+	}
 	return betaActions
 }
