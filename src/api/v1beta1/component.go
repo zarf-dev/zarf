@@ -22,7 +22,7 @@ type ZarfComponent struct {
 	// Determines the default Y/N state for installing this component on package deploy.
 	Default bool `json:"default,omitempty"`
 
-	// Do not prompt user to install this component.
+	// Do not prompt user to install this component. (Defaults to false)
 	Optional *bool `json:"optional,omitempty"`
 
 	// Filter when this component is included in package creation or deployment.
@@ -178,11 +178,11 @@ type ZarfManifest struct {
 	Namespace string `json:"namespace,omitempty"`
 	// List of local K8s YAML files or remote URLs to deploy (in order).
 	Files []string `json:"files,omitempty"`
-	// Allow traversing directory above the current directory if needed for kustomization.
+	// Allow traversing directory above the current directory if needed for kustomization. (Defaults to false)
 	KustomizeAllowAnyDirectory bool `json:"kustomizeAllowAnyDirectory,omitempty"`
 	// List of local kustomization paths or remote URLs to include in the package.
 	Kustomizations []string `json:"kustomizations,omitempty"`
-	// Whether to not wait for manifest resources to be ready before continuing.
+	// Whether to not wait for manifest resources to be ready before continuing. (Defaults to true)
 	Wait *bool `json:"wait,omitempty"`
 }
 

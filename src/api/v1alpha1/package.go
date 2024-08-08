@@ -16,7 +16,7 @@ const (
 	ZarfInitConfig ZarfPackageKind = "ZarfInitConfig"
 	// ZarfPackageConfig is the default kind of Zarf package, primarily used during `zarf package`.
 	ZarfPackageConfig ZarfPackageKind = "ZarfPackageConfig"
-	ApiVersion        string          = "zarf.dev/v1alpha1"
+	APIVersion        string          = "zarf.dev/v1alpha1"
 )
 
 // ZarfPackage the top-level structure of a Zarf config file.

@@ -27,7 +27,7 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "test",
 			oldPkg: v1alpha1.ZarfPackage{
-				APIVersion: v1alpha1.ApiVersion,
+				APIVersion: v1alpha1.APIVersion,
 				Kind:       v1alpha1.ZarfPackageConfig,
 				Components: []v1alpha1.ZarfComponent{
 					{
@@ -37,6 +37,17 @@ func TestTranslate(t *testing.T) {
 					{
 						Name:     "not-optional",
 						Required: helpers.BoolPtr(true),
+					},
+					{
+						Name:     "manifests",
+						Manifests: []v1alpha1.ZarfManifest{
+							{
+								NoWait: true,
+							},
+							{
+								NoWait: false,
+							},
+						},
 					},
 					{
 						Name: "actions",
@@ -95,10 +106,12 @@ func TestTranslate(t *testing.T) {
 							{
 								URL:      "https://example.com/chart",
 								RepoName: "repo1",
+								NoWait:   true,
 							},
 							{
 								URL:     "https://example.com/chart.git",
 								GitPath: "path/to/chart2",
+								NoWait:  false,
 							},
 							{
 								URL: "oci://example.com/chart",
@@ -111,7 +124,7 @@ func TestTranslate(t *testing.T) {
 				},
 			},
 			newPkg: ZarfPackage{
-				APIVersion: ApiVersion,
+				APIVersion: APIVersion,
 				Kind:       ZarfPackageConfig,
 				Metadata: ZarfMetadata{
 					Annotations: map[string]string{},
@@ -124,6 +137,18 @@ func TestTranslate(t *testing.T) {
 					{
 						Name:     "not-optional",
 						Optional: helpers.BoolPtr(false),
+					},
+					{
+						Name:     "manifests",
+						Optional: helpers.BoolPtr(true),
+						Manifests: []ZarfManifest{
+							{
+								Wait: helpers.BoolPtr(false),
+							},
+							{
+								Wait: helpers.BoolPtr(true),
+							},
+						},
 					},
 					{
 						Name:     "actions",
@@ -182,23 +207,27 @@ func TestTranslate(t *testing.T) {
 						Optional: helpers.BoolPtr(true),
 						Charts: []ZarfChart{
 							{
+								Wait: helpers.BoolPtr(false),
 								Helm: HelmRepoSource{
 									Url:      "https://example.com/chart",
 									RepoName: "repo1",
 								},
 							},
 							{
+								Wait: helpers.BoolPtr(true),
 								Git: GitRepoSource{
 									Url:  "https://example.com/chart.git",
 									Path: "path/to/chart2",
 								},
 							},
 							{
+								Wait: helpers.BoolPtr(true),
 								OCI: OCISource{
 									Url: "oci://example.com/chart",
 								},
 							},
 							{
+								Wait: helpers.BoolPtr(true),
 								Local: LocalRepoSource{
 									Path: "path/to/chart4",
 								},

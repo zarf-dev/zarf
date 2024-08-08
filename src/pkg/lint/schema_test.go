@@ -28,7 +28,7 @@ func TestZarfSchema(t *testing.T) {
 		{
 			name: "valid package",
 			pkg: v1alpha1.ZarfPackage{
-				APIVersion: v1alpha1.ApiVersion,
+				APIVersion: v1alpha1.APIVersion,
 				Kind:       v1alpha1.ZarfInitConfig,
 				Metadata: v1alpha1.ZarfMetadata{
 					Name: "valid-name",

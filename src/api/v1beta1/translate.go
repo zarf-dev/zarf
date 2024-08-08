@@ -29,7 +29,7 @@ func TranslateAlphaPackage(alphaPkg v1alpha1.ZarfPackage) (ZarfPackage, error) {
 		return ZarfPackage{}, fmt.Errorf("failed to unmarshal JSON to v1beta1 object: %w", err)
 	}
 
-	betaPkg.APIVersion = ApiVersion
+	betaPkg.APIVersion = APIVersion
 
 	betaPkg.Metadata.Annotations = make(map[string]string)
 	if alphaPkg.Metadata.Description != "" {
@@ -62,7 +62,6 @@ func TranslateAlphaPackage(alphaPkg v1alpha1.ZarfPackage) (ZarfPackage, error) {
 
 	for i := range betaPkg.Components {
 		betaPkg.Components[i].Optional = helpers.BoolPtr(!alphaPkg.Components[i].IsRequired())
-
 		for j := range betaPkg.Components[i].Charts {
 			oldUrl := alphaPkg.Components[i].Charts[j].URL
 			if helpers.IsOCIURL(oldUrl) {
@@ -74,14 +73,16 @@ func TranslateAlphaPackage(alphaPkg v1alpha1.ZarfPackage) (ZarfPackage, error) {
 				betaPkg.Components[i].Charts[j].Helm.Url = oldUrl
 				betaPkg.Components[i].Charts[j].Helm.RepoName = alphaPkg.Components[i].Charts[j].RepoName
 			}
-
 			betaPkg.Components[i].Charts[j].Local.Path = alphaPkg.Components[i].Charts[j].LocalPath
+			betaPkg.Components[i].Charts[j].Wait = helpers.BoolPtr(!alphaPkg.Components[i].Charts[j].NoWait)
 		}
 
+		for j := range betaPkg.Components[i].Manifests{
+			betaPkg.Components[i].Manifests[j].Wait = helpers.BoolPtr(!alphaPkg.Components[i].Manifests[j].NoWait)
+		}
 		betaPkg.Components[i].Actions.OnCreate = transformActionSet(betaPkg.Components[i].Actions.OnCreate, alphaPkg.Components[i].Actions.OnCreate)
 		betaPkg.Components[i].Actions.OnDeploy = transformActionSet(betaPkg.Components[i].Actions.OnDeploy, alphaPkg.Components[i].Actions.OnDeploy)
 		betaPkg.Components[i].Actions.OnRemove = transformActionSet(betaPkg.Components[i].Actions.OnRemove, alphaPkg.Components[i].Actions.OnRemove)
-
 	}
 
 	return betaPkg, nil
