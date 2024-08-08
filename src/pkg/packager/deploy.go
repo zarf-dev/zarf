@@ -18,11 +18,11 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/avast/retry-go/v4"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -551,9 +551,7 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 		if err != nil {
 			return err
 		}
-
-		// Create an anonymous function to push the repo to the Zarf git server
-		tryPush := func() error {
+		err = retry.Do(func() error {
 			namespace, name, port, err := serviceInfoFromServiceURL(p.state.GitServer.Address)
 
 			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
@@ -603,10 +601,8 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 				return err
 			}
 			return nil
-		}
-
-		// Try repo push up to retry limit
-		if err := helpers.RetryWithContext(ctx, tryPush, p.cfg.PkgOpts.Retries, 5*time.Second, message.Warnf); err != nil {
+		}, retry.Context(ctx), retry.Attempts(uint(p.cfg.PkgOpts.Retries)), retry.Delay(500*time.Millisecond))
+		if err != nil {
 			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}
 	}
