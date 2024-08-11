@@ -1,0 +1,80 @@
+name: Test RKE2 Cluster
+on:
+  schedule:
+   - cron: '0 7 * * *' ## Every day at 0700 UTC
+  workflow_dispatch: ## Give us the ability to run this manually
+    inputs:
+      cluster_name:
+        type: string
+        default: zarf-nightly-rke2-e2e-test
+        description: Name of the rke2 cluster that the test will create
+      instance_type:
+        type: string
+        default: t3.medium
+        description: EC2 instance type to use for the RKE2 cluster nodes
+
+permissions:
+  id-token: write
+  contents: read
+
+# Abort prior jobs in the same workflow / PR
+concurrency:
+  group: e2e-rke2-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eks-nightly-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Build binary and zarf packages
+        uses: ./.github/actions/packages
+
+      - name: Auth with AWS
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          role-to-assume: ${{ secrets.AWS_NIGHTLY_ROLE }}
+          role-session-name: ${{ github.job || github.event.client_payload.pull_request.head.sha || github.sha }}
+          aws-region: us-east-1
+          role-duration-seconds: 7200
+
+      - name: Build the eks package
+        run: ./build/zarf package create packages/distros/eks -o build --confirm
+
+      - name: Deploy the eks package
+        run: |
+          ./build/zarf package deploy build/zarf-package-distro-eks-amd64-0.0.3.tar.zst \
+            --components=deploy-eks-cluster \
+            --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
+            --set=EKS_INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} \
+            --confirm
+
+      - name: Run tests
+        run: make test-e2e-with-cluster ARCH=amd64
+
+      - name: show cluster logs
+        uses: ./.github/actions/debug-cluster
+        if: always()
+
+      - name: Teardown the cluster
+        if: always()
+        run: |
+          ./build/zarf package deploy build/zarf-package-distro-eks-amd64-0.0.3.tar.zst \
+            --components=teardown-eks-cluster \
+            --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
+            --confirm
+
+      - name: Save logs
+        if: always()
+        uses: ./.github/actions/save-logs
+
+      - name: Send trigger to Slack on workflow failure
+        if: failure()
+        uses: ./.github/actions/slack
+        with:
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
