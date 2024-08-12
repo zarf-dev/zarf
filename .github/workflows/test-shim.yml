@@ -81,3 +81,52 @@ jobs:
       - name: Skipped
         run: |
           echo skipped
+
+  test-e2e-without-cluster:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skipped
+        run: |
+          echo skipped
+
+  codeql-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skipped
+        run: |
+          echo skipped
+
+  test-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skipped
+        run: |
+          echo skipped
+
+  validate-bigbang:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skipped
+        run: |
+          echo skipped
+
+  validate-external:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skipped
+        run: |
+          echo skipped
+
+  validate-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skipped
+        run: |
+          echo skipped
+
+  validate-upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skipped
+        run: |
+          echo skipped
