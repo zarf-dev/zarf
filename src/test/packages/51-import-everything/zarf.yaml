@@ -27,7 +27,7 @@ components:
     required: false
     import:
       name: bigbang
-      url: oci://localhost:555/big-bang-min:2.10.0
+      url: oci://localhost:31888/big-bang-min:2.10.0
 
   # Test file imports including cosignKeyPath
   - name: file-imports

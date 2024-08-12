@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/oci"
+	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -36,16 +37,12 @@ var badDeployRef = registry.Reference{
 func (suite *PublishDeploySuiteTestSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 	suite.PackagesDir = "build"
-
-	e2e.SetupDockerRegistry(suite.T(), 555)
-	suite.Reference.Registry = "localhost:555"
+	suite.Reference.Registry = testutil.SetupInMemoryRegistry(testutil.TestContext(suite.T()), suite.T(), 31889)
 }
 
 func (suite *PublishDeploySuiteTestSuite) TearDownSuite() {
 	local := fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch)
 	e2e.CleanFiles(local)
-
-	e2e.TeardownRegistry(suite.T(), 555)
 }
 
 func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
@@ -123,11 +120,8 @@ func (suite *PublishDeploySuiteTestSuite) Test_2_Pull_And_Deploy() {
 func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
 	t := suite.T()
 	ref := suite.Reference.String()
-	dstRegistryPort := 556
-	dstRef := strings.Replace(ref, fmt.Sprint(555), fmt.Sprint(dstRegistryPort), 1)
-
-	e2e.SetupDockerRegistry(t, dstRegistryPort)
-	defer e2e.TeardownRegistry(t, dstRegistryPort)
+	dstRegistry := testutil.SetupInMemoryRegistry(testutil.TestContext(t), t, 31890)
+	dstRef := strings.Replace(ref, suite.Reference.Registry, dstRegistry, 1)
 
 	src, err := zoci.NewRemote(ref, oci.PlatformForArch(e2e.Arch), oci.WithPlainHTTP(true))
 	suite.NoError(err)
