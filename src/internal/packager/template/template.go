@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -26,7 +27,7 @@ const (
 
 // GetZarfVariableConfig gets a variable configuration specific to Zarf
 func GetZarfVariableConfig() *variables.VariableConfig {
-	prompt := func(variable variables.InteractiveVariable) (value string, err error) {
+	prompt := func(variable v1alpha1.InteractiveVariable) (value string, err error) {
 		if config.CommonOptions.Confirm {
 			return variable.Default, nil
 		}

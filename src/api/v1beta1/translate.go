@@ -15,6 +15,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// TranslateAlphaPackage translates a v1alpha1.ZarfPackage to a v1beta1.ZarfPackage
 func TranslateAlphaPackage(alphaPkg v1alpha1.ZarfPackage) (ZarfPackage, error) {
 	var betaPkg ZarfPackage
 
@@ -63,21 +64,21 @@ func TranslateAlphaPackage(alphaPkg v1alpha1.ZarfPackage) (ZarfPackage, error) {
 	for i := range betaPkg.Components {
 		betaPkg.Components[i].Optional = helpers.BoolPtr(!alphaPkg.Components[i].IsRequired())
 		for j := range betaPkg.Components[i].Charts {
-			oldUrl := alphaPkg.Components[i].Charts[j].URL
-			if helpers.IsOCIURL(oldUrl) {
-				betaPkg.Components[i].Charts[j].OCI.Url = oldUrl
-			} else if strings.HasSuffix(oldUrl, ".git") {
-				betaPkg.Components[i].Charts[j].Git.Url = oldUrl
+			oldURL := alphaPkg.Components[i].Charts[j].URL
+			if helpers.IsOCIURL(oldURL) {
+				betaPkg.Components[i].Charts[j].OCI.URL = oldURL
+			} else if strings.HasSuffix(oldURL, ".git") {
+				betaPkg.Components[i].Charts[j].Git.URL = oldURL
 				betaPkg.Components[i].Charts[j].Git.Path = alphaPkg.Components[i].Charts[j].GitPath
 			} else {
-				betaPkg.Components[i].Charts[j].Helm.Url = oldUrl
+				betaPkg.Components[i].Charts[j].Helm.URL = oldURL
 				betaPkg.Components[i].Charts[j].Helm.RepoName = alphaPkg.Components[i].Charts[j].RepoName
 			}
 			betaPkg.Components[i].Charts[j].Local.Path = alphaPkg.Components[i].Charts[j].LocalPath
 			betaPkg.Components[i].Charts[j].Wait = helpers.BoolPtr(!alphaPkg.Components[i].Charts[j].NoWait)
 		}
 
-		for j := range betaPkg.Components[i].Manifests{
+		for j := range betaPkg.Components[i].Manifests {
 			betaPkg.Components[i].Manifests[j].Wait = helpers.BoolPtr(!alphaPkg.Components[i].Manifests[j].NoWait)
 		}
 		betaPkg.Components[i].Actions.OnCreate = transformActionSet(betaPkg.Components[i].Actions.OnCreate, alphaPkg.Components[i].Actions.OnCreate)

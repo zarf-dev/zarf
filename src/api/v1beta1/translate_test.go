@@ -40,7 +40,7 @@ func TestTranslate(t *testing.T) {
 						Required: helpers.BoolPtr(true),
 					},
 					{
-						Name:     "manifests",
+						Name: "manifests",
 						Manifests: []v1alpha1.ZarfManifest{
 							{
 								NoWait: true,
@@ -210,21 +210,21 @@ func TestTranslate(t *testing.T) {
 							{
 								Wait: helpers.BoolPtr(false),
 								Helm: HelmRepoSource{
-									Url:      "https://example.com/chart",
+									URL:      "https://example.com/chart",
 									RepoName: "repo1",
 								},
 							},
 							{
 								Wait: helpers.BoolPtr(true),
 								Git: GitRepoSource{
-									Url:  "https://example.com/chart.git",
+									URL:  "https://example.com/chart.git",
 									Path: "path/to/chart2",
 								},
 							},
 							{
 								Wait: helpers.BoolPtr(true),
 								OCI: OCISource{
-									Url: "oci://example.com/chart",
+									URL: "oci://example.com/chart",
 								},
 							},
 							{

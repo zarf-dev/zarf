@@ -70,7 +70,7 @@ func runAction(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefau
 		d := ""
 		action.Dir = &d
 		action.Env = []string{}
-		action.SetVariables = []variables.Variable{}
+		action.SetVariables = []v1alpha1.Variable{}
 	}
 
 	if action.Description != "" {
@@ -204,7 +204,7 @@ func convertWaitToCmd(_ context.Context, wait v1alpha1.ZarfComponentActionWait, 
 }
 
 // Perform some basic string mutations to make commands more useful.
-func actionCmdMutation(_ context.Context, cmd string, shellPref exec.Shell) (string, error) {
+func actionCmdMutation(_ context.Context, cmd string, shellPref v1alpha1.Shell) (string, error) {
 	zarfCommand, err := utils.GetFinalExecutableCommand()
 	if err != nil {
 		return cmd, err
@@ -274,7 +274,7 @@ func actionGetCfg(_ context.Context, cfg v1alpha1.ZarfComponentActionDefaults, a
 	return cfg
 }
 
-func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cmd string, shellPref exec.Shell, spinner *message.Spinner) (string, error) {
+func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cmd string, shellPref v1alpha1.Shell, spinner *message.Spinner) (string, error) {
 	shell, shellArgs := exec.GetOSShell(shellPref)
 
 	message.Debugf("Running command in %s: %s", shell, cmd)
