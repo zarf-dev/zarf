@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
@@ -89,83 +90,55 @@ func runAction(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefau
 		spinner.Errorf(err, "Error mutating command: %s", cmdEscaped)
 	}
 
-	duration := time.Duration(actionDefaults.MaxTotalSeconds) * time.Second
-	timeout := time.After(duration)
+	// Keep trying until the max retries or timeout is reached.
+	actionCtx := ctx
+	if actionDefaults.MaxTotalSeconds > 0 {
+		var actionCancel context.CancelFunc
+		actionCtx, actionCancel = context.WithTimeout(ctx, time.Duration(actionDefaults.MaxTotalSeconds)*time.Second)
+		defer actionCancel()
+	}
+	err = retry.Do(func() error {
+		if out, err = actionRun(actionCtx, actionDefaults, cmd, actionDefaults.Shell, spinner); err != nil {
+			return err
+		}
+		out = strings.TrimSpace(out)
 
-	// Keep trying until the max retries is reached.
-	// TODO: Refactor using go-retry
-retryCmd:
-	for remaining := actionDefaults.MaxRetries + 1; remaining > 0; remaining-- {
-		// Perform the action run.
-		tryCmd := func(ctx context.Context) error {
-			// Try running the command and continue the retry loop if it fails.
-			if out, err = actionRun(ctx, actionDefaults, cmd, actionDefaults.Shell, spinner); err != nil {
+		// If an output variable is defined, set it.
+		for _, v := range action.SetVariables {
+			variableConfig.SetVariable(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
+			if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
 				return err
 			}
-
-			out = strings.TrimSpace(out)
-
-			// If an output variable is defined, set it.
-			for _, v := range action.SetVariables {
-				variableConfig.SetVariable(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
-				if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
-					return err
-				}
-			}
-
-			// If the action has a wait, change the spinner message to reflect that on success.
-			if action.Wait != nil {
-				spinner.Successf("Wait for \"%s\" succeeded", cmdEscaped)
-			} else {
-				spinner.Successf("Completed \"%s\"", cmdEscaped)
-			}
-
-			// If the command ran successfully, continue to the next action.
-			return nil
 		}
 
-		// If no timeout is set, run the command and return or continue retrying.
-		if actionDefaults.MaxTotalSeconds < 1 {
-			spinner.Updatef("Waiting for \"%s\" (no timeout)", cmdEscaped)
-			//TODO (schristoff): Make it so tryCmd can take a normal ctx
-			if err := tryCmd(context.Background()); err != nil {
-				continue retryCmd
-			}
-
-			return nil
-		}
-
-		// Run the command on repeat until success or timeout.
-		spinner.Updatef("Waiting for \"%s\" (timeout: %ds)", cmdEscaped, actionDefaults.MaxTotalSeconds)
-		select {
-		// On timeout break the loop to abort.
-		case <-timeout:
-			break retryCmd
-
-		// Otherwise, try running the command.
-		default:
-			ctx, cancel := context.WithTimeout(ctx, duration)
-			defer cancel()
-			if err := tryCmd(ctx); err != nil {
-				continue retryCmd
-			}
-
-			return nil
-		}
-	}
-
-	select {
-	case <-timeout:
-		// If we reached this point, the timeout was reached or command failed with no retries.
-		if actionDefaults.MaxTotalSeconds < 1 {
-			return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.MaxRetries)
+		// If the action has a wait, change the spinner message to reflect that on success.
+		if action.Wait != nil {
+			spinner.Successf("Wait for \"%s\" succeeded", cmdEscaped)
 		} else {
-			return fmt.Errorf("command %q timed out after %d seconds", cmdEscaped, actionDefaults.MaxTotalSeconds)
+			spinner.Successf("Completed \"%s\"", cmdEscaped)
 		}
-	default:
-		// If we reached this point, the retry limit was reached.
-		return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.MaxRetries)
+
+		return nil
+	},
+		retry.Context(actionCtx),
+		retry.Attempts(uint(actionDefaults.MaxRetries)),
+		retry.DelayType(retry.FixedDelay),
+		retry.Delay(100*time.Millisecond),
+		retry.OnRetry(func(uint, error) {
+			timeoutStr := ""
+			if actionDefaults.MaxTotalSeconds > 0 {
+				timeoutStr = fmt.Sprintf("(timeout: %ds)", actionDefaults.MaxTotalSeconds)
+			}
+			spinner.Updatef("Waiting for \"%s\" %s", cmdEscaped, timeoutStr)
+		}),
+	)
+	if actionCtx.Err() != nil {
+		return fmt.Errorf("command %q timed out after %d seconds: %w", cmdEscaped, actionDefaults.MaxTotalSeconds, err)
 	}
+	if err != nil {
+		return fmt.Errorf("command %q failed after %d retries: %w", cmdEscaped, actionDefaults.MaxRetries, err)
+	}
+	return nil
 }
 
 // convertWaitToCmd will return the wait command if it exists, otherwise it will return the original command.
