@@ -17,6 +17,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -132,8 +133,8 @@ func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage,
 }
 
 // RecordPackageDeploymentAndWait records the deployment of a package to the cluster and waits for any webhooks to complete.
-func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int, component v1alpha1.ZarfComponent, skipWebhooks bool) (deployedPackage *types.DeployedPackage, err error) {
-	deployedPackage, err = c.RecordPackageDeployment(ctx, pkg, components, connectStrings, generation)
+func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int, component v1alpha1.ZarfComponent, skipWebhooks bool) (*types.DeployedPackage, error) {
+	deployedPackage, err := c.RecordPackageDeployment(ctx, pkg, components, connectStrings, generation)
 	if err != nil {
 		return nil, err
 	}
@@ -144,39 +145,31 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alph
 		return deployedPackage, nil
 	}
 
+	spinner := message.NewProgressSpinner("Waiting for webhook %q to complete for component %q", hookName, component.Name)
+	defer spinner.Stop()
+
 	waitDuration := types.DefaultWebhookWaitDuration
 	if waitSeconds > 0 {
 		waitDuration = time.Duration(waitSeconds) * time.Second
 	}
-
 	waitCtx, cancel := context.WithTimeout(ctx, waitDuration)
 	defer cancel()
-
-	spinner := message.NewProgressSpinner("Waiting for webhook %q to complete for component %q", hookName, component.Name)
-	defer spinner.Stop()
-
-	timer := time.NewTimer(0)
-	defer timer.Stop()
-
-	for {
-		select {
-		case <-waitCtx.Done():
-			return nil, fmt.Errorf("error waiting for webhook %q to complete for component %q: %w", hookName, component.Name, waitCtx.Err())
-		case <-timer.C:
-			deployedPackage, err = c.GetDeployedPackage(ctx, deployedPackage.Name)
-			if err != nil {
-				return nil, err
-			}
-
-			packageNeedsWait, _, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
-			if !packageNeedsWait {
-				spinner.Success()
-				return deployedPackage, nil
-			}
-
-			timer.Reset(1 * time.Second)
+	deployedPackage, err = retry.DoWithData(func() (*types.DeployedPackage, error) {
+		deployedPackage, err = c.GetDeployedPackage(waitCtx, deployedPackage.Name)
+		if err != nil {
+			return nil, err
 		}
+		packageNeedsWait, _, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
+		if !packageNeedsWait {
+			return deployedPackage, nil
+		}
+		return deployedPackage, nil
+	}, retry.Context(waitCtx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
+	if err != nil {
+		return nil, err
 	}
+	spinner.Success()
+	return deployedPackage, nil
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.

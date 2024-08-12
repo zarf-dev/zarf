@@ -19,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -59,6 +60,7 @@ func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDat
 		return fmt.Errorf("unable to execute tar, ensure it is installed in the $PATH: %w", err)
 	}
 
+	// TODO: Refactor to use retry.
 	for {
 		select {
 		case <-ctx.Done():
@@ -180,76 +182,68 @@ type podFilter func(pod corev1.Pod) bool
 func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interface, target podLookup, include podFilter) ([]corev1.Pod, error) {
 	waitCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
+	readyPods, err := retry.DoWithData(func() ([]corev1.Pod, error) {
+		listOpts := metav1.ListOptions{
+			LabelSelector: target.Selector,
+		}
+		podList, err := clientset.CoreV1().Pods(target.Namespace).List(waitCtx, listOpts)
+		if err != nil {
+			return nil, err
+		}
+		message.Debugf("Found %d pods for target %#v", len(podList.Items), target)
+		// Sort the pods from newest to oldest
+		sort.Slice(podList.Items, func(i, j int) bool {
+			return podList.Items[i].CreationTimestamp.After(podList.Items[j].CreationTimestamp.Time)
+		})
 
-	timer := time.NewTimer(0)
-	defer timer.Stop()
+		readyPods := []corev1.Pod{}
+		for _, pod := range podList.Items {
+			message.Debugf("Testing pod %q", pod.Name)
 
-	for {
-		select {
-		case <-waitCtx.Done():
-			return nil, ctx.Err()
-		case <-timer.C:
-			listOpts := metav1.ListOptions{
-				LabelSelector: target.Selector,
+			// If an include function is provided, only keep pods that return true
+			if include != nil && !include(pod) {
+				continue
 			}
-			podList, err := clientset.CoreV1().Pods(target.Namespace).List(ctx, listOpts)
-			if err != nil {
-				return nil, err
-			}
 
-			message.Debugf("Found %d pods for target %#v", len(podList.Items), target)
+			// Handle container targeting
+			if target.Container != "" {
+				message.Debugf("Testing pod %q for container %q", pod.Name, target.Container)
 
-			var readyPods = []corev1.Pod{}
-
-			// Sort the pods from newest to oldest
-			sort.Slice(podList.Items, func(i, j int) bool {
-				return podList.Items[i].CreationTimestamp.After(podList.Items[j].CreationTimestamp.Time)
-			})
-
-			for _, pod := range podList.Items {
-				message.Debugf("Testing pod %q", pod.Name)
-
-				// If an include function is provided, only keep pods that return true
-				if include != nil && !include(pod) {
-					continue
-				}
-
-				// Handle container targeting
-				if target.Container != "" {
-					message.Debugf("Testing pod %q for container %q", pod.Name, target.Container)
-
-					// Check the status of initContainers for a running match
-					for _, initContainer := range pod.Status.InitContainerStatuses {
-						isRunning := initContainer.State.Running != nil
-						if initContainer.Name == target.Container && isRunning {
-							// On running match in initContainer break this loop
-							readyPods = append(readyPods, pod)
-							break
-						}
-					}
-
-					// Check the status of regular containers for a running match
-					for _, container := range pod.Status.ContainerStatuses {
-						isRunning := container.State.Running != nil
-						if container.Name == target.Container && isRunning {
-							readyPods = append(readyPods, pod)
-							break
-						}
-					}
-				} else {
-					status := pod.Status.Phase
-					message.Debugf("Testing pod %q phase, want (%q) got (%q)", pod.Name, corev1.PodRunning, status)
-					// Regular status checking without a container
-					if status == corev1.PodRunning {
+				// Check the status of initContainers for a running match
+				for _, initContainer := range pod.Status.InitContainerStatuses {
+					isRunning := initContainer.State.Running != nil
+					if initContainer.Name == target.Container && isRunning {
+						// On running match in initContainer break this loop
 						readyPods = append(readyPods, pod)
 						break
 					}
 				}
+
+				// Check the status of regular containers for a running match
+				for _, container := range pod.Status.ContainerStatuses {
+					isRunning := container.State.Running != nil
+					if container.Name == target.Container && isRunning {
+						readyPods = append(readyPods, pod)
+						break
+					}
+				}
+			} else {
+				status := pod.Status.Phase
+				message.Debugf("Testing pod %q phase, want (%q) got (%q)", pod.Name, corev1.PodRunning, status)
+				// Regular status checking without a container
+				if status == corev1.PodRunning {
+					readyPods = append(readyPods, pod)
+					break
+				}
 			}
-			if len(readyPods) > 0 {
-				return readyPods, nil
-			}
-			timer.Reset(3 * time.Second)
 		}
+		if len(readyPods) == 0 {
+			return nil, fmt.Errorf("no ready pods found")
+		}
+		return readyPods, nil
+	}, retry.Context(waitCtx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
+	if err != nil {
+		return nil, err
 	}
+	return readyPods, nil
 }
