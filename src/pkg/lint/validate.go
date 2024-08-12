@@ -40,59 +40,34 @@ const (
 	errChartReleaseNameEmpty = "release name empty, unable to fallback to chart name"
 )
 
+// Package errors found during validation.
 const (
-	//nolint:revive //ignore
-	PkgValidateErrInitNoYOLO = "sorry, you can't YOLO an init package"
-	//nolint:revive //ignore
-	PkgValidateErrConstant = "invalid package constant: %w"
-	//nolint:revive //ignore
-	PkgValidateErrYOLONoOCI = "OCI images not allowed in YOLO"
-	//nolint:revive //ignore
-	PkgValidateErrYOLONoGit = "git repos not allowed in YOLO"
-	//nolint:revive //ignore
-	PkgValidateErrYOLONoArch = "cluster architecture not allowed in YOLO"
-	//nolint:revive //ignore
-	PkgValidateErrYOLONoDistro = "cluster distros not allowed in YOLO"
-	//nolint:revive //ignore
-	PkgValidateErrComponentNameNotUnique = "component name %q is not unique"
-	//nolint:revive //ignore
-	PkgValidateErrComponentReqDefault = "component %q cannot be both required and default"
-	//nolint:revive //ignore
-	PkgValidateErrComponentReqGrouped = "component %q cannot be both required and grouped"
-	//nolint:revive //ignore
-	PkgValidateErrChartNameNotUnique = "chart name %q is not unique"
-	//nolint:revive //ignore
-	PkgValidateErrChart = "invalid chart definition: %w"
-	//nolint:revive //ignore
-	PkgValidateErrManifestNameNotUnique = "manifest name %q is not unique"
-	//nolint:revive //ignore
-	PkgValidateErrManifest = "invalid manifest definition: %w"
-	//nolint:revive //ignore
-	PkgValidateErrGroupMultipleDefaults = "group %q has multiple defaults (%q, %q)"
-	//nolint:revive //ignore
-	PkgValidateErrGroupOneComponent = "group %q only has one component (%q)"
-	//nolint:revive //ignore
-	PkgValidateErrAction = "invalid action: %w"
-	//nolint:revive //ignore
-	PkgValidateErrActionCmdWait = "action %q cannot be both a command and wait action"
-	//nolint:revive //ignore
-	PkgValidateErrActionClusterNetwork = "a single wait action must contain only one of cluster or network"
-	//nolint:revive //ignore
-	PkgValidateErrChartName = "chart %q exceed the maximum length of %d characters"
-	//nolint:revive //ignore
-	PkgValidateErrChartNamespaceMissing = "chart %q must include a namespace"
-	//nolint:revive //ignore
-	PkgValidateErrChartURLOrPath = "chart %q must have either a url or localPath"
-	//nolint:revive //ignore
-	PkgValidateErrChartVersion = "chart %q must include a chart version"
-	//nolint:revive //ignore
-	PkgValidateErrImportDefinition = "invalid imported definition for %s: %s"
-	//nolint:revive //ignore
+	PkgValidateErrInitNoYOLO              = "sorry, you can't YOLO an init package"
+	PkgValidateErrConstant                = "invalid package constant: %w"
+	PkgValidateErrYOLONoOCI               = "OCI images not allowed in YOLO"
+	PkgValidateErrYOLONoGit               = "git repos not allowed in YOLO"
+	PkgValidateErrYOLONoArch              = "cluster architecture not allowed in YOLO"
+	PkgValidateErrYOLONoDistro            = "cluster distros not allowed in YOLO"
+	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
+	PkgValidateErrComponentReqDefault     = "component %q cannot be both required and default"
+	PkgValidateErrComponentReqGrouped     = "component %q cannot be both required and grouped"
+	PkgValidateErrChartNameNotUnique      = "chart name %q is not unique"
+	PkgValidateErrChart                   = "invalid chart definition: %w"
+	PkgValidateErrManifestNameNotUnique   = "manifest name %q is not unique"
+	PkgValidateErrManifest                = "invalid manifest definition: %w"
+	PkgValidateErrGroupMultipleDefaults   = "group %q has multiple defaults (%q, %q)"
+	PkgValidateErrGroupOneComponent       = "group %q only has one component (%q)"
+	PkgValidateErrAction                  = "invalid action: %w"
+	PkgValidateErrActionCmdWait           = "action %q cannot be both a command and wait action"
+	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
+	PkgValidateErrChartName               = "chart %q exceed the maximum length of %d characters"
+	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
+	PkgValidateErrChartURLOrPath          = "chart %q must have either a url or localPath"
+	PkgValidateErrChartVersion            = "chart %q must include a chart version"
+	PkgValidateErrImportDefinition        = "invalid imported definition for %s: %s"
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
-	//nolint:revive //ignore
-	PkgValidateErrManifestNameLength = "manifest %q exceed the maximum length of %d characters"
-	//nolint:revive //ignore
-	PkgValidateErrVariable = "invalid package variable: %w"
+	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
+	PkgValidateErrVariable                = "invalid package variable: %w"
 )
 
 // ValidatePackage runs all validation checks on the package.
