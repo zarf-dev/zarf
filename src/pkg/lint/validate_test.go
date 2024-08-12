@@ -452,8 +452,7 @@ func TestValidateComponentAction(t *testing.T) {
 			action: v1alpha1.ZarfComponentAction{
 				Wait: &v1alpha1.ZarfComponentActionWait{Cluster: &v1alpha1.ZarfComponentActionWaitCluster{}, Network: &v1alpha1.ZarfComponentActionWaitNetwork{}},
 			},
-			//nolint:staticcheck //ignore
-			expectedErrs: []string{fmt.Sprintf(PkgValidateErrActionClusterNetwork)},
+			expectedErrs: []string{PkgValidateErrActionClusterNetwork},
 		},
 	}
 
