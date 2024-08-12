@@ -8,24 +8,24 @@ components:
   - name: import-component-local
     required: true
     import:
-      url: oci://localhost:555/import-everything:0.0.1
+      url: oci://localhost:31888/import-everything:0.0.1
 
   - name: import-component-oci
     required: true
     import:
-      url: oci://localhost:555/import-everything:0.0.1
+      url: oci://localhost:31888/import-everything:0.0.1
 
   - name: import-big-bang
     required: true
     import:
-      url: oci://localhost:555/import-everything:0.0.1
+      url: oci://localhost:31888/import-everything:0.0.1
 
   - name: file-imports
     required: true
     import:
-      url: oci://localhost:555/import-everything:0.0.1
+      url: oci://localhost:31888/import-everything:0.0.1
 
   - name: local-chart-import
     required: true
     import:
-      url: oci://localhost:555/import-everything:0.0.1
+      url: oci://localhost:31888/import-everything:0.0.1

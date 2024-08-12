@@ -16,6 +16,7 @@ import (
 	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
@@ -111,21 +112,6 @@ func (e2e *ZarfE2ETest) GetLogFileContents(t *testing.T, stdErr string) string {
 	logContents, err := os.ReadFile(logFile)
 	require.NoError(t, err)
 	return string(logContents)
-}
-
-// SetupDockerRegistry uses the host machine's docker daemon to spin up a local registry for testing purposes.
-func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) {
-	// spin up a local registry
-	registryImage := "registry:2.8.3"
-	err := exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", fmt.Sprintf("%d:5000", port), "--name", fmt.Sprintf("registry-%d", port), registryImage)
-	require.NoError(t, err)
-}
-
-// TeardownRegistry removes the local registry.
-func (e2e *ZarfE2ETest) TeardownRegistry(t *testing.T, port int) {
-	// remove the local registry
-	err := exec.CmdWithPrint("docker", "rm", "-f", fmt.Sprintf("registry-%d", port))
-	require.NoError(t, err)
 }
 
 // GetZarfVersion returns the current build/zarf version
