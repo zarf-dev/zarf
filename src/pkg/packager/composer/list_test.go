@@ -577,7 +577,7 @@ func TestValidateZarfComponent(t *testing.T) {
 				Name: "neither",
 			},
 			expectedErrs: []string{
-				fmt.Sprintf(pkgValidateErrImportDefinition, "neither", "neither a path nor a URL was provided"),
+				"neither a path nor a URL was provided",
 			},
 		},
 		{
@@ -590,7 +590,7 @@ func TestValidateZarfComponent(t *testing.T) {
 				},
 			},
 			expectedErrs: []string{
-				fmt.Sprintf(pkgValidateErrImportDefinition, "both", "both a path and a URL were provided"),
+				"both a path and a URL were provided",
 			},
 		},
 		{
@@ -602,7 +602,7 @@ func TestValidateZarfComponent(t *testing.T) {
 				},
 			},
 			expectedErrs: []string{
-				fmt.Sprintf(pkgValidateErrImportDefinition, "abs-path", "path cannot be an absolute path"),
+				"path cannot be an absolute path",
 			},
 		},
 		{
@@ -614,7 +614,7 @@ func TestValidateZarfComponent(t *testing.T) {
 				},
 			},
 			expectedErrs: []string{
-				fmt.Sprintf(pkgValidateErrImportDefinition, "bad-url", "URL is not a valid OCI URL"),
+				"URL is not a valid OCI URL",
 			},
 		},
 	}
