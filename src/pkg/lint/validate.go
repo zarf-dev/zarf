@@ -1,26 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package v1alpha1 holds the definition of the v1alpha1 Zarf Package
-package v1alpha1
+// Package lint contains functions for verifying zarf yaml files are valid
+package lint
 
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/validation"
-)
-
-// Zarf looks for these strings in zarf.yaml to make dynamic changes
-const (
-	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
-	ZarfPackageVariablePrefix = "###ZARF_PKG_VAR_"
-	ZarfPackageArch           = "###ZARF_PKG_ARCH###"
-	ZarfComponentName         = "###ZARF_COMPONENT_NAME###"
 )
 
 var (
@@ -47,105 +38,71 @@ const (
 	errChartReleaseNameEmpty = "release name empty, unable to fallback to chart name"
 )
 
+// Package errors found during validation.
 const (
-	//nolint:revive //ignore
-	PkgValidateErrInitNoYOLO = "sorry, you can't YOLO an init package"
-	//nolint:revive //ignore
-	PkgValidateErrConstant = "invalid package constant: %w"
-	//nolint:revive //ignore
-	PkgValidateErrYOLONoOCI = "OCI images not allowed in YOLO"
-	//nolint:revive //ignore
-	PkgValidateErrYOLONoGit = "git repos not allowed in YOLO"
-	//nolint:revive //ignore
-	PkgValidateErrYOLONoArch = "cluster architecture not allowed in YOLO"
-	//nolint:revive //ignore
-	PkgValidateErrYOLONoDistro = "cluster distros not allowed in YOLO"
-	//nolint:revive //ignore
-	PkgValidateErrComponentNameNotUnique = "component name %q is not unique"
-	//nolint:revive //ignore
-	PkgValidateErrComponentReqDefault = "component %q cannot be both required and default"
-	//nolint:revive //ignore
-	PkgValidateErrComponentReqGrouped = "component %q cannot be both required and grouped"
-	//nolint:revive //ignore
-	PkgValidateErrChartNameNotUnique = "chart name %q is not unique"
-	//nolint:revive //ignore
-	PkgValidateErrChart = "invalid chart definition: %w"
-	//nolint:revive //ignore
-	PkgValidateErrManifestNameNotUnique = "manifest name %q is not unique"
-	//nolint:revive //ignore
-	PkgValidateErrManifest = "invalid manifest definition: %w"
-	//nolint:revive //ignore
-	PkgValidateErrGroupMultipleDefaults = "group %q has multiple defaults (%q, %q)"
-	//nolint:revive //ignore
-	PkgValidateErrGroupOneComponent = "group %q only has one component (%q)"
-	//nolint:revive //ignore
-	PkgValidateErrAction = "invalid action: %w"
-	//nolint:revive //ignore
-	PkgValidateErrActionCmdWait = "action %q cannot be both a command and wait action"
-	//nolint:revive //ignore
-	PkgValidateErrActionClusterNetwork = "a single wait action must contain only one of cluster or network"
-	//nolint:revive //ignore
-	PkgValidateErrChartName = "chart %q exceed the maximum length of %d characters"
-	//nolint:revive //ignore
-	PkgValidateErrChartNamespaceMissing = "chart %q must include a namespace"
-	//nolint:revive //ignore
-	PkgValidateErrChartURLOrPath = "chart %q must have either a url or localPath"
-	//nolint:revive //ignore
-	PkgValidateErrChartVersion = "chart %q must include a chart version"
-	//nolint:revive //ignore
-	PkgValidateErrImportDefinition = "invalid imported definition for %s: %s"
-	//nolint:revive //ignore
+	PkgValidateErrInitNoYOLO              = "sorry, you can't YOLO an init package"
+	PkgValidateErrConstant                = "invalid package constant: %w"
+	PkgValidateErrYOLONoOCI               = "OCI images not allowed in YOLO"
+	PkgValidateErrYOLONoGit               = "git repos not allowed in YOLO"
+	PkgValidateErrYOLONoArch              = "cluster architecture not allowed in YOLO"
+	PkgValidateErrYOLONoDistro            = "cluster distros not allowed in YOLO"
+	PkgValidateErrComponentNameNotUnique  = "component name %q is not unique"
+	PkgValidateErrComponentReqDefault     = "component %q cannot be both required and default"
+	PkgValidateErrComponentReqGrouped     = "component %q cannot be both required and grouped"
+	PkgValidateErrChartNameNotUnique      = "chart name %q is not unique"
+	PkgValidateErrChart                   = "invalid chart definition: %w"
+	PkgValidateErrManifestNameNotUnique   = "manifest name %q is not unique"
+	PkgValidateErrManifest                = "invalid manifest definition: %w"
+	PkgValidateErrGroupMultipleDefaults   = "group %q has multiple defaults (%q, %q)"
+	PkgValidateErrGroupOneComponent       = "group %q only has one component (%q)"
+	PkgValidateErrAction                  = "invalid action: %w"
+	PkgValidateErrActionCmdWait           = "action %q cannot be both a command and wait action"
+	PkgValidateErrActionClusterNetwork    = "a single wait action must contain only one of cluster or network"
+	PkgValidateErrChartName               = "chart %q exceed the maximum length of %d characters"
+	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
+	PkgValidateErrChartURLOrPath          = "chart %q must have either a url or localPath"
+	PkgValidateErrChartVersion            = "chart %q must include a chart version"
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
-	//nolint:revive //ignore
-	PkgValidateErrManifestNameLength = "manifest %q exceed the maximum length of %d characters"
-	//nolint:revive //ignore
-	PkgValidateErrVariable = "invalid package variable: %w"
+	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
+	PkgValidateErrVariable                = "invalid package variable: %w"
 )
 
-// Validate runs all validation checks on the package.
-func (pkg ZarfPackage) Validate() error {
+// ValidatePackage runs all validation checks on the package.
+func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	var err error
-	if pkg.Kind == ZarfInitConfig && pkg.Metadata.YOLO {
+	if pkg.Kind == v1alpha1.ZarfInitConfig && pkg.Metadata.YOLO {
 		err = errors.Join(err, fmt.Errorf(PkgValidateErrInitNoYOLO))
 	}
-
 	for _, constant := range pkg.Constants {
 		if varErr := constant.Validate(); varErr != nil {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrConstant, varErr))
 		}
 	}
-
 	uniqueComponentNames := make(map[string]bool)
 	groupDefault := make(map[string]string)
 	groupedComponents := make(map[string][]string)
-
 	if pkg.Metadata.YOLO {
 		for _, component := range pkg.Components {
 			if len(component.Images) > 0 {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrYOLONoOCI))
 			}
-
 			if len(component.Repos) > 0 {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrYOLONoGit))
 			}
-
 			if component.Only.Cluster.Architecture != "" {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrYOLONoArch))
 			}
-
 			if len(component.Only.Cluster.Distros) > 0 {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrYOLONoDistro))
 			}
 		}
 	}
-
 	for _, component := range pkg.Components {
 		// ensure component name is unique
 		if _, ok := uniqueComponentNames[component.Name]; ok {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
 		}
 		uniqueComponentNames[component.Name] = true
-
 		if component.IsRequired() {
 			if component.Default {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentReqDefault, component.Name))
@@ -154,7 +111,6 @@ func (pkg ZarfPackage) Validate() error {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentReqGrouped, component.Name))
 			}
 		}
-
 		uniqueChartNames := make(map[string]bool)
 		for _, chart := range component.Charts {
 			// ensure chart name is unique
@@ -162,12 +118,10 @@ func (pkg ZarfPackage) Validate() error {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrChartNameNotUnique, chart.Name))
 			}
 			uniqueChartNames[chart.Name] = true
-
-			if chartErr := chart.Validate(); chartErr != nil {
+			if chartErr := validateChart(chart); chartErr != nil {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrChart, chartErr))
 			}
 		}
-
 		uniqueManifestNames := make(map[string]bool)
 		for _, manifest := range component.Manifests {
 			// ensure manifest name is unique
@@ -175,16 +129,13 @@ func (pkg ZarfPackage) Validate() error {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrManifestNameNotUnique, manifest.Name))
 			}
 			uniqueManifestNames[manifest.Name] = true
-
-			if manifestErr := manifest.Validate(); manifestErr != nil {
+			if manifestErr := validateManifest(manifest); manifestErr != nil {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrManifest, manifestErr))
 			}
 		}
-
-		if actionsErr := component.Actions.validate(); actionsErr != nil {
+		if actionsErr := validateActions(component.Actions); actionsErr != nil {
 			err = errors.Join(err, fmt.Errorf("%q: %w", component.Name, actionsErr))
 		}
-
 		// ensure groups don't have multiple defaults or only one component
 		if component.DeprecatedGroup != "" {
 			if component.Default {
@@ -196,74 +147,38 @@ func (pkg ZarfPackage) Validate() error {
 			groupedComponents[component.DeprecatedGroup] = append(groupedComponents[component.DeprecatedGroup], component.Name)
 		}
 	}
-
 	for groupKey, componentNames := range groupedComponents {
 		if len(componentNames) == 1 {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrGroupOneComponent, groupKey, componentNames[0]))
 		}
 	}
-
 	return err
 }
 
-func (a ZarfComponentActions) validate() error {
+// validateActions validates the actions of a component.
+func validateActions(a v1alpha1.ZarfComponentActions) error {
 	var err error
 
-	err = errors.Join(err, a.OnCreate.Validate())
+	err = errors.Join(err, validateActionSet(a.OnCreate))
 
-	if a.OnCreate.HasSetVariables() {
+	if hasSetVariables(a.OnCreate) {
 		err = errors.Join(err, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
 	}
 
-	err = errors.Join(err, a.OnDeploy.Validate())
+	err = errors.Join(err, validateActionSet(a.OnDeploy))
 
-	if a.OnRemove.HasSetVariables() {
+	if hasSetVariables(a.OnRemove) {
 		err = errors.Join(err, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
 	}
 
-	err = errors.Join(err, a.OnRemove.Validate())
+	err = errors.Join(err, validateActionSet(a.OnRemove))
 
 	return err
 }
 
-// Validate validates the component trying to be imported.
-func (c ZarfComponent) Validate() error {
-	var err error
-	path := c.Import.Path
-	url := c.Import.URL
-
-	// ensure path or url is provided
-	if path == "" && url == "" {
-		err = errors.Join(err, fmt.Errorf(PkgValidateErrImportDefinition, c.Name, "neither a path nor a URL was provided"))
-	}
-
-	// ensure path and url are not both provided
-	if path != "" && url != "" {
-		err = errors.Join(err, fmt.Errorf(PkgValidateErrImportDefinition, c.Name, "both a path and a URL were provided"))
-	}
-
-	// validation for path
-	if url == "" && path != "" {
-		// ensure path is not an absolute path
-		if filepath.IsAbs(path) {
-			err = errors.Join(err, fmt.Errorf(PkgValidateErrImportDefinition, c.Name, "path cannot be an absolute path"))
-		}
-	}
-
-	// validation for url
-	if url != "" && path == "" {
-		ok := helpers.IsOCIURL(url)
-		if !ok {
-			err = errors.Join(err, fmt.Errorf(PkgValidateErrImportDefinition, c.Name, "URL is not a valid OCI URL"))
-		}
-	}
-
-	return err
-}
-
-// HasSetVariables returns true if any of the actions contain setVariables.
-func (as ZarfComponentActionSet) HasSetVariables() bool {
-	check := func(actions []ZarfComponentAction) bool {
+// hasSetVariables returns true if any of the actions contain setVariables.
+func hasSetVariables(as v1alpha1.ZarfComponentActionSet) bool {
+	check := func(actions []v1alpha1.ZarfComponentAction) bool {
 		for _, action := range actions {
 			if len(action.SetVariables) > 0 {
 				return true
@@ -275,12 +190,12 @@ func (as ZarfComponentActionSet) HasSetVariables() bool {
 	return check(as.Before) || check(as.After) || check(as.OnSuccess) || check(as.OnFailure)
 }
 
-// Validate runs all validation checks on component action sets.
-func (as ZarfComponentActionSet) Validate() error {
+// validateActionSet runs all validation checks on component action sets.
+func validateActionSet(as v1alpha1.ZarfComponentActionSet) error {
 	var err error
-	validate := func(actions []ZarfComponentAction) {
+	validate := func(actions []v1alpha1.ZarfComponentAction) {
 		for _, action := range actions {
-			if actionErr := action.Validate(); actionErr != nil {
+			if actionErr := validateAction(action); actionErr != nil {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrAction, actionErr))
 			}
 		}
@@ -293,8 +208,8 @@ func (as ZarfComponentActionSet) Validate() error {
 	return err
 }
 
-// Validate runs all validation checks on an action.
-func (action ZarfComponentAction) Validate() error {
+// validateAction runs all validation checks on an action.
+func validateAction(action v1alpha1.ZarfComponentAction) error {
 	var err error
 
 	if action.Wait != nil {
@@ -340,8 +255,8 @@ func validateReleaseName(chartName, releaseName string) (err error) {
 	return
 }
 
-// Validate runs all validation checks on a chart.
-func (chart ZarfChart) Validate() error {
+// validateChart runs all validation checks on a chart.
+func validateChart(chart v1alpha1.ZarfChart) error {
 	var err error
 
 	if len(chart.Name) > ZarfMaxChartNameLength {
@@ -372,8 +287,8 @@ func (chart ZarfChart) Validate() error {
 	return err
 }
 
-// Validate runs all validation checks on a manifest.
-func (manifest ZarfManifest) Validate() error {
+// validateManifest runs all validation checks on a manifest.
+func validateManifest(manifest v1alpha1.ZarfManifest) error {
 	var err error
 
 	if len(manifest.Name) > ZarfMaxChartNameLength {

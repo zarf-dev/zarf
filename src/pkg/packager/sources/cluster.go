@@ -12,6 +12,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
@@ -24,7 +25,7 @@ var (
 
 // NewClusterSource creates a new cluster source.
 func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
-	if !v1alpha1.IsLowercaseNumberHyphenNoStartHyphen(pkgOpts.PackageSource) {
+	if !lint.IsLowercaseNumberHyphenNoStartHyphen(pkgOpts.PackageSource) {
 		return nil, fmt.Errorf("invalid package name %q", pkgOpts.PackageSource)
 	}
 
