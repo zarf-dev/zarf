@@ -6,7 +6,6 @@ package lint
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -461,98 +460,6 @@ func TestValidateComponentAction(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := validateAction(tt.action)
-			if tt.expectedErrs == nil {
-				require.NoError(t, err)
-				return
-			}
-			errs := strings.Split(err.Error(), "\n")
-			require.ElementsMatch(t, tt.expectedErrs, errs)
-		})
-	}
-}
-
-func TestValidateZarfComponent(t *testing.T) {
-	t.Parallel()
-	absPath, err := filepath.Abs("abs")
-	require.NoError(t, err)
-	tests := []struct {
-		component    v1alpha1.ZarfComponent
-		expectedErrs []string
-		name         string
-	}{
-		{
-			name: "valid path",
-			component: v1alpha1.ZarfComponent{
-				Name: "component1",
-				Import: v1alpha1.ZarfComponentImport{
-					Path: "relative/path",
-				},
-			},
-			expectedErrs: nil,
-		},
-		{
-			name: "valid URL",
-			component: v1alpha1.ZarfComponent{
-				Name: "component2",
-				Import: v1alpha1.ZarfComponentImport{
-					URL: "oci://example.com/package:v0.0.1",
-				},
-			},
-			expectedErrs: nil,
-		},
-		{
-			name: "neither path nor URL provided",
-			component: v1alpha1.ZarfComponent{
-				Name: "neither",
-			},
-			expectedErrs: []string{
-				fmt.Sprintf(PkgValidateErrImportDefinition, "neither", "neither a path nor a URL was provided"),
-			},
-		},
-		{
-			name: "both path and URL provided",
-			component: v1alpha1.ZarfComponent{
-				Name: "both",
-				Import: v1alpha1.ZarfComponentImport{
-					Path: "relative/path",
-					URL:  "https://example.com",
-				},
-			},
-			expectedErrs: []string{
-				fmt.Sprintf(PkgValidateErrImportDefinition, "both", "both a path and a URL were provided"),
-			},
-		},
-		{
-			name: "absolute path provided",
-			component: v1alpha1.ZarfComponent{
-				Name: "abs-path",
-				Import: v1alpha1.ZarfComponentImport{
-					Path: absPath,
-				},
-			},
-			expectedErrs: []string{
-				fmt.Sprintf(PkgValidateErrImportDefinition, "abs-path", "path cannot be an absolute path"),
-			},
-		},
-		{
-			name: "invalid URL provided",
-			component: v1alpha1.ZarfComponent{
-				Name: "bad-url",
-				Import: v1alpha1.ZarfComponentImport{
-					URL: "https://example.com",
-				},
-			},
-			expectedErrs: []string{
-				fmt.Sprintf(PkgValidateErrImportDefinition, "bad-url", "URL is not a valid OCI URL"),
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			err := validateComponent(tt.component)
 			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return

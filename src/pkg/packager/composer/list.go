@@ -6,6 +6,7 @@ package composer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -115,6 +116,43 @@ func (ic *ImportChain) append(c v1alpha1.ZarfComponent, index int, originalPacka
 		p.next = node
 		ic.tail = node
 	}
+}
+
+const pkgValidateErrImportDefinition = "invalid imported definition for %s: %s"
+
+// validateComponentCompose validates that a component doesn't break compose rules
+func validateComponentCompose(c v1alpha1.ZarfComponent) error {
+	var err error
+	path := c.Import.Path
+	url := c.Import.URL
+
+	// ensure path or url is provided
+	if path == "" && url == "" {
+		err = errors.Join(err, fmt.Errorf(pkgValidateErrImportDefinition, c.Name, "neither a path nor a URL was provided"))
+	}
+
+	// ensure path and url are not both provided
+	if path != "" && url != "" {
+		err = errors.Join(err, fmt.Errorf(pkgValidateErrImportDefinition, c.Name, "both a path and a URL were provided"))
+	}
+
+	// validation for path
+	if url == "" && path != "" {
+		// ensure path is not an absolute path
+		if filepath.IsAbs(path) {
+			err = errors.Join(err, fmt.Errorf(pkgValidateErrImportDefinition, c.Name, "path cannot be an absolute path"))
+		}
+	}
+
+	// validation for url
+	if url != "" && path == "" {
+		ok := helpers.IsOCIURL(url)
+		if !ok {
+			err = errors.Join(err, fmt.Errorf(pkgValidateErrImportDefinition, c.Name, "URL is not a valid OCI URL"))
+		}
+	}
+
+	return err
 }
 
 // NewImportChain creates a new import chain from a component

@@ -7,11 +7,9 @@ package lint
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
@@ -64,7 +62,6 @@ const (
 	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
 	PkgValidateErrChartURLOrPath          = "chart %q must have either a url or localPath"
 	PkgValidateErrChartVersion            = "chart %q must include a chart version"
-	PkgValidateErrImportDefinition        = "invalid imported definition for %s: %s"
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
 	PkgValidateErrVariable                = "invalid package variable: %w"
@@ -101,9 +98,6 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 		}
 	}
 	for _, component := range pkg.Components {
-		if compErr := validateComponent(component); compErr != nil {
-			err = errors.Join(err, compErr)
-		}
 		// ensure component name is unique
 		if _, ok := uniqueComponentNames[component.Name]; ok {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
@@ -178,41 +172,6 @@ func validateActions(a v1alpha1.ZarfComponentActions) error {
 	}
 
 	err = errors.Join(err, validateActionSet(a.OnRemove))
-
-	return err
-}
-
-// validateComponent validates the component trying to be imported.
-func validateComponent(c v1alpha1.ZarfComponent) error {
-	var err error
-	path := c.Import.Path
-	url := c.Import.URL
-
-	// ensure path or url is provided
-	if path == "" && url == "" {
-		err = errors.Join(err, fmt.Errorf(PkgValidateErrImportDefinition, c.Name, "neither a path nor a URL was provided"))
-	}
-
-	// ensure path and url are not both provided
-	if path != "" && url != "" {
-		err = errors.Join(err, fmt.Errorf(PkgValidateErrImportDefinition, c.Name, "both a path and a URL were provided"))
-	}
-
-	// validation for path
-	if url == "" && path != "" {
-		// ensure path is not an absolute path
-		if filepath.IsAbs(path) {
-			err = errors.Join(err, fmt.Errorf(PkgValidateErrImportDefinition, c.Name, "path cannot be an absolute path"))
-		}
-	}
-
-	// validation for url
-	if url != "" && path == "" {
-		ok := helpers.IsOCIURL(url)
-		if !ok {
-			err = errors.Join(err, fmt.Errorf(PkgValidateErrImportDefinition, c.Name, "URL is not a valid OCI URL"))
-		}
-	}
 
 	return err
 }
