@@ -7,8 +7,6 @@ package variables
 import (
 	"fmt"
 	"regexp"
-
-	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
 // VariableType represents a type of a Zarf package variable
@@ -70,8 +68,7 @@ type SetVariable struct {
 // Validate runs all validation checks on a package constant.
 func (c Constant) Validate() error {
 	if !regexp.MustCompile(c.Pattern).MatchString(c.Value) {
-		return fmt.Errorf(lang.PkgValidateErrPkgConstantPattern, c.Name, c.Pattern)
+		return fmt.Errorf("provided value for constant %s does not match pattern %s", c.Name, c.Pattern)
 	}
-
 	return nil
 }

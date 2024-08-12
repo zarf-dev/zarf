@@ -7,8 +7,6 @@ package v1alpha1
 import (
 	"github.com/invopop/jsonschema"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
-	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
@@ -228,7 +226,7 @@ type ZarfComponentActionDefaults struct {
 	// Additional environment variables for commands.
 	Env []string `json:"env,omitempty"`
 	// (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.
-	Shell exec.Shell `json:"shell,omitempty"`
+	Shell Shell `json:"shell,omitempty"`
 }
 
 // ZarfComponentAction represents a single action to run during a zarf package operation.
@@ -246,11 +244,11 @@ type ZarfComponentAction struct {
 	// The command to run. Must specify either cmd or wait for the action to do anything.
 	Cmd string `json:"cmd,omitempty"`
 	// (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.
-	Shell *exec.Shell `json:"shell,omitempty"`
+	Shell *Shell `json:"shell,omitempty"`
 	// [Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.
 	DeprecatedSetVariable string `json:"setVariable,omitempty" jsonschema:"pattern=^[A-Z0-9_]+$"`
 	// (onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.
-	SetVariables []variables.Variable `json:"setVariables,omitempty"`
+	SetVariables []Variable `json:"setVariables,omitempty"`
 	// Description of the action to be displayed during package execution instead of the command.
 	Description string `json:"description,omitempty"`
 	// Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.
@@ -330,4 +328,11 @@ func (ZarfComponentImport) JSONSchemaExtend(schema *jsonschema.Schema) {
 
 	path.Not = notSchema
 	url.Not = notSchema
+}
+
+// Shell represents the desired shell to use for a given command
+type Shell struct {
+	Windows string `json:"windows,omitempty" jsonschema:"description=(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item),example=powershell,example=cmd,example=pwsh,example=sh,example=bash,example=gsh"`
+	Linux   string `json:"linux,omitempty" jsonschema:"description=(default 'sh') Indicates a preference for the shell to use on Linux systems,example=sh,example=bash,example=fish,example=zsh,example=pwsh"`
+	Darwin  string `json:"darwin,omitempty" jsonschema:"description=(default 'sh') Indicates a preference for the shell to use on macOS systems,example=sh,example=bash,example=fish,example=zsh,example=pwsh"`
 }

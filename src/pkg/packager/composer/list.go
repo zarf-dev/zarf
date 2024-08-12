@@ -16,7 +16,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
@@ -26,8 +25,8 @@ type Node struct {
 
 	index int
 
-	vars   []variables.InteractiveVariable
-	consts []variables.Constant
+	vars   []v1alpha1.InteractiveVariable
+	consts []v1alpha1.Constant
 
 	relativeToHead      string
 	originalPackageName string
@@ -96,7 +95,7 @@ func (ic *ImportChain) Tail() *Node {
 }
 
 func (ic *ImportChain) append(c v1alpha1.ZarfComponent, index int, originalPackageName string,
-	relativeToHead string, vars []variables.InteractiveVariable, consts []variables.Constant) {
+	relativeToHead string, vars []v1alpha1.InteractiveVariable, consts []v1alpha1.Constant) {
 	node := &Node{
 		ZarfComponent:       c,
 		index:               index,
@@ -308,8 +307,8 @@ func (ic *ImportChain) Compose(ctx context.Context) (composed *v1alpha1.ZarfComp
 }
 
 // MergeVariables merges variables from the import chain
-func (ic *ImportChain) MergeVariables(existing []variables.InteractiveVariable) (merged []variables.InteractiveVariable) {
-	exists := func(v1 variables.InteractiveVariable, v2 variables.InteractiveVariable) bool {
+func (ic *ImportChain) MergeVariables(existing []v1alpha1.InteractiveVariable) (merged []v1alpha1.InteractiveVariable) {
+	exists := func(v1 v1alpha1.InteractiveVariable, v2 v1alpha1.InteractiveVariable) bool {
 		return v1.Name == v2.Name
 	}
 
@@ -325,8 +324,8 @@ func (ic *ImportChain) MergeVariables(existing []variables.InteractiveVariable) 
 }
 
 // MergeConstants merges constants from the import chain
-func (ic *ImportChain) MergeConstants(existing []variables.Constant) (merged []variables.Constant) {
-	exists := func(c1 variables.Constant, c2 variables.Constant) bool {
+func (ic *ImportChain) MergeConstants(existing []v1alpha1.Constant) (merged []v1alpha1.Constant) {
+	exists := func(c1 v1alpha1.Constant, c2 v1alpha1.Constant) bool {
 		return c1.Name == c2.Name
 	}
 

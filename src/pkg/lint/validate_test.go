@@ -13,8 +13,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
 func TestZarfPackageValidate(t *testing.T) {
@@ -82,7 +80,7 @@ func TestZarfPackageValidate(t *testing.T) {
 						Name: "duplicate",
 					},
 				},
-				Constants: []variables.Constant{
+				Constants: []v1alpha1.Constant{
 					{
 						Name:    "BAD",
 						Pattern: "^good_val$",
@@ -91,14 +89,14 @@ func TestZarfPackageValidate(t *testing.T) {
 				},
 			},
 			expectedErrs: []string{
-				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantPattern, "BAD", "^good_val$")).Error(),
-				fmt.Sprintf(lang.PkgValidateErrComponentReqDefault, "invalid"),
-				fmt.Sprintf(lang.PkgValidateErrChartNameNotUnique, "chart1"),
-				fmt.Sprintf(lang.PkgValidateErrManifestNameNotUnique, "manifest1"),
-				fmt.Sprintf(lang.PkgValidateErrComponentReqGrouped, "required-in-group"),
-				fmt.Sprintf(lang.PkgValidateErrComponentNameNotUnique, "duplicate"),
-				fmt.Sprintf(lang.PkgValidateErrGroupOneComponent, "a-group", "required-in-group"),
-				fmt.Sprintf(lang.PkgValidateErrGroupMultipleDefaults, "multi-default", "multi-default", "multi-default-2"),
+				fmt.Errorf(PkgValidateErrConstant, fmt.Errorf("provided value for constant %s does not match pattern %s", "BAD", "^good_val$")).Error(),
+				fmt.Sprintf(PkgValidateErrComponentReqDefault, "invalid"),
+				fmt.Sprintf(PkgValidateErrChartNameNotUnique, "chart1"),
+				fmt.Sprintf(PkgValidateErrManifestNameNotUnique, "manifest1"),
+				fmt.Sprintf(PkgValidateErrComponentReqGrouped, "required-in-group"),
+				fmt.Sprintf(PkgValidateErrComponentNameNotUnique, "duplicate"),
+				fmt.Sprintf(PkgValidateErrGroupOneComponent, "a-group", "required-in-group"),
+				fmt.Sprintf(PkgValidateErrGroupMultipleDefaults, "multi-default", "multi-default", "multi-default-2"),
 			},
 		},
 		{
@@ -124,11 +122,11 @@ func TestZarfPackageValidate(t *testing.T) {
 				},
 			},
 			expectedErrs: []string{
-				lang.PkgValidateErrInitNoYOLO,
-				lang.PkgValidateErrYOLONoOCI,
-				lang.PkgValidateErrYOLONoGit,
-				lang.PkgValidateErrYOLONoArch,
-				lang.PkgValidateErrYOLONoDistro,
+				PkgValidateErrInitNoYOLO,
+				PkgValidateErrYOLONoOCI,
+				PkgValidateErrYOLONoGit,
+				PkgValidateErrYOLONoArch,
+				PkgValidateErrYOLONoDistro,
 			},
 		},
 	}
@@ -164,12 +162,12 @@ func TestValidateManifest(t *testing.T) {
 		{
 			name:         "long name",
 			manifest:     v1alpha1.ZarfManifest{Name: longName, Files: []string{"a-file"}},
-			expectedErrs: []string{fmt.Sprintf(lang.PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength)},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength)},
 		},
 		{
 			name:         "no files or kustomize",
 			manifest:     v1alpha1.ZarfManifest{Name: "nothing-there"},
-			expectedErrs: []string{fmt.Sprintf(lang.PkgValidateErrManifestFileOrKustomize, "nothing-there")},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestFileOrKustomize, "nothing-there")},
 		},
 	}
 	for _, tt := range tests {
@@ -269,23 +267,23 @@ func TestValidateChart(t *testing.T) {
 			name:  "long name",
 			chart: v1alpha1.ZarfChart{Name: longName, Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
 			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrChartName, longName, ZarfMaxChartNameLength),
+				fmt.Sprintf(PkgValidateErrChartName, longName, ZarfMaxChartNameLength),
 			},
 		},
 		{
 			name:  "no url, local path, version, or namespace",
 			chart: v1alpha1.ZarfChart{Name: "invalid"},
 			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrChartNamespaceMissing, "invalid"),
-				fmt.Sprintf(lang.PkgValidateErrChartURLOrPath, "invalid"),
-				fmt.Sprintf(lang.PkgValidateErrChartVersion, "invalid"),
+				fmt.Sprintf(PkgValidateErrChartNamespaceMissing, "invalid"),
+				fmt.Sprintf(PkgValidateErrChartURLOrPath, "invalid"),
+				fmt.Sprintf(PkgValidateErrChartVersion, "invalid"),
 			},
 		},
 		{
 			name:  "both url and local path",
 			chart: v1alpha1.ZarfChart{Name: "invalid", Namespace: "whatever", URL: "http://whatever", LocalPath: "wherever", Version: "v1.0.0"},
 			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrChartURLOrPath, "invalid"),
+				fmt.Sprintf(PkgValidateErrChartURLOrPath, "invalid"),
 			},
 		},
 		{
@@ -362,7 +360,7 @@ func TestValidateComponentActions(t *testing.T) {
 					Before: []v1alpha1.ZarfComponentAction{
 						{
 							Cmd:          "echo 'invalid setVariable'",
-							SetVariables: []variables.Variable{{Name: "VAR"}},
+							SetVariables: []v1alpha1.Variable{{Name: "VAR"}},
 						},
 					},
 				},
@@ -404,10 +402,10 @@ func TestValidateComponentActions(t *testing.T) {
 				},
 			},
 			expectedErrs: []string{
-				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "create")).Error(),
-				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "deploy")).Error(),
-				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "remove")).Error(),
-				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "remove2")).Error(),
+				fmt.Errorf(PkgValidateErrAction, fmt.Errorf(PkgValidateErrActionCmdWait, "create")).Error(),
+				fmt.Errorf(PkgValidateErrAction, fmt.Errorf(PkgValidateErrActionCmdWait, "deploy")).Error(),
+				fmt.Errorf(PkgValidateErrAction, fmt.Errorf(PkgValidateErrActionCmdWait, "remove")).Error(),
+				fmt.Errorf(PkgValidateErrAction, fmt.Errorf(PkgValidateErrActionCmdWait, "remove2")).Error(),
 			},
 		},
 	}
@@ -445,8 +443,8 @@ func TestValidateComponentAction(t *testing.T) {
 				Wait: &v1alpha1.ZarfComponentActionWait{},
 			},
 			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrActionCmdWait, "ls"),
-				lang.PkgValidateErrActionClusterNetwork,
+				fmt.Sprintf(PkgValidateErrActionCmdWait, "ls"),
+				PkgValidateErrActionClusterNetwork,
 			},
 		},
 		{
@@ -454,7 +452,8 @@ func TestValidateComponentAction(t *testing.T) {
 			action: v1alpha1.ZarfComponentAction{
 				Wait: &v1alpha1.ZarfComponentActionWait{Cluster: &v1alpha1.ZarfComponentActionWaitCluster{}, Network: &v1alpha1.ZarfComponentActionWaitNetwork{}},
 			},
-			expectedErrs: []string{fmt.Sprintf(lang.PkgValidateErrActionClusterNetwork)},
+			//nolint:staticcheck //ignore
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrActionClusterNetwork)},
 		},
 	}
 
@@ -508,7 +507,7 @@ func TestValidateZarfComponent(t *testing.T) {
 				Name: "neither",
 			},
 			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "neither", "neither a path nor a URL was provided"),
+				fmt.Sprintf(PkgValidateErrImportDefinition, "neither", "neither a path nor a URL was provided"),
 			},
 		},
 		{
@@ -521,7 +520,7 @@ func TestValidateZarfComponent(t *testing.T) {
 				},
 			},
 			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "both", "both a path and a URL were provided"),
+				fmt.Sprintf(PkgValidateErrImportDefinition, "both", "both a path and a URL were provided"),
 			},
 		},
 		{
@@ -533,7 +532,7 @@ func TestValidateZarfComponent(t *testing.T) {
 				},
 			},
 			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "abs-path", "path cannot be an absolute path"),
+				fmt.Sprintf(PkgValidateErrImportDefinition, "abs-path", "path cannot be an absolute path"),
 			},
 		},
 		{
@@ -545,7 +544,7 @@ func TestValidateZarfComponent(t *testing.T) {
 				},
 			},
 			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "bad-url", "URL is not a valid OCI URL"),
+				fmt.Sprintf(PkgValidateErrImportDefinition, "bad-url", "URL is not a valid OCI URL"),
 			},
 		},
 	}

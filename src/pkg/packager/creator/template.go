@@ -12,7 +12,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
 // FillActiveTemplate merges user-specified variables into the configuration templates of a zarf.yaml.
@@ -33,8 +32,8 @@ func FillActiveTemplate(pkg v1alpha1.ZarfPackage, setVariables map[string]string
 
 			_, present := setVariables[key]
 			if !present && !config.CommonOptions.Confirm {
-				setVal, err := interactive.PromptVariable(variables.InteractiveVariable{
-					Variable: variables.Variable{Name: key},
+				setVal, err := interactive.PromptVariable(v1alpha1.InteractiveVariable{
+					Variable: v1alpha1.Variable{Name: key},
 				})
 				if err != nil {
 					return err

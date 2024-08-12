@@ -13,15 +13,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config/lang"
 	"k8s.io/apimachinery/pkg/util/validation"
-)
-
-const (
-	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
-	ZarfMaxChartNameLength     = 40
-	errChartReleaseNameEmpty   = "release name empty, unable to fallback to chart name"
-	errChartReleaseNameInvalid = "invalid release name %s: a DNS-1035 label must consist of lower case alphanumeric characters or -, start with an alphabetic character, and end with an alphanumeric character"
 )
 
 var (
@@ -42,15 +34,76 @@ func SupportedOS() []string {
 	return supportedOS
 }
 
+const (
+	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
+	ZarfMaxChartNameLength   = 40
+	errChartReleaseNameEmpty = "release name empty, unable to fallback to chart name"
+)
+
+const (
+	//nolint:revive //ignore
+	PkgValidateErrInitNoYOLO = "sorry, you can't YOLO an init package"
+	//nolint:revive //ignore
+	PkgValidateErrConstant = "invalid package constant: %w"
+	//nolint:revive //ignore
+	PkgValidateErrYOLONoOCI = "OCI images not allowed in YOLO"
+	//nolint:revive //ignore
+	PkgValidateErrYOLONoGit = "git repos not allowed in YOLO"
+	//nolint:revive //ignore
+	PkgValidateErrYOLONoArch = "cluster architecture not allowed in YOLO"
+	//nolint:revive //ignore
+	PkgValidateErrYOLONoDistro = "cluster distros not allowed in YOLO"
+	//nolint:revive //ignore
+	PkgValidateErrComponentNameNotUnique = "component name %q is not unique"
+	//nolint:revive //ignore
+	PkgValidateErrComponentReqDefault = "component %q cannot be both required and default"
+	//nolint:revive //ignore
+	PkgValidateErrComponentReqGrouped = "component %q cannot be both required and grouped"
+	//nolint:revive //ignore
+	PkgValidateErrChartNameNotUnique = "chart name %q is not unique"
+	//nolint:revive //ignore
+	PkgValidateErrChart = "invalid chart definition: %w"
+	//nolint:revive //ignore
+	PkgValidateErrManifestNameNotUnique = "manifest name %q is not unique"
+	//nolint:revive //ignore
+	PkgValidateErrManifest = "invalid manifest definition: %w"
+	//nolint:revive //ignore
+	PkgValidateErrGroupMultipleDefaults = "group %q has multiple defaults (%q, %q)"
+	//nolint:revive //ignore
+	PkgValidateErrGroupOneComponent = "group %q only has one component (%q)"
+	//nolint:revive //ignore
+	PkgValidateErrAction = "invalid action: %w"
+	//nolint:revive //ignore
+	PkgValidateErrActionCmdWait = "action %q cannot be both a command and wait action"
+	//nolint:revive //ignore
+	PkgValidateErrActionClusterNetwork = "a single wait action must contain only one of cluster or network"
+	//nolint:revive //ignore
+	PkgValidateErrChartName = "chart %q exceed the maximum length of %d characters"
+	//nolint:revive //ignore
+	PkgValidateErrChartNamespaceMissing = "chart %q must include a namespace"
+	//nolint:revive //ignore
+	PkgValidateErrChartURLOrPath = "chart %q must have either a url or localPath"
+	//nolint:revive //ignore
+	PkgValidateErrChartVersion = "chart %q must include a chart version"
+	//nolint:revive //ignore
+	PkgValidateErrImportDefinition = "invalid imported definition for %s: %s"
+	//nolint:revive //ignore
+	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
+	//nolint:revive //ignore
+	PkgValidateErrManifestNameLength = "manifest %q exceed the maximum length of %d characters"
+	//nolint:revive //ignore
+	PkgValidateErrVariable = "invalid package variable: %w"
+)
+
 // ValidatePackage runs all validation checks on the package.
 func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	var err error
 	if pkg.Kind == v1alpha1.ZarfInitConfig && pkg.Metadata.YOLO {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrInitNoYOLO))
+		err = errors.Join(err, fmt.Errorf(PkgValidateErrInitNoYOLO))
 	}
 	for _, constant := range pkg.Constants {
 		if varErr := constant.Validate(); varErr != nil {
-			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrConstant, varErr))
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrConstant, varErr))
 		}
 	}
 	uniqueComponentNames := make(map[string]bool)
@@ -59,16 +112,16 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	if pkg.Metadata.YOLO {
 		for _, component := range pkg.Components {
 			if len(component.Images) > 0 {
-				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrYOLONoOCI))
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrYOLONoOCI))
 			}
 			if len(component.Repos) > 0 {
-				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrYOLONoGit))
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrYOLONoGit))
 			}
 			if component.Only.Cluster.Architecture != "" {
-				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrYOLONoArch))
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrYOLONoArch))
 			}
 			if len(component.Only.Cluster.Distros) > 0 {
-				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrYOLONoDistro))
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrYOLONoDistro))
 			}
 		}
 	}
@@ -78,37 +131,37 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 		}
 		// ensure component name is unique
 		if _, ok := uniqueComponentNames[component.Name]; ok {
-			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentNameNotUnique, component.Name))
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
 		}
 		uniqueComponentNames[component.Name] = true
 		if component.IsRequired() {
 			if component.Default {
-				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentReqDefault, component.Name))
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentReqDefault, component.Name))
 			}
 			if component.DeprecatedGroup != "" {
-				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrComponentReqGrouped, component.Name))
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentReqGrouped, component.Name))
 			}
 		}
 		uniqueChartNames := make(map[string]bool)
 		for _, chart := range component.Charts {
 			// ensure chart name is unique
 			if _, ok := uniqueChartNames[chart.Name]; ok {
-				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartNameNotUnique, chart.Name))
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrChartNameNotUnique, chart.Name))
 			}
 			uniqueChartNames[chart.Name] = true
 			if chartErr := validateChart(chart); chartErr != nil {
-				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChart, chartErr))
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrChart, chartErr))
 			}
 		}
 		uniqueManifestNames := make(map[string]bool)
 		for _, manifest := range component.Manifests {
 			// ensure manifest name is unique
 			if _, ok := uniqueManifestNames[manifest.Name]; ok {
-				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifestNameNotUnique, manifest.Name))
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrManifestNameNotUnique, manifest.Name))
 			}
 			uniqueManifestNames[manifest.Name] = true
 			if manifestErr := validateManifest(manifest); manifestErr != nil {
-				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifest, manifestErr))
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrManifest, manifestErr))
 			}
 		}
 		if actionsErr := validateActions(component.Actions); actionsErr != nil {
@@ -118,7 +171,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 		if component.DeprecatedGroup != "" {
 			if component.Default {
 				if _, ok := groupDefault[component.DeprecatedGroup]; ok {
-					err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrGroupMultipleDefaults, component.DeprecatedGroup, groupDefault[component.DeprecatedGroup], component.Name))
+					err = errors.Join(err, fmt.Errorf(PkgValidateErrGroupMultipleDefaults, component.DeprecatedGroup, groupDefault[component.DeprecatedGroup], component.Name))
 				}
 				groupDefault[component.DeprecatedGroup] = component.Name
 			}
@@ -127,7 +180,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	}
 	for groupKey, componentNames := range groupedComponents {
 		if len(componentNames) == 1 {
-			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrGroupOneComponent, groupKey, componentNames[0]))
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrGroupOneComponent, groupKey, componentNames[0]))
 		}
 	}
 	return err
@@ -162,19 +215,19 @@ func validateComponent(c v1alpha1.ZarfComponent) error {
 
 	// ensure path or url is provided
 	if path == "" && url == "" {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "neither a path nor a URL was provided"))
+		err = errors.Join(err, fmt.Errorf(PkgValidateErrImportDefinition, c.Name, "neither a path nor a URL was provided"))
 	}
 
 	// ensure path and url are not both provided
 	if path != "" && url != "" {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "both a path and a URL were provided"))
+		err = errors.Join(err, fmt.Errorf(PkgValidateErrImportDefinition, c.Name, "both a path and a URL were provided"))
 	}
 
 	// validation for path
 	if url == "" && path != "" {
 		// ensure path is not an absolute path
 		if filepath.IsAbs(path) {
-			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "path cannot be an absolute path"))
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrImportDefinition, c.Name, "path cannot be an absolute path"))
 		}
 	}
 
@@ -182,7 +235,7 @@ func validateComponent(c v1alpha1.ZarfComponent) error {
 	if url != "" && path == "" {
 		ok := helpers.IsOCIURL(url)
 		if !ok {
-			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrImportDefinition, c.Name, "URL is not a valid OCI URL"))
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrImportDefinition, c.Name, "URL is not a valid OCI URL"))
 		}
 	}
 
@@ -209,7 +262,7 @@ func validateActionSet(as v1alpha1.ZarfComponentActionSet) error {
 	validate := func(actions []v1alpha1.ZarfComponentAction) {
 		for _, action := range actions {
 			if actionErr := validateAction(action); actionErr != nil {
-				err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrAction, actionErr))
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrAction, actionErr))
 			}
 		}
 	}
@@ -228,17 +281,17 @@ func validateAction(action v1alpha1.ZarfComponentAction) error {
 	if action.Wait != nil {
 		// Validate only cmd or wait, not both
 		if action.Cmd != "" {
-			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrActionCmdWait, action.Cmd))
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrActionCmdWait, action.Cmd))
 		}
 
 		// Validate only cluster or network, not both
 		if action.Wait.Cluster != nil && action.Wait.Network != nil {
-			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrActionClusterNetwork))
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrActionClusterNetwork))
 		}
 
 		// Validate at least one of cluster or network
 		if action.Wait.Cluster == nil && action.Wait.Network == nil {
-			err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrActionClusterNetwork))
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrActionClusterNetwork))
 		}
 	}
 
@@ -273,24 +326,24 @@ func validateChart(chart v1alpha1.ZarfChart) error {
 	var err error
 
 	if len(chart.Name) > ZarfMaxChartNameLength {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartName, chart.Name, ZarfMaxChartNameLength))
+		err = errors.Join(err, fmt.Errorf(PkgValidateErrChartName, chart.Name, ZarfMaxChartNameLength))
 	}
 
 	if chart.Namespace == "" {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartNamespaceMissing, chart.Name))
+		err = errors.Join(err, fmt.Errorf(PkgValidateErrChartNamespaceMissing, chart.Name))
 	}
 
 	// Must have a url or localPath (and not both)
 	if chart.URL != "" && chart.LocalPath != "" {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartURLOrPath, chart.Name))
+		err = errors.Join(err, fmt.Errorf(PkgValidateErrChartURLOrPath, chart.Name))
 	}
 
 	if chart.URL == "" && chart.LocalPath == "" {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartURLOrPath, chart.Name))
+		err = errors.Join(err, fmt.Errorf(PkgValidateErrChartURLOrPath, chart.Name))
 	}
 
 	if chart.Version == "" {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrChartVersion, chart.Name))
+		err = errors.Join(err, fmt.Errorf(PkgValidateErrChartVersion, chart.Name))
 	}
 
 	if nameErr := validateReleaseName(chart.Name, chart.ReleaseName); nameErr != nil {
@@ -305,11 +358,11 @@ func validateManifest(manifest v1alpha1.ZarfManifest) error {
 	var err error
 
 	if len(manifest.Name) > ZarfMaxChartNameLength {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))
+		err = errors.Join(err, fmt.Errorf(PkgValidateErrManifestNameLength, manifest.Name, ZarfMaxChartNameLength))
 	}
 
 	if len(manifest.Files) < 1 && len(manifest.Kustomizations) < 1 {
-		err = errors.Join(err, fmt.Errorf(lang.PkgValidateErrManifestFileOrKustomize, manifest.Name))
+		err = errors.Join(err, fmt.Errorf(PkgValidateErrManifestFileOrKustomize, manifest.Name))
 	}
 
 	return err

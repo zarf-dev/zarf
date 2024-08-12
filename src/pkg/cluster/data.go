@@ -53,7 +53,7 @@ func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDat
 	}
 
 	// Get the OS shell to execute commands in
-	shell, shellArgs := exec.GetOSShell(exec.Shell{Windows: "cmd"})
+	shell, shellArgs := exec.GetOSShell(v1alpha1.Shell{Windows: "cmd"})
 
 	if _, _, err := exec.Cmd(shell, append(shellArgs, "tar --version")...); err != nil {
 		return fmt.Errorf("unable to execute tar, ensure it is installed in the $PATH: %w", err)
