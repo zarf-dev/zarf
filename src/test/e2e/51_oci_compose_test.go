@@ -19,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	"oras.land/oras-go/v2/registry"
 )
@@ -39,17 +40,13 @@ var (
 func (suite *SkeletonSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 
-	e2e.SetupDockerRegistry(suite.T(), 555)
-	suite.Reference.Registry = "localhost:555"
-
+	suite.Reference.Registry = testutil.SetupInMemoryRegistry(testutil.TestContext(suite.T()), suite.T(), 31888)
 	// Setup the package paths after e2e has been initialized
 	importEverythingPath = filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch))
 	importceptionPath = filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch))
 }
 
 func (suite *SkeletonSuite) TearDownSuite() {
-	e2e.TeardownRegistry(suite.T(), 555)
-
 	err := os.RemoveAll(filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
 	suite.NoError(err)
 	err = os.RemoveAll(importEverythingPath)

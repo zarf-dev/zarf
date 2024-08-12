@@ -10,4 +10,4 @@ components:
     required: false
     import:
       name: demo-helm-charts
-      url: oci://localhost:555/helm-charts:0.0.1
+      url: oci://localhost:31888/helm-charts:0.0.1
