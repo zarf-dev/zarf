@@ -40,6 +40,7 @@ var (
 func (suite *SkeletonSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 
+	// This port must match the registry URL in 51-import-everything/zarf.yaml
 	suite.Reference.Registry = testutil.SetupInMemoryRegistry(testutil.TestContext(suite.T()), suite.T(), 31888)
 	// Setup the package paths after e2e has been initialized
 	importEverythingPath = filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch))
