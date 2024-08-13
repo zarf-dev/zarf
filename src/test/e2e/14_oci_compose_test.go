@@ -182,13 +182,13 @@ func (suite *PublishCopySkeletonSuite) Test_2_FilePaths() {
 func (suite *PublishCopySkeletonSuite) Test_3_Copy() {
 	t := suite.T()
 
+	example := filepath.Join("build", fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "publish", example, "oci://"+suite.Reference.Registry, "--insecure")
+	suite.NoError(err, stdOut, stdErr)
+
 	suite.Reference.Repository = "helm-charts"
 	suite.Reference.Reference = "0.0.1"
 	ref := suite.Reference.String()
-	example := filepath.Join("build", fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "publish", example, "oci://"+suite.Reference.Registry, "--insecure")
-
-	suite.NoError(err, stdOut, stdErr)
 
 	dstRegistry := testutil.SetupInMemoryRegistry(testutil.TestContext(t), t, 31890)
 	dstRef := strings.Replace(ref, suite.Reference.Registry, dstRegistry, 1)
