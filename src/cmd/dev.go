@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
@@ -89,6 +90,26 @@ var devGenerateCmd = &cobra.Command{
 			return err
 		}
 		return nil
+	},
+}
+
+var devMigrateCommand = &cobra.Command{
+	Use:     "migrate-schema [ PACKAGE ]",
+	Aliases: []string{"migrate"},
+	Args:    cobra.MaximumNArgs(1),
+	Short:   lang.CmdDevMigrateSchemaShort,
+	Example: lang.CmdDevGenerateExample,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
+
+		tmp, err := utils.MakeTempDir("")
+		if err != nil {
+			return err
+		}
+		packagePath := layout.New(tmp)
+		defer os.RemoveAll(tmp)
+
+		return packager.MigrateSchema(pkgConfig.CreateOpts.BaseDir, packagePath)
 	},
 }
 
@@ -297,6 +318,7 @@ func init() {
 	devCmd.AddCommand(devFindImagesCmd)
 	devCmd.AddCommand(devGenConfigFileCmd)
 	devCmd.AddCommand(devLintCmd)
+	devCmd.AddCommand(devMigrateCommand)
 
 	bindDevDeployFlags(v)
 	bindDevGenerateFlags(v)

@@ -329,6 +329,9 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevGenerateShort   = "[alpha] Creates a zarf.yaml automatically from a given remote (git) Helm chart"
 	CmdDevGenerateExample = "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo"
 
+	CmdDevMigrateSchemaShort   = "Migrate a ZarfPackageConfig to the given schema version (defaults to the most recent)"
+	CmdDevMigrateSchemaExample = "zarf dev migrate-schema v1beta1"
+
 	CmdDevPatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
 	CmdDevPatchGitOverwritePrompt = "Overwrite the file %s with these changes?"

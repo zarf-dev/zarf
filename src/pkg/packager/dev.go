@@ -8,14 +8,18 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/otiai10/copy"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -104,4 +108,34 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 
 	// cd back
 	return os.Chdir(cwd)
+}
+
+func MigrateSchema(baseDir string, pp *layout.PackagePaths) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	if err := os.Chdir(baseDir); err != nil {
+		return fmt.Errorf("unable to access directory %q: %w", baseDir, err)
+	}
+
+	fmt.Println(cwd)
+
+	copy.Copy(layout.ZarfYAML, pp.Base)
+
+	pkg, _, err := pp.ReadZarfYAML()
+	if err != nil {
+		return err
+	}
+	newPkg, err := v1beta1.TranslateAlphaPackage(pkg)
+	if err != nil {
+		return err
+	}
+	if err := utils.WriteYaml(filepath.Join(cwd, pp.ZarfYAML), &newPkg, helpers.ReadAllWriteUser); err != nil {
+		return err
+	}
+
+	fmt.Println("we are here")
+
+	return nil
 }
