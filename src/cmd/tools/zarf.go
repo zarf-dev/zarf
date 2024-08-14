@@ -141,10 +141,16 @@ var updateCredsCmd = &cobra.Command{
 		if confirm {
 			// Update registry and git pull secrets
 			if slices.Contains(args, message.RegistryKey) {
-				c.UpdateZarfManagedImageSecrets(ctx, newState)
+				err := c.UpdateZarfManagedImageSecrets(ctx, newState)
+				if err != nil {
+					return err
+				}
 			}
 			if slices.Contains(args, message.GitKey) {
-				c.UpdateZarfManagedGitSecrets(ctx, newState)
+				err := c.UpdateZarfManagedGitSecrets(ctx, newState)
+				if err != nil {
+					return err
+				}
 			}
 
 			// Update artifact token (if internal)
