@@ -6,6 +6,7 @@ package packager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -364,7 +365,7 @@ func (p *Packager) findImages(ctx context.Context) (imgMap map[string][]string, 
 			}
 			errMsg += fmt.Sprintf("the following images errored on cosign lookups: %s", erroredCosignLookups)
 		}
-		return imagesMap, fmt.Errorf(errMsg)
+		return imagesMap, errors.New(errMsg)
 	}
 
 	return imagesMap, nil
