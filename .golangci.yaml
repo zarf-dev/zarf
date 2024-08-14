@@ -23,6 +23,7 @@ linters-settings:
       - shadow
       - fieldalignment
       - unusedwrite
+      - printf
   nolintlint:
     require-specific: true
   goheader:

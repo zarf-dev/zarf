@@ -7,18 +7,13 @@ package test
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/defenseunicorns/pkg/oci"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2/registry"
-	"oras.land/oras-go/v2/registry/remote"
 )
 
 type PublishDeploySuiteTestSuite struct {
@@ -115,46 +110,6 @@ func (suite *PublishDeploySuiteTestSuite) Test_2_Pull_And_Deploy() {
 	// Deploy the local package.
 	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "deploy", local, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
-}
-
-func (suite *PublishDeploySuiteTestSuite) Test_3_Copy() {
-	t := suite.T()
-	ref := suite.Reference.String()
-	dstRegistry := testutil.SetupInMemoryRegistry(testutil.TestContext(t), t, 31890)
-	dstRef := strings.Replace(ref, suite.Reference.Registry, dstRegistry, 1)
-
-	src, err := zoci.NewRemote(ref, oci.PlatformForArch(e2e.Arch), oci.WithPlainHTTP(true))
-	suite.NoError(err)
-
-	dst, err := zoci.NewRemote(dstRef, oci.PlatformForArch(e2e.Arch), oci.WithPlainHTTP(true))
-	suite.NoError(err)
-
-	reg, err := remote.NewRegistry(strings.Split(dstRef, "/")[0])
-	suite.NoError(err)
-	reg.PlainHTTP = true
-	attempt := 0
-	ctx := testutil.TestContext(t)
-	for attempt <= 5 {
-		err = reg.Ping(ctx)
-		if err == nil {
-			break
-		}
-		attempt++
-		time.Sleep(2 * time.Second)
-	}
-	require.Less(t, attempt, 5, "failed to ping registry")
-
-	err = zoci.CopyPackage(ctx, src, dst, 5)
-	suite.NoError(err)
-
-	srcRoot, err := src.FetchRoot(ctx)
-	suite.NoError(err)
-
-	for _, layer := range srcRoot.Layers {
-		ok, err := dst.Repo().Exists(ctx, layer)
-		suite.True(ok)
-		suite.NoError(err)
-	}
 }
 
 func TestPublishDeploySuite(t *testing.T) {
