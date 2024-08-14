@@ -1,36 +1,34 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package v1alpha1 holds the definition of the v1alpha1 Zarf Package
-package v1alpha1
+// Package lint contains functions for verifying zarf yaml files are valid
+package lint
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 func TestZarfPackageValidate(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name         string
-		pkg          ZarfPackage
+		pkg          v1alpha1.ZarfPackage
 		expectedErrs []string
 	}{
 		{
 			name: "valid package",
-			pkg: ZarfPackage{
-				Kind: ZarfPackageConfig,
-				Metadata: ZarfMetadata{
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
 					Name: "valid-package",
 				},
-				Components: []ZarfComponent{
+				Components: []v1alpha1.ZarfComponent{
 					{
 						Name: "component1",
 					},
@@ -40,21 +38,21 @@ func TestZarfPackageValidate(t *testing.T) {
 		},
 		{
 			name: "invalid package",
-			pkg: ZarfPackage{
-				Kind: ZarfPackageConfig,
-				Metadata: ZarfMetadata{
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
 					Name: "invalid-package",
 				},
-				Components: []ZarfComponent{
+				Components: []v1alpha1.ZarfComponent{
 					{
 						Name:     "invalid",
 						Required: helpers.BoolPtr(true),
 						Default:  true,
-						Charts: []ZarfChart{
+						Charts: []v1alpha1.ZarfChart{
 							{Name: "chart1", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
 							{Name: "chart1", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
 						},
-						Manifests: []ZarfManifest{
+						Manifests: []v1alpha1.ZarfManifest{
 							{Name: "manifest1", Files: []string{"file1"}},
 							{Name: "manifest1", Files: []string{"file2"}},
 						},
@@ -81,7 +79,7 @@ func TestZarfPackageValidate(t *testing.T) {
 						Name: "duplicate",
 					},
 				},
-				Constants: []variables.Constant{
+				Constants: []v1alpha1.Constant{
 					{
 						Name:    "BAD",
 						Pattern: "^good_val$",
@@ -90,31 +88,31 @@ func TestZarfPackageValidate(t *testing.T) {
 				},
 			},
 			expectedErrs: []string{
-				fmt.Errorf(lang.PkgValidateErrConstant, fmt.Errorf(lang.PkgValidateErrPkgConstantPattern, "BAD", "^good_val$")).Error(),
-				fmt.Sprintf(lang.PkgValidateErrComponentReqDefault, "invalid"),
-				fmt.Sprintf(lang.PkgValidateErrChartNameNotUnique, "chart1"),
-				fmt.Sprintf(lang.PkgValidateErrManifestNameNotUnique, "manifest1"),
-				fmt.Sprintf(lang.PkgValidateErrComponentReqGrouped, "required-in-group"),
-				fmt.Sprintf(lang.PkgValidateErrComponentNameNotUnique, "duplicate"),
-				fmt.Sprintf(lang.PkgValidateErrGroupOneComponent, "a-group", "required-in-group"),
-				fmt.Sprintf(lang.PkgValidateErrGroupMultipleDefaults, "multi-default", "multi-default", "multi-default-2"),
+				fmt.Errorf(PkgValidateErrConstant, fmt.Errorf("provided value for constant %s does not match pattern %s", "BAD", "^good_val$")).Error(),
+				fmt.Sprintf(PkgValidateErrComponentReqDefault, "invalid"),
+				fmt.Sprintf(PkgValidateErrChartNameNotUnique, "chart1"),
+				fmt.Sprintf(PkgValidateErrManifestNameNotUnique, "manifest1"),
+				fmt.Sprintf(PkgValidateErrComponentReqGrouped, "required-in-group"),
+				fmt.Sprintf(PkgValidateErrComponentNameNotUnique, "duplicate"),
+				fmt.Sprintf(PkgValidateErrGroupOneComponent, "a-group", "required-in-group"),
+				fmt.Sprintf(PkgValidateErrGroupMultipleDefaults, "multi-default", "multi-default", "multi-default-2"),
 			},
 		},
 		{
 			name: "invalid yolo",
-			pkg: ZarfPackage{
-				Kind: ZarfInitConfig,
-				Metadata: ZarfMetadata{
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfInitConfig,
+				Metadata: v1alpha1.ZarfMetadata{
 					Name: "invalid-yolo",
 					YOLO: true,
 				},
-				Components: []ZarfComponent{
+				Components: []v1alpha1.ZarfComponent{
 					{
 						Name:   "yolo",
 						Images: []string{"an-image"},
 						Repos:  []string{"a-repo"},
-						Only: ZarfComponentOnlyTarget{
-							Cluster: ZarfComponentOnlyCluster{
+						Only: v1alpha1.ZarfComponentOnlyTarget{
+							Cluster: v1alpha1.ZarfComponentOnlyCluster{
 								Architecture: "not-empty",
 								Distros:      []string{"not-empty"},
 							},
@@ -123,11 +121,11 @@ func TestZarfPackageValidate(t *testing.T) {
 				},
 			},
 			expectedErrs: []string{
-				lang.PkgValidateErrInitNoYOLO,
-				lang.PkgValidateErrYOLONoOCI,
-				lang.PkgValidateErrYOLONoGit,
-				lang.PkgValidateErrYOLONoArch,
-				lang.PkgValidateErrYOLONoDistro,
+				PkgValidateErrInitNoYOLO,
+				PkgValidateErrYOLONoOCI,
+				PkgValidateErrYOLONoGit,
+				PkgValidateErrYOLONoArch,
+				PkgValidateErrYOLONoDistro,
 			},
 		},
 	}
@@ -136,7 +134,7 @@ func TestZarfPackageValidate(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := tt.pkg.Validate()
+			err := ValidatePackage(tt.pkg)
 			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
@@ -151,31 +149,31 @@ func TestValidateManifest(t *testing.T) {
 	t.Parallel()
 	longName := strings.Repeat("a", ZarfMaxChartNameLength+1)
 	tests := []struct {
-		manifest     ZarfManifest
+		manifest     v1alpha1.ZarfManifest
 		expectedErrs []string
 		name         string
 	}{
 		{
 			name:         "valid",
-			manifest:     ZarfManifest{Name: "valid", Files: []string{"a-file"}},
+			manifest:     v1alpha1.ZarfManifest{Name: "valid", Files: []string{"a-file"}},
 			expectedErrs: nil,
 		},
 		{
 			name:         "long name",
-			manifest:     ZarfManifest{Name: longName, Files: []string{"a-file"}},
-			expectedErrs: []string{fmt.Sprintf(lang.PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength)},
+			manifest:     v1alpha1.ZarfManifest{Name: longName, Files: []string{"a-file"}},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestNameLength, longName, ZarfMaxChartNameLength)},
 		},
 		{
 			name:         "no files or kustomize",
-			manifest:     ZarfManifest{Name: "nothing-there"},
-			expectedErrs: []string{fmt.Sprintf(lang.PkgValidateErrManifestFileOrKustomize, "nothing-there")},
+			manifest:     v1alpha1.ZarfManifest{Name: "nothing-there"},
+			expectedErrs: []string{fmt.Sprintf(PkgValidateErrManifestFileOrKustomize, "nothing-there")},
 		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := tt.manifest.Validate()
+			err := validateManifest(tt.manifest)
 			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
@@ -255,52 +253,52 @@ func TestValidateChart(t *testing.T) {
 	longName := strings.Repeat("a", ZarfMaxChartNameLength+1)
 	tests := []struct {
 		name         string
-		chart        ZarfChart
+		chart        v1alpha1.ZarfChart
 		expectedErrs []string
 		partialMatch bool
 	}{
 		{
 			name:         "valid",
-			chart:        ZarfChart{Name: "chart1", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0", ReleaseName: "this-is-valid"},
+			chart:        v1alpha1.ZarfChart{Name: "chart1", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0", ReleaseName: "this-is-valid"},
 			expectedErrs: nil,
 		},
 		{
 			name:  "long name",
-			chart: ZarfChart{Name: longName, Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
+			chart: v1alpha1.ZarfChart{Name: longName, Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
 			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrChartName, longName, ZarfMaxChartNameLength),
+				fmt.Sprintf(PkgValidateErrChartName, longName, ZarfMaxChartNameLength),
 			},
 		},
 		{
 			name:  "no url, local path, version, or namespace",
-			chart: ZarfChart{Name: "invalid"},
+			chart: v1alpha1.ZarfChart{Name: "invalid"},
 			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrChartNamespaceMissing, "invalid"),
-				fmt.Sprintf(lang.PkgValidateErrChartURLOrPath, "invalid"),
-				fmt.Sprintf(lang.PkgValidateErrChartVersion, "invalid"),
+				fmt.Sprintf(PkgValidateErrChartNamespaceMissing, "invalid"),
+				fmt.Sprintf(PkgValidateErrChartURLOrPath, "invalid"),
+				fmt.Sprintf(PkgValidateErrChartVersion, "invalid"),
 			},
 		},
 		{
 			name:  "both url and local path",
-			chart: ZarfChart{Name: "invalid", Namespace: "whatever", URL: "http://whatever", LocalPath: "wherever", Version: "v1.0.0"},
+			chart: v1alpha1.ZarfChart{Name: "invalid", Namespace: "whatever", URL: "http://whatever", LocalPath: "wherever", Version: "v1.0.0"},
 			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrChartURLOrPath, "invalid"),
+				fmt.Sprintf(PkgValidateErrChartURLOrPath, "invalid"),
 			},
 		},
 		{
 			name:         "invalid releaseName",
-			chart:        ZarfChart{ReleaseName: "namedwithperiods-0.47.0", Name: "releaseName", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
+			chart:        v1alpha1.ZarfChart{ReleaseName: "namedwithperiods-0.47.0", Name: "releaseName", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0"},
 			expectedErrs: []string{"invalid release name 'namedwithperiods-0.47.0'"},
 			partialMatch: true,
 		},
 		{
 			name:         "missing releaseName fallsback to name",
-			chart:        ZarfChart{Name: "chart3", Namespace: "namespace", URL: "http://whatever", Version: "v1.0.0"},
+			chart:        v1alpha1.ZarfChart{Name: "chart3", Namespace: "namespace", URL: "http://whatever", Version: "v1.0.0"},
 			expectedErrs: nil,
 		},
 		{
 			name:         "missing name and releaseName",
-			chart:        ZarfChart{Namespace: "namespace", URL: "http://whatever", Version: "v1.0.0"},
+			chart:        v1alpha1.ZarfChart{Namespace: "namespace", URL: "http://whatever", Version: "v1.0.0"},
 			expectedErrs: []string{errChartReleaseNameEmpty},
 		},
 	}
@@ -308,7 +306,7 @@ func TestValidateChart(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := tt.chart.Validate()
+			err := validateChart(tt.chart)
 			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
@@ -331,21 +329,21 @@ func TestValidateComponentActions(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name         string
-		actions      ZarfComponentActions
+		actions      v1alpha1.ZarfComponentActions
 		expectedErrs []string
 	}{
 		{
 			name: "valid actions",
-			actions: ZarfComponentActions{
-				OnCreate: ZarfComponentActionSet{
-					Before: []ZarfComponentAction{
+			actions: v1alpha1.ZarfComponentActions{
+				OnCreate: v1alpha1.ZarfComponentActionSet{
+					Before: []v1alpha1.ZarfComponentAction{
 						{
 							Cmd: "echo 'onCreate before valid'",
 						},
 					},
 				},
-				OnDeploy: ZarfComponentActionSet{
-					Before: []ZarfComponentAction{
+				OnDeploy: v1alpha1.ZarfComponentActionSet{
+					Before: []v1alpha1.ZarfComponentAction{
 						{
 							Cmd: "echo 'onDeploy before valid'",
 						},
@@ -356,12 +354,12 @@ func TestValidateComponentActions(t *testing.T) {
 		},
 		{
 			name: "setVariables in onCreate",
-			actions: ZarfComponentActions{
-				OnCreate: ZarfComponentActionSet{
-					Before: []ZarfComponentAction{
+			actions: v1alpha1.ZarfComponentActions{
+				OnCreate: v1alpha1.ZarfComponentActionSet{
+					Before: []v1alpha1.ZarfComponentAction{
 						{
 							Cmd:          "echo 'invalid setVariable'",
-							SetVariables: []variables.Variable{{Name: "VAR"}},
+							SetVariables: []v1alpha1.Variable{{Name: "VAR"}},
 						},
 					},
 				},
@@ -370,43 +368,43 @@ func TestValidateComponentActions(t *testing.T) {
 		},
 		{
 			name: "invalid onCreate action",
-			actions: ZarfComponentActions{
-				OnCreate: ZarfComponentActionSet{
-					Before: []ZarfComponentAction{
+			actions: v1alpha1.ZarfComponentActions{
+				OnCreate: v1alpha1.ZarfComponentActionSet{
+					Before: []v1alpha1.ZarfComponentAction{
 						{
 							Cmd:  "create",
-							Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}},
+							Wait: &v1alpha1.ZarfComponentActionWait{Cluster: &v1alpha1.ZarfComponentActionWaitCluster{}},
 						},
 					},
 				},
-				OnDeploy: ZarfComponentActionSet{
-					After: []ZarfComponentAction{
+				OnDeploy: v1alpha1.ZarfComponentActionSet{
+					After: []v1alpha1.ZarfComponentAction{
 						{
 							Cmd:  "deploy",
-							Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}},
+							Wait: &v1alpha1.ZarfComponentActionWait{Cluster: &v1alpha1.ZarfComponentActionWaitCluster{}},
 						},
 					},
 				},
-				OnRemove: ZarfComponentActionSet{
-					OnSuccess: []ZarfComponentAction{
+				OnRemove: v1alpha1.ZarfComponentActionSet{
+					OnSuccess: []v1alpha1.ZarfComponentAction{
 						{
 							Cmd:  "remove",
-							Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}},
+							Wait: &v1alpha1.ZarfComponentActionWait{Cluster: &v1alpha1.ZarfComponentActionWaitCluster{}},
 						},
 					},
-					OnFailure: []ZarfComponentAction{
+					OnFailure: []v1alpha1.ZarfComponentAction{
 						{
 							Cmd:  "remove2",
-							Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}},
+							Wait: &v1alpha1.ZarfComponentActionWait{Cluster: &v1alpha1.ZarfComponentActionWaitCluster{}},
 						},
 					},
 				},
 			},
 			expectedErrs: []string{
-				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "create")).Error(),
-				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "deploy")).Error(),
-				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "remove")).Error(),
-				fmt.Errorf(lang.PkgValidateErrAction, fmt.Errorf(lang.PkgValidateErrActionCmdWait, "remove2")).Error(),
+				fmt.Errorf(PkgValidateErrAction, fmt.Errorf(PkgValidateErrActionCmdWait, "create")).Error(),
+				fmt.Errorf(PkgValidateErrAction, fmt.Errorf(PkgValidateErrActionCmdWait, "deploy")).Error(),
+				fmt.Errorf(PkgValidateErrAction, fmt.Errorf(PkgValidateErrActionCmdWait, "remove")).Error(),
+				fmt.Errorf(PkgValidateErrAction, fmt.Errorf(PkgValidateErrActionCmdWait, "remove2")).Error(),
 			},
 		},
 	}
@@ -415,7 +413,7 @@ func TestValidateComponentActions(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := tt.actions.validate()
+			err := validateActions(tt.actions)
 			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
@@ -430,30 +428,30 @@ func TestValidateComponentAction(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name         string
-		action       ZarfComponentAction
+		action       v1alpha1.ZarfComponentAction
 		expectedErrs []string
 	}{
 		{
 			name:   "valid action no conditions",
-			action: ZarfComponentAction{},
+			action: v1alpha1.ZarfComponentAction{},
 		},
 		{
 			name: "cmd and wait both set, nothing in wait",
-			action: ZarfComponentAction{
+			action: v1alpha1.ZarfComponentAction{
 				Cmd:  "ls",
-				Wait: &ZarfComponentActionWait{},
+				Wait: &v1alpha1.ZarfComponentActionWait{},
 			},
 			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrActionCmdWait, "ls"),
-				lang.PkgValidateErrActionClusterNetwork,
+				fmt.Sprintf(PkgValidateErrActionCmdWait, "ls"),
+				PkgValidateErrActionClusterNetwork,
 			},
 		},
 		{
 			name: "cluster and network both set",
-			action: ZarfComponentAction{
-				Wait: &ZarfComponentActionWait{Cluster: &ZarfComponentActionWaitCluster{}, Network: &ZarfComponentActionWaitNetwork{}},
+			action: v1alpha1.ZarfComponentAction{
+				Wait: &v1alpha1.ZarfComponentActionWait{Cluster: &v1alpha1.ZarfComponentActionWaitCluster{}, Network: &v1alpha1.ZarfComponentActionWaitNetwork{}},
 			},
-			expectedErrs: []string{fmt.Sprintf(lang.PkgValidateErrActionClusterNetwork)},
+			expectedErrs: []string{PkgValidateErrActionClusterNetwork},
 		},
 	}
 
@@ -461,99 +459,7 @@ func TestValidateComponentAction(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := tt.action.Validate()
-			if tt.expectedErrs == nil {
-				require.NoError(t, err)
-				return
-			}
-			errs := strings.Split(err.Error(), "\n")
-			require.ElementsMatch(t, tt.expectedErrs, errs)
-		})
-	}
-}
-
-func TestValidateZarfComponent(t *testing.T) {
-	t.Parallel()
-	absPath, err := filepath.Abs("abs")
-	require.NoError(t, err)
-	tests := []struct {
-		component    ZarfComponent
-		expectedErrs []string
-		name         string
-	}{
-		{
-			name: "valid path",
-			component: ZarfComponent{
-				Name: "component1",
-				Import: ZarfComponentImport{
-					Path: "relative/path",
-				},
-			},
-			expectedErrs: nil,
-		},
-		{
-			name: "valid URL",
-			component: ZarfComponent{
-				Name: "component2",
-				Import: ZarfComponentImport{
-					URL: "oci://example.com/package:v0.0.1",
-				},
-			},
-			expectedErrs: nil,
-		},
-		{
-			name: "neither path nor URL provided",
-			component: ZarfComponent{
-				Name: "neither",
-			},
-			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "neither", "neither a path nor a URL was provided"),
-			},
-		},
-		{
-			name: "both path and URL provided",
-			component: ZarfComponent{
-				Name: "both",
-				Import: ZarfComponentImport{
-					Path: "relative/path",
-					URL:  "https://example.com",
-				},
-			},
-			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "both", "both a path and a URL were provided"),
-			},
-		},
-		{
-			name: "absolute path provided",
-			component: ZarfComponent{
-				Name: "abs-path",
-				Import: ZarfComponentImport{
-					Path: absPath,
-				},
-			},
-			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "abs-path", "path cannot be an absolute path"),
-			},
-		},
-		{
-			name: "invalid URL provided",
-			component: ZarfComponent{
-				Name: "bad-url",
-				Import: ZarfComponentImport{
-					URL: "https://example.com",
-				},
-			},
-			expectedErrs: []string{
-				fmt.Sprintf(lang.PkgValidateErrImportDefinition, "bad-url", "URL is not a valid OCI URL"),
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			err := tt.component.Validate()
+			err := validateAction(tt.action)
 			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return

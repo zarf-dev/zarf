@@ -26,6 +26,12 @@ jobs:
       - name: Install tools
         uses: ./.github/actions/install-tools
 
+      - name: install grype
+        env:
+          VERSION: v0.74.6
+        run: "curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin $VERSION"
+        shell: bash
+
       - name: Build CLI
         run: |
           make build-cli-linux-amd

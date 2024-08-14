@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -77,7 +78,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 	spinner := message.NewProgressSpinner(existMsg)
 
 	// Get the OS shell to execute commands in
-	shell, shellArgs := exec.GetOSShell(exec.Shell{Windows: "cmd"})
+	shell, shellArgs := exec.GetOSShell(v1alpha1.Shell{Windows: "cmd"})
 
 	defer spinner.Stop()
 

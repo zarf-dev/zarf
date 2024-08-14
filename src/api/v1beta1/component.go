@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package v1alpha1 holds the definition of the v1alpha1 Zarf Package
-package v1alpha1
+// Package v1beta1 holds the definition of the v1beta1 Zarf Package
+package v1beta1
 
 import (
 	"github.com/invopop/jsonschema"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
@@ -20,17 +20,11 @@ type ZarfComponent struct {
 	// Determines the default Y/N state for installing this component on package deploy.
 	Default bool `json:"default,omitempty"`
 
-	// Do not prompt user to install this component.
-	Required *bool `json:"required,omitempty"`
+	// Do not prompt user to install this component. (Defaults to false)
+	Optional *bool `json:"optional,omitempty"`
 
 	// Filter when this component is included in package creation or deployment.
 	Only ZarfComponentOnlyTarget `json:"only,omitempty"`
-
-	// [Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.
-	DeprecatedGroup string `json:"group,omitempty" jsonschema:"deprecated=true"`
-
-	// [Deprecated] Specify a path to a public key to validate signed online resources. This will be removed in Zarf v1.0.0.
-	DeprecatedCosignKeyPath string `json:"cosignKeyPath,omitempty" jsonschema:"deprecated=true"`
 
 	// Import a component from another Zarf package.
 	Import ZarfComponentImport `json:"import,omitempty"`
@@ -53,12 +47,6 @@ type ZarfComponent struct {
 	// List of git repos to include in the package.
 	Repos []string `json:"repos,omitempty"`
 
-	// Extend component functionality with additional features.
-	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty"`
-
-	// [Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0.
-	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"deprecated=true"`
-
 	// Custom commands to run at various stages of a package lifecycle.
 	Actions ZarfComponentActions `json:"actions,omitempty"`
 }
@@ -78,13 +66,12 @@ func (c ZarfComponent) RequiresCluster() bool {
 	return false
 }
 
-// IsRequired returns if the component is required or not.
-func (c ZarfComponent) IsRequired() bool {
-	if c.Required != nil {
-		return *c.Required
+// IsOptional returns if the component is optional.
+func (c ZarfComponent) IsOptional() bool {
+	if c.Optional == nil {
+		return false
 	}
-
-	return false
+	return *c.Optional
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
@@ -125,26 +112,54 @@ type ZarfFile struct {
 type ZarfChart struct {
 	// The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo.
 	Name string `json:"name"`
+	// The Helm repo where the chart is stored
+	Helm HelmRepoSource `json:"helm,omitempty"`
+	// The Git repo where the chart is stored
+	Git GitRepoSource `json:"git,omitempty"`
+	// The local path where the chart is stored
+	Local LocalRepoSource `json:"local,omitempty"`
+	// The OCI registry where the chart is stored
+	OCI OCISource `json:"oci,omitempty"`
 	// The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos').
 	Version string `json:"version,omitempty"`
-	// The URL of the OCI registry, chart repository, or git repo where the helm chart is stored.
-	URL string `json:"url,omitempty" jsonschema:"example=OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo,example=helm chart repo: https://stefanprodan.github.io/podinfo,example=git repo: https://github.com/stefanprodan/podinfo (note the '@' syntax for 'repos' is supported here too)"`
-	// The name of a chart within a Helm repository (defaults to the Zarf name of the chart).
-	RepoName string `json:"repoName,omitempty"`
-	// (git repo only) The sub directory to the chart within a git repo.
-	GitPath string `json:"gitPath,omitempty" jsonschema:"example=charts/your-chart"`
-	// The path to a local chart's folder or .tgz archive.
-	LocalPath string `json:"localPath,omitempty"`
 	// The namespace to deploy the chart to.
 	Namespace string `json:"namespace,omitempty"`
 	// The name of the Helm release to create (defaults to the Zarf name of the chart).
 	ReleaseName string `json:"releaseName,omitempty"`
 	// Whether to not wait for chart resources to be ready before continuing.
-	NoWait bool `json:"noWait,omitempty"`
+	Wait *bool `json:"wait,omitempty"`
 	// List of local values file paths or remote URLs to include in the package; these will be merged together when deployed.
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
 	// [alpha] List of variables to set in the Helm chart.
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
+}
+
+// HelmRepoSource represents a Helm chart stored in a Helm repository.
+type HelmRepoSource struct {
+	// The name of a chart within a Helm repository (defaults to the Zarf name of the chart).
+	RepoName string `json:"repoName,omitempty"`
+	// The URL of the chart repository where the helm chart is stored.
+	URL string `json:"url"`
+}
+
+// GitRepoSource represents a Helm chart stored in a Git repository.
+type GitRepoSource struct {
+	// The URL of the git repository where the helm chart is stored.
+	URL string `json:"url"`
+	// The sub directory to the chart within a git repo.
+	Path string `json:"path,omitempty"`
+}
+
+// LocalRepoSource represents a Helm chart stored locally.
+type LocalRepoSource struct {
+	// The path to a local chart's folder or .tgz archive.
+	Path string `json:"path,omitempty"`
+}
+
+// OCISource represents a Helm chart stored in an OCI registry.
+type OCISource struct {
+	// The URL of the OCI registry where the helm chart is stored.
+	URL string `json:"url"`
 }
 
 // ZarfChartVariable represents a variable that can be set for a Helm chart overrides.
@@ -165,28 +180,12 @@ type ZarfManifest struct {
 	Namespace string `json:"namespace,omitempty"`
 	// List of local K8s YAML files or remote URLs to deploy (in order).
 	Files []string `json:"files,omitempty"`
-	// Allow traversing directory above the current directory if needed for kustomization.
+	// Allow traversing directory above the current directory if needed for kustomization. (Defaults to false)
 	KustomizeAllowAnyDirectory bool `json:"kustomizeAllowAnyDirectory,omitempty"`
 	// List of local kustomization paths or remote URLs to include in the package.
 	Kustomizations []string `json:"kustomizations,omitempty"`
-	// Whether to not wait for manifest resources to be ready before continuing.
-	NoWait bool `json:"noWait,omitempty"`
-}
-
-// DeprecatedZarfComponentScripts are scripts that run before or after a component is deployed.
-type DeprecatedZarfComponentScripts struct {
-	// Show the output of the script during package deployment.
-	ShowOutput bool `json:"showOutput,omitempty"`
-	// Timeout in seconds for the script.
-	TimeoutSeconds int `json:"timeoutSeconds,omitempty"`
-	// Retry the script if it fails.
-	Retry bool `json:"retry,omitempty"`
-	// Scripts to run before the component is added during package create.
-	Prepare []string `json:"prepare,omitempty"`
-	// Scripts to run before the component is deployed.
-	Before []string `json:"before,omitempty"`
-	// Scripts to run after the component successfully deploys.
-	After []string `json:"after,omitempty"`
+	// Whether to not wait for manifest resources to be ready before continuing. (Defaults to true)
+	Wait *bool `json:"wait,omitempty"`
 }
 
 // ZarfComponentActions are ActionSets that map to different zarf package operations.
@@ -217,10 +216,10 @@ type ZarfComponentActionSet struct {
 type ZarfComponentActionDefaults struct {
 	// Hide the output of commands during execution (default false).
 	Mute bool `json:"mute,omitempty"`
-	// Default timeout in seconds for commands (default to 0, no timeout).
-	MaxTotalSeconds int `json:"maxTotalSeconds,omitempty"`
+	// Default timeout in seconds for commands (default no timeout).
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 	// Retry commands given number of times if they fail (default 0).
-	MaxRetries int `json:"maxRetries,omitempty"`
+	Retries int `json:"retries,omitempty"`
 	// Working directory for commands (default CWD).
 	Dir string `json:"dir,omitempty"`
 	// Additional environment variables for commands.
@@ -233,10 +232,10 @@ type ZarfComponentActionDefaults struct {
 type ZarfComponentAction struct {
 	// Hide the output of the command during package deployment (default false).
 	Mute *bool `json:"mute,omitempty"`
-	// Timeout in seconds for the command (default to 0, no timeout for cmd actions and 300, 5 minutes for wait actions).
-	MaxTotalSeconds *int `json:"maxTotalSeconds,omitempty"`
+	// Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 	// Retry the command if it fails up to given number of times (default 0).
-	MaxRetries *int `json:"maxRetries,omitempty"`
+	Retries int `json:"retries,omitempty"`
 	// The working directory to run the command in (default is CWD).
 	Dir *string `json:"dir,omitempty"`
 	// Additional environment variables to set for the command.
@@ -245,8 +244,6 @@ type ZarfComponentAction struct {
 	Cmd string `json:"cmd,omitempty"`
 	// (cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.
 	Shell *Shell `json:"shell,omitempty"`
-	// [Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.
-	DeprecatedSetVariable string `json:"setVariable,omitempty" jsonschema:"pattern=^[A-Z0-9_]+$"`
 	// (onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.
 	SetVariables []Variable `json:"setVariables,omitempty"`
 	// Description of the action to be displayed during package execution instead of the command.

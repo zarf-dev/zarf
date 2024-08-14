@@ -47,7 +47,7 @@ func TestMain(m *testing.M) {
 	zarf = fmt.Sprintf("./%s", test.GetCLIName())
 
 	// Run the tests
-	m.Run()
+	os.Exit(m.Run())
 }
 
 func TestReleases(t *testing.T) {

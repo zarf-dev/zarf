@@ -20,7 +20,7 @@ import (
 // Validate errors if a package violates the schema or any runtime validations
 // This must be run while in the parent directory of the zarf.yaml being validated
 func Validate(pkg v1alpha1.ZarfPackage, baseDir string) error {
-	if err := pkg.Validate(); err != nil {
+	if err := lint.ValidatePackage(pkg); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
 

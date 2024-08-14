@@ -11,46 +11,48 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/defenseunicorns/pkg/oci"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	"oras.land/oras-go/v2/registry"
+	"oras.land/oras-go/v2/registry/remote"
 )
 
-type SkeletonSuite struct {
+type PublishCopySkeletonSuite struct {
 	suite.Suite
 	*require.Assertions
 	Reference registry.Reference
 }
 
 var (
-	importEverything     = filepath.Join("src", "test", "packages", "51-import-everything")
+	importEverything     = filepath.Join("src", "test", "packages", "14-import-everything")
 	importEverythingPath string
-	importception        = filepath.Join("src", "test", "packages", "51-import-everything", "inception")
+	importception        = filepath.Join("src", "test", "packages", "14-import-everything", "inception")
 	importceptionPath    string
 )
 
-func (suite *SkeletonSuite) SetupSuite() {
+func (suite *PublishCopySkeletonSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 
-	e2e.SetupDockerRegistry(suite.T(), 555)
-	suite.Reference.Registry = "localhost:555"
-
+	// This port must match the registry URL in 14-import-everything/zarf.yaml
+	suite.Reference.Registry = testutil.SetupInMemoryRegistry(testutil.TestContext(suite.T()), suite.T(), 31888)
 	// Setup the package paths after e2e has been initialized
 	importEverythingPath = filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch))
 	importceptionPath = filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch))
 }
 
-func (suite *SkeletonSuite) TearDownSuite() {
-	e2e.TeardownRegistry(suite.T(), 555)
-
-	err := os.RemoveAll(filepath.Join("src", "test", "packages", "51-import-everything", "charts", "local"))
+func (suite *PublishCopySkeletonSuite) TearDownSuite() {
+	err := os.RemoveAll(filepath.Join("src", "test", "packages", "14-import-everything", "charts", "local"))
 	suite.NoError(err)
 	err = os.RemoveAll(importEverythingPath)
 	suite.NoError(err)
@@ -58,7 +60,7 @@ func (suite *SkeletonSuite) TearDownSuite() {
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
+func (suite *PublishCopySkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.T().Log("E2E: Skeleton Package Publish oci://")
 	ref := suite.Reference.String()
 
@@ -67,7 +69,7 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
-	bigBang := filepath.Join("src", "test", "packages", "51-import-everything", "big-bang-min")
+	bigBang := filepath.Join("src", "test", "packages", "14-import-everything", "big-bang-min")
 	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", bigBang, "oci://"+ref, "--insecure")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
@@ -97,7 +99,7 @@ func (suite *SkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.NoError(err)
 }
 
-func (suite *SkeletonSuite) Test_1_Compose_Everything_Inception() {
+func (suite *PublishCopySkeletonSuite) Test_1_Compose_Everything_Inception() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
 	_, _, err := e2e.Zarf(suite.T(), "package", "create", importEverything, "-o", "build", "--insecure", "--confirm")
@@ -122,7 +124,7 @@ func (suite *SkeletonSuite) Test_1_Compose_Everything_Inception() {
 	}
 }
 
-func (suite *SkeletonSuite) Test_2_FilePaths() {
+func (suite *PublishCopySkeletonSuite) Test_2_FilePaths() {
 	suite.T().Log("E2E: Skeleton + Package File Paths")
 
 	pkgTars := []string{
@@ -177,14 +179,62 @@ func (suite *SkeletonSuite) Test_2_FilePaths() {
 	}
 }
 
-func (suite *SkeletonSuite) DirOrFileExists(path string) {
+func (suite *PublishCopySkeletonSuite) Test_3_Copy() {
+	t := suite.T()
+
+	example := filepath.Join("build", fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "publish", example, "oci://"+suite.Reference.Registry, "--insecure")
+	suite.NoError(err, stdOut, stdErr)
+
+	suite.Reference.Repository = "helm-charts"
+	suite.Reference.Reference = "0.0.1"
+	ref := suite.Reference.String()
+
+	dstRegistry := testutil.SetupInMemoryRegistry(testutil.TestContext(t), t, 31890)
+	dstRef := strings.Replace(ref, suite.Reference.Registry, dstRegistry, 1)
+
+	src, err := zoci.NewRemote(ref, oci.PlatformForArch(e2e.Arch), oci.WithPlainHTTP(true))
+	suite.NoError(err)
+
+	dst, err := zoci.NewRemote(dstRef, oci.PlatformForArch(e2e.Arch), oci.WithPlainHTTP(true))
+	suite.NoError(err)
+
+	reg, err := remote.NewRegistry(strings.Split(dstRef, "/")[0])
+	suite.NoError(err)
+	reg.PlainHTTP = true
+	attempt := 0
+	ctx := testutil.TestContext(t)
+	for attempt <= 5 {
+		err = reg.Ping(ctx)
+		if err == nil {
+			break
+		}
+		attempt++
+		time.Sleep(2 * time.Second)
+	}
+	require.Less(t, attempt, 5, "failed to ping registry")
+
+	err = zoci.CopyPackage(ctx, src, dst, 5)
+	suite.NoError(err)
+
+	srcRoot, err := src.FetchRoot(ctx)
+	suite.NoError(err)
+
+	for _, layer := range srcRoot.Layers {
+		ok, err := dst.Repo().Exists(ctx, layer)
+		suite.True(ok)
+		suite.NoError(err)
+	}
+}
+
+func (suite *PublishCopySkeletonSuite) DirOrFileExists(path string) {
 	suite.T().Helper()
 
 	invalid := helpers.InvalidPath(path)
 	suite.Falsef(invalid, "path specified does not exist: %s", path)
 }
 
-func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components []v1alpha1.ZarfComponent, isSkeleton bool) {
+func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string, components []v1alpha1.ZarfComponent, isSkeleton bool) {
 	if isSkeleton {
 		suite.NoDirExists(filepath.Join(unpackedPath, "images"))
 		suite.NoDirExists(filepath.Join(unpackedPath, "sboms"))
@@ -198,14 +248,11 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 
 		base := filepath.Join(unpackedPath, "components", component.Name)
 		componentPaths := layout.ComponentPaths{
-			Base:           base,
-			Temp:           filepath.Join(base, layout.TempDir),
 			Files:          filepath.Join(base, layout.FilesDir),
 			Charts:         filepath.Join(base, layout.ChartsDir),
 			Repos:          filepath.Join(base, layout.ReposDir),
 			Manifests:      filepath.Join(base, layout.ManifestsDir),
 			DataInjections: filepath.Join(base, layout.DataInjectionsDir),
-			Values:         filepath.Join(base, layout.ValuesDir),
 		}
 
 		if isSkeleton && component.DeprecatedCosignKeyPath != "" {
@@ -282,5 +329,5 @@ func (suite *SkeletonSuite) verifyComponentPaths(unpackedPath string, components
 }
 
 func TestSkeletonSuite(t *testing.T) {
-	suite.Run(t, new(SkeletonSuite))
+	suite.Run(t, new(PublishCopySkeletonSuite))
 }

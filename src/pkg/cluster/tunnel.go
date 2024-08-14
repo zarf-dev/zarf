@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,6 +21,7 @@ import (
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
@@ -308,7 +308,6 @@ type Tunnel struct {
 	resourceType string
 	resourceName string
 	urlSuffix    string
-	attempt      int
 	stopChan     chan struct{}
 	readyChan    chan struct{}
 	errChan      chan error
@@ -352,38 +351,16 @@ func (tunnel *Tunnel) Wrap(function func() error) error {
 
 // Connect will establish a tunnel to the specified target.
 func (tunnel *Tunnel) Connect(ctx context.Context) (string, error) {
-	url, err := tunnel.establish(ctx)
-
-	// Try to establish the tunnel up to 3 times.
+	url, err := retry.DoWithData(func() (string, error) {
+		url, err := tunnel.establish(ctx)
+		if err != nil {
+			return "", err
+		}
+		return url, nil
+	}, retry.Context(ctx), retry.Attempts(6))
 	if err != nil {
-		tunnel.attempt++
-
-		// If we have exceeded the number of attempts, exit with an error.
-		if tunnel.attempt > 3 {
-			return "", fmt.Errorf("unable to establish tunnel after 3 attempts: %w", err)
-		}
-
-		// Otherwise, retry the connection but delay increasing intervals between attempts.
-		delay := tunnel.attempt * 10
-		message.Debugf("%s", err.Error())
-		message.Debugf("Delay creating tunnel, waiting %d seconds...", delay)
-
-		timer := time.NewTimer(0)
-		defer timer.Stop()
-
-		select {
-		case <-ctx.Done():
-			return "", ctx.Err()
-		case <-timer.C:
-			url, err = tunnel.Connect(ctx)
-			if err != nil {
-				return "", err
-			}
-
-			timer.Reset(time.Duration(delay) * time.Second)
-		}
+		return "", err
 	}
-
 	return url, nil
 }
 

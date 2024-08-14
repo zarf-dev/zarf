@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/avast/retry-go/v4"
 	plutoversionsfile "github.com/fairwindsops/pluto/v5"
 	plutoapi "github.com/fairwindsops/pluto/v5/pkg/api"
 	goyaml "github.com/goccy/go-yaml"
@@ -22,8 +23,6 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
-
-	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -59,7 +58,8 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	}
 
 	histClient := action.NewHistory(h.actionConfig)
-	tryHelm := func() error {
+
+	err = retry.Do(func() error {
 		var err error
 
 		releases, histErr := histClient.Run(h.chart.ReleaseName)
@@ -89,9 +89,7 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 
 		spinner.Success()
 		return nil
-	}
-
-	err = helpers.Retry(tryHelm, h.retries, 5*time.Second, message.Warnf)
+	}, retry.Context(ctx), retry.Attempts(uint(h.retries)), retry.Delay(500*time.Millisecond))
 	if err != nil {
 		releases, _ := histClient.Run(h.chart.ReleaseName)
 		previouslyDeployedVersion := 0

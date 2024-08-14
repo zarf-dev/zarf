@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -216,7 +215,7 @@ func TestGenerateValuesOverrides(t *testing.T) {
 			p, err := New(&types.PackagerConfig{DeployOpts: tt.deployOpts}, WithSource(&sources.TarballSource{}))
 			require.NoError(t, err)
 			for k, v := range tt.setVariables {
-				p.variableConfig.SetVariable(k, v, false, false, variables.RawVariableType)
+				p.variableConfig.SetVariable(k, v, false, false, v1alpha1.RawVariableType)
 			}
 
 			got, err := p.generateValuesOverrides(tt.chart, tt.componentName)

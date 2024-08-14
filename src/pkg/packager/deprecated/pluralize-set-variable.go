@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
 func migrateSetVariableToSetVariables(c v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, string) {
@@ -18,7 +17,7 @@ func migrateSetVariableToSetVariables(c v1alpha1.ZarfComponent) (v1alpha1.ZarfCo
 		for i := range actions {
 			if actions[i].DeprecatedSetVariable != "" && len(actions[i].SetVariables) < 1 {
 				hasSetVariable = true
-				actions[i].SetVariables = []variables.Variable{
+				actions[i].SetVariables = []v1alpha1.Variable{
 					{
 						Name:      actions[i].DeprecatedSetVariable,
 						Sensitive: false,

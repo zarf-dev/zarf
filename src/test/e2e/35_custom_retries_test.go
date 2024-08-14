@@ -26,7 +26,6 @@ func TestRetries(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path.Join(tmpDir, pkgName), "--retries", "2", "--timeout", "3s", "--tmpdir", tmpDir, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Retrying in 5s")
 	require.Contains(t, e2e.StripMessageFormatting(stdErr), "unable to install chart after 2 attempts")
 
 	_, _, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")

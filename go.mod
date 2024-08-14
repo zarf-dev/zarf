@@ -2,8 +2,6 @@ module github.com/zarf-dev/zarf
 
 go 1.22.4
 
-replace github.com/zarf-dev/zarf/src/api => ./src/api
-
 // TODO (@AABRO): Pending merge into github.com/gojsonschema/gojsonschema (https://github.com/gojsonschema/gojsonschema/pull/5)
 replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
 
@@ -17,10 +15,12 @@ require (
 	github.com/anchore/clio v0.0.0-20240705045624-ac88e09ad9d0
 	github.com/anchore/stereoscope v0.0.1
 	github.com/anchore/syft v0.100.0
+	github.com/avast/retry-go/v4 v4.6.0
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.1
 	github.com/defenseunicorns/pkg/kubernetes v0.2.0
 	github.com/defenseunicorns/pkg/oci v1.0.1
 	github.com/derailed/k9s v0.31.7
+	github.com/distribution/distribution/v3 v3.0.0-alpha.1
 	github.com/distribution/reference v0.5.0
 	github.com/fairwindsops/pluto/v5 v5.18.4
 	github.com/fatih/color v1.17.0
@@ -28,10 +28,10 @@ require (
 	github.com/fluxcd/helm-controller/api v1.0.1
 	github.com/fluxcd/pkg/apis/meta v1.5.0
 	github.com/fluxcd/source-controller/api v1.3.0
-	github.com/go-git/go-git/v5 v5.11.0
+	github.com/go-git/go-git/v5 v5.12.0
 	github.com/goccy/go-yaml v1.12.0
 	github.com/gofrs/flock v0.8.1
-	github.com/google/go-containerregistry v0.20.1
+	github.com/google/go-containerregistry v0.20.2
 	github.com/gosuri/uitable v0.0.4
 	github.com/invopop/jsonschema v0.12.0
 	github.com/mholt/archiver/v3 v3.5.1
@@ -40,7 +40,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.18.0
 	github.com/pterm/pterm v0.12.79
-	github.com/sergi/go-diff v1.3.1
+	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3
 	github.com/sigstore/cosign/v2 v2.2.3
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.1
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.1
@@ -51,7 +51,6 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.9.0
 	github.com/xeipuuv/gojsonschema v1.2.0
-	github.com/zarf-dev/zarf/src/api v0.0.0-00010101000000-000000000000
 	golang.org/x/crypto v0.25.0
 	golang.org/x/sync v0.7.0
 	golang.org/x/term v0.22.0
@@ -61,7 +60,7 @@ require (
 	k8s.io/client-go v0.30.3
 	k8s.io/component-base v0.30.3
 	k8s.io/klog/v2 v2.120.1
-	k8s.io/kubectl v0.30.0
+	k8s.io/kubectl v0.30.3
 	oras.land/oras-go/v2 v2.5.0
 	sigs.k8s.io/cli-utils v0.36.0
 	sigs.k8s.io/kustomize/api v0.17.3
@@ -70,10 +69,31 @@ require (
 )
 
 require (
+	github.com/bshuster-repo/logrus-logstash-hook v1.0.0 // indirect
+	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.2 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/gofrs/uuid v4.2.0+incompatible // indirect
+	github.com/gorilla/handlers v1.5.1 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
+	github.com/hashicorp/golang-lru/arc/v2 v2.0.5 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.5 // indirect
+	github.com/redis/go-redis/extra/rediscmd/v9 v9.0.5 // indirect
+	github.com/redis/go-redis/extra/redisotel/v9 v9.0.5 // indirect
+	github.com/redis/go-redis/v9 v9.3.0 // indirect
+	go.opentelemetry.io/contrib/exporters/autoexport v0.46.1 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v0.44.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.27.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.27.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.21.0 // indirect
+	go.opentelemetry.io/otel/exporters/prometheus v0.44.0 // indirect
+	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.44.0 // indirect
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.21.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.28.0 // indirect
+	go.opentelemetry.io/proto/otlp v1.2.0 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 )
 
@@ -123,7 +143,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Microsoft/hcsshim v0.11.4 // indirect
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
-	github.com/ProtonMail/go-crypto v0.0.0-20230923063757-afb1ddc0824c // indirect
+	github.com/ProtonMail/go-crypto v1.0.0 // indirect
 	github.com/ThalesIgnite/crypto11 v1.2.5 // indirect
 	github.com/a8m/envsubst v1.4.2 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
@@ -221,7 +241,7 @@ require (
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
-	github.com/docker/cli v26.0.0+incompatible // indirect
+	github.com/docker/cli v27.1.1+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker v25.0.6+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.0 // indirect
@@ -358,7 +378,7 @@ require (
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/microsoft/go-rustaudit v0.0.0-20220730194248-4b17361d90a5 // indirect
 	github.com/miekg/pkcs11 v1.1.1 // indirect
-	github.com/mikefarah/yq/v4 v4.44.2
+	github.com/mikefarah/yq/v4 v4.44.3
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
@@ -436,8 +456,8 @@ require (
 	github.com/sigstore/rekor v1.3.4 // indirect
 	github.com/sigstore/sigstore v1.8.7 // indirect
 	github.com/sigstore/timestamp-authority v1.2.1 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/skeema/knownhosts v1.2.1 // indirect
+	github.com/sirupsen/logrus v1.9.3
+	github.com/skeema/knownhosts v1.2.2 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spdx/tools-golang v0.5.3 // indirect
@@ -480,10 +500,10 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.52.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.52.0 // indirect
-	go.opentelemetry.io/otel v1.27.0 // indirect
-	go.opentelemetry.io/otel/metric v1.27.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.27.0 // indirect
-	go.opentelemetry.io/otel/trace v1.27.0 // indirect
+	go.opentelemetry.io/otel v1.28.0 // indirect
+	go.opentelemetry.io/otel/metric v1.28.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.28.0 // indirect
+	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	go.step.sm/crypto v0.42.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
@@ -492,7 +512,7 @@ require (
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/oauth2 v0.21.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
+	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
@@ -512,10 +532,10 @@ require (
 	gorm.io/gorm v1.25.5 // indirect
 	k8s.io/apiextensions-apiserver v0.30.0 // indirect
 	k8s.io/apiserver v0.30.0 // indirect
-	k8s.io/cli-runtime v0.30.0 // indirect
-	k8s.io/component-helpers v0.30.0 // indirect
+	k8s.io/cli-runtime v0.30.3 // indirect
+	k8s.io/component-helpers v0.30.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
-	k8s.io/metrics v0.30.0 // indirect
+	k8s.io/metrics v0.30.3 // indirect
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661 // indirect
 	modernc.org/libc v1.29.0 // indirect
 	modernc.org/mathutil v1.6.0 // indirect

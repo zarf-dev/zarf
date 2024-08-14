@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package v1alpha1 holds the definition of the v1alpha1 Zarf Package
-package v1alpha1
+// Package v1beta1 holds the definition of the v1beta1 Zarf Package
+package v1beta1
 
 import (
 	"fmt"
@@ -19,20 +19,6 @@ const (
 	FileVariableType VariableType = "file"
 )
 
-var (
-	// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
-	// https://regex101.com/r/tfsEuZ/1
-	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
-)
-
-// Zarf looks for these strings in zarf.yaml to make dynamic changes
-const (
-	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
-	ZarfPackageVariablePrefix = "###ZARF_PKG_VAR_"
-	ZarfPackageArch           = "###ZARF_PKG_ARCH###"
-	ZarfComponentName         = "###ZARF_COMPONENT_NAME###"
-)
-
 // ZarfPackageKind is an enum of the different kinds of Zarf packages.
 type ZarfPackageKind string
 
@@ -42,13 +28,18 @@ const (
 	// ZarfPackageConfig is the default kind of Zarf package, primarily used during `zarf package`.
 	ZarfPackageConfig ZarfPackageKind = "ZarfPackageConfig"
 	// APIVersion the api version of this package.
-	APIVersion string = "zarf.dev/v1alpha1"
+	APIVersion string = "zarf.dev/v1beta1"
+)
+
+// ZarfPackageTemplatePrefix is the prefix for package templates.
+const (
+	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
 )
 
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
 	// The API version of the Zarf package.
-	APIVersion string `json:"apiVersion,omitempty," jsonschema:"enum=zarf.dev/v1alpha1"`
+	APIVersion string `json:"apiVersion,omitempty," jsonschema:"enum=zarf.dev/v1beta1"`
 	// The kind of Zarf package.
 	Kind ZarfPackageKind `json:"kind" jsonschema:"enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	// Package metadata.
@@ -146,34 +137,22 @@ func (c Constant) Validate() error {
 type ZarfMetadata struct {
 	// Name to identify this Zarf package.
 	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
-	// Additional information about this package.
-	Description string `json:"description,omitempty"`
 	// Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with).
 	Version string `json:"version,omitempty"`
-	// Link to package information when online.
-	URL string `json:"url,omitempty"`
-	// An image URL to embed in this package (Reserved for future use in Zarf UI).
-	Image string `json:"image,omitempty"`
 	// Disable compression of this package.
 	Uncompressed bool `json:"uncompressed,omitempty"`
 	// The target cluster architecture for this package.
 	Architecture string `json:"architecture,omitempty" jsonschema:"example=arm64,example=amd64"`
-	// Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.
-	YOLO bool `json:"yolo,omitempty"`
-	// Comma-separated list of package authors (including contact info).
-	Authors string `json:"authors,omitempty" jsonschema:"example=Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"`
-	// Link to package documentation when online.
-	Documentation string `json:"documentation,omitempty"`
-	// Link to package source code when online.
-	Source string `json:"source,omitempty"`
-	// Name of the distributing entity, organization or individual.
-	Vendor string `json:"vendor,omitempty"`
-	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
-	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
+	// Default to true, when false components cannot have images or git repos as they will be pulled from the internet
+	Airgap *bool `json:"airgap,omitempty"`
+	// Annotations are key-value pairs that can be used to store metadata about the package.
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
 type ZarfBuildData struct {
+	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
+	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
 	// The machine name that created this package.
 	Terminal string `json:"terminal"`
 	// The username who created this package.
