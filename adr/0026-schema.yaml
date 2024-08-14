@@ -99,15 +99,12 @@ components:
   - podinfo@v1
   repos:
   - https://github.com/defenseunicorns/zarf
-  extensions:
-    bigbang:
-      version: bbVersion
-      repo: https://repo1.com/mybbrepo
-      valuesFiles:
-      - values.yaml
-      skipFlux: false
-      fluxPatchFiles:
-      - flux-patch.yaml
+  wait: true
+  healthChecks:
+  - apiVersion: v1
+    kind: pod
+    name: my-pod
+    namespace: my-namespace
   actions:
     onCreate:
       defaults:

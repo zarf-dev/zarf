@@ -62,6 +62,7 @@ There are several other keys Zarf will deprecate which will have automated migra
 ```
 - A new field called `.components.[x].healthChecks` will be introduced and will utilize [kstatus](https://github.com/kubernetes-sigs/cli-utils/blob/master/pkg/kstatus/README.md) to wait for resources to be ready after deployment. Read [#2718](https://github.com/zarf-dev/zarf/issues/2718) for more detail.
 - a new field `.components.[x].wait` will be introduced. It will default to true, and automatically run `healthchecks` for every object in the cluster.
+- `.components.[x].extensions` will be removed in favor of `zarf dev generate bigbang`. See #2875
 
 ### BDD scenarios
 The following are [behavior driven development](https://en.wikipedia.org/wiki/Behavior-driven_development) scenarios to provide context of what Zarf will do in specific situations given the above decisions.
