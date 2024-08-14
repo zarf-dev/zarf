@@ -71,7 +71,7 @@ const (
 func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	var err error
 	if pkg.Kind == v1alpha1.ZarfInitConfig && pkg.Metadata.YOLO {
-		err = errors.Join(err, fmt.Errorf(PkgValidateErrInitNoYOLO))
+		err = errors.Join(err, errors.New(PkgValidateErrInitNoYOLO))
 	}
 	for _, constant := range pkg.Constants {
 		if varErr := constant.Validate(); varErr != nil {
@@ -84,16 +84,16 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	if pkg.Metadata.YOLO {
 		for _, component := range pkg.Components {
 			if len(component.Images) > 0 {
-				err = errors.Join(err, fmt.Errorf(PkgValidateErrYOLONoOCI))
+				err = errors.Join(err, errors.New(PkgValidateErrYOLONoOCI))
 			}
 			if len(component.Repos) > 0 {
-				err = errors.Join(err, fmt.Errorf(PkgValidateErrYOLONoGit))
+				err = errors.Join(err, errors.New(PkgValidateErrYOLONoGit))
 			}
 			if component.Only.Cluster.Architecture != "" {
-				err = errors.Join(err, fmt.Errorf(PkgValidateErrYOLONoArch))
+				err = errors.Join(err, errors.New(PkgValidateErrYOLONoArch))
 			}
 			if len(component.Only.Cluster.Distros) > 0 {
-				err = errors.Join(err, fmt.Errorf(PkgValidateErrYOLONoDistro))
+				err = errors.Join(err, errors.New(PkgValidateErrYOLONoDistro))
 			}
 		}
 	}
@@ -220,12 +220,12 @@ func validateAction(action v1alpha1.ZarfComponentAction) error {
 
 		// Validate only cluster or network, not both
 		if action.Wait.Cluster != nil && action.Wait.Network != nil {
-			err = errors.Join(err, fmt.Errorf(PkgValidateErrActionClusterNetwork))
+			err = errors.Join(err, errors.New(PkgValidateErrActionClusterNetwork))
 		}
 
 		// Validate at least one of cluster or network
 		if action.Wait.Cluster == nil && action.Wait.Network == nil {
-			err = errors.Join(err, fmt.Errorf(PkgValidateErrActionClusterNetwork))
+			err = errors.Join(err, errors.New(PkgValidateErrActionClusterNetwork))
 		}
 	}
 
@@ -243,7 +243,7 @@ func validateReleaseName(chartName, releaseName string) (err error) {
 
 	// Check if the final releaseName is empty and return an error if so
 	if releaseName == "" {
-		err = fmt.Errorf(errChartReleaseNameEmpty)
+		err = errors.New(errChartReleaseNameEmpty)
 		return
 	}
 
