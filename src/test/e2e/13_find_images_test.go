@@ -42,8 +42,7 @@ func TestFindImages(t *testing.T) {
 		// Test `zarf prepare find-images` with `--kube-version` specified and less than than the declared minimum (v1.21.0)
 		stdOut, stdErr, err = e2e.Zarf(t, "prepare", "find-images", "--kube-version=v1.20.0", "src/test/packages/00-kube-version-override")
 		require.Error(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "Problem rendering the helm template for cert-manager", "The kubeVersion declaration should prevent this from templating")
-		require.Contains(t, stdErr, "following charts had errors: [cert-manager]", "Zarf should print an ending error message")
+		require.Contains(t, stdErr, "could not render the Helm template for chart cert-manager", "The kubeVersion declaration should prevent this from templating")
 	})
 
 	t.Run("zarf dev find-images with helm or manifest vars", func(t *testing.T) {
