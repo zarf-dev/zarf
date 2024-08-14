@@ -47,6 +47,18 @@ type ZarfComponent struct {
 	// List of git repos to include in the package.
 	Repos []string `json:"repos,omitempty"`
 
+	// DeprecatedGroup will not be included in the schema and cannot be set by the users of v1beta1
+	// This is here to maintain compatibility with v1alpha1 before the feature is removed in Zarf v1.0.0.
+	DeprecatedGroup string `json:"group,omitempty" jsonschema:"-"`
+
+	// DeprecatedExtensions will not be included in the schema and cannot be set by the users of v1beta1
+	// This is here to maintain compatibility with v1alpha1 before the feature is removed in Zarf v1.0.0.
+	DeprecatedExtensions ZarfComponentExtensions `json:"extensions,omitempty" jsonschema:"-"`
+
+	// DeprecatedCosignKeyPath will not be included in the schema and cannot be set by the users of v1beta1
+	// This is here to maintain compatibility with v1alpha1 before the feature is removed in Zarf v1.0.0.
+	DeprecatedCosignKeyPath string `json:"cosignKeyPath,omitempty" jsonschema:"-"`
+
 	// Custom commands to run at various stages of a package lifecycle.
 	Actions ZarfComponentActions `json:"actions,omitempty"`
 }
@@ -332,4 +344,24 @@ type Shell struct {
 	Windows string `json:"windows,omitempty" jsonschema:"description=(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item),example=powershell,example=cmd,example=pwsh,example=sh,example=bash,example=gsh"`
 	Linux   string `json:"linux,omitempty" jsonschema:"description=(default 'sh') Indicates a preference for the shell to use on Linux systems,example=sh,example=bash,example=fish,example=zsh,example=pwsh"`
 	Darwin  string `json:"darwin,omitempty" jsonschema:"description=(default 'sh') Indicates a preference for the shell to use on macOS systems,example=sh,example=bash,example=fish,example=zsh,example=pwsh"`
+}
+
+// ZarfComponentExtensions is a struct that contains all the official extensions.
+type ZarfComponentExtensions struct {
+	// Configurations for installing Big Bang and Flux in the cluster.
+	BigBang *BigBang `json:"bigbang,omitempty" jsonschema:"-"`
+}
+
+// BigBang holds the configuration for the Big Bang extension.
+type BigBang struct {
+	// The version of Big Bang to use.
+	Version string `json:"version" jsonschema:"-"`
+	// Override repo to pull Big Bang from instead of Repo One.
+	Repo string `json:"repo,omitempty" jsonschema:"-"`
+	// The list of values files to pass to Big Bang; these will be merged together.
+	ValuesFiles []string `json:"valuesFiles,omitempty" jsonschema:"-"`
+	// Whether to skip deploying flux; Defaults to false.
+	SkipFlux bool `json:"skipFlux,omitempty" jsonschema:"-"`
+	// Optional paths to Flux kustomize strategic merge patch files.
+	FluxPatchFiles []string `json:"fluxPatchFiles,omitempty" jsonschema:"-"`
 }

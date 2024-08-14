@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -38,6 +39,20 @@ func TestTranslate(t *testing.T) {
 					{
 						Name:     "not-optional",
 						Required: helpers.BoolPtr(true),
+					},
+					{
+						Name:                    "deprecated",
+						DeprecatedGroup:         "a-group",
+						DeprecatedCosignKeyPath: "path/to/my/key.key",
+						Extensions: extensions.ZarfComponentExtensions{
+							BigBang: &extensions.BigBang{
+								Repo:           "repo.git",
+								Version:        "2.0.0",
+								ValuesFiles:    []string{"my-values.yaml"},
+								SkipFlux:       true,
+								FluxPatchFiles: []string{"my-patch"},
+							},
+						},
 					},
 					{
 						Name: "manifests",
@@ -138,6 +153,21 @@ func TestTranslate(t *testing.T) {
 					{
 						Name:     "not-optional",
 						Optional: helpers.BoolPtr(false),
+					},
+					{
+						Name:                    "deprecated",
+						Optional:                helpers.BoolPtr(true),
+						DeprecatedGroup:         "a-group",
+						DeprecatedCosignKeyPath: "path/to/my/key.key",
+						DeprecatedExtensions: ZarfComponentExtensions{
+							BigBang: &BigBang{
+								Repo:           "repo.git",
+								Version:        "2.0.0",
+								ValuesFiles:    []string{"my-values.yaml"},
+								SkipFlux:       true,
+								FluxPatchFiles: []string{"my-patch"},
+							},
+						},
 					},
 					{
 						Name:     "manifests",
