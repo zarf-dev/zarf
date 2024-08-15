@@ -20,7 +20,7 @@ type TextTemplate struct {
 	Sensitive  bool
 	AutoIndent bool
 	Type       v1alpha1.VariableType
-	Value      string
+	Value      interface{}
 }
 
 // GetAllTemplates gets all of the current templates stored in the VariableConfig
@@ -95,7 +95,7 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) error {
 			// Check if the template is nil (present), use the original templateKey if not (so that it is not replaced).
 			value := templateKey
 			if template != nil {
-				value = template.Value
+				value = fmt.Sprint(template.Value)
 
 				// Check if the value is a file type and load the value contents from the file
 				if template.Type == v1alpha1.FileVariableType && value != "" {

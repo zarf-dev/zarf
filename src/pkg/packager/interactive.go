@@ -94,7 +94,7 @@ func (p *Packager) getPackageYAMLHints(stage string) map[string]string {
 			if !present {
 				value = fmt.Sprintf("'%s' (default)", helpers.Truncate(variable.Default, 20, false))
 			} else {
-				value = fmt.Sprintf("'%s'", helpers.Truncate(value, 20, false))
+				value = fmt.Sprintf("'%s'", helpers.Truncate(fmt.Sprint(value), 20, false))
 			}
 			if variable.Sensitive {
 				value = "'**sanitized**'"

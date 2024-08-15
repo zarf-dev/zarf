@@ -21,7 +21,7 @@ func (vc *VariableConfig) GetSetVariable(name string) (variable *v1alpha1.SetVar
 }
 
 // PopulateVariables handles setting the active variables within a VariableConfig's SetVariableMap
-func (vc *VariableConfig) PopulateVariables(variables []v1alpha1.InteractiveVariable, presetVariables map[string]string) error {
+func (vc *VariableConfig) PopulateVariables(variables []v1alpha1.InteractiveVariable, presetVariables map[string]interface{}) error {
 	for name, value := range presetVariables {
 		vc.SetVariable(name, value, false, false, "")
 	}
@@ -64,7 +64,7 @@ func (vc *VariableConfig) PopulateVariables(variables []v1alpha1.InteractiveVari
 }
 
 // SetVariable sets a variable in a VariableConfig's SetVariableMap
-func (vc *VariableConfig) SetVariable(name, value string, sensitive bool, autoIndent bool, varType v1alpha1.VariableType) {
+func (vc *VariableConfig) SetVariable(name string, value interface{}, sensitive bool, autoIndent bool, varType v1alpha1.VariableType) {
 	vc.setVariableMap[name] = &v1alpha1.SetVariable{
 		Variable: v1alpha1.Variable{
 			Name:       name,
@@ -84,7 +84,7 @@ func (vc *VariableConfig) CheckVariablePattern(name, pattern string) error {
 			return err
 		}
 
-		if r.MatchString(variable.Value) {
+		if r.MatchString(fmt.Sprint(variable.Value)) {
 			return nil
 		}
 

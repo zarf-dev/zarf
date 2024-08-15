@@ -33,7 +33,7 @@ type ZarfPackageOptions struct {
 	// Location where the public key component of a cosign key-pair can be found
 	SGetKeyPath string
 	// Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package
-	SetVariables map[string]string
+	SetVariables map[string]interface{}
 	// Location where the public key component of a cosign key-pair can be found
 	PublicKeyPath string
 	// The number of retries to perform for Zarf deploy operations like image pushes or Helm installs

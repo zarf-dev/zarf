@@ -50,8 +50,11 @@ var devDeployCmd = &cobra.Command{
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
-			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+		pkgCLISetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgDeploySet), pkgCLISetVariables, strings.ToUpper)
+		for k, v := range pkgCLISetVariables {
+			pkgConfig.PkgOpts.SetVariables[k] = v
+		}
 
 		pkgClient, err := packager.New(&pkgConfig)
 		if err != nil {
@@ -227,8 +230,11 @@ var devFindImagesCmd = &cobra.Command{
 
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
-		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
-			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+		pkgCLISetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgDeploySet), pkgCLISetVariables, strings.ToUpper)
+		for k, v := range pkgCLISetVariables {
+			pkgConfig.PkgOpts.SetVariables[k] = v
+		}
 		pkgClient, err := packager.New(&pkgConfig)
 		if err != nil {
 			return err
@@ -311,7 +317,7 @@ func init() {
 	devFindImagesCmd.Flags().MarkHidden("set")
 	devFindImagesCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
-	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	devFindImagesCmd.Flags().StringToStringVar(&pkgCLISetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 	// allow for the override of the default helm KubeVersion
 	devFindImagesCmd.Flags().StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	// check which manifests are using this particular image
@@ -334,7 +340,7 @@ func bindDevDeployFlags(v *viper.Viper) {
 	devDeployFlags.StringToStringVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringMapString(common.VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
 	devDeployFlags.StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
-	devDeployFlags.StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	devDeployFlags.StringToStringVar(&pkgCLISetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 
 	// Always require adopt-existing-resources flag (no viper)
 	devDeployFlags.BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)

@@ -131,7 +131,7 @@ type Constant struct {
 type SetVariable struct {
 	Variable `json:",inline"`
 	// The value the variable is currently set with
-	Value string `json:"value"`
+	Value interface{} `json:"value"`
 }
 
 // Validate runs all validation checks on a package constant.

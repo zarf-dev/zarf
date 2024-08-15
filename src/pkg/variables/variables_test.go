@@ -15,7 +15,7 @@ func TestPopulateVariables(t *testing.T) {
 	type test struct {
 		vc       VariableConfig
 		vars     []v1alpha1.InteractiveVariable
-		presets  map[string]string
+		presets  map[string]interface{}
 		wantErr  bool
 		wantVars SetVariableMap
 	}
@@ -26,7 +26,7 @@ func TestPopulateVariables(t *testing.T) {
 		{
 			vc:       VariableConfig{setVariableMap: SetVariableMap{}},
 			vars:     []v1alpha1.InteractiveVariable{{Variable: v1alpha1.Variable{Name: "NAME"}}},
-			presets:  map[string]string{},
+			presets:  map[string]interface{}{},
 			wantVars: SetVariableMap{"NAME": {Variable: v1alpha1.Variable{Name: "NAME"}}},
 		},
 		{
@@ -34,7 +34,7 @@ func TestPopulateVariables(t *testing.T) {
 			vars: []v1alpha1.InteractiveVariable{
 				{Variable: v1alpha1.Variable{Name: "NAME"}, Default: "Default"},
 			},
-			presets: map[string]string{},
+			presets: map[string]interface{}{},
 			wantVars: SetVariableMap{
 				"NAME": {Variable: v1alpha1.Variable{Name: "NAME"}, Value: "Default"},
 			},
@@ -44,7 +44,7 @@ func TestPopulateVariables(t *testing.T) {
 			vars: []v1alpha1.InteractiveVariable{
 				{Variable: v1alpha1.Variable{Name: "NAME"}, Default: "Default"},
 			},
-			presets: map[string]string{"NAME": "Set"},
+			presets: map[string]interface{}{"NAME": "Set"},
 			wantVars: SetVariableMap{
 				"NAME": {Variable: v1alpha1.Variable{Name: "NAME"}, Value: "Set"},
 			},
@@ -54,7 +54,7 @@ func TestPopulateVariables(t *testing.T) {
 			vars: []v1alpha1.InteractiveVariable{
 				{Variable: v1alpha1.Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: v1alpha1.FileVariableType}},
 			},
-			presets: map[string]string{},
+			presets: map[string]interface{}{},
 			wantVars: SetVariableMap{
 				"NAME": {Variable: v1alpha1.Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: v1alpha1.FileVariableType}},
 			},
@@ -64,7 +64,7 @@ func TestPopulateVariables(t *testing.T) {
 			vars: []v1alpha1.InteractiveVariable{
 				{Variable: v1alpha1.Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: v1alpha1.FileVariableType}},
 			},
-			presets: map[string]string{"NAME": "Set"},
+			presets: map[string]interface{}{"NAME": "Set"},
 			wantVars: SetVariableMap{
 				"NAME": {Variable: v1alpha1.Variable{Name: "NAME", Sensitive: true, AutoIndent: true, Type: v1alpha1.FileVariableType}, Value: "Set"},
 			},
@@ -74,7 +74,7 @@ func TestPopulateVariables(t *testing.T) {
 			vars: []v1alpha1.InteractiveVariable{
 				{Variable: v1alpha1.Variable{Name: "NAME"}, Prompt: true},
 			},
-			presets: map[string]string{},
+			presets: map[string]interface{}{},
 			wantVars: SetVariableMap{
 				"NAME": {Variable: v1alpha1.Variable{Name: "NAME"}, Value: "Prompt"},
 			},
@@ -84,7 +84,7 @@ func TestPopulateVariables(t *testing.T) {
 			vars: []v1alpha1.InteractiveVariable{
 				{Variable: v1alpha1.Variable{Name: "NAME"}, Default: "Default", Prompt: true},
 			},
-			presets: map[string]string{},
+			presets: map[string]interface{}{},
 			wantVars: SetVariableMap{
 				"NAME": {Variable: v1alpha1.Variable{Name: "NAME"}, Value: "Prompt"},
 			},
@@ -94,7 +94,7 @@ func TestPopulateVariables(t *testing.T) {
 			vars: []v1alpha1.InteractiveVariable{
 				{Variable: v1alpha1.Variable{Name: "NAME"}, Prompt: true},
 			},
-			presets: map[string]string{"NAME": "Set"},
+			presets: map[string]interface{}{"NAME": "Set"},
 			wantVars: SetVariableMap{
 				"NAME": {Variable: v1alpha1.Variable{Name: "NAME"}, Value: "Set"},
 			},

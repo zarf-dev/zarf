@@ -29,6 +29,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 )
 
+var pkgCLISetVariables = map[string]string{}
+
 var packageCmd = &cobra.Command{
 	Use:     "package",
 	Aliases: []string{"p"},
@@ -81,8 +83,11 @@ var packageDeployCmd = &cobra.Command{
 		pkgConfig.PkgOpts.PackageSource = packageSource
 
 		v := common.GetViper()
-		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
-			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+		pkgCLISetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgDeploySet), pkgCLISetVariables, strings.ToUpper)
+		for k, v := range pkgCLISetVariables {
+			pkgConfig.PkgOpts.SetVariables[k] = v
+		}
 
 		pkgClient, err := packager.New(&pkgConfig)
 		if err != nil {
@@ -420,7 +425,7 @@ func bindDeployFlags(v *viper.Viper) {
 	deployFlags.DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	deployFlags.IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)
-	deployFlags.StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	deployFlags.StringToStringVar(&pkgCLISetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(common.VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.SGetKeyPath, "sget", v.GetString(common.VPkgDeploySget), lang.CmdPackageDeployFlagSget)

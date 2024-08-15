@@ -60,8 +60,11 @@ var initCmd = &cobra.Command{
 		}
 
 		v := common.GetViper()
-		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
-			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+		pkgCLISetVariables = helpers.TransformAndMergeMap(
+			v.GetStringMapString(common.VPkgDeploySet), pkgCLISetVariables, strings.ToUpper)
+		for k, v := range pkgCLISetVariables {
+			pkgConfig.PkgOpts.SetVariables[k] = v
+		}
 
 		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
 		if err != nil {
@@ -187,7 +190,7 @@ func init() {
 	v.SetDefault(common.VInitRegistryPushUser, types.ZarfRegistryPushUser)
 
 	// Init package set variable flags
-	initCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdInitFlagSet)
+	initCmd.Flags().StringToStringVar(&pkgCLISetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdInitFlagSet)
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)
