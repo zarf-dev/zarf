@@ -13,7 +13,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/agnivade/levenshtein v1.1.1
 	github.com/anchore/clio v0.0.0-20240705045624-ac88e09ad9d0
-	github.com/anchore/stereoscope v0.0.1
+	github.com/anchore/stereoscope v0.0.2
 	github.com/anchore/syft v0.100.0
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.1
@@ -69,6 +69,7 @@ require (
 )
 
 require (
+	github.com/anchore/go-collections v0.0.0-20240216171411-9321230ce537 // indirect
 	github.com/bshuster-repo/logrus-logstash-hook v1.0.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
