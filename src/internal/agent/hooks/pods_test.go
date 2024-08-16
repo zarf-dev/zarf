@@ -60,6 +60,16 @@ func TestPodMutationWebhook(t *testing.T) {
 							},
 						},
 					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "my-volume-with-image-data",
+							VolumeSource: corev1.VolumeSource{
+								Image: &corev1.ImageVolumeSource{
+									Reference: "myimagewithdata:1.0",
+								},
+							},
+						},
+					},
 				},
 			}),
 			patch: []operations.PatchOperation{
@@ -80,6 +90,10 @@ func TestPodMutationWebhook(t *testing.T) {
 					"127.0.0.1:31999/library/nginx:latest-zarf-3793515731",
 				),
 				operations.ReplacePatchOperation(
+					"/spec/volumes/0/image/reference",
+					"127.0.0.1:31999/library/myimagewithdata:1.0-zarf-1938514925",
+				),
+				operations.ReplacePatchOperation(
 					"/metadata/labels",
 					map[string]string{
 						"zarf-agent": "patched",
@@ -89,10 +103,11 @@ func TestPodMutationWebhook(t *testing.T) {
 				operations.ReplacePatchOperation(
 					"/metadata/annotations",
 					map[string]string{
-						"zarf.dev/original-image-nginx":     "nginx",
-						"zarf.dev/original-image-alpine":    "alpine",
-						"zarf.dev/original-image-different": "busybox",
-						"should-be":                         "mutated",
+						"zarf.dev/original-image-nginx":                     "nginx",
+						"zarf.dev/original-image-alpine":                    "alpine",
+						"zarf.dev/original-image-different":                 "busybox",
+						"zarf.dev/original-image-my-volume-with-image-data": "myimagewithdata:1.0",
+						"should-be": "mutated",
 					},
 				),
 			},
