@@ -25,6 +25,9 @@ func TestConnectAndCreds(t *testing.T) {
 	t.Log("E2E: Connect")
 	ctx := context.Background()
 
+	prevAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
+	require.NoError(t, err)
+
 	c, err := cluster.NewCluster()
 	require.NoError(t, err)
 	// Init the state variable
@@ -36,9 +39,11 @@ func TestConnectAndCreds(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
+	newAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
+	require.NoError(t, err)
 	newState, err := c.LoadZarfState(ctx)
 	require.NoError(t, err)
-
+	require.NotEqual(t, prevAgentSecretData, newAgentSecretData)
 	require.NotEqual(t, oldState.ArtifactServer.PushToken, newState.ArtifactServer.PushToken)
 	require.NotEqual(t, oldState.GitServer.PushPassword, newState.GitServer.PushPassword)
 
