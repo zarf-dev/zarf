@@ -156,8 +156,8 @@ var updateCredsCmd = &cobra.Command{
 			// Update artifact token (if internal)
 			if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() {
 				pushToken, err := c.UpdateInternalArtifactServerToken(ctx, oldState.GitServer)
-				updateErr := fmt.Errorf("Unable to create the new Gitea artifact token: %w", err)
-				// TODO we change the default Zarf state to be empty for a service when it is not deployed
+				updateErr := fmt.Errorf("unable to create the new Gitea artifact token: %w", err)
+				// TODO once Zarf is changed so the default state is empty for a service when it is not deployed
 				// and sufficient time has passed for users state to get updated we should error on isNotFound
 				if err != nil && !kerrors.IsNotFound(err) {
 					return updateErr
@@ -187,8 +187,8 @@ var updateCredsCmd = &cobra.Command{
 			}
 			if slices.Contains(args, message.GitKey) && newState.GitServer.IsInternal() {
 				err := c.UpdateInternalGitServerSecret(cmd.Context(), oldState.GitServer, newState.GitServer)
-				updateErr := fmt.Errorf("Unable to update Zarf Git Server values: %w", err)
-				// TODO we change the default Zarf state to be empty for a service when it is not deployed
+				updateErr := fmt.Errorf("unable to update Zarf Git Server values: %w", err)
+				// TODO once Zarf is changed so the default state is empty for a service when it is not deployed
 				// and sufficient time has passed for users state to get updated we should error on isNotFound
 				if err != nil && !kerrors.IsNotFound(err) {
 					return updateErr
