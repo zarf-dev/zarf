@@ -21,7 +21,6 @@ import (
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -30,6 +29,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 var subAltNames []string
@@ -97,7 +97,7 @@ var updateCredsCmd = &cobra.Command{
 		} else {
 			if !slices.Contains(validKeys, args[0]) {
 				cmd.Help()
-				return fmt.Errorf("invalid service key specified, valid keys are: %s, %s, and %s", message.RegistryKey, message.GitKey, message.ArtifactKey)
+				return fmt.Errorf("invalid service key specified, valid key choices are: %v", validKeys)
 			}
 		}
 
@@ -155,31 +155,16 @@ var updateCredsCmd = &cobra.Command{
 
 			// Update artifact token (if internal)
 			if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() {
-				tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
-				if err != nil {
-					return err
+				pushToken, err := c.UpdateInternalArtifactServerToken(ctx, oldState.GitServer)
+				updateErr := fmt.Errorf("Unable to create the new Gitea artifact token: %w", err)
+				// TODO once Zarf state stops defaulting to internal values, we can error on isNotFound
+				if err != nil && !kerrors.IsNotFound(err) {
+					return updateErr
 				}
-				_, err = tunnel.Connect(cmd.Context())
-				if err != nil {
-					return err
-				}
-				defer tunnel.Close()
-				tunnelURL := tunnel.HTTPEndpoint()
-				giteaClient, err := gitea.NewClient(tunnelURL, oldState.GitServer.PushUsername, oldState.GitServer.PushPassword)
-				if err != nil {
-					return err
-				}
-				err = tunnel.Wrap(func() error {
-					tokenSha1, err := giteaClient.CreatePackageRegistryToken(ctx)
-					if err != nil {
-						return err
-					}
-					newState.ArtifactServer.PushToken = tokenSha1
-					return nil
-				})
-				if err != nil {
-					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
-					message.Warnf(lang.CmdToolsUpdateCredsUnableCreateToken, err.Error())
+				if kerrors.IsNotFound(err) {
+					message.Warn(updateErr.Error())
+				} else {
+					newState.ArtifactServer.PushToken = pushToken
 				}
 			}
 
@@ -200,34 +185,14 @@ var updateCredsCmd = &cobra.Command{
 				}
 			}
 			if slices.Contains(args, message.GitKey) && newState.GitServer.IsInternal() {
-				tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
-				if err != nil {
-					return err
+				err := c.UpdateInternalGitServerSecret(cmd.Context(), oldState.GitServer, newState.GitServer)
+				updateErr := fmt.Errorf("Unable to update Zarf Git Server values: %w", err)
+				// TODO once Zarf state stops defaulting to internal values, we can error on isNotFound
+				if err != nil && !kerrors.IsNotFound(err) {
+					return updateErr
 				}
-				_, err = tunnel.Connect(cmd.Context())
-				if err != nil {
-					return err
-				}
-				defer tunnel.Close()
-				tunnelURL := tunnel.HTTPEndpoint()
-				giteaClient, err := gitea.NewClient(tunnelURL, oldState.GitServer.PushUsername, oldState.GitServer.PushPassword)
-				if err != nil {
-					return err
-				}
-				err = tunnel.Wrap(func() error {
-					err := giteaClient.UpdateGitUser(ctx, newState.GitServer.PullUsername, newState.GitServer.PullPassword)
-					if err != nil {
-						return err
-					}
-					err = giteaClient.UpdateGitUser(ctx, newState.GitServer.PushUsername, newState.GitServer.PushPassword)
-					if err != nil {
-						return err
-					}
-					return nil
-				})
-				if err != nil {
-					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
-					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateGit, err.Error())
+				if kerrors.IsNotFound(err) {
+					message.Warn(updateErr.Error())
 				}
 			}
 			if slices.Contains(args, message.AgentKey) {
