@@ -111,9 +111,9 @@ components:
         architecture: amd64
     files:
       # Rust Injector Binary
-      - source: https://zarf-init.s3.us-east-2.amazonaws.com/injector/###ZARF_PKG_TMPL_INJECTOR_VERSION###/zarf-injector-amd64
+      - source: ../../src/injector/target/x86_64-unknown-linux-musl/release/zarf-injector
         target: "###ZARF_TEMP###/zarf-injector"
-        shasum: "###ZARF_PKG_TMPL_INJECTOR_AMD64_SHASUM###"
+        # shasum: "###ZARF_PKG_TMPL_INJECTOR_AMD64_SHASUM###"
         executable: true
 
   - name: zarf-injector
@@ -126,9 +126,9 @@ components:
         architecture: arm64
     files:
       # Rust Injector Binary
-      - source: https://zarf-init.s3.us-east-2.amazonaws.com/injector/###ZARF_PKG_TMPL_INJECTOR_VERSION###/zarf-injector-arm64
+      - source: ../../src/injector/target/aarch64-unknown-linux-musl/release/zarf-injector
         target: "###ZARF_TEMP###/zarf-injector"
-        shasum: "###ZARF_PKG_TMPL_INJECTOR_ARM64_SHASUM###"
+        # shasum: "###ZARF_PKG_TMPL_INJECTOR_ARM64_SHASUM###"
         executable: true
 
   - name: zarf-seed-registry
