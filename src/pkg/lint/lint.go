@@ -71,7 +71,7 @@ func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, createOpts ty
 		node := chain.Head()
 		for node != nil {
 			component := node.ZarfComponent
-			compFindings, err := fillComponentTemplate(&component, createOpts)
+			compFindings, err := fillObjTemplate(&component, createOpts.SetVariables)
 			if err != nil {
 				return nil, err
 			}
@@ -87,12 +87,12 @@ func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, createOpts ty
 	return findings, nil
 }
 
-func fillComponentTemplate(c *v1alpha1.ZarfComponent, createOpts types.ZarfCreateOptions) ([]PackageFinding, error) {
+func fillObjTemplate(rawObj any, setVariables map[string]string) ([]PackageFinding, error) {
 	var findings []PackageFinding
 	templateMap := map[string]string{}
 
 	setVarsAndWarn := func(templatePrefix string, deprecated bool) error {
-		yamlTemplates, err := utils.FindYamlTemplates(c, templatePrefix, "###")
+		yamlTemplates, err := utils.FindYamlTemplates(rawObj, templatePrefix, "###")
 		if err != nil {
 			return err
 		}
@@ -105,7 +105,7 @@ func fillComponentTemplate(c *v1alpha1.ZarfComponent, createOpts types.ZarfCreat
 					Severity:    SevWarn,
 				})
 			}
-			if _, present := createOpts.SetVariables[key]; !present {
+			if _, present := setVariables[key]; !present {
 				unSetTemplates = true
 			}
 		}
@@ -115,7 +115,7 @@ func fillComponentTemplate(c *v1alpha1.ZarfComponent, createOpts types.ZarfCreat
 				Severity:    SevWarn,
 			})
 		}
-		for key, value := range createOpts.SetVariables {
+		for key, value := range setVariables {
 			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
 		}
 		return nil
@@ -130,7 +130,7 @@ func fillComponentTemplate(c *v1alpha1.ZarfComponent, createOpts types.ZarfCreat
 		return nil, err
 	}
 
-	if err := utils.ReloadYamlTemplate(c, templateMap); err != nil {
+	if err := utils.ReloadYamlTemplate(rawObj, templateMap); err != nil {
 		return nil, err
 	}
 	return findings, nil

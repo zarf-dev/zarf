@@ -10,7 +10,6 @@ import (
 	"regexp"
 
 	"github.com/xeipuuv/gojsonschema"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -30,29 +29,12 @@ func ValidatePackageSchema(setVariables map[string]string) ([]PackageFinding, er
 		return nil, err
 	}
 
-	untypedZarfPackage, err = templateRawYaml(untypedZarfPackage, setVariables)
+	_, err = fillObjTemplate(&untypedZarfPackage, setVariables)
 	if err != nil {
 		return nil, err
 	}
 
 	return getSchemaFindings(jsonSchema, untypedZarfPackage)
-}
-
-func templateRawYaml(untypedPackage any, values map[string]string) (any, error) {
-	templateMap := map[string]string{}
-
-	for key, value := range values {
-		templateMap[fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageVariablePrefix, key)] = value
-	}
-
-	for key, value := range values {
-		templateMap[fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, key)] = value
-	}
-
-	if err := utils.ReloadYamlTemplate(&untypedPackage, templateMap); err != nil {
-		return nil, err
-	}
-	return untypedPackage, nil
 }
 
 func makeFieldPathYqCompat(field string) string {

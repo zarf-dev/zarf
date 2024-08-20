@@ -32,12 +32,10 @@ func TestLintComponents(t *testing.T) {
 		require.Error(t, err)
 	})
 }
-func TestFillComponentTemplate(t *testing.T) {
-	createOpts := types.ZarfCreateOptions{
-		SetVariables: map[string]string{
-			"KEY1": "value1",
-			"KEY2": "value2",
-		},
+func TestFillObjTemplate(t *testing.T) {
+	SetVariables := map[string]string{
+		"KEY1": "value1",
+		"KEY2": "value2",
 	}
 
 	component := v1alpha1.ZarfComponent{
@@ -48,7 +46,7 @@ func TestFillComponentTemplate(t *testing.T) {
 		},
 	}
 
-	findings, err := fillComponentTemplate(&component, createOpts)
+	findings, err := fillObjTemplate(&component, SetVariables)
 	require.NoError(t, err)
 	expectedFindings := []PackageFinding{
 		{
