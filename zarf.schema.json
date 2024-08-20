@@ -1032,8 +1032,16 @@
     "ZarfMetadata": {
       "properties": {
         "name": {
-          "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9\\-]*$"
+            },
+            {
+              "type": "string",
+              "pattern": "^###ZARF_PKG_TMPL"
+            }
+          ],
           "description": "Name to identify this Zarf package."
         },
         "description": {
