@@ -50,5 +50,6 @@ repos:
         args: ["--schemafile", "zarf.schema.json"]
         exclude: |
           (?x)^(
-            src/test/packages/12-lint/.*
+            src/test/packages/12-lint/.*|
+            src/pkg/lint/testdata/package-with-templates/zarf.yaml
           )$
