@@ -69,7 +69,7 @@ var getCredsCmd = &cobra.Command{
 		}
 		// TODO: Determine if this is actually needed.
 		if state.Distro == "" {
-			return errors.New("Zarf state secret did not load properly")
+			return errors.New("zarf state secret did not load properly")
 		}
 
 		if len(args) > 0 {
@@ -152,7 +152,7 @@ var updateCredsCmd = &cobra.Command{
 				}
 			}
 			// TODO once Zarf is changed so the default state is empty for a service when it is not deployed
-			// and sufficient time has passed for users state to get updated we should error on isNotFound
+			// and sufficient time has passed for users state to get updated we can remove this check
 			internalGitServerExists, err := c.InternalGitServerExists(cmd.Context())
 			if err != nil {
 				return err
