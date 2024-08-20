@@ -349,3 +349,12 @@ func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServe
 	}
 	return nil
 }
+
+// InternalGitServerExists checks if the Zarf internal git server exists in the cluster.
+func (c *Cluster) InternalGitServerExists(ctx context.Context) (bool, error) {
+	_, err := c.Clientset.CoreV1().Services(ZarfNamespaceName).Get(ctx, ZarfGitServerName, metav1.GetOptions{})
+	if err != nil && !kerrors.IsNotFound(err) {
+		return false, err
+	}
+	return !kerrors.IsNotFound(err), nil
+}
