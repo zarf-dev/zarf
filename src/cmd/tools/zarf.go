@@ -29,7 +29,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 var subAltNames []string
@@ -116,7 +115,7 @@ var updateCredsCmd = &cobra.Command{
 		}
 		// TODO: Determine if this is actually needed.
 		if oldState.Distro == "" {
-			return errors.New("Zarf state secret did not load properly")
+			return errors.New("zarf state secret did not load properly")
 		}
 		newState, err := cluster.MergeZarfState(oldState, updateCredsInitOpts, args)
 		if err != nil {
@@ -152,20 +151,18 @@ var updateCredsCmd = &cobra.Command{
 					return err
 				}
 			}
+			// TODO once Zarf is changed so the default state is empty for a service when it is not deployed
+			// and sufficient time has passed for users state to get updated we should error on isNotFound
+			internalGitServerExists, err := c.InternalGitServerExists(cmd.Context())
+			if err != nil {
+				return err
+			}
 
 			// Update artifact token (if internal)
-			if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() {
-				pushToken, err := c.UpdateInternalArtifactServerToken(ctx, oldState.GitServer)
-				updateErr := fmt.Errorf("unable to create the new Gitea artifact token: %w", err)
-				// TODO once Zarf is changed so the default state is empty for a service when it is not deployed
-				// and sufficient time has passed for users state to get updated we should error on isNotFound
-				if err != nil && !kerrors.IsNotFound(err) {
-					return updateErr
-				}
-				if kerrors.IsNotFound(err) {
-					message.Warn(updateErr.Error())
-				} else {
-					newState.ArtifactServer.PushToken = pushToken
+			if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() && internalGitServerExists {
+				newState.ArtifactServer.PushToken, err = c.UpdateInternalArtifactServerToken(ctx, oldState.GitServer)
+				if err != nil {
+					return fmt.Errorf("unable to create the new Gitea artifact token: %w", err)
 				}
 			}
 
@@ -185,14 +182,10 @@ var updateCredsCmd = &cobra.Command{
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
 				}
 			}
-			if slices.Contains(args, message.GitKey) && newState.GitServer.IsInternal() {
+			if slices.Contains(args, message.GitKey) && newState.GitServer.IsInternal() && internalGitServerExists {
 				err := c.UpdateInternalGitServerSecret(cmd.Context(), oldState.GitServer, newState.GitServer)
-				updateErr := fmt.Errorf("unable to update Zarf Git Server values: %w", err)
-				if err != nil && !kerrors.IsNotFound(err) {
-					return updateErr
-				}
-				if kerrors.IsNotFound(err) {
-					message.Warn(updateErr.Error())
+				if err != nil {
+					return fmt.Errorf("unable to update Zarf Git Server values: %w", err)
 				}
 			}
 			if slices.Contains(args, message.AgentKey) {
