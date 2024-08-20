@@ -43,9 +43,9 @@ func TestUseCLI(t *testing.T) {
 	t.Run("zarf prepare sha256sum <remote>", func(t *testing.T) {
 		t.Parallel()
 		// Test `zarf prepare sha256sum` for a remote asset
-		expectedShasum := "c3cdea0573ba5a058ec090b5d2683bf398e8b1614c37ec81136ed03b78167617\n"
+		expectedShasum := "b905e647e0d7876cfd5b665632cfc43ad919dc60408f7236c5b541c53277b503\n"
 
-		stdOut, stdErr, err := e2e.Zarf(t, "prepare", "sha256sum", "https://zarf-public.s3-us-gov-west-1.amazonaws.com/pipelines/zarf-prepare-shasum-remote-test-file.txt")
+		stdOut, stdErr, err := e2e.Zarf(t, "prepare", "sha256sum", "https://zarf-init.s3.us-east-2.amazonaws.com/injector/2024-07-22/zarf-injector-arm64")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, expectedShasum, "The expected SHASUM should equal the actual SHASUM")
 	})

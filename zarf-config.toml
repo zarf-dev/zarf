@@ -5,9 +5,9 @@ agent_image = 'zarf-dev/zarf/agent'
 agent_image_tag = 'local'
 
 # Tag for the zarf injector binary to use
-injector_version = '2024-05-15'
-injector_amd64_shasum = '1b34519ac30daf0e5a4a2f0a0766dbcd0852c0b5364b35576eea4ac9e22d9e82'
-injector_arm64_shasum = 'ca20f427f9cf91ff42646a785c4772be5892a6752fa14924c5085b2d0109b008'
+injector_version = '2024-07-22'
+injector_amd64_shasum = '8463bfd66930a4b26c665b51f25e8a32ed5948068bae49987013c89173394478'
+injector_arm64_shasum = 'b905e647e0d7876cfd5b665632cfc43ad919dc60408f7236c5b541c53277b503'
 
 
 # The image reference to use for the registry that Zarf deploys into the cluster
