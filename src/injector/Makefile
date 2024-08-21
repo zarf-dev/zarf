@@ -25,6 +25,3 @@ list-sizes: ## List the sizes of the Zarf injector binaries
 	@echo '\n\033[0;36mSize of Zarf injector binaries:\033[0m\n'; \
 	du --si target/x86_64-unknown-linux-musl/release/zarf-injector; \
 	du --si target/aarch64-unknown-linux-musl/release/zarf-injector
-
-build-with-docker: ## Build the Zarf injector using Docker
-	docker run --rm --user "$(id -u)":"$(id -g)" -e CROSS_CONTAINER_IN_CONTAINER=true -v /var/run/docker.sock:/var/run/docker.sock -v $$PWD:/usr/src/zarf-injector -w /usr/src/zarf-injector rust:1.71.0-bookworm make build-injector-linux
