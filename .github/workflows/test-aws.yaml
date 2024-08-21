@@ -1,0 +1,21 @@
+name: Release CLI and Packages on Tag
+
+permissions:
+  contents: read
+
+on:
+  push:
+  workflow_dispatch:
+
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Test AWS"
+        run: aws s3 ls
+        env:
+          COSIGN_EXPERIMENTAL: 1
+          AWS_REGION: ${{ secrets.COSIGN_AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.COSIGN_AWS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.COSIGN_AWS_ACCESS_KEY }}
