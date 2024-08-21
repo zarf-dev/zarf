@@ -91,7 +91,8 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(h.retries)), retry.Delay(500*time.Millisecond))
 	if err != nil {
-		message.Warn(err.Error())
+		removeMsg := "if you need to remove the failed chart, use `zarf package remove`"
+		installErr := fmt.Errorf("unable to install chart after %d attempts: %w: %s", h.retries, err, removeMsg)
 
 		releases, _ := histClient.Run(h.chart.ReleaseName)
 		previouslyDeployedVersion := 0
@@ -102,9 +103,6 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 				previouslyDeployedVersion = release.Version
 			}
 		}
-
-		removeMsg := "if you need to remove the failed chart, use `zarf package remove`"
-		installErr := fmt.Errorf("unable to install chart after %d attempts: %s", h.retries, removeMsg)
 
 		// No prior releases means this was an initial install.
 		if previouslyDeployedVersion == 0 {
