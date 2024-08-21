@@ -16,11 +16,9 @@ install-cross:
 build-injector-linux: build-injector-linux-amd build-injector-linux-arm ## Build the Zarf injector for AMD64 and ARM64
 
 build-injector-linux-amd: install-cross
-	rustup target add aarch64-unknown-linux-musl
 	cross build --target aarch64-unknown-linux-musl --release
 
 build-injector-linux-arm: install-cross
-	rustup target add x86_64-unknown-linux-musl
 	cross build --target x86_64-unknown-linux-musl --release
 
 list-sizes: ## List the sizes of the Zarf injector binaries
@@ -29,4 +27,4 @@ list-sizes: ## List the sizes of the Zarf injector binaries
 	du --si target/aarch64-unknown-linux-musl/release/zarf-injector
 
 build-with-docker: ## Build the Zarf injector using Docker
-	docker run --rm --user "$(id -u)":"$(id -g)" -v $$PWD:/usr/src/zarf-injector -w /usr/src/zarf-injector rust:1.71.0-bookworm make build-injector-linux
+	docker run --rm --user "$(id -u)":"$(id -g)" -e CROSS_CONTAINER_IN_CONTAINER=true -v /var/run/docker.sock:/var/run/docker.sock -v $$PWD:/usr/src/zarf-injector -w /usr/src/zarf-injector rust:1.71.0-bookworm make build-injector-linux
