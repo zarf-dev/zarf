@@ -22,36 +22,6 @@ components:
           - name: REPLICA_COUNT
             description: "Override the number of pod replicas"
             path: replicaCount
-
-      - name: podinfo-oci
-        version: 6.4.0
-        namespace: podinfo-from-oci
-        # In this case `url` will load the helm chart located in the podinfo OCI repository
-        url: oci://ghcr.io/stefanprodan/charts/podinfo
-        valuesFiles:
-          - values.yaml
-
-      - name: podinfo-git
-        version: 6.4.0
-        namespace: podinfo-from-git
-        # In this case `url` will load the helm chart located in the podinfo git repository
-        url: https://github.com/stefanprodan/podinfo.git
-        # By default git will look in the root of the git repository but you can define a sub directory with `gitPath`
-        gitPath: charts/podinfo
-        valuesFiles:
-          - values.yaml
-
-      - name: podinfo-repo
-        version: 6.4.0
-        namespace: podinfo-from-repo
-        # In this case `url` will load the helm chart located in the podinfo helm repository
-        url: https://stefanprodan.github.io/podinfo
-        # By default the chart `name` will be what is used to search a repository but since Zarf chart names must be unique per-component you can override this with `repoName`
-        repoName: podinfo
-        # By default the release name will be the chart name, but you can override this with the `releaseName` key
-        releaseName: cool-release-name
-        valuesFiles:
-          - values.yaml
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
       # This is the cosign signature for the podinfo image for image signature verification
@@ -64,24 +34,6 @@ components:
                 kind: deployment
                 name: podinfo-local
                 namespace: podinfo-from-local-chart
-                condition: available
-          - wait:
-              cluster:
-                kind: deployment
-                name: podinfo-oci
-                namespace: podinfo-from-oci
-                condition: available
-          - wait:
-              cluster:
-                kind: deployment
-                name: podinfo-git
-                namespace: podinfo-from-git
-                condition: available
-          - wait:
-              cluster:
-                kind: deployment
-                name: cool-release-name-podinfo
-                namespace: podinfo-from-repo
                 condition: available
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
