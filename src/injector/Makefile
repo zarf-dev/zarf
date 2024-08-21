@@ -10,6 +10,12 @@ help: ## Display this help information
 clean: ## Clean the build directory
 	rm -rf target
 
+# This is for local dev with mac arm machines since our cross images are not supported on that platform
+build-injector-darwin-arm:
+	rustup target add aarch64-unknown-linux-musl
+	cargo build --target aarch64-unknown-linux-musl --release
+
+# $HOME/.cargo/bin must be added to path for cross to work
 install-cross:
 	cargo install cross --git https://github.com/cross-rs/cross --tag v0.2.5
 
