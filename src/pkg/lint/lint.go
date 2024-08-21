@@ -71,7 +71,7 @@ func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, createOpts ty
 		node := chain.Head()
 		for node != nil {
 			component := node.ZarfComponent
-			compFindings, err := fillObjTemplate(&component, createOpts.SetVariables)
+			compFindings, err := templateZarfObj(&component, createOpts.SetVariables)
 			if err != nil {
 				return nil, err
 			}
@@ -87,12 +87,12 @@ func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, createOpts ty
 	return findings, nil
 }
 
-func fillObjTemplate(rawObj any, setVariables map[string]string) ([]PackageFinding, error) {
+func templateZarfObj(zarfObj any, setVariables map[string]string) ([]PackageFinding, error) {
 	var findings []PackageFinding
 	templateMap := map[string]string{}
 
 	setVarsAndWarn := func(templatePrefix string, deprecated bool) error {
-		yamlTemplates, err := utils.FindYamlTemplates(rawObj, templatePrefix, "###")
+		yamlTemplates, err := utils.FindYamlTemplates(zarfObj, templatePrefix, "###")
 		if err != nil {
 			return err
 		}
@@ -130,7 +130,7 @@ func fillObjTemplate(rawObj any, setVariables map[string]string) ([]PackageFindi
 		return nil, err
 	}
 
-	if err := utils.ReloadYamlTemplate(rawObj, templateMap); err != nil {
+	if err := utils.ReloadYamlTemplate(zarfObj, templateMap); err != nil {
 		return nil, err
 	}
 	return findings, nil

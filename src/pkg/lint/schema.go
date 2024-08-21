@@ -29,7 +29,7 @@ func ValidatePackageSchema(setVariables map[string]string) ([]PackageFinding, er
 		return nil, err
 	}
 
-	_, err = fillObjTemplate(&untypedZarfPackage, setVariables)
+	_, err = templateZarfObj(&untypedZarfPackage, setVariables)
 	if err != nil {
 		return nil, err
 	}

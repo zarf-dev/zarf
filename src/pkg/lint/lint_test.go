@@ -46,7 +46,7 @@ func TestFillObjTemplate(t *testing.T) {
 		},
 	}
 
-	findings, err := fillObjTemplate(&component, SetVariables)
+	findings, err := templateZarfObj(&component, SetVariables)
 	require.NoError(t, err)
 	expectedFindings := []PackageFinding{
 		{
