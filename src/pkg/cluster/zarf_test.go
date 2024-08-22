@@ -285,3 +285,41 @@ func TestRegistryHPA(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, autoscalingv2.DisabledPolicySelect, *disableHpa.Spec.Behavior.ScaleDown.SelectPolicy)
 }
+
+func TestInternalGitServerExists(t *testing.T) {
+	tests := []struct {
+		name          string
+		svc           *corev1.Service
+		expectedExist bool
+		expectedErr   error
+	}{
+		{
+			name:          "Git server exists",
+			svc:           &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ZarfGitServerName, Namespace: ZarfNamespaceName}},
+			expectedExist: true,
+			expectedErr:   nil,
+		},
+		{
+			name:          "Git server does not exist",
+			svc:           nil,
+			expectedExist: false,
+			expectedErr:   nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cs := fake.NewSimpleClientset()
+			cluster := &Cluster{Clientset: cs}
+			ctx := context.Background()
+			if tt.svc != nil {
+				_, err := cs.CoreV1().Services(tt.svc.Namespace).Create(ctx, tt.svc, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			exists, err := cluster.InternalGitServerExists(ctx)
+			require.Equal(t, tt.expectedExist, exists)
+			require.Equal(t, tt.expectedErr, err)
+		})
+	}
+}
