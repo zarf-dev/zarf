@@ -18,7 +18,7 @@ import (
 func TestDosGames(t *testing.T) {
 	t.Log("E2E: Dos games")
 
-	path := filepath.Join("build", fmt.Sprintf("zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch))
+	path := filepath.Join("build", fmt.Sprintf("zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch))
 
 	// Deploy the game
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--confirm")
