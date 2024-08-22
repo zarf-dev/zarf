@@ -576,9 +576,7 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 	CmdToolsUpdateCredsConfirmFlag          = "Confirm updating credentials without prompting"
 	CmdToolsUpdateCredsConfirmProvided      = "Confirm flag specified, continuing without prompting."
 	CmdToolsUpdateCredsConfirmContinue      = "Continue with these changes?"
-	CmdToolsUpdateCredsUnableCreateToken    = "Unable to create the new Gitea artifact token: %s"
 	CmdToolsUpdateCredsUnableUpdateRegistry = "Unable to update Zarf Registry values: %s"
-	CmdToolsUpdateCredsUnableUpdateGit      = "Unable to update Zarf Git Server values: %s"
 	CmdToolsUpdateCredsUnableUpdateAgent    = "Unable to update Zarf Agent TLS secrets: %s"
 	CmdToolsUpdateCredsUnableUpdateCreds    = "Unable to update Zarf credentials"
 
