@@ -1,6 +1,7 @@
 name: Zarf Application Package Publishing
 
 permissions:
+  id-token: write
   contents: read
 
 on:
