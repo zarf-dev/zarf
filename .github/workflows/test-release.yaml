@@ -1,6 +1,7 @@
 name: Release CLI and Packages on Tag
 
 permissions:
+  id-token: write
   contents: read
 
 on:
