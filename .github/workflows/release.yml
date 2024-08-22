@@ -1,7 +1,6 @@
 name: Release CLI and Packages on Tag
 
 permissions:
-  id-token: write
   contents: read
 
 on:
@@ -13,6 +12,7 @@ jobs:
   build-release:
     runs-on: ubuntu-latest
     permissions:
+      id-token: write
       packages: write
     steps:
       # Checkout the repo and setup the tooling for this job
