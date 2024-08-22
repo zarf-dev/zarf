@@ -1,0 +1,32 @@
+name: Release CLI and Packages on Tag
+
+permissions:
+  contents: read
+
+on:
+  push:
+  workflow_dispatch:
+
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Zarf Agent: Login to GHCR"
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          registry: ghcr.io
+          username: dummy
+          password: ${{ github.token }}
+
+      - name: Auth with AWS
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          role-to-assume: ${{ secrets.AWS_KMS_ROLE }}
+          role-session-name: ${{ github.job || github.event.client_payload.pull_request.head.sha || github.sha }}
+          aws-region: us-east-2
+          role-duration-seconds: 3600
+
+
+      - name: "sign image"
+        run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} ghcr.io/zarf-dev/test-signing-image@sha256:aa22bce1c95a25aadfd695caad2a1227fa2aa61833753317356d15500a6e6878

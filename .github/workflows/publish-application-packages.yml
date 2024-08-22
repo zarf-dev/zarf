@@ -32,6 +32,8 @@ jobs:
           username: dummy
           password: ${{ github.token }}
 
+
+
       - name: Build And Publish Application Packages
         # Create the dos-games package with the cosign signature, publish to ghcr and copy the tags to allow 'uname -m' to work
         run: |
@@ -44,7 +46,3 @@ jobs:
 
           # Publish a skeleton of the dos-games package
           zarf package publish examples/dos-games oci://ghcr.io/zarf-dev/packages
-        env:
-          AWS_REGION: ${{ secrets.COSIGN_AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.COSIGN_AWS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.COSIGN_AWS_ACCESS_KEY }}
