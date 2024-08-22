@@ -185,7 +185,7 @@ func (suite *CompositionSuite) Test_2_ComposabilityBadLocalOS() {
 
 	_, stdErr, err := e2e.Zarf(suite.T(), "package", "create", composeTestBadLocalOS, "-o", "build", "--no-color", "--confirm")
 	suite.Error(err)
-	suite.Contains(stdErr, "\"only.localOS\" \"linux\" cannot be redefined as \"windows\" during compose")
+	suite.Contains(e2e.StripMessageFormatting(stdErr), "\"only.localOS\" \"linux\" cannot be redefined as \"windows\" during compose")
 }
 
 func TestCompositionSuite(t *testing.T) {

@@ -96,7 +96,8 @@ func Execute(ctx context.Context) {
 	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
 		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
 	} else {
-		pterm.Error.Println(err.Error())
+		errParagraph := message.Paragraph(err.Error())
+		pterm.Error.Println(errParagraph)
 	}
 	os.Exit(1)
 }
