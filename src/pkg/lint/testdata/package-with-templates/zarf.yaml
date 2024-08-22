@@ -1,0 +1,5 @@
+kind: ZarfPackageConfig
+metadata:
+  name: "###ZARF_PKG_VAR_PACKAGE_NAME###"
+components:
+  - name: "###ZARF_PKG_TMPL_MY_COMP_NAME###"

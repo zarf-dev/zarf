@@ -119,7 +119,7 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 		}
 	}
 
-	if err := Validate(pkg, pc.createOpts.BaseDir); err != nil {
+	if err := Validate(pkg, pc.createOpts.BaseDir, pc.createOpts.SetVariables); err != nil {
 		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
