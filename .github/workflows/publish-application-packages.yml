@@ -1,7 +1,6 @@
 name: Zarf Application Package Publishing
 
 permissions:
-  id-token: write
   contents: read
 
 on:
@@ -11,6 +10,7 @@ jobs:
   publish-packages:
     runs-on: ubuntu-latest
     permissions:
+      id-token: write
       packages: write
     steps:
       - name: "Checkout Repo"
