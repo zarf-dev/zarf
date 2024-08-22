@@ -38,4 +38,4 @@ jobs:
         uses: ./.github/actions/install-tools
 
       - name: "sign image"
-        run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} ghcr.io/zarf-dev/test-signing-image@sha256:aa22bce1c95a25aadfd695caad2a1227fa2aa61833753317356d15500a6e6878
+        run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} ghcr.io/zarf-dev/zarf/test-signing-image@sha256:aa22bce1c95a25aadfd695caad2a1227fa2aa61833753317356d15500a6e6878
