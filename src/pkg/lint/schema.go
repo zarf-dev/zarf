@@ -18,13 +18,18 @@ import (
 var ZarfSchema fs.ReadFileFS
 
 // ValidatePackageSchema checks the Zarf package in the current directory against the Zarf schema
-func ValidatePackageSchema() ([]PackageFinding, error) {
+func ValidatePackageSchema(setVariables map[string]string) ([]PackageFinding, error) {
 	var untypedZarfPackage interface{}
 	if err := utils.ReadYaml(layout.ZarfYAML, &untypedZarfPackage); err != nil {
 		return nil, err
 	}
 
 	jsonSchema, err := ZarfSchema.ReadFile("zarf.schema.json")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = templateZarfObj(&untypedZarfPackage, setVariables)
 	if err != nil {
 		return nil, err
 	}

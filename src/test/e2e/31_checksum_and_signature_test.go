@@ -15,7 +15,7 @@ func TestChecksumAndSignature(t *testing.T) {
 	t.Log("E2E: Checksum and Signature")
 
 	testPackageDirPath := "examples/dos-games"
-	pkgName := fmt.Sprintf("zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
+	pkgName := fmt.Sprintf("zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch)
 	privateKeyFlag := "--signing-key=src/test/packages/zarf-test.prv-key"
 	publicKeyFlag := "--key=src/test/packages/zarf-test.pub"
 
@@ -37,7 +37,7 @@ func TestChecksumAndSignature(t *testing.T) {
 	// Test that we get an error when trying to deploy a package without providing the public key
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgName, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "failed to deploy package: unable to load the package: package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
+	require.Contains(t, e2e.StripMessageFormatting(stdErr), "failed to deploy package: unable to load the package: package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
 
 	// Test that we don't get an error when we remember to provide the public key
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgName, publicKeyFlag, "--confirm")

@@ -1,0 +1,50 @@
+name: Test Import
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+# Abort prior jobs in the same workflow / PR
+concurrency:
+  group: import-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Setup Go
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Run test Go program that imports Zarf
+        run: |
+          cd $(mktemp -d)
+          echo "$GO_MAIN" > main.go
+          go mod init github.com/zarf-dev/test-import
+          go mod edit -replace github.com/zarf-dev/zarf=github.com/${{ github.repository }}@${COMMIT_SHA:0:12}
+          go mod tidy
+          cat go.mod | grep -q ${COMMIT_SHA:0:12}
+          go run main.go
+        env:
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+          GO_MAIN: |
+            package main
+
+            import (
+            	"fmt"
+
+            	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+            	"github.com/zarf-dev/zarf/src/pkg/packager"
+            )
+
+            func main() {
+            	fmt.Println(packager.Packager{})
+            	fmt.Println(v1alpha1.ZarfComponent{})
+            }

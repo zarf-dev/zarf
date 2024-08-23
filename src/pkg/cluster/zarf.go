@@ -20,6 +20,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -287,4 +288,73 @@ func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageNam
 	}
 
 	return installedCharts, nil
+}
+
+// UpdateInternalArtifactServerToken updates the the artifact server token on the internal gitea server and returns it
+func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitServer types.GitServerInfo) (string, error) {
+	tunnel, err := c.NewTunnel(ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
+	if err != nil {
+		return "", err
+	}
+	_, err = tunnel.Connect(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer tunnel.Close()
+	tunnelURL := tunnel.HTTPEndpoint()
+	giteaClient, err := gitea.NewClient(tunnelURL, oldGitServer.PushUsername, oldGitServer.PushPassword)
+	if err != nil {
+		return "", err
+	}
+	var newToken string
+	err = tunnel.Wrap(func() error {
+		newToken, err = giteaClient.CreatePackageRegistryToken(ctx)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return newToken, err
+}
+
+// UpdateInternalGitServerSecret updates the internal gitea server secrets with the new git server info
+func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServer types.GitServerInfo, newGitServer types.GitServerInfo) error {
+	tunnel, err := c.NewTunnel(ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
+	if err != nil {
+		return err
+	}
+	_, err = tunnel.Connect(ctx)
+	if err != nil {
+		return err
+	}
+	defer tunnel.Close()
+	tunnelURL := tunnel.HTTPEndpoint()
+	giteaClient, err := gitea.NewClient(tunnelURL, oldGitServer.PushUsername, oldGitServer.PushPassword)
+	if err != nil {
+		return err
+	}
+	err = tunnel.Wrap(func() error {
+		err := giteaClient.UpdateGitUser(ctx, newGitServer.PullUsername, newGitServer.PullPassword)
+		if err != nil {
+			return err
+		}
+		err = giteaClient.UpdateGitUser(ctx, newGitServer.PushUsername, newGitServer.PushPassword)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// InternalGitServerExists checks if the Zarf internal git server exists in the cluster.
+func (c *Cluster) InternalGitServerExists(ctx context.Context) (bool, error) {
+	_, err := c.Clientset.CoreV1().Services(ZarfNamespaceName).Get(ctx, ZarfGitServerName, metav1.GetOptions{})
+	if err != nil && !kerrors.IsNotFound(err) {
+		return false, err
+	}
+	return !kerrors.IsNotFound(err), nil
 }

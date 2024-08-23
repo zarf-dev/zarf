@@ -53,7 +53,7 @@ jobs:
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@29d86d22a34ea372b1bbf3b2dced2e25ca6b3384 # v3.26.1
+        uses: github/codeql-action/init@f0f3afee809481da311ca3a6ff1ff51d81dbeb24 # v3.26.4
         with:
           languages: ${{ matrix.language }}
           config-file: ./.github/codeql.yaml
@@ -62,6 +62,6 @@ jobs:
         run: make build-cli-linux-amd
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@29d86d22a34ea372b1bbf3b2dced2e25ca6b3384 # v3.26.1
+        uses: github/codeql-action/analyze@f0f3afee809481da311ca3a6ff1ff51d81dbeb24 # v3.26.4
         with:
           category: "/language:${{matrix.language}}"

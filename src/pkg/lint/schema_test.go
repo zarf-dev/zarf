@@ -7,11 +7,13 @@ package lint
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 func TestZarfSchema(t *testing.T) {
@@ -188,6 +190,24 @@ components:
 		}
 		require.ElementsMatch(t, expected, findings)
 	})
+}
+
+func TestValidatePackageSchema(t *testing.T) {
+	ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
+	setVariables := map[string]string{
+		"PACKAGE_NAME": "test-package",
+		"MY_COMP_NAME": "test-comp",
+	}
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(filepath.Join("testdata", "package-with-templates"))
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, os.Chdir(cwd))
+	}()
+	findings, err := ValidatePackageSchema(setVariables)
+	require.Empty(t, findings)
+	require.NoError(t, err)
 }
 
 func TestYqCompat(t *testing.T) {

@@ -40,15 +40,3 @@ repos:
         types: [go]
         language: golang
         pass_filenames: false
-  - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.14.0
-    hooks:
-      - id: check-jsonschema
-        name: "Validate Zarf Configs Against Schema"
-        files: "zarf.yaml"
-        types: [yaml]
-        args: ["--schemafile", "zarf.schema.json"]
-        exclude: |
-          (?x)^(
-            src/test/packages/12-lint/.*
-          )$

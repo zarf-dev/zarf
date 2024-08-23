@@ -91,6 +91,9 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(h.retries)), retry.Delay(500*time.Millisecond))
 	if err != nil {
+		removeMsg := "if you need to remove the failed chart, use `zarf package remove`"
+		installErr := fmt.Errorf("unable to install chart after %d attempts: %w: %s", h.retries, err, removeMsg)
+
 		releases, _ := histClient.Run(h.chart.ReleaseName)
 		previouslyDeployedVersion := 0
 
@@ -101,21 +104,18 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 			}
 		}
 
-		removeMsg := "if you need to remove the failed chart, use `zarf package remove`"
-
 		// No prior releases means this was an initial install.
 		if previouslyDeployedVersion == 0 {
-			return nil, "", fmt.Errorf("unable to install chart after %d attempts: %s", h.retries, removeMsg)
+			return nil, "", installErr
 		}
 
 		// Attempt to rollback on a failed upgrade.
 		spinner.Updatef("Performing chart rollback")
 		err = h.rollbackChart(h.chart.ReleaseName, previouslyDeployedVersion)
 		if err != nil {
-			return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts and unable to rollback: %s", h.retries, removeMsg)
+			return nil, "", fmt.Errorf("%w: unable to rollback: %w", installErr, err)
 		}
-
-		return nil, "", fmt.Errorf("unable to upgrade chart after %d attempts: %s", h.retries, removeMsg)
+		return nil, "", installErr
 	}
 
 	// return any collected connect strings for zarf connect.

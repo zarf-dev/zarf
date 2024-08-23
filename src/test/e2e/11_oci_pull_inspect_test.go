@@ -55,7 +55,7 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 
 	// Verify the package was pulled correctly.
 	suite.FileExists(out)
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", out, "--key", "https://zarf.dev/cosign.pub", "--sbom-out", sbomTmp)
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", out, "--key", "https://raw.githubusercontent.com/zarf-dev/zarf/v0.38.2/cosign.pub", "--sbom-out", sbomTmp)
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, "Validating SBOM checksums")
 	suite.Contains(stdErr, "Package signature validated!")

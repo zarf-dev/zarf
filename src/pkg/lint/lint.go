@@ -36,7 +36,7 @@ func Validate(ctx context.Context, createOpts types.ZarfCreateOptions) error {
 		return err
 	}
 	findings = append(findings, compFindings...)
-	schemaFindings, err := ValidatePackageSchema()
+	schemaFindings, err := ValidatePackageSchema(createOpts.SetVariables)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, createOpts ty
 		node := chain.Head()
 		for node != nil {
 			component := node.ZarfComponent
-			compFindings, err := fillComponentTemplate(&component, createOpts)
+			compFindings, err := templateZarfObj(&component, createOpts.SetVariables)
 			if err != nil {
 				return nil, err
 			}
@@ -87,12 +87,12 @@ func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, createOpts ty
 	return findings, nil
 }
 
-func fillComponentTemplate(c *v1alpha1.ZarfComponent, createOpts types.ZarfCreateOptions) ([]PackageFinding, error) {
+func templateZarfObj(zarfObj any, setVariables map[string]string) ([]PackageFinding, error) {
 	var findings []PackageFinding
 	templateMap := map[string]string{}
 
 	setVarsAndWarn := func(templatePrefix string, deprecated bool) error {
-		yamlTemplates, err := utils.FindYamlTemplates(c, templatePrefix, "###")
+		yamlTemplates, err := utils.FindYamlTemplates(zarfObj, templatePrefix, "###")
 		if err != nil {
 			return err
 		}
@@ -105,7 +105,7 @@ func fillComponentTemplate(c *v1alpha1.ZarfComponent, createOpts types.ZarfCreat
 					Severity:    SevWarn,
 				})
 			}
-			if _, present := createOpts.SetVariables[key]; !present {
+			if _, present := setVariables[key]; !present {
 				unSetTemplates = true
 			}
 		}
@@ -115,7 +115,7 @@ func fillComponentTemplate(c *v1alpha1.ZarfComponent, createOpts types.ZarfCreat
 				Severity:    SevWarn,
 			})
 		}
-		for key, value := range createOpts.SetVariables {
+		for key, value := range setVariables {
 			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
 		}
 		return nil
@@ -130,7 +130,7 @@ func fillComponentTemplate(c *v1alpha1.ZarfComponent, createOpts types.ZarfCreat
 		return nil, err
 	}
 
-	if err := utils.ReloadYamlTemplate(c, templateMap); err != nil {
+	if err := utils.ReloadYamlTemplate(zarfObj, templateMap); err != nil {
 		return nil, err
 	}
 	return findings, nil
