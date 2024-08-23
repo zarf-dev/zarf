@@ -61,7 +61,7 @@ func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 
 	// Ensure that the action was appended
 	suite.Contains(stdErr, `
-  - defenseunicorns/zarf-game:multi-tile-dark
+  - ghcr.io/zarf-dev/doom-game:0.0.1
   actions:
     onDeploy:
       before:

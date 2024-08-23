@@ -23,7 +23,7 @@ import { Tabs, TabItem, LinkCard, CardGrid } from '@astrojs/starlight/components
     # (Select optional components as desired)
 
     # Now you are ready to deploy any Zarf Package, try out our Retro Arcade!!
-    zarf package deploy oci://🦄/dos-games:1.0.0 --key=https://zarf.dev/cosign.pub
+    zarf package deploy oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0 --key=https://zarf.dev/cosign.pub
     # (Select 'Y' to confirm deployment)
     ```
 
@@ -39,7 +39,7 @@ import { Tabs, TabItem, LinkCard, CardGrid } from '@astrojs/starlight/components
     zarf init --confirm
 
     # Deploy the DOS Games package
-    zarf package deploy oci://🦄/dos-games:1.0.0 \
+    zarf package deploy oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0 \
        --key=https://zarf.dev/cosign.pub \
        --confirm
     ```
