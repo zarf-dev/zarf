@@ -11,8 +11,8 @@ import (
 
 	"github.com/agnivade/levenshtein"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ForDeploy creates a new deployment filter.
@@ -40,9 +40,9 @@ var (
 )
 
 // Apply applies the filter.
-func (f *deploymentFilter) Apply(pkg v1alpha1.ZarfPackage) ([]v1alpha1.ZarfComponent, error) {
-	var selectedComponents []v1alpha1.ZarfComponent
-	groupedComponents := map[string][]v1alpha1.ZarfComponent{}
+func (f *deploymentFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
+	var selectedComponents []types.ZarfComponent
+	groupedComponents := map[string][]types.ZarfComponent{}
 	orderedComponentGroups := []string{}
 
 	// Group the components by Name and Group while maintaining order
@@ -66,8 +66,8 @@ func (f *deploymentFilter) Apply(pkg v1alpha1.ZarfPackage) ([]v1alpha1.ZarfCompo
 
 		// NOTE: This does not use forIncludedComponents as it takes group, default and required status into account.
 		for _, groupKey := range orderedComponentGroups {
-			var groupDefault *v1alpha1.ZarfComponent
-			var groupSelected *v1alpha1.ZarfComponent
+			var groupDefault *types.ZarfComponent
+			var groupSelected *types.ZarfComponent
 
 			for _, component := range groupedComponents[groupKey] {
 				// Ensure we have a local version of the component to point to (otherwise the pointer might change on us)
@@ -75,7 +75,7 @@ func (f *deploymentFilter) Apply(pkg v1alpha1.ZarfPackage) ([]v1alpha1.ZarfCompo
 
 				selectState, matchedRequest := includedOrExcluded(component.Name, f.requestedComponents)
 
-				if !component.IsRequired() {
+				if component.IsOptional() {
 					if selectState == excluded {
 						// If the component was explicitly excluded, record the match and continue
 						matchedRequests[matchedRequest] = true
@@ -161,7 +161,7 @@ func (f *deploymentFilter) Apply(pkg v1alpha1.ZarfPackage) ([]v1alpha1.ZarfCompo
 			} else {
 				component := groupedComponents[groupKey][0]
 
-				if component.IsRequired() {
+				if !component.IsOptional() {
 					selectedComponents = append(selectedComponents, component)
 					continue
 				}
