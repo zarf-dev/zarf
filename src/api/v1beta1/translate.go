@@ -64,6 +64,9 @@ func TranslateAlphaPackage(alphaPkg v1alpha1.ZarfPackage) (ZarfPackage, error) {
 	for i := range betaPkg.Components {
 		betaPkg.Components[i].Optional = helpers.BoolPtr(!alphaPkg.Components[i].IsRequired())
 		for j := range betaPkg.Components[i].Charts {
+			if alphaPkg.Components[i].DeprecatedGroup != "" {
+				betaPkg.Metadata.Annotations[fmt.Sprintf("group-%d", i)] = alphaPkg.Components[i].DeprecatedGroup
+			}
 			oldURL := alphaPkg.Components[i].Charts[j].URL
 			if helpers.IsOCIURL(oldURL) {
 				betaPkg.Components[i].Charts[j].OCI.URL = oldURL

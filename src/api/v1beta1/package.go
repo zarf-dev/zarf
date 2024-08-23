@@ -59,6 +59,12 @@ func (pkg ZarfPackage) IsInitConfig() bool {
 	return pkg.Kind == ZarfInitConfig
 }
 
+// GetDeprecatedGroup gets the group of the component, if it is set. This should only be set
+// by for backwards compatibility with v1alpha1 packages.
+func (pkg ZarfPackage) GetDeprecatedGroup(componentIndex int) string {
+	return pkg.Metadata.Annotations[fmt.Sprintf("group-%d", componentIndex)]
+}
+
 // HasImages returns true if one of the components contains an image.
 func (pkg ZarfPackage) HasImages() bool {
 	for _, component := range pkg.Components {
