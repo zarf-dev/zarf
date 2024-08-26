@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 func TestZarfDevGenerate(t *testing.T) {
@@ -24,10 +24,10 @@ func TestZarfDevGenerate(t *testing.T) {
 		version := "6.4.0"
 		gitPath := "charts/podinfo"
 
-		stdOut, stdErr, err := e2e.Zarf("dev", "generate", "podinfo", "--url", url, "--version", version, "--gitPath", gitPath, "--output-directory", tmpDir)
+		stdOut, stdErr, err := e2e.Zarf(t, "dev", "generate", "podinfo", "--url", url, "--version", version, "--gitPath", gitPath, "--output-directory", tmpDir)
 		require.NoError(t, err, stdOut, stdErr)
 
-		zarfPackage := types.ZarfPackage{}
+		zarfPackage := v1alpha1.ZarfPackage{}
 		packageLocation := filepath.Join(tmpDir, layout.ZarfYAML)
 		err = utils.ReadYaml(packageLocation, &zarfPackage)
 		require.NoError(t, err)

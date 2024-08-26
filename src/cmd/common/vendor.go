@@ -10,8 +10,8 @@ import (
 
 	"slices"
 
-	"github.com/defenseunicorns/zarf/src/config"
 	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/config"
 )
 
 var vendorCmds = []string{

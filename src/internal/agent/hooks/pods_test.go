@@ -9,11 +9,11 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/agent/http/admission"
-	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
+	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,11 +50,12 @@ func TestPodMutationWebhook(t *testing.T) {
 					Annotations: map[string]string{"should-be": "mutated"},
 				},
 				Spec: corev1.PodSpec{
-					Containers:     []corev1.Container{{Image: "nginx"}},
-					InitContainers: []corev1.Container{{Image: "busybox"}},
+					Containers:     []corev1.Container{{Name: "nginx", Image: "nginx"}},
+					InitContainers: []corev1.Container{{Name: "different", Image: "busybox"}},
 					EphemeralContainers: []corev1.EphemeralContainer{
 						{
 							EphemeralContainerCommon: corev1.EphemeralContainerCommon{
+								Name:  "alpine",
 								Image: "alpine",
 							},
 						},
@@ -85,6 +86,15 @@ func TestPodMutationWebhook(t *testing.T) {
 						"should-be":  "mutated",
 					},
 				),
+				operations.ReplacePatchOperation(
+					"/metadata/annotations",
+					map[string]string{
+						"zarf.dev/original-image-nginx":     "nginx",
+						"zarf.dev/original-image-alpine":    "alpine",
+						"zarf.dev/original-image-different": "busybox",
+						"should-be":                         "mutated",
+					},
+				),
 			},
 			code: http.StatusOK,
 		},
@@ -108,7 +118,7 @@ func TestPodMutationWebhook(t *testing.T) {
 					Labels: nil,
 				},
 				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{Image: "nginx"}},
+					Containers: []corev1.Container{{Name: "nginx", Image: "nginx"}},
 				},
 			}),
 			patch: []operations.PatchOperation{
@@ -123,6 +133,12 @@ func TestPodMutationWebhook(t *testing.T) {
 				operations.ReplacePatchOperation(
 					"/metadata/labels",
 					map[string]string{"zarf-agent": "patched"},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/annotations",
+					map[string]string{
+						"zarf.dev/original-image-nginx": "nginx",
+					},
 				),
 			},
 			code: http.StatusOK,

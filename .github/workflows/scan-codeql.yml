@@ -16,11 +16,21 @@ on:
       - "adr/**"
       - "docs/**"
       - "CODEOWNERS"
+  merge_group:
+    paths-ignore:
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+      - "CODEOWNERS"
   schedule:
     - cron: "32 2 * * 5"
 
 jobs:
-  validate:
+  codeql-scan:
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -36,14 +46,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Setup golang
         uses: ./.github/actions/golang
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@e8893c57a1f3a2b659b6b55564fdfdbbd2982911 # v3.24.0
+        uses: github/codeql-action/init@2c779ab0d087cd7fe7b826087247c2c81f27bfa6 # v3.26.5
         with:
           languages: ${{ matrix.language }}
           config-file: ./.github/codeql.yaml
@@ -52,6 +62,6 @@ jobs:
         run: make build-cli-linux-amd
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@e8893c57a1f3a2b659b6b55564fdfdbbd2982911 # v3.24.0
+        uses: github/codeql-action/analyze@2c779ab0d087cd7fe7b826087247c2c81f27bfa6 # v3.26.5
         with:
           category: "/language:${{matrix.language}}"

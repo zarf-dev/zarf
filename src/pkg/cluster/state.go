@@ -7,21 +7,22 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
 
-	"github.com/fatih/color"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/pki"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Zarf Cluster Constants.
@@ -35,15 +36,16 @@ const (
 
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
 func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitOptions) error {
-	var distro string
-
 	spinner := message.NewProgressSpinner("Gathering cluster state information")
 	defer spinner.Stop()
 
 	// Attempt to load an existing state prior to init.
 	// NOTE: We are ignoring the error here because we don't really expect a state to exist yet.
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
-	state, _ := c.LoadZarfState(ctx)
+	state, err := c.LoadZarfState(ctx)
+	if err != nil && !kerrors.IsNotFound(err) {
+		return fmt.Errorf("failed to check for existing state: %w", err)
+	}
 
 	// If state is nil, this is a new cluster.
 	if state == nil {
@@ -52,7 +54,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 
 		if initOptions.ApplianceMode {
 			// If the K3s component is being deployed, skip distro detection.
-			distro = DistroIsK3s
+			state.Distro = DistroIsK3s
 			state.ZarfAppliance = true
 		} else {
 			// Otherwise, trying to detect the K8s distro type.
@@ -67,18 +69,19 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 			if err != nil {
 				return err
 			}
-			distro = detectDistro(nodeList.Items[0], namespaceList.Items)
+			state.Distro = detectDistro(nodeList.Items[0], namespaceList.Items)
 		}
 
-		if distro != DistroIsUnknown {
-			spinner.Updatef("Detected K8s distro %s", distro)
+		if state.Distro != DistroIsUnknown {
+			spinner.Updatef("Detected K8s distro %s", state.Distro)
 		}
-
-		// Defaults
-		state.Distro = distro
 
 		// Setup zarf agent PKI
-		state.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
+		agentTLS, err := pki.GeneratePKI(config.ZarfAgentHost)
+		if err != nil {
+			return err
+		}
+		state.AgentTLS = agentTLS
 
 		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
@@ -96,8 +99,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 			namespaceCopy := namespace
 			_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
 			if err != nil {
-				// This is not a hard failure, but we should log it.
-				message.WarnErrf(err, "Unable to mark the namespace %s as ignored by Zarf Agent", namespace.Name)
+				return fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
 			}
 		}
 
@@ -127,27 +129,13 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		// The default SA is required for pods to start properly.
 		saCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
-		err = func(ctx context.Context, ns, name string) error {
-			timer := time.NewTimer(0)
-			defer timer.Stop()
-			for {
-				select {
-				case <-ctx.Done():
-					return fmt.Errorf("failed to get service account %s/%s: %w", ns, name, ctx.Err())
-				case <-timer.C:
-					_, err := c.Clientset.CoreV1().ServiceAccounts(ns).Get(ctx, name, metav1.GetOptions{})
-					if err != nil && !kerrors.IsNotFound(err) {
-						return err
-					}
-					if kerrors.IsNotFound(err) {
-						message.Debug("Service account %s/%s not found, retrying...", ns, name)
-						timer.Reset(1 * time.Second)
-						continue
-					}
-					return nil
-				}
+		err = retry.Do(func() error {
+			_, err := c.Clientset.CoreV1().ServiceAccounts(ZarfNamespaceName).Get(saCtx, "default", metav1.GetOptions{})
+			if err != nil {
+				return err
 			}
-		}(saCtx, ZarfNamespaceName, "default")
+			return nil
+		}, retry.Context(saCtx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
 		if err != nil {
 			return fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
@@ -206,19 +194,16 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.
 func (c *Cluster) LoadZarfState(ctx context.Context) (state *types.ZarfState, err error) {
-	// Set up the API connection
+	stateErr := errors.New("failed to load the Zarf State from the cluster, has Zarf been initiated?")
 	secret, err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).Get(ctx, ZarfStateSecretName, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("%w. %s", err, message.ColorWrap("Did you remember to zarf init?", color.Bold))
+		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
-
 	err = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
-
 	c.debugPrintZarfState(state)
-
 	return state, nil
 }
 
@@ -250,7 +235,11 @@ func (c *Cluster) debugPrintZarfState(state *types.ZarfState) {
 	// this is a shallow copy, nested pointers WILL NOT be copied
 	oldState := *state
 	sanitized := c.sanitizeZarfState(&oldState)
-	message.Debugf("ZarfState - %s", message.JSONValue(sanitized))
+	b, err := json.MarshalIndent(sanitized, "", "  ")
+	if err != nil {
+		return
+	}
+	message.Debugf("ZarfState - %s", string(b))
 }
 
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.
@@ -301,21 +290,14 @@ func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions
 	if slices.Contains(services, message.RegistryKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, initOptions.RegistryInfo)
-		// Set the state of the internal registry if it has changed
-		// TODO: Internal registry should be a function of the address and not a property.
-		if newState.RegistryInfo.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, newState.RegistryInfo.NodePort) {
-			newState.RegistryInfo.InternalRegistry = true
-		} else {
-			newState.RegistryInfo.InternalRegistry = false
-		}
 
 		// Set the new passwords if they should be autogenerated
-		if newState.RegistryInfo.PushPassword == oldState.RegistryInfo.PushPassword && oldState.RegistryInfo.InternalRegistry {
+		if newState.RegistryInfo.PushPassword == oldState.RegistryInfo.PushPassword && oldState.RegistryInfo.IsInternal() {
 			if newState.RegistryInfo.PushPassword, err = helpers.RandomString(types.ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
 		}
-		if newState.RegistryInfo.PullPassword == oldState.RegistryInfo.PullPassword && oldState.RegistryInfo.InternalRegistry {
+		if newState.RegistryInfo.PullPassword == oldState.RegistryInfo.PullPassword && oldState.RegistryInfo.IsInternal() {
 			if newState.RegistryInfo.PullPassword, err = helpers.RandomString(types.ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
@@ -325,21 +307,13 @@ func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions
 		// TODO: Replace use of reflections with explicit setting
 		newState.GitServer = helpers.MergeNonZero(newState.GitServer, initOptions.GitServer)
 
-		// Set the state of the internal git server if it has changed
-		// TODO: Internal server should be a function of the address and not a property.
-		if newState.GitServer.Address == types.ZarfInClusterGitServiceURL {
-			newState.GitServer.InternalServer = true
-		} else {
-			newState.GitServer.InternalServer = false
-		}
-
 		// Set the new passwords if they should be autogenerated
-		if newState.GitServer.PushPassword == oldState.GitServer.PushPassword && oldState.GitServer.InternalServer {
+		if newState.GitServer.PushPassword == oldState.GitServer.PushPassword && oldState.GitServer.IsInternal() {
 			if newState.GitServer.PushPassword, err = helpers.RandomString(types.ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
 		}
-		if newState.GitServer.PullPassword == oldState.GitServer.PullPassword && oldState.GitServer.InternalServer {
+		if newState.GitServer.PullPassword == oldState.GitServer.PullPassword && oldState.GitServer.IsInternal() {
 			if newState.GitServer.PullPassword, err = helpers.RandomString(types.ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
@@ -349,21 +323,17 @@ func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions
 		// TODO: Replace use of reflections with explicit setting
 		newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, initOptions.ArtifactServer)
 
-		// Set the state of the internal artifact server if it has changed
-		// TODO: Internal server should be a function of the address and not a property.
-		if newState.ArtifactServer.Address == types.ZarfInClusterArtifactServiceURL {
-			newState.ArtifactServer.InternalServer = true
-		} else {
-			newState.ArtifactServer.InternalServer = false
-		}
-
 		// Set an empty token if it should be autogenerated
-		if newState.ArtifactServer.PushToken == oldState.ArtifactServer.PushToken && oldState.ArtifactServer.InternalServer {
+		if newState.ArtifactServer.PushToken == oldState.ArtifactServer.PushToken && oldState.ArtifactServer.IsInternal() {
 			newState.ArtifactServer.PushToken = ""
 		}
 	}
 	if slices.Contains(services, message.AgentKey) {
-		newState.AgentTLS = pki.GeneratePKI(config.ZarfAgentHost)
+		agentTLS, err := pki.GeneratePKI(config.ZarfAgentHost)
+		if err != nil {
+			return nil, err
+		}
+		newState.AgentTLS = agentTLS
 	}
 
 	return &newState, nil

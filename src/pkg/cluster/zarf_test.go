@@ -16,8 +16,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // TestPackageSecretNeedsWait verifies that Zarf waits for webhooks to complete correctly.
@@ -27,7 +28,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 	type testCase struct {
 		name            string
 		deployedPackage *types.DeployedPackage
-		component       types.ZarfComponent
+		component       v1alpha1.ZarfComponent
 		skipWebhooks    bool
 		needsWait       bool
 		waitSeconds     int
@@ -43,7 +44,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:      "NoWebhooks",
-			component: types.ZarfComponent{Name: componentName},
+			component: v1alpha1.ZarfComponent{Name: componentName},
 			deployedPackage: &types.DeployedPackage{
 				Name:              packageName,
 				ComponentWebhooks: map[string]map[string]types.Webhook{},
@@ -54,7 +55,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:      "WebhookRunning",
-			component: types.ZarfComponent{Name: componentName},
+			component: v1alpha1.ZarfComponent{Name: componentName},
 			deployedPackage: &types.DeployedPackage{
 				Name: packageName,
 				ComponentWebhooks: map[string]map[string]types.Webhook{
@@ -73,7 +74,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		// Ensure we only wait on running webhooks for the provided component
 		{
 			name:      "WebhookRunningOnDifferentComponent",
-			component: types.ZarfComponent{Name: componentName},
+			component: v1alpha1.ZarfComponent{Name: componentName},
 			deployedPackage: &types.DeployedPackage{
 				Name: packageName,
 				ComponentWebhooks: map[string]map[string]types.Webhook{
@@ -91,7 +92,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:      "WebhookSucceeded",
-			component: types.ZarfComponent{Name: componentName},
+			component: v1alpha1.ZarfComponent{Name: componentName},
 			deployedPackage: &types.DeployedPackage{
 				Name: packageName,
 				ComponentWebhooks: map[string]map[string]types.Webhook{
@@ -108,7 +109,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:      "WebhookFailed",
-			component: types.ZarfComponent{Name: componentName},
+			component: v1alpha1.ZarfComponent{Name: componentName},
 			deployedPackage: &types.DeployedPackage{
 				Name: packageName,
 				ComponentWebhooks: map[string]map[string]types.Webhook{
@@ -125,7 +126,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:      "WebhookRemoving",
-			component: types.ZarfComponent{Name: componentName},
+			component: v1alpha1.ZarfComponent{Name: componentName},
 			deployedPackage: &types.DeployedPackage{
 				Name: packageName,
 				ComponentWebhooks: map[string]map[string]types.Webhook{
@@ -142,11 +143,11 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:      "SkipWaitForYOLO",
-			component: types.ZarfComponent{Name: componentName},
+			component: v1alpha1.ZarfComponent{Name: componentName},
 			deployedPackage: &types.DeployedPackage{
 				Name: packageName,
-				Data: types.ZarfPackage{
-					Metadata: types.ZarfMetadata{
+				Data: v1alpha1.ZarfPackage{
+					Metadata: v1alpha1.ZarfMetadata{
 						YOLO: true,
 					},
 				},
@@ -165,7 +166,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		},
 		{
 			name:         "SkipWebhooksFlagUsed",
-			component:    types.ZarfComponent{Name: componentName},
+			component:    v1alpha1.ZarfComponent{Name: componentName},
 			skipWebhooks: true,
 			deployedPackage: &types.DeployedPackage{
 				Name: packageName,
@@ -283,4 +284,42 @@ func TestRegistryHPA(t *testing.T) {
 	disableHpa, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Get(ctx, hpa.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 	require.Equal(t, autoscalingv2.DisabledPolicySelect, *disableHpa.Spec.Behavior.ScaleDown.SelectPolicy)
+}
+
+func TestInternalGitServerExists(t *testing.T) {
+	tests := []struct {
+		name          string
+		svc           *corev1.Service
+		expectedExist bool
+		expectedErr   error
+	}{
+		{
+			name:          "Git server exists",
+			svc:           &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ZarfGitServerName, Namespace: ZarfNamespaceName}},
+			expectedExist: true,
+			expectedErr:   nil,
+		},
+		{
+			name:          "Git server does not exist",
+			svc:           nil,
+			expectedExist: false,
+			expectedErr:   nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cs := fake.NewSimpleClientset()
+			cluster := &Cluster{Clientset: cs}
+			ctx := context.Background()
+			if tt.svc != nil {
+				_, err := cs.CoreV1().Services(tt.svc.Namespace).Create(ctx, tt.svc, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			exists, err := cluster.InternalGitServerExists(ctx)
+			require.Equal(t, tt.expectedExist, exists)
+			require.Equal(t, tt.expectedErr, err)
+		})
+	}
 }

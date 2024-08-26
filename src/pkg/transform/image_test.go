@@ -13,12 +13,13 @@ import (
 var imageRefs = []string{
 	"nginx",
 	"nginx:1.23.3",
-	"defenseunicorns/zarf-agent:v0.22.1",
-	"defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
+	"zarf-dev/zarf-agent:v0.22.1",
+	"zarf-dev/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
 	"busybox:latest@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
 	"ghcr.io/stefanprodan/podinfo:6.3.3",
-	"registry1.dso.mil/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0",
+	"registry1.dso.mil/ironbank/opensource/zarf-dev/zarf/zarf-agent:v0.25.0",
 	"gitlab.com/project/gitea/gitea:1.19.3-rootless-zarf-3431384023",
+	"oci://10.43.130.183:5000/stefanprodan/manifests/podinfo",
 }
 
 var badImageRefs = []string{
@@ -32,12 +33,13 @@ func TestImageTransformHost(t *testing.T) {
 		// Normal git repos and references for pushing/pulling
 		"gitlab.com/project/library/nginx:latest-zarf-3793515731",
 		"gitlab.com/project/library/nginx:1.23.3-zarf-3793515731",
-		"gitlab.com/project/defenseunicorns/zarf-agent:v0.22.1-zarf-4283503412",
-		"gitlab.com/project/defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
+		"gitlab.com/project/zarf-dev/zarf-agent:v0.22.1-zarf-2183797434",
+		"gitlab.com/project/zarf-dev/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
 		"gitlab.com/project/library/busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
 		"gitlab.com/project/stefanprodan/podinfo:6.3.3-zarf-2985051089",
-		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0-zarf-2003217571",
+		"gitlab.com/project/ironbank/opensource/zarf-dev/zarf/zarf-agent:v0.25.0-zarf-1211467612",
 		"gitlab.com/project/gitea/gitea:1.19.3-rootless-zarf-3431384023",
+		"gitlab.com/project/stefanprodan/manifests/podinfo:latest-zarf-531355090",
 	}
 
 	for idx, ref := range imageRefs {
@@ -56,12 +58,13 @@ func TestImageTransformHostWithoutChecksum(t *testing.T) {
 	var expectedResult = []string{
 		"gitlab.com/project/library/nginx:latest",
 		"gitlab.com/project/library/nginx:1.23.3",
-		"gitlab.com/project/defenseunicorns/zarf-agent:v0.22.1",
-		"gitlab.com/project/defenseunicorns/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
+		"gitlab.com/project/zarf-dev/zarf-agent:v0.22.1",
+		"gitlab.com/project/zarf-dev/zarf-agent@sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de",
 		"gitlab.com/project/library/busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79",
 		"gitlab.com/project/stefanprodan/podinfo:6.3.3",
-		"gitlab.com/project/ironbank/opensource/defenseunicorns/zarf/zarf-agent:v0.25.0",
+		"gitlab.com/project/ironbank/opensource/zarf-dev/zarf/zarf-agent:v0.25.0",
 		"gitlab.com/project/gitea/gitea:1.19.3-rootless-zarf-3431384023",
+		"gitlab.com/project/stefanprodan/manifests/podinfo:latest",
 	}
 
 	for idx, ref := range imageRefs {
@@ -80,12 +83,13 @@ func TestParseImageRef(t *testing.T) {
 	var expectedResult = [][]string{
 		{"docker.io/", "library/nginx", "latest", ""},
 		{"docker.io/", "library/nginx", "1.23.3", ""},
-		{"docker.io/", "defenseunicorns/zarf-agent", "v0.22.1", ""},
-		{"docker.io/", "defenseunicorns/zarf-agent", "", "sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de"},
+		{"docker.io/", "zarf-dev/zarf-agent", "v0.22.1", ""},
+		{"docker.io/", "zarf-dev/zarf-agent", "", "sha256:84605f731c6a18194794c51e70021c671ab064654b751aa57e905bce55be13de"},
 		{"docker.io/", "library/busybox", "latest", "sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79"},
 		{"ghcr.io/", "stefanprodan/podinfo", "6.3.3", ""},
-		{"registry1.dso.mil/", "ironbank/opensource/defenseunicorns/zarf/zarf-agent", "v0.25.0", ""},
+		{"registry1.dso.mil/", "ironbank/opensource/zarf-dev/zarf/zarf-agent", "v0.25.0", ""},
 		{"gitlab.com/", "project/gitea/gitea", "1.19.3-rootless-zarf-3431384023", ""},
+		{"10.43.130.183:5000/", "stefanprodan/manifests/podinfo", "latest", ""},
 	}
 
 	for idx, ref := range imageRefs {

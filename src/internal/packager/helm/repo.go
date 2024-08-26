@@ -5,19 +5,20 @@
 package helm
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/git"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/git"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/cli"
@@ -32,7 +33,7 @@ import (
 )
 
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
-func (h *Helm) PackageChart(cosignKeyPath string) error {
+func (h *Helm) PackageChart(ctx context.Context, cosignKeyPath string) error {
 	if len(h.chart.URL) > 0 {
 		url, refPlain, err := transform.GitURLSplitRef(h.chart.URL)
 		// check if the chart is a git url with a ref (if an error is returned url will be empty)
@@ -47,19 +48,18 @@ func (h *Helm) PackageChart(cosignKeyPath string) error {
 				h.chart.URL = fmt.Sprintf("%s@%s", h.chart.URL, h.chart.Version)
 			}
 
-			err = h.PackageChartFromGit(cosignKeyPath)
+			err = h.PackageChartFromGit(ctx, cosignKeyPath)
 			if err != nil {
 				return fmt.Errorf("unable to pull the chart %q from git: %w", h.chart.Name, err)
 			}
 		} else {
-			err = h.DownloadPublishedChart(cosignKeyPath)
+			err = h.DownloadPublishedChart(ctx, cosignKeyPath)
 			if err != nil {
 				return fmt.Errorf("unable to download the published chart %q: %w", h.chart.Name, err)
 			}
 		}
-
 	} else {
-		err := h.PackageChartFromLocalFiles(cosignKeyPath)
+		err := h.PackageChartFromLocalFiles(ctx, cosignKeyPath)
 		if err != nil {
 			return fmt.Errorf("unable to package the %q chart: %w", h.chart.Name, err)
 		}
@@ -68,7 +68,7 @@ func (h *Helm) PackageChart(cosignKeyPath string) error {
 }
 
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
-func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
+func (h *Helm) PackageChartFromLocalFiles(ctx context.Context, cosignKeyPath string) error {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.chart.Name, h.chart.Version, h.chart.LocalPath)
 	defer spinner.Stop()
 
@@ -82,7 +82,7 @@ func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 	var saved string
 	temp := filepath.Join(h.chartPath, "temp")
 	if _, ok := cl.(loader.DirLoader); ok {
-		err = h.buildChartDependencies(spinner)
+		err = h.buildChartDependencies()
 		if err != nil {
 			return fmt.Errorf("unable to build dependencies for the chart: %w", err)
 		}
@@ -102,7 +102,7 @@ func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 	}
 
 	// Finalize the chart
-	err = h.finalizeChartPackage(saved, cosignKeyPath)
+	err = h.finalizeChartPackage(ctx, saved, cosignKeyPath)
 	if err != nil {
 		return err
 	}
@@ -113,12 +113,12 @@ func (h *Helm) PackageChartFromLocalFiles(cosignKeyPath string) error {
 }
 
 // PackageChartFromGit is a special implementation of chart archiving that supports the https://p1.dso.mil/#/products/big-bang/ model.
-func (h *Helm) PackageChartFromGit(cosignKeyPath string) error {
+func (h *Helm) PackageChartFromGit(ctx context.Context, cosignKeyPath string) error {
 	spinner := message.NewProgressSpinner("Processing helm chart %s", h.chart.Name)
 	defer spinner.Stop()
 
 	// Retrieve the repo containing the chart
-	gitPath, err := DownloadChartFromGitToTemp(h.chart.URL, spinner)
+	gitPath, err := DownloadChartFromGitToTemp(ctx, h.chart.URL)
 	if err != nil {
 		return err
 	}
@@ -126,11 +126,11 @@ func (h *Helm) PackageChartFromGit(cosignKeyPath string) error {
 
 	// Set the directory for the chart and package it
 	h.chart.LocalPath = filepath.Join(gitPath, h.chart.GitPath)
-	return h.PackageChartFromLocalFiles(cosignKeyPath)
+	return h.PackageChartFromLocalFiles(ctx, cosignKeyPath)
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
-func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
+func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string) error {
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.chart.Name, h.chart.Version, h.chart.URL)
 	defer spinner.Stop()
 
@@ -157,7 +157,7 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 	if registry.IsOCI(h.chart.URL) {
 		regClient, err = registry.NewClient(registry.ClientOptEnableCache(true))
 		if err != nil {
-			spinner.Fatalf(err, "Unable to create a new registry client")
+			return fmt.Errorf("unable to create the new registry client: %w", err)
 		}
 		chartURL = h.chart.URL
 		// Explicitly set the pull version for OCI
@@ -221,7 +221,7 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 	}
 
 	// Finalize the chart
-	err = h.finalizeChartPackage(saved, cosignKeyPath)
+	err = h.finalizeChartPackage(ctx, saved, cosignKeyPath)
 	if err != nil {
 		return err
 	}
@@ -232,20 +232,19 @@ func (h *Helm) DownloadPublishedChart(cosignKeyPath string) error {
 }
 
 // DownloadChartFromGitToTemp downloads a chart from git into a temp directory
-func DownloadChartFromGitToTemp(url string, spinner *message.Spinner) (string, error) {
-	// Create the Git configuration and download the repo
-	gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
-
-	// Download the git repo to a temporary directory
-	err := gitCfg.DownloadRepoToTemp(url)
+func DownloadChartFromGitToTemp(ctx context.Context, url string) (string, error) {
+	path, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return "", fmt.Errorf("unable to download the git repo %s: %w", url, err)
+		return "", fmt.Errorf("unable to create tmpdir: %w", err)
 	}
-
-	return gitCfg.GitPath, nil
+	repository, err := git.Clone(ctx, path, url, true)
+	if err != nil {
+		return "", err
+	}
+	return repository.Path(), nil
 }
 
-func (h *Helm) finalizeChartPackage(saved, cosignKeyPath string) error {
+func (h *Helm) finalizeChartPackage(ctx context.Context, saved, cosignKeyPath string) error {
 	// Ensure the name is consistent for deployments
 	destinationTarball := StandardName(h.chartPath, h.chart) + ".tgz"
 	err := os.Rename(saved, destinationTarball)
@@ -253,19 +252,19 @@ func (h *Helm) finalizeChartPackage(saved, cosignKeyPath string) error {
 		return fmt.Errorf("unable to save the final chart tarball: %w", err)
 	}
 
-	err = h.packageValues(cosignKeyPath)
+	err = h.packageValues(ctx, cosignKeyPath)
 	if err != nil {
 		return fmt.Errorf("unable to process the values for the package: %w", err)
 	}
 	return nil
 }
 
-func (h *Helm) packageValues(cosignKeyPath string) error {
+func (h *Helm) packageValues(ctx context.Context, cosignKeyPath string) error {
 	for valuesIdx, path := range h.chart.ValuesFiles {
 		dst := StandardValuesName(h.valuesPath, h.chart, valuesIdx)
 
 		if helpers.IsURL(path) {
-			if err := utils.DownloadToFile(path, dst, cosignKeyPath); err != nil {
+			if err := utils.DownloadToFile(ctx, path, dst, cosignKeyPath); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 			}
 		} else {
@@ -279,11 +278,11 @@ func (h *Helm) packageValues(cosignKeyPath string) error {
 }
 
 // buildChartDependencies builds the helm chart dependencies
-func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
+func (h *Helm) buildChartDependencies() error {
 	// Download and build the specified dependencies
 	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
 	if err != nil {
-		spinner.Fatalf(err, "Unable to create a new registry client")
+		return fmt.Errorf("unable to create a new registry client: %w", err)
 	}
 
 	h.settings = cli.New()
@@ -307,18 +306,20 @@ func (h *Helm) buildChartDependencies(spinner *message.Spinner) error {
 
 	// Build the deps from the helm chart
 	err = man.Build()
-	if e, ok := err.(downloader.ErrRepoNotFound); ok {
+	var notFoundErr *downloader.ErrRepoNotFound
+	if errors.As(err, &notFoundErr) {
 		// If we encounter a repo not found error point the user to `zarf tools helm repo add`
-		message.Warnf("%s. Please add the missing repo(s) via the following:", e.Error())
-		for _, repository := range e.Repos {
+		message.Warnf("%s. Please add the missing repo(s) via the following:", notFoundErr.Error())
+		for _, repository := range notFoundErr.Repos {
 			message.ZarfCommand(fmt.Sprintf("tools helm repo add <your-repo-name> %s", repository))
 		}
-	} else if err != nil {
-		// Warn the user of any issues but don't fail - any actual issues will cause a fail during packaging (e.g. the charts we are building may exist already, we just can't get updates)
+		return err
+	}
+	if err != nil {
 		message.ZarfCommand("tools helm dependency build --verify")
 		message.Warnf("Unable to perform a rebuild of Helm dependencies: %s", err.Error())
+		return err
 	}
-
 	return nil
 }
 

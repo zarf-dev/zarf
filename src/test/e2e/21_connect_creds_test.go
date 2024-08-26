@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 )
 
 type RegistryResponse struct {
@@ -23,28 +23,35 @@ type RegistryResponse struct {
 
 func TestConnectAndCreds(t *testing.T) {
 	t.Log("E2E: Connect")
-	e2e.SetupWithCluster(t)
+	ctx := context.Background()
 
-	prevAgentSecretData, _, err := e2e.Kubectl("get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
+	prevAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	c, err := cluster.NewCluster()
+	require.NoError(t, err)
+	// Init the state variable
+	oldState, err := c.LoadZarfState(ctx)
+	require.NoError(t, err)
 
 	connectToZarfServices(ctx, t)
 
-	stdOut, stdErr, err := e2e.Zarf("tools", "update-creds", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	newAgentSecretData, _, err := e2e.Kubectl("get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
+	newAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
-	require.NotEqual(t, prevAgentSecretData, newAgentSecretData, "agent secrets should not be the same")
+	newState, err := c.LoadZarfState(ctx)
+	require.NoError(t, err)
+	require.NotEqual(t, prevAgentSecretData, newAgentSecretData)
+	require.NotEqual(t, oldState.ArtifactServer.PushToken, newState.ArtifactServer.PushToken)
+	require.NotEqual(t, oldState.GitServer.PushPassword, newState.GitServer.PushPassword)
 
 	connectToZarfServices(ctx, t)
 }
 
 func TestMetrics(t *testing.T) {
 	t.Log("E2E: Emits metrics")
-	e2e.SetupWithCluster(t)
 
 	c, err := cluster.NewCluster()
 	require.NoError(t, err)
@@ -83,25 +90,25 @@ func TestMetrics(t *testing.T) {
 
 func connectToZarfServices(ctx context.Context, t *testing.T) {
 	// Make the Registry contains the images we expect
-	stdOut, stdErr, err := e2e.Zarf("tools", "registry", "catalog")
+	stdOut, stdErr, err := e2e.Zarf(t, "tools", "registry", "catalog")
 	require.NoError(t, err, stdOut, stdErr)
 	registryList := strings.Split(strings.Trim(stdOut, "\n "), "\n")
 
 	// We assert greater than or equal to since the base init has 8 images
 	// HOWEVER during an upgrade we could have mismatched versions/names resulting in more images
 	require.GreaterOrEqual(t, len(registryList), 3)
-	require.Contains(t, stdOut, "defenseunicorns/zarf/agent")
+	require.Contains(t, stdOut, "zarf-dev/zarf/agent")
 	require.Contains(t, stdOut, "gitea/gitea")
 	require.Contains(t, stdOut, "library/registry")
 
 	// Get the git credentials
-	stdOut, stdErr, err = e2e.Zarf("tools", "get-creds", "git")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "git")
 	require.NoError(t, err, stdOut, stdErr)
 	gitPushPassword := strings.TrimSpace(stdOut)
-	stdOut, stdErr, err = e2e.Zarf("tools", "get-creds", "git-readonly")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "git-readonly")
 	require.NoError(t, err, stdOut, stdErr)
 	gitPullPassword := strings.TrimSpace(stdOut)
-	stdOut, stdErr, err = e2e.Zarf("tools", "get-creds", "artifact")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "artifact")
 	require.NoError(t, err, stdOut, stdErr)
 	gitArtifactToken := strings.TrimSpace(stdOut)
 

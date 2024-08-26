@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/test"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/test"
 )
 
 var (
@@ -38,7 +38,6 @@ func TestMain(m *testing.M) {
 	e2e.ZarfBinPath = filepath.Join("build", test.GetCLIName())
 	e2e.ApplianceMode = os.Getenv(applianceModeEnvVar) == "true"
 	e2e.ApplianceModeKeep = os.Getenv(applianceModeKeepEnvVar) == "true"
-	e2e.RunClusterTests = os.Getenv(skipK8sEnvVar) != "true"
 
 	message.SetLogLevel(message.TraceLevel)
 

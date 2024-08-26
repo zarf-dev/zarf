@@ -10,6 +10,16 @@ on:
       - "adr/**"
       - "docs/**"
       - "CODEOWNERS"
+  merge_group:
+    paths-ignore:
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+      - "CODEOWNERS"
   push:
     # Running unit tests on main gives codecov a base to compare PRs against
     branches:
@@ -24,11 +34,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  validate-unit:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Setup golang
         uses: ./.github/actions/golang
@@ -37,6 +47,6 @@ jobs:
         run: make test-unit
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c # v4.4.1
+        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

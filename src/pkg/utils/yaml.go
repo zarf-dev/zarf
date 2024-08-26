@@ -8,6 +8,7 @@ package utils
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -15,8 +16,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/fatih/color"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/lexer"
@@ -26,6 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 	k8syaml "sigs.k8s.io/yaml"
+
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 const yamlEscape = "\x1b"
@@ -93,7 +94,7 @@ func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) {
 		outputYAML = strings.Replace(outputYAML, key, value, 1)
 	}
 
-	if config.NoColor {
+	if !message.ColorEnabled() {
 		// If no color is specified strip any color codes from the output - https://regex101.com/r/YFyIwC/2
 		ansiRegex := regexp.MustCompile(`\x1b\[(.*?)m`)
 		outputYAML = ansiRegex.ReplaceAllString(outputYAML, "")
@@ -124,8 +125,6 @@ func AddRootHint(hints map[string]string, rootKey string, hintText string) map[s
 
 // ReadYaml reads a yaml file and unmarshals it into a given config.
 func ReadYaml(path string, destConfig any) error {
-	message.Debugf("Reading YAML at %s", path)
-
 	file, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -198,7 +197,7 @@ func SplitYAML(yamlData []byte) ([]*unstructured.Unstructured, error) {
 	for _, yml := range ymls {
 		u := &unstructured.Unstructured{}
 		if err := k8syaml.Unmarshal([]byte(yml), u); err != nil {
-			return objs, fmt.Errorf("failed to unmarshal manifest: %#v", err)
+			return objs, fmt.Errorf("failed to unmarshal manifest: %w", err)
 		}
 		objs = append(objs, u)
 	}
@@ -218,10 +217,10 @@ func SplitYAMLToString(yamlData []byte) ([]string, error) {
 	for {
 		ext := runtime.RawExtension{}
 		if err := d.Decode(&ext); err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
-			return objs, fmt.Errorf("failed to unmarshal manifest: %#v", err)
+			return objs, fmt.Errorf("failed to unmarshal manifest: %w", err)
 		}
 		ext.Raw = bytes.TrimSpace(ext.Raw)
 		if len(ext.Raw) == 0 || bytes.Equal(ext.Raw, []byte("null")) {

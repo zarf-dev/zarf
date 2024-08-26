@@ -6,13 +6,14 @@ package filters
 import (
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestCopyFilter(t *testing.T) {
-	pkg := types.ZarfPackage{
-		Components: []types.ZarfComponent{
+	pkg := v1alpha1.ZarfPackage{
+		Components: []v1alpha1.ZarfComponent{
 			{
 				Images: []string{
 					"example.com/include-image-tag:latest",

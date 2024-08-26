@@ -17,9 +17,12 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/avast/retry-go/v4"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/gitea"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // GetDeployedZarfPackages gets metadata information about packages that have been deployed to the cluster.
@@ -54,14 +57,17 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
-func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string) (deployedPackage *types.DeployedPackage, err error) {
-	// Get the secret that describes the deployed package
+func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string) (*types.DeployedPackage, error) {
 	secret, err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).Get(ctx, config.ZarfPackagePrefix+packageName, metav1.GetOptions{})
 	if err != nil {
-		return deployedPackage, err
+		return nil, err
 	}
-
-	return deployedPackage, json.Unmarshal(secret.Data["data"], &deployedPackage)
+	deployedPackage := &types.DeployedPackage{}
+	err = json.Unmarshal(secret.Data["data"], deployedPackage)
+	if err != nil {
+		return nil, err
+	}
+	return deployedPackage, nil
 }
 
 // StripZarfLabelsAndSecretsFromNamespaces removes metadata and secrets from existing namespaces no longer manged by Zarf.
@@ -104,8 +110,7 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 }
 
 // PackageSecretNeedsWait checks if a package component has a running webhook that needs to be waited on.
-func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage, component types.ZarfComponent, skipWebhooks bool) (needsWait bool, waitSeconds int, hookName string) {
-
+func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage, component v1alpha1.ZarfComponent, skipWebhooks bool) (needsWait bool, waitSeconds int, hookName string) {
 	// Skip checking webhook status when '--skip-webhooks' flag is provided and for YOLO packages
 	if skipWebhooks || deployedPackage == nil || deployedPackage.Data.Metadata.YOLO {
 		return false, 0, ""
@@ -129,8 +134,8 @@ func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage,
 }
 
 // RecordPackageDeploymentAndWait records the deployment of a package to the cluster and waits for any webhooks to complete.
-func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int, component types.ZarfComponent, skipWebhooks bool) (deployedPackage *types.DeployedPackage, err error) {
-	deployedPackage, err = c.RecordPackageDeployment(ctx, pkg, components, connectStrings, generation)
+func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int, component v1alpha1.ZarfComponent, skipWebhooks bool) (*types.DeployedPackage, error) {
+	deployedPackage, err := c.RecordPackageDeployment(ctx, pkg, components, connectStrings, generation)
 	if err != nil {
 		return nil, err
 	}
@@ -141,43 +146,35 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg types.
 		return deployedPackage, nil
 	}
 
+	spinner := message.NewProgressSpinner("Waiting for webhook %q to complete for component %q", hookName, component.Name)
+	defer spinner.Stop()
+
 	waitDuration := types.DefaultWebhookWaitDuration
 	if waitSeconds > 0 {
 		waitDuration = time.Duration(waitSeconds) * time.Second
 	}
-
 	waitCtx, cancel := context.WithTimeout(ctx, waitDuration)
 	defer cancel()
-
-	spinner := message.NewProgressSpinner("Waiting for webhook %q to complete for component %q", hookName, component.Name)
-	defer spinner.Stop()
-
-	timer := time.NewTimer(0)
-	defer timer.Stop()
-
-	for {
-		select {
-		case <-waitCtx.Done():
-			return nil, fmt.Errorf("error waiting for webhook %q to complete for component %q: %w", hookName, component.Name, waitCtx.Err())
-		case <-timer.C:
-			deployedPackage, err = c.GetDeployedPackage(ctx, deployedPackage.Name)
-			if err != nil {
-				return nil, err
-			}
-
-			packageNeedsWait, _, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
-			if !packageNeedsWait {
-				spinner.Success()
-				return deployedPackage, nil
-			}
-
-			timer.Reset(1 * time.Second)
+	deployedPackage, err = retry.DoWithData(func() (*types.DeployedPackage, error) {
+		deployedPackage, err = c.GetDeployedPackage(waitCtx, deployedPackage.Name)
+		if err != nil {
+			return nil, err
 		}
+		packageNeedsWait, _, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
+		if !packageNeedsWait {
+			return deployedPackage, nil
+		}
+		return deployedPackage, nil
+	}, retry.Context(waitCtx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
+	if err != nil {
+		return nil, err
 	}
+	spinner.Success()
+	return deployedPackage, nil
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg types.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int) (deployedPackage *types.DeployedPackage, err error) {
+func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int) (deployedPackage *types.DeployedPackage, err error) {
 	packageName := pkg.Metadata.Name
 
 	// Attempt to load information about webhooks for the package
@@ -278,7 +275,7 @@ func (c *Cluster) DisableRegHPAScaleDown(ctx context.Context) error {
 }
 
 // GetInstalledChartsForComponent returns any installed Helm Charts for the provided package component.
-func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component types.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component v1alpha1.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
 	deployedPackage, err := c.GetDeployedPackage(ctx, packageName)
 	if err != nil {
 		return installedCharts, err
@@ -291,4 +288,73 @@ func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageNam
 	}
 
 	return installedCharts, nil
+}
+
+// UpdateInternalArtifactServerToken updates the the artifact server token on the internal gitea server and returns it
+func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitServer types.GitServerInfo) (string, error) {
+	tunnel, err := c.NewTunnel(ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
+	if err != nil {
+		return "", err
+	}
+	_, err = tunnel.Connect(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer tunnel.Close()
+	tunnelURL := tunnel.HTTPEndpoint()
+	giteaClient, err := gitea.NewClient(tunnelURL, oldGitServer.PushUsername, oldGitServer.PushPassword)
+	if err != nil {
+		return "", err
+	}
+	var newToken string
+	err = tunnel.Wrap(func() error {
+		newToken, err = giteaClient.CreatePackageRegistryToken(ctx)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return newToken, err
+}
+
+// UpdateInternalGitServerSecret updates the internal gitea server secrets with the new git server info
+func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServer types.GitServerInfo, newGitServer types.GitServerInfo) error {
+	tunnel, err := c.NewTunnel(ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
+	if err != nil {
+		return err
+	}
+	_, err = tunnel.Connect(ctx)
+	if err != nil {
+		return err
+	}
+	defer tunnel.Close()
+	tunnelURL := tunnel.HTTPEndpoint()
+	giteaClient, err := gitea.NewClient(tunnelURL, oldGitServer.PushUsername, oldGitServer.PushPassword)
+	if err != nil {
+		return err
+	}
+	err = tunnel.Wrap(func() error {
+		err := giteaClient.UpdateGitUser(ctx, newGitServer.PullUsername, newGitServer.PullPassword)
+		if err != nil {
+			return err
+		}
+		err = giteaClient.UpdateGitUser(ctx, newGitServer.PushUsername, newGitServer.PushPassword)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// InternalGitServerExists checks if the Zarf internal git server exists in the cluster.
+func (c *Cluster) InternalGitServerExists(ctx context.Context) (bool, error) {
+	_, err := c.Clientset.CoreV1().Services(ZarfNamespaceName).Get(ctx, ZarfGitServerName, metav1.GetOptions{})
+	if err != nil && !kerrors.IsNotFound(err) {
+		return false, err
+	}
+	return !kerrors.IsNotFound(err), nil
 }

@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 )
 
 func TestYOLOMode(t *testing.T) {
@@ -22,16 +22,14 @@ func TestYOLOMode(t *testing.T) {
 		return
 	}
 
-	e2e.SetupWithCluster(t)
-
 	// Destroy the cluster to test Zarf cleaning up after itself
-	stdOut, stdErr, err := e2e.Zarf("destroy", "--confirm", "--remove-components")
+	stdOut, stdErr, err := e2e.Zarf(t, "destroy", "--confirm", "--remove-components")
 	require.NoError(t, err, stdOut, stdErr)
 
 	path := fmt.Sprintf("build/zarf-package-yolo-%s.tar.zst", e2e.Arch)
 
 	// Deploy the YOLO package
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	c, err := cluster.NewCluster()
@@ -45,7 +43,7 @@ func TestYOLOMode(t *testing.T) {
 	require.NoError(t, err, resp)
 	require.Equal(t, 200, resp.StatusCode)
 
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "yolo", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "yolo", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
@@ -54,11 +52,10 @@ func TestDevDeploy(t *testing.T) {
 	if e2e.ApplianceMode {
 		return
 	}
-	e2e.SetupWithCluster(t)
 
-	stdOut, stdErr, err := e2e.Zarf("dev", "deploy", "examples/dos-games")
+	stdOut, stdErr, err := e2e.Zarf(t, "dev", "deploy", "examples/dos-games")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf("package", "remove", "dos-games", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

@@ -13,17 +13,18 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/zoci"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/extensions/bigbang"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 var (
@@ -43,10 +44,10 @@ func NewSkeletonCreator(createOpts types.ZarfCreateOptions, publishOpts types.Za
 }
 
 // LoadPackageDefinition loads and configure a zarf.yaml file when creating and publishing a skeleton package.
-func (sc *SkeletonCreator) LoadPackageDefinition(ctx context.Context, src *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
+func (sc *SkeletonCreator) LoadPackageDefinition(ctx context.Context, src *layout.PackagePaths) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
 	pkg, warnings, err = src.ReadZarfYAML()
 	if err != nil {
-		return types.ZarfPackage{}, nil, err
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
 	pkg.Metadata.Architecture = config.GetArch()
@@ -54,7 +55,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(ctx context.Context, src *layou
 	// Compose components into a single zarf.yaml file
 	pkg, composeWarnings, err := ComposeComponents(ctx, pkg, sc.createOpts.Flavor)
 	if err != nil {
-		return types.ZarfPackage{}, nil, err
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
 	pkg.Metadata.Architecture = zoci.SkeletonArch
@@ -63,15 +64,15 @@ func (sc *SkeletonCreator) LoadPackageDefinition(ctx context.Context, src *layou
 
 	pkg.Components, err = sc.processExtensions(pkg.Components, src)
 	if err != nil {
-		return types.ZarfPackage{}, nil, err
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
 	for _, warning := range warnings {
 		message.Warn(warning)
 	}
 
-	if err := pkg.Validate(); err != nil {
-		return types.ZarfPackage{}, nil, err
+	if err := Validate(pkg, sc.createOpts.BaseDir, sc.createOpts.SetVariables); err != nil {
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
 	return pkg, warnings, nil
@@ -80,7 +81,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(ctx context.Context, src *layou
 // Assemble updates all components of the loaded Zarf package with necessary modifications for package assembly.
 //
 // It processes each component to ensure correct structure and resource locations.
-func (sc *SkeletonCreator) Assemble(_ context.Context, dst *layout.PackagePaths, components []types.ZarfComponent, _ string) error {
+func (sc *SkeletonCreator) Assemble(_ context.Context, dst *layout.PackagePaths, components []v1alpha1.ZarfComponent, _ string) error {
 	for _, component := range components {
 		c, err := sc.addComponent(component, dst)
 		if err != nil {
@@ -101,7 +102,7 @@ func (sc *SkeletonCreator) Assemble(_ context.Context, dst *layout.PackagePaths,
 // - writes the loaded zarf.yaml to disk
 //
 // - signs the package
-func (sc *SkeletonCreator) Output(_ context.Context, dst *layout.PackagePaths, pkg *types.ZarfPackage) (err error) {
+func (sc *SkeletonCreator) Output(_ context.Context, dst *layout.PackagePaths, pkg *v1alpha1.ZarfPackage) (err error) {
 	for _, component := range pkg.Components {
 		if err := dst.Components.Archive(component, false); err != nil {
 			return err
@@ -125,7 +126,7 @@ func (sc *SkeletonCreator) Output(_ context.Context, dst *layout.PackagePaths, p
 	return dst.SignPackage(sc.publishOpts.SigningKeyPath, sc.publishOpts.SigningKeyPassword, !config.CommonOptions.Confirm)
 }
 
-func (sc *SkeletonCreator) processExtensions(components []types.ZarfComponent, layout *layout.PackagePaths) (processedComponents []types.ZarfComponent, err error) {
+func (sc *SkeletonCreator) processExtensions(components []v1alpha1.ZarfComponent, layout *layout.PackagePaths) (processedComponents []v1alpha1.ZarfComponent, err error) {
 	// Create component paths and process extensions for each component.
 	for _, c := range components {
 		componentPaths, err := layout.Components.Create(c)
@@ -146,7 +147,7 @@ func (sc *SkeletonCreator) processExtensions(components []types.ZarfComponent, l
 	return processedComponents, nil
 }
 
-func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layout.PackagePaths) (updatedComponent *types.ZarfComponent, err error) {
+func (sc *SkeletonCreator) addComponent(component v1alpha1.ZarfComponent, dst *layout.PackagePaths) (updatedComponent *v1alpha1.ZarfComponent, err error) {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
 	updatedComponent = &component
@@ -168,7 +169,7 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 	// TODO: (@WSTARR) Shim the skeleton component's create action dirs to be empty. This prevents actions from failing by cd'ing into directories that will be flattened.
 	updatedComponent.Actions.OnCreate.Defaults.Dir = ""
 
-	resetActions := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
+	resetActions := func(actions []v1alpha1.ZarfComponentAction) []v1alpha1.ZarfComponentAction {
 		for idx := range actions {
 			actions[idx].Dir = nil
 		}
@@ -182,7 +183,6 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 
 	// If any helm charts are defined, process them.
 	for chartIdx, chart := range component.Charts {
-
 		if chart.LocalPath != "" {
 			rel := filepath.Join(layout.ChartsDir, fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			dst := filepath.Join(componentPaths.Base, rel)
@@ -210,8 +210,6 @@ func (sc *SkeletonCreator) addComponent(component types.ZarfComponent, dst *layo
 	}
 
 	for filesIdx, file := range component.Files {
-		message.Debugf("Loading %#v", file)
-
 		if helpers.IsURL(file.Source) {
 			continue
 		}

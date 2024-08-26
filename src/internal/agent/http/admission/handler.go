@@ -12,9 +12,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 	corev1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,10 +35,7 @@ func NewHandler() *Handler {
 
 // Serve returns an http.HandlerFunc for an admission webhook.
 func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
-	message.Debugf("http.Serve(%#v)", hook)
 	return func(w http.ResponseWriter, r *http.Request) {
-		message.Debugf("http.Serve()(writer, %#v)", r.URL)
-
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != http.MethodPost {
 			http.Error(w, lang.AgentErrInvalidMethod, http.StatusMethodNotAllowed)
@@ -119,9 +116,6 @@ func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 			http.Error(w, lang.AgentErrMarshalResponse, http.StatusInternalServerError)
 			return
 		}
-
-		message.Debug("PATCH: ", string(admissionResponse.Response.Patch))
-		message.Debug("RESPONSE: ", string(jsonResponse))
 
 		message.Infof(lang.AgentInfoWebhookAllowed, r.URL.Path, review.Request.Operation, result.Allowed)
 		w.WriteHeader(http.StatusOK)

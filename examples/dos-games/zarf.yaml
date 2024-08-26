@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: dos-games
   description: Simple example to load classic DOS games into K8s in the airgap
-  version: 1.0.0
+  version: 1.1.0
 
 components:
   - name: baseline
@@ -14,7 +14,7 @@ components:
           - manifests/deployment.yaml
           - manifests/service.yaml
     images:
-      - defenseunicorns/zarf-game:multi-tile-dark
+      - ghcr.io/zarf-dev/doom-game:0.0.1
     actions:
       onDeploy:
         after:

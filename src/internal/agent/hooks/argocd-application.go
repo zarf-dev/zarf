@@ -10,12 +10,12 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -48,7 +48,6 @@ type ApplicationSource struct {
 
 // NewApplicationMutationHook creates a new instance of the ArgoCD Application mutation hook.
 func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
-	message.Debug("hooks.NewApplicationMutationHook()")
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
 			return mutateApplication(ctx, r, cluster)
@@ -63,7 +62,7 @@ func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster) o
 func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (result *operations.Result, err error) {
 	state, err := cluster.LoadZarfState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(lang.AgentErrGetState, err)
+		return nil, err
 	}
 
 	message.Debugf("Using the url of (%s) to mutate the ArgoCD Application", state.GitServer.Address)
@@ -72,8 +71,6 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	if err = json.Unmarshal(r.Object.Raw, &app); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
-
-	message.Debugf("Data %v", string(r.Object.Raw))
 
 	patches := []operations.PatchOperation{}
 

@@ -7,12 +7,12 @@ package filters
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 // ComponentFilterStrategy is a strategy interface for filtering components.
 type ComponentFilterStrategy interface {
-	Apply(types.ZarfPackage) ([]types.ZarfComponent, error)
+	Apply(v1alpha1.ZarfPackage) ([]v1alpha1.ZarfComponent, error)
 }
 
 // comboFilter is a filter that applies a sequence of filters.
@@ -21,7 +21,7 @@ type comboFilter struct {
 }
 
 // Apply applies the filter.
-func (f *comboFilter) Apply(pkg types.ZarfPackage) ([]types.ZarfComponent, error) {
+func (f *comboFilter) Apply(pkg v1alpha1.ZarfPackage) ([]v1alpha1.ZarfComponent, error) {
 	result := pkg
 
 	for _, filter := range f.filters {

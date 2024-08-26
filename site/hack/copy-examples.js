@@ -25,7 +25,7 @@ async function copyExamples() {
     }
     const mdx = parsed.get("x-mdx").trim();
     examples.push(dir);
-    const repo = "https://github.com/defenseunicorns/zarf";
+    const repo = "https://github.com/zarf-dev/zarf";
     const link = new URL(`${repo}/edit/main/examples/${dir}/zarf.yaml`).toString();
     const fm = `---
 title: "${dir}"

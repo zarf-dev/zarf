@@ -4,12 +4,50 @@
 package cluster
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
+
+	"github.com/zarf-dev/zarf/src/types"
 )
+
+func TestListConnections(t *testing.T) {
+	t.Parallel()
+
+	c := &Cluster{
+		Clientset: fake.NewSimpleClientset(),
+	}
+	svc := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "connect",
+			Labels: map[string]string{
+				ZarfConnectLabelName: "connect name",
+			},
+			Annotations: map[string]string{
+				ZarfConnectAnnotationDescription: "description",
+				ZarfConnectAnnotationURL:         "url",
+			},
+		},
+		Spec: corev1.ServiceSpec{},
+	}
+	_, err := c.Clientset.CoreV1().Services(svc.ObjectMeta.Namespace).Create(context.Background(), &svc, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	connections, err := c.ListConnections(context.Background())
+	require.NoError(t, err)
+	expectedConnections := types.ConnectStrings{
+		"connect name": types.ConnectString{
+			Description: "description",
+			URL:         "url",
+		},
+	}
+	require.Equal(t, expectedConnections, connections)
+}
 
 func TestServiceInfoFromNodePortURL(t *testing.T) {
 	t.Parallel()
@@ -21,6 +59,7 @@ func TestServiceInfoFromNodePortURL(t *testing.T) {
 		expectedErr       string
 		expectedNamespace string
 		expectedName      string
+		expectedIP        string
 		expectedPort      int
 	}{
 		{
@@ -85,6 +124,7 @@ func TestServiceInfoFromNodePortURL(t *testing.T) {
 								Port:     3333,
 							},
 						},
+						ClusterIP: "good-ip",
 					},
 				},
 				{
@@ -105,6 +145,7 @@ func TestServiceInfoFromNodePortURL(t *testing.T) {
 			},
 			expectedNamespace: "good-namespace",
 			expectedName:      "good-service",
+			expectedIP:        "good-ip",
 			expectedPort:      3333,
 		},
 	}
@@ -113,15 +154,16 @@ func TestServiceInfoFromNodePortURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			namespace, name, port, err := serviceInfoFromNodePortURL(tt.services, tt.nodePortURL)
+			svc, port, err := serviceInfoFromNodePortURL(tt.services, tt.nodePortURL)
 			if tt.expectedErr != "" {
 				require.EqualError(t, err, tt.expectedErr)
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, tt.expectedNamespace, namespace)
-			require.Equal(t, tt.expectedName, name)
+			require.Equal(t, tt.expectedNamespace, svc.Namespace)
+			require.Equal(t, tt.expectedName, svc.Name)
 			require.Equal(t, tt.expectedPort, port)
+			require.Equal(t, tt.expectedIP, svc.Spec.ClusterIP)
 		})
 	}
 }

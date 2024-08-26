@@ -10,12 +10,12 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
-func componentFromQuery(t *testing.T, q string) types.ZarfComponent {
-	c := types.ZarfComponent{
+func componentFromQuery(t *testing.T, q string) v1alpha1.ZarfComponent {
+	c := v1alpha1.ZarfComponent{
 		Name: q,
 	}
 
@@ -48,8 +48,8 @@ func componentFromQuery(t *testing.T, q string) types.ZarfComponent {
 	return c
 }
 
-func componentMatrix(_ *testing.T) []types.ZarfComponent {
-	var components []types.ZarfComponent
+func componentMatrix(_ *testing.T) []v1alpha1.ZarfComponent {
+	var components []v1alpha1.ZarfComponent
 
 	defaultValues := []bool{true, false}
 	requiredValues := []interface{}{nil, true, false}
@@ -92,7 +92,7 @@ func componentMatrix(_ *testing.T) []types.ZarfComponent {
 					}
 				}
 
-				c := types.ZarfComponent{
+				c := v1alpha1.ZarfComponent{
 					Name:            name.String(),
 					Default:         defaultValue,
 					DeprecatedGroup: groupValue,
@@ -111,24 +111,23 @@ func componentMatrix(_ *testing.T) []types.ZarfComponent {
 }
 
 func TestDeployFilter_Apply(t *testing.T) {
-
 	possibilities := componentMatrix(t)
 
 	tests := map[string]struct {
-		pkg                types.ZarfPackage
+		pkg                v1alpha1.ZarfPackage
 		optionalComponents string
-		want               []types.ZarfComponent
+		want               []v1alpha1.ZarfComponent
 		expectedErr        error
 	}{
 		"Test when version is less than v0.33.0 w/ no optional components selected": {
-			pkg: types.ZarfPackage{
-				Build: types.ZarfBuildData{
+			pkg: v1alpha1.ZarfPackage{
+				Build: v1alpha1.ZarfBuildData{
 					Version: "v0.32.0",
 				},
 				Components: possibilities,
 			},
 			optionalComponents: "",
-			want: []types.ZarfComponent{
+			want: []v1alpha1.ZarfComponent{
 				componentFromQuery(t, "required=<nil> && default=true"),
 				componentFromQuery(t, "required=true && default=true"),
 				componentFromQuery(t, "required=false && default=true"),
@@ -138,14 +137,14 @@ func TestDeployFilter_Apply(t *testing.T) {
 			},
 		},
 		"Test when version is less than v0.33.0 w/ some optional components selected": {
-			pkg: types.ZarfPackage{
-				Build: types.ZarfBuildData{
+			pkg: v1alpha1.ZarfPackage{
+				Build: v1alpha1.ZarfBuildData{
 					Version: "v0.32.0",
 				},
 				Components: possibilities,
 			},
 			optionalComponents: strings.Join([]string{"required=false", "required=<nil> && group=bar && idx=5 && default=false", "-required=true"}, ","),
-			want: []types.ZarfComponent{
+			want: []v1alpha1.ZarfComponent{
 				componentFromQuery(t, "required=<nil> && default=true"),
 				componentFromQuery(t, "required=true && default=true"),
 				componentFromQuery(t, "required=false && default=true"),
@@ -158,11 +157,11 @@ func TestDeployFilter_Apply(t *testing.T) {
 			},
 		},
 		"Test failing when group has no default and no selection was made": {
-			pkg: types.ZarfPackage{
-				Build: types.ZarfBuildData{
+			pkg: v1alpha1.ZarfPackage{
+				Build: v1alpha1.ZarfBuildData{
 					Version: "v0.32.0",
 				},
-				Components: []types.ZarfComponent{
+				Components: []v1alpha1.ZarfComponent{
 					componentFromQuery(t, "group=foo && default=false"),
 					componentFromQuery(t, "group=foo && default=false"),
 				},
@@ -171,11 +170,11 @@ func TestDeployFilter_Apply(t *testing.T) {
 			expectedErr:        ErrNoDefaultOrSelection,
 		},
 		"Test failing when multiple are selected from the same group": {
-			pkg: types.ZarfPackage{
-				Build: types.ZarfBuildData{
+			pkg: v1alpha1.ZarfPackage{
+				Build: v1alpha1.ZarfBuildData{
 					Version: "v0.32.0",
 				},
-				Components: []types.ZarfComponent{
+				Components: []v1alpha1.ZarfComponent{
 					componentFromQuery(t, "group=foo && default=true"),
 					componentFromQuery(t, "group=foo && default=false"),
 				},
@@ -184,8 +183,8 @@ func TestDeployFilter_Apply(t *testing.T) {
 			expectedErr:        ErrMultipleSameGroup,
 		},
 		"Test failing when no components are found that match the query": {
-			pkg: types.ZarfPackage{
-				Build: types.ZarfBuildData{
+			pkg: v1alpha1.ZarfPackage{
+				Build: v1alpha1.ZarfBuildData{
 					Version: "v0.32.0",
 				},
 				Components: possibilities,

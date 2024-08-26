@@ -11,12 +11,12 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/agent/operations"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -36,7 +36,6 @@ type RepoCreds struct {
 
 // NewRepositorySecretMutationHook creates a new instance of the ArgoCD repository secret mutation hook.
 func NewRepositorySecretMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
-	message.Debug("hooks.NewRepositoryMutationHook()")
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
 			return mutateRepositorySecret(ctx, r, cluster)
@@ -55,7 +54,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 
 	state, err := cluster.LoadZarfState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(lang.AgentErrGetState, err)
+		return nil, err
 	}
 
 	message.Infof("Using the url of (%s) to mutate the ArgoCD Repository Secret", state.GitServer.Address)

@@ -5,26 +5,28 @@
 package cmd
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/cmd/common"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/cmd/common"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/types"
 
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/packager"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/packager"
 )
 
 var packageCmd = &cobra.Command{
@@ -39,7 +41,7 @@ var packageCreateCmd = &cobra.Command{
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageCreateShort,
 	Long:    lang.CmdPackageCreateLong,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
 
 		var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
@@ -52,12 +54,16 @@ var packageCreateCmd = &cobra.Command{
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient, err := packager.New(&pkgConfig)
+		if err != nil {
+			return err
+		}
 		defer pkgClient.ClearTempPaths()
 
 		if err := pkgClient.Create(cmd.Context()); err != nil {
-			message.Fatalf(err, lang.CmdPackageCreateErr, err.Error())
+			return fmt.Errorf("failed to create package: %w", err)
 		}
+		return nil
 	},
 }
 
@@ -67,21 +73,29 @@ var packageDeployCmd = &cobra.Command{
 	Short:   lang.CmdPackageDeployShort,
 	Long:    lang.CmdPackageDeployLong,
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		packageSource, err := choosePackage(args)
+		if err != nil {
+			return err
+		}
+		pkgConfig.PkgOpts.PackageSource = packageSource
 
 		v := common.GetViper()
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient, err := packager.New(&pkgConfig)
+		if err != nil {
+			return err
+		}
 		defer pkgClient.ClearTempPaths()
 
 		ctx := cmd.Context()
 
 		if err := pkgClient.Deploy(ctx); err != nil {
-			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
+			return fmt.Errorf("failed to deploy package: %w", err)
 		}
+		return nil
 	},
 }
 
@@ -92,17 +106,21 @@ var packageMirrorCmd = &cobra.Command{
 	Long:    lang.CmdPackageMirrorLong,
 	Example: lang.CmdPackageMirrorExample,
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
-
-		pkgClient := packager.NewOrDie(&pkgConfig)
-		defer pkgClient.ClearTempPaths()
-
-		ctx := cmd.Context()
-
-		if err := pkgClient.Mirror(ctx); err != nil {
-			message.Fatalf(err, lang.CmdPackageDeployErr, err.Error())
+	RunE: func(cmd *cobra.Command, args []string) error {
+		packageSource, err := choosePackage(args)
+		if err != nil {
+			return err
 		}
+		pkgConfig.PkgOpts.PackageSource = packageSource
+		pkgClient, err := packager.New(&pkgConfig)
+		if err != nil {
+			return err
+		}
+		defer pkgClient.ClearTempPaths()
+		if err := pkgClient.Mirror(cmd.Context()); err != nil {
+			return fmt.Errorf("failed to mirror package: %w", err)
+		}
+		return nil
 	},
 }
 
@@ -112,17 +130,25 @@ var packageInspectCmd = &cobra.Command{
 	Short:   lang.CmdPackageInspectShort,
 	Long:    lang.CmdPackageInspectLong,
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
-
-		src := identifyAndFallbackToClusterSource()
-
-		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
-		defer pkgClient.ClearTempPaths()
-
-		if err := pkgClient.Inspect(cmd.Context()); err != nil {
-			message.Fatalf(err, lang.CmdPackageInspectErr, err.Error())
+	RunE: func(cmd *cobra.Command, args []string) error {
+		packageSource, err := choosePackage(args)
+		if err != nil {
+			return err
 		}
+		pkgConfig.PkgOpts.PackageSource = packageSource
+		src, err := identifyAndFallbackToClusterSource()
+		if err != nil {
+			return err
+		}
+		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
+		if err != nil {
+			return err
+		}
+		defer pkgClient.ClearTempPaths()
+		if err := pkgClient.Inspect(cmd.Context()); err != nil {
+			return fmt.Errorf("failed to inspect package: %w", err)
+		}
+		return nil
 	},
 	ValidArgsFunction: getPackageCompletionArgs,
 }
@@ -131,11 +157,18 @@ var packageListCmd = &cobra.Command{
 	Use:     "list",
 	Aliases: []string{"l", "ls"},
 	Short:   lang.CmdPackageListShort,
-	Run: func(cmd *cobra.Command, _ []string) {
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
+		defer cancel()
+		c, err := cluster.NewClusterWithWait(timeoutCtx)
+		if err != nil {
+			return err
+		}
+
 		ctx := cmd.Context()
-		deployedZarfPackages, err := common.NewClusterOrDie(ctx).GetDeployedZarfPackages(ctx)
+		deployedZarfPackages, err := c.GetDeployedZarfPackages(ctx)
 		if err != nil && len(deployedZarfPackages) == 0 {
-			message.Fatalf(err, lang.CmdPackageListNoPackageWarn)
+			return fmt.Errorf("unable to get the packages deployed to the cluster: %w", err)
 		}
 
 		// Populate a matrix of all the deployed packages
@@ -158,8 +191,9 @@ var packageListCmd = &cobra.Command{
 
 		// Print out any unmarshalling errors
 		if err != nil {
-			message.Fatalf(err, lang.CmdPackageListUnmarshalErr)
+			return fmt.Errorf("unable to read all of the packages deployed to the cluster: %w", err)
 		}
+		return nil
 	},
 }
 
@@ -168,19 +202,25 @@ var packageRemoveCmd = &cobra.Command{
 	Aliases: []string{"u", "rm"},
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageRemoveShort,
-	Run: func(cmd *cobra.Command, args []string) {
-		pkgConfig.PkgOpts.PackageSource = choosePackage(args)
-
-		src := identifyAndFallbackToClusterSource()
-
-		pkgClient := packager.NewOrDie(&pkgConfig, packager.WithSource(src))
-		defer pkgClient.ClearTempPaths()
-
-		ctx := cmd.Context()
-
-		if err := pkgClient.Remove(ctx); err != nil {
-			message.Fatalf(err, lang.CmdPackageRemoveErr, err.Error())
+	RunE: func(cmd *cobra.Command, args []string) error {
+		packageSource, err := choosePackage(args)
+		if err != nil {
+			return err
 		}
+		pkgConfig.PkgOpts.PackageSource = packageSource
+		src, err := identifyAndFallbackToClusterSource()
+		if err != nil {
+			return err
+		}
+		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
+		if err != nil {
+			return err
+		}
+		defer pkgClient.ClearTempPaths()
+		if err := pkgClient.Remove(cmd.Context()); err != nil {
+			return fmt.Errorf("unable to remove the package with an error of: %w", err)
+		}
+		return nil
 	},
 	ValidArgsFunction: getPackageCompletionArgs,
 }
@@ -190,11 +230,11 @@ var packagePublishCmd = &cobra.Command{
 	Short:   lang.CmdPackagePublishShort,
 	Example: lang.CmdPackagePublishExample,
 	Args:    cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		pkgConfig.PkgOpts.PackageSource = args[0]
 
 		if !helpers.IsOCIURL(args[1]) {
-			message.Fatal(nil, lang.CmdPackageRegistryPrefixErr)
+			return errors.New("Registry must be prefixed with 'oci://'")
 		}
 		parts := strings.Split(strings.TrimPrefix(args[1], helpers.OCIURLPrefix), "/")
 		ref := registry.Reference{
@@ -203,7 +243,7 @@ var packagePublishCmd = &cobra.Command{
 		}
 		err := ref.ValidateRegistry()
 		if err != nil {
-			message.Fatalf(nil, "%s", err.Error())
+			return err
 		}
 
 		if helpers.IsDir(pkgConfig.PkgOpts.PackageSource) {
@@ -213,12 +253,16 @@ var packagePublishCmd = &cobra.Command{
 
 		pkgConfig.PublishOpts.PackageDestination = ref.String()
 
-		pkgClient := packager.NewOrDie(&pkgConfig)
+		pkgClient, err := packager.New(&pkgConfig)
+		if err != nil {
+			return err
+		}
 		defer pkgClient.ClearTempPaths()
 
 		if err := pkgClient.Publish(cmd.Context()); err != nil {
-			message.Fatalf(err, lang.CmdPackagePublishErr, err.Error())
+			return fmt.Errorf("failed to publish package: %w", err)
 		}
+		return nil
 	},
 }
 
@@ -227,21 +271,23 @@ var packagePullCmd = &cobra.Command{
 	Short:   lang.CmdPackagePullShort,
 	Example: lang.CmdPackagePullExample,
 	Args:    cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		pkgConfig.PkgOpts.PackageSource = args[0]
-
-		pkgClient := packager.NewOrDie(&pkgConfig)
-		defer pkgClient.ClearTempPaths()
-
-		if err := pkgClient.Pull(cmd.Context()); err != nil {
-			message.Fatalf(err, lang.CmdPackagePullErr, err.Error())
+		pkgClient, err := packager.New(&pkgConfig)
+		if err != nil {
+			return err
 		}
+		defer pkgClient.ClearTempPaths()
+		if err := pkgClient.Pull(cmd.Context()); err != nil {
+			return fmt.Errorf("failed to pull package: %w", err)
+		}
+		return nil
 	},
 }
 
-func choosePackage(args []string) string {
+func choosePackage(args []string) (string, error) {
 	if len(args) > 0 {
-		return args[0]
+		return args[0], nil
 	}
 	var path string
 	prompt := &survey.Input{
@@ -258,23 +304,24 @@ func choosePackage(args []string) string {
 	}
 
 	if err := survey.AskOne(prompt, &path, survey.WithValidator(survey.Required)); err != nil {
-		message.Fatalf(nil, lang.CmdPackageChooseErr, err.Error())
+		return "", fmt.Errorf("package path selection canceled: %w", err)
 	}
 
-	return path
+	return path, nil
 }
 
-func identifyAndFallbackToClusterSource() (src sources.PackageSource) {
-	var err error
+// TODO: This code does not seem to do what it was intended.
+func identifyAndFallbackToClusterSource() (sources.PackageSource, error) {
 	identifiedSrc := sources.Identify(pkgConfig.PkgOpts.PackageSource)
 	if identifiedSrc == "" {
 		message.Debugf(lang.CmdPackageClusterSourceFallback, pkgConfig.PkgOpts.PackageSource)
-		src, err = sources.NewClusterSource(&pkgConfig.PkgOpts)
+		src, err := sources.NewClusterSource(&pkgConfig.PkgOpts)
 		if err != nil {
-			message.Fatalf(err, lang.CmdPackageInvalidSource, pkgConfig.PkgOpts.PackageSource, err.Error())
+			return nil, fmt.Errorf("unable to identify source from %s: %w", pkgConfig.PkgOpts.PackageSource, err)
 		}
+		return src, nil
 	}
-	return src
+	return nil, nil
 }
 
 func getPackageCompletionArgs(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
@@ -356,18 +403,9 @@ func bindCreateFlags(v *viper.Viper) {
 
 	createFlags.IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)
 
-	err := createFlags.MarkHidden("output-directory")
-	if err != nil {
-		message.Fatal(err, err.Error())
-	}
-	err = createFlags.MarkHidden("key")
-	if err != nil {
-		message.Fatal(err, err.Error())
-	}
-	err = createFlags.MarkHidden("key-pass")
-	if err != nil {
-		message.Fatal(err, err.Error())
-	}
+	createFlags.MarkHidden("output-directory")
+	createFlags.MarkHidden("key")
+	createFlags.MarkHidden("key-pass")
 }
 
 func bindDeployFlags(v *viper.Viper) {
@@ -387,10 +425,7 @@ func bindDeployFlags(v *viper.Viper) {
 	deployFlags.StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(common.VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.SGetKeyPath, "sget", v.GetString(common.VPkgDeploySget), lang.CmdPackageDeployFlagSget)
 
-	err := deployFlags.MarkHidden("sget")
-	if err != nil {
-		message.Fatal(err, err.Error())
-	}
+	deployFlags.MarkHidden("sget")
 }
 
 func bindMirrorFlags(v *viper.Viper) {

@@ -6,28 +6,28 @@ package composer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
-	"github.com/defenseunicorns/zarf/src/pkg/zoci"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/extensions/bigbang"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
 // Node is a node in the import chain
 type Node struct {
-	types.ZarfComponent
+	v1alpha1.ZarfComponent
 
 	index int
 
-	vars   []variables.InteractiveVariable
-	consts []variables.Constant
+	vars   []v1alpha1.InteractiveVariable
+	consts []v1alpha1.Constant
 
 	relativeToHead      string
 	originalPackageName string
@@ -71,8 +71,8 @@ func (n *Node) Prev() *Node {
 // otherwise the name of the component will be used
 func (n *Node) ImportName() string {
 	name := n.ZarfComponent.Name
-	if n.Import.ComponentName != "" {
-		name = n.Import.ComponentName
+	if n.Import.Name != "" {
+		name = n.Import.Name
 	}
 	return name
 }
@@ -95,8 +95,8 @@ func (ic *ImportChain) Tail() *Node {
 	return ic.tail
 }
 
-func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageName string,
-	relativeToHead string, vars []variables.InteractiveVariable, consts []variables.Constant) {
+func (ic *ImportChain) append(c v1alpha1.ZarfComponent, index int, originalPackageName string,
+	relativeToHead string, vars []v1alpha1.InteractiveVariable, consts []v1alpha1.Constant) {
 	node := &Node{
 		ZarfComponent:       c,
 		index:               index,
@@ -118,9 +118,44 @@ func (ic *ImportChain) append(c types.ZarfComponent, index int, originalPackageN
 	}
 }
 
+// validateComponentCompose validates that a component doesn't break compose rules
+func validateComponentCompose(c v1alpha1.ZarfComponent) error {
+	var err error
+	path := c.Import.Path
+	url := c.Import.URL
+
+	// ensure path or url is provided
+	if path == "" && url == "" {
+		err = errors.Join(err, errors.New("neither a path nor a URL was provided"))
+	}
+
+	// ensure path and url are not both provided
+	if path != "" && url != "" {
+		err = errors.Join(err, errors.New("both a path and a URL were provided"))
+	}
+
+	// validation for path
+	if url == "" && path != "" {
+		// ensure path is not an absolute path
+		if filepath.IsAbs(path) {
+			err = errors.Join(err, errors.New("path cannot be an absolute path"))
+		}
+	}
+
+	// validation for url
+	if url != "" && path == "" {
+		ok := helpers.IsOCIURL(url)
+		if !ok {
+			err = errors.Join(err, errors.New("URL is not a valid OCI URL"))
+		}
+	}
+
+	return err
+}
+
 // NewImportChain creates a new import chain from a component
 // Returning the chain on error so we can have additional information to use during lint
-func NewImportChain(ctx context.Context, head types.ZarfComponent, index int, originalPackageName, arch, flavor string) (*ImportChain, error) {
+func NewImportChain(ctx context.Context, head v1alpha1.ZarfComponent, index int, originalPackageName, arch, flavor string) (*ImportChain, error) {
 	ic := &ImportChain{}
 	if arch == "" {
 		return ic, fmt.Errorf("cannot build import chain: architecture must be provided")
@@ -141,9 +176,8 @@ func NewImportChain(ctx context.Context, head types.ZarfComponent, index int, or
 			return ic, nil
 		}
 
-		// TODO: stuff like this should also happen in linting
-		if err := node.ZarfComponent.Validate(); err != nil {
-			return ic, err
+		if err := validateComponentCompose(node.ZarfComponent); err != nil {
+			return nil, fmt.Errorf("invalid imported definition for %s: %w", node.Name, err)
 		}
 
 		// ensure that remote components are not importing other remote components
@@ -155,7 +189,7 @@ func NewImportChain(ctx context.Context, head types.ZarfComponent, index int, or
 			return ic, fmt.Errorf("detected malformed import chain, cannot import local components from remote components")
 		}
 
-		var pkg types.ZarfPackage
+		var pkg v1alpha1.ZarfPackage
 
 		var relativeToHead string
 		var importURL string
@@ -193,7 +227,7 @@ func NewImportChain(ctx context.Context, head types.ZarfComponent, index int, or
 
 		// 'found' and 'index' are parallel slices. Each element in found[x] corresponds to pkg[index[x]]
 		// found[0] and pkg[index[0]] would be the same component for example
-		found := []types.ZarfComponent{}
+		found := []v1alpha1.ZarfComponent{}
 		index := []int{}
 		for i, component := range pkg.Components {
 			if component.Name == name && CompatibleComponent(component, arch, flavor) {
@@ -257,7 +291,7 @@ func (ic *ImportChain) String() string {
 }
 
 // Migrate performs migrations on the import chain
-func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
+func (ic *ImportChain) Migrate(build v1alpha1.ZarfBuildData) (warnings []string) {
 	node := ic.head
 	for node != nil {
 		migrated, w := deprecated.MigrateComponent(build, node.ZarfComponent)
@@ -274,7 +308,7 @@ func (ic *ImportChain) Migrate(build types.ZarfBuildData) (warnings []string) {
 
 // Compose merges the import chain into a single component
 // fixing paths, overriding metadata, etc
-func (ic *ImportChain) Compose(ctx context.Context) (composed *types.ZarfComponent, err error) {
+func (ic *ImportChain) Compose(ctx context.Context) (composed *v1alpha1.ZarfComponent, err error) {
 	composed = &ic.tail.ZarfComponent
 
 	if ic.tail.prev == nil {
@@ -287,7 +321,7 @@ func (ic *ImportChain) Compose(ctx context.Context) (composed *types.ZarfCompone
 	}
 
 	// start with an empty component to compose into
-	composed = &types.ZarfComponent{}
+	composed = &v1alpha1.ZarfComponent{}
 
 	// start overriding with the tail node
 	node := ic.tail
@@ -313,8 +347,8 @@ func (ic *ImportChain) Compose(ctx context.Context) (composed *types.ZarfCompone
 }
 
 // MergeVariables merges variables from the import chain
-func (ic *ImportChain) MergeVariables(existing []variables.InteractiveVariable) (merged []variables.InteractiveVariable) {
-	exists := func(v1 variables.InteractiveVariable, v2 variables.InteractiveVariable) bool {
+func (ic *ImportChain) MergeVariables(existing []v1alpha1.InteractiveVariable) (merged []v1alpha1.InteractiveVariable) {
+	exists := func(v1 v1alpha1.InteractiveVariable, v2 v1alpha1.InteractiveVariable) bool {
 		return v1.Name == v2.Name
 	}
 
@@ -330,8 +364,8 @@ func (ic *ImportChain) MergeVariables(existing []variables.InteractiveVariable) 
 }
 
 // MergeConstants merges constants from the import chain
-func (ic *ImportChain) MergeConstants(existing []variables.Constant) (merged []variables.Constant) {
-	exists := func(c1 variables.Constant, c2 variables.Constant) bool {
+func (ic *ImportChain) MergeConstants(existing []v1alpha1.Constant) (merged []v1alpha1.Constant) {
+	exists := func(c1 v1alpha1.Constant, c2 v1alpha1.Constant) bool {
 		return c1.Name == c2.Name
 	}
 
@@ -347,7 +381,7 @@ func (ic *ImportChain) MergeConstants(existing []variables.Constant) (merged []v
 }
 
 // CompatibleComponent determines if this component is compatible with the given create options
-func CompatibleComponent(c types.ZarfComponent, arch, flavor string) bool {
+func CompatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
 	satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
 	satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor
 	return satisfiesArch && satisfiesFlavor

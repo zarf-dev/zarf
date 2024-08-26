@@ -6,13 +6,12 @@ package utils
 
 import (
 	"bufio"
-	"io"
+	"errors"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
@@ -23,47 +22,47 @@ type Credential struct {
 }
 
 // FindAuthForHost finds the authentication scheme for a given host using .git-credentials then .netrc.
-func FindAuthForHost(baseURL string) *Credential {
+func FindAuthForHost(baseURL string) (*Credential, error) {
 	homePath, _ := os.UserHomeDir()
 
 	// Read the ~/.git-credentials file
 	credentialsPath := filepath.Join(homePath, ".git-credentials")
-	// Dogsled the error since we are ok if this file doesn't exist (error message debugged on close)
-	credentialsFile, _ := os.Open(credentialsPath)
-	gitCreds := credentialParser(credentialsFile)
+	gitCreds, err := credentialParser(credentialsPath)
+	if err != nil {
+		return nil, err
+	}
 
 	// Read the ~/.netrc file
 	netrcPath := filepath.Join(homePath, ".netrc")
-	// Dogsled the error since we are ok if this file doesn't exist (error message debugged on close)
-	netrcFile, _ := os.Open(netrcPath)
-	netrcCreds := netrcParser(netrcFile)
+	netrcCreds, err := netrcParser(netrcPath)
+	if err != nil {
+		return nil, err
+	}
 
 	// Combine the creds together (.netrc second because it could have a default)
 	creds := append(gitCreds, netrcCreds...)
-
-	// Look for a match for the given host path in the creds file
 	for _, cred := range creds {
 		// An empty credPath means that we have reached the default from the .netrc
 		hasPath := strings.Contains(baseURL, cred.Path) || cred.Path == ""
 		if hasPath {
-			return &cred
+			return &cred, nil
 		}
 	}
-
-	return nil
+	return nil, nil
 }
 
 // credentialParser parses a user's .git-credentials file to find git creds for hosts.
-func credentialParser(file io.ReadCloser) []Credential {
+func credentialParser(path string) ([]Credential, error) {
+	file, err := os.Open(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
 	var credentials []Credential
-
-	defer func(file io.ReadCloser) {
-		err := file.Close()
-		if err != nil {
-			message.Debugf("Unable to load an existing git credentials file: %s", err.Error())
-		}
-	}(file)
-
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		gitURL, err := url.Parse(scanner.Text())
@@ -80,27 +79,25 @@ func credentialParser(file io.ReadCloser) []Credential {
 		}
 		credentials = append(credentials, credential)
 	}
-
-	return credentials
+	return credentials, nil
 }
 
 // netrcParser parses a user's .netrc file using the method curl did pre 7.84.0: https://daniel.haxx.se/blog/2022/05/31/netrc-pains/.
-func netrcParser(file io.ReadCloser) []Credential {
+func netrcParser(path string) ([]Credential, error) {
+	file, err := os.Open(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
 	var credentials []Credential
-
-	defer func(file io.ReadCloser) {
-		err := file.Close()
-		if err != nil {
-			message.Debugf("Unable to load an existing netrc file: %s", err.Error())
-		}
-	}(file)
-
 	scanner := bufio.NewScanner(file)
-
 	activeMacro := false
 	activeCommand := ""
 	var activeMachine map[string]string
-
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -154,13 +151,11 @@ func netrcParser(file io.ReadCloser) []Credential {
 			}
 		}
 	}
-
 	// Append the last machine (if exists) at the end of the file
 	if activeMachine != nil {
 		credentials = appendNetrcMachine(activeMachine, credentials)
 	}
-
-	return credentials
+	return credentials, nil
 }
 
 func appendNetrcMachine(machine map[string]string, credentials []Credential) []Credential {

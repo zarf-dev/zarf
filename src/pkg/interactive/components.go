@@ -8,14 +8,14 @@ import (
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // SelectOptionalComponent prompts to confirm optional components
-func SelectOptionalComponent(component types.ZarfComponent) (confirm bool, err error) {
+func SelectOptionalComponent(component v1alpha1.ZarfComponent) (confirm bool, err error) {
 	message.HorizontalRule()
 
 	displayComponent := component
@@ -34,7 +34,7 @@ func SelectOptionalComponent(component types.ZarfComponent) (confirm bool, err e
 }
 
 // SelectChoiceGroup prompts to select component groups
-func SelectChoiceGroup(componentGroup []types.ZarfComponent) (types.ZarfComponent, error) {
+func SelectChoiceGroup(componentGroup []v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, error) {
 	message.HorizontalRule()
 
 	var chosen int

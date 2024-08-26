@@ -5,17 +5,19 @@
 package cmd
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"os"
 	"regexp"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/cmd/common"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 
 	"github.com/spf13/cobra"
 )
@@ -28,16 +30,21 @@ var destroyCmd = &cobra.Command{
 	Aliases: []string{"d"},
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
-	Run: func(cmd *cobra.Command, _ []string) {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
-		c := common.NewClusterOrDie(ctx)
+		timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
+		defer cancel()
+		c, err := cluster.NewClusterWithWait(timeoutCtx)
+		if err != nil {
+			return err
+		}
 
 		// NOTE: If 'zarf init' failed to deploy the k3s component (or if we're looking at the wrong kubeconfig)
 		//       there will be no zarf-state to load and the struct will be empty. In these cases, if we can find
 		//       the scripts to remove k3s, we will still try to remove a locally installed k3s cluster
 		state, err := c.LoadZarfState(ctx)
 		if err != nil {
-			message.WarnErr(err, lang.ErrLoadState)
+			message.WarnErr(err, err.Error())
 		}
 
 		// If Zarf deployed the cluster, burn it all down
@@ -45,7 +52,7 @@ var destroyCmd = &cobra.Command{
 			// Check if we have the scripts to destroy everything
 			fileInfo, err := os.Stat(config.ZarfCleanupScriptsPath)
 			if errors.Is(err, os.ErrNotExist) || !fileInfo.IsDir() {
-				message.Fatalf(lang.CmdDestroyErrNoScriptPath, config.ZarfCleanupScriptsPath)
+				return fmt.Errorf("unable to find the folder %s which has the scripts to cleanup the cluster. Please double-check you have the right kube-context", config.ZarfCleanupScriptsPath)
 			}
 
 			// Run all the scripts!
@@ -61,7 +68,7 @@ var destroyCmd = &cobra.Command{
 					// Don't remove scripts we can't execute so the user can try to manually run
 					continue
 				} else if err != nil {
-					message.Debugf("Received error when trying to execute the script (%s): %#v", script, err)
+					return fmt.Errorf("received an error when executing the script %s: %w", script, err)
 				}
 
 				// Try to remove the script, but ignore any errors
@@ -73,12 +80,13 @@ var destroyCmd = &cobra.Command{
 
 			// If Zarf didn't deploy the cluster, only delete the ZarfNamespace
 			if err := c.DeleteZarfNamespace(ctx); err != nil {
-				message.Fatal(err, err.Error())
+				return err
 			}
 
 			// Remove zarf agent labels and secrets from namespaces Zarf doesn't manage
 			c.StripZarfLabelsAndSecretsFromNamespaces(ctx)
 		}
+		return nil
 	},
 }
 

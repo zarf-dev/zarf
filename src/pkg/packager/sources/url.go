@@ -12,11 +12,12 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 var (
@@ -30,7 +31,7 @@ type URLSource struct {
 }
 
 // Collect downloads a package from the source URL.
-func (s *URLSource) Collect(_ context.Context, dir string) (string, error) {
+func (s *URLSource) Collect(ctx context.Context, dir string) (string, error) {
 	if !config.CommonOptions.Insecure && s.Shasum == "" && !strings.HasPrefix(s.PackageSource, helpers.SGETURLPrefix) {
 		return "", fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
 	}
@@ -43,7 +44,7 @@ func (s *URLSource) Collect(_ context.Context, dir string) (string, error) {
 
 	dstTarball := filepath.Join(dir, "zarf-package-url-unknown")
 
-	if err := utils.DownloadToFile(packageURL, dstTarball, s.SGetKeyPath); err != nil {
+	if err := utils.DownloadToFile(ctx, packageURL, dstTarball, s.SGetKeyPath); err != nil {
 		return "", err
 	}
 
@@ -51,7 +52,7 @@ func (s *URLSource) Collect(_ context.Context, dir string) (string, error) {
 }
 
 // LoadPackage loads a package from an http, https or sget URL.
-func (s *URLSource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg types.ZarfPackage, warnings []string, err error) {
+func (s *URLSource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return pkg, nil, err
@@ -75,7 +76,7 @@ func (s *URLSource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 }
 
 // LoadPackageMetadata loads a package's metadata from an http, https or sget URL.
-func (s *URLSource) LoadPackageMetadata(ctx context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg types.ZarfPackage, warnings []string, err error) {
+func (s *URLSource) LoadPackageMetadata(ctx context.Context, dst *layout.PackagePaths, wantSBOM bool, skipValidation bool) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
 	tmp, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return pkg, nil, err

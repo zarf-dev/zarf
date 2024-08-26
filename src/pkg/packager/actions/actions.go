@@ -13,22 +13,22 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/internal/packager/template"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
 // Run runs all provided actions.
-func Run(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func Run(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
 	if variableConfig == nil {
 		variableConfig = template.GetZarfVariableConfig()
 	}
 
 	for _, a := range actions {
-		if err := runAction(defaultCfg, a, variableConfig); err != nil {
+		if err := runAction(ctx, defaultCfg, a, variableConfig); err != nil {
 			return err
 		}
 	}
@@ -36,10 +36,8 @@ func Run(defaultCfg types.ZarfComponentActionDefaults, actions []types.ZarfCompo
 }
 
 // Run commands that a component has provided.
-func runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func runAction(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
 	var (
-		ctx        context.Context
-		cancel     context.CancelFunc
 		cmdEscaped string
 		out        string
 		err        error
@@ -56,7 +54,7 @@ func runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfCo
 		}
 
 		// Convert the wait to a command.
-		if cmd, err = convertWaitToCmd(*action.Wait, action.MaxTotalSeconds); err != nil {
+		if cmd, err = convertWaitToCmd(ctx, *action.Wait, action.MaxTotalSeconds); err != nil {
 			return err
 		}
 
@@ -72,7 +70,7 @@ func runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfCo
 		d := ""
 		action.Dir = &d
 		action.Env = []string{}
-		action.SetVariables = []variables.Variable{}
+		action.SetVariables = []v1alpha1.Variable{}
 	}
 
 	if action.Description != "" {
@@ -85,9 +83,9 @@ func runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfCo
 	// Persist the spinner output so it doesn't get overwritten by the command output.
 	spinner.EnablePreserveWrites()
 
-	actionDefaults := actionGetCfg(defaultCfg, action, variableConfig.GetAllTemplates())
+	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates())
 
-	if cmd, err = actionCmdMutation(cmd, actionDefaults.Shell); err != nil {
+	if cmd, err = actionCmdMutation(ctx, cmd, actionDefaults.Shell); err != nil {
 		spinner.Errorf(err, "Error mutating command: %s", cmdEscaped)
 	}
 
@@ -95,9 +93,9 @@ func runAction(defaultCfg types.ZarfComponentActionDefaults, action types.ZarfCo
 	timeout := time.After(duration)
 
 	// Keep trying until the max retries is reached.
+	// TODO: Refactor using go-retry
 retryCmd:
 	for remaining := actionDefaults.MaxRetries + 1; remaining > 0; remaining-- {
-
 		// Perform the action run.
 		tryCmd := func(ctx context.Context) error {
 			// Try running the command and continue the retry loop if it fails.
@@ -111,7 +109,6 @@ retryCmd:
 			for _, v := range action.SetVariables {
 				variableConfig.SetVariable(v.Name, out, v.Sensitive, v.AutoIndent, v.Type)
 				if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
-					message.WarnErr(err, err.Error())
 					return err
 				}
 			}
@@ -130,7 +127,8 @@ retryCmd:
 		// If no timeout is set, run the command and return or continue retrying.
 		if actionDefaults.MaxTotalSeconds < 1 {
 			spinner.Updatef("Waiting for \"%s\" (no timeout)", cmdEscaped)
-			if err := tryCmd(context.TODO()); err != nil {
+			//TODO (schristoff): Make it so tryCmd can take a normal ctx
+			if err := tryCmd(context.Background()); err != nil {
 				continue retryCmd
 			}
 
@@ -146,7 +144,7 @@ retryCmd:
 
 		// Otherwise, try running the command.
 		default:
-			ctx, cancel = context.WithTimeout(context.Background(), duration)
+			ctx, cancel := context.WithTimeout(ctx, duration)
 			defer cancel()
 			if err := tryCmd(ctx); err != nil {
 				continue retryCmd
@@ -171,7 +169,7 @@ retryCmd:
 }
 
 // convertWaitToCmd will return the wait command if it exists, otherwise it will return the original command.
-func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string, error) {
+func convertWaitToCmd(_ context.Context, wait v1alpha1.ZarfComponentActionWait, timeout *int) (string, error) {
 	// Build the timeout string.
 	timeoutString := fmt.Sprintf("--timeout %ds", *timeout)
 
@@ -185,7 +183,7 @@ func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string,
 
 		// Build a call to the zarf tools wait-for command.
 		return fmt.Sprintf("./zarf tools wait-for %s %s %s %s %s",
-			cluster.Kind, cluster.Identifier, cluster.Condition, ns, timeoutString), nil
+			cluster.Kind, cluster.Name, cluster.Condition, ns, timeoutString), nil
 	}
 
 	network := wait.Network
@@ -207,7 +205,7 @@ func convertWaitToCmd(wait types.ZarfComponentActionWait, timeout *int) (string,
 }
 
 // Perform some basic string mutations to make commands more useful.
-func actionCmdMutation(cmd string, shellPref exec.Shell) (string, error) {
+func actionCmdMutation(_ context.Context, cmd string, shellPref v1alpha1.Shell) (string, error) {
 	zarfCommand, err := utils.GetFinalExecutableCommand()
 	if err != nil {
 		return cmd, err
@@ -238,7 +236,7 @@ func actionCmdMutation(cmd string, shellPref exec.Shell) (string, error) {
 }
 
 // Merge the ActionSet defaults with the action config.
-func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAction, vars map[string]*variables.TextTemplate) types.ZarfComponentActionDefaults {
+func actionGetCfg(_ context.Context, cfg v1alpha1.ZarfComponentActionDefaults, a v1alpha1.ZarfComponentAction, vars map[string]*variables.TextTemplate) v1alpha1.ZarfComponentActionDefaults {
 	if a.Mute != nil {
 		cfg.Mute = *a.Mute
 	}
@@ -277,7 +275,7 @@ func actionGetCfg(cfg types.ZarfComponentActionDefaults, a types.ZarfComponentAc
 	return cfg
 }
 
-func actionRun(ctx context.Context, cfg types.ZarfComponentActionDefaults, cmd string, shellPref exec.Shell, spinner *message.Spinner) (string, error) {
+func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cmd string, shellPref v1alpha1.Shell, spinner *message.Spinner) (string, error) {
 	shell, shellArgs := exec.GetOSShell(shellPref)
 
 	message.Debugf("Running command in %s: %s", shell, cmd)

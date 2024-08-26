@@ -2,7 +2,7 @@
 title: Running Tests
 ---
 
-Currently, we primarily test Zarf through a series of [end-to-end tests](https://github.com/defenseunicorns/zarf/tree/main/src/test/e2e). These tests are called in the `test-*.yml` workflows and undergo automatic execution against several K8s distros whenever a pull request is created or updated.
+Currently, we primarily test Zarf through a series of [end-to-end tests](https://github.com/zarf-dev/zarf/tree/main/src/test/e2e). These tests are called in the `test-*.yml` workflows and undergo automatic execution against several K8s distros whenever a pull request is created or updated.
 
 In addition, Zarf implements unit tests for specific functions where edge cases prove difficult to cover through end-to-end testing alone. Unit tests follow standard Go convention and are `*_test.go` files.
 

@@ -7,8 +7,8 @@ package filters
 import (
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 func TestCombine(t *testing.T) {
@@ -18,8 +18,8 @@ func TestCombine(t *testing.T) {
 
 	combo := Combine(f1, f2, f3)
 
-	pkg := types.ZarfPackage{
-		Components: []types.ZarfComponent{
+	pkg := v1alpha1.ZarfPackage{
+		Components: []v1alpha1.ZarfComponent{
 			{
 				Name: "foo",
 			},
@@ -35,7 +35,7 @@ func TestCombine(t *testing.T) {
 		},
 	}
 
-	expected := []types.ZarfComponent{
+	expected := []v1alpha1.ZarfComponent{
 		{
 			Name: "bar",
 		},
@@ -50,7 +50,7 @@ func TestCombine(t *testing.T) {
 
 	// Test error propagation
 	combo = Combine(f1, f2, ForDeploy("group with no default", false))
-	pkg.Components = append(pkg.Components, types.ZarfComponent{
+	pkg.Components = append(pkg.Components, v1alpha1.ZarfComponent{
 		Name:            "group with no default",
 		DeprecatedGroup: "g1",
 	})

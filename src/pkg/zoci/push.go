@@ -10,16 +10,16 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
 )
 
 // PublishPackage publishes the zarf package to the remote repository.
-func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, paths *layout.PackagePaths, concurrency int) error {
+func (r *Remote) PublishPackage(ctx context.Context, pkg *v1alpha1.ZarfPackage, paths *layout.PackagePaths, concurrency int) error {
 	src, err := file.New(paths.Base)
 	if err != nil {
 		return err
@@ -88,7 +88,7 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *types.ZarfPackage, pat
 	return nil
 }
 
-func annotationsFromMetadata(metadata *types.ZarfMetadata) map[string]string {
+func annotationsFromMetadata(metadata *v1alpha1.ZarfMetadata) map[string]string {
 	annotations := map[string]string{
 		ocispec.AnnotationTitle:       metadata.Name,
 		ocispec.AnnotationDescription: metadata.Description,

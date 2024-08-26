@@ -1,5 +1,5 @@
 run:
-  timeout: 5m
+  timeout: 10m
 linters:
   disable-all: true
   enable:
@@ -14,6 +14,8 @@ linters:
     - goimports
     - nolintlint
     - testifylint
+    - whitespace
+    - errorlint
 linters-settings:
   govet:
     enable-all: true
@@ -21,6 +23,7 @@ linters-settings:
       - shadow
       - fieldalignment
       - unusedwrite
+      - printf
   nolintlint:
     require-specific: true
   goheader:
@@ -56,6 +59,7 @@ linters-settings:
   testifylint:
     enable-all: true
   errcheck:
+    check-type-assertions: true
     exclude-functions:
       - (*github.com/spf13/cobra.Command).Help
       - (*github.com/spf13/cobra.Command).MarkFlagRequired

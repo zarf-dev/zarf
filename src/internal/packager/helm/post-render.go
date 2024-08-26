@@ -14,11 +14,11 @@ import (
 	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
@@ -37,9 +37,7 @@ type renderer struct {
 	namespaces     map[string]*corev1.Namespace
 }
 
-func (h *Helm) newRenderer() (*renderer, error) {
-	message.Debugf("helm.NewRenderer()")
-
+func (h *Helm) newRenderer(ctx context.Context) (*renderer, error) {
 	rend := &renderer{
 		Helm:           h,
 		connectStrings: types.ConnectStrings{},
@@ -49,7 +47,7 @@ func (h *Helm) newRenderer() (*renderer, error) {
 		return rend, nil
 	}
 
-	namespace, err := h.cluster.Clientset.CoreV1().Namespaces().Get(context.TODO(), h.chart.Namespace, metav1.GetOptions{})
+	namespace, err := h.cluster.Clientset.CoreV1().Namespaces().Get(ctx, h.chart.Namespace, metav1.GetOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return nil, fmt.Errorf("unable to check for existing namespace %q in cluster: %w", h.chart.Namespace, err)
 	}
@@ -125,7 +123,6 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		return err
 	}
 	for name, namespace := range r.namespaces {
-
 		// Check to see if this namespace already exists
 		var existingNamespace bool
 		for _, serverNamespace := range namespaceList.Items {
@@ -159,8 +156,11 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			continue
 		}
 
-		// Try to get a valid existing secret
-		validRegistrySecret := c.GenerateRegistryPullCreds(name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
+		// Create the secret
+		validRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
+		if err != nil {
+			return err
+		}
 		// TODO: Refactor as error is not checked instead of checking for not found error.
 		currentRegistrySecret, _ := c.Clientset.CoreV1().Secrets(name).Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
 		sameSecretData := maps.EqualFunc(currentRegistrySecret.Data, validRegistrySecret.Data, func(v1, v2 []byte) bool { return bytes.Equal(v1, v2) })
@@ -202,7 +202,6 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			if err != nil {
 				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
 			}
-
 		}
 	}
 	return nil
@@ -223,7 +222,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 		// parse to unstructured to have access to more data than just the name
 		rawData := &unstructured.Unstructured{}
 		if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
-			return fmt.Errorf("failed to unmarshal manifest: %#v", err)
+			return fmt.Errorf("failed to unmarshal manifest: %w", err)
 		}
 
 		switch rawData.GetKind() {
@@ -251,14 +250,14 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			if annotations == nil {
 				annotations = map[string]string{}
 			}
-			if key, keyExists := labels[config.ZarfConnectLabelName]; keyExists {
+			if key, keyExists := labels[cluster.ZarfConnectLabelName]; keyExists {
 				// If there is a zarf-connect label
 				message.Debugf("Match helm service %s for zarf connection %s", rawData.GetName(), key)
 
 				// Add the connectString for processing later in the deployment
 				r.connectStrings[key] = types.ConnectString{
-					Description: annotations[config.ZarfConnectAnnotationDescription],
-					URL:         annotations[config.ZarfConnectAnnotationURL],
+					Description: annotations[cluster.ZarfConnectAnnotationDescription],
+					URL:         annotations[cluster.ZarfConnectAnnotationURL],
 				}
 			}
 		}
@@ -282,6 +281,10 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 					return err
 				}
 				resource, err := dc.Resource(mapping.Resource).Namespace(deployedNamespace).Get(ctx, rawData.GetName(), metav1.GetOptions{})
+				// Ignore resources that are yet to be created
+				if kerrors.IsNotFound(err) {
+					return nil
+				}
 				if err != nil {
 					return err
 				}
@@ -305,7 +308,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 				return nil
 			}()
 			if err != nil {
-				message.Debugf("Unable to adopt resource %s: %s", rawData.GetName(), err.Error())
+				return fmt.Errorf("unable to adopt the resource %s: %w", rawData.GetName(), err)
 			}
 		}
 		// Finally place this back onto the output buffer

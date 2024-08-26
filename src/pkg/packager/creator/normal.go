@@ -17,24 +17,25 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/extensions/bigbang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/git"
-	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/internal/packager/images"
-	"github.com/defenseunicorns/zarf/src/internal/packager/kustomize"
-	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/zoci"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/extensions/bigbang"
+	"github.com/zarf-dev/zarf/src/internal/git"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 var (
@@ -61,10 +62,10 @@ func NewPackageCreator(createOpts types.ZarfCreateOptions, cwd string) *PackageC
 }
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
-func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout.PackagePaths) (pkg types.ZarfPackage, warnings []string, err error) {
+func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout.PackagePaths) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
 	pkg, warnings, err = src.ReadZarfYAML()
 	if err != nil {
-		return types.ZarfPackage{}, nil, err
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
@@ -72,23 +73,22 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 	// Compose components into a single zarf.yaml file
 	pkg, composeWarnings, err := ComposeComponents(ctx, pkg, pc.createOpts.Flavor)
 	if err != nil {
-		return types.ZarfPackage{}, nil, err
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
-
 	warnings = append(warnings, composeWarnings...)
 
 	// After components are composed, template the active package.
 	pkg, templateWarnings, err := FillActiveTemplate(pkg, pc.createOpts.SetVariables)
 	if err != nil {
-		return types.ZarfPackage{}, nil, fmt.Errorf("unable to fill values in template: %w", err)
+		return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("unable to fill values in template: %w", err)
 	}
 
 	warnings = append(warnings, templateWarnings...)
 
 	// After templates are filled process any create extensions
-	pkg.Components, err = pc.processExtensions(pkg.Components, src, pkg.Metadata.YOLO)
+	pkg.Components, err = pc.processExtensions(ctx, pkg.Components, src, pkg.Metadata.YOLO)
 	if err != nil {
-		return types.ZarfPackage{}, nil, err
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
 	// If we are creating a differential package, remove duplicate images and repos.
@@ -97,37 +97,37 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 
 		diffData, err := loadDifferentialData(ctx, pc.createOpts.DifferentialPackagePath)
 		if err != nil {
-			return types.ZarfPackage{}, nil, err
+			return v1alpha1.ZarfPackage{}, nil, err
 		}
 
 		pkg.Build.DifferentialPackageVersion = diffData.DifferentialPackageVersion
 
 		versionsMatch := diffData.DifferentialPackageVersion == pkg.Metadata.Version
 		if versionsMatch {
-			return types.ZarfPackage{}, nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
+			return v1alpha1.ZarfPackage{}, nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
 
 		noVersionSet := diffData.DifferentialPackageVersion == "" || pkg.Metadata.Version == ""
 		if noVersionSet {
-			return types.ZarfPackage{}, nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
+			return v1alpha1.ZarfPackage{}, nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
 
 		filter := filters.ByDifferentialData(diffData)
 		pkg.Components, err = filter.Apply(pkg)
 		if err != nil {
-			return types.ZarfPackage{}, nil, err
+			return v1alpha1.ZarfPackage{}, nil, err
 		}
 	}
 
-	if err := pkg.Validate(); err != nil {
-		return types.ZarfPackage{}, nil, err
+	if err := Validate(pkg, pc.createOpts.BaseDir, pc.createOpts.SetVariables); err != nil {
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
 	return pkg, warnings, nil
 }
 
 // Assemble assembles all of the package assets into Zarf's tmp directory layout.
-func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths, components []types.ZarfComponent, arch string) error {
+func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths, components []v1alpha1.ZarfComponent, arch string) error {
 	var imageList []transform.Image
 
 	skipSBOMFlagUsed := pc.createOpts.SkipSBOM
@@ -137,17 +137,17 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 		onCreate := component.Actions.OnCreate
 
 		onFailure := func() {
-			if err := actions.Run(onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
+			if err := actions.Run(ctx, onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
 				message.Debugf("unable to run component failure action: %s", err.Error())
 			}
 		}
 
-		if err := pc.addComponent(component, dst); err != nil {
+		if err := pc.addComponent(ctx, component, dst); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
 		}
 
-		if err := actions.Run(onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
+		if err := actions.Run(ctx, onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -236,7 +236,7 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 //
 // - writes the Zarf package as a tarball to a local directory,
 // or an OCI registry based on the --output flag
-func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, pkg *types.ZarfPackage) (err error) {
+func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, pkg *v1alpha1.ZarfPackage) (err error) {
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range pkg.Components {
@@ -321,13 +321,16 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		}
 
 		if pc.createOpts.ViewSBOM {
-			sbom.ViewSBOMFiles(sbomDir)
+			err := sbom.ViewSBOMFiles(sbomDir)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func (pc *PackageCreator) processExtensions(components []types.ZarfComponent, layout *layout.PackagePaths, isYOLO bool) (processedComponents []types.ZarfComponent, err error) {
+func (pc *PackageCreator) processExtensions(ctx context.Context, components []v1alpha1.ZarfComponent, layout *layout.PackagePaths, isYOLO bool) (processedComponents []v1alpha1.ZarfComponent, err error) {
 	// Create component paths and process extensions for each component.
 	for _, c := range components {
 		componentPaths, err := layout.Components.Create(c)
@@ -337,7 +340,7 @@ func (pc *PackageCreator) processExtensions(components []types.ZarfComponent, la
 
 		// Big Bang
 		if c.Extensions.BigBang != nil {
-			if c, err = bigbang.Run(isYOLO, componentPaths, c); err != nil {
+			if c, err = bigbang.Run(ctx, isYOLO, componentPaths, c); err != nil {
 				return nil, fmt.Errorf("unable to process bigbang extension: %w", err)
 			}
 		}
@@ -348,7 +351,7 @@ func (pc *PackageCreator) processExtensions(components []types.ZarfComponent, la
 	return processedComponents, nil
 }
 
-func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layout.PackagePaths) error {
+func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.ZarfComponent, dst *layout.PackagePaths) error {
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 
 	componentPaths, err := dst.Components.Create(component)
@@ -357,21 +360,19 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 	}
 
 	onCreate := component.Actions.OnCreate
-	if err := actions.Run(onCreate.Defaults, onCreate.Before, nil); err != nil {
+	if err := actions.Run(ctx, onCreate.Defaults, onCreate.Before, nil); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
 
 	// If any helm charts are defined, process them.
 	for _, chart := range component.Charts {
 		helmCfg := helm.New(chart, componentPaths.Charts, componentPaths.Values)
-		if err := helmCfg.PackageChart(componentPaths.Charts); err != nil {
+		if err := helmCfg.PackageChart(ctx, componentPaths.Charts); err != nil {
 			return err
 		}
 	}
 
 	for filesIdx, file := range component.Files {
-		message.Debugf("Loading %#v", file)
-
 		rel := filepath.Join(layout.FilesDir, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(componentPaths.Base, rel)
 		destinationDir := filepath.Dir(dst)
@@ -387,7 +388,7 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 				compressedFile := filepath.Join(componentPaths.Temp, compressedFileName)
 
 				// If the file is an archive, download it to the componentPath.Temp
-				if err := utils.DownloadToFile(file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(ctx, file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 
@@ -396,7 +397,7 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
 				}
 			} else {
-				if err := utils.DownloadToFile(file.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(ctx, file.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 			}
@@ -447,7 +448,7 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 			dst := filepath.Join(componentPaths.Base, rel)
 
 			if helpers.IsURL(data.Source) {
-				if err := utils.DownloadToFile(data.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(ctx, data.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 				}
 			} else {
@@ -480,7 +481,7 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", path)
 				if helpers.IsURL(path) {
-					if err := utils.DownloadToFile(path, dst, component.DeprecatedCosignKeyPath); err != nil {
+					if err := utils.DownloadToFile(ctx, path, dst, component.DeprecatedCosignKeyPath); err != nil {
 						return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 					}
 				} else {
@@ -513,22 +514,22 @@ func (pc *PackageCreator) addComponent(component types.ZarfComponent, dst *layou
 
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
-			gitCfg := git.NewWithSpinner(types.GitServerInfo{}, spinner)
-			if err := gitCfg.Pull(url, componentPaths.Repos, false); err != nil {
+			_, err := git.Clone(ctx, componentPaths.Repos, url, false)
+			if err != nil {
 				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
 		spinner.Success()
 	}
 
-	if err := actions.Run(onCreate.Defaults, onCreate.After, nil); err != nil {
+	if err := actions.Run(ctx, onCreate.Defaults, onCreate.After, nil); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 
 	return nil
 }
 
-func (pc *PackageCreator) getFilesToSBOM(component types.ZarfComponent, dst *layout.PackagePaths) (*layout.ComponentSBOM, error) {
+func (pc *PackageCreator) getFilesToSBOM(component v1alpha1.ZarfComponent, dst *layout.PackagePaths) (*layout.ComponentSBOM, error) {
 	componentPaths, err := dst.Components.Create(component)
 	if err != nil {
 		return nil, err

@@ -14,32 +14,55 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
-	"github.com/defenseunicorns/zarf/src/cmd/common"
-	"github.com/defenseunicorns/zarf/src/cmd/tools"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/cmd/common"
+	"github.com/zarf-dev/zarf/src/cmd/tools"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 var (
 	// Default global config for the packager
 	pkgConfig = types.PackagerConfig{}
+	// LogLevelCLI holds the log level as input from a command
+	LogLevelCLI string
+	// SkipLogFile is a flag to skip logging to a file
+	SkipLogFile bool
+	// NoColor is a flag to disable colors in output
+	NoColor bool
 )
 
 var rootCmd = &cobra.Command{
 	Use: "zarf COMMAND",
-	PersistentPreRun: func(cmd *cobra.Command, _ []string) {
-		// Skip for vendor-only commands
+	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+		// Skip for vendor only commands
 		if common.CheckVendorOnlyFromPath(cmd) {
-			return
+			return nil
 		}
-		// Don't log the help command
+
+		skipLogFile := SkipLogFile
+
+		// Dont write tool commands to file.
+		comps := strings.Split(cmd.CommandPath(), " ")
+		if len(comps) > 1 && comps[1] == "tools" {
+			skipLogFile = true
+		}
+		if len(comps) > 1 && comps[1] == "version" {
+			skipLogFile = true
+		}
+
+		// Dont write help command to file.
 		if cmd.Parent() == nil {
-			config.SkipLogFile = true
+			skipLogFile = true
 		}
-		common.SetupCLI()
+
+		err := common.SetupCLI(LogLevelCLI, skipLogFile, NoColor)
+		if err != nil {
+			return err
+		}
+		return nil
 	},
 	Short:         lang.RootCmdShort,
 	Long:          lang.RootCmdLong,
@@ -73,7 +96,8 @@ func Execute(ctx context.Context) {
 	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
 		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
 	} else {
-		pterm.Error.Println(err.Error())
+		errParagraph := message.Paragraph(err.Error())
+		pterm.Error.Println(errParagraph)
 	}
 	os.Exit(1)
 }
@@ -89,11 +113,11 @@ func init() {
 
 	v := common.InitViper()
 
-	rootCmd.PersistentFlags().StringVarP(&common.LogLevelCLI, "log-level", "l", v.GetString(common.VLogLevel), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(common.VLogLevel), lang.RootCmdFlagLogLevel)
 	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(common.VArchitecture), lang.RootCmdFlagArch)
-	rootCmd.PersistentFlags().BoolVar(&config.SkipLogFile, "no-log-file", v.GetBool(common.VNoLogFile), lang.RootCmdFlagSkipLogFile)
+	rootCmd.PersistentFlags().BoolVar(&SkipLogFile, "no-log-file", v.GetBool(common.VNoLogFile), lang.RootCmdFlagSkipLogFile)
 	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(common.VNoProgress), lang.RootCmdFlagNoProgress)
-	rootCmd.PersistentFlags().BoolVar(&config.NoColor, "no-color", v.GetBool(common.VNoColor), lang.RootCmdFlagNoColor)
+	rootCmd.PersistentFlags().BoolVar(&NoColor, "no-color", v.GetBool(common.VNoColor), lang.RootCmdFlagNoColor)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(common.VZarfCache), lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(common.VTmpDir), lang.RootCmdFlagTempDir)
 	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(common.VInsecure), lang.RootCmdFlagInsecure)

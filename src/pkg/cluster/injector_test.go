@@ -11,69 +11,155 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
+	"github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
+
+	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 )
 
-func TestCreateInjectorConfigMap(t *testing.T) {
-	t.Parallel()
-
-	binData := []byte("foobar")
-	binPath := filepath.Join(t.TempDir(), "bin")
-	err := os.WriteFile(binPath, binData, 0o644)
-	require.NoError(t, err)
-
+func TestInjector(t *testing.T) {
+	ctx := context.Background()
 	cs := fake.NewSimpleClientset()
 	c := &Cluster{
 		Clientset: cs,
+		Watcher:   pkgkubernetes.NewImmediateWatcher(status.CurrentStatus),
 	}
-
-	ctx := context.Background()
-	for i := 0; i < 2; i++ {
-		err = c.createInjectorConfigMap(ctx, binPath)
+	cs.PrependReactor("delete-collection", "configmaps", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		delAction, ok := action.(k8stesting.DeleteCollectionActionImpl)
+		if !ok {
+			return false, nil, fmt.Errorf("action is not of type DeleteCollectionActionImpl")
+		}
+		if delAction.GetListRestrictions().Labels.String() != "zarf-injector=payload" {
+			return false, nil, nil
+		}
+		gvr := delAction.Resource
+		gvk := delAction.Resource.GroupVersion().WithKind("ConfigMap")
+		list, err := cs.Tracker().List(gvr, gvk, delAction.Namespace)
 		require.NoError(t, err)
-		cm, err := cs.CoreV1().ConfigMaps(ZarfNamespaceName).Get(ctx, "rust-binary", metav1.GetOptions{})
-		require.NoError(t, err)
-		require.Equal(t, binData, cm.BinaryData["zarf-injector"])
+		for _, cm := range list.(*corev1.ConfigMapList).Items {
+			v, ok := cm.Labels["zarf-injector"]
+			if !ok {
+				continue
+			}
+			if v != "payload" {
+				continue
+			}
+			err = cs.Tracker().Delete(gvr, delAction.Namespace, cm.Name)
+			require.NoError(t, err)
+		}
+		return true, nil, nil
+	})
+
+	// Setup nodes and pods with images
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "node1",
+		},
+		Status: corev1.NodeStatus{
+			Allocatable: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("10"),
+				corev1.ResourceMemory: resource.MustParse("100Gi"),
+			},
+		},
 	}
-}
-
-func TestCreateService(t *testing.T) {
-	t.Parallel()
-
-	cs := fake.NewSimpleClientset()
-	c := &Cluster{
-		Clientset: cs,
-	}
-
-	expected, err := os.ReadFile("./testdata/expected-injection-service.json")
+	_, err := cs.CoreV1().Nodes().Create(ctx, node, metav1.CreateOptions{})
 	require.NoError(t, err)
-	ctx := context.Background()
-	for i := 0; i < 2; i++ {
-		_, err := c.createService(ctx)
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "good",
+			Namespace: "default",
+		},
+		Spec: corev1.PodSpec{
+			NodeName: "node1",
+			Containers: []corev1.Container{
+				{
+					Image: "ubuntu:latest",
+				},
+			},
+		},
+	}
+	_, err = cs.CoreV1().Pods(pod.ObjectMeta.Namespace).Create(ctx, pod, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	err = c.StopInjection(ctx)
+	require.NoError(t, err)
+
+	for range 2 {
+		tmpDir := t.TempDir()
+		binData := []byte("foobar")
+		err := os.WriteFile(filepath.Join(tmpDir, "zarf-injector"), binData, 0o644)
+		require.NoError(t, err)
+
+		idx, err := random.Index(1, 1, 1)
+		require.NoError(t, err)
+		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
+		require.NoError(t, err)
+
+		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil)
+		require.NoError(t, err)
+
+		podList, err := cs.CoreV1().Pods(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, podList.Items, 1)
+		require.Equal(t, "injector", podList.Items[0].ObjectMeta.Name)
+
+		svcList, err := cs.CoreV1().Services(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, svcList.Items, 1)
+		expected, err := os.ReadFile("./testdata/expected-injection-service.json")
 		require.NoError(t, err)
 		svc, err := cs.CoreV1().Services(ZarfNamespaceName).Get(ctx, "zarf-injector", metav1.GetOptions{})
 		require.NoError(t, err)
 		b, err := json.Marshal(svc)
 		require.NoError(t, err)
 		require.Equal(t, strings.TrimSpace(string(expected)), string(b))
+
+		cmList, err := cs.CoreV1().ConfigMaps(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, cmList.Items, 2)
+		cm, err := cs.CoreV1().ConfigMaps(ZarfNamespaceName).Get(ctx, "rust-binary", metav1.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, binData, cm.BinaryData["zarf-injector"])
 	}
+
+	err = c.StopInjection(ctx)
+	require.NoError(t, err)
+
+	podList, err := cs.CoreV1().Pods(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+	require.Empty(t, podList.Items)
+	svcList, err := cs.CoreV1().Services(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+	require.Empty(t, svcList.Items)
+	cmList, err := cs.CoreV1().ConfigMaps(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+	require.Empty(t, cmList.Items)
 }
 
 func TestBuildInjectionPod(t *testing.T) {
 	t.Parallel()
 
-	c := &Cluster{}
-	pod, err := c.buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum")
-	require.NoError(t, err)
-	require.Contains(t, pod.Name, "injector-")
-	// Replace the random UUID in the pod name with a fixed placeholder for consistent comparison.
-	pod.ObjectMeta.Name = "injector-UUID"
+	resReq := corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(".5"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("1"),
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		},
+	}
+	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq)
+	require.Equal(t, "injector", pod.Name)
 	b, err := json.Marshal(pod)
 	require.NoError(t, err)
 	expected, err := os.ReadFile("./testdata/expected-injection-pod.json")
@@ -81,7 +167,7 @@ func TestBuildInjectionPod(t *testing.T) {
 	require.Equal(t, strings.TrimSpace(string(expected)), string(b))
 }
 
-func TestImagesAndNodesForInjection(t *testing.T) {
+func TestGetInjectorImageAndNode(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -185,14 +271,18 @@ func TestImagesAndNodesForInjection(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	getCtx, getCancel := context.WithTimeout(ctx, 1*time.Second)
-	defer getCancel()
-	result, err := c.getImagesAndNodesForInjection(getCtx)
-	require.NoError(t, err)
-	expected := imageNodeMap{
-		"pod-2-init":      []string{"good"},
-		"pod-2-container": []string{"good"},
-		"pod-2-ephemeral": []string{"good"},
+	resReq := corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(".5"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("1"),
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		},
 	}
-	require.Equal(t, expected, result)
+	image, node, err := c.getInjectorImageAndNode(ctx, resReq)
+	require.NoError(t, err)
+	require.Equal(t, "pod-2-container", image)
+	require.Equal(t, "good", node)
 }

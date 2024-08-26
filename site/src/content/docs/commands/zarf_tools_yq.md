@@ -84,6 +84,7 @@ zarf tools yq -P sample.json
 ### SEE ALSO
 
 * [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools yq completion](/commands/zarf_tools_yq_completion/)	 - Generate the autocompletion script for the specified shell
 * [zarf tools yq eval](/commands/zarf_tools_yq_eval/)	 - (default) Apply the expression to each document in each yaml file in sequence
 * [zarf tools yq eval-all](/commands/zarf_tools_yq_eval-all/)	 - Loads _all_ yaml documents of _all_ yaml files and runs expression once
 

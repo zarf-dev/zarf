@@ -11,12 +11,12 @@ import (
 	"runtime"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // DevDeploy creates + deploys a package in one shot
@@ -39,7 +39,7 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 		return err
 	}
 
-	p.cfg.Pkg, p.warnings, err = pc.LoadPackageDefinition(ctx, p.layout)
+	p.cfg.Pkg, _, err = pc.LoadPackageDefinition(ctx, p.layout)
 	if err != nil {
 		return err
 	}
@@ -53,8 +53,8 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := p.cfg.Pkg.Validate(); err != nil {
-		return fmt.Errorf("unable to validate package: %w", err)
+	if err := creator.Validate(p.cfg.Pkg, p.cfg.CreateOpts.BaseDir, p.cfg.CreateOpts.SetVariables); err != nil {
+		return fmt.Errorf("package validation failed: %w", err)
 	}
 
 	if err := p.populatePackageVariableConfig(); err != nil {

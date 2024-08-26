@@ -7,8 +7,7 @@ package operations
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/config/lang"
 	admission "k8s.io/api/admission/v1"
 )
 
@@ -32,8 +31,6 @@ type Hook struct {
 
 // Execute evaluates the request and try to execute the function for operation specified in the request.
 func (h *Hook) Execute(r *admission.AdmissionRequest) (*Result, error) {
-	message.Debugf("operations.Execute(*admission.AdmissionRequest) - %#v , %s/%s: %#v", r.Kind, r.Namespace, r.Name, r.Operation)
-
 	switch r.Operation {
 	case admission.Create:
 		return wrapperExecution(h.Create, r)

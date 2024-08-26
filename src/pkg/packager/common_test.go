@@ -13,10 +13,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestValidatePackageArchitecture(t *testing.T) {
@@ -84,9 +84,9 @@ func TestValidatePackageArchitecture(t *testing.T) {
 					Clientset: cs,
 				},
 				cfg: &types.PackagerConfig{
-					Pkg: types.ZarfPackage{
-						Metadata: types.ZarfMetadata{Architecture: tt.pkgArch},
-						Components: []types.ZarfComponent{
+					Pkg: v1alpha1.ZarfPackage{
+						Metadata: v1alpha1.ZarfMetadata{Architecture: tt.pkgArch},
+						Components: []v1alpha1.ZarfComponent{
 							{
 								Images: tt.images,
 							},
@@ -120,98 +120,66 @@ func TestValidatePackageArchitecture(t *testing.T) {
 func TestValidateLastNonBreakingVersion(t *testing.T) {
 	t.Parallel()
 
-	type testCase struct {
+	tests := []struct {
 		name                   string
 		cliVersion             string
 		lastNonBreakingVersion string
-		expectedErrorMessage   string
-		expectedWarningMessage string
-		returnError            bool
-		throwWarning           bool
-	}
-
-	testCases := []testCase{
+		expectedErr            string
+		expectedWarnings       []string
+	}{
 		{
-			name:                   "CLI version less than lastNonBreakingVersion",
+			name:                   "CLI version less than last non breaking version",
 			cliVersion:             "v0.26.4",
 			lastNonBreakingVersion: "v0.27.0",
-			returnError:            false,
-			throwWarning:           true,
-			expectedWarningMessage: fmt.Sprintf(
-				lang.CmdPackageDeployValidateLastNonBreakingVersionWarn,
-				"v0.26.4",
-				"v0.27.0",
-				"v0.27.0",
-			),
+			expectedWarnings: []string{
+				fmt.Sprintf(
+					lang.CmdPackageDeployValidateLastNonBreakingVersionWarn,
+					"v0.26.4",
+					"v0.27.0",
+					"v0.27.0",
+				),
+			},
 		},
 		{
-			name:                   "invalid semantic version (CLI version)",
+			name:                   "invalid cli version",
 			cliVersion:             "invalidSemanticVersion",
 			lastNonBreakingVersion: "v0.0.1",
-			returnError:            false,
-			throwWarning:           true,
-			expectedWarningMessage: fmt.Sprintf(lang.CmdPackageDeployInvalidCLIVersionWarn, "invalidSemanticVersion"),
+			expectedWarnings:       []string{fmt.Sprintf(lang.CmdPackageDeployInvalidCLIVersionWarn, "invalidSemanticVersion")},
 		},
 		{
-			name:                   "invalid semantic version (lastNonBreakingVersion)",
+			name:                   "invalid last non breaking version",
 			cliVersion:             "v0.0.1",
 			lastNonBreakingVersion: "invalidSemanticVersion",
-			throwWarning:           false,
-			returnError:            true,
-			expectedErrorMessage:   "unable to parse lastNonBreakingVersion",
+			expectedErr:            "unable to parse last non breaking version",
 		},
 		{
-			name:                   "CLI version greater than lastNonBreakingVersion",
+			name:                   "CLI version greater than last non breaking version",
 			cliVersion:             "v0.28.2",
 			lastNonBreakingVersion: "v0.27.0",
-			returnError:            false,
-			throwWarning:           false,
 		},
 		{
-			name:                   "CLI version equal to lastNonBreakingVersion",
+			name:                   "CLI version equal to last non breaking version",
 			cliVersion:             "v0.27.0",
 			lastNonBreakingVersion: "v0.27.0",
-			returnError:            false,
-			throwWarning:           false,
 		},
 		{
-			name:                   "empty lastNonBreakingVersion",
-			cliVersion:             "this shouldn't get evaluated when the lastNonBreakingVersion is empty",
+			name:                   "empty last non breaking version",
+			cliVersion:             "",
 			lastNonBreakingVersion: "",
-			returnError:            false,
-			throwWarning:           false,
 		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	for _, testCase := range testCases {
-		testCase := testCase
-
-		t.Run(testCase.name, func(t *testing.T) {
-			config.CLIVersion = testCase.cliVersion
-
-			p := &Packager{
-				cfg: &types.PackagerConfig{
-					Pkg: types.ZarfPackage{
-						Build: types.ZarfBuildData{
-							LastNonBreakingVersion: testCase.lastNonBreakingVersion,
-						},
-					},
-				},
+			warnings, err := validateLastNonBreakingVersion(tt.cliVersion, tt.lastNonBreakingVersion)
+			if tt.expectedErr != "" {
+				require.ErrorContains(t, err, tt.expectedErr)
+				require.Empty(t, warnings)
+				return
 			}
-
-			err := p.validateLastNonBreakingVersion()
-
-			switch {
-			case testCase.returnError:
-				require.ErrorContains(t, err, testCase.expectedErrorMessage)
-				require.Empty(t, p.warnings, "Expected no warnings for test case: %s", testCase.name)
-			case testCase.throwWarning:
-				require.Contains(t, p.warnings, testCase.expectedWarningMessage)
-				require.NoError(t, err, "Expected no error for test case: %s", testCase.name)
-			default:
-				require.NoError(t, err, "Expected no error for test case: %s", testCase.name)
-				require.Empty(t, p.warnings, "Expected no warnings for test case: %s", testCase.name)
-			}
+			require.NoError(t, err)
+			require.ElementsMatch(t, tt.expectedWarnings, warnings)
 		})
 	}
 }

@@ -5,21 +5,23 @@
 package packager
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/types"
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // Generate generates a Zarf package definition.
-func (p *Packager) Generate() (err error) {
+func (p *Packager) Generate(ctx context.Context) (err error) {
 	generatedZarfYAMLPath := filepath.Join(p.cfg.GenerateOpts.Output, layout.ZarfYAML)
 	spinner := message.NewProgressSpinner("Generating package for %q at %s", p.cfg.GenerateOpts.Name, generatedZarfYAMLPath)
 
@@ -35,10 +37,10 @@ func (p *Packager) Generate() (err error) {
 		}
 	}
 
-	generatedComponent := types.ZarfComponent{
+	generatedComponent := v1alpha1.ZarfComponent{
 		Name:     p.cfg.GenerateOpts.Name,
 		Required: helpers.BoolPtr(true),
-		Charts: []types.ZarfChart{
+		Charts: []v1alpha1.ZarfChart{
 			{
 				Name:      p.cfg.GenerateOpts.Name,
 				Version:   p.cfg.GenerateOpts.Version,
@@ -49,19 +51,19 @@ func (p *Packager) Generate() (err error) {
 		},
 	}
 
-	p.cfg.Pkg = types.ZarfPackage{
-		Kind: types.ZarfPackageConfig,
-		Metadata: types.ZarfMetadata{
+	p.cfg.Pkg = v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
 			Name:        p.cfg.GenerateOpts.Name,
 			Version:     p.cfg.GenerateOpts.Version,
 			Description: "auto-generated using `zarf dev generate`",
 		},
-		Components: []types.ZarfComponent{
+		Components: []v1alpha1.ZarfComponent{
 			generatedComponent,
 		},
 	}
 
-	images, err := p.findImages()
+	images, err := p.findImages(ctx)
 	if err != nil {
 		// purposefully not returning error here, as we can still generate the package without images
 		message.Warnf("Unable to find images: %s", err.Error())
@@ -72,7 +74,7 @@ func (p *Packager) Generate() (err error) {
 		p.cfg.Pkg.Components[i].Images = images[name]
 	}
 
-	if err := p.cfg.Pkg.Validate(); err != nil {
+	if err := lint.ValidatePackage(p.cfg.Pkg); err != nil {
 		return err
 	}
 

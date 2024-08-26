@@ -17,9 +17,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestNewPackageSource(t *testing.T) {
@@ -51,13 +52,13 @@ func TestNewPackageSource(t *testing.T) {
 		},
 		{
 			name:             "https",
-			src:              "https://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst",
+			src:              "https://github.com/zarf-dev/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst",
 			expectedIdentify: "https",
 			expectedType:     &URLSource{},
 		},
 		{
 			name:             "http",
-			src:              "http://github.com/defenseunicorns/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst",
+			src:              "http://github.com/zarf-dev/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst",
 			expectedIdentify: "http",
 			expectedType:     &URLSource{},
 		},
@@ -117,7 +118,7 @@ func TestPackageSource(t *testing.T) {
 
 	b, err := os.ReadFile("./testdata/expected-pkg.json")
 	require.NoError(t, err)
-	expectedPkg := types.ZarfPackage{}
+	expectedPkg := v1alpha1.ZarfPackage{}
 	err = json.Unmarshal(b, &expectedPkg)
 	require.NoError(t, err)
 

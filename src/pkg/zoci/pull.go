@@ -11,11 +11,11 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2/content/file"
 )
 
@@ -76,7 +76,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.
 //
 // It also retrieves the descriptors for all image layers that are required by the components.
-func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []types.ZarfComponent) (layers []ocispec.Descriptor, err error) {
+func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent) (layers []ocispec.Descriptor, err error) {
 	root, err := r.FetchRoot(ctx)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 	tarballFormat := "%s.tar"
 	images := map[string]bool{}
 	for _, rc := range requestedComponents {
-		component := helpers.Find(pkg.Components, func(component types.ZarfComponent) bool {
+		component := helpers.Find(pkg.Components, func(component v1alpha1.ZarfComponent) bool {
 			return component.Name == rc.Name
 		})
 		if component.Name == "" {

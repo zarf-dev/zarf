@@ -6,13 +6,15 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/defenseunicorns/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // DeleteZarfNamespace deletes the Zarf namespace from the connected cluster.
@@ -27,23 +29,20 @@ func (c *Cluster) DeleteZarfNamespace(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	timer := time.NewTimer(0)
-	defer timer.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-timer.C:
-			_, err := c.Clientset.CoreV1().Namespaces().Get(ctx, ZarfNamespaceName, metav1.GetOptions{})
-			if kerrors.IsNotFound(err) {
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-			timer.Reset(1 * time.Second)
+	err = retry.Do(func() error {
+		_, err := c.Clientset.CoreV1().Namespaces().Get(ctx, ZarfNamespaceName, metav1.GetOptions{})
+		if kerrors.IsNotFound(err) {
+			return nil
 		}
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("namespace still exists")
+	}, retry.Context(ctx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
+	if err != nil {
+		return err
 	}
+	return nil
 }
 
 // NewZarfManagedNamespace returns a corev1.Namespace with Zarf-managed labels

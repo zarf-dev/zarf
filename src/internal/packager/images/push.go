@@ -9,14 +9,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // Push pushes images to a registry.
@@ -54,7 +56,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	progress := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
 	defer progress.Close()
 
-	if err := helpers.Retry(func() error {
+	err = retry.Do(func() error {
 		c, _ := cluster.NewCluster()
 		if c != nil {
 			registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegInfo)
@@ -99,8 +101,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 					return err
 				}
 
-				message.Debugf("push %s -> %s)", refInfo.Reference, offlineNameCRC)
-
 				if err = pushImage(img, offlineNameCRC); err != nil {
 					return err
 				}
@@ -125,7 +125,8 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			totalSize -= size
 		}
 		return nil
-	}, cfg.Retries, 5*time.Second, message.Warnf); err != nil {
+	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
+	if err != nil {
 		return err
 	}
 

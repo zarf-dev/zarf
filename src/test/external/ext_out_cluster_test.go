@@ -16,10 +16,11 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	"helm.sh/helm/v3/pkg/repo"
 )
 
@@ -29,6 +30,7 @@ const (
 	subnet         = "172.31.0.0/16"
 	gateway        = "172.31.0.1"
 	giteaIP        = "172.31.0.99"
+	registryIP     = "172.31.0.10"
 	giteaHost      = "gitea.localhost"
 	registryHost   = "registry.localhost"
 	clusterName    = "zarf-external-test"
@@ -43,7 +45,9 @@ var outClusterCredentialArgs = []string{
 	"--git-url=http://" + giteaHost + ":3000",
 	"--registry-push-username=" + registryUser,
 	"--registry-push-password=" + commonPassword,
-	"--registry-url=k3d-" + registryHost + ":5000"}
+	// TODO @AustinAbro321 once flux updates to a version of helm using ORAS v1.2.5 or greater we can switch back
+	// to using the registry host rather than creating an IP https://github.com/helm/helm/pull/12998
+	"--registry-url=" + registryIP + ":5000"}
 
 type ExtOutClusterTestSuite struct {
 	suite.Suite
@@ -51,12 +55,12 @@ type ExtOutClusterTestSuite struct {
 }
 
 func (suite *ExtOutClusterTestSuite) SetupSuite() {
-
 	suite.Assertions = require.New(suite.T())
 
 	// Teardown any leftovers from previous tests
 	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)
-	_ = exec.CmdWithPrint("k3d", "registry", "delete", registryHost)
+	_ = exec.CmdWithPrint("docker", "rm", "-f", "k3d-"+registryHost)
+	_ = exec.CmdWithPrint("docker", "compose", "down")
 	_ = exec.CmdWithPrint("docker", "network", "remove", network)
 
 	// Setup a network for everything to live inside
@@ -64,11 +68,12 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	suite.NoError(err, "unable to create the k3d registry")
 
 	// Install a k3d-managed registry server to act as the 'remote' container registry
-	err = exec.CmdWithPrint("k3d", "registry", "create", registryHost, "--port", "5000")
+	err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "5000:5000", "--name", "k3d-"+registryHost, "registry:2.8.3")
 	suite.NoError(err, "unable to create the k3d registry")
 
 	// Create a k3d cluster with the proper networking and aliases
-	err = exec.CmdWithPrint("k3d", "cluster", "create", clusterName, "--registry-use", "k3d-"+registryHost+":5000", "--host-alias", giteaIP+":"+giteaHost, "--network", network)
+	err = exec.CmdWithPrint("k3d", "cluster", "create", clusterName, "--registry-config", "registries.yaml",
+		"--host-alias", registryIP+":"+registryHost, "--host-alias", giteaIP+":"+giteaHost, "--network", network)
 	suite.NoError(err, "unable to create the k3d cluster")
 
 	// Install a gitea server via docker compose to act as the 'remote' git server
@@ -83,7 +88,9 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 
 	// Connect gitea to the k3d network
 	err = exec.CmdWithPrint("docker", "network", "connect", "--ip", giteaIP, network, giteaHost)
-	suite.NoError(err, "unable to connect the gitea-server top k3d")
+	suite.NoError(err, "unable to connect the gitea-server to k3d")
+	err = exec.CmdWithPrint("docker", "network", "connect", "--ip", registryIP, network, "k3d-"+registryHost)
+	suite.NoError(err, "unable to connect the registry-server to k3d")
 }
 
 func (suite *ExtOutClusterTestSuite) TearDownSuite() {
@@ -94,7 +101,7 @@ func (suite *ExtOutClusterTestSuite) TearDownSuite() {
 	err = exec.CmdWithPrint("docker", "compose", "down")
 	suite.NoError(err, "unable to teardown the gitea-server")
 
-	err = exec.CmdWithPrint("k3d", "registry", "delete", registryHost)
+	err = exec.CmdWithPrint("docker", "rm", "-f", "k3d-"+registryHost)
 	suite.NoError(err, "unable to teardown the k3d registry")
 
 	err = exec.CmdWithPrint("docker", "network", "remove", network)
@@ -135,20 +142,25 @@ func (suite *ExtOutClusterTestSuite) Test_1_Deploy() {
 	initArgs = append(initArgs, outClusterCredentialArgs...)
 	err := exec.CmdWithPrint(zarfBinPath, initArgs...)
 	suite.NoError(err, "unable to initialize the k8s server with zarf")
-
-	// Deploy the flux example package
-	deployArgs := []string{"package", "deploy", "../../../build/zarf-package-podinfo-flux-amd64.tar.zst", "--confirm"}
-	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
-	suite.NoError(err, "unable to deploy flux example package")
-
-	// Verify flux was able to pull from the 'external' repository
-	podinfoArgs := []string{"wait", "deployment", "-n=podinfo", "podinfo", "--for", "condition=Available=True", "--timeout=3s"}
-	errorStr := "unable to verify flux deployed the podinfo example"
-	success := verifyKubectlWaitSuccess(suite.T(), 2, podinfoArgs, errorStr)
-	suite.True(success, errorStr)
 }
 
-func (suite *ExtOutClusterTestSuite) Test_2_AuthToPrivateHelmChart() {
+func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
+	// Deploy the flux example package
+	temp := suite.T().TempDir()
+	defer os.Remove(temp)
+	createPodInfoPackageWithInsecureSources(suite.T(), temp)
+
+	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--confirm"}
+	err := exec.CmdWithPrint(zarfBinPath, deployArgs...)
+	suite.NoError(err, "unable to deploy flux example package")
+
+	path := fmt.Sprintf("../../../build/zarf-package-argocd-%s.tar.zst", "amd64")
+	deployArgs = []string{"package", "deploy", path, "--confirm"}
+	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
+	suite.NoError(err)
+}
+
+func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
 	baseURL := fmt.Sprintf("http://%s:3000", giteaHost)
 
 	suite.createHelmChartInGitea(baseURL, giteaUser, commonPassword)
@@ -195,7 +207,7 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 	podinfoTarballPath := filepath.Join(tempDir, fmt.Sprintf("podinfo-%s.tgz", podInfoVersion))
 	suite.NoError(err, "Unable to package chart")
 
-	err = utils.DownloadToFile(fmt.Sprintf("https://stefanprodan.github.io/podinfo/podinfo-%s.tgz", podInfoVersion), podinfoTarballPath, "")
+	err = utils.DownloadToFile(testutil.TestContext(suite.T()), fmt.Sprintf("https://stefanprodan.github.io/podinfo/podinfo-%s.tgz", podInfoVersion), podinfoTarballPath, "")
 	suite.NoError(err)
 	url := fmt.Sprintf("%s/api/packages/%s/helm/api/charts", baseURL, username)
 

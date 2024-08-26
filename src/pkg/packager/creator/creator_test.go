@@ -6,16 +6,20 @@ package creator
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestLoadPackageDefinition(t *testing.T) {
-	t.Parallel()
+	// TODO once creator is refactored to not expect to be in the same directory as the zarf.yaml file
+	// this test can be re-parallelized
 	tests := []struct {
 		name        string
 		testDir     string
@@ -31,7 +35,7 @@ func TestLoadPackageDefinition(t *testing.T) {
 		{
 			name:        "invalid package definition",
 			testDir:     "invalid",
-			expectedErr: "package must have at least 1 component",
+			expectedErr: "found errors in schema",
 			creator:     NewPackageCreator(types.ZarfCreateOptions{}, ""),
 		},
 		{
@@ -43,17 +47,26 @@ func TestLoadPackageDefinition(t *testing.T) {
 		{
 			name:        "invalid package definition",
 			testDir:     "invalid",
-			expectedErr: "package must have at least 1 component",
+			expectedErr: "found errors in schema",
 			creator:     NewSkeletonCreator(types.ZarfCreateOptions{}, types.ZarfPublishOptions{}),
 		},
 	}
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			cwd, err := os.Getwd()
+			require.NoError(t, err)
+			defer func() {
+				err = os.Chdir(cwd)
+				require.NoError(t, err)
+			}()
+			path := filepath.Join("testdata", tt.testDir)
+			err = os.Chdir(path)
+			require.NoError(t, err)
 
-			src := layout.New(filepath.Join("testdata", tt.testDir))
+			src := layout.New(".")
 			pkg, _, err := tt.creator.LoadPackageDefinition(context.Background(), src)
 
 			if tt.expectedErr == "" {

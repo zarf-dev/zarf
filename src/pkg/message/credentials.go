@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/pterm/pterm"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Common constants for printing credentials
@@ -35,7 +35,7 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 	}
 
 	loginData := [][]string{}
-	if state.RegistryInfo.InternalRegistry {
+	if state.RegistryInfo.IsInternal() {
 		loginData = append(loginData,
 			[]string{"Registry", state.RegistryInfo.PushUsername, state.RegistryInfo.PushPassword, "zarf connect registry", RegistryKey},
 			[]string{"Registry (read-only)", state.RegistryInfo.PullUsername, state.RegistryInfo.PullPassword, "zarf connect registry", RegistryReadKey},
@@ -91,7 +91,6 @@ func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState
 	}
 
 	for _, service := range services {
-
 		HorizontalRule()
 
 		switch service {

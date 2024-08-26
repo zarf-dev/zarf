@@ -10,15 +10,15 @@ import (
 	"os"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/internal/packager/sbom"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // Inspect list the contents of a package.
 func (p *Packager) Inspect(ctx context.Context) (err error) {
 	wantSBOM := p.cfg.InspectOpts.ViewSBOM || p.cfg.InspectOpts.SBOMOutputDir != ""
 
-	p.cfg.Pkg, p.warnings, err = p.source.LoadPackageMetadata(ctx, p.layout, wantSBOM, true)
+	p.cfg.Pkg, _, err = p.source.LoadPackageMetadata(ctx, p.layout, wantSBOM, true)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,10 @@ func (p *Packager) Inspect(ctx context.Context) (err error) {
 	}
 
 	if p.cfg.InspectOpts.ViewSBOM {
-		sbom.ViewSBOMFiles(sbomDir)
+		err := sbom.ViewSBOMFiles(sbomDir)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -7,27 +7,27 @@ package filters
 import (
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 func Test_selectStateFilter_Apply(t *testing.T) {
 	tests := []struct {
 		name                string
 		requestedComponents string
-		components          []types.ZarfComponent
-		expectedResult      []types.ZarfComponent
+		components          []v1alpha1.ZarfComponent
+		expectedResult      []v1alpha1.ZarfComponent
 		expectedError       error
 	}{
 		{
 			name:                "Test when requestedComponents is empty",
 			requestedComponents: "",
-			components: []types.ZarfComponent{
+			components: []v1alpha1.ZarfComponent{
 				{Name: "component1"},
 				{Name: "component2"},
 				{Name: "component3"},
 			},
-			expectedResult: []types.ZarfComponent{
+			expectedResult: []v1alpha1.ZarfComponent{
 				{Name: "component1"},
 				{Name: "component2"},
 				{Name: "component3"},
@@ -37,12 +37,12 @@ func Test_selectStateFilter_Apply(t *testing.T) {
 		{
 			name:                "Test when requestedComponents contains a valid component name",
 			requestedComponents: "component2",
-			components: []types.ZarfComponent{
+			components: []v1alpha1.ZarfComponent{
 				{Name: "component1"},
 				{Name: "component2"},
 				{Name: "component3"},
 			},
-			expectedResult: []types.ZarfComponent{
+			expectedResult: []v1alpha1.ZarfComponent{
 				{Name: "component2"},
 			},
 			expectedError: nil,
@@ -50,12 +50,12 @@ func Test_selectStateFilter_Apply(t *testing.T) {
 		{
 			name:                "Test when requestedComponents contains an excluded component name",
 			requestedComponents: "comp*, -component2",
-			components: []types.ZarfComponent{
+			components: []v1alpha1.ZarfComponent{
 				{Name: "component1"},
 				{Name: "component2"},
 				{Name: "component3"},
 			},
-			expectedResult: []types.ZarfComponent{
+			expectedResult: []v1alpha1.ZarfComponent{
 				{Name: "component1"},
 				{Name: "component3"},
 			},
@@ -64,12 +64,12 @@ func Test_selectStateFilter_Apply(t *testing.T) {
 		{
 			name:                "Test when requestedComponents contains a glob pattern",
 			requestedComponents: "comp*",
-			components: []types.ZarfComponent{
+			components: []v1alpha1.ZarfComponent{
 				{Name: "component1"},
 				{Name: "component2"},
 				{Name: "other"},
 			},
-			expectedResult: []types.ZarfComponent{
+			expectedResult: []v1alpha1.ZarfComponent{
 				{Name: "component1"},
 				{Name: "component2"},
 			},
@@ -81,7 +81,7 @@ func Test_selectStateFilter_Apply(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			filter := BySelectState(tc.requestedComponents)
 
-			result, err := filter.Apply(types.ZarfPackage{
+			result, err := filter.Apply(v1alpha1.ZarfPackage{
 				Components: tc.components,
 			})
 

@@ -15,7 +15,6 @@ import (
 
 func TestConfigFile(t *testing.T) {
 	t.Log("E2E: Config file")
-	e2e.SetupWithCluster(t)
 
 	var (
 		path   = fmt.Sprintf("zarf-package-config-file-%s.tar.zst", e2e.Arch)
@@ -32,7 +31,7 @@ func TestConfigFile(t *testing.T) {
 
 	configFileDefaultTests(t)
 
-	stdOut, stdErr, err := e2e.Zarf("package", "remove", path, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	e2e.CleanFiles(path)
@@ -41,12 +40,12 @@ func TestConfigFile(t *testing.T) {
 func configFileTests(t *testing.T, dir, path string) {
 	t.Helper()
 
-	_, stdErr, err := e2e.Zarf("package", "create", dir, "--confirm")
+	_, stdErr, err := e2e.Zarf(t, "package", "create", dir, "--confirm")
 	require.NoError(t, err)
 	require.Contains(t, string(stdErr), "This is a zebra and they have stripes")
 	require.Contains(t, string(stdErr), "This is a leopard and they have spots")
 
-	_, stdErr, err = e2e.Zarf("package", "deploy", path, "--confirm")
+	_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	require.NoError(t, err)
 	require.Contains(t, string(stdErr), "📦 LION COMPONENT")
 	require.NotContains(t, string(stdErr), "📦 LEOPARD COMPONENT")
@@ -56,7 +55,7 @@ func configFileTests(t *testing.T, dir, path string) {
 	require.NotContains(t, string(stdErr), "This package does NOT contain an SBOM.")
 
 	// Verify the configmap was properly templated
-	kubectlOut, _, err := e2e.Kubectl("-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath={.data.templateme\\.properties}")
+	kubectlOut, _, err := e2e.Kubectl(t, "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath={.data.templateme\\.properties}")
 	require.NoError(t, err)
 	require.Contains(t, string(kubectlOut), "scorpion=iridescent")
 	require.Contains(t, string(kubectlOut), "camel_spider=matte")
@@ -90,7 +89,7 @@ b42JLSKqwpvVjQDiFZPI/0wZTo3WkWm9Rd7CAACheb8S70K1r/JIzsmIcnj0v4xs
 sfd+R35UE+m8MExbDP4lKFParmvi2/UZfb3VFNMmMPTV6AEIBl6N4PmhHMZOsIRs
 H4RxbE+FpmsMAUCpdrzvFkc=
 -----END PRIVATE KEY-----`
-	kubectlOut, _, err = e2e.Kubectl("-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath={.data.tls-key}")
+	kubectlOut, _, err = e2e.Kubectl(t, "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath={.data.tls-key}")
 	require.NoError(t, err)
 	require.Equal(t, tlsKey, kubectlOut)
 }
@@ -143,25 +142,25 @@ func configFileDefaultTests(t *testing.T) {
 	defer os.Unsetenv("ZARF_CONFIG")
 
 	// Test global flags
-	stdOut, _, _ := e2e.Zarf("--help")
+	stdOut, _, _ := e2e.Zarf(t, "--help")
 	for _, test := range globalFlags {
 		require.Contains(t, string(stdOut), test)
 	}
 
 	// Test init flags
-	stdOut, _, _ = e2e.Zarf("init", "--help")
+	stdOut, _, _ = e2e.Zarf(t, "init", "--help")
 	for _, test := range initFlags {
 		require.Contains(t, string(stdOut), test)
 	}
 
 	// Test package create flags
-	stdOut, _, _ = e2e.Zarf("package", "create", "--help")
+	stdOut, _, _ = e2e.Zarf(t, "package", "create", "--help")
 	for _, test := range packageCreateFlags {
 		require.Contains(t, string(stdOut), test)
 	}
 
 	// Test package deploy flags
-	stdOut, _, _ = e2e.Zarf("package", "deploy", "--help")
+	stdOut, _, _ = e2e.Zarf(t, "package", "deploy", "--help")
 	for _, test := range packageDeployFlags {
 		require.Contains(t, string(stdOut), test)
 	}

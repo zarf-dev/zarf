@@ -13,14 +13,14 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/pkg/interactive"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/interactive"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // PackagePaths is the default package layout.
@@ -38,13 +38,6 @@ type PackagePaths struct {
 	isLegacyLayout bool
 }
 
-// InjectionMadnessPaths contains paths for injection madness.
-type InjectionMadnessPaths struct {
-	InjectionBinary      string
-	SeedImagesDir        string
-	InjectorPayloadTarGz string
-}
-
 // New returns a new PackagePaths struct.
 func New(baseDir string) *PackagePaths {
 	return &PackagePaths{
@@ -59,9 +52,9 @@ func New(baseDir string) *PackagePaths {
 
 // ReadZarfYAML reads a zarf.yaml file into memory,
 // checks if it's using the legacy layout, and migrates deprecated component configs.
-func (pp *PackagePaths) ReadZarfYAML() (pkg types.ZarfPackage, warnings []string, err error) {
+func (pp *PackagePaths) ReadZarfYAML() (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
 	if err := utils.ReadYaml(pp.ZarfYAML, &pkg); err != nil {
-		return types.ZarfPackage{}, nil, fmt.Errorf("unable to read zarf.yaml: %w", err)
+		return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("unable to read zarf.yaml: %w", err)
 	}
 
 	if pp.IsLegacyLayout() {
@@ -82,7 +75,7 @@ func (pp *PackagePaths) ReadZarfYAML() (pkg types.ZarfPackage, warnings []string
 
 // MigrateLegacy migrates a legacy package layout to the new layout.
 func (pp *PackagePaths) MigrateLegacy() (err error) {
-	var pkg types.ZarfPackage
+	var pkg v1alpha1.ZarfPackage
 	base := pp.Base
 
 	// legacy layout does not contain a checksums file, nor a signature
@@ -250,7 +243,7 @@ func (pp *PackagePaths) ArchivePackage(destinationTarball string, maxPackageSize
 			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
 		}
 		message.Notef("Package is larger than %dMB, splitting into multiple files", maxPackageSizeMB)
-		err := utils.SplitFile(destinationTarball, chunkSize)
+		err := splitFile(destinationTarball, chunkSize)
 		if err != nil {
 			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
 		}

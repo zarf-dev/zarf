@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // PromptSigPassword prompts the user for the password to their private key
@@ -23,8 +23,7 @@ func PromptSigPassword() ([]byte, error) {
 }
 
 // PromptVariable prompts the user for a value for a variable
-func PromptVariable(variable variables.InteractiveVariable) (value string, err error) {
-
+func PromptVariable(variable v1alpha1.InteractiveVariable) (value string, err error) {
 	if variable.Description != "" {
 		message.Question(variable.Description)
 	}

@@ -16,14 +16,9 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/transform"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -37,8 +32,33 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/moby/moby/client"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"golang.org/x/sync/errgroup"
 )
+
+func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
+	if refInfo.Digest != "" && desc != nil && types.MediaType(desc.MediaType).IsIndex() {
+		var idx v1.IndexManifest
+		if err := json.Unmarshal(desc.Manifest, &idx); err != nil {
+			return fmt.Errorf("unable to unmarshal index.json: %w", err)
+		}
+		lines := []string{"The following images are available in the index:"}
+		name := refInfo.Name
+		if refInfo.Tag != "" {
+			name += ":" + refInfo.Tag
+		}
+		for _, desc := range idx.Manifests {
+			lines = append(lines, fmt.Sprintf("image - %s@%s with platform %s", name, desc.Digest.String(), desc.Platform.String()))
+		}
+		imageOptions := strings.Join(lines, "\n")
+		return fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", refInfo.Reference, imageOptions)
+	}
+	return nil
+}
 
 // Pull pulls all of the images from the given config.
 func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, error) {
@@ -132,7 +152,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 							ref, utils.ByteFormat(float64(rawImg.Size), 2))
 					}
 
-					// Use unbuffered opener to avoid OOM Kill issues https://github.com/defenseunicorns/zarf/issues/1214.
+					// Use unbuffered opener to avoid OOM Kill issues https://github.com/zarf-dev/zarf/issues/1214.
 					// This will also take forever to load large images.
 					img, err = daemon.Image(reference, daemon.WithUnbufferedOpener())
 					if err != nil {
@@ -146,23 +166,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 				}
 			}
 
-			if refInfo.Digest != "" && desc != nil && types.MediaType(desc.MediaType).IsIndex() {
-				message.Warn("Zarf does not currently support direct consumption of OCI image indexes or Docker manifest lists")
-
-				var idx v1.IndexManifest
-				if err := json.Unmarshal(desc.Manifest, &idx); err != nil {
-					return fmt.Errorf("unable to unmarshal index manifest: %w", err)
-				}
-				lines := []string{"The following images are available in the index:"}
-				name := refInfo.Name
-				if refInfo.Tag != "" {
-					name += ":" + refInfo.Tag
-				}
-				for _, desc := range idx.Manifests {
-					lines = append(lines, fmt.Sprintf("\n(%s) %s@%s", desc.Platform, name, desc.Digest))
-				}
-				message.Warn(strings.Join(lines, "\n"))
-				return fmt.Errorf("%s resolved to an index, please select a specific platform to use", refInfo.Reference)
+			if err := checkForIndex(refInfo, desc); err != nil {
+				return err
 			}
 
 			cacheImg, err := utils.OnlyHasImageLayers(img)
@@ -224,26 +229,23 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 	toPull := maps.Clone(fetched)
 
-	sc := func() error {
+	err = retry.Do(func() error {
 		saved, err := SaveConcurrent(ctx, cranePath, toPull)
 		for k := range saved {
 			delete(toPull, k)
 		}
 		return err
-	}
-
-	ss := func() error {
-		saved, err := SaveSequential(ctx, cranePath, toPull)
-		for k := range saved {
-			delete(toPull, k)
-		}
-		return err
-	}
-
-	if err := helpers.RetryWithContext(ctx, sc, 2, 5*time.Second, message.Warnf); err != nil {
+	}, retry.Context(ctx), retry.Attempts(2))
+	if err != nil {
 		message.Warnf("Failed to save images in parallel, falling back to sequential save: %s", err.Error())
-
-		if err := helpers.RetryWithContext(ctx, ss, 2, 5*time.Second, message.Warnf); err != nil {
+		err = retry.Do(func() error {
+			saved, err := SaveSequential(ctx, cranePath, toPull)
+			for k := range saved {
+				delete(toPull, k)
+			}
+			return err
+		}, retry.Context(ctx), retry.Attempts(2))
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -254,7 +256,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 	// Needed because when pulling from the local docker daemon, while using the docker containerd runtime
 	// Crane incorrectly names the blob of the docker image config to a sha that does not match the contents
-	// https://github.com/defenseunicorns/zarf/issues/2584
+	// https://github.com/zarf-dev/zarf/issues/2584
 	// This is a band aid fix while we wait for crane and or docker to create the permanent fix
 	blobDir := filepath.Join(cfg.DestinationDirectory, "blobs", "sha256")
 	err = filepath.Walk(blobDir, func(path string, fi os.FileInfo, err error) error {

@@ -10,6 +10,16 @@ on:
       - "adr/**"
       - "docs/**"
       - "CODEOWNERS"
+  merge_group:
+    paths-ignore:
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+      - "CODEOWNERS"
 
 permissions:
   contents: read
@@ -20,11 +30,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  validate-external:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Setup golang
         uses: ./.github/actions/golang
@@ -38,8 +48,15 @@ jobs:
       - name: Setup k3d
         uses: ./.github/actions/k3d
 
+      - name: Cleanup files
+        uses: ./.github/actions/cleanup-files
+
       - name: Run external service test
         run: make test-external
+
+      - name: get cluster info
+        uses: ./.github/actions/debug-cluster
+        if: always()
 
       - name: Save logs
         if: always()

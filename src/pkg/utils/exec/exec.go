@@ -15,6 +15,9 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"testing"
+
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 // Config is a struct for configuring the Cmd function.
@@ -27,13 +30,6 @@ type Config struct {
 	Stderr         io.Writer
 }
 
-// Shell represents the desired shell to use for a given command
-type Shell struct {
-	Windows string `json:"windows,omitempty" jsonschema:"description=(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item),example=powershell,example=cmd,example=pwsh,example=sh,example=bash,example=gsh"`
-	Linux   string `json:"linux,omitempty" jsonschema:"description=(default 'sh') Indicates a preference for the shell to use on Linux systems,example=sh,example=bash,example=fish,example=zsh,example=pwsh"`
-	Darwin  string `json:"darwin,omitempty" jsonschema:"description=(default 'sh') Indicates a preference for the shell to use on macOS systems,example=sh,example=bash,example=fish,example=zsh,example=pwsh"`
-}
-
 // PrintCfg is a helper function for returning a Config struct with Print set to true.
 func PrintCfg() Config {
 	return Config{Print: true}
@@ -41,13 +37,20 @@ func PrintCfg() Config {
 
 // Cmd executes a given command with given config.
 func Cmd(command string, args ...string) (string, string, error) {
-	return CmdWithContext(context.TODO(), Config{}, command, args...)
+	return CmdWithContext(context.Background(), Config{}, command, args...)
 }
 
 // CmdWithPrint executes a given command with given config and prints the command.
 func CmdWithPrint(command string, args ...string) error {
-	_, _, err := CmdWithContext(context.TODO(), PrintCfg(), command, args...)
+	_, _, err := CmdWithContext(context.Background(), PrintCfg(), command, args...)
 	return err
+}
+
+// CmdWithTesting takes a *testing.T and generates a context the cancels on cleanup
+func CmdWithTesting(t *testing.T, config Config, command string, args ...string) (string, string, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	return CmdWithContext(ctx, config, command, args...)
 }
 
 // CmdWithContext executes a given command with given config.
@@ -153,7 +156,7 @@ func LaunchURL(url string) error {
 }
 
 // GetOSShell returns the shell and shellArgs based on the current OS
-func GetOSShell(shellPref Shell) (string, []string) {
+func GetOSShell(shellPref v1alpha1.Shell) (string, []string) {
 	var shell string
 	var shellArgs []string
 	powershellShellArgs := []string{"-Command", "$ErrorActionPreference = 'Stop';"}

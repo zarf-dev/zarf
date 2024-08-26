@@ -8,17 +8,15 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -41,16 +39,8 @@ import (
 func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	message.Warnf(lang.WarnSGetDeprecation)
 
-	// If this is a DefenseUnicorns package, use an internal sget public key
-	if strings.HasPrefix(image, fmt.Sprintf("%s://defenseunicorns", helpers.SGETURLScheme)) {
-		os.Setenv("DU_SGET_KEY", config.CosignPublicKey)
-		key = "env://DU_SGET_KEY"
-	}
-
 	// Remove the custom protocol header from the url
 	image = strings.TrimPrefix(image, helpers.SGETURLPrefix)
-
-	message.Debugf("utils.Sget: image=%s, key=%s", image, key)
 
 	spinner := message.NewProgressSpinner("Loading signed file %s", image)
 	defer spinner.Stop()
@@ -181,7 +171,7 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 }
 
 // CosignVerifyBlob verifies the zarf.yaml.sig was signed with the key provided by the flag
-func CosignVerifyBlob(blobRef string, sigRef string, keyPath string) error {
+func CosignVerifyBlob(ctx context.Context, blobRef string, sigRef string, keyPath string) error {
 	keyOptions := options.KeyOpts{KeyRef: keyPath}
 	cmd := &verify.VerifyBlobCmd{
 		KeyOpts:    keyOptions,
@@ -190,7 +180,7 @@ func CosignVerifyBlob(blobRef string, sigRef string, keyPath string) error {
 		Offline:    true,
 		IgnoreTlog: true,
 	}
-	err := cmd.Exec(context.TODO(), blobRef)
+	err := cmd.Exec(ctx, blobRef)
 	if err == nil {
 		message.Successf("Package signature validated!")
 	}

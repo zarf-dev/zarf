@@ -7,18 +7,17 @@ package deprecated
 import (
 	"fmt"
 
-	"github.com/defenseunicorns/zarf/src/pkg/variables"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
-func migrateSetVariableToSetVariables(c types.ZarfComponent) (types.ZarfComponent, string) {
+func migrateSetVariableToSetVariables(c v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, string) {
 	hasSetVariable := false
 
-	migrate := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
+	migrate := func(actions []v1alpha1.ZarfComponentAction) []v1alpha1.ZarfComponentAction {
 		for i := range actions {
 			if actions[i].DeprecatedSetVariable != "" && len(actions[i].SetVariables) < 1 {
 				hasSetVariable = true
-				actions[i].SetVariables = []variables.Variable{
+				actions[i].SetVariables = []v1alpha1.Variable{
 					{
 						Name:      actions[i].DeprecatedSetVariable,
 						Sensitive: false,
@@ -56,8 +55,8 @@ func migrateSetVariableToSetVariables(c types.ZarfComponent) (types.ZarfComponen
 	return c, ""
 }
 
-func clearSetVariables(c types.ZarfComponent) types.ZarfComponent {
-	clear := func(actions []types.ZarfComponentAction) []types.ZarfComponentAction {
+func clearSetVariables(c v1alpha1.ZarfComponent) v1alpha1.ZarfComponent {
+	clear := func(actions []v1alpha1.ZarfComponentAction) []v1alpha1.ZarfComponentAction {
 		for i := range actions {
 			actions[i].DeprecatedSetVariable = ""
 		}

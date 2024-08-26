@@ -7,6 +7,6 @@ components:
   - name: baseline
     required: true
     images:
-      - defenseunicorns/zarf-game:multi-tile-dark
-      - defenseunicorns/zarf-game:multi-tile-dark@sha256:f78e442f0f3eb3e9459b5ae6b1a8fda62f8dfe818112e7d130a4e8ae72b3cbff
-      - defenseunicorns/zarf-game@sha256:f78e442f0f3eb3e9459b5ae6b1a8fda62f8dfe818112e7d130a4e8ae72b3cbff
+      - ghcr.io/zarf-dev/doom-game:0.0.1
+      - ghcr.io/zarf-dev/doom-game:0.0.1@sha256:0a44b759e219d9d6f3c7cbbf40c57ede71a1f9bf54da65767c4137be74727662
+      - ghcr.io/zarf-dev/doom-game@sha256:0a44b759e219d9d6f3c7cbbf40c57ede71a1f9bf54da65767c4137be74727662

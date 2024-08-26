@@ -12,16 +12,16 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/creator"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/pkg/zoci"
-	"github.com/defenseunicorns/zarf/src/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
 // Publish publishes the package to a registry
@@ -58,7 +58,7 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 			return err
 		}
 
-		p.cfg.Pkg, p.warnings, err = sc.LoadPackageDefinition(ctx, p.layout)
+		p.cfg.Pkg, _, err = sc.LoadPackageDefinition(ctx, p.layout)
 		if err != nil {
 			return err
 		}
@@ -72,7 +72,7 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 		}
 	} else {
 		filter := filters.Empty()
-		p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, filter, false)
+		p.cfg.Pkg, _, err = p.source.LoadPackage(ctx, p.layout, filter, false)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
@@ -107,13 +107,13 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 	}
 	if p.cfg.CreateOpts.IsSkeleton {
 		message.Title("How to import components from this skeleton:", "")
-		ex := []types.ZarfComponent{}
+		ex := []v1alpha1.ZarfComponent{}
 		for _, c := range p.cfg.Pkg.Components {
-			ex = append(ex, types.ZarfComponent{
+			ex = append(ex, v1alpha1.ZarfComponent{
 				Name: fmt.Sprintf("import-%s", c.Name),
-				Import: types.ZarfComponentImport{
-					ComponentName: c.Name,
-					URL:           helpers.OCIURLPrefix + remote.Repo().Reference.String(),
+				Import: v1alpha1.ZarfComponentImport{
+					Name: c.Name,
+					URL:  helpers.OCIURLPrefix + remote.Repo().Reference.String(),
 				},
 			})
 		}

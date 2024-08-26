@@ -5,13 +5,14 @@
 package common
 
 import (
+	"errors"
 	"os"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // Constants for use when loading configurations from viper config files
@@ -166,16 +167,15 @@ func printViperConfigUsed() {
 	if !vInitialized {
 		return
 	}
-
-	// Optional, so ignore file not found errors
-	if vConfigError != nil {
-		// Config file not found; ignore
-		if _, ok := vConfigError.(viper.ConfigFileNotFoundError); !ok {
-			message.WarnErrf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
-		}
-	} else {
-		message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
+	var notFoundErr viper.ConfigFileNotFoundError
+	if errors.As(vConfigError, &notFoundErr) {
+		return
 	}
+	if vConfigError != nil {
+		message.WarnErrf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
+		return
+	}
+	message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
 }
 
 func setDefaults() {

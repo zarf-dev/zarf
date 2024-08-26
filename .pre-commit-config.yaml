@@ -9,7 +9,7 @@ repos:
         args:
           - "--allow-missing-credentials"
       - id: detect-private-key
-        exclude: "src/test/e2e/30_config_file_test.go"
+        exclude: "src/test/e2e/29_config_file_test.go"
       - id: end-of-file-fixer
         exclude: site/src/content/docs/commands/.*
       - id: fix-byte-order-marker
@@ -40,15 +40,3 @@ repos:
         types: [go]
         language: golang
         pass_filenames: false
-  - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.14.0
-    hooks:
-      - id: check-jsonschema
-        name: "Validate Zarf Configs Against Schema"
-        files: "zarf.yaml"
-        types: [yaml]
-        args: ["--schemafile", "zarf.schema.json"]
-        exclude: |
-          (?x)^(
-            src/test/packages/12-lint/.*
-          )$

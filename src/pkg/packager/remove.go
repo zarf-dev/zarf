@@ -18,14 +18,15 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/actions"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
@@ -37,15 +38,13 @@ func (p *Packager) Remove(ctx context.Context) (err error) {
 	spinner := message.NewProgressSpinner("Removing Zarf package %s", p.cfg.PkgOpts.PackageSource)
 	defer spinner.Stop()
 
-	var packageName string
-
 	// we do not want to allow removal of signed packages without a signature if there are remove actions
 	// as this is arbitrary code execution from an untrusted source
-	p.cfg.Pkg, p.warnings, err = p.source.LoadPackageMetadata(ctx, p.layout, false, false)
+	p.cfg.Pkg, _, err = p.source.LoadPackageMetadata(ctx, p.layout, false, false)
 	if err != nil {
 		return err
 	}
-	packageName = p.cfg.Pkg.Metadata.Name
+	packageName := p.cfg.Pkg.Metadata.Name
 
 	// Build a list of components to remove and determine if we need a cluster connection
 	componentsToRemove := []string{}
@@ -165,18 +164,18 @@ func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage type
 func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.DeployedPackage, deployedComponent types.DeployedComponent, spinner *message.Spinner) (*types.DeployedPackage, error) {
 	components := deployedPackage.Data.Components
 
-	c := helpers.Find(components, func(t types.ZarfComponent) bool {
+	c := helpers.Find(components, func(t v1alpha1.ZarfComponent) bool {
 		return t.Name == deployedComponent.Name
 	})
 
 	onRemove := c.Actions.OnRemove
 	onFailure := func() {
-		if err := actions.Run(onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
+		if err := actions.Run(ctx, onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
 			message.Debugf("Unable to run the failure action: %s", err)
 		}
 	}
 
-	if err := actions.Run(onRemove.Defaults, onRemove.Before, nil); err != nil {
+	if err := actions.Run(ctx, onRemove.Defaults, onRemove.Before, nil); err != nil {
 		onFailure()
 		return nil, fmt.Errorf("unable to run the before action for component (%s): %w", c.Name, err)
 	}
@@ -208,12 +207,12 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 		}
 	}
 
-	if err := actions.Run(onRemove.Defaults, onRemove.After, nil); err != nil {
+	if err := actions.Run(ctx, onRemove.Defaults, onRemove.After, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the after action: %w", err)
 	}
 
-	if err := actions.Run(onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
+	if err := actions.Run(ctx, onRemove.Defaults, onRemove.OnSuccess, nil); err != nil {
 		onFailure()
 		return deployedPackage, fmt.Errorf("unable to run the success action: %w", err)
 	}

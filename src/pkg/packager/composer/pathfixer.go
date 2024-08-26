@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
 func makePathRelativeTo(path, relativeTo string) string {
@@ -19,7 +19,7 @@ func makePathRelativeTo(path, relativeTo string) string {
 	return filepath.Join(relativeTo, path)
 }
 
-func fixPaths(child *types.ZarfComponent, relativeToHead string) {
+func fixPaths(child *v1alpha1.ZarfComponent, relativeToHead string) {
 	for fileIdx, file := range child.Files {
 		composed := makePathRelativeTo(file.Source, relativeToHead)
 		child.Files[fileIdx].Source = composed
@@ -71,7 +71,7 @@ func fixPaths(child *types.ZarfComponent, relativeToHead string) {
 }
 
 // fixActionPaths takes a slice of actions and mutates the Dir to be relative to the head node
-func fixActionPaths(actions []types.ZarfComponentAction, defaultDir, relativeToHead string) []types.ZarfComponentAction {
+func fixActionPaths(actions []v1alpha1.ZarfComponentAction, defaultDir, relativeToHead string) []v1alpha1.ZarfComponentAction {
 	for actionIdx, action := range actions {
 		var composed string
 		if action.Dir != nil {

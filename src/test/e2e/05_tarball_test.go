@@ -12,11 +12,11 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestMultiPartPackage(t *testing.T) {
@@ -31,7 +31,7 @@ func TestMultiPartPackage(t *testing.T) {
 	e2e.CleanFiles(deployPath, outputFile)
 
 	// Create the package with a max size of 20MB
-	stdOut, stdErr, err := e2e.Zarf("package", "create", createPath, "--max-package-size=20", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", createPath, "--max-package-size=20", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	parts, err := filepath.Glob("zarf-package-multi-part-*")
@@ -54,7 +54,7 @@ func TestMultiPartPackage(t *testing.T) {
 	require.Equal(t, 3, pkgData.Count)
 	fmt.Printf("%#v", pkgData)
 
-	stdOut, stdErr, err = e2e.Zarf("package", "deploy", deployPath, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", deployPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the package was deployed
@@ -83,42 +83,32 @@ func TestReproducibleTarballs(t *testing.T) {
 	var (
 		createPath = filepath.Join("examples", "dos-games")
 		tmp        = t.TempDir()
-		tb         = filepath.Join(tmp, fmt.Sprintf("zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch))
+		tb         = filepath.Join(tmp, fmt.Sprintf("zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch))
 		unpack1    = filepath.Join(tmp, "unpack1")
 		unpack2    = filepath.Join(tmp, "unpack2")
 	)
 
-	stdOut, stdErr, err := e2e.Zarf("package", "create", createPath, "--confirm", "--output", tmp)
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", createPath, "--confirm", "--output", tmp)
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf("tools", "archiver", "decompress", tb, unpack1)
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "archiver", "decompress", tb, unpack1)
 	require.NoError(t, err, stdOut, stdErr)
 
-	var pkg1 types.ZarfPackage
+	var pkg1 v1alpha1.ZarfPackage
 	err = utils.ReadYaml(filepath.Join(unpack1, layout.ZarfYAML), &pkg1)
 	require.NoError(t, err)
 
-	b, err := os.ReadFile(filepath.Join(unpack1, layout.Checksums))
-	require.NoError(t, err)
-	checksums1 := string(b)
-
 	e2e.CleanFiles(unpack1, tb)
 
-	stdOut, stdErr, err = e2e.Zarf("package", "create", createPath, "--confirm", "--output", tmp)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", createPath, "--confirm", "--output", tmp)
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf("tools", "archiver", "decompress", tb, unpack2)
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "archiver", "decompress", tb, unpack2)
 	require.NoError(t, err, stdOut, stdErr)
 
-	var pkg2 types.ZarfPackage
+	var pkg2 v1alpha1.ZarfPackage
 	err = utils.ReadYaml(filepath.Join(unpack2, layout.ZarfYAML), &pkg2)
 	require.NoError(t, err)
-
-	b, err = os.ReadFile(filepath.Join(unpack2, layout.Checksums))
-	require.NoError(t, err)
-	checksums2 := string(b)
-
-	message.PrintDiff(checksums1, checksums2)
 
 	require.Equal(t, pkg1.Metadata.AggregateChecksum, pkg2.Metadata.AggregateChecksum)
 }

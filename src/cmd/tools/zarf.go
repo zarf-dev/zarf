@@ -5,6 +5,8 @@
 package tools
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -16,18 +18,17 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 
-	"github.com/defenseunicorns/zarf/src/cmd/common"
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/internal/packager/git"
-	"github.com/defenseunicorns/zarf/src/internal/packager/helm"
-	"github.com/defenseunicorns/zarf/src/internal/packager/template"
-	"github.com/defenseunicorns/zarf/src/pkg/cluster"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/sources"
-	"github.com/defenseunicorns/zarf/src/pkg/pki"
-	"github.com/defenseunicorns/zarf/src/pkg/zoci"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/cmd/common"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 var subAltNames []string
@@ -52,12 +53,23 @@ var getCredsCmd = &cobra.Command{
 	Example: lang.CmdToolsGetCredsExample,
 	Aliases: []string{"gc"},
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
-		state, err := common.NewClusterOrDie(ctx).LoadZarfState(ctx)
-		if err != nil || state.Distro == "" {
-			// If no distro the zarf secret did not load properly
-			message.Fatalf(nil, lang.ErrLoadState)
+
+		timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
+		defer cancel()
+		c, err := cluster.NewClusterWithWait(timeoutCtx)
+		if err != nil {
+			return err
+		}
+
+		state, err := c.LoadZarfState(ctx)
+		if err != nil {
+			return err
+		}
+		// TODO: Determine if this is actually needed.
+		if state.Distro == "" {
+			return errors.New("zarf state secret did not load properly")
 		}
 
 		if len(args) > 0 {
@@ -66,6 +78,7 @@ var getCredsCmd = &cobra.Command{
 		} else {
 			message.PrintCredentialTable(state, nil)
 		}
+		return nil
 	},
 }
 
@@ -76,27 +89,37 @@ var updateCredsCmd = &cobra.Command{
 	Example: lang.CmdToolsUpdateCredsExample,
 	Aliases: []string{"uc"},
 	Args:    cobra.MaximumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		validKeys := []string{message.RegistryKey, message.GitKey, message.ArtifactKey, message.AgentKey}
 		if len(args) == 0 {
 			args = validKeys
 		} else {
 			if !slices.Contains(validKeys, args[0]) {
 				cmd.Help()
-				message.Fatalf(nil, lang.CmdToolsUpdateCredsInvalidServiceErr, message.RegistryKey, message.GitKey, message.ArtifactKey)
+				return fmt.Errorf("invalid service key specified, valid key choices are: %v", validKeys)
 			}
 		}
 
 		ctx := cmd.Context()
-		c := common.NewClusterOrDie(ctx)
+
+		timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
+		defer cancel()
+		c, err := cluster.NewClusterWithWait(timeoutCtx)
+		if err != nil {
+			return err
+		}
+
 		oldState, err := c.LoadZarfState(ctx)
-		if err != nil || oldState.Distro == "" {
-			// If no distro the zarf secret did not load properly
-			message.Fatalf(nil, lang.ErrLoadState)
+		if err != nil {
+			return err
+		}
+		// TODO: Determine if this is actually needed.
+		if oldState.Distro == "" {
+			return errors.New("zarf state secret did not load properly")
 		}
 		newState, err := cluster.MergeZarfState(oldState, updateCredsInitOpts, args)
 		if err != nil {
-			message.Fatal(err, lang.CmdToolsUpdateCredsUnableUpdateCreds)
+			return fmt.Errorf("unable to update Zarf credentials: %w", err)
 		}
 
 		message.PrintCredentialUpdates(oldState, newState, args)
@@ -110,53 +133,59 @@ var updateCredsCmd = &cobra.Command{
 				Message: lang.CmdToolsUpdateCredsConfirmContinue,
 			}
 			if err := survey.AskOne(prompt, &confirm); err != nil {
-				message.Fatalf(nil, lang.ErrConfirmCancel, err)
+				return fmt.Errorf("confirm selection canceled: %w", err)
 			}
 		}
 
 		if confirm {
 			// Update registry and git pull secrets
 			if slices.Contains(args, message.RegistryKey) {
-				c.UpdateZarfManagedImageSecrets(ctx, newState)
+				err := c.UpdateZarfManagedImageSecrets(ctx, newState)
+				if err != nil {
+					return err
+				}
 			}
 			if slices.Contains(args, message.GitKey) {
-				c.UpdateZarfManagedGitSecrets(ctx, newState)
+				err := c.UpdateZarfManagedGitSecrets(ctx, newState)
+				if err != nil {
+					return err
+				}
+			}
+			// TODO once Zarf is changed so the default state is empty for a service when it is not deployed
+			// and sufficient time has passed for users state to get updated we can remove this check
+			internalGitServerExists, err := c.InternalGitServerExists(cmd.Context())
+			if err != nil {
+				return err
 			}
 
 			// Update artifact token (if internal)
-			if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.InternalServer {
-				g := git.New(oldState.GitServer)
-				tokenResponse, err := g.CreatePackageRegistryToken(ctx)
+			if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() && internalGitServerExists {
+				newState.ArtifactServer.PushToken, err = c.UpdateInternalArtifactServerToken(ctx, oldState.GitServer)
 				if err != nil {
-					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
-					message.Warnf(lang.CmdToolsUpdateCredsUnableCreateToken, err.Error())
-				} else {
-					newState.ArtifactServer.PushToken = tokenResponse.Sha1
+					return fmt.Errorf("unable to create the new Gitea artifact token: %w", err)
 				}
 			}
 
 			// Save the final Zarf State
 			err = c.SaveZarfState(ctx, newState)
 			if err != nil {
-				message.Fatalf(err, lang.ErrSaveState)
+				return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
 			}
 
 			// Update Zarf 'init' component Helm releases if present
 			h := helm.NewClusterOnly(&types.PackagerConfig{}, template.GetZarfVariableConfig(), newState, c)
 
-			if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.InternalRegistry {
+			if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.IsInternal() {
 				err = h.UpdateZarfRegistryValues(ctx)
 				if err != nil {
 					// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
 				}
 			}
-			if slices.Contains(args, message.GitKey) && newState.GitServer.InternalServer {
-				g := git.New(newState.GitServer)
-				err = g.UpdateZarfGiteaUsers(ctx, oldState)
+			if slices.Contains(args, message.GitKey) && newState.GitServer.IsInternal() && internalGitServerExists {
+				err := c.UpdateInternalGitServerSecret(cmd.Context(), oldState.GitServer, newState.GitServer)
 				if err != nil {
-					// Warn if we couldn't actually update the git server (it might not be installed and we should try to continue)
-					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateGit, err.Error())
+					return fmt.Errorf("unable to update Zarf Git Server values: %w", err)
 				}
 			}
 			if slices.Contains(args, message.AgentKey) {
@@ -167,6 +196,7 @@ var updateCredsCmd = &cobra.Command{
 				}
 			}
 		}
+		return nil
 	},
 }
 
@@ -174,32 +204,31 @@ var clearCacheCmd = &cobra.Command{
 	Use:     "clear-cache",
 	Aliases: []string{"c"},
 	Short:   lang.CmdToolsClearCacheShort,
-	Run: func(_ *cobra.Command, _ []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		message.Notef(lang.CmdToolsClearCacheDir, config.GetAbsCachePath())
 		if err := os.RemoveAll(config.GetAbsCachePath()); err != nil {
-			message.Fatalf(err, lang.CmdToolsClearCacheErr, config.GetAbsCachePath())
+			return fmt.Errorf("unable to clear the cache directory %s: %w", config.GetAbsCachePath(), err)
 		}
 		message.Successf(lang.CmdToolsClearCacheSuccess, config.GetAbsCachePath())
+		return nil
 	},
 }
 
 var downloadInitCmd = &cobra.Command{
 	Use:   "download-init",
 	Short: lang.CmdToolsDownloadInitShort,
-	Run: func(cmd *cobra.Command, _ []string) {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		url := zoci.GetInitPackageURL(config.CLIVersion)
-
 		remote, err := zoci.NewRemote(url, oci.PlatformForArch(config.GetArch()))
 		if err != nil {
-			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
+			return fmt.Errorf("unable to download the init package: %w", err)
 		}
-
 		source := &sources.OCISource{Remote: remote}
-
 		_, err = source.Collect(cmd.Context(), outputDirectory)
 		if err != nil {
-			message.Fatalf(err, lang.CmdToolsDownloadInitErr, err.Error())
+			return fmt.Errorf("unable to download the init package: %w", err)
 		}
+		return nil
 	},
 }
 
@@ -208,18 +237,22 @@ var generatePKICmd = &cobra.Command{
 	Aliases: []string{"pki"},
 	Short:   lang.CmdToolsGenPkiShort,
 	Args:    cobra.ExactArgs(1),
-	Run: func(_ *cobra.Command, args []string) {
-		pki := pki.GeneratePKI(args[0], subAltNames...)
+	RunE: func(_ *cobra.Command, args []string) error {
+		pki, err := pki.GeneratePKI(args[0], subAltNames...)
+		if err != nil {
+			return err
+		}
 		if err := os.WriteFile("tls.ca", pki.CA, helpers.ReadAllWriteUser); err != nil {
-			message.Fatalf(err, lang.ErrWritingFile, "tls.ca", err.Error())
+			return err
 		}
 		if err := os.WriteFile("tls.crt", pki.Cert, helpers.ReadAllWriteUser); err != nil {
-			message.Fatalf(err, lang.ErrWritingFile, "tls.crt", err.Error())
+			return err
 		}
 		if err := os.WriteFile("tls.key", pki.Key, helpers.ReadWriteUser); err != nil {
-			message.Fatalf(err, lang.ErrWritingFile, "tls.key", err.Error())
+			return err
 		}
 		message.Successf(lang.CmdToolsGenPkiSuccess, args[0])
+		return nil
 	},
 }
 
@@ -227,7 +260,7 @@ var generateKeyCmd = &cobra.Command{
 	Use:     "gen-key",
 	Aliases: []string{"key"},
 	Short:   lang.CmdToolsGenKeyShort,
-	Run: func(_ *cobra.Command, _ []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		// Utility function to prompt the user for the password to the private key
 		passwordFunc := func(bool) ([]byte, error) {
 			// perform the first prompt
@@ -259,7 +292,7 @@ var generateKeyCmd = &cobra.Command{
 		// Use cosign to generate the keypair
 		keyBytes, err := cosign.GenerateKeyPair(passwordFunc)
 		if err != nil {
-			message.Fatalf(err, lang.CmdToolsGenKeyErrUnableToGenKeypair, err.Error())
+			return fmt.Errorf("unable to generate key pair: %w", err)
 		}
 
 		prvKeyFileName := "cosign.key"
@@ -275,23 +308,23 @@ var generateKeyCmd = &cobra.Command{
 			}
 			err := survey.AskOne(confirmOverwritePrompt, &confirm)
 			if err != nil {
-				message.Fatalf(err, lang.CmdToolsGenKeyErrNoConfirmOverwrite)
+				return err
 			}
-
 			if !confirm {
-				message.Fatal(nil, lang.CmdToolsGenKeyErrNoConfirmOverwrite)
+				return errors.New("did not receive confirmation for overwriting key file(s)")
 			}
 		}
 
 		// Write the key file contents to disk
 		if err := os.WriteFile(prvKeyFileName, keyBytes.PrivateBytes, helpers.ReadWriteUser); err != nil {
-			message.Fatalf(err, lang.ErrWritingFile, prvKeyFileName, err.Error())
+			return err
 		}
 		if err := os.WriteFile(pubKeyFileName, keyBytes.PublicBytes, helpers.ReadAllWriteUser); err != nil {
-			message.Fatalf(err, lang.ErrWritingFile, pubKeyFileName, err.Error())
+			return err
 		}
 
 		message.Successf(lang.CmdToolsGenKeySuccess, prvKeyFileName, pubKeyFileName)
+		return nil
 	},
 }
 

@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/zarf-dev/zarf/src/test/testutil"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -21,7 +23,7 @@ import (
 func TestParseChecksum(t *testing.T) {
 	t.Parallel()
 
-	adr := "https://raw.githubusercontent.com/defenseunicorns/zarf/main/.adr-dir"
+	adr := "https://raw.githubusercontent.com/zarf-dev/zarf/main/.adr-dir"
 	sum := "930f4d5a191812e57b39bd60fca789ace07ec5acd36d63e1047604c8bdf998a3"
 
 	tests := []struct {
@@ -136,7 +138,7 @@ func TestDownloadToFile(t *testing.T) {
 			}
 			fmt.Println(src)
 			dst := filepath.Join(t.TempDir(), tt.fileName)
-			err := DownloadToFile(src, dst, "")
+			err := DownloadToFile(testutil.TestContext(t), src, dst, "")
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
 				return

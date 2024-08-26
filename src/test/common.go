@@ -6,7 +6,6 @@ package test
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"os"
 	"regexp"
@@ -17,8 +16,9 @@ import (
 	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/zarf/src/pkg/utils/exec"
+	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
 
 // ZarfE2ETest Struct holding common fields most of the tests will utilize.
@@ -27,7 +27,6 @@ type ZarfE2ETest struct {
 	Arch              string
 	ApplianceMode     bool
 	ApplianceModeKeep bool
-	RunClusterTests   bool
 }
 
 var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
@@ -53,16 +52,8 @@ func GetCLIName() string {
 	return binaryName
 }
 
-// SetupWithCluster performs actions for each test that requires a K8s cluster.
-func (e2e *ZarfE2ETest) SetupWithCluster(t *testing.T) {
-	if !e2e.RunClusterTests {
-		t.Skip("")
-	}
-	_ = exec.CmdWithPrint("sh", "-c", fmt.Sprintf("%s tools kubectl describe nodes | grep -A 99 Non-terminated", e2e.ZarfBinPath))
-}
-
 // Zarf executes a Zarf command.
-func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
+func (e2e *ZarfE2ETest) Zarf(t *testing.T, args ...string) (string, string, error) {
 	if !slices.Contains(args, "--tmpdir") && !slices.Contains(args, "tools") {
 		tmpdir, err := os.MkdirTemp("", "zarf-")
 		if err != nil {
@@ -85,14 +76,14 @@ func (e2e *ZarfE2ETest) Zarf(args ...string) (string, string, error) {
 		args = append(args, "--zarf-cache", cacheDir)
 		defer os.RemoveAll(cacheDir)
 	}
-	return exec.CmdWithContext(context.TODO(), exec.PrintCfg(), e2e.ZarfBinPath, args...)
+	return exec.CmdWithTesting(t, exec.PrintCfg(), e2e.ZarfBinPath, args...)
 }
 
 // Kubectl executes `zarf tools kubectl ...`
-func (e2e *ZarfE2ETest) Kubectl(args ...string) (string, string, error) {
+func (e2e *ZarfE2ETest) Kubectl(t *testing.T, args ...string) (string, string, error) {
 	tk := []string{"tools", "kubectl"}
 	args = append(tk, args...)
-	return e2e.Zarf(args...)
+	return e2e.Zarf(t, args...)
 }
 
 // CleanFiles removes files and directories that have been created during the test.
@@ -123,25 +114,10 @@ func (e2e *ZarfE2ETest) GetLogFileContents(t *testing.T, stdErr string) string {
 	return string(logContents)
 }
 
-// SetupDockerRegistry uses the host machine's docker daemon to spin up a local registry for testing purposes.
-func (e2e *ZarfE2ETest) SetupDockerRegistry(t *testing.T, port int) {
-	// spin up a local registry
-	registryImage := "registry:2.8.3"
-	err := exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", fmt.Sprintf("%d:5000", port), "--name", fmt.Sprintf("registry-%d", port), registryImage)
-	require.NoError(t, err)
-}
-
-// TeardownRegistry removes the local registry.
-func (e2e *ZarfE2ETest) TeardownRegistry(t *testing.T, port int) {
-	// remove the local registry
-	err := exec.CmdWithPrint("docker", "rm", "-f", fmt.Sprintf("registry-%d", port))
-	require.NoError(t, err)
-}
-
 // GetZarfVersion returns the current build/zarf version
 func (e2e *ZarfE2ETest) GetZarfVersion(t *testing.T) string {
 	// Get the version of the CLI
-	stdOut, stdErr, err := e2e.Zarf("version")
+	stdOut, stdErr, err := e2e.Zarf(t, "version")
 	require.NoError(t, err, stdOut, stdErr)
 	return strings.Trim(stdOut, "\n")
 }

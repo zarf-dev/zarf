@@ -14,29 +14,25 @@ components:
 
   - name: full-repo
     repos:
-    - https://github.com/defenseunicorns/zarf-public-test.git
-    - https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1
-    - https://gitlab.com/gitlab-org/build/omnibus-mirror/pcre2/-/tree/vreverse?ref_type=heads
+      - https://github.com/zarf-dev/zarf-public-test.git
+      - https://dev.azure.com/defenseunicorns/zarf-public-test/_git/zarf-public-test@v0.0.1
+      - https://gitlab.com/gitlab-org/build/omnibus-mirror/pcre2/-/tree/vreverse?ref_type=heads
     images:
-    - registry.com:9001/whatever/image:1.0.0
-    - busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79
-    - busybox:###ZARF_PKG_VAR_WHATEVER_IMAGE###
-    - busybox:###ZARF_PKG_TMPL_BUSYBOX_IMAGE###
-    - ubuntu:###ZARF_PKG_TMPL_UBUNTU_IMAGE###
+      - registry.com:9001/whatever/image:1.0.0
+      - busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79
+      - busybox:###ZARF_PKG_VAR_WHATEVER_IMAGE###
+      - busybox:###ZARF_PKG_TMPL_BUSYBOX_IMAGE###
+      - ubuntu:###ZARF_PKG_TMPL_UBUNTU_IMAGE###
     files:
-    - source: https://github.com/k3s-io/k3s/releases/download/v1.28.2+k3s1/k3s
-      shasum: 2f041d37a2c6d54d53e106e1c7713bc48f806f3919b0d9e092f5fcbdc55b41cf
-      target: src/
-    - source: file-without-shasum.txt
-      target: src/
-
-  - name: import
-    import:
-      path: "###ZARF_PKG_TMPL_PATH###"
+      - source: https://github.com/k3s-io/k3s/releases/download/v1.28.2+k3s1/k3s
+        shasum: 2f041d37a2c6d54d53e106e1c7713bc48f806f3919b0d9e092f5fcbdc55b41cf
+        target: src/
+      - source: file-without-shasum.txt
+        target: src/
 
   - name: oci-games-url
     import:
-      url: oci://🦄/dos-games:1.0.0
+      url: oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0
       name: baseline
 
   - name: oci-games-url

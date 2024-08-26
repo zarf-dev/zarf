@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/zarf/src/config/lang"
-	"github.com/defenseunicorns/zarf/src/pkg/layout"
-	"github.com/defenseunicorns/zarf/src/pkg/utils"
-	"github.com/defenseunicorns/zarf/src/types"
 	"github.com/mholt/archiver/v3"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // TestCreateDifferential creates several differential packages and ensures the reference package images and repos are not included in the new package.
@@ -28,17 +28,17 @@ func TestCreateDifferential(t *testing.T) {
 	differentialFlag := fmt.Sprintf("--differential=%s", packageName)
 
 	// Build the package a first time
-	stdOut, stdErr, err := e2e.Zarf("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.25.0", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", packagePath, "--set=PACKAGE_VERSION=v0.25.0", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(packageName)
 
 	// Build the differential package without changing the version
-	_, stdErr, err = e2e.Zarf("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.25.0", differentialFlag, "--confirm")
+	_, stdErr, err = e2e.Zarf(t, "package", "create", packagePath, "--set=PACKAGE_VERSION=v0.25.0", differentialFlag, "--confirm")
 	require.Error(t, err, "zarf package create should have errored when a differential package was being created without updating the package version number")
 	require.Contains(t, e2e.StripMessageFormatting(stdErr), lang.PkgCreateErrDifferentialSameVersion)
 
 	// Build the differential package
-	stdOut, stdErr, err = e2e.Zarf("package", "create", packagePath, "--set=PACKAGE_VERSION=v0.26.0", differentialFlag, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", packagePath, "--set=PACKAGE_VERSION=v0.26.0", differentialFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(differentialPackageName)
 
@@ -47,7 +47,7 @@ func TestCreateDifferential(t *testing.T) {
 	require.NoError(t, err, "unable to extract zarf.yaml from the differential git package")
 
 	// Load the extracted zarf.yaml specification
-	var differentialZarfConfig types.ZarfPackage
+	var differentialZarfConfig v1alpha1.ZarfPackage
 	err = utils.ReadYaml(filepath.Join(tmpdir, layout.ZarfYAML), &differentialZarfConfig)
 	require.NoError(t, err, "unable to read zarf.yaml from the differential git package")
 
@@ -63,7 +63,7 @@ func TestCreateDifferential(t *testing.T) {
 	expectedGitRepos := []string{
 		"https://github.com/stefanprodan/podinfo.git",
 		"https://github.com/kelseyhightower/nocode.git",
-		"https://github.com/defenseunicorns/zarf.git@refs/tags/v0.26.0",
+		"https://github.com/zarf-dev/zarf.git@refs/tags/v0.26.0",
 	}
 	require.Len(t, actualGitRepos, 4, "zarf.yaml from the differential package does not contain the correct number of repos")
 	for _, expectedRepo := range expectedGitRepos {
@@ -73,7 +73,7 @@ func TestCreateDifferential(t *testing.T) {
 	/* Validate we have ONLY the images we expect to have */
 	expectedImages := []string{
 		"ghcr.io/stefanprodan/podinfo:latest",
-		"ghcr.io/defenseunicorns/zarf/agent:v0.26.0",
+		"ghcr.io/zarf-dev/zarf/agent:v0.26.0",
 	}
 	require.Len(t, actualImages, 2, "zarf.yaml from the differential package does not contain the correct number of images")
 	for _, expectedImage := range expectedImages {

@@ -1,0 +1,31 @@
+kind: ZarfPackageConfig
+metadata:
+  name: find-image-with-variables
+  description: Simple zarf package with variables
+
+variables:
+  - name: PODINFO_IMAGE
+    default: "ghcr.io/stefanprodan/podinfo:latest"
+
+constants:
+  - name: AGENT_IMAGE
+    value: "ghcr.io/zarf-dev/zarf/agent:v0.36.1"
+
+components:
+- name: simple-var
+  required: true
+  manifests:
+    - name: simple-deployment
+      namespace: zarf
+      files:
+        - deployment.yaml
+- name: chart-with-var
+  required: true
+  charts:
+    - name: simple
+      releaseName: simple
+      localPath: simple-helm
+      namespace: zarf-simple
+      version: 0.1.0
+      valuesFiles:
+        - values.yaml

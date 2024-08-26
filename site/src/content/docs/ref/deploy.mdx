@@ -117,7 +117,7 @@ $ zarf connect [service name]
 
 :::note
 
-You can also specify a package locally, or via oci such as `zarf package deploy oci://defenseunicorns/dos-games:1.0.0-$(uname -m) --key=https://zarf.dev/cosign.pub`
+You can also specify a package locally, or via oci such as `zarf package deploy oci://defenseunicorns/dos-games:1.0.0 --key=https://zarf.dev/cosign.pub`
 
 :::
 
@@ -139,6 +139,12 @@ Should matching releases exist, a `helm upgrade` is performed.
 By default, Zarf waits for all resources to deploy successfully during install, upgrade, and rollback operations.
 
 You can override this behavior during install and upgrade by setting the `noWait: true` key under the `charts` and `manifests` fields.
+
+:::note
+
+Deployments will wait for helm [post-install hooks](https://helm.sh/docs/topics/charts_hooks/#the-available-hooks) to complete even with `noWait` set to `true` as Zarf follows the [Helm release lifecycle](https://helm.sh/docs/topics/charts_hooks/#hooks-and-the-release-lifecycle)
+
+:::
 
 ### Timeout Settings
 

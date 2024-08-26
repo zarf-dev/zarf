@@ -5,17 +5,40 @@
 package creator
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"time"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/deprecated"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
+// Validate errors if a package violates the schema or any runtime validations
+// This must be run while in the parent directory of the zarf.yaml being validated
+func Validate(pkg v1alpha1.ZarfPackage, baseDir string, setVariables map[string]string) error {
+	if err := lint.ValidatePackage(pkg); err != nil {
+		return fmt.Errorf("package validation failed: %w", err)
+	}
+
+	findings, err := lint.ValidatePackageSchema(setVariables)
+	if err != nil {
+		return fmt.Errorf("unable to check schema: %w", err)
+	}
+
+	if lint.HasSevOrHigher(findings, lint.SevErr) {
+		lint.PrintFindings(findings, lint.SevErr, baseDir, pkg.Metadata.Name)
+		return fmt.Errorf("found errors in schema")
+	}
+
+	return nil
+}
+
 // recordPackageMetadata records various package metadata during package create.
-func recordPackageMetadata(pkg *types.ZarfPackage, createOpts types.ZarfCreateOptions) error {
+func recordPackageMetadata(pkg *v1alpha1.ZarfPackage, createOpts types.ZarfCreateOptions) error {
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue.
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.

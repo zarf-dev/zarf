@@ -45,7 +45,7 @@ func (suite *CompositionSuite) TearDownSuite() {
 func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 	suite.T().Log("E2E: Package Compose Example")
 
-	_, stdErr, err := e2e.Zarf("package", "create", composeExample, "-o", "build", "--no-color", "--confirm")
+	_, stdErr, err := e2e.Zarf(suite.T(), "package", "create", composeExample, "-o", "build", "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that common names merge
@@ -61,7 +61,7 @@ func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 
 	// Ensure that the action was appended
 	suite.Contains(stdErr, `
-  - defenseunicorns/zarf-game:multi-tile-dark
+  - ghcr.io/zarf-dev/doom-game:0.0.1
   actions:
     onDeploy:
       before:
@@ -71,7 +71,7 @@ func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 func (suite *CompositionSuite) Test_1_FullComposability() {
 	suite.T().Log("E2E: Full Package Compose")
 
-	_, stdErr, err := e2e.Zarf("package", "create", composeTest, "-o", "build", "--no-color", "--confirm")
+	_, stdErr, err := e2e.Zarf(suite.T(), "package", "create", composeTest, "-o", "build", "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that names merge and that composition is added appropriately
@@ -139,8 +139,8 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
   - ghcr.io/stefanprodan/podinfo:6.4.0
   - ghcr.io/stefanprodan/podinfo:6.4.1
   repos:
-  - https://github.com/defenseunicorns/zarf-public-test.git
-  - https://github.com/defenseunicorns/zarf-public-test.git@refs/heads/dragons
+  - https://github.com/zarf-dev/zarf-public-test.git
+  - https://github.com/zarf-dev/zarf-public-test.git@refs/heads/dragons
 `)
 
 	// Check dataInjections
@@ -183,9 +183,9 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 func (suite *CompositionSuite) Test_2_ComposabilityBadLocalOS() {
 	suite.T().Log("E2E: Package Compose Example")
 
-	_, stdErr, err := e2e.Zarf("package", "create", composeTestBadLocalOS, "-o", "build", "--no-color", "--confirm")
+	_, stdErr, err := e2e.Zarf(suite.T(), "package", "create", composeTestBadLocalOS, "-o", "build", "--no-color", "--confirm")
 	suite.Error(err)
-	suite.Contains(stdErr, "\"only.localOS\" \"linux\" cannot be\n             redefined as \"windows\" during compose")
+	suite.Contains(e2e.StripMessageFormatting(stdErr), "\"only.localOS\" \"linux\" cannot be redefined as \"windows\" during compose")
 }
 
 func TestCompositionSuite(t *testing.T) {

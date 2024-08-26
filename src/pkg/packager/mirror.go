@@ -10,34 +10,34 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/defenseunicorns/zarf/src/config"
-	"github.com/defenseunicorns/zarf/src/pkg/message"
-	"github.com/defenseunicorns/zarf/src/pkg/packager/filters"
-	"github.com/defenseunicorns/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Mirror pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the air gap without deploying them
-func (p *Packager) Mirror(ctx context.Context) (err error) {
+func (p *Packager) Mirror(ctx context.Context) error {
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
 	)
 
-	p.cfg.Pkg, p.warnings, err = p.source.LoadPackage(ctx, p.layout, filter, true)
+	pkg, warnings, err := p.source.LoadPackage(ctx, p.layout, filter, true)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
+	p.cfg.Pkg = pkg
 
-	var sbomWarnings []string
-	p.sbomViewFiles, sbomWarnings, err = p.layout.SBOMs.StageSBOMViewFiles()
+	sbomViewFiles, sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
 	if err != nil {
 		return err
 	}
-
-	p.warnings = append(p.warnings, sbomWarnings...)
+	warnings = append(warnings, sbomWarnings...)
 
 	// Confirm the overall package mirror
-	if !p.confirmAction(config.ZarfMirrorStage) {
+	if !p.confirmAction(config.ZarfMirrorStage, warnings, sbomViewFiles) {
 		return fmt.Errorf("mirror cancelled")
 	}
 
@@ -55,7 +55,7 @@ func (p *Packager) Mirror(ctx context.Context) (err error) {
 }
 
 // mirrorComponent mirrors a Zarf Component.
-func (p *Packager) mirrorComponent(ctx context.Context, component types.ZarfComponent) error {
+func (p *Packager) mirrorComponent(ctx context.Context, component v1alpha1.ZarfComponent) error {
 	componentPaths := p.layout.Components.Dirs[component.Name]
 
 	// All components now require a name
