@@ -178,5 +178,5 @@ components:
               cluster:
                 kind: deployment
                 namespace: zarf
-                name: app=docker-registry
+                name: app=zarf-registry
                 condition: Available

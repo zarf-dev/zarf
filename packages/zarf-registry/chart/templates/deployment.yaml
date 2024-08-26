@@ -4,7 +4,7 @@ metadata:
   name: {{ template "docker-registry.fullname" . }}
   namespace: {{ .Values.namespace | default .Release.Namespace }}
   labels:
-    app: {{ template "docker-registry.name" . }}
+    app: {{ .Values.appLabel }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}

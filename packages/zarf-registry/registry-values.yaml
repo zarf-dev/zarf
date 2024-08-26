@@ -9,6 +9,9 @@ image:
   repository: "###ZARF_REGISTRY###/###ZARF_CONST_REGISTRY_IMAGE###"
   tag: "###ZARF_CONST_REGISTRY_IMAGE_TAG###"
 
+probe: 5001
+
+
 imagePullSecrets:
   - name: private-registry
 
@@ -30,6 +33,8 @@ resources:
     memory: "###ZARF_VAR_REGISTRY_MEM_LIMIT###"
 
 fullnameOverride: "zarf-docker-registry"
+
+appLabel: "zarf-registry"
 
 podLabels:
   zarf.dev/agent: "ignore"
