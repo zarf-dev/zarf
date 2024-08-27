@@ -330,17 +330,17 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 	return nil
 }
 
-func (pc *PackageCreator) processExtensions(ctx context.Context, components []v1alpha1.ZarfComponent, layout *layout.PackagePaths, isYOLO bool) (processedComponents []v1alpha1.ZarfComponent, err error) {
+func (pc *PackageCreator) processExtensions(ctx context.Context, pkg v1beta1.ZarfPackage, layout *layout.PackagePaths) (processedComponents []v1beta1.ZarfComponent, err error) {
 	// Create component paths and process extensions for each component.
-	for _, c := range components {
+	for _, c := range pkg.Components {
 		componentPaths, err := layout.Components.Create(c)
 		if err != nil {
 			return nil, err
 		}
 
 		// Big Bang
-		if c.Extensions.BigBang != nil {
-			if c, err = bigbang.Run(ctx, isYOLO, componentPaths, c); err != nil {
+		if c.DeprecatedExtensions.BigBang != nil {
+			if c, err = bigbang.Run(ctx, pkg.IsAirGap(), componentPaths, c); err != nil {
 				return nil, fmt.Errorf("unable to process bigbang extension: %w", err)
 			}
 		}

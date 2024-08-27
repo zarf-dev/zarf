@@ -160,6 +160,8 @@ type GitRepoSource struct {
 	URL string `json:"url"`
 	// The sub directory to the chart within a git repo.
 	Path string `json:"path,omitempty"`
+	// The Tag of the repo where the helm chart is stored.
+	Tag string `json:"tag,omitempty"`
 }
 
 // LocalRepoSource represents a Helm chart stored locally.

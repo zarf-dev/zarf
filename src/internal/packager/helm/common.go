@@ -51,7 +51,7 @@ type Helm struct {
 type Modifier func(*Helm)
 
 // New returns a new Helm config struct.
-func New(chart v1alpha1.ZarfChart, chartPath string, valuesPath string, mods ...Modifier) *Helm {
+func New(chart types.ZarfChart, chartPath string, valuesPath string, mods ...Modifier) *Helm {
 	h := &Helm{
 		chart:      chart,
 		chartPath:  chartPath,

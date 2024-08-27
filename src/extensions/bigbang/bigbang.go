@@ -18,12 +18,12 @@ import (
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1beta2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/chartutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,9 +43,9 @@ var tenMins = metav1.Duration{
 
 // Run mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
-func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, error) {
-	cfg := c.Extensions.BigBang
-	manifests := []v1alpha1.ZarfManifest{}
+func Run(ctx context.Context, airgap bool, tmpPaths *layout.ComponentPaths, c types.ZarfComponent) (types.ZarfComponent, error) {
+	cfg := c.DeprecatedExtensions.BigBang
+	manifests := []types.ZarfManifest{}
 
 	validVersionResponse, err := isValidVersion(cfg.Version)
 
@@ -76,7 +76,7 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c v1al
 		// Add the flux manifests to the list of manifests to be pulled down by Zarf.
 		manifests = append(manifests, fluxManifest)
 
-		if !YOLO {
+		if airgap {
 			// Add the images to the list of images to be pulled down by Zarf.
 			c.Images = append(c.Images, images...)
 		}
@@ -86,13 +86,15 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c v1al
 
 	// Configure helm to pull down the Big Bang chart.
 	helmCfg := helm.New(
-		v1alpha1.ZarfChart{
-			Name:        bb,
-			Namespace:   bb,
-			URL:         bbRepo,
-			Version:     cfg.Version,
+		types.ZarfChart{
+			Name:      bb,
+			Namespace: bb,
+			Git: types.GitRepoSource{
+				URL:  bbRepo,
+				Tag:  cfg.Version,
+				Path: "./chart",
+			},
 			ValuesFiles: cfg.ValuesFiles,
-			GitPath:     "./chart",
 		},
 		path.Join(tmpPaths.Temp, bb),
 		path.Join(tmpPaths.Temp, bb, "values"),
@@ -113,7 +115,7 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c v1al
 	}
 
 	// Add the Big Bang repo to the list of repos to be pulled down by Zarf.
-	if !YOLO {
+	if airgap {
 		bbRepo := fmt.Sprintf("%s@%s", cfg.Repo, cfg.Version)
 		c.Repos = append(c.Repos, bbRepo)
 	}
@@ -122,7 +124,7 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c v1al
 	if err != nil {
 		return c, fmt.Errorf("unable to find Big Bang resources: %w", err)
 	}
-	if !YOLO {
+	if airgap {
 		for _, gitRepo := range gitRepos {
 			c.Repos = append(c.Repos, gitRepo)
 		}
@@ -139,9 +141,9 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c v1al
 	}
 
 	// ten minutes in seconds
-	maxTotalSeconds := 10 * 60
+	maxTotalSeconds := time.Duration(10 * 60 * time.Second)
 
-	defaultMaxTotalSeconds := c.Actions.OnDeploy.Defaults.MaxTotalSeconds
+	defaultMaxTotalSeconds := c.Actions.OnDeploy.Defaults.Timeout.Duration
 	if defaultMaxTotalSeconds > maxTotalSeconds {
 		maxTotalSeconds = defaultMaxTotalSeconds
 	}
@@ -149,11 +151,11 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c v1al
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
 	for _, hrNamespacedName := range namespacedHelmReleaseNames {
 		hr := hrDependencies[hrNamespacedName]
-		action := v1alpha1.ZarfComponentAction{
-			Description:     fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hrNamespacedName),
-			MaxTotalSeconds: &maxTotalSeconds,
-			Wait: &v1alpha1.ZarfComponentActionWait{
-				Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
+		action := types.ZarfComponentAction{
+			Description: fmt.Sprintf("Big Bang Helm Release `%s` to be ready", hrNamespacedName),
+			Timeout:     &metav1.Duration{Duration: maxTotalSeconds},
+			Wait: &types.ZarfComponentActionWait{
+				Cluster: &types.ZarfComponentActionWaitCluster{
 					Kind:      "HelmRelease",
 					Name:      hr.Metadata.Name,
 					Namespace: hr.Metadata.Namespace,
@@ -168,7 +170,7 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c v1al
 		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.54.0/chart/templates/metrics-server/helmrelease.yaml
 		if hr.Metadata.Name == "metrics-server" {
 			action.Description = "K8s metric server to exist or be deployed by Big Bang"
-			action.Wait.Cluster = &v1alpha1.ZarfComponentActionWaitCluster{
+			action.Wait.Cluster = &types.ZarfComponentActionWaitCluster{
 				Kind: "APIService",
 				// https://github.com/kubernetes-sigs/metrics-server#compatibility-matrix
 				Name: "v1beta1.metrics.k8s.io",
@@ -195,13 +197,13 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c v1al
 
 	// Add onFailure actions with additional troubleshooting information.
 	for _, cmd := range failureGeneral {
-		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, v1alpha1.ZarfComponentAction{
+		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, types.ZarfComponentAction{
 			Cmd: fmt.Sprintf("./zarf tools kubectl %s", cmd),
 		})
 	}
 
 	for _, cmd := range failureDebug {
-		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, v1alpha1.ZarfComponentAction{
+		c.Actions.OnDeploy.OnFailure = append(c.Actions.OnDeploy.OnFailure, types.ZarfComponentAction{
 			Mute:        &t,
 			Description: "Storing debug information to the log for troubleshooting.",
 			Cmd:         fmt.Sprintf("./zarf tools kubectl %s", cmd),
@@ -209,13 +211,13 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c v1al
 	}
 
 	// Add a pre-remove action to suspend the Big Bang HelmReleases to prevent reconciliation during removal.
-	c.Actions.OnRemove.Before = append(c.Actions.OnRemove.Before, v1alpha1.ZarfComponentAction{
+	c.Actions.OnRemove.Before = append(c.Actions.OnRemove.Before, types.ZarfComponentAction{
 		Description: "Suspend Big Bang HelmReleases to prevent reconciliation during removal.",
 		Cmd:         `./zarf tools kubectl patch helmrelease -n bigbang bigbang --type=merge -p '{"spec":{"suspend":true}}'`,
 	})
 
 	// Select the images needed to support the repos for this configuration of Big Bang.
-	if !YOLO {
+	if airgap {
 		for _, hr := range hrDependencies {
 			namespacedName := getNamespacedNameFromMeta(hr.Metadata)
 			gitRepo := gitRepos[hr.NamespacedSource]
@@ -234,7 +236,7 @@ func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c v1al
 	}
 
 	// Create the flux wrapper around Big Bang for deployment.
-	manifest, err := addBigBangManifests(YOLO, tmpPaths.Temp, cfg)
+	manifest, err := addBigBangManifests(airgap, tmpPaths.Temp, cfg)
 	if err != nil {
 		return c, err
 	}
@@ -453,9 +455,9 @@ func findBBResources(t string) (gitRepos map[string]string, helmReleaseDeps map[
 }
 
 // addBigBangManifests creates the manifests component for deploying Big Bang.
-func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang) (v1alpha1.ZarfManifest, error) {
+func addBigBangManifests(YOLO bool, manifestDir string, cfg *types.BigBang) (types.ZarfManifest, error) {
 	// Create a manifest component that we add to the zarf package for bigbang.
-	manifest := v1alpha1.ZarfManifest{
+	manifest := types.ZarfManifest{
 		Name:      bb,
 		Namespace: bb,
 	}

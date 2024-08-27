@@ -13,9 +13,9 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/chartutil"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -43,7 +43,7 @@ func (h HelmReleaseDependency) Dependencies() []string {
 }
 
 // getFlux Creates a component to deploy Flux.
-func getFlux(baseDir string, cfg *extensions.BigBang) (manifest v1alpha1.ZarfManifest, images []string, err error) {
+func getFlux(baseDir string, cfg *types.BigBang) (manifest types.ZarfManifest, images []string, err error) {
 	localPath := path.Join(baseDir, "bb-ext-flux.yaml")
 	kustomizePath := path.Join(baseDir, "kustomization.yaml")
 
