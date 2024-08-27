@@ -330,7 +330,7 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 	return nil
 }
 
-func (pc *PackageCreator) processExtensions(ctx context.Context, pkg v1beta1.ZarfPackage, layout *layout.PackagePaths) (processedComponents []v1beta1.ZarfComponent, err error) {
+func (pc *PackageCreator) processExtensions(ctx context.Context, pkg types.ZarfPackage, layout *layout.PackagePaths) (processedComponents []types.ZarfComponent, err error) {
 	// Create component paths and process extensions for each component.
 	for _, c := range pkg.Components {
 		componentPaths, err := layout.Components.Create(c)

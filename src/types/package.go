@@ -69,6 +69,13 @@ func (pkg ZarfPackage) HasImages() bool {
 	return false
 }
 
+func (pkg ZarfPackage) IsAirGap() bool {
+	if pkg.Metadata.Airgap == nil {
+		return true
+	}
+	return *pkg.Metadata.Airgap
+}
+
 // IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections).
 func (pkg ZarfPackage) IsSBOMAble() bool {
 	for _, c := range pkg.Components {
