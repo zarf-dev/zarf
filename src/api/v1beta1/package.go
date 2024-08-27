@@ -59,6 +59,13 @@ func (pkg ZarfPackage) IsInitConfig() bool {
 	return pkg.Kind == ZarfInitConfig
 }
 
+func (pkg ZarfPackage) IsAirGap() bool {
+	if pkg.Metadata.Airgap == nil {
+		return true
+	}
+	return *pkg.Metadata.Airgap
+}
+
 // HasImages returns true if one of the components contains an image.
 func (pkg ZarfPackage) HasImages() bool {
 	for _, component := range pkg.Components {

@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/mholt/archiver/v3"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/extensions/bigbang"
@@ -86,7 +87,7 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 	warnings = append(warnings, templateWarnings...)
 
 	// After templates are filled process any create extensions
-	pkg.Components, err = pc.processExtensions(ctx, pkg.Components, src, pkg.Metadata.YOLO)
+	pkg.Components, err = pc.processExtensions(ctx, pkg, src)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, nil, err
 	}
@@ -330,17 +331,17 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 	return nil
 }
 
-func (pc *PackageCreator) processExtensions(ctx context.Context, components []v1alpha1.ZarfComponent, layout *layout.PackagePaths, isYOLO bool) (processedComponents []v1alpha1.ZarfComponent, err error) {
+func (pc *PackageCreator) processExtensions(ctx context.Context, pkg v1beta1.ZarfPackage, layout *layout.PackagePaths) (processedComponents []v1beta1.ZarfComponent, err error) {
 	// Create component paths and process extensions for each component.
-	for _, c := range components {
+	for _, c := range pkg.Components {
 		componentPaths, err := layout.Components.Create(c)
 		if err != nil {
 			return nil, err
 		}
 
 		// Big Bang
-		if c.Extensions.BigBang != nil {
-			if c, err = bigbang.Run(ctx, isYOLO, componentPaths, c); err != nil {
+		if c.DeprecatedExtensions.BigBang != nil {
+			if c, err = bigbang.Run(ctx, pkg.IsAirGap(), componentPaths, c); err != nil {
 				return nil, fmt.Errorf("unable to process bigbang extension: %w", err)
 			}
 		}

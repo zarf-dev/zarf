@@ -12,8 +12,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -43,7 +42,7 @@ func (h HelmReleaseDependency) Dependencies() []string {
 }
 
 // getFlux Creates a component to deploy Flux.
-func getFlux(baseDir string, cfg *extensions.BigBang) (manifest v1alpha1.ZarfManifest, images []string, err error) {
+func getFlux(baseDir string, cfg *v1beta1.BigBang) (manifest v1beta1.ZarfManifest, images []string, err error) {
 	localPath := path.Join(baseDir, "bb-ext-flux.yaml")
 	kustomizePath := path.Join(baseDir, "kustomization.yaml")
 
@@ -72,7 +71,7 @@ func getFlux(baseDir string, cfg *extensions.BigBang) (manifest v1alpha1.ZarfMan
 	}
 
 	// Add the flux.yaml file to the component manifests.
-	manifest = v1alpha1.ZarfManifest{
+	manifest = v1beta1.ZarfManifest{
 		Name:      "flux-system",
 		Namespace: "flux-system",
 		Files:     []string{localPath},
