@@ -1,0 +1,507 @@
+kind: ZarfPackageConfig
+apiVersion: v1
+metadata:
+  name: everything-zarf-package
+  description: A zarf package with a non empty value for every key - this is an invalid package and is here to exhibit the proposed v1 schema by 0026-schema.md
+  version: v1.0.0
+  uncompressed: true
+  architecture: amd64
+  airgap: true # changed from yolo
+  annotations: # All of these are v0 fields that will be deprecated in favor of a choose your own adventure label map
+    authors: cool-kidz
+    documentation: https://my-package-documentation.com
+    source: https://my-git-server/my-package
+    url: https://my-package-website.com
+    vendor: my-vendor
+    image: https://my-image-url-to-use-in-deprecated-zarf-ui
+    anyway-you-want-it: thats-the-way-you-need-it
+build: # Everything here is created by Zarf not be users
+  terminal: my-computer
+  user: my-user
+  architecture: amd64
+  timestamp: 2021-09-01T00:00:00Z
+  version: v1.0.0
+  migrations:
+    - scripts-to-actions
+  registryOverrides:
+    gcr.io: my-gcr.com
+  differential: true
+  differentialPackageVersion: "v0.99.9"
+  differentialMissing:
+    - missing-component
+  flavor: cool-flavor
+  lastNonBreakingVersion: "v0.99.9"
+  aggregateChecksum: shasum # this is moved from .metadata
+components:
+- name: a-component
+  description: Zarf description
+  default: false # Austin to check if we remove this
+  only:
+    localOS: darwin
+    cluster:
+      architecture: amd64
+      distros:
+      - ubuntu
+    flavor: a-flavor # this will only be used when there are multiple components
+  import:
+    name: other-component-name
+    path: ABCD # Only path or URL will be used, not both
+    url: oci://
+  manifests:
+  - name: manifest
+    namespace: manifest-ns
+    files:
+    - a-file.yaml
+    kustomizeAllowAnyDirectory: false
+    kustomizations:
+    - a-kustomization.yaml
+    wait: false
+  charts:
+  - name: chart
+    namespace: chart-ns
+    version: v1.0.0
+    releaseName: chart-release
+    wait: true
+    valuesFiles:
+    - values.yaml
+    variables:
+      - name: REPLICA_COUNT
+        description: "Override the number of pod replicas"
+        path: replicaCount
+    # Everything below this line is changing https://github.com/defenseunicorns/zarf/issues/2245
+    helm: # Only one of helm, git, oci, url, or local is allowed
+      url: https://stefanprodan.github.io/podinfo
+      name: podinfo # replaces repoName since it's only applicable in this situation
+    git:
+      url: https://stefanprodan.github.io/podinfo
+      path: charts/podinfo
+    oci:
+      url: oci://ghcr.io/stefanprodan/charts/podinfo
+    local:
+      path: chart
+  dataInjections:
+  - source: zim-data
+    target:
+      namespace: my-namespace
+      selector: app=my-app
+      container: data-loader
+      path: /data
+    compress: true
+  files:
+  - source: source-file.txt
+    target: target-file.txt
+    shasum: shasum
+    executable: false
+    symlinks:
+    - /path/to/symlink
+    extractPath: /path/to/extract
+  images:
+  - podinfo@v1
+  repos:
+  - https://github.com/defenseunicorns/zarf
+  wait: true
+  healthChecks:
+  - apiVersion: v1
+    kind: pod
+    name: my-pod
+    namespace: my-namespace
+  actions:
+    onCreate:
+      defaults:
+        mute: true
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+      before:
+      - mute: false
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        cmd: echo hello
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+        setVariables:
+        - name: VAR
+          sensitive: false
+          autoIndent: true
+          pattern: ".+"
+          type: raw
+        description: action-description
+        wait:
+          cluster: # Only one of cluster / network can be used
+            kind: pod
+            name: my-pod
+            namespace: pod-ns
+            condition: ready
+          network:
+            protocol: http
+            address: github.com
+            code: 200
+      after:
+      - mute: false
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        cmd: echo hello
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+        setVariables:
+        - name: VAR
+          sensitive: false
+          autoIndent: true
+          pattern: ".+"
+          type: raw
+        description: action-description
+        wait:
+          cluster: # Only one of cluster / network can be used
+            kind: pod
+            name: my-pod
+            namespace: pod-ns
+            condition: ready
+          network:
+            protocol: http
+            address: github.com
+            code: 200
+      onSuccess:
+      - mute: false
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        cmd: echo hello
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+        setVariables:
+        - name: VAR
+          sensitive: false
+          autoIndent: true
+          pattern: ".+"
+          type: raw
+        description: action-description
+        wait:
+          cluster: # Only one of cluster / network can be used
+            kind: pod
+            name: my-pod
+            namespace: pod-ns
+            condition: ready
+          network:
+            protocol: http
+            address: github.com
+            code: 200
+      onFailure:
+      - mute: false
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        cmd: echo hello
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+        setVariables:
+        - name: VAR
+          sensitive: false
+          autoIndent: true
+          pattern: ".+"
+          type: raw
+        description: action-description
+        wait:
+          cluster: # Only one of cluster / network can be used
+            kind: pod
+            name: my-pod
+            namespace: pod-ns
+            condition: ready
+          network:
+            protocol: http
+            address: github.com
+            code: 200
+    onDeploy:
+      defaults:
+        mute: true
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+      before:
+      - mute: false
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        cmd: echo hello
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+        setVariables:
+        - name: VAR
+          sensitive: false
+          autoIndent: true
+          pattern: ".+"
+          type: raw
+        description: action-description
+        wait:
+          cluster: # Only one of cluster / network can be used
+            kind: pod
+            name: my-pod
+            namespace: pod-ns
+            condition: ready
+          network:
+            protocol: http
+            address: github.com
+            code: 200
+      after:
+      - mute: false
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        cmd: echo hello
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+        setVariables:
+        - name: VAR
+          sensitive: false
+          autoIndent: true
+          pattern: ".+"
+          type: raw
+        description: action-description
+        wait:
+          cluster: # Only one of cluster / network can be used
+            kind: pod
+            name: my-pod
+            namespace: pod-ns
+            condition: ready
+          network:
+            protocol: http
+            address: github.com
+            code: 200
+      onSuccess:
+      - mute: false
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        cmd: echo hello
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+        setVariables:
+        - name: VAR
+          sensitive: false
+          autoIndent: true
+          pattern: ".+"
+          type: raw
+        description: action-description
+        wait:
+          cluster: # Only one of cluster / network can be used
+            kind: pod
+            name: my-pod
+            namespace: pod-ns
+            condition: ready
+          network:
+            protocol: http
+            address: github.com
+            code: 200
+      onFailure:
+      - mute: false
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        cmd: echo hello
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+        setVariables:
+        - name: VAR
+          sensitive: false
+          autoIndent: true
+          pattern: ".+"
+          type: raw
+        description: action-description
+        wait:
+          cluster: # Only one of cluster / network can be used
+            kind: pod
+            name: my-pod
+            namespace: pod-ns
+            condition: ready
+          network:
+            protocol: http
+            address: github.com
+            code: 200
+    onRemove:
+      defaults:
+        mute: true
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+      before:
+      - mute: false
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        cmd: echo hello
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+        setVariables:
+        - name: VAR
+          sensitive: false
+          autoIndent: true
+          pattern: ".+"
+          type: raw
+        description: action-description
+        wait:
+          cluster: # Only one of cluster / network can be used
+            kind: pod
+            name: my-pod
+            namespace: pod-ns
+            condition: ready
+          network:
+            protocol: http
+            address: github.com
+            code: 200
+      after:
+      - mute: false
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        cmd: echo hello
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+        setVariables:
+        - name: VAR
+          sensitive: false
+          autoIndent: true
+          pattern: ".+"
+          type: raw
+        description: action-description
+        wait:
+          cluster: # Only one of cluster / network can be used
+            kind: pod
+            name: my-pod
+            namespace: pod-ns
+            condition: ready
+          network:
+            protocol: http
+            address: github.com
+            code: 200
+      onSuccess:
+      - mute: false
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        cmd: echo hello
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+        setVariables:
+        - name: VAR
+          sensitive: false
+          autoIndent: true
+          pattern: ".+"
+          type: raw
+        description: action-description
+        wait:
+          cluster: # Only one of cluster / network can be used
+            kind: pod
+            name: my-pod
+            namespace: pod-ns
+            condition: ready
+          network:
+            protocol: http
+            address: github.com
+            code: 200
+      onFailure:
+      - mute: false
+        timeout: 1m
+        retries: 0
+        dir: dir
+        env:
+        - ENV_VAR=FOO
+        cmd: echo hello
+        shell:
+          darwin: sh
+          linux: sh
+          windows: powershell
+        setVariables:
+        - name: VAR
+          sensitive: false
+          autoIndent: true
+          pattern: ".+"
+          type: raw
+        description: action-description
+        wait:
+          cluster: # Only one of cluster / network can be used
+            kind: pod
+            name: my-pod
+            namespace: pod-ns
+            condition: ready
+          network:
+            protocol: http
+            address: github.com
+            code: 200
+constants:
+- name: CONSTANT
+  value: constant-value
+  description: constant-value
+  autoIndent: false
+  pattern: ".+"
+variables:
+- name: VAR
+  sensitive: false
+  autoIndent: true
+  pattern: ".+"
+  type: raw
+  description: var
+  default: whatever
+  prompt: false
