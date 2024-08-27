@@ -337,6 +337,7 @@ func (ic *ImportChain) Compose(ctx context.Context) (composed *v1alpha1.ZarfComp
 		overrideDeprecated(composed, node.ZarfComponent)
 		overrideResources(composed, node.ZarfComponent)
 		overrideActions(composed, node.ZarfComponent)
+		composed.HealthChecks = append(composed.HealthChecks, node.ZarfComponent.HealthChecks...)
 
 		bigbang.Compose(composed, node.ZarfComponent, node.relativeToHead)
 

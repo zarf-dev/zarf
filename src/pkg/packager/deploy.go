@@ -236,7 +236,7 @@ func (p *Packager) deployComponents(ctx context.Context) (deployedComponents []t
 				}
 				objs = append(objs, obj)
 			}
-			err := pkgkubernetes.WaitForReady(ctx, nil, objs)
+			err := pkgkubernetes.WaitForReady(ctx, p.cluster.Watcher, objs)
 			if err != nil {
 				deployedComponents[idx].Status = types.ComponentStatusFailed
 				return deployedComponents, err

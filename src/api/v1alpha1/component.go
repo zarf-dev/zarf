@@ -81,8 +81,9 @@ func (c ZarfComponent) RequiresCluster() bool {
 	hasManifests := len(c.Manifests) > 0
 	hasRepos := len(c.Repos) > 0
 	hasDataInjections := len(c.DataInjections) > 0
+	hasHealthChecks := len(c.HealthChecks) > 0
 
-	if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections {
+	if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections || hasHealthChecks {
 		return true
 	}
 

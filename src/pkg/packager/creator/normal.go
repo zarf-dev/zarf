@@ -77,6 +77,8 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 	}
 	warnings = append(warnings, composeWarnings...)
 
+	fmt.Println("pkg with health checks: ", pkg)
+
 	// After components are composed, template the active package.
 	pkg, templateWarnings, err := FillActiveTemplate(pkg, pc.createOpts.SetVariables)
 	if err != nil {
@@ -237,6 +239,7 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 // - writes the Zarf package as a tarball to a local directory,
 // or an OCI registry based on the --output flag
 func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, pkg *v1alpha1.ZarfPackage) (err error) {
+	fmt.Println("we are in output")
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range pkg.Components {
@@ -254,6 +257,12 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 
 	if err := recordPackageMetadata(pkg, pc.createOpts); err != nil {
 		return err
+	}
+
+	for _, v := range pkg.Components {
+		for _, x := range v.HealthChecks {
+			fmt.Print("this is health check: ", x)
+		}
 	}
 
 	if err := utils.WriteYaml(dst.ZarfYAML, pkg, helpers.ReadUser); err != nil {
