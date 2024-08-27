@@ -89,7 +89,7 @@ jobs:
         run: |
           echo skipped
 
-  codeql-scan:
+  go-codeql-scan:
     runs-on: ubuntu-latest
     steps:
       - name: Skipped
