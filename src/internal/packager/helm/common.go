@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -51,7 +52,7 @@ type Helm struct {
 type Modifier func(*Helm)
 
 // New returns a new Helm config struct.
-func New(chart v1alpha1.ZarfChart, chartPath string, valuesPath string, mods ...Modifier) *Helm {
+func New(chart v1beta1.ZarfChart, chartPath string, valuesPath string, mods ...Modifier) *Helm {
 	h := &Helm{
 		chart:      chart,
 		chartPath:  chartPath,

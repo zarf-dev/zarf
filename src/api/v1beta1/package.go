@@ -7,6 +7,9 @@ package v1beta1
 import (
 	"fmt"
 	"regexp"
+	"strings"
+
+	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
 )
 
 // VariableType represents a type of a Zarf package variable
@@ -59,10 +62,56 @@ func (pkg ZarfPackage) IsInitConfig() bool {
 	return pkg.Kind == ZarfInitConfig
 }
 
+func (pkg ZarfPackage) IsAirGap() bool {
+	if pkg.Metadata.Airgap == nil {
+		return true
+	}
+	return *pkg.Metadata.Airgap
+
+}
+
 // GetDeprecatedGroup gets the group of the component, if it is set. This should only be set
-// by for backwards compatibility with v1alpha1 packages.
-func (pkg ZarfPackage) GetDeprecatedGroup(componentIndex int) string {
-	return pkg.Metadata.Annotations[fmt.Sprintf("group-%d", componentIndex)]
+// by annotations for backwards compatibility with v1alpha1 packages.
+func (pkg ZarfPackage) GetDeprecatedGroup(compIdx int) string {
+	if pkg.Metadata.Annotations == nil {
+		return ""
+	}
+
+	return pkg.Metadata.Annotations[fmt.Sprintf("group-%d", compIdx)]
+}
+
+// GetDeprecatedGroup gets the group of the component, if it is set. This should only be set
+// by annotations for backwards compatibility with v1alpha1 packages.
+func (pkg ZarfPackage) GetDeprecatedCosignKey(compIdx int) string {
+	if pkg.Metadata.Annotations == nil {
+		return ""
+	}
+
+	return pkg.Metadata.Annotations[fmt.Sprintf("cosign-key-path-%d", compIdx)]
+}
+
+// GetDeprecatedExtension gets the extensions of the component, if it is set. This should only be set
+// by annotations for backwards compatibility with v1alpha1 packages.
+func (pkg ZarfPackage) GetDeprecatedExtensions(compIdx int) extensions.ZarfComponentExtensions {
+	if pkg.Metadata.Annotations == nil {
+		return extensions.ZarfComponentExtensions{}
+	}
+
+	if pkg.Metadata.Annotations[fmt.Sprintf("big-bang-%d-version", compIdx)] == "" {
+		return extensions.ZarfComponentExtensions{}
+	}
+
+	extensions := extensions.ZarfComponentExtensions{
+		BigBang: &extensions.BigBang{
+			Version:        pkg.Metadata.Annotations[fmt.Sprintf("big-bang-%d-version", compIdx)],
+			ValuesFiles:    strings.Split(pkg.Metadata.Annotations[fmt.Sprintf("big-bang-%d-values-files", compIdx)], ","),
+			SkipFlux:       pkg.Metadata.Annotations[fmt.Sprintf("big-bang-%d-skip-flux", compIdx)] == "true",
+			Repo:           pkg.Metadata.Annotations[fmt.Sprintf("big-bang-%d-repo", compIdx)],
+			FluxPatchFiles: strings.Split(pkg.Metadata.Annotations[fmt.Sprintf("big-bang-%d-values-files", compIdx)], ","),
+		},
+	}
+
+	return extensions
 }
 
 // HasImages returns true if one of the components contains an image.

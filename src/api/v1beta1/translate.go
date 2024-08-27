@@ -7,6 +7,7 @@ package v1beta1
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -63,10 +64,33 @@ func TranslateAlphaPackage(alphaPkg v1alpha1.ZarfPackage) (ZarfPackage, error) {
 
 	for i := range betaPkg.Components {
 		betaPkg.Components[i].Optional = helpers.BoolPtr(!alphaPkg.Components[i].IsRequired())
+		if alphaPkg.Components[i].DeprecatedGroup != "" {
+			betaPkg.Metadata.Annotations[fmt.Sprintf("group-%d", i)] = alphaPkg.Components[i].DeprecatedGroup
+		}
+
 		for j := range betaPkg.Components[i].Charts {
-			if alphaPkg.Components[i].DeprecatedGroup != "" {
-				betaPkg.Metadata.Annotations[fmt.Sprintf("group-%d", i)] = alphaPkg.Components[i].DeprecatedGroup
+			if alphaPkg.Components[i].Extensions.BigBang != nil {
+				if alphaPkg.Components[i].Extensions.BigBang.Version != "" {
+					betaPkg.Metadata.Annotations[fmt.Sprintf("big-bang-%d-version", i)] = alphaPkg.Components[i].Extensions.BigBang.Version
+				}
+				if alphaPkg.Components[i].Extensions.BigBang.Repo != "" {
+					betaPkg.Metadata.Annotations[fmt.Sprintf("big-bang-%d-repo", i)] = alphaPkg.Components[i].Extensions.BigBang.Repo
+				}
+
+				if alphaPkg.Components[i].Extensions.BigBang.FluxPatchFiles != nil {
+					betaPkg.Metadata.Annotations[fmt.Sprintf("big-bang-%d-flux-patch-files", i)] = strings.Join(alphaPkg.Components[i].Extensions.BigBang.FluxPatchFiles, ",")
+				}
+
+				if alphaPkg.Components[i].Extensions.BigBang.ValuesFiles != nil {
+					betaPkg.Metadata.Annotations[fmt.Sprintf("big-bang-%d-values-files", i)] = strings.Join(alphaPkg.Components[i].Extensions.BigBang.ValuesFiles, ",")
+				}
+				betaPkg.Metadata.Annotations[fmt.Sprintf("big-bang-%d-skip-flux", i)] = strconv.FormatBool(alphaPkg.Components[i].Extensions.BigBang.SkipFlux)
 			}
+
+			if alphaPkg.Components[i].DeprecatedCosignKeyPath != "" {
+				betaPkg.Metadata.Annotations[fmt.Sprintf("cosign-key-path-%d", i)] = alphaPkg.Components[i].DeprecatedCosignKeyPath
+			}
+
 			oldURL := alphaPkg.Components[i].Charts[j].URL
 			if helpers.IsOCIURL(oldURL) {
 				betaPkg.Components[i].Charts[j].OCI.URL = oldURL
