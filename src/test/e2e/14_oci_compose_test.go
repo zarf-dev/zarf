@@ -65,47 +65,47 @@ func (suite *PublishCopySkeletonSuite) Test_0_Publish_Skeletons() {
 	ref := suite.Reference.String()
 
 	helmCharts := filepath.Join("examples", "helm-charts")
-	_, stdErr, err := e2e.Zarf(suite.T(), "package", "publish", helmCharts, "oci://"+ref, "--insecure")
+	_, stdErr, err := e2e.Zarf(suite.T(), "package", "publish", helmCharts, "oci://"+ref, "--plain-http")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
 	bigBang := filepath.Join("src", "test", "packages", "14-import-everything", "big-bang-min")
-	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", bigBang, "oci://"+ref, "--insecure")
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", bigBang, "oci://"+ref, "--plain-http")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
 	composable := filepath.Join("src", "test", "packages", "09-composable-packages")
-	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", composable, "oci://"+ref, "--insecure")
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", composable, "oci://"+ref, "--plain-http")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
-	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", importEverything, "oci://"+ref, "--insecure")
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", importEverything, "oci://"+ref, "--plain-http")
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
-	_, _, err = e2e.Zarf(suite.T(), "package", "inspect", "oci://"+ref+"/import-everything:0.0.1", "--insecure", "-a", "skeleton")
+	_, _, err = e2e.Zarf(suite.T(), "package", "inspect", "oci://"+ref+"/import-everything:0.0.1", "--plain-http", "-a", "skeleton")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/import-everything:0.0.1", "-o", "build", "--insecure", "-a", "skeleton")
+	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/import-everything:0.0.1", "-o", "build", "--plain-http", "-a", "skeleton")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "-o", "build", "--insecure", "-a", "skeleton")
+	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "-o", "build", "--plain-http", "-a", "skeleton")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/big-bang-min:2.10.0", "-o", "build", "--insecure", "-a", "skeleton")
+	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/big-bang-min:2.10.0", "-o", "build", "--plain-http", "-a", "skeleton")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/test-compose-package:0.0.1", "-o", "build", "--insecure", "-a", "skeleton")
+	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/test-compose-package:0.0.1", "-o", "build", "--plain-http", "-a", "skeleton")
 	suite.NoError(err)
 }
 
 func (suite *PublishCopySkeletonSuite) Test_1_Compose_Everything_Inception() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
-	_, _, err := e2e.Zarf(suite.T(), "package", "create", importEverything, "-o", "build", "--insecure", "--confirm")
+	_, _, err := e2e.Zarf(suite.T(), "package", "create", importEverything, "-o", "build", "--plain-http", "--confirm")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf(suite.T(), "package", "create", importception, "-o", "build", "--insecure", "--confirm")
+	_, _, err = e2e.Zarf(suite.T(), "package", "create", importception, "-o", "build", "--plain-http", "--confirm")
 	suite.NoError(err)
 
 	_, stdErr, err := e2e.Zarf(suite.T(), "package", "inspect", importEverythingPath)
@@ -183,7 +183,7 @@ func (suite *PublishCopySkeletonSuite) Test_3_Copy() {
 	t := suite.T()
 
 	example := filepath.Join("build", fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "publish", example, "oci://"+suite.Reference.Registry, "--insecure")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "publish", example, "oci://"+suite.Reference.Registry, "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 
 	suite.Reference.Repository = "helm-charts"

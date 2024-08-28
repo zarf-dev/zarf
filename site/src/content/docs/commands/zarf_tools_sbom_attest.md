@@ -36,9 +36,11 @@ zarf tools sbom attest --output [FORMAT] <IMAGE> [flags]
 ### Options inherited from parent commands
 
 ```
-  -c, --config string   syft configuration file
-  -q, --quiet           suppress all logging output
-  -v, --verbose count   increase verbosity (-v = info, -vv = debug)
+  -c, --config string              syft configuration file
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+  -q, --quiet                      suppress all logging output
+  -v, --verbose count              increase verbosity (-v = info, -vv = debug)
 ```
 
 ### SEE ALSO

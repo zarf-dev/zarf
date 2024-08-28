@@ -103,7 +103,8 @@ func configFileDefaultTests(t *testing.T) {
 		"Disable log file creation (default true)",
 		"Disable fancy UI progress bars, spinners, logos, etc (default true)",
 		"zarf_cache: 978499a5",
-		"Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.",
+		"Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.",
+		"Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.",
 		"tmp_dir: c457359e",
 	}
 

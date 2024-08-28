@@ -32,8 +32,8 @@ type Remote struct {
 func NewRemote(url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {
 	logger := slog.New(message.ZarfHandler{})
 	modifiers := append([]oci.Modifier{
-		oci.WithPlainHTTP(config.CommonOptions.Insecure),
-		oci.WithInsecureSkipVerify(config.CommonOptions.Insecure),
+		oci.WithPlainHTTP(config.CommonOptions.PlainHTTP),
+		oci.WithInsecureSkipVerify(config.CommonOptions.InsecureSkipTLSVerify),
 		oci.WithLogger(logger),
 		oci.WithUserAgent("zarf/" + config.CLIVersion),
 	}, mods...)
