@@ -120,7 +120,7 @@ func (s *OCISource) LoadPackageMetadata(ctx context.Context, dst *layout.Package
 	}
 	dst.SetFromLayers(layersFetched)
 
-	pkg, warnings, err = dst.ReadZarfYAML()
+	pkg, warnings, err = dst.ReadGeneratedZarfYaml()
 	if err != nil {
 		return pkg, nil, err
 	}

@@ -5,7 +5,9 @@
 package layout
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -17,6 +19,7 @@ import (
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
@@ -48,6 +51,31 @@ func New(baseDir string) *PackagePaths {
 			Base: filepath.Join(baseDir, ComponentsDir),
 		},
 	}
+}
+
+// ReadGeneratedZarfYaml reads a zarf package from the a generated zarfv1beta1.yaml file or from a zarf.yaml file and translates it
+// This should only be used on generated Zarf packages
+func (pp *PackagePaths) ReadGeneratedZarfYaml() (v1beta1.ZarfPackage, error) {
+	path := filepath.Join(pp.Base, "zarfv1beta1.yaml")
+	_, err := os.Stat(path)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return v1beta1.ZarfPackage{}, err
+	}
+	if errors.Is(err, fs.ErrNotExist) {
+		alphaPkg, _, err := pp.ReadZarfYAML()
+		if err != nil {
+			return v1beta1.ZarfPackage{}, err
+		}
+		betaPkg, err := v1beta1.TranslateAlphaPackage(alphaPkg)
+		if err != nil {
+			return v1beta1.ZarfPackage{}, err
+		}
+		return betaPkg, nil
+	}
+
+	var pkg v1beta1.ZarfPackage
+	err = utils.ReadYaml(path, &pkg)
+	return pkg, err
 }
 
 // ReadZarfYAML reads a zarf.yaml file into memory,
