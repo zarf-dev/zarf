@@ -31,7 +31,7 @@ components:
     # default: false    # the initial value overrides the child component
     import:
       # The URL to the skeleton package containing this component's package definition
-      url: oci://🦄/dos-games:1.0.0
+      url: oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0
       # Example optional custom name to point to in the imported package (default is to use this component's name)
       name: baseline
     # Un'name'd Zarf primitives will be appended to the end of the primitive's list for that component.

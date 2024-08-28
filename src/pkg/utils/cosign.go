@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -16,7 +15,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 
@@ -40,12 +38,6 @@ import (
 // Forked from https://github.com/sigstore/cosign/blob/v1.7.1/pkg/sget/sget.go
 func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	message.Warnf(lang.WarnSGetDeprecation)
-
-	// If this is a DefenseUnicorns package, use an internal sget public key
-	if strings.HasPrefix(image, fmt.Sprintf("%s://defenseunicorns", helpers.SGETURLScheme)) {
-		os.Setenv("DU_SGET_KEY", config.CosignPublicKey)
-		key = "env://DU_SGET_KEY"
-	}
 
 	// Remove the custom protocol header from the url
 	image = strings.TrimPrefix(image, helpers.SGETURLPrefix)

@@ -44,7 +44,7 @@ func TestZarfInit(t *testing.T) {
 		// We need to use the --architecture flag here to force zarf to find the package.
 		_, stdErr, err = e2e.Zarf(t, "init", "--architecture", mismatchedArch, "--components=k3s", "--confirm")
 		require.Error(t, err, stdErr)
-		require.Contains(t, stdErr, expectedErrorMessage)
+		require.Contains(t, e2e.StripMessageFormatting(stdErr), expectedErrorMessage)
 	}
 
 	if !e2e.ApplianceMode {

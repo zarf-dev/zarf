@@ -13,6 +13,7 @@ import (
 	"maps"
 
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/zarf-dev/zarf/src/config"
@@ -112,78 +113,79 @@ func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo typ
 }
 
 // UpdateZarfManagedImageSecrets updates all Zarf-managed image secrets in all namespaces based on state
-// TODO: Refactor to return errors properly.
-func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *types.ZarfState) {
+func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *types.ZarfState) error {
 	spinner := message.NewProgressSpinner("Updating existing Zarf-managed image secrets")
 	defer spinner.Stop()
 
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		spinner.Errorf(err, "Unable to get k8s namespaces")
-	} else {
-		// Update all image pull secrets
-		for _, namespace := range namespaceList.Items {
-			currentRegistrySecret, err := c.Clientset.CoreV1().Secrets(namespace.Name).Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
-			if err != nil {
-				continue
-			}
-
-			// Check if this is a Zarf managed secret or is in a namespace the Zarf agent will take action in
-			if currentRegistrySecret.Labels[ZarfManagedByLabel] == "zarf" ||
-				(namespace.Labels[AgentLabel] != "skip" && namespace.Labels[AgentLabel] != "ignore") {
-				spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
-
-				newRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
-				if err != nil {
-					message.WarnErrf(err, "Unable to generate registry creds")
-					continue
-				}
-				if !maps.EqualFunc(currentRegistrySecret.Data, newRegistrySecret.Data, func(v1, v2 []byte) bool { return bytes.Equal(v1, v2) }) {
-					_, err := c.Clientset.CoreV1().Secrets(newRegistrySecret.Namespace).Update(ctx, newRegistrySecret, metav1.UpdateOptions{})
-					if err != nil {
-						message.WarnErrf(err, "Problem creating registry secret for the %s namespace", namespace.Name)
-					}
-				}
-			}
-		}
-		spinner.Success()
+		return err
 	}
+	// Update all image pull secrets
+	for _, namespace := range namespaceList.Items {
+		currentRegistrySecret, err := c.Clientset.CoreV1().Secrets(namespace.Name).Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
+		if kerrors.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		// Skip if namespace is skipped and secret is not managed by Zarf.
+		if currentRegistrySecret.Labels[ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
+			continue
+		}
+		newRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
+		if err != nil {
+			return err
+		}
+		if maps.EqualFunc(currentRegistrySecret.Data, newRegistrySecret.Data, func(v1, v2 []byte) bool { return bytes.Equal(v1, v2) }) {
+			continue
+		}
+		spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
+		_, err = c.Clientset.CoreV1().Secrets(newRegistrySecret.Namespace).Update(ctx, newRegistrySecret, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+	}
+
+	spinner.Success()
+	return nil
 }
 
 // UpdateZarfManagedGitSecrets updates all Zarf-managed git secrets in all namespaces based on state
-// TODO: Refactor to return errors properly.
-func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.ZarfState) {
+func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.ZarfState) error {
 	spinner := message.NewProgressSpinner("Updating existing Zarf-managed git secrets")
 	defer spinner.Stop()
 
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		spinner.Errorf(err, "Unable to get k8s namespaces")
-	} else {
-		// Update all git pull secrets
-		for _, namespace := range namespaceList.Items {
-			currentGitSecret, err := c.Clientset.CoreV1().Secrets(namespace.Name).Get(ctx, config.ZarfGitServerSecretName, metav1.GetOptions{})
-			if err != nil {
-				continue
-			}
-
-			// Check if this is a Zarf managed secret or is in a namespace the Zarf agent will take action in
-			if currentGitSecret.Labels[ZarfManagedByLabel] == "zarf" ||
-				(namespace.Labels[AgentLabel] != "skip" && namespace.Labels[AgentLabel] != "ignore") {
-				spinner.Updatef("Updating existing Zarf-managed git secret for namespace: '%s'", namespace.Name)
-
-				// Create the secret
-				newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, state.GitServer)
-				if !maps.Equal(currentGitSecret.StringData, newGitSecret.StringData) {
-					_, err := c.Clientset.CoreV1().Secrets(newGitSecret.Namespace).Update(ctx, newGitSecret, metav1.UpdateOptions{})
-					if err != nil {
-						message.WarnErrf(err, "Problem creating git server secret for the %s namespace", namespace.Name)
-					}
-				}
-			}
-		}
-		spinner.Success()
+		return err
 	}
+	for _, namespace := range namespaceList.Items {
+		currentGitSecret, err := c.Clientset.CoreV1().Secrets(namespace.Name).Get(ctx, config.ZarfGitServerSecretName, metav1.GetOptions{})
+		if kerrors.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			continue
+		}
+		// Skip if namespace is skipped and secret is not managed by Zarf.
+		if currentGitSecret.Labels[ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
+			continue
+		}
+		newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, state.GitServer)
+		if maps.Equal(currentGitSecret.StringData, newGitSecret.StringData) {
+			continue
+		}
+		spinner.Updatef("Updating existing Zarf-managed git secret for namespace: %s", namespace.Name)
+		_, err = c.Clientset.CoreV1().Secrets(newGitSecret.Namespace).Update(ctx, newGitSecret, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+	}
+
+	spinner.Success()
+	return nil
 }
 
 // GetServiceInfoFromRegistryAddress gets the service info for a registry address if it is a NodePort
