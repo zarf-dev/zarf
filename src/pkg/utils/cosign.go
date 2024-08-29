@@ -6,6 +6,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -14,10 +15,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
-	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/message"
-
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
@@ -31,6 +28,9 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
+
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // Sget performs a cosign signature verification on a given image using the specified public key.
