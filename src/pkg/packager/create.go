@@ -12,7 +12,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 )
 
@@ -27,7 +27,7 @@ func (p *Packager) Create(ctx context.Context) error {
 		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
 
-	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
+	logging.FromContextOrDiscard(ctx).Info("Using build directory", "path", p.cfg.CreateOpts.BaseDir)
 
 	pc := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
 

@@ -14,7 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/packager/composer"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
@@ -43,7 +43,7 @@ func Validate(ctx context.Context, createOpts types.ZarfCreateOptions) error {
 	findings = append(findings, schemaFindings...)
 
 	if len(findings) == 0 {
-		message.Successf("0 findings for %q", pkg.Metadata.Name)
+		logging.FromContextOrDiscard(ctx).Info("No findings found", "package", pkg.Metadata.Name)
 		return nil
 	}
 	PrintFindings(findings, SevWarn, createOpts.BaseDir, pkg.Metadata.Name)

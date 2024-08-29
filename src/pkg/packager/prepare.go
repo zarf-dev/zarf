@@ -54,7 +54,7 @@ func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) 
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return nil, fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
-	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
+	logging.FromContextOrDiscard(ctx).Info("Using build directory", "path", p.cfg.CreateOpts.BaseDir)
 
 	c := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
 
@@ -80,10 +80,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 
 	for _, component := range p.cfg.Pkg.Components {
 		if len(component.Repos) > 0 && p.cfg.FindImagesOpts.RepoHelmChartPath == "" {
-			message.Note("This Zarf package contains git repositories, " +
-				"if any repos contain helm charts you want to template and " +
-				"search for images, make sure to specify the helm chart path " +
-				"via the --repo-chart-path flag")
+			log.Info("This Zarf package contains git repositories, if any repos contain helm charts you want to template and search for images, make sure to specify the helm chart path via the --repo-chart-path flag")
 			break
 		}
 	}

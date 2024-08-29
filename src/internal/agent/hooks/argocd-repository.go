@@ -14,7 +14,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
@@ -56,8 +55,6 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	if err != nil {
 		return nil, err
 	}
-
-	message.Infof("Using the url of (%s) to mutate the ArgoCD Repository Secret", state.GitServer.Address)
 
 	secret := corev1.Secret{}
 	if err = json.Unmarshal(r.Object.Raw, &secret); err != nil {

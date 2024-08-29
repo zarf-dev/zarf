@@ -11,6 +11,7 @@ import (
 	"runtime"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/saferwall/pe/log"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -95,7 +96,7 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 	}
 
 	// Notify all the things about the successful deployment
-	message.Successf("Zarf dev deployment complete")
+	log.Info("Zarf dev deployment complete")
 
 	message.HorizontalRule()
 	message.Title("Next steps:", "")

@@ -19,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
@@ -127,7 +128,7 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, er
 	// Give the user the choice to download the init-package and note that this does require an internet connection
 	message.Question(fmt.Sprintf(lang.CmdInitPullAsk, url))
 
-	message.Note(lang.CmdInitPullNote)
+	logging.FromContextOrDiscard(ctx).Info("Downloading init package will require an internet connection")
 
 	// Prompt the user if --confirm not specified
 	if !confirmDownload {

@@ -19,7 +19,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 
 	"github.com/zarf-dev/zarf/src/pkg/logging"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -96,7 +95,7 @@ func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Reposi
 	}
 	repo, err := git.PlainCloneContext(ctx, r.path, false, cloneOpts)
 	if err != nil {
-		message.Notef("Falling back to host 'git', failed to clone the repo %q with Zarf: %s", gitURLNoRef, err.Error())
+		logging.FromContextOrDiscard(ctx).Error("Failling back to the host git, failed to clone the repo with Zarf", "error", err, "repository", gitURLNoRef)
 		err := r.gitCloneFallback(ctx, gitURLNoRef, ref, shallow)
 		if err != nil {
 			return nil, err

@@ -14,12 +14,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/hooks"
 	agentHttp "github.com/zarf-dev/zarf/src/internal/agent/http"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 )
 
 // Heavily influenced by https://github.com/douglasmakey/admissioncontroller and
@@ -93,7 +92,7 @@ func startServer(ctx context.Context, port string, mux *http.ServeMux) error {
 		}
 		return nil
 	})
-	message.Infof(lang.AgentInfoPort, httpPort)
+	logging.FromContextOrDiscard(ctx).Info("server running", "port", httpPort)
 	err := g.Wait()
 	if err != nil {
 		return err

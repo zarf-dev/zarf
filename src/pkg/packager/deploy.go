@@ -128,7 +128,7 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	}
 
 	// Notify all the things about the successful deployment
-	message.Successf("Zarf deployment complete")
+	logging.FromContextOrDiscard(ctx).Info("Zarf deployment complete")
 
 	err = p.printTablesForDeployment(ctx, deployedComponents)
 	if err != nil {
@@ -257,7 +257,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.Z
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
-		message.Notef("Not deploying the component (%s) since external registry information was provided during `zarf init`", component.Name)
+		logging.FromContextOrDiscard(ctx).Info("Skipping deploying the component since external registyr information was provided during init", "component", component.Name)
 		return nil, nil
 	}
 

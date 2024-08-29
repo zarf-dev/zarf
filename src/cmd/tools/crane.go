@@ -5,6 +5,7 @@
 package tools
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -20,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
@@ -239,13 +241,15 @@ func pruneImages(cmd *cobra.Command, _ []string) error {
 	if tunnel != nil {
 		message.Notef(lang.CmdToolsRegistryTunnel, registryEndpoint, zarfState.RegistryInfo.Address)
 		defer tunnel.Close()
-		return tunnel.Wrap(func() error { return doPruneImagesForPackages(zarfState, zarfPackages, registryEndpoint) })
+		return tunnel.Wrap(func() error { return doPruneImagesForPackages(ctx, zarfState, zarfPackages, registryEndpoint) })
 	}
 
-	return doPruneImagesForPackages(zarfState, zarfPackages, registryEndpoint)
+	return doPruneImagesForPackages(ctx, zarfState, zarfPackages, registryEndpoint)
 }
 
-func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.DeployedPackage, registryEndpoint string) error {
+func doPruneImagesForPackages(ctx context.Context, zarfState *types.ZarfState, zarfPackages []types.DeployedPackage, registryEndpoint string) error {
+	log := logging.FromContextOrDiscard(ctx)
+
 	authOption := images.WithPushAuth(zarfState.RegistryInfo)
 
 	spinner := message.NewProgressSpinner(lang.CmdToolsRegistryPruneLookup)
@@ -320,11 +324,7 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 	spinner.Success()
 
 	if len(imageDigestsToPrune) > 0 {
-		message.Note(lang.CmdToolsRegistryPruneImageList)
-
-		for digestRef := range imageDigestsToPrune {
-			message.Info(digestRef)
-		}
+		log.Info("Pruning images with digests from the registry", "digests", imageDigestsToPrune)
 
 		confirm := config.CommonOptions.Confirm
 
@@ -353,7 +353,7 @@ func doPruneImagesForPackages(zarfState *types.ZarfState, zarfPackages []types.D
 			spinner.Success()
 		}
 	} else {
-		message.Note(lang.CmdToolsRegistryPruneNoImages)
+		log.Info("Tehere are no images to prune")
 	}
 
 	return nil

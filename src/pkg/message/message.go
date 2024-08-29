@@ -156,11 +156,6 @@ func Infof(format string, a ...any) {
 	}
 }
 
-// Success prints a success message.
-func Success(message string) {
-	Successf("%s", message)
-}
-
 // Successf prints a success message with a given format.
 func Successf(format string, a ...any) {
 	message := Paragraph(format, a...)

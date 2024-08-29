@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
@@ -127,7 +128,7 @@ var updateCredsCmd = &cobra.Command{
 		confirm := config.CommonOptions.Confirm
 
 		if confirm {
-			message.Note(lang.CmdToolsUpdateCredsConfirmProvided)
+			logging.FromContextOrDiscard(ctx).Info("Confirm flag specified, continuing without prompting")
 		} else {
 			prompt := &survey.Confirm{
 				Message: lang.CmdToolsUpdateCredsConfirmContinue,
@@ -204,12 +205,13 @@ var clearCacheCmd = &cobra.Command{
 	Use:     "clear-cache",
 	Aliases: []string{"c"},
 	Short:   lang.CmdToolsClearCacheShort,
-	RunE: func(_ *cobra.Command, _ []string) error {
-		message.Notef(lang.CmdToolsClearCacheDir, config.GetAbsCachePath())
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		log := logging.FromContextOrDiscard(cmd.Context())
+		log.Info("Using cache directory", "path", config.GetAbsCachePath())
 		if err := os.RemoveAll(config.GetAbsCachePath()); err != nil {
 			return fmt.Errorf("unable to clear the cache directory %s: %w", config.GetAbsCachePath(), err)
 		}
-		message.Successf(lang.CmdToolsClearCacheSuccess, config.GetAbsCachePath())
+		log.Info("Successfully cleared the cache", "path", config.GetAbsCachePath())
 		return nil
 	},
 }
@@ -237,7 +239,7 @@ var generatePKICmd = &cobra.Command{
 	Aliases: []string{"pki"},
 	Short:   lang.CmdToolsGenPkiShort,
 	Args:    cobra.ExactArgs(1),
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		pki, err := pki.GeneratePKI(args[0], subAltNames...)
 		if err != nil {
 			return err
@@ -251,7 +253,7 @@ var generatePKICmd = &cobra.Command{
 		if err := os.WriteFile("tls.key", pki.Key, helpers.ReadWriteUser); err != nil {
 			return err
 		}
-		message.Successf(lang.CmdToolsGenPkiSuccess, args[0])
+		logging.FromContextOrDiscard(cmd.Context()).Info("Successfully created a chain of trust", "host", args[0])
 		return nil
 	},
 }
@@ -260,7 +262,7 @@ var generateKeyCmd = &cobra.Command{
 	Use:     "gen-key",
 	Aliases: []string{"key"},
 	Short:   lang.CmdToolsGenKeyShort,
-	RunE: func(_ *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		// Utility function to prompt the user for the password to the private key
 		passwordFunc := func(bool) ([]byte, error) {
 			// perform the first prompt
@@ -323,7 +325,7 @@ var generateKeyCmd = &cobra.Command{
 			return err
 		}
 
-		message.Successf(lang.CmdToolsGenKeySuccess, prvKeyFileName, pubKeyFileName)
+		logging.FromContextOrDiscard(cmd.Context()).Info("Generated key pair", "private key", prvKeyFileName, "public key", pubKeyFileName)
 		return nil
 	},
 }

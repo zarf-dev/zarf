@@ -17,7 +17,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -33,7 +33,7 @@ type SplitTarballSource struct {
 }
 
 // Collect turns a split tarball into a full tarball.
-func (s *SplitTarballSource) Collect(_ context.Context, dir string) (string, error) {
+func (s *SplitTarballSource) Collect(ctx context.Context, dir string) (string, error) {
 	pattern := strings.Replace(s.PackageSource, ".part000", ".part*", 1)
 	fileList, err := filepath.Glob(pattern)
 	if err != nil {
@@ -105,7 +105,7 @@ func (s *SplitTarballSource) Collect(_ context.Context, dir string) (string, err
 	}
 
 	// communicate to the user that the package was reassembled
-	message.Infof("Reassembled package to: %q", reassembled)
+	logging.FromContextOrDiscard(ctx).Info("reassembled package", "path", reassembled)
 
 	return reassembled, nil
 }

@@ -142,7 +142,6 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInitErrValidateArtifact = "the 'artifact-push-username' and 'artifact-push-token' flags must be provided if the 'artifact-url' flag is provided"
 
 	CmdInitPullAsk       = "It seems the init package could not be found locally, but can be pulled from oci://%s"
-	CmdInitPullNote      = "Note: This will require an internet connection."
 	CmdInitPullConfirm   = "Do you want to pull this init package?"
 	CmdInitPullErrManual = "pull the init package manually and place it in the current working directory"
 
@@ -183,8 +182,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 		"This command starts up a http proxy that can be used by running pods to transform queries " +
 		"that conform to Gitea / Gitlab repository and package URLs in the airgap."
 
-	CmdInternalGenerateCliDocsShort   = "Creates auto-generated markdown of all the commands for the CLI"
-	CmdInternalGenerateCliDocsSuccess = "Successfully created the CLI documentation"
+	CmdInternalGenerateCliDocsShort = "Creates auto-generated markdown of all the commands for the CLI"
 
 	CmdInternalConfigSchemaShort = "Generates a JSON schema for the zarf.yaml configuration"
 
@@ -417,8 +415,6 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 
 	CmdToolsRegistryPruneShort       = "Prunes images from the registry that are not currently being used by any Zarf packages."
 	CmdToolsRegistryPruneFlagConfirm = "Confirm the image prune action to prevent accidental deletions"
-	CmdToolsRegistryPruneImageList   = "The following image digests will be pruned from the registry:"
-	CmdToolsRegistryPruneNoImages    = "There are no images to prune"
 	CmdToolsRegistryPruneLookup      = "Looking up images within package definitions"
 	CmdToolsRegistryPruneCatalog     = "Cataloging images in the registry"
 	CmdToolsRegistryPruneCalculate   = "Calculating images to prune"
@@ -482,15 +478,12 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsHelmLong  = "Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the air gap."
 
 	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory"
-	CmdToolsClearCacheDir           = "Cache directory set to: %s"
-	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
 	CmdToolsDownloadInitShort               = "Downloads the init package for the current Zarf version into the specified directory"
 	CmdToolsDownloadInitFlagOutputDirectory = "Specify a directory to place the init package in."
 
 	CmdToolsGenPkiShort       = "Generates a Certificate Authority and PKI chain of trust for the given host"
-	CmdToolsGenPkiSuccess     = "Successfully created a chain of trust for %s"
 	CmdToolsGenPkiFlagAltName = "Specify Subject Alternative Names for the certificate"
 
 	CmdToolsGenKeyShort                = "Generates a cosign public/private keypair that can be used to sign packages"
@@ -499,7 +492,6 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsGenKeyPromptExists         = "File %s already exists. Overwrite? "
 	CmdToolsGenKeyErrUnableGetPassword = "unable to get password for private key: %s"
 	CmdToolsGenKeyErrPasswordsNotMatch = "passwords do not match"
-	CmdToolsGenKeySuccess              = "Generated key pair and written to %s and %s"
 
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 
@@ -573,7 +565,6 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 # NOTE: Not specifying a pull username/password will keep the previous pull username/password.
 `
 	CmdToolsUpdateCredsConfirmFlag          = "Confirm updating credentials without prompting"
-	CmdToolsUpdateCredsConfirmProvided      = "Confirm flag specified, continuing without prompting."
 	CmdToolsUpdateCredsConfirmContinue      = "Continue with these changes?"
 	CmdToolsUpdateCredsUnableUpdateRegistry = "Unable to update Zarf Registry values: %s"
 	CmdToolsUpdateCredsUnableUpdateAgent    = "Unable to update Zarf Agent TLS secrets: %s"
@@ -595,7 +586,6 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 // These are only seen in the Kubernetes logs.
 const (
 	AgentInfoWebhookAllowed        = "Webhook [%s - %s] - Allowed: %t"
-	AgentInfoPort                  = "Server running in port: %s"
 	AgentWarnNotOCIType            = "Skipping HelmRepo mutation because the type is not OCI: %s"
 	AgentWarnSemVerRef             = "Detected a semver OCI ref (%s) - continuing but will be unable to guarantee against collisions if multiple OCI artifacts with the same name are brought in from different registries"
 	AgentErrBadRequest             = "could not read request body: %s"

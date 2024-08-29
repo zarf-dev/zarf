@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -185,7 +186,7 @@ func CosignVerifyBlob(ctx context.Context, blobRef string, sigRef string, keyPat
 	}
 	err := cmd.Exec(ctx, blobRef)
 	if err == nil {
-		message.Successf("Package signature validated!")
+		log.FromContext(ctx).Info("Package signature validated")
 	}
 
 	return err

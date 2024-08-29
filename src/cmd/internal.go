@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -67,7 +68,7 @@ var httpProxyCmd = &cobra.Command{
 var genCLIDocs = &cobra.Command{
 	Use:   "gen-cli-docs",
 	Short: lang.CmdInternalGenerateCliDocsShort,
-	RunE: func(_ *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		// Don't include the datestamp in the output
 		rootCmd.DisableAutoGenTag = true
 
@@ -161,7 +162,7 @@ tableOfContents: false
 		if err := doc.GenMarkdownTreeCustom(rootCmd, "./site/src/content/docs/commands", prependTitle, linkHandler); err != nil {
 			return err
 		}
-		message.Success(lang.CmdInternalGenerateCliDocsSuccess)
+		logging.FromContextOrDiscard(cmd.Context()).Info("Successfully createed the CLI documentation")
 		return nil
 	},
 }
