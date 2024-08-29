@@ -13,23 +13,22 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/cli"
+	"helm.sh/helm/v3/pkg/downloader"
+	"helm.sh/helm/v3/pkg/getter"
+	"helm.sh/helm/v3/pkg/registry"
+	"helm.sh/helm/v3/pkg/repo"
+	"k8s.io/client-go/util/homedir"
+
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/cli"
-	"helm.sh/helm/v3/pkg/helmpath"
-	"helm.sh/helm/v3/pkg/registry"
-	"k8s.io/client-go/util/homedir"
-
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/downloader"
-	"helm.sh/helm/v3/pkg/getter"
-	"helm.sh/helm/v3/pkg/repo"
 )
 
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
@@ -181,10 +180,6 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 
 		chartURL, err = repo.FindChartInAuthRepoURL(h.chart.URL, username, password, chartName, h.chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
 		if err != nil {
-			if strings.Contains(err.Error(), "not found") {
-				// Intentionally dogsled this error since this is just a nice to have helper
-				_ = h.listAvailableChartsAndVersions(pull)
-			}
 			return fmt.Errorf("unable to pull the helm chart: %w", err)
 		}
 	}
@@ -336,55 +331,4 @@ func (h *Helm) loadAndValidateChart(location string) (loader.ChartLoader, *chart
 	}
 
 	return cl, chart, nil
-}
-
-func (h *Helm) listAvailableChartsAndVersions(pull *action.Pull) error {
-	c := repo.Entry{
-		URL:      h.chart.URL,
-		CertFile: pull.CertFile,
-		KeyFile:  pull.KeyFile,
-		CAFile:   pull.CaFile,
-		Name:     h.chart.Name,
-	}
-
-	r, err := repo.NewChartRepository(&c, getter.All(pull.Settings))
-	if err != nil {
-		return err
-	}
-	idx, err := r.DownloadIndexFile()
-	if err != nil {
-		return fmt.Errorf("looks like %q is not a valid chart repository or cannot be reached: %w", h.chart.URL, err)
-	}
-	defer func() {
-		os.RemoveAll(filepath.Join(r.CachePath, helmpath.CacheChartsFile(r.Config.Name)))
-		os.RemoveAll(filepath.Join(r.CachePath, helmpath.CacheIndexFile(r.Config.Name)))
-	}()
-
-	// Read the index file for the repository to get chart information and return chart URL
-	repoIndex, err := repo.LoadIndexFile(idx)
-	if err != nil {
-		return err
-	}
-
-	chartData := [][]string{}
-	for name, entries := range repoIndex.Entries {
-		versions := ""
-		for idx, entry := range entries {
-			separator := ""
-			if idx < len(entries)-1 {
-				separator = ", "
-			}
-			versions += entry.Version + separator
-		}
-
-		versions = helpers.Truncate(versions, 75, false)
-		chartData = append(chartData, []string{name, versions})
-	}
-
-	message.Notef("Available charts and versions from %q:", h.chart.URL)
-
-	// Print out the table for the user
-	header := []string{"Chart", "Versions"}
-	message.Table(header, chartData)
-	return nil
 }

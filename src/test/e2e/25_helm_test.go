@@ -52,7 +52,6 @@ func testHelmChartsExample(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", evilChartLookupPath, "--tmpdir", tmpdir, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 	require.Contains(t, e2e.StripMessageFormatting(stdErr), "chart \"asdf\" version \"6.4.0\" not found")
-	require.Contains(t, e2e.StripMessageFormatting(stdErr), "Available charts and versions from \"https://stefanprodan.github.io/podinfo\":")
 
 	// Create a test package (with a registry override (host+subpath to host+subpath) to test that as well)
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io/stefanprodan=docker.io/stefanprodan", "--tmpdir", tmpdir, "--confirm")
