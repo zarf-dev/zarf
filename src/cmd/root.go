@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"slices"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -74,12 +76,13 @@ var rootCmd = &cobra.Command{
 		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 		cmd.Help()
 
+		log := logging.FromContextOrDiscard(cmd.Context())
 		if len(args) > 0 {
 			if strings.Contains(args[0], config.ZarfPackagePrefix) || strings.Contains(args[0], "zarf-init") {
-				message.Warnf(lang.RootCmdDeprecatedDeploy, args[0])
+				log.Warn("Deprecated: Please use \"zarf package deploy\" to deploy this package.  This warning will be removed in Zarf v1.0.0.")
 			}
 			if args[0] == layout.ZarfYAML {
-				message.Warn(lang.RootCmdDeprecatedCreate)
+				log.Warn("Deprecated: Please use \"zarf package create\" to create this package.  This warning will be removed in Zarf v1.0.0.")
 			}
 		}
 	},
@@ -87,6 +90,10 @@ var rootCmd = &cobra.Command{
 
 // Execute is the entrypoint for the CLI.
 func Execute(ctx context.Context) {
+	handler := logging.NewPtermHandler()
+	log := slog.New(handler)
+	ctx = logging.NewContext(ctx, log)
+
 	cmd, err := rootCmd.ExecuteContextC(ctx)
 	if err == nil {
 		return

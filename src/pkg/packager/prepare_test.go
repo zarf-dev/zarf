@@ -91,7 +91,7 @@ func TestFindImages(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := New(tt.cfg)
+			p, err := New(ctx, tt.cfg)
 			require.NoError(t, err)
 			images, err := p.FindImages(ctx)
 			if tt.expectedErr != "" {

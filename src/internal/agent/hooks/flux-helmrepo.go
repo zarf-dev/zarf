@@ -13,13 +13,14 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/fluxcd/pkg/apis/meta"
 	flux "github.com/fluxcd/source-controller/api/v1"
+	v1 "k8s.io/api/admission/v1"
+
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	v1 "k8s.io/api/admission/v1"
 )
 
 // NewHelmRepositoryMutationHook creates a new instance of the helm repo mutation hook.
@@ -43,7 +44,7 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 
 	// If we see a type of helm repo other than OCI we should flag a warning and return
 	if strings.ToLower(src.Spec.Type) != "oci" {
-		message.Warnf(lang.AgentWarnNotOCIType, src.Spec.Type)
+		logging.FromContextOrDiscard(ctx).Warn("Skipping HelmRepo mutation because the type is not OCI", "type", src.Spec.Type)
 		return &operations.Result{Allowed: true}, nil
 	}
 
@@ -65,8 +66,6 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 		return nil, err
 	}
 
-	message.Debugf("Using the url of (%s) to mutate the flux HelmRepository", registryAddress)
-
 	patchedSrc, err := transform.ImageTransformHost(registryAddress, src.Spec.URL)
 	if err != nil {
 		return nil, fmt.Errorf("unable to transform the HelmRepo URL: %w", err)
@@ -77,8 +76,6 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 		return nil, fmt.Errorf("unable to parse the HelmRepo URL: %w", err)
 	}
 	patchedURL := helpers.OCIURLPrefix + patchedRefInfo.Name
-
-	message.Debugf("original HelmRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 
 	patches := populateHelmRepoPatchOperations(patchedURL, zarfState.RegistryInfo.IsInternal())
 

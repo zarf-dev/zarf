@@ -6,7 +6,6 @@ package helm
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +15,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -39,7 +39,7 @@ func (h *Helm) PackageChart(ctx context.Context, cosignKeyPath string) error {
 		// check if the chart is a git url with a ref (if an error is returned url will be empty)
 		isGitURL := strings.HasSuffix(url, ".git")
 		if err != nil {
-			message.Debugf("unable to parse the url, continuing with %s", h.chart.URL)
+			logging.FromContextOrDiscard(ctx).Debug("continuing with original url as the url could not be parsed", "url", h.chart.URL, "error", err)
 		}
 
 		if isGitURL {
@@ -147,7 +147,7 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 
 	// Not returning the error here since the repo file is only needed if we are pulling from a repo that requires authentication
 	if err != nil {
-		message.Debugf("Unable to load the repo file at %q: %s", pull.Settings.RepositoryConfig, err.Error())
+		logging.FromContextOrDiscard(ctx).Debug("unable to load the repository file", "path", pull.Settings.RepositoryConfig, "error", err)
 	}
 
 	var username string
@@ -306,19 +306,8 @@ func (h *Helm) buildChartDependencies() error {
 
 	// Build the deps from the helm chart
 	err = man.Build()
-	var notFoundErr *downloader.ErrRepoNotFound
-	if errors.As(err, &notFoundErr) {
-		// If we encounter a repo not found error point the user to `zarf tools helm repo add`
-		message.Warnf("%s. Please add the missing repo(s) via the following:", notFoundErr.Error())
-		for _, repository := range notFoundErr.Repos {
-			message.ZarfCommand(fmt.Sprintf("tools helm repo add <your-repo-name> %s", repository))
-		}
-		return err
-	}
 	if err != nil {
-		message.ZarfCommand("tools helm dependency build --verify")
-		message.Warnf("Unable to perform a rebuild of Helm dependencies: %s", err.Error())
-		return err
+		return fmt.Errorf("Unable to perform rebuild of Helm dependencies: %w", err)
 	}
 	return nil
 }

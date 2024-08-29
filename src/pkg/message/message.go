@@ -119,12 +119,6 @@ func Debug(payload ...any) {
 	debugPrinter(2, payload...)
 }
 
-// Debugf prints a debug message with a given format.
-func Debugf(format string, a ...any) {
-	message := fmt.Sprintf(format, a...)
-	debugPrinter(2, message)
-}
-
 // Warn prints a warning message.
 func Warn(message string) {
 	Warnf("%s", message)
@@ -135,12 +129,6 @@ func Warnf(format string, a ...any) {
 	message := Paragraphn(TermWidth-10, format, a...)
 	pterm.Println()
 	pterm.Warning.Println(message)
-}
-
-// WarnErr prints an error message as a warning.
-func WarnErr(err any, message string) {
-	debugPrinter(2, err)
-	Warnf(message)
 }
 
 // WarnErrf prints an error message as a warning with a given format.

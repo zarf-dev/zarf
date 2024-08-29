@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
@@ -40,8 +41,8 @@ var deprecatedGetGitCredsCmd = &cobra.Command{
 	Hidden: true,
 	Short:  lang.CmdToolsGetGitPasswdShort,
 	Long:   lang.CmdToolsGetGitPasswdLong,
-	Run: func(_ *cobra.Command, _ []string) {
-		message.Warn(lang.CmdToolsGetGitPasswdDeprecation)
+	Run: func(cmd *cobra.Command, _ []string) {
+		logging.FromContextOrDiscard(cmd.Context()).Warn("Deprecated: This command has been replaced by 'zarf tools get-creds git' and will be removed in Zarf v1.0.0.")
 		getCredsCmd.Run(getCredsCmd, []string{"git"})
 	},
 }
@@ -101,6 +102,7 @@ var updateCredsCmd = &cobra.Command{
 		}
 
 		ctx := cmd.Context()
+		log := logging.FromContextOrDiscard(ctx)
 
 		timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 		defer cancel()
@@ -179,7 +181,7 @@ var updateCredsCmd = &cobra.Command{
 				err = h.UpdateZarfRegistryValues(ctx)
 				if err != nil {
 					// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
-					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
+					log.Warn("Unable to update Zarf Registry values", "error", err)
 				}
 			}
 			if slices.Contains(args, message.GitKey) && newState.GitServer.IsInternal() && internalGitServerExists {
@@ -192,7 +194,7 @@ var updateCredsCmd = &cobra.Command{
 				err = h.UpdateZarfAgentValues(ctx)
 				if err != nil {
 					// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
-					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateAgent, err.Error())
+					log.Warn("Unable to update Zarf Agent TLS secrets", "error", err)
 				}
 			}
 		}

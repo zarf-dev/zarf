@@ -4,7 +4,6 @@
 package hooks
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -15,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -189,14 +189,14 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
+	ctx := testutil.TestContext(t)
 	state := &types.ZarfState{RegistryInfo: types.RegistryInfo{Address: "127.0.0.1:31999"}}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			c := createTestClientWithZarfState(ctx, t, state)
-			handler := admission.NewHandler().Serve(NewOCIRepositoryMutationHook(ctx, c))
+			handler := admission.NewHandler().Serve(ctx, NewOCIRepositoryMutationHook(ctx, c))
 			if tt.svc != nil {
 				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
 				require.NoError(t, err)

@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,11 +15,14 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
-func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles []string) (confirm bool) {
+func (p *Packager) confirmAction(ctx context.Context, stage string, warnings []string, sbomViewFiles []string) (confirm bool) {
+	log := logging.FromContextOrDiscard(ctx)
+
 	pterm.Println()
 	message.HeaderInfof("📦 PACKAGE DEFINITION")
 	utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(stage), true)
@@ -48,7 +52,7 @@ func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles 
 				pterm.Println(viewNow)
 				pterm.Println(viewLater)
 			} else {
-				message.Warn("This package does NOT contain an SBOM.  If you require an SBOM, please contact the creator of this package to request a version that includes an SBOM.")
+				log.Warn("This package does NOT contain an SBOM.  If you require an SBOM, please contact the creator of this package to request a version that includes an SBOM.")
 			}
 		}
 	}
@@ -57,7 +61,7 @@ func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles 
 		message.HorizontalRule()
 		message.Title("Package Warnings", "the following warnings were flagged while reading the package")
 		for _, warning := range warnings {
-			message.Warn(warning)
+			log.Warn(warning)
 		}
 	}
 

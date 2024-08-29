@@ -41,7 +41,7 @@ func (p *Packager) Create(ctx context.Context) error {
 	}
 	p.cfg.Pkg = pkg
 
-	if !p.confirmAction(config.ZarfCreateStage, warnings, nil) {
+	if !p.confirmAction(ctx, config.ZarfCreateStage, warnings, nil) {
 		return fmt.Errorf("package creation canceled")
 	}
 

@@ -21,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -68,7 +69,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(ctx context.Context, src *layou
 	}
 
 	for _, warning := range warnings {
-		message.Warn(warning)
+		logging.FromContextOrDiscard(ctx).Warn(warning)
 	}
 
 	if err := Validate(pkg, sc.createOpts.BaseDir, sc.createOpts.SetVariables); err != nil {

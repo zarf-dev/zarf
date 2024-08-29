@@ -4,7 +4,6 @@
 package hooks
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -15,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,13 +36,14 @@ func createFluxGitRepoAdmissionRequest(t *testing.T, op v1.Operation, fluxGitRep
 func TestFluxMutationWebhook(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := testutil.TestContext(t)
+
 	state := &types.ZarfState{GitServer: types.GitServerInfo{
 		Address:      "https://git-server.com",
 		PushUsername: "a-push-user",
 	}}
 	c := createTestClientWithZarfState(ctx, t, state)
-	handler := admission.NewHandler().Serve(NewGitRepositoryMutationHook(ctx, c))
+	handler := admission.NewHandler().Serve(ctx, NewGitRepositoryMutationHook(ctx, c))
 
 	tests := []admissionTest{
 		{

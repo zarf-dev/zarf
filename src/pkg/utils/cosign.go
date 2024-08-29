@@ -15,8 +15,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
-	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
@@ -31,13 +29,18 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
+
+	"github.com/zarf-dev/zarf/src/pkg/logging"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // Sget performs a cosign signature verification on a given image using the specified public key.
 //
 // Forked from https://github.com/sigstore/cosign/blob/v1.7.1/pkg/sget/sget.go
 func Sget(ctx context.Context, image, key string, out io.Writer) error {
-	message.Warnf(lang.WarnSGetDeprecation)
+	log := logging.FromContextOrDiscard(ctx)
+
+	logging.FromContextOrDiscard(ctx).Warn("Using sget to download resources is being deprecated and will removed in the v1.0.0 release of Zarf. Please publish the packages as OCI artifacts instead.")
 
 	// Remove the custom protocol header from the url
 	image = strings.TrimPrefix(image, helpers.SGETURLPrefix)
@@ -131,11 +134,11 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 
 	for _, sig := range sp {
 		if cert, err := sig.Cert(); err == nil && cert != nil {
-			message.Debugf("Certificate subject: %s", cert.Subject)
+			log.Info("Certificate subject", "subject", cert.Subject)
 
 			ce := cosign.CertExtensions{Cert: cert}
 			if issuerURL := ce.GetIssuer(); issuerURL != "" {
-				message.Debugf("Certificate issuer URL: %s", issuerURL)
+				log.Debug("Certificate issues", "url", issuerURL)
 			}
 		}
 
@@ -144,7 +147,7 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 			spinner.Errorf(err, "Error getting payload")
 			return err
 		}
-		message.Debug(string(p))
+		log.Debug(string(p))
 	}
 
 	// TODO(mattmoor): Depending on what this is, use the higher-level stuff.

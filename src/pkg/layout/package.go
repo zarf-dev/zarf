@@ -99,7 +99,6 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 	legacySBOMs := filepath.Join(base, "sboms")
 	if !helpers.InvalidPath(legacySBOMs) {
 		pp = pp.AddSBOMs()
-		message.Debugf("Migrating %q to %q", legacySBOMs, pp.SBOMs.Path)
 		if err := os.Rename(legacySBOMs, pp.SBOMs.Path); err != nil {
 			return err
 		}
@@ -109,7 +108,6 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 	legacyImagesTar := filepath.Join(base, "images.tar")
 	if !helpers.InvalidPath(legacyImagesTar) {
 		pp = pp.AddImages()
-		message.Debugf("Migrating %q to %q", legacyImagesTar, pp.Images.Base)
 		defer os.Remove(legacyImagesTar)
 		imgTags := []string{}
 		for _, component := range pkg.Components {
@@ -309,8 +307,6 @@ func (pp *PackagePaths) SetFromPaths(paths []string) {
 				pp.Components.Tarballs = make(map[string]string)
 			}
 			pp.Components.Tarballs[componentName] = filepath.Join(pp.Base, path)
-		default:
-			message.Debug("ignoring path", path)
 		}
 	}
 }

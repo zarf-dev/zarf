@@ -16,6 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -143,7 +144,7 @@ func (s *OCISource) LoadPackageMetadata(ctx context.Context, dst *layout.Package
 
 		if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
 			if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
-				message.Warn("The package was signed but no public key was provided, skipping signature validation")
+				logging.FromContextOrDiscard(ctx).Warn("The package was signed but no public key was provided, skipping signature validation")
 			} else {
 				return pkg, nil, err
 			}

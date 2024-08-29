@@ -23,7 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -53,7 +53,7 @@ var devDeployCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig)
 		if err != nil {
 			return err
 		}
@@ -78,7 +78,7 @@ var devGenerateCmd = &cobra.Command{
 		pkgConfig.CreateOpts.BaseDir = "."
 		pkgConfig.FindImagesOpts.RepoHelmChartPath = pkgConfig.GenerateOpts.GitPath
 
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig)
 		if err != nil {
 			return err
 		}
@@ -97,7 +97,7 @@ var devTransformGitLinksCmd = &cobra.Command{
 	Aliases: []string{"p"},
 	Short:   lang.CmdDevPatchGitShort,
 	Args:    cobra.ExactArgs(2),
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		host, fileName := args[0], args[1]
 
 		// Read the contents of the given file
@@ -110,7 +110,7 @@ var devTransformGitLinksCmd = &cobra.Command{
 
 		// Perform git url transformation via regex
 		text := string(content)
-		processedText := transform.MutateGitURLsInText(message.Warnf, pkgConfig.InitOpts.GitServer.Address, text, pkgConfig.InitOpts.GitServer.PushUsername)
+		processedText := transform.MutateGitURLsInText(cmd.Context(), pkgConfig.InitOpts.GitServer.Address, text, pkgConfig.InitOpts.GitServer.PushUsername)
 
 		// Print the differences
 		dmp := diffmatchpatch.New()
@@ -153,7 +153,7 @@ var devSha256SumCmd = &cobra.Command{
 		var err error
 
 		if helpers.IsURL(fileName) {
-			message.Warn(lang.CmdDevSha256sumRemoteWarning)
+			logging.FromContextOrDiscard(cmd.Context()).Warn("This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link.")
 
 			fileBase, err := helpers.ExtractBasePathFromURL(fileName)
 			if err != nil {
@@ -229,7 +229,7 @@ var devFindImagesCmd = &cobra.Command{
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig)
 		if err != nil {
 			return err
 		}
@@ -276,7 +276,7 @@ var devLintCmd = &cobra.Command{
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig)
 		if err != nil {
 			return err
 		}
