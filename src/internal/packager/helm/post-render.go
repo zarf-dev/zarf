@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
@@ -208,6 +209,8 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 }
 
 func (r *renderer) editHelmResources(ctx context.Context, resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
+	log := logging.FromContextOrDiscard(ctx)
+
 	dc, err := dynamic.NewForConfig(r.cluster.RestConfig)
 	if err != nil {
 		return err
@@ -232,7 +235,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), namespace); err != nil {
 				message.WarnErrf(err, "could not parse namespace %s", rawData.GetName())
 			} else {
-				message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
+				log.Debug("matched Helm namespace for Zarf annotation", "namespace", namespace.Name)
 				namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
 				// Add it to the stack
 				r.namespaces[namespace.Name] = namespace
@@ -252,7 +255,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			}
 			if key, keyExists := labels[cluster.ZarfConnectLabelName]; keyExists {
 				// If there is a zarf-connect label
-				message.Debugf("Match helm service %s for zarf connection %s", rawData.GetName(), key)
+				log.Debug("match Helm service for Zarf connection", "service", rawData.GetName(), "connection", key)
 
 				// Add the connectString for processing later in the deployment
 				r.connectStrings[key] = types.ConnectString{

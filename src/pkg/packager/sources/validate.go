@@ -17,7 +17,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
@@ -36,7 +36,7 @@ func ValidatePackageSignature(ctx context.Context, paths *layout.PackagePaths, p
 	}
 
 	if publicKeyPath != "" {
-		message.Debugf("Using public key %q for signature validation", publicKeyPath)
+		logging.FromContextOrDiscard(ctx).Debug("using public key for signature validation", "path", publicKeyPath)
 	}
 
 	// Handle situations where there is no signature within the package

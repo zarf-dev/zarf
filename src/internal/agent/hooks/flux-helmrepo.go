@@ -65,8 +65,6 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 		return nil, err
 	}
 
-	message.Debugf("Using the url of (%s) to mutate the flux HelmRepository", registryAddress)
-
 	patchedSrc, err := transform.ImageTransformHost(registryAddress, src.Spec.URL)
 	if err != nil {
 		return nil, fmt.Errorf("unable to transform the HelmRepo URL: %w", err)
@@ -77,8 +75,6 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 		return nil, fmt.Errorf("unable to parse the HelmRepo URL: %w", err)
 	}
 	patchedURL := helpers.OCIURLPrefix + patchedRefInfo.Name
-
-	message.Debugf("original HelmRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 
 	patches := populateHelmRepoPatchOperations(patchedURL, zarfState.RegistryInfo.IsInternal())
 

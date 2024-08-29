@@ -20,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
@@ -71,7 +72,7 @@ New creates a new package instance with the provided config.
 
 Note: This function creates a tmp directory that should be cleaned up with p.ClearTempPaths().
 */
-func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
+func New(ctx context.Context, cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("no config provided")
 	}
@@ -110,7 +111,7 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 		if err != nil {
 			return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 		}
-		message.Debug("Using temporary directory:", dir)
+		logging.FromContextOrDiscard(ctx).Debug("Using temporary directory", "directory", dir)
 		pkgr.layout = layout.New(dir)
 	}
 

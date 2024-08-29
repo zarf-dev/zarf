@@ -5,6 +5,7 @@
 package sbom
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"os"
@@ -27,6 +28,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -48,7 +50,7 @@ var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 var componentPrefix = "zarf-component-"
 
 // Catalog catalogs the given components and images to create an SBOM.
-func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imageList []transform.Image, paths *layout.PackagePaths) error {
+func Catalog(ctx context.Context, componentSBOMs map[string]*layout.ComponentSBOM, imageList []transform.Image, paths *layout.PackagePaths) error {
 	imageCount := len(imageList)
 	componentCount := len(componentSBOMs)
 	builder := Builder{
@@ -103,7 +105,7 @@ func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imageList []transf
 		builder.spinner.Updatef("Creating component file SBOMs (%d of %d): %s", currComponent, componentCount, component)
 
 		if componentSBOMs[component] == nil {
-			message.Debugf("Component %s has invalid SBOM, skipping", component)
+			logging.FromContextOrDiscard(ctx).Debug("component has invalid SBOM, skipping", "component", component)
 			continue
 		}
 

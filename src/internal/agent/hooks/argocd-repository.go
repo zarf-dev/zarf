@@ -14,7 +14,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
@@ -57,8 +56,6 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 		return nil, err
 	}
 
-	message.Infof("Using the url of (%s) to mutate the ArgoCD Repository Secret", state.GitServer.Address)
-
 	secret := corev1.Secret{}
 	if err = json.Unmarshal(r.Object.Raw, &secret); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
@@ -91,7 +88,6 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 			return nil, fmt.Errorf("unable the git url: %w", err)
 		}
 		patchedURL = transformedURL.String()
-		message.Debugf("original url of (%s) got mutated to (%s)", repoCreds.URL, patchedURL)
 	}
 
 	patches := populateArgoRepositoryPatchOperations(patchedURL, state.GitServer)

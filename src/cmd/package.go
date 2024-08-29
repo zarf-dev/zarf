@@ -14,6 +14,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/types"
@@ -54,7 +55,7 @@ var packageCreateCmd = &cobra.Command{
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig)
 		if err != nil {
 			return err
 		}
@@ -84,7 +85,7 @@ var packageDeployCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig)
 		if err != nil {
 			return err
 		}
@@ -112,7 +113,7 @@ var packageMirrorCmd = &cobra.Command{
 			return err
 		}
 		pkgConfig.PkgOpts.PackageSource = packageSource
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig)
 		if err != nil {
 			return err
 		}
@@ -136,11 +137,11 @@ var packageInspectCmd = &cobra.Command{
 			return err
 		}
 		pkgConfig.PkgOpts.PackageSource = packageSource
-		src, err := identifyAndFallbackToClusterSource()
+		src, err := identifyAndFallbackToClusterSource(cmd.Context())
 		if err != nil {
 			return err
 		}
-		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig, packager.WithSource(src))
 		if err != nil {
 			return err
 		}
@@ -208,11 +209,11 @@ var packageRemoveCmd = &cobra.Command{
 			return err
 		}
 		pkgConfig.PkgOpts.PackageSource = packageSource
-		src, err := identifyAndFallbackToClusterSource()
+		src, err := identifyAndFallbackToClusterSource(cmd.Context())
 		if err != nil {
 			return err
 		}
-		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig, packager.WithSource(src))
 		if err != nil {
 			return err
 		}
@@ -253,7 +254,7 @@ var packagePublishCmd = &cobra.Command{
 
 		pkgConfig.PublishOpts.PackageDestination = ref.String()
 
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig)
 		if err != nil {
 			return err
 		}
@@ -273,7 +274,7 @@ var packagePullCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pkgConfig.PkgOpts.PackageSource = args[0]
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(cmd.Context(), &pkgConfig)
 		if err != nil {
 			return err
 		}
@@ -311,10 +312,10 @@ func choosePackage(args []string) (string, error) {
 }
 
 // TODO: This code does not seem to do what it was intended.
-func identifyAndFallbackToClusterSource() (sources.PackageSource, error) {
+func identifyAndFallbackToClusterSource(ctx context.Context) (sources.PackageSource, error) {
 	identifiedSrc := sources.Identify(pkgConfig.PkgOpts.PackageSource)
 	if identifiedSrc == "" {
-		message.Debugf(lang.CmdPackageClusterSourceFallback, pkgConfig.PkgOpts.PackageSource)
+		logging.FromContextOrDiscard(ctx).Debug("package source does not satisfy any current sources, assuming it is a package deployed to a cluster", "source", pkgConfig.PkgOpts.PackageSource)
 		src, err := sources.NewClusterSource(&pkgConfig.PkgOpts)
 		if err != nil {
 			return nil, fmt.Errorf("unable to identify source from %s: %w", pkgConfig.PkgOpts.PackageSource, err)

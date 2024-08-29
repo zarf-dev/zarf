@@ -225,7 +225,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 	doneSaving := make(chan error)
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
-	go utils.RenderProgressBarForLocalDirWrite(cfg.DestinationDirectory, totalBytes.Load(), doneSaving, updateText, updateText)
+	go utils.RenderProgressBarForLocalDirWrite(ctx, cfg.DestinationDirectory, totalBytes.Load(), doneSaving, updateText, updateText)
 
 	toPull := maps.Clone(fetched)
 

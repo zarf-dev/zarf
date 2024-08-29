@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -15,9 +16,9 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
-
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
 
 // isJSONPathWaitType checks if the condition is a JSONPath or condition.
@@ -30,11 +31,13 @@ func isJSONPathWaitType(condition string) bool {
 }
 
 // ExecuteWait executes the wait-for command.
-func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string, timeout time.Duration) error {
+func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kind, identifier string, timeout time.Duration) error {
+	log := logging.FromContextOrDiscard(ctx)
+
 	// Handle network endpoints.
 	switch kind {
 	case "http", "https", "tcp":
-		return waitForNetworkEndpoint(kind, identifier, condition, timeout)
+		return waitForNetworkEndpoint(ctx, kind, identifier, condition, timeout)
 	}
 
 	// Type of wait, condition or JSONPath
@@ -96,13 +99,13 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 			zarfKubectlGet := fmt.Sprintf("%s tools kubectl get %s %s %s", zarfCommand, namespaceFlag, kind, identifier)
 			stdout, stderr, err := exec.Cmd(shell, append(shellArgs, zarfKubectlGet)...)
 			if err != nil {
-				message.Debug(stdout, stderr, err)
+				log.Debug(zarfKubectlGet, "stdout", stdout, "stderr", stderr, "error", err)
 				continue
 			}
 
 			resourceNotFound := strings.Contains(stderr, "No resources found") && identifier == ""
 			if resourceNotFound {
-				message.Debug(stdout, stderr, err)
+				log.Debug("could not get Kubernetes resource", "stdout", stdout, "stderr", stderr, "error", err)
 				continue
 			}
 
@@ -120,7 +123,7 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 
 			// If there is an error, log it and try again.
 			if stdout, stderr, err := exec.Cmd(shell, append(shellArgs, zarfKubectlWait)...); err != nil {
-				message.Debug(stdout, stderr, err)
+				log.Debug("could not wait for Kubernetes resource", "stdout", stdout, "stderr", stderr, "error", err)
 				continue
 			}
 
@@ -132,7 +135,9 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 }
 
 // waitForNetworkEndpoint waits for a network endpoint to respond.
-func waitForNetworkEndpoint(resource, name, condition string, timeout time.Duration) error {
+func waitForNetworkEndpoint(ctx context.Context, resource, name, condition string, timeout time.Duration) error {
+	log := logging.FromContextOrDiscard(ctx)
+
 	// Set the timeout for the wait-for command.
 	expired := time.After(timeout)
 
@@ -167,7 +172,7 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 
 					// If the status code is not in the 2xx range, try again.
 					if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
-						message.Debug(err)
+						log.Debug("network request failed", "error", err)
 						continue
 					}
 
@@ -187,14 +192,14 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 				// Try to get the URL and check the status code.
 				resp, err := http.Get(url)
 				if err != nil || resp.StatusCode != code {
-					message.Debug(err)
+					log.Debug("network request failed", "error", err)
 					continue
 				}
 			default:
 				// Fallback to any generic protocol using net.Dial
 				conn, err := net.Dial(resource, name)
 				if err != nil {
-					message.Debug(err)
+					log.Debug("network connection failed", "error", err)
 					continue
 				}
 				defer conn.Close()

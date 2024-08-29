@@ -56,7 +56,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+r.Repo().Reference.String())
 
 	layerSize := oci.SumDescsSize(layersToPull)
-	go utils.RenderProgressBarForLocalDirWrite(destinationDir, layerSize, doneSaving, "Pulling", successText)
+	go utils.RenderProgressBarForLocalDirWrite(ctx, destinationDir, layerSize, doneSaving, "Pulling", successText)
 
 	dst, err := file.New(destinationDir)
 	if err != nil {
