@@ -36,7 +36,6 @@ type Packager struct {
 	cluster        *cluster.Cluster
 	layout         *layout.PackagePaths
 	hpaModified    bool
-	connectStrings types.ConnectStrings
 	source         sources.PackageSource
 }
 
