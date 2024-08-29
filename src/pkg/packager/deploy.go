@@ -191,7 +191,7 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 		}
 
 		// Deploy the component
-		var charts []types.InstalledChart
+		charts := []types.InstalledChart{}
 		var deployErr error
 		if p.cfg.Pkg.IsInitConfig() {
 			charts, deployErr = p.deployInitComponent(ctx, component)
