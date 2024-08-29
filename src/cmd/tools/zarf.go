@@ -74,9 +74,9 @@ var getCredsCmd = &cobra.Command{
 
 		if len(args) > 0 {
 			// If a component name is provided, only show that component's credentials
-			message.PrintComponentCredential(state, args[0])
+			common.PrintComponentCredential(state, args[0])
 		} else {
-			message.PrintCredentialTable(state, nil)
+			common.PrintCredentialTable(state, nil)
 		}
 		return nil
 	},
@@ -90,7 +90,7 @@ var updateCredsCmd = &cobra.Command{
 	Aliases: []string{"uc"},
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		validKeys := []string{message.RegistryKey, message.GitKey, message.ArtifactKey, message.AgentKey}
+		validKeys := []string{cluster.RegistryKey, cluster.GitKey, cluster.ArtifactKey, cluster.AgentKey}
 		if len(args) == 0 {
 			args = validKeys
 		} else {
@@ -122,7 +122,7 @@ var updateCredsCmd = &cobra.Command{
 			return fmt.Errorf("unable to update Zarf credentials: %w", err)
 		}
 
-		message.PrintCredentialUpdates(oldState, newState, args)
+		common.PrintCredentialUpdates(oldState, newState, args)
 
 		confirm := config.CommonOptions.Confirm
 
@@ -139,13 +139,13 @@ var updateCredsCmd = &cobra.Command{
 
 		if confirm {
 			// Update registry and git pull secrets
-			if slices.Contains(args, message.RegistryKey) {
+			if slices.Contains(args, cluster.RegistryKey) {
 				err := c.UpdateZarfManagedImageSecrets(ctx, newState)
 				if err != nil {
 					return err
 				}
 			}
-			if slices.Contains(args, message.GitKey) {
+			if slices.Contains(args, cluster.GitKey) {
 				err := c.UpdateZarfManagedGitSecrets(ctx, newState)
 				if err != nil {
 					return err
@@ -159,7 +159,7 @@ var updateCredsCmd = &cobra.Command{
 			}
 
 			// Update artifact token (if internal)
-			if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() && internalGitServerExists {
+			if slices.Contains(args, cluster.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() && internalGitServerExists {
 				newState.ArtifactServer.PushToken, err = c.UpdateInternalArtifactServerToken(ctx, oldState.GitServer)
 				if err != nil {
 					return fmt.Errorf("unable to create the new Gitea artifact token: %w", err)
@@ -175,20 +175,20 @@ var updateCredsCmd = &cobra.Command{
 			// Update Zarf 'init' component Helm releases if present
 			h := helm.NewClusterOnly(&types.PackagerConfig{}, template.GetZarfVariableConfig(), newState, c)
 
-			if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.IsInternal() {
+			if slices.Contains(args, cluster.RegistryKey) && newState.RegistryInfo.IsInternal() {
 				err = h.UpdateZarfRegistryValues(ctx)
 				if err != nil {
 					// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
 				}
 			}
-			if slices.Contains(args, message.GitKey) && newState.GitServer.IsInternal() && internalGitServerExists {
+			if slices.Contains(args, cluster.GitKey) && newState.GitServer.IsInternal() && internalGitServerExists {
 				err := c.UpdateInternalGitServerSecret(cmd.Context(), oldState.GitServer, newState.GitServer)
 				if err != nil {
 					return fmt.Errorf("unable to update Zarf Git Server values: %w", err)
 				}
 			}
-			if slices.Contains(args, message.AgentKey) {
+			if slices.Contains(args, cluster.AgentKey) {
 				err = h.UpdateZarfAgentValues(ctx)
 				if err != nil {
 					// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)

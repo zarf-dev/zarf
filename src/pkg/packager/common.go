@@ -116,6 +116,11 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 	return pkgr, nil
 }
 
+// GetCluster returns the packager cluster.
+func (p *Packager) GetCluster() *cluster.Cluster {
+	return p.cluster
+}
+
 // ClearTempPaths removes the temp directory and any files within it.
 func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails

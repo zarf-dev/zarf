@@ -247,34 +247,6 @@ func Paragraphn(n int, format string, a ...any) string {
 	return strings.Join(formattedLines, "\n")
 }
 
-// Table prints a padded table containing the specified header and data
-func Table(header []string, data [][]string) {
-	pterm.Println()
-
-	// To avoid side effects make copies of the header and data before adding padding
-	headerCopy := make([]string, len(header))
-	copy(headerCopy, header)
-	dataCopy := make([][]string, len(data))
-	copy(dataCopy, data)
-	if len(headerCopy) > 0 {
-		headerCopy[0] = fmt.Sprintf("     %s", headerCopy[0])
-	}
-
-	table := pterm.TableData{
-		headerCopy,
-	}
-
-	for _, row := range dataCopy {
-		if len(row) > 0 {
-			row[0] = fmt.Sprintf("     %s", row[0])
-		}
-		table = append(table, pterm.TableData{row}...)
-	}
-
-	//nolint:errcheck // never returns an error
-	pterm.DefaultTable.WithHasHeader().WithData(table).Render()
-}
-
 func debugPrinter(offset int, a ...any) {
 	printer := pterm.Debug.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
 	now := time.Now().Format(time.RFC3339)

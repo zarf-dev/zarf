@@ -283,11 +283,21 @@ func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) err
 	return nil
 }
 
+// Common constants for printing credentials
+const (
+	RegistryKey     = "registry"
+	RegistryReadKey = "registry-readonly"
+	GitKey          = "git"
+	GitReadKey      = "git-readonly"
+	ArtifactKey     = "artifact"
+	AgentKey        = "agent"
+)
+
 // MergeZarfState merges init options for provided services into the provided state to create a new state struct
 func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions, services []string) (*types.ZarfState, error) {
 	newState := *oldState
 	var err error
-	if slices.Contains(services, message.RegistryKey) {
+	if slices.Contains(services, RegistryKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, initOptions.RegistryInfo)
 
@@ -303,7 +313,7 @@ func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions
 			}
 		}
 	}
-	if slices.Contains(services, message.GitKey) {
+	if slices.Contains(services, GitKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.GitServer = helpers.MergeNonZero(newState.GitServer, initOptions.GitServer)
 
@@ -319,7 +329,7 @@ func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions
 			}
 		}
 	}
-	if slices.Contains(services, message.ArtifactKey) {
+	if slices.Contains(services, ArtifactKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, initOptions.ArtifactServer)
 
@@ -328,7 +338,7 @@ func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions
 			newState.ArtifactServer.PushToken = ""
 		}
 	}
-	if slices.Contains(services, message.AgentKey) {
+	if slices.Contains(services, AgentKey) {
 		agentTLS, err := pki.GeneratePKI(config.ZarfAgentHost)
 		if err != nil {
 			return nil, err

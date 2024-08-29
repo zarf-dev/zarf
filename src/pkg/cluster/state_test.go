@@ -18,7 +18,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -304,7 +303,7 @@ func TestMergeZarfStateRegistry(t *testing.T) {
 			oldState := &types.ZarfState{
 				RegistryInfo: tt.oldRegistry,
 			}
-			newState, err := MergeZarfState(oldState, types.ZarfInitOptions{RegistryInfo: tt.initRegistry}, []string{message.RegistryKey})
+			newState, err := MergeZarfState(oldState, types.ZarfInitOptions{RegistryInfo: tt.initRegistry}, []string{RegistryKey})
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedRegistry.PushUsername, newState.RegistryInfo.PushUsername)
 			require.Equal(t, tt.expectedRegistry.PullUsername, newState.RegistryInfo.PullUsername)
@@ -382,7 +381,7 @@ func TestMergeZarfStateGit(t *testing.T) {
 			oldState := &types.ZarfState{
 				GitServer: tt.oldGitServer,
 			}
-			newState, err := MergeZarfState(oldState, types.ZarfInitOptions{GitServer: tt.initGitServer}, []string{message.GitKey})
+			newState, err := MergeZarfState(oldState, types.ZarfInitOptions{GitServer: tt.initGitServer}, []string{GitKey})
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedGitServer.PushUsername, newState.GitServer.PushUsername)
 			require.Equal(t, tt.expectedGitServer.PullUsername, newState.GitServer.PullUsername)
@@ -469,7 +468,7 @@ func TestMergeZarfStateArtifact(t *testing.T) {
 			oldState := &types.ZarfState{
 				ArtifactServer: tt.oldArtifactServer,
 			}
-			newState, err := MergeZarfState(oldState, types.ZarfInitOptions{ArtifactServer: tt.initArtifactServer}, []string{message.ArtifactKey})
+			newState, err := MergeZarfState(oldState, types.ZarfInitOptions{ArtifactServer: tt.initArtifactServer}, []string{ArtifactKey})
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedArtifactServer, newState.ArtifactServer)
 		})
@@ -484,7 +483,7 @@ func TestMergeZarfStateAgent(t *testing.T) {
 	oldState := &types.ZarfState{
 		AgentTLS: agentTLS,
 	}
-	newState, err := MergeZarfState(oldState, types.ZarfInitOptions{}, []string{message.AgentKey})
+	newState, err := MergeZarfState(oldState, types.ZarfInitOptions{}, []string{AgentKey})
 	require.NoError(t, err)
 	require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
 }

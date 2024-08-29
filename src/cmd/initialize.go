@@ -69,10 +69,24 @@ var initCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		err = pkgClient.Deploy(cmd.Context())
+		deployedComponents, err := pkgClient.Deploy(cmd.Context())
 		if err != nil {
 			return err
 		}
+
+		// Don't print if cluster is not configured
+		cluster := pkgClient.GetCluster()
+		if cluster == nil {
+			return nil
+		}
+
+		// Grab a fresh copy of the state to print the most up-to-date version of the creds
+		latestState, err := cluster.LoadZarfState(cmd.Context())
+		if err != nil {
+			return err
+		}
+		common.PrintCredentialTable(latestState, deployedComponents)
+
 		return nil
 	},
 }

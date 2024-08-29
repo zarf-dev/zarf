@@ -58,7 +58,7 @@ func (p *Packager) resetRegistryHPA(ctx context.Context) {
 }
 
 // Deploy attempts to deploy the given PackageConfig.
-func (p *Packager) Deploy(ctx context.Context) error {
+func (p *Packager) Deploy(ctx context.Context) ([]types.DeployedComponent, error) {
 	isInteractive := !config.CommonOptions.Confirm
 
 	deployFilter := filters.Combine(
@@ -71,48 +71,48 @@ func (p *Packager) Deploy(ctx context.Context) error {
 		filter := filters.Empty()
 		pkg, loadWarnings, err := p.source.LoadPackage(ctx, p.layout, filter, true)
 		if err != nil {
-			return fmt.Errorf("unable to load the package: %w", err)
+			return nil, fmt.Errorf("unable to load the package: %w", err)
 		}
 		p.cfg.Pkg = pkg
 		warnings = append(warnings, loadWarnings...)
 	} else {
 		pkg, loadWarnings, err := p.source.LoadPackage(ctx, p.layout, deployFilter, true)
 		if err != nil {
-			return fmt.Errorf("unable to load the package: %w", err)
+			return nil, fmt.Errorf("unable to load the package: %w", err)
 		}
 		p.cfg.Pkg = pkg
 		warnings = append(warnings, loadWarnings...)
 		if err := p.populatePackageVariableConfig(); err != nil {
-			return fmt.Errorf("unable to set the active variables: %w", err)
+			return nil, fmt.Errorf("unable to set the active variables: %w", err)
 		}
 	}
 
 	validateWarnings, err := validateLastNonBreakingVersion(config.CLIVersion, p.cfg.Pkg.Build.LastNonBreakingVersion)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	warnings = append(warnings, validateWarnings...)
 
 	sbomViewFiles, sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	warnings = append(warnings, sbomWarnings...)
 
 	// Confirm the overall package deployment
 	if !p.confirmAction(config.ZarfDeployStage, warnings, sbomViewFiles) {
-		return fmt.Errorf("deployment cancelled")
+		return nil, fmt.Errorf("deployment cancelled")
 	}
 
 	if isInteractive {
 		p.cfg.Pkg.Components, err = deployFilter.Apply(p.cfg.Pkg)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Set variables and prompt if --confirm is not set
 		if err := p.populatePackageVariableConfig(); err != nil {
-			return fmt.Errorf("unable to set the active variables: %w", err)
+			return nil, fmt.Errorf("unable to set the active variables: %w", err)
 		}
 	}
 
@@ -123,7 +123,7 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := p.deployComponents(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(deployedComponents) == 0 {
 		message.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
@@ -132,12 +132,7 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	// Notify all the things about the successful deployment
 	message.Successf("Zarf deployment complete")
 
-	err = p.printTablesForDeployment(ctx, deployedComponents)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return deployedComponents, nil
 }
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
@@ -191,7 +186,7 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 		}
 
 		// Deploy the component
-		charts := []types.InstalledChart{}
+		var charts []types.InstalledChart
 		var deployErr error
 		if p.cfg.Pkg.IsInitConfig() {
 			charts, deployErr = p.deployInitComponent(ctx, component)
@@ -775,33 +770,6 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 	}
 
 	return installedCharts, nil
-}
-
-func (p *Packager) printTablesForDeployment(ctx context.Context, componentsToDeploy []types.DeployedComponent) error {
-	// If not init config, print the application connection table
-	if !p.cfg.Pkg.IsInitConfig() {
-		connectStrings := types.ConnectStrings{}
-		for _, comp := range componentsToDeploy {
-			for _, chart := range comp.InstalledCharts {
-				for k, v := range chart.ConnectStrings {
-					connectStrings[k] = v
-				}
-			}
-		}
-		message.PrintConnectStringTable(connectStrings)
-		return nil
-	}
-	// Don't print if cluster is not configured
-	if p.cluster == nil {
-		return nil
-	}
-	// Grab a fresh copy of the state to print the most up-to-date version of the creds
-	latestState, err := p.cluster.LoadZarfState(ctx)
-	if err != nil {
-		return err
-	}
-	message.PrintCredentialTable(latestState, componentsToDeploy)
-	return nil
 }
 
 // ServiceInfoFromServiceURL takes a serviceURL and parses it to find the service info for connecting to the cluster. The string is expected to follow the following format:

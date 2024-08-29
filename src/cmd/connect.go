@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -98,7 +99,7 @@ var connectListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		message.PrintConnectStringTable(connections)
+		common.PrintConnectStringTable(connections)
 		return nil
 	},
 }

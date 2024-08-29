@@ -96,11 +96,21 @@ var packageDeployCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		ctx := cmd.Context()
-
-		if err := pkgClient.Deploy(ctx); err != nil {
+		deployedComponents, err := pkgClient.Deploy(cmd.Context())
+		if err != nil {
 			return fmt.Errorf("failed to deploy package: %w", err)
 		}
+
+		connectStrings := types.ConnectStrings{}
+		for _, comp := range deployedComponents {
+			for _, chart := range comp.InstalledCharts {
+				for k, v := range chart.ConnectStrings {
+					connectStrings[k] = v
+				}
+			}
+		}
+		common.PrintConnectStringTable(connectStrings)
+
 		return nil
 	},
 }
@@ -193,7 +203,7 @@ var packageListCmd = &cobra.Command{
 		}
 
 		header := []string{"Package", "Version", "Components"}
-		message.Table(header, packageData)
+		common.Table(header, packageData)
 
 		// Print out any unmarshalling errors
 		if err != nil {
