@@ -12,8 +12,8 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/mholt/archiver/v3"
+
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // ComponentPaths contains paths for a component.
@@ -58,7 +58,6 @@ func (c *Components) Archive(component v1alpha1.ZarfComponent, cleanupTemp bool)
 	}
 	if size > 0 {
 		tb := fmt.Sprintf("%s.tar", base)
-		message.Debugf("Archiving %q", name)
 		if err := helpers.CreateReproducibleTarballFromDir(base, name, tb); err != nil {
 			return err
 		}
@@ -66,8 +65,6 @@ func (c *Components) Archive(component v1alpha1.ZarfComponent, cleanupTemp bool)
 			c.Tarballs = make(map[string]string)
 		}
 		c.Tarballs[name] = tb
-	} else {
-		message.Debugf("Component %q is empty, skipping archiving", name)
 	}
 
 	delete(c.Dirs, name)
@@ -126,11 +123,9 @@ func (c *Components) Unarchive(component v1alpha1.ZarfComponent) (err error) {
 
 	// if the component is already unarchived, skip
 	if !helpers.InvalidPath(cs.Base) {
-		message.Debugf("Component %q already unarchived", name)
 		return nil
 	}
 
-	message.Debugf("Unarchiving %q", filepath.Base(tb))
 	if err := archiver.Unarchive(tb, c.Base); err != nil {
 		return err
 	}

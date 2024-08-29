@@ -17,7 +17,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logging"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	ocistore "oras.land/oras-go/v2/content/oci"
@@ -80,7 +80,7 @@ func (ic *ImportChain) fetchOCISkeleton(ctx context.Context) error {
 
 		dir = filepath.Join(cache, "dirs", id)
 
-		message.Debug("creating empty directory for remote component:", filepath.Join("<zarf-cache>", "oci", "dirs", id))
+		logging.FromContextOrDiscard(ctx).Debug("Creaing empty directory for remote component", "path", filepath.Join("<zarf-cache>", "oci", "dirs", id))
 	} else {
 		tb = filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.Encoded())
 		dir = filepath.Join(cache, "dirs", componentDesc.Digest.Encoded())
@@ -97,7 +97,7 @@ func (ic *ImportChain) fetchOCISkeleton(ctx context.Context) error {
 		} else if !exists {
 			doneSaving := make(chan error)
 			successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+remote.Repo().Reference.String())
-			go utils.RenderProgressBarForLocalDirWrite(cache, componentDesc.Size, doneSaving, "Pulling", successText)
+			go utils.RenderProgressBarForLocalDirWrite(ctx, cache, componentDesc.Size, doneSaving, "Pulling", successText)
 			err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
 			doneSaving <- err
 			<-doneSaving

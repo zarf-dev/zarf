@@ -44,7 +44,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		src.Spec.Reference = &flux.OCIRepositoryRef{}
 	}
 
-	// If we have a semver we want to continue since we wil still have the upstream tag
+	// If we have a semver we want to continue since we will still have the upstream tag
 	// but should warn that we can't guarantee there won't be collisions
 	if src.Spec.Reference.SemVer != "" {
 		message.Warnf(lang.AgentWarnSemVerRef, src.Spec.Reference.SemVer)
@@ -69,8 +69,6 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	}
 
 	// For the internal registry this will be the ip & port of the service, it may look like 10.43.36.151:5000
-	message.Debugf("Using the url of (%s) to mutate the flux OCIRepository", registryAddress)
-
 	ref := src.Spec.URL
 	if src.Spec.Reference.Digest != "" {
 		ref = fmt.Sprintf("%s@%s", ref, src.Spec.Reference.Digest)
@@ -96,8 +94,6 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	} else if patchedRefInfo.Tag != "" {
 		patchedRef.Tag = patchedRefInfo.Tag
 	}
-
-	message.Debugf("original OCIRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
 
 	patches := populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.IsInternal(), patchedRef)
 

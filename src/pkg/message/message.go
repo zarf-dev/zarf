@@ -119,12 +119,6 @@ func Debug(payload ...any) {
 	debugPrinter(2, payload...)
 }
 
-// Debugf prints a debug message with a given format.
-func Debugf(format string, a ...any) {
-	message := fmt.Sprintf(format, a...)
-	debugPrinter(2, message)
-}
-
 // Warn prints a warning message.
 func Warn(message string) {
 	Warnf("%s", message)

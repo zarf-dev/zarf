@@ -13,7 +13,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
@@ -64,8 +63,6 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	if err != nil {
 		return nil, err
 	}
-
-	message.Debugf("Using the url of (%s) to mutate the ArgoCD Application", state.GitServer.Address)
 
 	app := Application{}
 	if err = json.Unmarshal(r.Object.Raw, &app); err != nil {
@@ -125,7 +122,6 @@ func getPatchedRepoURL(repoURL string, gs types.GitServerInfo, r *v1.AdmissionRe
 			return "", fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
 		}
 		patchedURL = transformedURL.String()
-		message.Debugf("original repoURL of (%s) got mutated to (%s)", repoURL, patchedURL)
 	}
 
 	return patchedURL, nil
