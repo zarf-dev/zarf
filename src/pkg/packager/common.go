@@ -130,15 +130,16 @@ func (p *Packager) GetVariableConfig() *variables.VariableConfig {
 }
 
 // connectToCluster attempts to connect to a cluster if a connection is not already established
-func (p *Packager) connectToCluster(ctx context.Context) (err error) {
+func (p *Packager) connectToCluster(ctx context.Context) error {
 	if p.isConnectedToCluster() {
 		return nil
 	}
 
-	p.cluster, err = cluster.NewClusterWithWait(ctx)
+	cluster, err := cluster.NewClusterWithWait(ctx)
 	if err != nil {
 		return err
 	}
+	p.cluster = cluster
 
 	return p.attemptClusterChecks(ctx)
 }
@@ -150,7 +151,7 @@ func (p *Packager) isConnectedToCluster() bool {
 
 // attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
 // NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
-func (p *Packager) attemptClusterChecks(ctx context.Context) (err error) {
+func (p *Packager) attemptClusterChecks(ctx context.Context) error {
 	spinner := message.NewProgressSpinner("Gathering additional cluster information (if available)")
 	defer spinner.Stop()
 

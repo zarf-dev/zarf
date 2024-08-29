@@ -18,7 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
-func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles []string) (confirm bool) {
+func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles []string) bool {
 	pterm.Println()
 	message.HeaderInfof("📦 PACKAGE DEFINITION")
 	utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(stage), true)
@@ -77,6 +77,7 @@ func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles 
 	pterm.Println()
 
 	// Prompt the user for confirmation, on abort return false
+	var confirm bool
 	if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
 		// User aborted or declined, cancel the action
 		return false
