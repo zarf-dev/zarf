@@ -25,14 +25,11 @@ jobs:
 
       - name: Run test Go program that imports Zarf
         run: |
-          cd ..
-          mkdir test-import
-          cd test-import
+          cd $(mktemp -d)
           echo "$GO_MAIN" > main.go
           go mod init github.com/zarf-dev/test-import
           go get github.com/${{ github.event.pull_request.head.repo.full_name }}@$COMMIT_SHA
           go mod tidy
-          cat go.mod
           cat go.mod | grep -q ${COMMIT_SHA:0:12}
           go run main.go
         env:
