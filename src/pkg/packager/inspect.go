@@ -15,13 +15,14 @@ import (
 )
 
 // Inspect list the contents of a package.
-func (p *Packager) Inspect(ctx context.Context) (err error) {
+func (p *Packager) Inspect(ctx context.Context) error {
 	wantSBOM := p.cfg.InspectOpts.ViewSBOM || p.cfg.InspectOpts.SBOMOutputDir != ""
 
-	p.cfg.Pkg, _, err = p.source.LoadPackageMetadata(ctx, p.layout, wantSBOM, true)
+	pkg, _, err := p.source.LoadPackageMetadata(ctx, p.layout, wantSBOM, true)
 	if err != nil {
 		return err
 	}
+	p.cfg.Pkg = pkg
 
 	if p.cfg.InspectOpts.ListImages {
 		imageList := []string{}

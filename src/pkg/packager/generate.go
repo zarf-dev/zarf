@@ -21,7 +21,7 @@ import (
 )
 
 // Generate generates a Zarf package definition.
-func (p *Packager) Generate(ctx context.Context) (err error) {
+func (p *Packager) Generate(ctx context.Context) error {
 	generatedZarfYAMLPath := filepath.Join(p.cfg.GenerateOpts.Output, layout.ZarfYAML)
 	spinner := message.NewProgressSpinner("Generating package for %q at %s", p.cfg.GenerateOpts.Name, generatedZarfYAMLPath)
 

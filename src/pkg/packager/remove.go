@@ -30,7 +30,7 @@ import (
 )
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
-func (p *Packager) Remove(ctx context.Context) (err error) {
+func (p *Packager) Remove(ctx context.Context) error {
 	_, isClusterSource := p.source.(*sources.ClusterSource)
 	if isClusterSource {
 		p.cluster = p.source.(*sources.ClusterSource).Cluster
@@ -40,10 +40,11 @@ func (p *Packager) Remove(ctx context.Context) (err error) {
 
 	// we do not want to allow removal of signed packages without a signature if there are remove actions
 	// as this is arbitrary code execution from an untrusted source
-	p.cfg.Pkg, _, err = p.source.LoadPackageMetadata(ctx, p.layout, false, false)
+	pkg, _, err := p.source.LoadPackageMetadata(ctx, p.layout, false, false)
 	if err != nil {
 		return err
 	}
+	p.cfg.Pkg = pkg
 	packageName := p.cfg.Pkg.Metadata.Name
 
 	// Build a list of components to remove and determine if we need a cluster connection
