@@ -20,19 +20,12 @@ on:
     - cron: "32 2 * * 5"
 
 jobs:
-  codeql-scan:
+  go-codeql-scan:
     runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
       security-events: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: ["go"]
-        # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby' ]
-        # Learn more about CodeQL language support at https://aka.ms/codeql-docs/language-support
 
     steps:
       - name: Checkout
@@ -45,7 +38,7 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@4dd16135b69a43b6c8efb853346f8437d92d3c93 # v3.26.6
         with:
-          languages: ${{ matrix.language }}
+          languages: go
           config-file: ./.github/codeql.yaml
 
       - name: Build
@@ -54,4 +47,4 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@4dd16135b69a43b6c8efb853346f8437d92d3c93 # v3.26.6
         with:
-          category: "/language:${{matrix.language}}"
+          category: "/language:go"
