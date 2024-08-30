@@ -31,7 +31,7 @@ jobs:
           cd test-import
           echo "$GO_MAIN" > main.go
           go mod init github.com/zarf-dev/test-import
-          go get ${{ github.event.pull_request.head.repo.full_name }}@${{ github.event.pull_request.head.sha }}
+          go get github.com/${{ github.event.pull_request.head.repo.full_name }}@${{ github.event.pull_request.head.sha }}
           go mod tidy
           cat go.mod | grep -q ${COMMIT_SHA:0:12}
           go run main.go
