@@ -10,7 +10,6 @@ panic = "abort"
 strip = true
 
 
-
 [package]
 name = "zarf-injector"
 version = "0.5.0"
@@ -23,9 +22,18 @@ glob = "0.3.1"
 flate2 = "1.0.28"
 tar = "0.4.40"
 sha2 = "0.10.8"
-hex = {version = "0.4.3", default-features = false}
-serde_json = { version = "1.0.113", default-features = false, features = ["alloc"] }
-axum = {version = "0.7.5", features = ["tokio"]}
+hex = { version = "0.4.3", default-features = false }
+serde_json = { version = "1.0.113", default-features = false, features = [
+    "alloc",
+] }
+axum = { version = "0.7.5", features = ["tokio"] }
 tokio = { version = "1.35.0", features = ["fs", "rt"] }
-tokio-util = { version = "0.7.10", features = ["io"]}
+tokio-util = { version = "0.7.10", features = ["io"] }
 regex-lite = "0.1.5"
+
+[dev-dependencies]
+anyhow = "1.0.86"
+bollard = "0.17.1"
+futures-util = "0.3.30"
+regex = "1.10.6"
+temp-dir = "0.1.13"
