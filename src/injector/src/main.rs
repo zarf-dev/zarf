@@ -51,7 +51,7 @@ fn collect_binary_data(paths: &Vec<PathBuf>) -> io::Result<Vec<u8>> {
         println!("Processing {}", path.display());
         let new_content = get_file(path);
         buffer
-            .write(&new_content.unwrap())
+            .write_all(&new_content.unwrap())
             .expect("Could not add the file contents to the merged file buffer");
     }
 
@@ -143,14 +143,14 @@ async fn handler(Path(path): Path<String>) -> Response {
         let name = caps.get(1).unwrap().as_str().to_string();
         let reference = caps.get(2).unwrap().as_str().to_string();
         handle_get_manifest(name, reference).await
-    } else if blob.is_match(&path) {
+    } else if blob.is_match(path) {
         let caps = blob.captures(path).unwrap();
         let tag = caps.get(1).unwrap().as_str().to_string();
         handle_get_digest(tag).await
     } else {
         Response::builder()
             .status(StatusCode::NOT_FOUND)
-            .body(format!("Not Found"))
+            .body("Not Found".to_string())
             .unwrap()
             .into_response()
     }
@@ -185,7 +185,7 @@ async fn handle_get_manifest(name: String, reference: String) -> Response {
     if sha_manifest.is_empty() {
         Response::builder()
             .status(StatusCode::NOT_FOUND)
-            .body(format!("Not Found"))
+            .body("Not Found".to_string())
             .unwrap()
             .into_response()
     } else {
