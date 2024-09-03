@@ -401,7 +401,7 @@ func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfC
 	if len(component.HealthChecks) > 0 {
 		healthCheckContext, cancel := context.WithTimeout(ctx, p.cfg.DeployOpts.Timeout)
 		defer cancel()
-		spinner := message.NewProgressSpinner("Running Health checks for %s", component.Name)
+		spinner := message.NewProgressSpinner("Running health checks")
 		defer spinner.Stop()
 		if err = runHealthChecks(healthCheckContext, p.cluster.Watcher, component.HealthChecks); err != nil {
 			return nil, fmt.Errorf("health checks failed: %w", err)
