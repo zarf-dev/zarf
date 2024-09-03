@@ -16,7 +16,7 @@ jobs:
       - name: Setup golang
         uses: ./.github/actions/golang
 
-      - name: Docs and schemas
+      - name: Test go mod
         run: "make test-go-mod"
 
       - name: Save logs
