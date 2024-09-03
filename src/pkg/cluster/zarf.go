@@ -134,8 +134,8 @@ func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage,
 }
 
 // RecordPackageDeploymentAndWait records the deployment of a package to the cluster and waits for any webhooks to complete.
-func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int, component v1alpha1.ZarfComponent, skipWebhooks bool) (*types.DeployedPackage, error) {
-	deployedPackage, err := c.RecordPackageDeployment(ctx, pkg, components, connectStrings, generation)
+func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, generation int, component v1alpha1.ZarfComponent, skipWebhooks bool) (*types.DeployedPackage, error) {
+	deployedPackage, err := c.RecordPackageDeployment(ctx, pkg, components, generation)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alph
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, connectStrings types.ConnectStrings, generation int) (deployedPackage *types.DeployedPackage, err error) {
+func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, generation int) (deployedPackage *types.DeployedPackage, err error) {
 	packageName := pkg.Metadata.Name
 
 	// Attempt to load information about webhooks for the package
@@ -185,6 +185,16 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 	}
 	if existingPackageSecret != nil {
 		componentWebhooks = existingPackageSecret.ComponentWebhooks
+	}
+
+	// TODO: This is done for backwards compartibility and could be removed in the future.
+	connectStrings := types.ConnectStrings{}
+	for _, comp := range components {
+		for _, chart := range comp.InstalledCharts {
+			for k, v := range chart.ConnectStrings {
+				connectStrings[k] = v
+			}
+		}
 	}
 
 	deployedPackage = &types.DeployedPackage{

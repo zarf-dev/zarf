@@ -16,7 +16,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // DevDeploy creates + deploys a package in one shot
@@ -74,8 +73,6 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 	}
 
 	message.HeaderInfof("📦 PACKAGE DEPLOY %s", p.cfg.Pkg.Metadata.Name)
-
-	p.connectStrings = make(types.ConnectStrings)
 
 	if !p.cfg.CreateOpts.NoYOLO {
 		p.cfg.Pkg.Metadata.YOLO = true
