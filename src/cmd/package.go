@@ -14,6 +14,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/types"
@@ -60,7 +61,12 @@ var packageCreateCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		if err := pkgClient.Create(cmd.Context()); err != nil {
+		err = pkgClient.Create(cmd.Context())
+		var lintErr *lint.LintError
+		if errors.As(err, &lintErr) {
+			common.PrintFindings(lintErr)
+		}
+		if err != nil {
 			return fmt.Errorf("failed to create package: %w", err)
 		}
 		return nil

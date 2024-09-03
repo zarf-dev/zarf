@@ -23,18 +23,18 @@ func Validate(pkg v1alpha1.ZarfPackage, baseDir string, setVariables map[string]
 	if err := lint.ValidatePackage(pkg); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
-
 	findings, err := lint.ValidatePackageSchema(setVariables)
 	if err != nil {
 		return fmt.Errorf("unable to check schema: %w", err)
 	}
-
-	if lint.HasSevOrHigher(findings, lint.SevErr) {
-		lint.PrintFindings(findings, lint.SevErr, baseDir, pkg.Metadata.Name)
-		return fmt.Errorf("found errors in schema")
+	if len(findings) == 0 {
+		return nil
 	}
-
-	return nil
+	return &lint.LintError{
+		BaseDir:     baseDir,
+		PackageName: pkg.Metadata.Name,
+		Findings:    findings,
+	}
 }
 
 // recordPackageMetadata records various package metadata during package create.

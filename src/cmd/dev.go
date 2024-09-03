@@ -59,7 +59,12 @@ var devDeployCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		if err := pkgClient.DevDeploy(cmd.Context()); err != nil {
+		err = pkgClient.DevDeploy(cmd.Context())
+		var lintErr *lint.LintError
+		if errors.As(err, &lintErr) {
+			common.PrintFindings(lintErr)
+		}
+		if err != nil {
 			return fmt.Errorf("failed to dev deploy: %w", err)
 		}
 		return nil
@@ -235,7 +240,12 @@ var devFindImagesCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		if _, err := pkgClient.FindImages(cmd.Context()); err != nil {
+		_, err = pkgClient.FindImages(cmd.Context())
+		var lintErr *lint.LintError
+		if errors.As(err, &lintErr) {
+			common.PrintFindings(lintErr)
+		}
+		if err != nil {
 			return fmt.Errorf("unable to find images: %w", err)
 		}
 		return nil
@@ -282,7 +292,19 @@ var devLintCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		return lint.Validate(cmd.Context(), pkgConfig.CreateOpts)
+		err = lint.Validate(cmd.Context(), pkgConfig.CreateOpts)
+		var lintErr *lint.LintError
+		if errors.As(err, &lintErr) {
+			common.PrintFindings(lintErr)
+			// Do not return an error if the findings are all warnings.
+			if lintErr.OnlyWarnings() {
+				return nil
+			}
+		}
+		if err != nil {
+			return err
+		}
+		return nil
 	},
 }
 
