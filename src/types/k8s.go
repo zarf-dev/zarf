@@ -119,8 +119,9 @@ type Webhook struct {
 
 // InstalledChart contains information about a Helm Chart that has been deployed to a cluster.
 type InstalledChart struct {
-	Namespace string `json:"namespace"`
-	ChartName string `json:"chartName"`
+	Namespace      string         `json:"namespace"`
+	ChartName      string         `json:"chartName"`
+	ConnectStrings ConnectStrings `json:"connectStrings,omitempty"`
 }
 
 // GitServerInfo contains information Zarf uses to communicate with a git repository to push/pull repositories to.

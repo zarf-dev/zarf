@@ -28,7 +28,7 @@ jobs:
           cd $(mktemp -d)
           echo "$GO_MAIN" > main.go
           go mod init github.com/zarf-dev/test-import
-          go mod edit -replace github.com/zarf-dev/zarf=github.com/${{ github.repository }}@${COMMIT_SHA:0:12}
+          go mod edit -replace github.com/zarf-dev/zarf=github.com/${{ github.event.pull_request.head.repo.full_name }}@${COMMIT_SHA:0:12}
           go mod tidy
           cat go.mod | grep -q ${COMMIT_SHA:0:12}
           go run main.go
