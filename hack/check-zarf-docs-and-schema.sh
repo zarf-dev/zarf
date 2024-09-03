@@ -2,10 +2,17 @@
 
 set -euo pipefail
 
-if [ -z "$(git status -s ./site/src/content/docs/commands/ ./zarf.schema.json)" ]; then
+PATHS=(
+    "./zarf.schema.json"
+    "./schema/zarf_package_v1alpha1.schema.json"
+    "./schema/zarf_package_v1beta1.schema.json"
+    "./site/src/content/docs/commands/"
+)
+
+if [ -z "$(git status -s "${PATHS[@]}")" ]; then
     echo "Success!"
     exit 0
 else
-    git diff ./site/src/content/docs/commands/ ./zarf.schema.json
+    git diff "${PATHS[@]}"
     exit 1
 fi
