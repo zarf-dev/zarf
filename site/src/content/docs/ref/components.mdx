@@ -267,6 +267,24 @@ When merging components together Zarf will adopt the following strategies depend
 
 <ExampleYAML src={import("../../../../../examples/big-bang/zarf.yaml?raw")} component="bigbang" />
 
+### Health Checks
+
+<Properties item="ZarfComponent" include={["healthChecks"]} />
+
+Health checks wait until the specified resources are fully reconciled, meaning that their desired and current states match. Internally, [kstatus](https://github.com/kubernetes-sigs/cli-utils/blob/master/pkg/kstatus/README.md#kstatus) is used to assess when reconciliation is complete. Health checks supports all Kubernetes resources that implement the [status](https://kubernetes.io/docs/concepts/overview/working-with-objects/#object-spec-and-status) field, including custom resource definitions. If the status field is not implemented on a resource, it will automatically pass the health check.
+
+```yaml
+    healthChecks:
+      - name: my-pod
+        namespace: my-namespace
+        apiVersion: v1
+        kind: Pod
+      - name: my-stateful-set
+        namespace: my-namespace
+        apiVersion: apps/v1
+        kind: StatefulSet
+```
+
 ## Deploying Components
 
 When deploying a Zarf package, components are deployed in the order they are defined in the `zarf.yaml`.

@@ -83,6 +83,50 @@ func TestCompose(t *testing.T) {
 			},
 		},
 		{
+			name: "Health Checks",
+			ic: createChainFromSlice(t, []v1alpha1.ZarfComponent{
+				{
+					Name: "base",
+					HealthChecks: []v1alpha1.NamespacedObjectKindReference{
+						{
+							APIVersion: "v1",
+							Kind:       "Pods",
+							Namespace:  "base-ns",
+							Name:       "base-pod",
+						},
+					},
+				},
+				{
+					Name: "import-one",
+					HealthChecks: []v1alpha1.NamespacedObjectKindReference{
+						{
+							APIVersion: "v1",
+							Kind:       "Pods",
+							Namespace:  "import-ns",
+							Name:       "import-pod",
+						},
+					},
+				},
+			}),
+			expectedComposed: v1alpha1.ZarfComponent{
+				Name: "base",
+				HealthChecks: []v1alpha1.NamespacedObjectKindReference{
+					{
+						APIVersion: "v1",
+						Kind:       "Pods",
+						Namespace:  "import-ns",
+						Name:       "import-pod",
+					},
+					{
+						APIVersion: "v1",
+						Kind:       "Pods",
+						Namespace:  "base-ns",
+						Name:       "base-pod",
+					},
+				},
+			},
+		},
+		{
 			name: "Multiple Components",
 			ic: createChainFromSlice(t, []v1alpha1.ZarfComponent{
 				createDummyComponent(t, "hello", firstDirectory, "hello"),

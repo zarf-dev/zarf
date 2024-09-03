@@ -245,7 +245,6 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 				// Break the manifest into separate resources
 				yamls, err := utils.SplitYAML(contents)
 				if err != nil {
-					fmt.Println("got this err")
 					return nil, err
 				}
 				resources = append(resources, yamls...)

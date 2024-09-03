@@ -169,6 +169,38 @@
         "^x-": {}
       }
     },
+    "NamespacedObjectKindReference": {
+      "properties": {
+        "apiVersion": {
+          "type": "string",
+          "description": "API Version of the resource"
+        },
+        "kind": {
+          "type": "string",
+          "description": "Kind of the resource"
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Namespace of the resource"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the resource"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "apiVersion",
+        "kind",
+        "namespace",
+        "name"
+      ],
+      "description": "NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version.",
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
     "Shell": {
       "properties": {
         "windows": {
@@ -512,6 +544,13 @@
         "actions": {
           "$ref": "#/$defs/ZarfComponentActions",
           "description": "Custom commands to run at various stages of a package lifecycle."
+        },
+        "healthChecks": {
+          "items": {
+            "$ref": "#/$defs/NamespacedObjectKindReference"
+          },
+          "type": "array",
+          "description": "List of resources to health check after deployment"
         }
       },
       "additionalProperties": false,
