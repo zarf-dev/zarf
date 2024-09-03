@@ -15,6 +15,33 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+func TestLintError(t *testing.T) {
+	t.Parallel()
+
+	lintErr := &LintError{
+		Findings: []PackageFinding{
+			{
+				Severity: SevWarn,
+			},
+		},
+	}
+	require.Equal(t, "linting error found 1 instance(s)", lintErr.Error())
+	require.True(t, lintErr.OnlyWarnings())
+
+	lintErr = &LintError{
+		Findings: []PackageFinding{
+			{
+				Severity: SevWarn,
+			},
+			{
+				Severity: SevErr,
+			},
+		},
+	}
+	require.Equal(t, "linting error found 2 instance(s)", lintErr.Error())
+	require.False(t, lintErr.OnlyWarnings())
+}
+
 func TestLintComponents(t *testing.T) {
 	t.Run("Test composable components with bad path", func(t *testing.T) {
 		t.Parallel()

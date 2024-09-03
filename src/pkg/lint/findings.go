@@ -6,11 +6,15 @@ package lint
 
 import (
 	"fmt"
-	"path/filepath"
+)
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/fatih/color"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+// Severity is the type of finding.
+type Severity string
+
+// Severity definitions.
+const (
+	SevErr  = "Error"
+	SevWarn = "Warning"
 )
 
 // PackageFinding is a struct that contains a finding about something wrong with a package
@@ -26,69 +30,16 @@ type PackageFinding struct {
 	// PackagePathOverride shows the path to the package that the error originated from
 	// If it is not set the base package will be used when displaying the error
 	PackagePathOverride string
-	Severity            Severity
+	// Severity of finding.
+	Severity Severity
 }
 
-// Severity is the type of finding
-type Severity int
-
-// different severities of package errors
-const (
-	SevErr Severity = iota + 1
-	SevWarn
-)
-
-func (f PackageFinding) itemizedDescription() string {
+// ItemizedDescription returns a string with the description and item if finding contains one.
+func (f PackageFinding) ItemizedDescription() string {
 	if f.Item == "" {
 		return f.Description
 	}
 	return fmt.Sprintf("%s - %s", f.Description, f.Item)
-}
-
-func colorWrapSev(s Severity) string {
-	if s == SevErr {
-		return message.ColorWrap("Error", color.FgRed)
-	} else if s == SevWarn {
-		return message.ColorWrap("Warning", color.FgYellow)
-	}
-	return "unknown"
-}
-
-func filterLowerSeverity(findings []PackageFinding, severity Severity) []PackageFinding {
-	findings = helpers.RemoveMatches(findings, func(finding PackageFinding) bool {
-		return finding.Severity > severity
-	})
-	return findings
-}
-
-// PrintFindings prints the findings of the given severity in a table
-func PrintFindings(findings []PackageFinding, severity Severity, baseDir string, packageName string) {
-	findings = filterLowerSeverity(findings, severity)
-	if len(findings) == 0 {
-		return
-	}
-	mapOfFindingsByPath := GroupFindingsByPath(findings, packageName)
-
-	header := []string{"Type", "Path", "Message"}
-
-	for _, findings := range mapOfFindingsByPath {
-		lintData := [][]string{}
-		for _, finding := range findings {
-			lintData = append(lintData, []string{
-				colorWrapSev(finding.Severity),
-				message.ColorWrap(finding.YqPath, color.FgCyan),
-				finding.itemizedDescription(),
-			})
-		}
-		var packagePathFromUser string
-		if helpers.IsOCIURL(findings[0].PackagePathOverride) {
-			packagePathFromUser = findings[0].PackagePathOverride
-		} else {
-			packagePathFromUser = filepath.Join(baseDir, findings[0].PackagePathOverride)
-		}
-		message.Notef("Linting package %q at %s", findings[0].PackageNameOverride, packagePathFromUser)
-		message.Table(header, lintData)
-	}
 }
 
 // GroupFindingsByPath groups findings by their package path
@@ -107,9 +58,4 @@ func GroupFindingsByPath(findings []PackageFinding, packageName string) map[stri
 		mapOfFindingsByPath[finding.PackagePathOverride] = append(mapOfFindingsByPath[finding.PackagePathOverride], finding)
 	}
 	return mapOfFindingsByPath
-}
-
-// HasSevOrHigher returns true if the findings contain a severity equal to or greater than the given severity
-func HasSevOrHigher(findings []PackageFinding, severity Severity) bool {
-	return len(filterLowerSeverity(findings, severity)) > 0
 }
