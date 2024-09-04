@@ -63,6 +63,11 @@ components:
         namespace: zarf
         valuesFiles:
           - gitea-values.yaml
+    healthChecks:
+      - name: zarf-gitea
+        namespace: zarf
+        kind: Deployment
+        apiVersion: apps/v1
     actions:
       onDeploy:
         before:
@@ -71,12 +76,6 @@ components:
               - name: GIT_SERVER_CREATE_PVC
             mute: true
         after:
-          - wait:
-              cluster:
-                kind: pod
-                namespace: zarf
-                name: app=gitea
-                condition: Ready
           - cmd: ./zarf internal create-read-only-gitea-user --no-progress
             maxRetries: 3
             maxTotalSeconds: 60

@@ -171,12 +171,8 @@ components:
     images:
       # This image (or images) must match that used for injection (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
-    actions:
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: deployment
-                namespace: zarf
-                name: app=docker-registry
-                condition: Available
+    healthChecks:
+      - name: zarf-docker-registry
+        namespace: zarf
+        kind: Deployment
+        apiVersion: apps/v1
