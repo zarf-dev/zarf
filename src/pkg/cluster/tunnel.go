@@ -6,6 +6,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -147,8 +148,23 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 	var err error
 	var tunnel *Tunnel
 	if registryInfo.IsInternal() {
+		registrySvc, err := c.Clientset.CoreV1().Services(ZarfNamespaceName).Get(ctx, ZarfRegistryName, metav1.GetOptions{})
+		if err != nil {
+			return "", nil, err
+		}
+		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{MatchLabels: registrySvc.Spec.Selector})
+		if err != nil {
+			return "", nil, err
+		}
+		podList, err := c.Clientset.CoreV1().Pods(ZarfNamespaceName).List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
+		if err != nil {
+			return "", nil, err
+		}
+		if len(podList.Items) < 1 {
+			return "", nil, errors.New("no pods for internal registry")
+		}
 		// Establish a registry tunnel to send the images to the zarf registry
-		if tunnel, err = c.NewTunnel(ZarfNamespaceName, SvcResource, ZarfRegistryName, "", 0, ZarfRegistryPort); err != nil {
+		if tunnel, err = c.NewTunnel(ZarfNamespaceName, PodResource, podList.Items[0].Name, "", 0, ZarfRegistryPort); err != nil {
 			return "", tunnel, err
 		}
 	} else {
