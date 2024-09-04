@@ -150,12 +150,31 @@ func TestCompose(t *testing.T) {
 							fmt.Sprintf("%s%svalues.yaml", finalDirectory, string(os.PathSeparator)),
 							"values.yaml",
 						},
+						Variables: []v1alpha1.ZarfChartVariable{
+							{
+								Name:        "var-today",
+								Description: "var description",
+								Path:        "path",
+							},
+							{
+								Name:        "var-hello",
+								Description: "var description",
+								Path:        "path",
+							},
+						},
 					},
 					{
 						Name:      "world",
 						LocalPath: fmt.Sprintf("%s%schart", firstDirectory, string(os.PathSeparator)),
 						ValuesFiles: []string{
 							fmt.Sprintf("%s%svalues.yaml", firstDirectory, string(os.PathSeparator)),
+						},
+						Variables: []v1alpha1.ZarfChartVariable{
+							{
+								Name:        "var-world",
+								Description: "var description",
+								Path:        "path",
+							},
 						},
 					},
 				},
@@ -504,6 +523,13 @@ func createDummyComponent(t *testing.T, name, importDir, subName string) v1alpha
 				LocalPath: "chart",
 				ValuesFiles: []string{
 					"values.yaml",
+				},
+				Variables: []v1alpha1.ZarfChartVariable{
+					{
+						Name:        fmt.Sprintf("var-%s", name),
+						Description: "var description",
+						Path:        "path",
+					},
 				},
 			},
 		},
