@@ -55,6 +55,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 	progress := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
 	defer progress.Close()
+	pushOptions := createPushOpts(cfg, progress)
 
 	err = retry.Do(func() error {
 		c, _ := cluster.NewCluster()
@@ -67,9 +68,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				defer tunnel.Close()
 			}
 		}
-
-		progress = message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
-		pushOptions := createPushOpts(cfg, progress)
 
 		pushImage := func(img v1.Image, name string) error {
 			if tunnel != nil {
