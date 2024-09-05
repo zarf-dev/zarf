@@ -87,11 +87,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			refTruncated := helpers.Truncate(refInfo.Reference, 55, true)
 			progress.Updatef(fmt.Sprintf("Pushing %s", refTruncated))
 
-			size, err := calcImgSize(img)
-			if err != nil {
-				return err
-			}
-
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
 				offlineNameCRC, err := transform.ImageTransformHost(registryURL, refInfo.Reference)
@@ -102,8 +97,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				if err = pushImage(img, offlineNameCRC); err != nil {
 					return err
 				}
-
-				totalSize -= size
 			}
 
 			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
@@ -120,7 +113,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 
 			pushed = append(pushed, refInfo)
-			totalSize -= size
 		}
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
