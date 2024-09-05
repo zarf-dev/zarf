@@ -223,6 +223,7 @@ test-cves:
 
 test-go-mod:
 	go mod tidy
+	echo "in test go mod"
 	hack/check-go-mod.sh
 
 cve-report: ## Create a CVE report for the current project (must `brew install grype` first)
