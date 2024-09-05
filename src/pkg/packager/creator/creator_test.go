@@ -35,7 +35,7 @@ func TestLoadPackageDefinition(t *testing.T) {
 		{
 			name:        "invalid package definition",
 			testDir:     "invalid",
-			expectedErr: "found errors in schema",
+			expectedErr: "linting error found 1 instance(s)",
 			creator:     NewPackageCreator(types.ZarfCreateOptions{}, ""),
 		},
 		{
@@ -47,7 +47,7 @@ func TestLoadPackageDefinition(t *testing.T) {
 		{
 			name:        "invalid package definition",
 			testDir:     "invalid",
-			expectedErr: "found errors in schema",
+			expectedErr: "linting error found 1 instance(s)",
 			creator:     NewSkeletonCreator(types.ZarfCreateOptions{}, types.ZarfPublishOptions{}),
 		},
 	}

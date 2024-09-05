@@ -1,0 +1,21 @@
+kind: ZarfPackageConfig
+metadata:
+  name: health-checks
+  description: Deploys a simple pod to test health checks
+
+components:
+  - name: health-checks
+    required: true
+    manifests:
+      - name: ready-pod
+        namespace: health-checks
+        noWait: true
+        files:
+          - ready-pod.yaml
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+    healthChecks:
+      - name: ready-pod
+        namespace: health-checks
+        apiVersion: v1
+        kind: Pod

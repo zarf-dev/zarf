@@ -78,7 +78,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --set stringToString              Specify deployment variables to set on the command line (KEY=value) (default [])
       --skip-webhooks                   [alpha] Skip waiting for external webhooks to execute as each package component is deployed
       --storage-class string            Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
-      --timeout duration                Timeout for Helm operations such as installs and rollbacks (default 15m0s)
+      --timeout duration                Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
 ```
 
 ### Options inherited from parent commands

@@ -61,6 +61,21 @@ type ZarfComponent struct {
 
 	// Custom commands to run at various stages of a package lifecycle.
 	Actions ZarfComponentActions `json:"actions,omitempty"`
+
+	// List of resources to health check after deployment
+	HealthChecks []NamespacedObjectKindReference `json:"healthChecks,omitempty"`
+}
+
+// NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version.
+type NamespacedObjectKindReference struct {
+	// API Version of the resource
+	APIVersion string `json:"apiVersion"`
+	// Kind of the resource
+	Kind string `json:"kind"`
+	// Namespace of the resource
+	Namespace string `json:"namespace"`
+	// Name of the resource
+	Name string `json:"name"`
 }
 
 // RequiresCluster returns if the component requires a cluster connection to deploy.
@@ -70,8 +85,9 @@ func (c ZarfComponent) RequiresCluster() bool {
 	hasManifests := len(c.Manifests) > 0
 	hasRepos := len(c.Repos) > 0
 	hasDataInjections := len(c.DataInjections) > 0
+	hasHealthChecks := len(c.HealthChecks) > 0
 
-	if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections {
+	if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections || hasHealthChecks {
 		return true
 	}
 
