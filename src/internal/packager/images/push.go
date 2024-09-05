@@ -53,9 +53,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		registryURL = cfg.RegInfo.Address
 	)
 
-	progress := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
-	defer progress.Close()
-
 	err = retry.Do(func() error {
 		c, _ := cluster.NewCluster()
 		if c != nil {
@@ -68,7 +65,8 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 		}
 
-		progress = message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
+		progress := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
+		defer progress.Close()
 		pushOptions := createPushOpts(cfg, progress)
 
 		pushImage := func(img v1.Image, name string) error {
@@ -124,13 +122,12 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			pushed = append(pushed, refInfo)
 			totalSize -= size
 		}
+		progress.Successf("Pushed %d images", len(cfg.ImageList))
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
 	if err != nil {
 		return err
 	}
-
-	progress.Successf("Pushed %d images", len(cfg.ImageList))
 
 	return nil
 }
