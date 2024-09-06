@@ -18,10 +18,13 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
-func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles []string) bool {
+func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles []string) (bool, error) {
 	pterm.Println()
 	message.HeaderInfof("📦 PACKAGE DEFINITION")
-	utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(stage), true)
+	err := utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(stage), true)
+	if err != nil {
+		return false, err
+	}
 
 	// Print any potential breaking changes (if this is a Deploy confirm) between this CLI version and the deployed init package
 	if stage == config.ZarfDeployStage {
@@ -67,7 +70,7 @@ func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles 
 	if config.CommonOptions.Confirm {
 		pterm.Println()
 		message.Successf("%s Zarf package confirmed", stage)
-		return config.CommonOptions.Confirm
+		return config.CommonOptions.Confirm, nil
 	}
 
 	prompt := &survey.Confirm{
@@ -80,10 +83,10 @@ func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles 
 	var confirm bool
 	if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
 		// User aborted or declined, cancel the action
-		return false
+		return false, err
 	}
 
-	return true
+	return true, nil
 }
 
 func (p *Packager) getPackageYAMLHints(stage string) map[string]string {

@@ -15,12 +15,16 @@ import (
 )
 
 // SelectOptionalComponent prompts to confirm optional components
+// FIXME(mkcp): Unnecessary named returns
 func SelectOptionalComponent(component v1alpha1.ZarfComponent) (confirm bool, err error) {
 	message.HorizontalRule()
 
 	displayComponent := component
 	displayComponent.Description = ""
-	utils.ColorPrintYAML(displayComponent, nil, false)
+	err = utils.ColorPrintYAML(displayComponent, nil, false)
+	if err != nil {
+		return false, err
+	}
 	if component.Description != "" {
 		message.Question(component.Description)
 	}

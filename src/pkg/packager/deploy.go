@@ -100,8 +100,8 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	warnings = append(warnings, sbomWarnings...)
 
 	// Confirm the overall package deployment
-	if !p.confirmAction(config.ZarfDeployStage, warnings, sbomViewFiles) {
-		return fmt.Errorf("deployment cancelled")
+	if ok, err := p.confirmAction(config.ZarfDeployStage, warnings, sbomViewFiles); !ok {
+		return fmt.Errorf("deployment cancelled, err=%w", err)
 	}
 
 	if isInteractive {

@@ -25,16 +25,22 @@ func (p *Packager) Inspect(ctx context.Context) error {
 	p.cfg.Pkg = pkg
 
 	if p.cfg.InspectOpts.ListImages {
-		imageList := []string{}
+		var imageList []string
 		for _, component := range p.cfg.Pkg.Components {
 			imageList = append(imageList, component.Images...)
 		}
 		imageList = helpers.Unique(imageList)
 		for _, image := range imageList {
-			fmt.Fprintln(os.Stdout, "-", image)
+			_, err := fmt.Fprintln(os.Stdout, "-", image)
+			if err != nil {
+				return err
+			}
 		}
 	} else {
-		utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
+		err := utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
+		if err != nil {
+			return err
+		}
 	}
 
 	sbomDir := p.layout.SBOMs.Path

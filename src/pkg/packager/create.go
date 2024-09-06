@@ -41,8 +41,8 @@ func (p *Packager) Create(ctx context.Context) error {
 	}
 	p.cfg.Pkg = pkg
 
-	if !p.confirmAction(config.ZarfCreateStage, warnings, nil) {
-		return fmt.Errorf("package creation canceled")
+	if ok, err2 := p.confirmAction(config.ZarfCreateStage, warnings, nil); err2 != nil || !ok {
+		return fmt.Errorf("package creation canceled, err=%w", err2)
 	}
 
 	if err := pc.Assemble(ctx, p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
