@@ -25,6 +25,7 @@ import (
 )
 
 // Publish publishes the package to a registry
+// FIXME(mkcp): named return that could be shadowed
 func (p *Packager) Publish(ctx context.Context) (err error) {
 	_, isOCISource := p.source.(*sources.OCISource)
 	if isOCISource && p.cfg.PublishOpts.SigningKeyPath == "" {
@@ -117,7 +118,10 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 				},
 			})
 		}
-		utils.ColorPrintYAML(ex, nil, true)
+		err := utils.ColorPrintYAML(ex, nil, true)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
