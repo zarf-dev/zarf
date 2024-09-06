@@ -23,7 +23,7 @@ func TestPull(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	packagePath := "./testdata/zarf-package-empty-amd64-0.0.1.tar.zst"
+	packagePath := "./testdata/zarf-package-test-amd64-0.0.1.tar.zst"
 	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		file, err := os.Open(packagePath)
 		if err != nil {
@@ -38,13 +38,13 @@ func TestPull(t *testing.T) {
 	})
 
 	dir := t.TempDir()
-	shasum := "25f9365f0642016d42c77ff6acecb44cb83427ad1f507f2be9e9ec78c3b3d5d3"
+	shasum := "307294e3a066cebea6f04772c2ba31210b2753b40b0d5da86a1983c29c5545dd"
 	err := Pull(ctx, srv.URL, dir, shasum, filters.Empty())
 	require.NoError(t, err)
 
 	packageData, err := os.ReadFile(packagePath)
 	require.NoError(t, err)
-	pulledPath := filepath.Join(dir, "zarf-package-empty-amd64-0.0.1.tar.zst")
+	pulledPath := filepath.Join(dir, "zarf-package-test-amd64-0.0.1.tar.zst")
 	pulledData, err := os.ReadFile(pulledPath)
 	require.NoError(t, err)
 	require.Equal(t, packageData, pulledData)

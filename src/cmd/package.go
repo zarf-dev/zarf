@@ -11,26 +11,27 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
-
-	"github.com/zarf-dev/zarf/src/cmd/common"
-	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/packager2"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
-	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
-	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
-	"github.com/zarf-dev/zarf/src/types"
-
-	"oras.land/oras-go/v2/registry"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"oras.land/oras-go/v2/registry"
+
+	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/dns"
+	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 var packageCmd = &cobra.Command{
@@ -128,18 +129,47 @@ var packageMirrorCmd = &cobra.Command{
 		}
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		packageSource, err := choosePackage(args)
+		var c *cluster.Cluster
+		if dns.IsServiceURL(pkgConfig.InitOpts.RegistryInfo.Address) || dns.IsServiceURL(pkgConfig.InitOpts.GitServer.Address) {
+			var err error
+			c, err = cluster.NewCluster()
+			if err != nil {
+				return err
+			}
+		}
+		src, err := choosePackage(args)
 		if err != nil {
 			return err
 		}
-		pkgConfig.PkgOpts.PackageSource = packageSource
-		pkgClient, err := packager.New(&pkgConfig)
+		filter := filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.BySelectState(pkgConfig.PkgOpts.OptionalComponents),
+		)
+
+		loadOpt := packager2.LoadOptions{
+			Source:                  src,
+			Shasum:                  pkgConfig.PkgOpts.Shasum,
+			PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+			Filter:                  filter,
+		}
+		pkgPaths, err := packager2.LoadPackage(cmd.Context(), loadOpt)
 		if err != nil {
 			return err
 		}
-		defer pkgClient.ClearTempPaths()
-		if err := pkgClient.Mirror(cmd.Context()); err != nil {
-			return fmt.Errorf("failed to mirror package: %w", err)
+		defer os.RemoveAll(pkgPaths.Base)
+		mirrorOpt := packager2.MirrorOptions{
+			Cluster:         c,
+			PackagePaths:    *pkgPaths,
+			Filter:          filter,
+			RegistryInfo:    pkgConfig.InitOpts.RegistryInfo,
+			GitInfo:         pkgConfig.InitOpts.GitServer,
+			NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
+			Retries:         pkgConfig.PkgOpts.Retries,
+		}
+		err = packager2.Mirror(cmd.Context(), mirrorOpt)
+		if err != nil {
+			return err
 		}
 		return nil
 	},
@@ -482,6 +512,7 @@ func bindMirrorFlags(v *viper.Viper) {
 	// Always require confirm flag (no viper)
 	mirrorFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageDeployFlagConfirm)
 
+	mirrorFlags.StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
 	mirrorFlags.BoolVar(&pkgConfig.MirrorOpts.NoImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
 	mirrorFlags.BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
