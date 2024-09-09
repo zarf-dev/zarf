@@ -33,6 +33,12 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
+const (
+	cosignB64Enabled        = true
+	cosignOutputCertificate = ""
+	cosignTLogUpload        = false
+)
+
 // Sget performs a cosign signature verification on a given image using the specified public key.
 //
 // Forked from https://github.com/sigstore/cosign/blob/v1.7.1/pkg/sget/sget.go
@@ -171,7 +177,7 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 }
 
 // CosignVerifyBlob verifies the zarf.yaml.sig was signed with the key provided by the flag
-func CosignVerifyBlob(ctx context.Context, blobRef string, sigRef string, keyPath string) error {
+func CosignVerifyBlob(ctx context.Context, blobRef, sigRef, keyPath string) error {
 	keyOptions := options.KeyOpts{KeyRef: keyPath}
 	cmd := &verify.VerifyBlobCmd{
 		KeyOpts:    keyOptions,
@@ -181,74 +187,83 @@ func CosignVerifyBlob(ctx context.Context, blobRef string, sigRef string, keyPat
 		IgnoreTlog: true,
 	}
 	err := cmd.Exec(ctx, blobRef)
-	if err == nil {
-		message.Successf("Package signature validated!")
+	if err != nil {
+		return err
 	}
 
-	return err
+	message.Successf("Package signature validated!")
+	return nil
 }
 
 // CosignSignBlob signs the provide binary and returns the signature
-func CosignSignBlob(blobPath string, outputSigPath string, keyPath string, passwordFunc func(bool) ([]byte, error)) ([]byte, error) {
-	rootOptions := &options.RootOptions{Verbose: false, Timeout: options.DefaultTimeout}
+func CosignSignBlob(blobPath, outputSigPath, keyPath string, passFn cosign.PassFunc) ([]byte, error) {
+	rootOptions := &options.RootOptions{
+		Verbose: false,
+		Timeout: options.DefaultTimeout,
+	}
 
-	keyOptions := options.KeyOpts{KeyRef: keyPath,
-		PassFunc: passwordFunc}
-	b64 := true
-	outputCertificate := ""
-	tlogUpload := false
+	keyOptions := options.KeyOpts{
+		KeyRef:   keyPath,
+		PassFunc: passFn,
+	}
 
-	sig, err := sign.SignBlobCmd(rootOptions,
+	sig, err := sign.SignBlobCmd(
+		rootOptions,
 		keyOptions,
 		blobPath,
-		b64,
+		cosignB64Enabled,
 		outputSigPath,
-		outputCertificate,
-		tlogUpload)
+		cosignOutputCertificate,
+		cosignTLogUpload)
+	if err != nil {
+		return []byte{}, err
+	}
 
-	return sig, err
+	return sig, nil
 }
 
 // GetCosignArtifacts returns signatures and attestations for the given image
-func GetCosignArtifacts(image string) (cosignList []string, err error) {
-	var cosignArtifactList []string
+func GetCosignArtifacts(image string) ([]string, error) {
 	var nameOpts []name.Option
-	ref, err := name.ParseReference(image, nameOpts...)
 
+	ref, err := name.ParseReference(image, nameOpts...)
 	if err != nil {
-		return cosignArtifactList, err
+		return []string{}, err
 	}
 
 	var remoteOpts []ociremote.Option
 	simg, _ := ociremote.SignedEntity(ref, remoteOpts...)
 	if simg == nil {
-		return cosignArtifactList, nil
+		return []string{}, nil
 	}
+
 	// Errors are dogsled because these functions always return a name.Tag which we can check for layers
 	sigRef, _ := ociremote.SignatureTag(ref, remoteOpts...)
 	attRef, _ := ociremote.AttestationTag(ref, remoteOpts...)
 
-	sigs, err := simg.Signatures()
+	ss, err := simg.Signatures()
 	if err != nil {
-		return cosignArtifactList, err
+		return []string{}, err
 	}
-	layers, err := sigs.Layers()
+	ssLayers, err := ss.Layers()
 	if err != nil {
-		return cosignArtifactList, err
+		return []string{}, err
 	}
-	if len(layers) > 0 {
+
+	var cosignArtifactList = make([]string, 0)
+	if 0 < len(ssLayers) {
 		cosignArtifactList = append(cosignArtifactList, sigRef.String())
 	}
 
 	atts, err := simg.Attestations()
 	if err != nil {
-		return cosignArtifactList, err
+		return []string{}, err
 	}
-	layers, err = atts.Layers()
+	aLayers, err := atts.Layers()
 	if err != nil {
-		return cosignArtifactList, err
+		return []string{}, err
 	}
-	if len(layers) > 0 {
+	if 0 < len(aLayers) {
 		cosignArtifactList = append(cosignArtifactList, attRef.String())
 	}
 	return cosignArtifactList, nil
