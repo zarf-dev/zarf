@@ -234,7 +234,7 @@ func validateAction(action v1alpha1.ZarfComponentAction) error {
 
 // validateReleaseName validates a release name against DNS 1035 spec, using chartName as fallback.
 // https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names
-func validateReleaseName(chartName, releaseName string) (err error) {
+func validateReleaseName(chartName, releaseName string) error {
 	// Fallback to chartName if releaseName is empty
 	// NOTE: Similar fallback mechanism happens in src/internal/packager/helm/chart.go:InstallOrUpgradeChart
 	if releaseName == "" {
@@ -243,16 +243,15 @@ func validateReleaseName(chartName, releaseName string) (err error) {
 
 	// Check if the final releaseName is empty and return an error if so
 	if releaseName == "" {
-		err = errors.New(errChartReleaseNameEmpty)
-		return
+		return errors.New(errChartReleaseNameEmpty)
 	}
 
 	// Validate the releaseName against DNS 1035 label spec
 	if errs := validation.IsDNS1035Label(releaseName); len(errs) > 0 {
-		err = fmt.Errorf("invalid release name '%s': %s", releaseName, strings.Join(errs, "; "))
+		return fmt.Errorf("invalid release name '%s': %s", releaseName, strings.Join(errs, "; "))
 	}
 
-	return
+	return nil
 }
 
 // validateChart runs all validation checks on a chart.
