@@ -15,7 +15,7 @@ import (
 )
 
 // SelectOptionalComponent prompts to confirm optional components
-func SelectOptionalComponent(component v1alpha1.ZarfComponent) (confirm bool, err error) {
+func SelectOptionalComponent(component v1alpha1.ZarfComponent) (bool, error) {
 	message.HorizontalRule()
 
 	displayComponent := component
@@ -30,6 +30,8 @@ func SelectOptionalComponent(component v1alpha1.ZarfComponent) (confirm bool, er
 		Default: component.Default,
 	}
 
+	// REVIEW(mkcp): Can confirm be true here? It's not clear to me if survey.AskOne will ever flip a boolean
+	var confirm bool
 	return confirm, survey.AskOne(prompt, &confirm)
 }
 
