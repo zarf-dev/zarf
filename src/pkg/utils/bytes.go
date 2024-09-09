@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+// SPDX-FileCopyrightText: 2024-Present The Zarf Authors
 
 // forked from https://www.socketloop.com/tutorials/golang-byte-format-example
 
@@ -16,25 +16,25 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
-type Unit struct {
+type unit struct {
 	name string
 	size float64
 }
 
 var (
-	gigabyte = Unit{
+	gigabyte = unit{
 		name: "GB",
 		size: 1000000000,
 	}
-	megabyte = Unit{
+	megabyte = unit{
 		name: "MB",
 		size: 1000000,
 	}
-	kilobyte = Unit{
+	kilobyte = unit{
 		name: "KB",
 		size: 1000,
 	}
-	unitByte = Unit{
+	unitByte = unit{
 		name: "Byte",
 	}
 )
@@ -47,42 +47,38 @@ func RoundUp(input float64, places int) float64 {
 	return round / pow
 }
 
-// ByteFormat formats a number of bytes into a human readable string.
+// ByteFormat formats a number of bytes into a human-readable string.
 func ByteFormat(in float64, precision int) string {
 	if precision <= 0 {
 		precision = 1
 	}
 
-	var unit string
-	var val float64
+	var v float64
+	var u string
 
 	// https://www.techtarget.com/searchstorage/definition/mebibyte-MiB
 	switch {
 	case gigabyte.size <= in:
-		val = RoundUp(in/gigabyte.size, precision)
-		unit = gigabyte.name
-		break
-	case 1000000 <= in:
-		val = RoundUp(in/1000000, precision)
-		unit = megabyte.name
-		break
-	case 1000 <= in:
-		val = RoundUp(in/1000, precision)
-		unit = kilobyte.name
-		break
+		v = RoundUp(in/gigabyte.size, precision)
+		u = gigabyte.name
+	case megabyte.size <= in:
+		v = RoundUp(in/megabyte.size, precision)
+		u = megabyte.name
+	case kilobyte.size <= in:
+		v = RoundUp(in/kilobyte.size, precision)
+		u = kilobyte.name
 	default:
-		val = in
-		unit = unitByte.name
-		break
+		v = in
+		u = unitByte.name
 	}
 
 	// NOTE(mkcp): Negative bytes are nonsense, but it's more robust for inputs without erroring.
-	if val < -1 || 1 < val {
-		unit += "s"
+	if v < -1 || 1 < v {
+		u += "s"
 	}
 
-	vFmt := strconv.FormatFloat(val, 'f', precision, 64)
-	return vFmt + " " + unit
+	vFmt := strconv.FormatFloat(v, 'f', precision, 64)
+	return vFmt + " " + u
 }
 
 // RenderProgressBarForLocalDirWrite creates a progress bar that continuously tracks the progress of writing files to a local directory and all of its subdirectories.
