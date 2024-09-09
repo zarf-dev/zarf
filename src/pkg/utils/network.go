@@ -39,7 +39,7 @@ func parseChecksum(src string) (string, string, error) {
 }
 
 // DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary).
-func DownloadToFile(ctx context.Context, src string, dst string, cosignKeyPath string) (err error) {
+func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) error {
 	// check if the parsed URL has a checksum
 	// if so, remove it and use the checksum to validate the file
 	src, checksum, err := parseChecksum(src)
@@ -69,9 +69,6 @@ func DownloadToFile(ctx context.Context, src string, dst string, cosignKeyPath s
 		if err != nil {
 			return fmt.Errorf("unable to download file with sget: %s: %w", src, err)
 		}
-		if err != nil {
-			return err
-		}
 	} else {
 		err = httpGetFile(src, file)
 		if err != nil {
@@ -80,7 +77,7 @@ func DownloadToFile(ctx context.Context, src string, dst string, cosignKeyPath s
 	}
 
 	// If the file has a checksum, validate it
-	if len(checksum) > 0 {
+	if 0 < len(checksum) {
 		received, err := helpers.GetSHA256OfFile(dst)
 		if err != nil {
 			return err
