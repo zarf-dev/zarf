@@ -30,9 +30,12 @@ func SelectOptionalComponent(component v1alpha1.ZarfComponent) (bool, error) {
 		Default: component.Default,
 	}
 
-	// REVIEW(mkcp): Can confirm be true here? It's not clear to me if survey.AskOne will ever flip a boolean
 	var confirm bool
-	return confirm, survey.AskOne(prompt, &confirm)
+	err := survey.AskOne(prompt, &confirm)
+	if err != nil {
+		return false, err
+	}
+	return confirm, nil
 }
 
 // SelectChoiceGroup prompts to select component groups
