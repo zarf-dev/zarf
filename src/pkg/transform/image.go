@@ -62,32 +62,36 @@ func ImageTransformHostWithoutChecksum(targetHost, srcReference string) (string,
 }
 
 // ParseImageRef parses a source reference into an Image struct
-func ParseImageRef(srcReference string) (out Image, err error) {
+func ParseImageRef(srcReference string) (Image, error) {
 	srcReference = strings.TrimPrefix(srcReference, helpers.OCIURLPrefix)
 
 	ref, err := reference.ParseAnyReference(srcReference)
 	if err != nil {
-		return out, err
+		return Image{}, err
 	}
 
 	// Parse the reference into its components
-	if named, ok := ref.(reference.Named); ok {
-		out.Name = named.Name()
-		out.Path = reference.Path(named)
-		out.Host = reference.Domain(named)
-		out.Reference = ref.String()
-	} else {
-		return out, fmt.Errorf("unable to parse image name from %s", srcReference)
+	named, ok := ref.(reference.Named)
+	if !ok {
+		return Image{}, fmt.Errorf("unable to parse image name from %s", srcReference)
 	}
 
+	out := Image{
+		Name:      named.Name(),
+		Path:      reference.Path(named),
+		Host:      reference.Domain(named),
+		Reference: ref.String(),
+	}
+
+	// TODO(mkcp): This rewriting tag and digest code could probably be consolidated with types
 	// Parse the tag and add it to digestOrReference
-	if tagged, ok := ref.(reference.Tagged); ok {
+	if tagged, tagOK := ref.(reference.Tagged); tagOK {
 		out.Tag = tagged.Tag()
 		out.TagOrDigest = fmt.Sprintf(":%s", tagged.Tag())
 	}
 
 	// Parse the digest and override digestOrReference
-	if digested, ok := ref.(reference.Digested); ok {
+	if digested, digOK := ref.(reference.Digested); digOK {
 		out.Digest = digested.Digest().String()
 		out.TagOrDigest = fmt.Sprintf("@%s", digested.Digest().String())
 	}
