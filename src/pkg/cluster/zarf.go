@@ -109,28 +109,29 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 	spinner.Success()
 }
 
-// PackageSecretNeedsWait checks if a package component has a running webhook that needs to be waited on.
-func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage, component v1alpha1.ZarfComponent, skipWebhooks bool) (needsWait bool, waitSeconds int, hookName string) {
+// PackageSecretNeedsWait checks if a package component has a running webhook that needs to be waited on. Returns the
+// number of seconds remaining to wait and the name of the webhook. If seconds is zero there's no need to wait.
+func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage, component v1alpha1.ZarfComponent, skipWebhooks bool) (int, string) {
 	// Skip checking webhook status when '--skip-webhooks' flag is provided and for YOLO packages
 	if skipWebhooks || deployedPackage == nil || deployedPackage.Data.Metadata.YOLO {
-		return false, 0, ""
+		return 0, ""
 	}
 
 	// Look for the specified component
 	hookMap, componentExists := deployedPackage.ComponentWebhooks[component.Name]
 	if !componentExists {
-		return false, 0, "" // Component not found, no need to wait
+		return 0, "" // Component not found, no need to wait
 	}
 
 	// Check if there are any "Running" webhooks for the component that we need to wait for
 	for hookName, webhook := range hookMap {
 		if webhook.Status == types.WebhookStatusRunning {
-			return true, webhook.WaitDurationSeconds, hookName
+			return webhook.WaitDurationSeconds, hookName
 		}
 	}
 
 	// If we get here, the component doesn't need to wait for a webhook to run
-	return false, 0, ""
+	return 0, ""
 }
 
 // RecordPackageDeploymentAndWait records the deployment of a package to the cluster and waits for any webhooks to complete.
@@ -140,9 +141,9 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alph
 		return nil, err
 	}
 
-	packageNeedsWait, waitSeconds, hookName := c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
+	waitSeconds, hookName := c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
 	// If no webhooks need to complete, we can return immediately.
-	if !packageNeedsWait {
+	if waitSeconds == 0 {
 		return deployedPackage, nil
 	}
 
@@ -160,8 +161,8 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alph
 		if err != nil {
 			return nil, err
 		}
-		packageNeedsWait, _, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
-		if !packageNeedsWait {
+		waitSeconds, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
+		if waitSeconds == 0 {
 			return deployedPackage, nil
 		}
 		return deployedPackage, nil
@@ -174,7 +175,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alph
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, generation int) (deployedPackage *types.DeployedPackage, err error) {
+func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, generation int) (*types.DeployedPackage, error) {
 	packageName := pkg.Metadata.Name
 
 	// Attempt to load information about webhooks for the package
@@ -187,7 +188,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		componentWebhooks = existingPackageSecret.ComponentWebhooks
 	}
 
-	// TODO: This is done for backwards compartibility and could be removed in the future.
+	// TODO: This is done for backwards compatibility and could be removed in the future.
 	connectStrings := types.ConnectStrings{}
 	for _, comp := range components {
 		for _, chart := range comp.InstalledCharts {
@@ -197,7 +198,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		}
 	}
 
-	deployedPackage = &types.DeployedPackage{
+	deployedPackage := &types.DeployedPackage{
 		Name:               packageName,
 		CLIVersion:         config.CLIVersion,
 		Data:               pkg,
@@ -285,12 +286,13 @@ func (c *Cluster) DisableRegHPAScaleDown(ctx context.Context) error {
 }
 
 // GetInstalledChartsForComponent returns any installed Helm Charts for the provided package component.
-func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component v1alpha1.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component v1alpha1.ZarfComponent) ([]types.InstalledChart, error) {
 	deployedPackage, err := c.GetDeployedPackage(ctx, packageName)
 	if err != nil {
-		return installedCharts, err
+		return nil, err
 	}
 
+	installedCharts := make([]types.InstalledChart, 0)
 	for _, deployedComponent := range deployedPackage.DeployedComponents {
 		if deployedComponent.Name == component.Name {
 			installedCharts = append(installedCharts, deployedComponent.InstalledCharts...)
