@@ -15,8 +15,8 @@ import (
 type SetVariableMap map[string]*v1alpha1.SetVariable
 
 // GetSetVariable gets a variable set within a VariableConfig by its name
-func (vc *VariableConfig) GetSetVariable(name string) (variable *v1alpha1.SetVariable, ok bool) {
-	variable, ok = vc.setVariableMap[name]
+func (vc *VariableConfig) GetSetVariable(name string) (*v1alpha1.SetVariable, bool) {
+	variable, ok := vc.setVariableMap[name]
 	return variable, ok
 }
 

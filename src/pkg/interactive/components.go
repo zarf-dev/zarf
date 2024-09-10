@@ -15,7 +15,7 @@ import (
 )
 
 // SelectOptionalComponent prompts to confirm optional components
-func SelectOptionalComponent(component v1alpha1.ZarfComponent) (confirm bool, err error) {
+func SelectOptionalComponent(component v1alpha1.ZarfComponent) (bool, error) {
 	message.HorizontalRule()
 
 	displayComponent := component
@@ -30,7 +30,12 @@ func SelectOptionalComponent(component v1alpha1.ZarfComponent) (confirm bool, er
 		Default: component.Default,
 	}
 
-	return confirm, survey.AskOne(prompt, &confirm)
+	var confirm bool
+	err := survey.AskOne(prompt, &confirm)
+	if err != nil {
+		return false, err
+	}
+	return confirm, nil
 }
 
 // SelectChoiceGroup prompts to select component groups
