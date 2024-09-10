@@ -109,29 +109,28 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 	spinner.Success()
 }
 
-// PackageSecretNeedsWait checks if a package component has a running webhook that needs to be waited on. Returns the
-// number of seconds remaining to wait and the name of the webhook. If seconds is zero there's no need to wait.
-func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage, component v1alpha1.ZarfComponent, skipWebhooks bool) (int, string) {
+// PackageSecretNeedsWait checks if a package component has a running webhook that needs to be waited on.
+func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage, component v1alpha1.ZarfComponent, skipWebhooks bool) (needsWait bool, waitSeconds int, hookName string) {
 	// Skip checking webhook status when '--skip-webhooks' flag is provided and for YOLO packages
 	if skipWebhooks || deployedPackage == nil || deployedPackage.Data.Metadata.YOLO {
-		return 0, ""
+		return false, 0, ""
 	}
 
 	// Look for the specified component
 	hookMap, componentExists := deployedPackage.ComponentWebhooks[component.Name]
 	if !componentExists {
-		return 0, "" // Component not found, no need to wait
+		return false, 0, "" // Component not found, no need to wait
 	}
 
 	// Check if there are any "Running" webhooks for the component that we need to wait for
 	for hookName, webhook := range hookMap {
 		if webhook.Status == types.WebhookStatusRunning {
-			return webhook.WaitDurationSeconds, hookName
+			return true, webhook.WaitDurationSeconds, hookName
 		}
 	}
 
 	// If we get here, the component doesn't need to wait for a webhook to run
-	return 0, ""
+	return false, 0, ""
 }
 
 // RecordPackageDeploymentAndWait records the deployment of a package to the cluster and waits for any webhooks to complete.
@@ -141,9 +140,9 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alph
 		return nil, err
 	}
 
-	waitSeconds, hookName := c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
+	packageNeedsWait, waitSeconds, hookName := c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
 	// If no webhooks need to complete, we can return immediately.
-	if waitSeconds == 0 {
+	if !packageNeedsWait {
 		return deployedPackage, nil
 	}
 
@@ -161,8 +160,8 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alph
 		if err != nil {
 			return nil, err
 		}
-		waitSeconds, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
-		if waitSeconds == 0 {
+		packageNeedsWait, _, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
+		if !packageNeedsWait {
 			return deployedPackage, nil
 		}
 		return deployedPackage, nil

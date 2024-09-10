@@ -30,6 +30,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 		deployedPackage *types.DeployedPackage
 		component       v1alpha1.ZarfComponent
 		skipWebhooks    bool
+		needsWait       bool
 		waitSeconds     int
 		hookName        string
 	}
@@ -48,6 +49,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 				Name:              packageName,
 				ComponentWebhooks: map[string]map[string]types.Webhook{},
 			},
+			needsWait:   false,
 			waitSeconds: 0,
 			hookName:    "",
 		},
@@ -65,6 +67,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 					},
 				},
 			},
+			needsWait:   true,
 			waitSeconds: 10,
 			hookName:    webhookName,
 		},
@@ -83,6 +86,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 					},
 				},
 			},
+			needsWait:   false,
 			waitSeconds: 0,
 			hookName:    "",
 		},
@@ -99,6 +103,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 					},
 				},
 			},
+			needsWait:   false,
 			waitSeconds: 0,
 			hookName:    "",
 		},
@@ -115,6 +120,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 					},
 				},
 			},
+			needsWait:   false,
 			waitSeconds: 0,
 			hookName:    "",
 		},
@@ -131,6 +137,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 					},
 				},
 			},
+			needsWait:   false,
 			waitSeconds: 0,
 			hookName:    "",
 		},
@@ -153,6 +160,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 					},
 				},
 			},
+			needsWait:   false,
 			waitSeconds: 0,
 			hookName:    "",
 		},
@@ -171,6 +179,7 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 					},
 				},
 			},
+			needsWait:   false,
 			waitSeconds: 0,
 			hookName:    "",
 		},
@@ -184,8 +193,9 @@ func TestPackageSecretNeedsWait(t *testing.T) {
 
 			c := &Cluster{}
 
-			waitSeconds, hookName := c.PackageSecretNeedsWait(testCase.deployedPackage, testCase.component, testCase.skipWebhooks)
+			needsWait, waitSeconds, hookName := c.PackageSecretNeedsWait(testCase.deployedPackage, testCase.component, testCase.skipWebhooks)
 
+			require.Equal(t, testCase.needsWait, needsWait)
 			require.Equal(t, testCase.waitSeconds, waitSeconds)
 			require.Equal(t, testCase.hookName, hookName)
 		})
