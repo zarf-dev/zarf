@@ -59,6 +59,7 @@ linters-settings:
   testifylint:
     enable-all: true
   errcheck:
+    check-blank: true
     check-type-assertions: true
     exclude-functions:
       - (*github.com/spf13/cobra.Command).Help
@@ -68,6 +69,7 @@ linters-settings:
 issues:
   # Revive rules that are disabled by default.
   include:
+    - EXC0001
     - EXC0012
     - EXC0013
     - EXC0014
