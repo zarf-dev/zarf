@@ -10,9 +10,8 @@ import (
 )
 
 // UpdateGiteaPVC updates the existing Gitea persistent volume claim and tells Gitea whether to create or not.
-// REVIEW(mkcp): It looks like we've got some error+signal coming back from these functions where we return a both a
-// string true/false downstream but sometimes with errors. So I'm not going to make these `return "", err` but we may
-// want to consider if returning the error is necessary and not, for example, better served with a new type.
+// TODO(mkcp): We return both string true/false and errors here so our callers get a string. This should be returning an
+// empty val if we error, but we'll have to refactor upstream beforehand.
 func (c *Cluster) UpdateGiteaPVC(ctx context.Context, pvcName string, shouldRollBack bool) (string, error) {
 	if shouldRollBack {
 		pvc, err := c.Clientset.CoreV1().PersistentVolumeClaims(ZarfNamespaceName).Get(ctx, pvcName, metav1.GetOptions{})

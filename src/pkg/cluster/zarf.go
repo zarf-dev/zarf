@@ -33,11 +33,11 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 	listOpts := metav1.ListOptions{LabelSelector: ZarfPackageInfoLabel}
 	secrets, err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).List(ctx, listOpts)
 	if err != nil {
-		return []types.DeployedPackage{}, err
+		return nil, err
 	}
 
-	errs := make([]error, 0)
-	deployedPackages := make([]types.DeployedPackage, 0)
+	errs := []error{}
+	deployedPackages := []types.DeployedPackage{}
 	for _, secret := range secrets.Items {
 		if !strings.HasPrefix(secret.Name, config.ZarfPackagePrefix) {
 			continue
@@ -52,9 +52,9 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 		deployedPackages = append(deployedPackages, deployedPackage)
 	}
 
-	// REVIEW(mkcp): This seems like it could be a breaking behavior change. Can I get a second set of eyes here?
-	if 0 < len(errs) {
-		return []types.DeployedPackage{}, errors.Join(errs...)
+	err = errors.Join(errs...)
+	if err != nil {
+		return nil, err
 	}
 	return deployedPackages, nil
 }
