@@ -12,6 +12,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 )
 
+// ZarfInspectOptions tracks the user-defined preferences during a package inspection.
 type ZarfInspectOptions struct {
 	// View SBOM contents while inspecting the package
 	ViewSBOM bool
