@@ -40,7 +40,7 @@ func (p *Packager) Remove(ctx context.Context) error {
 
 	// we do not want to allow removal of signed packages without a signature if there are remove actions
 	// as this is arbitrary code execution from an untrusted source
-	pkg, _, err := p.source.LoadPackageMetadata(ctx, p.layout, false, false)
+	pkg, _, err := p.source.LoadPackageMetadata(ctx, p.Layout, false, false)
 	if err != nil {
 		return err
 	}

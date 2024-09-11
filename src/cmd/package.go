@@ -14,6 +14,16 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/zarf-dev/zarf/src/cmd/common"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
+
+	"oras.land/oras-go/v2/registry"
+
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/spf13/cobra"
@@ -29,12 +39,9 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
+<<<<<<< HEAD
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
-	"github.com/zarf-dev/zarf/src/types"
-)
-
-var packageCmd = &cobra.Command{
 	Use:     "package",
 	Aliases: []string{"p"},
 	Short:   lang.CmdPackageShort,
@@ -193,21 +200,41 @@ var packageInspectCmd = &cobra.Command{
 			return err
 		}
 		pkgConfig.PkgOpts.PackageSource = packageSource
-		src, err := identifyAndFallbackToClusterSource()
+
+		pkgClient, err := packager.New(&pkgConfig)
 		if err != nil {
 			return err
 		}
-		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
-		if err != nil {
-			return err
-		}
+		sources.New(&pkgConfig.PkgOpts)
 		defer pkgClient.ClearTempPaths()
-		if err := pkgClient.Inspect(cmd.Context()); err != nil {
+		options := packager2.ZarfInspectOptions{
+			ListImages:    pkgConfig.InspectOpts.ListImages,
+			ViewSBOM:      pkgConfig.InspectOpts.ViewSBOM,
+			SBOMOutputDir: pkgConfig.InspectOpts.SBOMOutputDir,
+		}
+
+		src, err := sources.New(&pkgConfig.PkgOpts)
+		if err != nil {
 			return fmt.Errorf("failed to inspect package: %w", err)
 		}
+
+		if pkgConfig.InspectOpts.ListImages {
+			output, err := packager2.InspectList(cmd.Context(), src, pkgClient.Layout, options)
+			if err != nil {
+				return fmt.Errorf("failed to inspect package: %w", err)
+			}
+			for _, image := range output {
+				fmt.Fprintln(os.Stdout, "-", image)
+			}
+		}
+
+		output, err := packager2.Inspect(cmd.Context(), src, pkgClient.Layout, options)
+		if err != nil {
+			return fmt.Errorf("failed to inspect package: %w", err)
+		}
+		utils.ColorPrintYAML(output, nil, false)
 		return nil
 	},
-	ValidArgsFunction: getPackageCompletionArgs,
 }
 
 var packageListCmd = &cobra.Command{

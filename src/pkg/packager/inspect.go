@@ -18,13 +18,13 @@ import (
 func (p *Packager) Inspect(ctx context.Context) error {
 	wantSBOM := p.cfg.InspectOpts.ViewSBOM || p.cfg.InspectOpts.SBOMOutputDir != ""
 
-	pkg, _, err := p.source.LoadPackageMetadata(ctx, p.layout, wantSBOM, true)
+	pkg, _, err := p.source.LoadPackageMetadata(ctx, p.Layout, wantSBOM, true)
 	if err != nil {
 		return err
 	}
 	p.cfg.Pkg = pkg
 
-	if p.cfg.InspectOpts.ListImages {
+	if p.cfg.InspectOpts.ListImages && len(p.cfg.Pkg.Components) > 0 {
 		imageList := []string{}
 		for _, component := range p.cfg.Pkg.Components {
 			imageList = append(imageList, component.Images...)
@@ -37,10 +37,10 @@ func (p *Packager) Inspect(ctx context.Context) error {
 		utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
 	}
 
-	sbomDir := p.layout.SBOMs.Path
+	sbomDir := p.Layout.SBOMs.Path
 
 	if p.cfg.InspectOpts.SBOMOutputDir != "" {
-		out, err := p.layout.SBOMs.OutputSBOMFiles(p.cfg.InspectOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name)
+		out, err := p.Layout.SBOMs.OutputSBOMFiles(p.cfg.InspectOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name)
 		if err != nil {
 			return err
 		}

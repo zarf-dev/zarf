@@ -69,14 +69,14 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	warnings := []string{}
 	if isInteractive {
 		filter := filters.Empty()
-		pkg, loadWarnings, err := p.source.LoadPackage(ctx, p.layout, filter, true)
+		pkg, loadWarnings, err := p.source.LoadPackage(ctx, p.Layout, filter, true)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
 		p.cfg.Pkg = pkg
 		warnings = append(warnings, loadWarnings...)
 	} else {
-		pkg, loadWarnings, err := p.source.LoadPackage(ctx, p.layout, deployFilter, true)
+		pkg, loadWarnings, err := p.source.LoadPackage(ctx, p.Layout, deployFilter, true)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
@@ -93,7 +93,7 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	}
 	warnings = append(warnings, validateWarnings...)
 
-	sbomViewFiles, sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
+	sbomViewFiles, sbomWarnings, err := p.Layout.SBOMs.StageSBOMViewFiles()
 	if err != nil {
 		return err
 	}
@@ -294,7 +294,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.Z
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := p.cluster.StartInjection(ctx, p.layout.Base, p.layout.Images.Base, component.Images)
+		err := p.cluster.StartInjection(ctx, p.Layout.Base, p.Layout.Images.Base, component.Images)
 		if err != nil {
 			return nil, err
 		}
@@ -320,7 +320,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.Z
 // Deploy a Zarf Component.
 func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool) ([]types.InstalledChart, error) {
 	// Toggles for general deploy operations
-	componentPath := p.layout.Components.Dirs[component.Name]
+	componentPath := p.Layout.Components.Dirs[component.Name]
 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
@@ -438,7 +438,7 @@ func (p *Packager) processComponentFiles(component v1alpha1.ZarfComponent, pkgLo
 		}
 
 		// Replace temp target directory and home directory
-		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.layout.Base, 1)
+		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.Layout.Base, 1)
 		file.Target = config.GetAbsHomePath(file.Target)
 
 		fileList := []string{}
@@ -577,7 +577,7 @@ func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []s
 	imageList := helpers.Unique(combinedImageList)
 
 	pushCfg := images.PushConfig{
-		SourceDirectory: p.layout.Images.Base,
+		SourceDirectory: p.Layout.Images.Base,
 		ImageList:       imageList,
 		RegInfo:         p.state.RegistryInfo,
 		NoChecksum:      noImgChecksum,

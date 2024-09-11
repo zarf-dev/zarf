@@ -34,11 +34,11 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 
 	pc := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
 
-	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.Layout.ZarfYAML); err != nil {
 		return err
 	}
 
-	p.cfg.Pkg, _, err = pc.LoadPackageDefinition(ctx, p.layout)
+	p.cfg.Pkg, _, err = pc.LoadPackageDefinition(ctx, p.Layout)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 		}
 	}
 
-	if err := pc.Assemble(ctx, p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
+	if err := pc.Assemble(ctx, p.Layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
 		return err
 	}
 
