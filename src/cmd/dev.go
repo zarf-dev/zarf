@@ -97,6 +97,18 @@ var devGenerateCmd = &cobra.Command{
 	},
 }
 
+var bigBangGenerateCommand = &cobra.Command{
+    Use:     "big-bang VERSION",
+    Aliases: []string{"bb"},
+    Short:   "Creates a zarf.yaml and associated manifests for a Big Bang package",
+    Example: "zarf dev generate big-bang 2.3.4 --values-file=my-values-manifest.yaml",
+    RunE: func(cmd *cobra.Command, args []string) error {
+		
+        fmt.Println("Generating Big Bang")
+        return nil
+    },
+}
+
 var devTransformGitLinksCmd = &cobra.Command{
 	Use:     "patch-git HOST FILE",
 	Aliases: []string{"p"},
@@ -314,6 +326,7 @@ func init() {
 
 	devCmd.AddCommand(devDeployCmd)
 	devCmd.AddCommand(devGenerateCmd)
+	devGenerateCmd.AddCommand(bigBangGenerateCommand)
 	devCmd.AddCommand(devTransformGitLinksCmd)
 	devCmd.AddCommand(devSha256SumCmd)
 	devCmd.AddCommand(devFindImagesCmd)
