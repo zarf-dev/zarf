@@ -1,3 +1,4 @@
+// Packager2 contains functions for inspecting packages.
 package packager2
 
 import (
@@ -33,10 +34,8 @@ func Inspect(ctx context.Context, src sources.PackageSource, layout *layout.Pack
 		if err != nil {
 			return pkg, err
 		}
-
 		return pkg, nil
 	}
-
 	return pkg, nil
 }
 

@@ -205,8 +205,8 @@ var packageInspectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		sources.New(&pkgConfig.PkgOpts)
 		defer pkgClient.ClearTempPaths()
+
 		options := packager2.ZarfInspectOptions{
 			ListImages:    pkgConfig.InspectOpts.ListImages,
 			ViewSBOM:      pkgConfig.InspectOpts.ViewSBOM,
