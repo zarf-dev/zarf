@@ -20,7 +20,8 @@ type zarfCommandResult struct {
 	err    error
 }
 
-func zarfCommandWStruct(t *testing.T, e2e test.ZarfE2ETest, path string) (result zarfCommandResult) {
+func zarfCommandWStruct(t *testing.T, e2e test.ZarfE2ETest, path string) zarfCommandResult {
+	result := zarfCommandResult{}
 	result.stdOut, result.stdErr, result.err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	return result
 }
