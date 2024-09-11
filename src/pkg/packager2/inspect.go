@@ -40,6 +40,7 @@ func Inspect(ctx context.Context, src sources.PackageSource, layout *layout.Pack
 	return pkg, nil
 }
 
+// InspectList lists the images in a component action
 func InspectList(ctx context.Context, src sources.PackageSource, layout *layout.PackagePaths, options ZarfInspectOptions) ([]string, error) {
 	var imageList []string
 	pkg, err := getPackageMetadata(ctx, src, layout, options)
@@ -58,7 +59,6 @@ func InspectList(ctx context.Context, src sources.PackageSource, layout *layout.
 		return nil, fmt.Errorf("failed listing images: list of images found in components: %d", len(imageList))
 	}
 
-	//todo: (schristoff) ?????
 	return imageList, err
 }
 
