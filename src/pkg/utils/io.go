@@ -40,7 +40,10 @@ func GetFinalExecutablePath() (string, error) {
 
 	// In case the binary is symlinked somewhere else, get the final destination
 	linkedPath, err := filepath.EvalSymlinks(binaryPath)
-	return linkedPath, err
+	if err != nil {
+		return "", err
+	}
+	return linkedPath, nil
 }
 
 // GetFinalExecutableCommand returns the final path to the Zarf executable including and library prefixes and overrides.
@@ -48,7 +51,7 @@ func GetFinalExecutableCommand() (string, error) {
 	// In case the binary is symlinked somewhere else, get the final destination
 	zarfCommand, err := GetFinalExecutablePath()
 	if err != nil {
-		return zarfCommand, err
+		return "", err
 	}
 
 	if config.ActionsCommandZarfPrefix != "" {
@@ -60,5 +63,5 @@ func GetFinalExecutableCommand() (string, error) {
 		zarfCommand = "zarf"
 	}
 
-	return zarfCommand, err
+	return zarfCommand, nil
 }

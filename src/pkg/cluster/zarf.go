@@ -52,7 +52,11 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 		deployedPackages = append(deployedPackages, deployedPackage)
 	}
 
-	return deployedPackages, errors.Join(errs...)
+	err = errors.Join(errs...)
+	if err != nil {
+		return nil, err
+	}
+	return deployedPackages, nil
 }
 
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
@@ -325,7 +329,10 @@ func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitS
 		}
 		return nil
 	})
-	return newToken, err
+	if err != nil {
+		return "", err
+	}
+	return newToken, nil
 }
 
 // UpdateInternalGitServerSecret updates the internal gitea server secrets with the new git server info

@@ -83,7 +83,6 @@ func (c *Cluster) ListConnections(ctx context.Context) (types.ConnectStrings, er
 
 // NewTargetTunnelInfo returns a new TunnelInfo object for the specified target.
 func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (TunnelInfo, error) {
-	var err error
 	zt := TunnelInfo{
 		Namespace:    ZarfNamespaceName,
 		ResourceType: SvcResource,
@@ -102,9 +101,11 @@ func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (Tunne
 		zt.RemotePort = ZarfInjectorPort
 	default:
 		if target != "" {
-			if zt, err = c.checkForZarfConnectLabel(ctx, target); err != nil {
+			ztNew, err := c.checkForZarfConnectLabel(ctx, target)
+			if err != nil {
 				return TunnelInfo{}, fmt.Errorf("problem looking for a zarf connect label in the cluster: %s", err.Error())
 			}
+			zt = ztNew
 		}
 		if zt.ResourceName == "" {
 			return TunnelInfo{}, fmt.Errorf("missing resource name")
@@ -113,7 +114,7 @@ func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (Tunne
 			return TunnelInfo{}, fmt.Errorf("missing remote port")
 		}
 	}
-	return zt, err
+	return zt, nil
 }
 
 // Connect will establish a tunnel to the specified target.
