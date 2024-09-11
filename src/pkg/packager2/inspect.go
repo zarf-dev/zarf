@@ -23,13 +23,13 @@ type ZarfInspectOptions struct {
 // Inspect list the contents of a package.
 func Inspect(ctx context.Context, src sources.PackageSource, layout *layout.PackagePaths, options ZarfInspectOptions) (v1alpha1.ZarfPackage, error) {
 	var err error
-	pkg, err := getPackageMetadata(ctx, src, layout, options)
+	pkg, err := getPackageMetadata(ctx, src, layout, options.ViewSBOM, options.SBOMOutputDir)
 	if err != nil {
 		return pkg, err
 	}
 
-	if getSBOM(ctx, options) {
-		err = handleSBOMOptions(ctx, layout, pkg, options)
+	if getSBOM(options.ViewSBOM, options.SBOMOutputDir) {
+		err = handleSBOMOptions(layout, pkg, options.ViewSBOM, options.SBOMOutputDir)
 		if err != nil {
 			return pkg, err
 		}
@@ -43,7 +43,7 @@ func Inspect(ctx context.Context, src sources.PackageSource, layout *layout.Pack
 // InspectList lists the images in a component action
 func InspectList(ctx context.Context, src sources.PackageSource, layout *layout.PackagePaths, options ZarfInspectOptions) ([]string, error) {
 	var imageList []string
-	pkg, err := getPackageMetadata(ctx, src, layout, options)
+	pkg, err := getPackageMetadata(ctx, src, layout, options.ViewSBOM, options.SBOMOutputDir)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +62,8 @@ func InspectList(ctx context.Context, src sources.PackageSource, layout *layout.
 	return imageList, err
 }
 
-func getPackageMetadata(ctx context.Context, src sources.PackageSource, layout *layout.PackagePaths, options ZarfInspectOptions) (v1alpha1.ZarfPackage, error) {
-	SBOM := getSBOM(ctx, options)
+func getPackageMetadata(ctx context.Context, src sources.PackageSource, layout *layout.PackagePaths, viewSBOM bool, SBOMOutputDir string) (v1alpha1.ZarfPackage, error) {
+	SBOM := getSBOM(viewSBOM, SBOMOutputDir)
 
 	pkg, _, err := src.LoadPackageMetadata(ctx, layout, SBOM, true)
 	if err != nil {
@@ -72,19 +72,19 @@ func getPackageMetadata(ctx context.Context, src sources.PackageSource, layout *
 	return pkg, nil
 }
 
-func handleSBOMOptions(_ context.Context, layout *layout.PackagePaths, pkg v1alpha1.ZarfPackage, options ZarfInspectOptions) error {
-	if options.SBOMOutputDir != "" {
-		out, err := layout.SBOMs.OutputSBOMFiles(options.SBOMOutputDir, pkg.Metadata.Name)
+func handleSBOMOptions(layout *layout.PackagePaths, pkg v1alpha1.ZarfPackage, viewSBOM bool, SBOMOutputDir string) error {
+	if SBOMOutputDir != "" {
+		out, err := layout.SBOMs.OutputSBOMFiles(SBOMOutputDir, pkg.Metadata.Name)
 		if err != nil {
 			return err
 		}
-		if options.ViewSBOM {
+		if viewSBOM {
 			err := sbom.ViewSBOMFiles(out)
 			if err != nil {
 				return err
 			}
 		}
-	} else if options.ViewSBOM {
+	} else if viewSBOM {
 		err := sbom.ViewSBOMFiles(layout.SBOMs.Path)
 		if err != nil {
 			return err
@@ -94,8 +94,8 @@ func handleSBOMOptions(_ context.Context, layout *layout.PackagePaths, pkg v1alp
 	return nil
 }
 
-func getSBOM(_ context.Context, options ZarfInspectOptions) bool {
-	if options.ViewSBOM || options.SBOMOutputDir != "" {
+func getSBOM(viewSBOM bool, SBOMOutputDir string) bool {
+	if viewSBOM || SBOMOutputDir != "" {
 		return true
 	}
 	return false
