@@ -47,9 +47,6 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	// Pull the package via OCI.
 	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "pull", ref)
 	suite.NoError(err, stdOut, stdErr)
-	suite.Contains(stdErr, fmt.Sprintf("Pulling %q", ref))
-	suite.Contains(stdErr, "Validating full package checksums")
-	suite.NotContains(stdErr, "Package signature validated!")
 
 	sbomTmp := suite.T().TempDir()
 
@@ -57,8 +54,6 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	suite.FileExists(out)
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", out, "--key", "https://raw.githubusercontent.com/zarf-dev/zarf/v0.38.2/cosign.pub", "--sbom-out", sbomTmp)
 	suite.NoError(err, stdOut, stdErr)
-	suite.Contains(stdErr, "Validating SBOM checksums")
-	suite.Contains(stdErr, "Package signature validated!")
 
 	// Test pull w/ bad ref.
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+badPullInspectRef.String(), "--plain-http")

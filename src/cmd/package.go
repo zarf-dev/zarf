@@ -8,14 +8,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/types"
 
@@ -308,14 +311,17 @@ var packagePullCmd = &cobra.Command{
 	Example: lang.CmdPackagePullExample,
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		pkgConfig.PkgOpts.PackageSource = args[0]
-		pkgClient, err := packager.New(&pkgConfig)
+		outputDir := pkgConfig.PullOpts.OutputDirectory
+		if outputDir == "" {
+			wd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			outputDir = wd
+		}
+		err := packager2.Pull(cmd.Context(), args[0], outputDir, pkgConfig.PkgOpts.Shasum, filters.Empty())
 		if err != nil {
 			return err
-		}
-		defer pkgClient.ClearTempPaths()
-		if err := pkgClient.Pull(cmd.Context()); err != nil {
-			return fmt.Errorf("failed to pull package: %w", err)
 		}
 		return nil
 	},

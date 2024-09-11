@@ -1,0 +1,7 @@
+kind: ZarfPackageConfig
+metadata:
+  name: empty
+  version: 0.0.1
+components:
+  - name: empty
+    required: true
