@@ -33,11 +33,11 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 	listOpts := metav1.ListOptions{LabelSelector: ZarfPackageInfoLabel}
 	secrets, err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).List(ctx, listOpts)
 	if err != nil {
-		return nil, err
+		return []types.DeployedPackage{}, err
 	}
 
-	errs := []error{}
-	deployedPackages := []types.DeployedPackage{}
+	errs := make([]error, 0)
+	deployedPackages := make([]types.DeployedPackage, 0)
 	for _, secret := range secrets.Items {
 		if !strings.HasPrefix(secret.Name, config.ZarfPackagePrefix) {
 			continue
@@ -52,7 +52,11 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 		deployedPackages = append(deployedPackages, deployedPackage)
 	}
 
-	return deployedPackages, errors.Join(errs...)
+	// REVIEW(mkcp): This seems like it could be a breaking behavior change. Can I get a second set of eyes here?
+	if 0 < len(errs) {
+		return []types.DeployedPackage{}, errors.Join(errs...)
+	}
+	return deployedPackages, nil
 }
 
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
@@ -325,7 +329,10 @@ func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitS
 		}
 		return nil
 	})
-	return newToken, err
+	if err != nil {
+		return "", err
+	}
+	return newToken, nil
 }
 
 // UpdateInternalGitServerSecret updates the internal gitea server secrets with the new git server info

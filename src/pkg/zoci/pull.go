@@ -70,7 +70,10 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	err = r.CopyToTarget(ctx, layersToPull, dst, copyOpts)
 	doneSaving <- err
 	<-doneSaving
-	return layersToPull, err
+	if err != nil {
+		return nil, err
+	}
+	return layersToPull, nil
 }
 
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.
