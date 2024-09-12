@@ -59,7 +59,7 @@ func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster) o
 }
 
 // mutateApplication mutates the git repository url to point to the repository URL defined in the ZarfState.
-func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (result *operations.Result, err error) {
+func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
 	state, err := cluster.LoadZarfState(ctx)
 	if err != nil {
 		return nil, err
@@ -72,8 +72,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
-	patches := []operations.PatchOperation{}
-
+	patches := make([]operations.PatchOperation, 0)
 	if app.Spec.Source != nil {
 		patchedURL, err := getPatchedRepoURL(app.Spec.Source.RepoURL, state.GitServer, r)
 		if err != nil {

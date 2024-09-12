@@ -10,6 +10,8 @@ import (
 )
 
 // UpdateGiteaPVC updates the existing Gitea persistent volume claim and tells Gitea whether to create or not.
+// TODO(mkcp): We return both string true/false and errors here so our callers get a string. This should be returning an
+// empty val if we error, but we'll have to refactor upstream beforehand.
 func (c *Cluster) UpdateGiteaPVC(ctx context.Context, pvcName string, shouldRollBack bool) (string, error) {
 	if shouldRollBack {
 		pvc, err := c.Clientset.CoreV1().PersistentVolumeClaims(ZarfNamespaceName).Get(ctx, pvcName, metav1.GetOptions{})

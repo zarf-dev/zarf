@@ -193,12 +193,14 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 }
 
 // LoadZarfState returns the current zarf/zarf-state secret data or an empty ZarfState.
-func (c *Cluster) LoadZarfState(ctx context.Context) (state *types.ZarfState, err error) {
+func (c *Cluster) LoadZarfState(ctx context.Context) (*types.ZarfState, error) {
 	stateErr := errors.New("failed to load the Zarf State from the cluster, has Zarf been initiated?")
 	secret, err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).Get(ctx, ZarfStateSecretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
+
+	state := &types.ZarfState{}
 	err = json.Unmarshal(secret.Data[ZarfStateDataKey], &state)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)

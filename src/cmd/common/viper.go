@@ -177,7 +177,9 @@ func printViperConfigUsed() {
 		message.WarnErrf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
 		return
 	}
-	message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
+	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
+		message.Notef(lang.CmdViperInfoUsingConfigFile, cfgFile)
+	}
 }
 
 func setDefaults() {

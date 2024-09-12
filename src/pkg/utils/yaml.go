@@ -192,12 +192,12 @@ func SplitYAML(yamlData []byte) ([]*unstructured.Unstructured, error) {
 	var objs []*unstructured.Unstructured
 	ymls, err := SplitYAMLToString(yamlData)
 	if err != nil {
-		return nil, err
+		return []*unstructured.Unstructured{}, err
 	}
 	for _, yml := range ymls {
 		u := &unstructured.Unstructured{}
 		if err := k8syaml.Unmarshal([]byte(yml), u); err != nil {
-			return objs, fmt.Errorf("failed to unmarshal manifest: %w", err)
+			return []*unstructured.Unstructured{}, fmt.Errorf("failed to unmarshal manifest: %w", err)
 		}
 		objs = append(objs, u)
 	}
@@ -220,7 +220,7 @@ func SplitYAMLToString(yamlData []byte) ([]string, error) {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return objs, fmt.Errorf("failed to unmarshal manifest: %w", err)
+			return []string{}, fmt.Errorf("failed to unmarshal manifest: %w", err)
 		}
 		ext.Raw = bytes.TrimSpace(ext.Raw)
 		if len(ext.Raw) == 0 || bytes.Equal(ext.Raw, []byte("null")) {

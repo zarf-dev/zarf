@@ -52,7 +52,11 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 		deployedPackages = append(deployedPackages, deployedPackage)
 	}
 
-	return deployedPackages, errors.Join(errs...)
+	err = errors.Join(errs...)
+	if err != nil {
+		return nil, err
+	}
+	return deployedPackages, nil
 }
 
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
@@ -174,7 +178,7 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alph
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, generation int) (deployedPackage *types.DeployedPackage, err error) {
+func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, generation int) (*types.DeployedPackage, error) {
 	packageName := pkg.Metadata.Name
 
 	// Attempt to load information about webhooks for the package
@@ -187,7 +191,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		componentWebhooks = existingPackageSecret.ComponentWebhooks
 	}
 
-	// TODO: This is done for backwards compartibility and could be removed in the future.
+	// TODO: This is done for backwards compatibility and could be removed in the future.
 	connectStrings := types.ConnectStrings{}
 	for _, comp := range components {
 		for _, chart := range comp.InstalledCharts {
@@ -197,7 +201,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		}
 	}
 
-	deployedPackage = &types.DeployedPackage{
+	deployedPackage := &types.DeployedPackage{
 		Name:               packageName,
 		CLIVersion:         config.CLIVersion,
 		Data:               pkg,
@@ -285,12 +289,13 @@ func (c *Cluster) DisableRegHPAScaleDown(ctx context.Context) error {
 }
 
 // GetInstalledChartsForComponent returns any installed Helm Charts for the provided package component.
-func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component v1alpha1.ZarfComponent) (installedCharts []types.InstalledChart, err error) {
+func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component v1alpha1.ZarfComponent) ([]types.InstalledChart, error) {
 	deployedPackage, err := c.GetDeployedPackage(ctx, packageName)
 	if err != nil {
-		return installedCharts, err
+		return nil, err
 	}
 
+	installedCharts := make([]types.InstalledChart, 0)
 	for _, deployedComponent := range deployedPackage.DeployedComponents {
 		if deployedComponent.Name == component.Name {
 			installedCharts = append(installedCharts, deployedComponent.InstalledCharts...)
@@ -324,7 +329,10 @@ func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitS
 		}
 		return nil
 	})
-	return newToken, err
+	if err != nil {
+		return "", err
+	}
+	return newToken, nil
 }
 
 // UpdateInternalGitServerSecret updates the internal gitea server secrets with the new git server info
