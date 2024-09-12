@@ -1,4 +1,4 @@
-// Packager2 contains functions for inspecting packages.
+// Package packager2 contains functions for inspecting packages.
 package packager2
 
 import (
@@ -14,6 +14,7 @@ import (
 
 // ZarfInspectOptions tracks the user-defined preferences during a package inspection.
 type ZarfInspectOptions struct {
+
 	// View SBOM contents while inspecting the package
 	ViewSBOM bool
 	// Location to output an SBOM into after package inspection
