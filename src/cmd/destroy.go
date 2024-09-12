@@ -30,6 +30,7 @@ var destroyCmd = &cobra.Command{
 	Aliases: []string{"d"},
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
+	// FIXME(mkcp): This function deeply needs a refactor and un-nesting.
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
 		timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
@@ -57,6 +58,7 @@ var destroyCmd = &cobra.Command{
 
 			// Run all the scripts!
 			pattern := regexp.MustCompile(`(?mi)zarf-clean-.+\.sh$`)
+			// TODO(mkcp): Handle this error
 			scripts, _ := helpers.RecursiveFileList(config.ZarfCleanupScriptsPath, pattern, true)
 			// Iterate over all matching zarf-clean scripts and exec them
 			for _, script := range scripts {
@@ -72,6 +74,7 @@ var destroyCmd = &cobra.Command{
 				}
 
 				// Try to remove the script, but ignore any errors
+				// TODO(mkcp): Should we be ignoring this error? Setup handling or retry, or lintignore
 				_ = os.Remove(script)
 			}
 		} else {
