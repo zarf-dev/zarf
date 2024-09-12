@@ -146,8 +146,8 @@ func (suite *ExtOutClusterTestSuite) Test_1_Deploy() {
 
 func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	// Deploy the flux example package
+	// Cleanup dir at end of test
 	temp := suite.T().TempDir()
-	defer os.Remove(temp)
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
 
 	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--confirm"}
@@ -158,6 +158,8 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	deployArgs = []string{"package", "deploy", path, "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err)
+	err = os.Remove(temp)
+	suite.NoError(err, "unable to remove tempdir")
 }
 
 func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
@@ -168,12 +170,13 @@ func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
 
 	tempDir := suite.T().TempDir()
 	repoPath := filepath.Join(tempDir, "repositories.yaml")
-	os.Setenv("HELM_REPOSITORY_CONFIG", repoPath)
-	defer os.Unsetenv("HELM_REPOSITORY_CONFIG")
+	// Cleanup at end of func
+	err := os.Setenv("HELM_REPOSITORY_CONFIG", repoPath)
+	suite.Error(err, "Unable to set HELM_REPOSITORY_CONFIG")
 
 	packagePath := filepath.Join("..", "packages", "external-helm-auth")
 	findImageArgs := []string{"dev", "find-images", packagePath}
-	err := exec.CmdWithPrint(zarfBinPath, findImageArgs...)
+	err = exec.CmdWithPrint(zarfBinPath, findImageArgs...)
 	suite.Error(err, "Since auth has not been setup, this should fail")
 
 	repoFile := repo.NewFile()
@@ -195,6 +198,9 @@ func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
 	packageCreateArgs := []string{"package", "create", packagePath, fmt.Sprintf("--output=%s", tempDir), "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, packageCreateArgs...)
 	suite.NoError(err, "Unable to create package, helm auth likely failed")
+
+	err = os.Unsetenv("HELM_REPOSITORY_CONFIG")
+	suite.Error(err, "Unable to Unset HELM_REPOSITORY_CONFIG")
 }
 
 func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, username string, password string) {
@@ -211,9 +217,9 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 	suite.NoError(err)
 	url := fmt.Sprintf("%s/api/packages/%s/helm/api/charts", baseURL, username)
 
+	// Close the file directly at the end of the test
 	file, err := os.Open(podinfoTarballPath)
 	suite.NoError(err)
-	defer file.Close()
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -221,7 +227,8 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 	suite.NoError(err)
 	_, err = io.Copy(part, file)
 	suite.NoError(err)
-	writer.Close()
+	err = writer.Close()
+	suite.NoError(err)
 
 	req, err := http.NewRequest("POST", url, body)
 	suite.NoError(err)
@@ -233,7 +240,11 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 
 	resp, err := client.Do(req)
 	suite.NoError(err)
-	resp.Body.Close()
+	err = resp.Body.Close()
+	suite.NoError(err)
+
+	err = file.Close()
+	suite.NoError(err)
 }
 
 func (suite *ExtOutClusterTestSuite) makeGiteaUserPrivate(baseURL string, username string, password string) {
@@ -256,12 +267,15 @@ func (suite *ExtOutClusterTestSuite) makeGiteaUserPrivate(baseURL string, userna
 	req.SetBasicAuth(username, password)
 
 	client := &http.Client{}
+	// Close resp body at end of test
 	resp, err := client.Do(req)
 	suite.NoError(err)
-	defer resp.Body.Close()
 
 	_, err = io.ReadAll(resp.Body)
 	suite.NoError(err)
+
+	err = resp.Body.Close()
+	suite.NoError(err, "Unable to close response body")
 }
 
 func TestExtOurClusterTestSuite(t *testing.T) {
