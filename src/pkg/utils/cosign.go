@@ -228,26 +228,28 @@ func GetCosignArtifacts(image string) ([]string, error) {
 
 	ref, err := name.ParseReference(image, nameOpts...)
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 
+	// FIXME(mkcp): Re-review how this function is used and whether a signed entity err-miss is something we should pass
+	// up to the caller. Needs a comment if nothing else.
 	var remoteOpts []ociremote.Option
 	simg, _ := ociremote.SignedEntity(ref, remoteOpts...)
 	if simg == nil {
-		return []string{}, nil
+		return nil, nil
 	}
 
 	// Errors are dogsled because these functions always return a name.Tag which we can check for layers
-	sigRef, _ := ociremote.SignatureTag(ref, remoteOpts...)
-	attRef, _ := ociremote.AttestationTag(ref, remoteOpts...)
+	sigRef, _ := ociremote.SignatureTag(ref, remoteOpts...)   //nolint:errcheck
+	attRef, _ := ociremote.AttestationTag(ref, remoteOpts...) //nolint:errcheck
 
 	ss, err := simg.Signatures()
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 	ssLayers, err := ss.Layers()
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 
 	var cosignArtifactList = make([]string, 0)
@@ -257,11 +259,11 @@ func GetCosignArtifacts(image string) ([]string, error) {
 
 	atts, err := simg.Attestations()
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 	aLayers, err := atts.Layers()
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 	if 0 < len(aLayers) {
 		cosignArtifactList = append(cosignArtifactList, attRef.String())
