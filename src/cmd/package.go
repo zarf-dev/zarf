@@ -79,6 +79,12 @@ var packageDeployCmd = &cobra.Command{
 	Short:   lang.CmdPackageDeployShort,
 	Long:    lang.CmdPackageDeployLong,
 	Args:    cobra.MaximumNArgs(1),
+	PreRun: func(_ *cobra.Command, _ []string) {
+		// If --insecure was provided, set --skip-signature-validation to match
+		if config.CommonOptions.Insecure {
+			pkgConfig.PkgOpts.SkipSignatureValidation = true
+		}
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		packageSource, err := choosePackage(args)
 		if err != nil {
@@ -112,6 +118,12 @@ var packageMirrorCmd = &cobra.Command{
 	Long:    lang.CmdPackageMirrorLong,
 	Example: lang.CmdPackageMirrorExample,
 	Args:    cobra.MaximumNArgs(1),
+	PreRun: func(_ *cobra.Command, _ []string) {
+		// If --insecure was provided, set --skip-signature-validation to match
+		if config.CommonOptions.Insecure {
+			pkgConfig.PkgOpts.SkipSignatureValidation = true
+		}
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		packageSource, err := choosePackage(args)
 		if err != nil {
@@ -136,6 +148,12 @@ var packageInspectCmd = &cobra.Command{
 	Short:   lang.CmdPackageInspectShort,
 	Long:    lang.CmdPackageInspectLong,
 	Args:    cobra.MaximumNArgs(1),
+	PreRun: func(_ *cobra.Command, _ []string) {
+		// If --insecure was provided, set --skip-signature-validation to match
+		if config.CommonOptions.Insecure {
+			pkgConfig.PkgOpts.SkipSignatureValidation = true
+		}
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		packageSource, err := choosePackage(args)
 		if err != nil {
@@ -208,6 +226,12 @@ var packageRemoveCmd = &cobra.Command{
 	Aliases: []string{"u", "rm"},
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageRemoveShort,
+	PreRun: func(_ *cobra.Command, _ []string) {
+		// If --insecure was provided, set --skip-signature-validation to match
+		if config.CommonOptions.Insecure {
+			pkgConfig.PkgOpts.SkipSignatureValidation = true
+		}
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		packageSource, err := choosePackage(args)
 		if err != nil {
@@ -236,6 +260,12 @@ var packagePublishCmd = &cobra.Command{
 	Short:   lang.CmdPackagePublishShort,
 	Example: lang.CmdPackagePublishExample,
 	Args:    cobra.ExactArgs(2),
+	PreRun: func(_ *cobra.Command, _ []string) {
+		// If --insecure was provided, set --skip-signature-validation to match
+		if config.CommonOptions.Insecure {
+			pkgConfig.PkgOpts.SkipSignatureValidation = true
+		}
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pkgConfig.PkgOpts.PackageSource = args[0]
 
@@ -430,6 +460,7 @@ func bindDeployFlags(v *viper.Viper) {
 	deployFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(common.VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.SGetKeyPath, "sget", v.GetString(common.VPkgDeploySget), lang.CmdPackageDeployFlagSget)
+	deployFlags.BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	deployFlags.MarkHidden("sget")
 }
@@ -446,6 +477,7 @@ func bindMirrorFlags(v *viper.Viper) {
 	mirrorFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageDeployFlagConfirm)
 
 	mirrorFlags.BoolVar(&pkgConfig.MirrorOpts.NoImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
+	mirrorFlags.BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	mirrorFlags.IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)
 	mirrorFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageMirrorFlagComponents)
@@ -466,12 +498,14 @@ func bindInspectFlags(_ *viper.Viper) {
 	inspectFlags.BoolVarP(&pkgConfig.InspectOpts.ViewSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
 	inspectFlags.StringVar(&pkgConfig.InspectOpts.SBOMOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
 	inspectFlags.BoolVar(&pkgConfig.InspectOpts.ListImages, "list-images", false, lang.CmdPackageInspectFlagListImages)
+	inspectFlags.BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 }
 
 func bindRemoveFlags(v *viper.Viper) {
 	removeFlags := packageRemoveCmd.Flags()
 	removeFlags.BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageRemoveFlagConfirm)
 	removeFlags.StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
+	removeFlags.BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	_ = packageRemoveCmd.MarkFlagRequired("confirm")
 }
 
@@ -479,6 +513,7 @@ func bindPublishFlags(v *viper.Viper) {
 	publishFlags := packagePublishCmd.Flags()
 	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPath, "signing-key", v.GetString(common.VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
 	publishFlags.StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "signing-key-pass", v.GetString(common.VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
+	publishFlags.BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 }
 
 func bindPullFlags(v *viper.Viper) {

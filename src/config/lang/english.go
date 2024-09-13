@@ -45,14 +45,16 @@ const (
 	RootCmdLong  = "Zarf eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud native workloads\n" +
 		"using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments."
 
-	RootCmdFlagLogLevel    = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
-	RootCmdFlagArch        = "Architecture for OCI images and Zarf packages"
-	RootCmdFlagSkipLogFile = "Disable log file creation"
-	RootCmdFlagNoProgress  = "Disable fancy UI progress bars, spinners, logos, etc"
-	RootCmdFlagNoColor     = "Disable colors in output"
-	RootCmdFlagCachePath   = "Specify the location of the Zarf cache directory"
-	RootCmdFlagTempDir     = "Specify the temporary directory to use for intermediate files"
-	RootCmdFlagInsecure    = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
+	RootCmdFlagLogLevel              = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
+	RootCmdFlagArch                  = "Architecture for OCI images and Zarf packages"
+	RootCmdFlagSkipLogFile           = "Disable log file creation"
+	RootCmdFlagNoProgress            = "Disable fancy UI progress bars, spinners, logos, etc"
+	RootCmdFlagNoColor               = "Disable colors in output"
+	RootCmdFlagCachePath             = "Specify the location of the Zarf cache directory"
+	RootCmdFlagTempDir               = "Specify the temporary directory to use for intermediate files"
+	RootCmdFlagInsecure              = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
+	RootCmdFlagPlainHTTP             = "Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture."
+	RootCmdFlagInsecureSkipTLSVerify = "Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
 	RootCmdDeprecatedDeploy = "Deprecated: Please use \"zarf package deploy %s\" to deploy this package.  This warning will be removed in Zarf v1.0.0."
 	RootCmdDeprecatedCreate = "Deprecated: Please use \"zarf package create\" to create this package.  This warning will be removed in Zarf v1.0.0."
@@ -210,10 +212,11 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInternalCrc32Short = "Generates a decimal CRC32 for the given text"
 
 	// zarf package
-	CmdPackageShort             = "Zarf package commands for creating, deploying, and inspecting packages"
-	CmdPackageFlagConcurrency   = "Number of concurrent layer operations to perform when interacting with a remote package."
-	CmdPackageFlagFlagPublicKey = "Path to public key file for validating signed packages"
-	CmdPackageFlagRetries       = "Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs"
+	CmdPackageShort                       = "Zarf package commands for creating, deploying, and inspecting packages"
+	CmdPackageFlagConcurrency             = "Number of concurrent layer operations to perform when interacting with a remote package."
+	CmdPackageFlagFlagPublicKey           = "Path to public key file for validating signed packages"
+	CmdPackageFlagSkipSignatureValidation = "Skip validating the signature of the Zarf package"
+	CmdPackageFlagRetries                 = "Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs"
 
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
 	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.\n" +
@@ -273,7 +276,7 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	CmdPackageDeployFlagAdoptExistingResources         = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
 	CmdPackageDeployFlagSet                            = "Specify deployment variables to set on the command line (KEY=value)"
 	CmdPackageDeployFlagComponents                     = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported."
-	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote package and \"--insecure\" is not provided"
+	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote package."
 	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v1.0.0 please use the --key flag instead."
 	CmdPackageDeployFlagSkipWebhooks                   = "[alpha] Skip waiting for external webhooks to execute as each package component is deployed"
 	CmdPackageDeployFlagTimeout                        = "Timeout for health checks and Helm operations such as installs and rollbacks"

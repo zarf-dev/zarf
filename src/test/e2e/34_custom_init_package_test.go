@@ -38,7 +38,7 @@ func TestCustomInit(t *testing.T) {
 	// Test that we get an error when trying to deploy a package without providing the public key
 	stdOut, stdErr, err = e2e.Zarf(t, "init", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, e2e.StripMessageFormatting(stdErr), "unable to load the package: package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
+	require.Contains(t, e2e.StripMessageFormatting(stdErr), "unable to load the package: package is signed but no key was provided - add a key with the --key flag or use the --skip-signature-validation flag and run the command again")
 
 	/* Test operations during package deploy */
 	// Test that we can deploy the package with the public key

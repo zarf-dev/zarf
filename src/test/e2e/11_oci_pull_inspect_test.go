@@ -61,7 +61,7 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	suite.Contains(stdErr, "Package signature validated!")
 
 	// Test pull w/ bad ref.
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+badPullInspectRef.String(), "--insecure")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+badPullInspectRef.String(), "--plain-http")
 	suite.Error(err, stdOut, stdErr)
 }
 
@@ -69,7 +69,7 @@ func (suite *PullInspectTestSuite) Test_1_Remote_Inspect() {
 	suite.T().Log("E2E: Package Inspect oci://")
 
 	// Test inspect w/ bad ref.
-	_, stdErr, err := e2e.Zarf(suite.T(), "package", "inspect", "oci://"+badPullInspectRef.String(), "--insecure")
+	_, stdErr, err := e2e.Zarf(suite.T(), "package", "inspect", "oci://"+badPullInspectRef.String(), "--plain-http")
 	suite.Error(err, stdErr)
 
 	// Test inspect on a public package.

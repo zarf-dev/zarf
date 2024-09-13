@@ -20,14 +20,16 @@ const (
 
 	// Root config keys
 
-	VLogLevel     = "log_level"
-	VArchitecture = "architecture"
-	VNoLogFile    = "no_log_file"
-	VNoProgress   = "no_progress"
-	VNoColor      = "no_color"
-	VZarfCache    = "zarf_cache"
-	VTmpDir       = "tmp_dir"
-	VInsecure     = "insecure"
+	VLogLevel              = "log_level"
+	VArchitecture          = "architecture"
+	VNoLogFile             = "no_log_file"
+	VNoProgress            = "no_progress"
+	VNoColor               = "no_color"
+	VZarfCache             = "zarf_cache"
+	VTmpDir                = "tmp_dir"
+	VInsecure              = "insecure"
+	VPlainHTTP             = "plain_http"
+	VInsecureSkipTLSVerify = "insecure_skip_tls_verify"
 
 	// Init config keys
 
