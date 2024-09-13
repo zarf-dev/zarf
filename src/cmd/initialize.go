@@ -94,19 +94,27 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 	}
 
 	// Create the cache directory if it doesn't exist
-	if helpers.InvalidPath(config.GetAbsCachePath()) {
-		if err := helpers.CreateDirectory(config.GetAbsCachePath(), helpers.ReadExecuteAllWriteUser); err != nil {
-			return "", fmt.Errorf("unable to create the cache directory %s: %w", config.GetAbsCachePath(), err)
+	absCachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return "", err
+	}
+	// Verify that we can write to the path
+	// FIXME(mkcp): Decompose this into a helper function
+	if helpers.InvalidPath(absCachePath) {
+		// Create the directory if the path is invalid
+		if err := helpers.CreateDirectory(absCachePath, helpers.ReadExecuteAllWriteUser); err != nil {
+			return "", fmt.Errorf("unable to create the cache directory %s: %w", absCachePath, err)
 		}
 	}
 
 	// Next, look in the cache directory
-	if !helpers.InvalidPath(filepath.Join(config.GetAbsCachePath(), initPackageName)) {
-		return filepath.Join(config.GetAbsCachePath(), initPackageName), nil
+	if !helpers.InvalidPath(filepath.Join(absCachePath, initPackageName)) {
+		// join and return
+		return filepath.Join(absCachePath, initPackageName), nil
 	}
 
 	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
-	downloadCacheTarget, err := downloadInitPackage(ctx, config.GetAbsCachePath())
+	downloadCacheTarget, err := downloadInitPackage(ctx, absCachePath)
 	if err != nil {
 		if errors.Is(err, lang.ErrInitNotFound) {
 			return "", err
@@ -130,6 +138,7 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, er
 	message.Note(lang.CmdInitPullNote)
 
 	// Prompt the user if --confirm not specified
+	// FIXME(mkcp): This condition can never be met
 	if !confirmDownload {
 		prompt := &survey.Confirm{
 			Message: lang.CmdInitPullConfirm,
