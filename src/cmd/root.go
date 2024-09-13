@@ -77,8 +77,11 @@ var rootCmd = &cobra.Command{
 	SilenceErrors: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		zarfLogo := message.GetLogo()
-		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
-		cmd.Help()
+		_, _ = fmt.Fprintln(os.Stderr, zarfLogo) //nolint:errcheck
+		err := cmd.Help()
+		if err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err) //nolint:errcheck
+		}
 
 		if len(args) > 0 {
 			if strings.Contains(args[0], config.ZarfPackagePrefix) || strings.Contains(args[0], "zarf-init") {
