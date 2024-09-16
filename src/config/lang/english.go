@@ -317,7 +317,7 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a ar
 # Pull a skeleton package
 $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a skeleton`
 	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
-	CmdPackagePullFlagShasum          = "Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using zarf dev sha256sum <url>"
+	CmdPackagePullFlagShasum          = "Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using `zarf dev sha256sum <url>`"
 
 	CmdPackageChoose                = "Choose or type the package file"
 	CmdPackageClusterSourceFallback = "%q does not satisfy any current sources, assuming it is a package deployed to a cluster"
