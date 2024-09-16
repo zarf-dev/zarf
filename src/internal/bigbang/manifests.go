@@ -6,16 +6,15 @@ package bigbang
 
 import (
 	"errors"
-	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 )
 
 const bbV1ZarfCredentialsValues = `
@@ -95,17 +94,13 @@ func manifestGitRepo(version, repo string) (fluxSrcCtrl.GitRepository, error) {
 	if err != nil {
 		return fluxSrcCtrl.GitRepository{}, err
 	}
-	if semverVersion != nil {
-		c, _ := semver.NewConstraint(">= 2.7.0")
-		if c != nil {
-			updateFlux, errList := c.Validate(semverVersion)
-			if errList != nil {
-				return fluxSrcCtrl.GitRepository{}, errors.Join(errList...)
-			}
-			if updateFlux {
-				apiVersion = "source.toolkit.fluxcd.io/v1"
-			}
-		}
+	c, err := semver.NewConstraint(">= 2.7.0")
+	if err != nil {
+		return fluxSrcCtrl.GitRepository{}, err
+	}
+	updateFlux := c.Check(semverVersion)
+	if updateFlux {
+		apiVersion = "source.toolkit.fluxcd.io/v1"
 	}
 
 	return fluxSrcCtrl.GitRepository{
@@ -127,37 +122,23 @@ func manifestGitRepo(version, repo string) (fluxSrcCtrl.GitRepository, error) {
 	}, nil
 }
 
-// manifestValuesFile generates a Secret object for the Big Bang umbrella repo.
-func manifestValuesFile(idx int, path string) (corev1.Secret, error) {
+// getValuesFilesResource generates a Secret object for the Big Bang umbrella repo.
+func getValuesFilesResource(path string) (unstructured.Unstructured, error) {
 	// Read the file from the path.
 	file, err := os.ReadFile(path)
 	if err != nil {
-		return corev1.Secret{}, err
+		return unstructured.Unstructured{}, err
+	}
+	var resource unstructured.Unstructured
+	if err := yaml.Unmarshal(file, &resource); err != nil {
+		return unstructured.Unstructured{}, err
 	}
 
-	// Get the base file name for this file.
-	baseName := filepath.Base(path)
+	if resource.GetKind() != "Secret" && resource.GetKind() != "ConfigMap" {
+		return unstructured.Unstructured{}, errors.New("values file must be a Secret or ConfigMap")
+	}
 
-	// Define the name as the file name without the extension.
-	baseName = strings.TrimSuffix(baseName, filepath.Ext(baseName))
-
-	// Add the name prefix.
-	name := fmt.Sprintf("bb-usr-vals-%d-%s", idx, baseName)
-
-	// Create a secret with the file contents.
-	return corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Secret",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: bb,
-			Name:      name,
-		},
-		StringData: map[string]string{
-			"values.yaml": string(file),
-		},
-	}, nil
+	return resource, nil
 }
 
 // manifestHelmRelease generates a HelmRelease object for the Big Bang umbrella repo.

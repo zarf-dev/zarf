@@ -18,7 +18,9 @@ import (
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1beta2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
@@ -39,13 +41,14 @@ var tenMins = metav1.Duration{
 	Duration: 10 * time.Minute,
 }
 
-// Run mutates a component that should deploy Big Bang to a set of manifests
-// that contain the flux deployment of Big Bang
+// Create creates a Zarf.yaml file for a big bang package
 func Create(ctx context.Context, baseDir string, version string, valuesFiles []string, skipFlux bool, repo string, airgap bool) error {
 	manifests := []v1alpha1.ZarfManifest{}
 	bbComponent := v1alpha1.ZarfComponent{Name: "bigbang"}
 	fluxComponent := v1alpha1.ZarfComponent{Name: "flux"}
 	pkg := v1alpha1.ZarfPackage{
+		Kind:       v1alpha1.ZarfPackageConfig,
+		APIVersion: v1alpha1.APIVersion,
 		Metadata: v1alpha1.ZarfMetadata{
 			Name: "bigbang",
 			YOLO: !airgap,
@@ -79,15 +82,19 @@ func Create(ctx context.Context, baseDir string, version string, valuesFiles []s
 		if err != nil {
 			return err
 		}
+		fluxFilePath := filepath.Join(fluxBaseDir, "bb-flux.yaml")
+		if err := kustomize.Build(fluxBaseDir, fluxFilePath, true); err != nil {
+			return fmt.Errorf("unable to build kustomization: %w", err)
+		}
 
 		fluxManifest := v1alpha1.ZarfManifest{
 			Name:      "flux-system",
 			Namespace: "flux-system",
-			Files:     []string{"kustomizationl.yaml", "gotk-components.yaml"},
+			Files:     []string{fluxFilePath},
 		}
 
 		if airgap {
-			images, err := getFluxImages(fluxBaseDir)
+			images, err := readFluxImages(fluxFilePath)
 			if err != nil {
 				return nil
 			}
@@ -100,6 +107,12 @@ func Create(ctx context.Context, baseDir string, version string, valuesFiles []s
 
 	bbRepo := fmt.Sprintf("%s@%s", repo, version)
 
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmpDir)
+
 	// Configure helm to pull down the Big Bang chart.
 	helmCfg := helm.New(
 		v1alpha1.ZarfChart{
@@ -110,8 +123,8 @@ func Create(ctx context.Context, baseDir string, version string, valuesFiles []s
 			ValuesFiles: valuesFiles,
 			GitPath:     "./chart",
 		},
-		path.Join(baseDir, bb),
-		path.Join(baseDir, bb, "values"),
+		path.Join(tmpDir, bb),
+		path.Join(tmpDir, bb, "values"),
 		helm.WithVariableConfig(&variables.VariableConfig{}),
 	)
 
@@ -133,6 +146,7 @@ func Create(ctx context.Context, baseDir string, version string, valuesFiles []s
 		bbRepo := fmt.Sprintf("%s@%s", repo, version)
 		bbComponent.Repos = append(bbComponent.Repos, bbRepo)
 	}
+
 	// Parse the template for GitRepository objects and add them to the list of repos to be pulled down by Zarf.
 	gitRepos, hrDependencies, hrValues, err := findBBResources(template)
 	if err != nil {
@@ -225,7 +239,7 @@ func Create(ctx context.Context, baseDir string, version string, valuesFiles []s
 			gitRepo := gitRepos[hr.NamespacedSource]
 			values := hrValues[namespacedName]
 
-			images, err := findImagesforBBChartRepo(ctx, gitRepo, values)
+			images, err := findImagesForBBChartRepo(ctx, gitRepo, values)
 			if err != nil {
 				return fmt.Errorf("unable to find images for chart repo: %w", err)
 			}
@@ -239,7 +253,10 @@ func Create(ctx context.Context, baseDir string, version string, valuesFiles []s
 
 	manifestDir := filepath.Join(baseDir, "manifests")
 
-	os.Mkdir(manifestDir, helpers.ReadWriteExecuteUser)
+	err = os.Mkdir(manifestDir, helpers.ReadWriteExecuteUser)
+	if err != nil {
+		return err
+	}
 
 	// Create the flux wrapper around Big Bang for deployment.
 	manifest, err := addBigBangManifests(airgap, manifestDir, valuesFiles, version, repo)
@@ -256,7 +273,10 @@ func Create(ctx context.Context, baseDir string, version string, valuesFiles []s
 
 	pkg.Components = append(pkg.Components, fluxComponent, bbComponent)
 
-	utils.WriteYaml(filepath.Join(baseDir, "zarf.yaml"), pkg, helpers.ReadWriteUser)
+	err = utils.WriteYaml(filepath.Join(baseDir, "zarf.yaml"), pkg, helpers.ReadWriteUser)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -285,7 +305,10 @@ func isValidVersion(version string) (bool, error) {
 // to return the list of git repos and tags needed.
 func findBBResources(t string) (gitRepos map[string]string, helmReleaseDeps map[string]HelmReleaseDependency, helmReleaseValues map[string]map[string]interface{}, err error) {
 	// Break the template into separate resources.
-	yamls, _ := utils.SplitYAMLToString([]byte(t))
+	yamls, err := utils.SplitYAMLToString([]byte(t))
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	gitRepos = map[string]string{}
 	helmReleaseDeps = map[string]HelmReleaseDependency{}
@@ -419,7 +442,7 @@ func addBigBangManifests(airgap bool, manifestDir string, valuesFiles []string, 
 
 	// Create the GitRepository manifest.
 	if err := addManifest("bb-ext-gitrepository.yaml", fluxGitRepo); err != nil {
-		return manifest, err
+		return v1alpha1.ZarfManifest{}, err
 	}
 
 	var hrValues []fluxHelmCtrl.ValuesReference
@@ -445,33 +468,29 @@ func addBigBangManifests(airgap bool, manifestDir string, valuesFiles []string, 
 	// Loop through the valuesFrom list and create a manifest for each.
 	for _, valuesFile := range valuesFiles {
 		// Get values file name, make sure it's a secret and add it here
-		// data, err := manifestValuesFile(valuesIdx, valuesFile)
-		// if err != nil {
-		// 	return manifest, err
-		// }
+		resource, err := getValuesFilesResource(valuesFile)
+		if err != nil {
+			return manifest, err
+		}
 
-		// path := fmt.Sprintf("%s.yaml", data.Name)
-		// if err := addManifest(path, data); err != nil {
-		// 	return manifest, err
-		// }
-		fmt.Print(valuesFile)
+		manifest.Files = append(manifest.Files, valuesFile)
 
 		// Add it to the list of valuesFrom for the HelmRelease
-		// hrValues = append(hrValues, fluxHelmCtrl.ValuesReference{
-		// 	Kind: "Secret",
-		// 	Name: data.Name,
-		// })
+		hrValues = append(hrValues, fluxHelmCtrl.ValuesReference{
+			Kind: resource.GetKind(),
+			Name: resource.GetName(),
+		})
 	}
 
 	if err := addManifest("bb-ext-helmrelease.yaml", manifestHelmRelease(hrValues)); err != nil {
-		return manifest, err
+		return v1alpha1.ZarfManifest{}, err
 	}
 
 	return manifest, nil
 }
 
-// findImagesforBBChartRepo finds and returns the images for the Big Bang chart repo
-func findImagesforBBChartRepo(ctx context.Context, repo string, values chartutil.Values) (images []string, err error) {
+// findImagesForBBChartRepo finds and returns the images for the Big Bang chart repo
+func findImagesForBBChartRepo(ctx context.Context, repo string, values chartutil.Values) (images []string, err error) {
 	matches := strings.Split(repo, "@")
 	if len(matches) < 2 {
 		return images, fmt.Errorf("cannot convert git repo %s to helm chart without a version tag", repo)

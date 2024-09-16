@@ -13,7 +13,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
-	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"helm.sh/helm/v3/pkg/chartutil"
 	v1 "k8s.io/api/apps/v1"
@@ -41,60 +40,39 @@ func (h HelmReleaseDependency) Dependencies() []string {
 }
 
 // getFluxManifest Creates a component to deploy Flux.
-func getFluxManifest(baseDir, file, repo, version string) (error) {
-
+func getFluxManifest(dir, file, repo, version string) error {
 	// Instead of compiling the kustomization ahead of time, we should just pull down the files and do a kustomization
 	// within Zarf. The trouble will be when people want to make changes kustomization
 
+	// If the .git is part of the url then we will be redirected to authenticate
+	// TODO check if .git is necessary
 	repo = strings.TrimSuffix(repo, ".git")
 
 	remotePath := fmt.Sprintf("%s/-/raw/master/base/flux", repo)
 	ref := fmt.Sprintf("?ref_type=%s", version)
 
 	kustomizationPath := fmt.Sprintf("%s/%s%s", remotePath, file, ref)
-	localKustomizationPath := filepath.Join(baseDir, file)
+	localKustomizationPath := filepath.Join(dir, file)
 
 	err := utils.DownloadToFile(context.TODO(), kustomizationPath, localKustomizationPath, "")
 	if err != nil {
 		return err
 	}
 	return nil
-	// gotkRemote := fmt.Sprintf("%s/gotk-components.yaml%s", remotePath, ref)
-	// fmt.Println(gotkRemote)
-	// localGotkPath := filepath.Join(baseDir, "gotk-components.yaml")
-	// err = utils.DownloadToFile(context.TODO(), gotkRemote, localGotkPath, "")
-	// if err != nil {
-	// 	return err
-	// }
-
-	return nil
-}
-
-func getFluxImages(baseDir string) ([]string, error) {
-	localPath := filepath.Join(baseDir, "bb-ext-flux.yaml")
-
-	// Perform Kustomization now to get the flux.yaml file.
-	if err := kustomize.Build(baseDir, localPath, true); err != nil {
-		return nil, fmt.Errorf("unable to build kustomization: %w", err)
-	}
-
-	// Read the flux.yaml file to get the images.
-	images, err := readFluxImages(localPath)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read flux images: %w", err)
-	}
-	return images, nil
 }
 
 // readFluxImages finds the images Flux needs to deploy
-func readFluxImages(localPath string) (images []string, err error) {
-	contents, err := os.ReadFile(localPath)
+func readFluxImages(fluxFilePath string) (images []string, err error) {
+	contents, err := os.ReadFile(fluxFilePath)
 	if err != nil {
 		return images, fmt.Errorf("unable to read flux manifest: %w", err)
 	}
 
 	// Break the manifest into separate resources.
-	yamls, _ := utils.SplitYAML(contents)
+	yamls, err := utils.SplitYAML(contents)
+	if err != nil {
+		return nil, err
+	}
 
 	// Loop through each resource and find the images.
 	for _, yaml := range yamls {
