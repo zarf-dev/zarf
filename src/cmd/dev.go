@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -22,6 +23,8 @@ import (
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/bigbang"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
@@ -98,15 +101,19 @@ var devGenerateCmd = &cobra.Command{
 }
 
 var bigBangGenerateCommand = &cobra.Command{
-    Use:     "big-bang VERSION",
-    Aliases: []string{"bb"},
-    Short:   "Creates a zarf.yaml and associated manifests for a Big Bang package",
-    Example: "zarf dev generate big-bang 2.3.4 --values-file=my-values-manifest.yaml",
-    RunE: func(cmd *cobra.Command, args []string) error {
-		
-        fmt.Println("Generating Big Bang")
-        return nil
-    },
+	Use:     "big-bang VERSION",
+	Aliases: []string{"bb"},
+	Short:   "Creates a zarf.yaml and associated manifests for a Big Bang package",
+	Example: "zarf dev generate big-bang 2.3.4 --values-file=my-values-manifest.yaml",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("unable to get the current working directory: %w", err)
+		}
+		layout.New(cwd)
+		err = bigbang.Create(context.Background(), cwd, "2.19.2", nil, false, "", true)
+		return err
+	},
 }
 
 var devTransformGitLinksCmd = &cobra.Command{

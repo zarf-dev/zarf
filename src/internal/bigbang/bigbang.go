@@ -19,7 +19,6 @@ import (
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1beta2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
@@ -42,10 +41,10 @@ var tenMins = metav1.Duration{
 
 // Run mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
-func Create(ctx context.Context, tmpPaths *layout.ComponentPaths, version string, valuesFiles []string, skipFlux bool, repo string, airgap bool) error {
+func Create(ctx context.Context, baseDir string, version string, valuesFiles []string, skipFlux bool, repo string, airgap bool) error {
 	manifests := []v1alpha1.ZarfManifest{}
-	bbComponent := v1alpha1.ZarfComponent{}
-	fluxComponent := v1alpha1.ZarfComponent{}
+	bbComponent := v1alpha1.ZarfComponent{Name: "bigbang"}
+	fluxComponent := v1alpha1.ZarfComponent{Name: "flux"}
 	pkg := v1alpha1.ZarfPackage{
 		Metadata: v1alpha1.ZarfMetadata{
 			Name: "bigbang",
@@ -70,18 +69,33 @@ func Create(ctx context.Context, tmpPaths *layout.ComponentPaths, version string
 
 	// By default, we want to deploy flux.
 	if !skipFlux {
-		fluxManifest, images, err := getFlux(tmpPaths.Temp, cfg)
+		fluxBaseDir := filepath.Join(baseDir, "flux")
+		err := getFluxManifest(fluxBaseDir, "kustomization.yaml", repo, version)
 		if err != nil {
 			return err
 		}
 
-		// Add the flux manifests to the list of manifests to be pulled down by Zarf.
-		manifests = append(manifests, fluxManifest)
+		err = getFluxManifest(fluxBaseDir, "gotk-components.yaml", repo, version)
+		if err != nil {
+			return err
+		}
+
+		fluxManifest := v1alpha1.ZarfManifest{
+			Name:      "flux-system",
+			Namespace: "flux-system",
+			Files:     []string{"kustomizationl.yaml", "gotk-components.yaml"},
+		}
 
 		if airgap {
+			images, err := getFluxImages(fluxBaseDir)
+			if err != nil {
+				return nil
+			}
 			// Add the images to the list of images to be pulled down by Zarf.
 			fluxComponent.Images = append(fluxComponent.Images, images...)
 		}
+
+		fluxComponent.Manifests = append(fluxComponent.Manifests, fluxManifest)
 	}
 
 	bbRepo := fmt.Sprintf("%s@%s", repo, version)
@@ -96,8 +110,8 @@ func Create(ctx context.Context, tmpPaths *layout.ComponentPaths, version string
 			ValuesFiles: valuesFiles,
 			GitPath:     "./chart",
 		},
-		path.Join(tmpPaths.Temp, bb),
-		path.Join(tmpPaths.Temp, bb, "values"),
+		path.Join(baseDir, bb),
+		path.Join(baseDir, bb, "values"),
 		helm.WithVariableConfig(&variables.VariableConfig{}),
 	)
 
@@ -140,14 +154,6 @@ func Create(ctx context.Context, tmpPaths *layout.ComponentPaths, version string
 		return fmt.Errorf("unable to sort Big Bang HelmReleases: %w", err)
 	}
 
-	// ten minutes in seconds
-	maxTotalSeconds := 10 * 60
-
-	defaultMaxTotalSeconds := c.Actions.OnDeploy.Defaults.MaxTotalSeconds
-	if defaultMaxTotalSeconds > maxTotalSeconds {
-		maxTotalSeconds = defaultMaxTotalSeconds
-	}
-
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
 	for _, hrNamespacedName := range namespacedHelmReleaseNames {
 		hr := hrDependencies[hrNamespacedName]
@@ -159,6 +165,7 @@ func Create(ctx context.Context, tmpPaths *layout.ComponentPaths, version string
 		}
 
 		// TODO, ask radius method what's going on here
+
 		// In Big Bang the metrics-server is a special case that only deploy if needed.
 		// The check it, we need to look for the existence of APIService instead of the HelmRelease, which
 		// may not ever be created. See links below for more details.
@@ -230,8 +237,12 @@ func Create(ctx context.Context, tmpPaths *layout.ComponentPaths, version string
 		bbComponent.Images = helpers.Unique(bbComponent.Images)
 	}
 
+	manifestDir := filepath.Join(baseDir, "manifests")
+
+	os.Mkdir(manifestDir, helpers.ReadWriteExecuteUser)
+
 	// Create the flux wrapper around Big Bang for deployment.
-	manifest, err := addBigBangManifests(airgap, tmpPaths.Temp, cfg)
+	manifest, err := addBigBangManifests(airgap, manifestDir, valuesFiles, version, repo)
 	if err != nil {
 		return err
 	}
@@ -242,6 +253,10 @@ func Create(ctx context.Context, tmpPaths *layout.ComponentPaths, version string
 	// Prepend the Big Bang manifests to the list of manifests to be pulled down by Zarf.
 	// This is done so that the Big Bang manifests are deployed first.
 	bbComponent.Manifests = append(manifests, bbComponent.Manifests...)
+
+	pkg.Components = append(pkg.Components, fluxComponent, bbComponent)
+
+	utils.WriteYaml(filepath.Join(baseDir, "zarf.yaml"), pkg, helpers.ReadWriteUser)
 
 	return nil
 }
@@ -262,7 +277,7 @@ func isValidVersion(version string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return !c.Check(specifiedVersion), fmt.Errorf("Big Bang version %s must be at least %s", version, bbMinRequiredVersion)
+	return c.Check(specifiedVersion), nil
 }
 
 // findBBResources takes a list of yaml objects (as a string) and
@@ -439,12 +454,13 @@ func addBigBangManifests(airgap bool, manifestDir string, valuesFiles []string, 
 		// if err := addManifest(path, data); err != nil {
 		// 	return manifest, err
 		// }
+		fmt.Print(valuesFile)
 
 		// Add it to the list of valuesFrom for the HelmRelease
-		hrValues = append(hrValues, fluxHelmCtrl.ValuesReference{
-			Kind: "Secret",
-			Name: data.Name,
-		})
+		// hrValues = append(hrValues, fluxHelmCtrl.ValuesReference{
+		// 	Kind: "Secret",
+		// 	Name: data.Name,
+		// })
 	}
 
 	if err := addManifest("bb-ext-helmrelease.yaml", manifestHelmRelease(hrValues)); err != nil {
@@ -481,12 +497,4 @@ func findImagesforBBChartRepo(ctx context.Context, repo string, values chartutil
 	spinner.Success()
 
 	return images, err
-}
-
-func getNamespacedNameFromMeta(o metav1.ObjectMeta) string {
-	return getNamespacedNameFromStr(o.Namespace, o.Name)
-}
-
-func getNamespacedNameFromStr(namespace, name string) string {
-	return fmt.Sprintf("%s.%s", namespace, name)
 }
