@@ -32,6 +32,7 @@ import (
 )
 
 var extractPath string
+var bbOpts bigBangOpts
 
 var devCmd = &cobra.Command{
 	Use:     "dev",
@@ -98,13 +99,23 @@ var devGenerateCmd = &cobra.Command{
 	},
 }
 
+type bigBangOpts struct {
+	valuesFiles *[]string
+	skipFlux    *bool
+	airgap      *bool
+	repo        *string
+}
+
 var bigBangGenerateCommand = &cobra.Command{
 	Use:     "big-bang VERSION",
 	Aliases: []string{"bb"},
+	Args:    cobra.ExactArgs(1),
 	Short:   "Creates a zarf.yaml and associated manifests for a Big Bang package",
 	Example: "zarf dev generate big-bang 2.3.4 --values-file=my-values-manifest.yaml",
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		return bigbang.Create(cmd.Context(), ".", "2.19.2", nil, false, "", true)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println(len(args))
+		version := args[0]
+		return bigbang.Create(cmd.Context(), ".", version, *bbOpts.valuesFiles, *bbOpts.skipFlux, *bbOpts.repo, *bbOpts.airgap)
 	},
 }
 
@@ -325,12 +336,17 @@ func init() {
 
 	devCmd.AddCommand(devDeployCmd)
 	devCmd.AddCommand(devGenerateCmd)
-	devGenerateCmd.AddCommand(bigBangGenerateCommand)
 	devCmd.AddCommand(devTransformGitLinksCmd)
 	devCmd.AddCommand(devSha256SumCmd)
 	devCmd.AddCommand(devFindImagesCmd)
 	devCmd.AddCommand(devGenConfigFileCmd)
 	devCmd.AddCommand(devLintCmd)
+	devGenerateCmd.AddCommand(bigBangGenerateCommand)
+
+	bbOpts.valuesFiles = bigBangGenerateCommand.Flags().StringSlice("values-files", nil, "A comma separated list of values files manifests to pass to the Big Bang component")
+	bbOpts.skipFlux = bigBangGenerateCommand.Flags().Bool("skip-flux", false, "Skip the Flux component in the Big Bang package")
+	bbOpts.airgap = bigBangGenerateCommand.Flags().Bool("airgap", true, "Whether or not this package is targeting an airgap environment")
+	bbOpts.repo = bigBangGenerateCommand.Flags().String("repo", "https://https://repo1.dso.mil/big-bang/bigbang.git", "The git repository to use for the Big Bang package")
 
 	bindDevDeployFlags(v)
 	bindDevGenerateFlags(v)

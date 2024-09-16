@@ -44,8 +44,8 @@ var tenMins = metav1.Duration{
 // Create creates a Zarf.yaml file for a big bang package
 func Create(ctx context.Context, baseDir string, version string, valuesFiles []string, skipFlux bool, repo string, airgap bool) error {
 	manifests := []v1alpha1.ZarfManifest{}
-	bbComponent := v1alpha1.ZarfComponent{Name: "bigbang"}
-	fluxComponent := v1alpha1.ZarfComponent{Name: "flux"}
+	bbComponent := v1alpha1.ZarfComponent{Name: "bigbang", Required: helpers.BoolPtr(true)}
+	fluxComponent := v1alpha1.ZarfComponent{Name: "flux", Required: helpers.BoolPtr(true)}
 	pkg := v1alpha1.ZarfPackage{
 		Kind:       v1alpha1.ZarfPackageConfig,
 		APIVersion: v1alpha1.APIVersion,
@@ -62,7 +62,7 @@ func Create(ctx context.Context, baseDir string, version string, valuesFiles []s
 		return fmt.Errorf("invalid version %s: %w", version, err)
 	}
 	if !validVersionResponse {
-		return fmt.Errorf("Big Bang version %s must be at least %s", version, bbMinRequiredVersion)
+		return fmt.Errorf("version %s must be at least %s", version, bbMinRequiredVersion)
 	}
 
 	// If no repo is provided, use the default.
@@ -358,6 +358,8 @@ func findBBResources(t string) (gitRepos map[string]string, helmReleaseDeps map[
 		// If the resource is a GitRepository, parse it for the URL and tag.
 		if g.Kind == fluxSrcCtrl.GitRepositoryKind && g.Spec.URL != "" {
 			ref := "master"
+
+			fmt.Println(g.Spec.Reference)
 
 			switch {
 			case g.Spec.Reference.Commit != "":
