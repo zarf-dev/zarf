@@ -276,7 +276,7 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	CmdPackageDeployFlagAdoptExistingResources         = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
 	CmdPackageDeployFlagSet                            = "Specify deployment variables to set on the command line (KEY=value)"
 	CmdPackageDeployFlagComponents                     = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported."
-	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote package."
+	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote https package."
 	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v1.0.0 please use the --key flag instead."
 	CmdPackageDeployFlagSkipWebhooks                   = "[alpha] Skip waiting for external webhooks to execute as each package component is deployed"
 	CmdPackageDeployFlagTimeout                        = "Timeout for health checks and Helm operations such as installs and rollbacks"
@@ -317,6 +317,7 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a ar
 # Pull a skeleton package
 $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a skeleton`
 	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
+	CmdPackagePullFlagShasum          = "Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'"
 
 	CmdPackageChoose                = "Choose or type the package file"
 	CmdPackageClusterSourceFallback = "%q does not satisfy any current sources, assuming it is a package deployed to a cluster"

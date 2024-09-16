@@ -518,5 +518,6 @@ func bindPublishFlags(v *viper.Viper) {
 
 func bindPullFlags(v *viper.Viper) {
 	pullFlags := packagePullCmd.Flags()
+	pullFlags.StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
 	pullFlags.StringVarP(&pkgConfig.PullOpts.OutputDirectory, "output-directory", "o", v.GetString(common.VPkgPullOutputDir), lang.CmdPackagePullFlagOutputDirectory)
 }
