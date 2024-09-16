@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestLintError(t *testing.T) {
@@ -54,8 +53,7 @@ func TestLintComponents(t *testing.T) {
 			Metadata: v1alpha1.ZarfMetadata{Name: "test-zarf-package"},
 		}
 
-		createOpts := types.ZarfCreateOptions{Flavor: "", BaseDir: "."}
-		_, err := lintComponents(context.Background(), zarfPackage, createOpts)
+		_, err := lintComponents(context.Background(), zarfPackage, "", nil)
 		require.Error(t, err)
 	})
 }
