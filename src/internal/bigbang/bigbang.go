@@ -6,6 +6,7 @@ package bigbang
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -27,6 +28,7 @@ import (
 	"helm.sh/helm/v3/pkg/chartutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
 
@@ -42,8 +44,9 @@ var tenMins = metav1.Duration{
 }
 
 // Create creates a Zarf.yaml file for a big bang package
-func Create(ctx context.Context, baseDir string, version string, valuesFiles []string, skipFlux bool, repo string, airgap bool) error {
+func Create(ctx context.Context, baseDir string, version string, valuesFileManifests []string, skipFlux bool, repo string, airgap bool) error {
 	manifests := []v1alpha1.ZarfManifest{}
+	valuesFiles := []string{}
 	bbComponent := v1alpha1.ZarfComponent{Name: "bigbang", Required: helpers.BoolPtr(true)}
 	fluxComponent := v1alpha1.ZarfComponent{Name: "flux", Required: helpers.BoolPtr(true)}
 	pkg := v1alpha1.ZarfPackage{
@@ -56,6 +59,39 @@ func Create(ctx context.Context, baseDir string, version string, valuesFiles []s
 		Components: []v1alpha1.ZarfComponent{},
 	}
 
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmpDir)
+
+	for idx, valuesFile := range valuesFileManifests {
+		// TODO, maybe delete this function
+		resource, err := getValuesFilesResource(valuesFile)
+		if err != nil {
+			return err
+		}
+		if resource.GetKind() != "Secret" && resource.GetKind() != "ConfigMap" {
+			return errors.New("values manifests must be a Secret or ConfigMap")
+		}
+		data, found, err := unstructured.NestedStringMap(resource.Object, "data")
+		if err != nil || !found {
+			data, found, err = unstructured.NestedStringMap(resource.Object, "stringData")
+			if err != nil || !found {
+				return fmt.Errorf("failed to get data from resource: %w", err)
+			}
+		}
+		valuesYaml, found := data["values.yaml"]
+		if !found {
+			return errors.New("values.yaml key must exist in data")
+		}
+		valuesFilePath := filepath.Join(tmpDir, fmt.Sprintf("values-%d.yaml", idx))
+		if err := os.WriteFile(valuesFilePath, []byte(valuesYaml), helpers.ReadWriteUser); err != nil {
+			return fmt.Errorf("failed to write values.yaml file: %w", err)
+		}
+		valuesFiles = append(valuesFiles, valuesFilePath)
+	}
+
 	validVersionResponse, err := isValidVersion(version)
 
 	if err != nil {
@@ -63,11 +99,6 @@ func Create(ctx context.Context, baseDir string, version string, valuesFiles []s
 	}
 	if !validVersionResponse {
 		return fmt.Errorf("version %s must be at least %s", version, bbMinRequiredVersion)
-	}
-
-	// If no repo is provided, use the default.
-	if repo == "" {
-		repo = bbRepo
 	}
 
 	// By default, we want to deploy flux.
@@ -106,12 +137,6 @@ func Create(ctx context.Context, baseDir string, version string, valuesFiles []s
 	}
 
 	bbRepo := fmt.Sprintf("%s@%s", repo, version)
-
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmpDir)
 
 	// Configure helm to pull down the Big Bang chart.
 	helmCfg := helm.New(
@@ -254,12 +279,12 @@ func Create(ctx context.Context, baseDir string, version string, valuesFiles []s
 	manifestDir := filepath.Join(baseDir, "manifests")
 
 	err = os.Mkdir(manifestDir, helpers.ReadWriteExecuteUser)
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrExist) {
 		return err
 	}
 
 	// Create the flux wrapper around Big Bang for deployment.
-	manifest, err := addBigBangManifests(airgap, manifestDir, valuesFiles, version, repo)
+	manifest, err := addBigBangManifests(airgap, manifestDir, valuesFileManifests, version, repo)
 	if err != nil {
 		return err
 	}
@@ -358,8 +383,6 @@ func findBBResources(t string) (gitRepos map[string]string, helmReleaseDeps map[
 		// If the resource is a GitRepository, parse it for the URL and tag.
 		if g.Kind == fluxSrcCtrl.GitRepositoryKind && g.Spec.URL != "" {
 			ref := "master"
-
-			fmt.Println(g.Spec.Reference)
 
 			switch {
 			case g.Spec.Reference.Commit != "":
@@ -468,6 +491,7 @@ func addBigBangManifests(airgap bool, manifestDir string, valuesFiles []string, 
 	}
 
 	// Loop through the valuesFrom list and create a manifest for each.
+	//TODO change this to take valuesFile resources
 	for _, valuesFile := range valuesFiles {
 		// Get values file name, make sure it's a secret and add it here
 		resource, err := getValuesFilesResource(valuesFile)

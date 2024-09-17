@@ -5,7 +5,6 @@
 package bigbang
 
 import (
-	"errors"
 	"os"
 
 	"github.com/Masterminds/semver/v3"
@@ -132,10 +131,6 @@ func getValuesFilesResource(path string) (unstructured.Unstructured, error) {
 	var resource unstructured.Unstructured
 	if err := yaml.Unmarshal(file, &resource); err != nil {
 		return unstructured.Unstructured{}, err
-	}
-
-	if resource.GetKind() != "Secret" && resource.GetKind() != "ConfigMap" {
-		return unstructured.Unstructured{}, errors.New("values file must be a Secret or ConfigMap")
 	}
 
 	return resource, nil

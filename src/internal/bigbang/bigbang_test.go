@@ -71,7 +71,7 @@ metadata:
   namespace: default
 spec:
   url: https://github.com/example/repo.git
-  reference:
+  ref:
     branch: main
 ---
 apiVersion: v1
@@ -92,23 +92,21 @@ data:
   key: value
 `,
 			expectedGitRepos: map[string]string{
-				"default/my-git-repo": "https://github.com/example/repo.git@main",
+				"default.my-git-repo": "https://github.com/example/repo.git@main",
 			},
 			expectedHelmReleaseDeps: map[string]HelmReleaseDependency{
-				"default/my-helm-release": {
+				"default.my-helm-release": {
 					Metadata: metav1.ObjectMeta{
 						Name:      "my-helm-release",
 						Namespace: "default",
 					},
-					NamespacedDependencies: []string{"default/another-helm-release"},
-					NamespacedSource:       "default/my-git-repo",
+					NamespacedDependencies: []string{".another-helm-release"},
+					NamespacedSource:       "default.my-git-repo",
 					ValuesFrom:             nil,
 				},
 			},
 			expectedHelmReleaseValues: map[string]map[string]interface{}{
-				"default/my-helm-release": {
-					"key": "value",
-				},
+				"default.my-helm-release": {},
 			},
 			expectedErr: false,
 		},

@@ -346,7 +346,7 @@ func init() {
 	bbOpts.valuesFiles = bigBangGenerateCommand.Flags().StringSlice("values-files", nil, "A comma separated list of values files manifests to pass to the Big Bang component")
 	bbOpts.skipFlux = bigBangGenerateCommand.Flags().Bool("skip-flux", false, "Skip the Flux component in the Big Bang package")
 	bbOpts.airgap = bigBangGenerateCommand.Flags().Bool("airgap", true, "Whether or not this package is targeting an airgap environment")
-	bbOpts.repo = bigBangGenerateCommand.Flags().String("repo", "https://https://repo1.dso.mil/big-bang/bigbang.git", "The git repository to use for the Big Bang package")
+	bbOpts.repo = bigBangGenerateCommand.Flags().String("repo", "https://repo1.dso.mil/big-bang/bigbang.git", "The git repository to use for the Big Bang package")
 
 	bindDevDeployFlags(v)
 	bindDevGenerateFlags(v)
