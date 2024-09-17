@@ -1,0 +1,20 @@
+ApiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-config
+data:
+  values.yaml: |
+    elasticsearchKibana:
+      enabled: false
+
+    eckOperator:
+      enabled: false
+
+    fluentbit:
+      enabled: false
+
+    loki:
+      enabled: true
+
+    promtail:
+      enabled: true

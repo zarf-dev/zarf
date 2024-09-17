@@ -1,0 +1,149 @@
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfPackageConfig
+metadata:
+  name: bigbang
+components:
+- name: bigbang
+  required: true
+  manifests:
+  - name: bigbang
+    namespace: bigbang
+    files:
+    - manifests/bb-ext-gitrepository.yaml
+    - manifests/bb-ext-zarf-credentials.yaml
+    - values-files/ingress.yaml
+    - values-files/kyverno.yaml
+    - values-files/loki.yaml
+    - values-files/neuvector.yaml
+    - manifests/bb-ext-helmrelease.yaml
+  images:
+  - registry1.dso.mil/ironbank/opensource/istio/operator:1.19.6
+  - registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.28.4
+  - registry1.dso.mil/ironbank/opensource/kyverno/policy-reporter:2.17.5
+  - registry1.dso.mil/ironbank/opensource/grafana/loki:2.9.3
+  - registry1.dso.mil/ironbank/opensource/prometheus/alertmanager:v0.26.0
+  - registry1.dso.mil/ironbank/big-bang/base:2.1.0
+  - registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.28.6
+  - registry1.dso.mil/ironbank/opensource/kubernetes/kube-state-metrics:v2.10.1
+  - registry1.dso.mil/ironbank/opensource/ingress-nginx/kube-webhook-certgen:v1.3.0
+  - registry1.dso.mil/ironbank/opensource/prometheus/prometheus:v2.49.1
+  - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-config-reloader:v0.71.0
+  - registry1.dso.mil/ironbank/opensource/prometheus-operator/prometheus-operator:v0.71.0
+  - registry1.dso.mil/ironbank/opensource/prometheus/node-exporter:v1.7.0
+  - registry1.dso.mil/ironbank/opensource/thanos/thanos:v0.33.0
+  - registry1.dso.mil/ironbank/neuvector/neuvector/controller:5.2.2
+  - registry1.dso.mil/ironbank/neuvector/neuvector/enforcer:5.2.2
+  - registry1.dso.mil/ironbank/neuvector/neuvector/manager:5.2.2
+  - registry1.dso.mil/ironbank/neuvector/neuvector/scanner:5
+  - registry1.dso.mil/ironbank/neuvector/neuvector/prometheus-exporter:5.1.0
+  - registry1.dso.mil/ironbank/big-bang/grafana/grafana-plugins:10.2.3
+  - registry1.dso.mil/ironbank/kiwigrid/k8s-sidecar:1.25.3
+  - registry1.dso.mil/ironbank/opensource/istio/pilot:1.19.6
+  - registry1.dso.mil/ironbank/opensource/istio/proxyv2:1.19.6
+  - registry1.dso.mil/ironbank/opensource/kiali/kiali:v1.78.0
+  - registry1.dso.mil/ironbank/opensource/kiali/kiali-operator:v1.78.0
+  - registry1.dso.mil/ironbank/opensource/kyverno:v1.11.4
+  - registry1.dso.mil/ironbank/opensource/kyverno/kyvernopre:v1.11.4
+  - registry1.dso.mil/ironbank/opensource/kubernetes/kubectl:v1.28.5
+  - registry1.dso.mil/ironbank/redhat/ubi/ubi9-minimal:9.3
+  - registry1.dso.mil/ironbank/opensource/kyverno/kyverno/reports-controller:v1.11.4
+  - registry1.dso.mil/ironbank/opensource/kyverno/kyverno/background-controller:v1.11.4
+  - registry1.dso.mil/ironbank/opensource/kyverno/kyverno/cleanup-controller:v1.11.4
+  - registry1.dso.mil/ironbank/opensource/kubernetes-sigs/metrics-server:v0.6.4
+  - registry1.dso.mil/ironbank/opensource/grafana/promtail:v2.9.2
+  - registry1.dso.mil/ironbank/opensource/grafana/tempo:2.3.0-ubi9
+  - registry1.dso.mil/ironbank/opensource/grafana/tempo-query:2.3.1
+  repos:
+  - https://repo1.dso.mil/big-bang/bigbang@2.19.2
+  - https://repo1.dso.mil/big-bang/product/packages/istio-operator.git@1.19.6-bb.0
+  - https://repo1.dso.mil/big-bang/product/packages/istio-controlplane.git@1.19.6-bb.1
+  - https://repo1.dso.mil/big-bang/product/packages/kiali.git@1.78.0-bb.1
+  - https://repo1.dso.mil/big-bang/product/packages/kyverno-policies.git@3.0.4-bb.18
+  - https://repo1.dso.mil/big-bang/product/packages/loki.git@5.41.4-bb.1
+  - https://repo1.dso.mil/big-bang/product/packages/metrics-server.git@3.11.0-bb.2
+  - https://repo1.dso.mil/big-bang/product/packages/monitoring.git@56.0.3-bb.0
+  - https://repo1.dso.mil/big-bang/product/packages/grafana.git@7.2.1-bb.3
+  - https://repo1.dso.mil/big-bang/product/packages/kyverno.git@3.1.4-bb.0
+  - https://repo1.dso.mil/big-bang/product/packages/neuvector.git@2.6.3-bb.8
+  - https://repo1.dso.mil/big-bang/product/packages/promtail.git@6.15.3-bb.4
+  - https://repo1.dso.mil/big-bang/product/packages/tempo.git@1.7.1-bb.2
+  - https://repo1.dso.mil/big-bang/product/packages/kyverno-reporter.git@2.21.6-bb.0
+  actions:
+    onDeploy:
+      onFailure:
+      - cmd: ./zarf tools kubectl get nodes -o wide
+      - cmd: ./zarf tools kubectl get hr -n bigbang
+      - cmd: ./zarf tools kubectl get gitrepo -n bigbang
+      - cmd: ./zarf tools kubectl get pods -A
+      - mute: true
+        cmd: ./zarf tools kubectl describe hr -n bigbang
+        description: Storing debug information to the log for troubleshooting.
+      - mute: true
+        cmd: ./zarf tools kubectl describe gitrepo -n bigbang
+        description: Storing debug information to the log for troubleshooting.
+      - mute: true
+        cmd: ./zarf tools kubectl describe pods -A
+        description: Storing debug information to the log for troubleshooting.
+      - mute: true
+        cmd: ./zarf tools kubectl describe nodes
+        description: Storing debug information to the log for troubleshooting.
+      - mute: true
+        cmd: ./zarf tools kubectl get events -A
+        description: Storing debug information to the log for troubleshooting.
+    onRemove:
+      before:
+      - cmd: ./zarf tools kubectl patch helmrelease -n bigbang bigbang --type=merge -p '{"spec":{"suspend":true}}'
+        description: Suspend Big Bang HelmReleases to prevent reconciliation during removal.
+  healthChecks:
+  - apiVersion: v1
+    kind: HelmRelease
+    namespace: bigbang
+    name: kyverno
+  - apiVersion: v1
+    kind: HelmRelease
+    namespace: bigbang
+    name: kyverno-policies
+  - apiVersion: v1
+    kind: HelmRelease
+    namespace: bigbang
+    name: istio-operator
+  - apiVersion: v1
+    kind: HelmRelease
+    namespace: bigbang
+    name: istio
+  - apiVersion: v1
+    kind: HelmRelease
+    namespace: bigbang
+    name: monitoring
+  - apiVersion: v1
+    kind: HelmRelease
+    namespace: bigbang
+    name: loki
+  - apiVersion: v1
+    kind: HelmRelease
+    namespace: bigbang
+    name: grafana
+  - apiVersion: v1
+    kind: HelmRelease
+    namespace: bigbang
+    name: tempo
+  - apiVersion: v1
+    kind: HelmRelease
+    namespace: bigbang
+    name: promtail
+  - apiVersion: v1
+    kind: HelmRelease
+    namespace: bigbang
+    name: metrics-server
+  - apiVersion: v1
+    kind: HelmRelease
+    namespace: bigbang
+    name: kiali
+  - apiVersion: v1
+    kind: HelmRelease
+    namespace: bigbang
+    name: neuvector
+  - apiVersion: v1
+    kind: HelmRelease
+    namespace: bigbang
+    name: kyverno-reporter

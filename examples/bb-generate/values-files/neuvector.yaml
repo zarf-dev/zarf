@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bb-usr-vals-0-ingress
+  namespace: bigbang
+stringData:
+  values.yaml: |
+    # If running in k3s, this is needed for Neuvector to start properly
+    neuvector:
+      values:
+        k3s:
+          enabled: true

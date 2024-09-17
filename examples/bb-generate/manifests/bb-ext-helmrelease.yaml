@@ -1,0 +1,36 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  creationTimestamp: null
+  name: bigbang
+  namespace: bigbang
+spec:
+  chart:
+    spec:
+      chart: ./chart
+      sourceRef:
+        kind: GitRepository
+        name: bigbang
+  install:
+    remediation:
+      retries: -1
+  interval: 0s
+  rollback:
+    cleanupOnFail: true
+  timeout: 10m0s
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 5
+  valuesFrom:
+  - kind: Secret
+    name: zarf-credentials
+  - kind: Secret
+    name: bb-usr-vals-0-ingress
+  - kind: ConfigMap
+    name: kyverno-config
+  - kind: ConfigMap
+    name: loki-config
+  - kind: Secret
+    name: bb-usr-vals-0-ingress
+status: {}
