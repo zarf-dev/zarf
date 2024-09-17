@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -188,6 +189,11 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 		}
 	}
 
+	// Sort so the dependencies are always the same between runs
+	sort.Slice(hrDependencies, func(i, j int) bool {
+		return hrDependencies[i].Metadata.Name < hrDependencies[j].Metadata.Name
+	})
+
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
 	for _, hr := range hrDependencies {
 		healthCheck := v1alpha1.NamespacedObjectKindReference{
@@ -315,7 +321,7 @@ func isValidVersion(version string) (bool, error) {
 // findBBResources takes a list of yaml objects (as a string) and
 // parses it for GitRepository objects that it then parses
 // to return the list of git repos and tags needed.
-func findBBResources(t string) (map[string]string, map[string]HelmReleaseDependency, map[string]map[string]interface{}, error) {
+func findBBResources(t string) (map[string]string, []HelmReleaseDependency, map[string]map[string]interface{}, error) {
 	// Break the template into separate resources.
 	yamls, err := utils.SplitYAMLToString([]byte(t))
 	if err != nil {
@@ -323,7 +329,7 @@ func findBBResources(t string) (map[string]string, map[string]HelmReleaseDepende
 	}
 
 	gitRepos := map[string]string{}
-	helmReleaseDeps := map[string]HelmReleaseDependency{}
+	helmReleaseDeps := []HelmReleaseDependency{}
 	helmReleaseValues := map[string]map[string]interface{}{}
 	secrets := map[string]corev1.Secret{}
 	configMaps := map[string]corev1.ConfigMap{}
@@ -348,15 +354,14 @@ func findBBResources(t string) (map[string]string, map[string]HelmReleaseDepende
 				deps = append(deps, depNamespacedName)
 			}
 
-			namespacedName := getNamespacedNameFromMeta(h.ObjectMeta)
 			srcNamespacedName := getNamespacedNameFromStr(h.Spec.Chart.Spec.SourceRef.Namespace, h.Spec.Chart.Spec.SourceRef.Name)
 
-			helmReleaseDeps[namespacedName] = HelmReleaseDependency{
+			helmReleaseDeps = append(helmReleaseDeps, HelmReleaseDependency{
 				Metadata:               h.ObjectMeta,
 				NamespacedDependencies: deps,
 				NamespacedSource:       srcNamespacedName,
 				ValuesFrom:             h.Spec.ValuesFrom,
-			}
+			})
 
 		case fluxSrcCtrl.GitRepositoryKind:
 			var g fluxSrcCtrl.GitRepository

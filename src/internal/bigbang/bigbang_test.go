@@ -50,7 +50,7 @@ func TestFindBBResources(t *testing.T) {
 		name                      string
 		input                     string
 		expectedGitRepos          map[string]string
-		expectedHelmReleaseDeps   map[string]HelmReleaseDependency
+		expectedHelmReleaseDeps   []HelmReleaseDependency
 		expectedHelmReleaseValues map[string]map[string]interface{}
 	}{
 		{
@@ -59,8 +59,8 @@ func TestFindBBResources(t *testing.T) {
 			expectedGitRepos: map[string]string{
 				"default.my-git-repo": "https://github.com/example/repo.git@main",
 			},
-			expectedHelmReleaseDeps: map[string]HelmReleaseDependency{
-				"default.my-helm-release": {
+			expectedHelmReleaseDeps: []HelmReleaseDependency{
+				{
 					Metadata: metav1.ObjectMeta{
 						Name:      "my-helm-release",
 						Namespace: "default",
