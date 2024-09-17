@@ -162,22 +162,7 @@ func TestGetValuesFromManifest(t *testing.T) {
 }
 
 func TestAddBigBangManifests(t *testing.T) {
-	// Set up a temporary directory for the manifests
-
-	tempDir := t.TempDir()
-
-	// ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	// 	// Extract the filename from the URL
-	// 	urlPath := r.URL.Path
-	// 	filename := path.Base(urlPath)
-	// 	filepath := path.Join("testdata", "downloaded", filename)
-	// 	data, err := os.ReadFile(filepath)
-	// 	require.NoError(t, err)
-	// 	w.Write(data)
-	// }))
-	// defer ts.Close()
-
-	// Define test cases
+	t.Parallel()
 	tests := []struct {
 		name          string
 		airgap        bool
@@ -185,7 +170,6 @@ func TestAddBigBangManifests(t *testing.T) {
 		version       string
 		repo          string
 		expectedFiles []string
-		expectError   bool
 	}{
 		{
 			name:        "Airgap true",
@@ -198,7 +182,6 @@ func TestAddBigBangManifests(t *testing.T) {
 				filepath.Join("testdata", "addBBManifests", "airgap-true", "bb-zarf-credentials.yaml"),
 				filepath.Join("testdata", "addBBManifests", "airgap-true", "helmrelease.yaml"),
 			},
-			expectError: false,
 		},
 		{
 			name:   "Airgap false with values files and v2beta1 version",
@@ -212,22 +195,19 @@ func TestAddBigBangManifests(t *testing.T) {
 				filepath.Join("testdata", "addBBManifests", "airgap-false", "gitrepository.yaml"),
 				filepath.Join("testdata", "addBBManifests", "airgap-false", "helmrelease.yaml"),
 			},
-			expectError: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			tempDir := t.TempDir()
 			var expectedManifests []string
 			for _, f := range tt.expectedFiles {
 				expectedManifests = append(expectedManifests, filepath.Join(tempDir, filepath.Base(f)))
 			}
 			expectedManifests = append(expectedManifests, tt.valuesFiles...)
 			manifest, err := addBigBangManifests(context.Background(), tt.airgap, tempDir, tt.valuesFiles, tt.version, tt.repo)
-			if tt.expectError {
-				require.Error(t, err)
-				return
-			}
 			require.NoError(t, err)
 			require.ElementsMatch(t, expectedManifests, manifest.Files)
 
