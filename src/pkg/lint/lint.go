@@ -9,13 +9,14 @@ import (
 	"fmt"
 	"os"
 
+	goyaml "github.com/goccy/go-yaml"
+
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/composer"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // LintError represents an error containing lint findings.
@@ -42,22 +43,28 @@ func (e *LintError) OnlyWarnings() bool {
 }
 
 // Validate lints the given Zarf package
-func Validate(ctx context.Context, createOpts types.ZarfCreateOptions) error {
-	var findings []PackageFinding
-	if err := os.Chdir(createOpts.BaseDir); err != nil {
-		return fmt.Errorf("unable to access directory %q: %w", createOpts.BaseDir, err)
+func Validate(ctx context.Context, baseDir, flavor string, setVariables map[string]string) error {
+	err := os.Chdir(baseDir)
+	if err != nil {
+		return fmt.Errorf("unable to access directory %q: %w", baseDir, err)
+	}
+	b, err := os.ReadFile(layout.ZarfYAML)
+	if err != nil {
+		return err
 	}
 	var pkg v1alpha1.ZarfPackage
-	if err := utils.ReadYaml(layout.ZarfYAML, &pkg); err != nil {
+	err = goyaml.Unmarshal(b, &pkg)
+	if err != nil {
 		return err
 	}
 
-	compFindings, err := lintComponents(ctx, pkg, createOpts)
+	findings := []PackageFinding{}
+	compFindings, err := lintComponents(ctx, pkg, flavor, setVariables)
 	if err != nil {
 		return err
 	}
 	findings = append(findings, compFindings...)
-	schemaFindings, err := ValidatePackageSchema(createOpts.SetVariables)
+	schemaFindings, err := ValidatePackageSchema(setVariables)
 	if err != nil {
 		return err
 	}
@@ -66,31 +73,27 @@ func Validate(ctx context.Context, createOpts types.ZarfCreateOptions) error {
 		return nil
 	}
 	return &LintError{
-		BaseDir:     createOpts.BaseDir,
+		BaseDir:     baseDir,
 		PackageName: pkg.Metadata.Name,
 		Findings:    findings,
 	}
 }
 
-func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, createOpts types.ZarfCreateOptions) ([]PackageFinding, error) {
-	var findings []PackageFinding
-
+func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, flavor string, setVariables map[string]string) ([]PackageFinding, error) {
+	findings := []PackageFinding{}
 	for i, component := range pkg.Components {
 		arch := config.GetArch(pkg.Metadata.Architecture)
-		if !composer.CompatibleComponent(component, arch, createOpts.Flavor) {
+		if !composer.CompatibleComponent(component, arch, flavor) {
 			continue
 		}
-
-		chain, err := composer.NewImportChain(ctx, component, i, pkg.Metadata.Name, arch, createOpts.Flavor)
-
+		chain, err := composer.NewImportChain(ctx, component, i, pkg.Metadata.Name, arch, flavor)
 		if err != nil {
 			return nil, err
 		}
-
 		node := chain.Head()
 		for node != nil {
 			component := node.ZarfComponent
-			compFindings, err := templateZarfObj(&component, createOpts.SetVariables)
+			compFindings, err := templateZarfObj(&component, setVariables)
 			if err != nil {
 				return nil, err
 			}

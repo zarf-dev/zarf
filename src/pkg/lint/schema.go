@@ -23,17 +23,14 @@ func ValidatePackageSchema(setVariables map[string]string) ([]PackageFinding, er
 	if err := utils.ReadYaml(layout.ZarfYAML, &untypedZarfPackage); err != nil {
 		return nil, err
 	}
-
 	jsonSchema, err := ZarfSchema.ReadFile("zarf.schema.json")
 	if err != nil {
 		return nil, err
 	}
-
 	_, err = templateZarfObj(&untypedZarfPackage, setVariables)
 	if err != nil {
 		return nil, err
 	}
-
 	return getSchemaFindings(jsonSchema, untypedZarfPackage)
 }
 
