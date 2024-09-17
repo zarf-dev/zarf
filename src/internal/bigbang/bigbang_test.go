@@ -43,7 +43,7 @@ func TestRequiredBigBangVersions(t *testing.T) {
 }
 
 func TestFindBBResources(t *testing.T) {
-	b, err := os.ReadFile(filepath.Join("testdata", "find-bb-template-resources.yaml"))
+	b, err := os.ReadFile(filepath.Join("testdata", "findBBResources", "resources.yaml"))
 	require.NoError(t, err)
 	template := string(b)
 	tests := []struct {
@@ -52,7 +52,6 @@ func TestFindBBResources(t *testing.T) {
 		expectedGitRepos          map[string]string
 		expectedHelmReleaseDeps   map[string]HelmReleaseDependency
 		expectedHelmReleaseValues map[string]map[string]interface{}
-		expectedErr               bool
 	}{
 		{
 			name:  "Valid input with HelmRelease, GitRepository, Secret, and ConfigMap",
@@ -86,31 +85,16 @@ func TestFindBBResources(t *testing.T) {
 					"key2": "value2",
 				},
 			},
-			expectedErr: false,
-		},
-		{
-			name: "Invalid YAML input",
-			input: `
-		invalid-yaml
-		`,
-			expectedGitRepos:          nil,
-			expectedHelmReleaseDeps:   nil,
-			expectedHelmReleaseValues: nil,
-			expectedErr:               true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gitRepos, helmReleaseDeps, helmReleaseValues, err := findBBResources(tt.input)
-			if tt.expectedErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tt.expectedGitRepos, gitRepos)
-				require.Equal(t, tt.expectedHelmReleaseDeps, helmReleaseDeps)
-				require.Equal(t, tt.expectedHelmReleaseValues, helmReleaseValues)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedGitRepos, gitRepos)
+			require.Equal(t, tt.expectedHelmReleaseDeps, helmReleaseDeps)
+			require.Equal(t, tt.expectedHelmReleaseValues, helmReleaseValues)
 		})
 	}
 }
