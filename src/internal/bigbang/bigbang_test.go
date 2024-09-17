@@ -63,6 +63,7 @@ spec:
         namespace: default
   dependsOn:
   - name: another-helm-release
+    namespace: istio
 ---
 apiVersion: source.toolkit.fluxcd.io/v1beta2
 kind: GitRepository
@@ -100,7 +101,7 @@ data:
 						Name:      "my-helm-release",
 						Namespace: "default",
 					},
-					NamespacedDependencies: []string{".another-helm-release"},
+					NamespacedDependencies: []string{"istio.another-helm-release"},
 					NamespacedSource:       "default.my-git-repo",
 					ValuesFrom:             nil,
 				},
@@ -110,49 +111,16 @@ data:
 			},
 			expectedErr: false,
 		},
-		// 		{
-		// 			name: "Invalid YAML input",
-		// 			input: `
-		// invalid-yaml
-		// `,
-		// 			expectedGitRepos:          nil,
-		// 			expectedHelmReleaseDeps:   nil,
-		// 			expectedHelmReleaseValues: nil,
-		// 			expectedErr:               true,
-		// 		},
-		// 		{
-		// 			name: "Input with missing fields",
-		// 			input: `
-		// apiVersion: helm.toolkit.fluxcd.io/v2beta1
-		// kind: HelmRelease
-		// metadata:
-		//   name: my-helm-release
-		//   namespace: default
-		// spec:
-		//   chart:
-		//     spec:
-		//       sourceRef:
-		//         kind: GitRepository
-		//         name: my-git-repo
-		//         namespace: default
-		// `,
-		// 			expectedGitRepos: nil,
-		// 			expectedHelmReleaseDeps: map[string]HelmReleaseDependency{
-		// 				"default/my-helm-release": {
-		// 					Metadata: metav1.ObjectMeta{
-		// 						Name:      "my-helm-release",
-		// 						Namespace: "default",
-		// 					},
-		// 					NamespacedDependencies: nil,
-		// 					NamespacedSource:       "default/my-git-repo",
-		// 					ValuesFrom:             nil,
-		// 				},
-		// 			},
-		// 			expectedHelmReleaseValues: map[string]map[string]interface{}{
-		// 				"default/my-helm-release": {},
-		// 			},
-		// 			expectedErr: false,
-		// 		},
+		{
+			name: "Invalid YAML input",
+			input: `
+		invalid-yaml
+		`,
+			expectedGitRepos:          nil,
+			expectedHelmReleaseDeps:   nil,
+			expectedHelmReleaseValues: nil,
+			expectedErr:               true,
+		},
 	}
 
 	for _, tt := range tests {
