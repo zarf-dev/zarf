@@ -110,10 +110,9 @@ var bigBangGenerateCommand = &cobra.Command{
 	Use:     "big-bang VERSION",
 	Aliases: []string{"bb"},
 	Args:    cobra.ExactArgs(1),
-	Short:   "Creates a zarf.yaml and associated manifests for a Big Bang package",
+	Short:   "Creates a zarf.yaml and associated manifests for a Big Bang Zarf package in the current directory",
 	Example: "zarf dev generate big-bang 2.3.4 --values-file=my-values-manifest.yaml",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println(len(args))
 		version := args[0]
 		return bigbang.Create(cmd.Context(), ".", version, *bbOpts.valuesFiles, *bbOpts.skipFlux, *bbOpts.repo, *bbOpts.airgap)
 	},
@@ -346,7 +345,7 @@ func init() {
 	bbOpts.valuesFiles = bigBangGenerateCommand.Flags().StringSlice("values-files", nil, "A comma separated list of values files manifests to pass to the Big Bang component")
 	bbOpts.skipFlux = bigBangGenerateCommand.Flags().Bool("skip-flux", false, "Skip the Flux component in the Big Bang package")
 	bbOpts.airgap = bigBangGenerateCommand.Flags().Bool("airgap", true, "Whether or not this package is targeting an airgap environment")
-	bbOpts.repo = bigBangGenerateCommand.Flags().String("repo", "https://repo1.dso.mil/big-bang/bigbang.git", "The git repository to use for the Big Bang package")
+	bbOpts.repo = bigBangGenerateCommand.Flags().String("repo", "https://repo1.dso.mil/big-bang/bigbang", "The git repository to use for the Big Bang package")
 
 	bindDevDeployFlags(v)
 	bindDevGenerateFlags(v)

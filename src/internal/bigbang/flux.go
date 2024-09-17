@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
@@ -40,21 +39,14 @@ func (h HelmReleaseDependency) Dependencies() []string {
 }
 
 // getFluxManifest Creates a component to deploy Flux.
-func getFluxManifest(dir, file, repo, version string) error {
-	// Instead of compiling the kustomization ahead of time, we should just pull down the files and do a kustomization
-	// within Zarf. The trouble will be when people want to make changes kustomization
-
-	// If the .git is part of the url then we will be redirected to authenticate
-	// TODO check if .git is necessary
-	repo = strings.TrimSuffix(repo, ".git")
-
+func getFluxManifest(ctx context.Context, dir, file, repo, version string) error {
 	remotePath := fmt.Sprintf("%s/-/raw/master/base/flux", repo)
 	ref := fmt.Sprintf("?ref_type=%s", version)
 
 	kustomizationPath := fmt.Sprintf("%s/%s%s", remotePath, file, ref)
 	localKustomizationPath := filepath.Join(dir, file)
 
-	err := utils.DownloadToFile(context.TODO(), kustomizationPath, localKustomizationPath, "")
+	err := utils.DownloadToFile(ctx, kustomizationPath, localKustomizationPath, "")
 	if err != nil {
 		return err
 	}

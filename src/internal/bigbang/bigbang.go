@@ -72,7 +72,6 @@ func getValuesFromManifest(valuesFileManifest string) (string, error) {
 // Create creates a Zarf.yaml file for a big bang package
 func Create(ctx context.Context, baseDir string, version string, valuesFileManifests []string, skipFlux bool, repo string, airgap bool) error {
 	bbComponent := v1alpha1.ZarfComponent{Name: "bigbang", Required: helpers.BoolPtr(true)}
-	fluxComponent := v1alpha1.ZarfComponent{Name: "flux", Required: helpers.BoolPtr(true)}
 	pkg := v1alpha1.ZarfPackage{
 		Kind:       v1alpha1.ZarfPackageConfig,
 		APIVersion: v1alpha1.APIVersion,
@@ -113,18 +112,24 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 
 	// By default, we want to deploy flux.
 	if !skipFlux {
-		fluxBaseDir := filepath.Join(baseDir, "flux")
-		err := getFluxManifest(fluxBaseDir, "kustomization.yaml", repo, version)
+		fluxComponent := v1alpha1.ZarfComponent{Name: "flux", Required: helpers.BoolPtr(true)}
+		fluxTmpDir := filepath.Join(tmpDir, "flux")
+		err := getFluxManifest(ctx, fluxTmpDir, "kustomization.yaml", repo, version)
 		if err != nil {
 			return err
 		}
 
-		err = getFluxManifest(fluxBaseDir, "gotk-components.yaml", repo, version)
+		err = getFluxManifest(ctx, fluxTmpDir, "gotk-components.yaml", repo, version)
 		if err != nil {
 			return err
 		}
+		fluxBaseDir := filepath.Join(baseDir, "flux")
+		err = os.Mkdir(fluxBaseDir, helpers.ReadWriteExecuteUser)
+		if err != nil && !errors.Is(err, os.ErrExist) {
+			return err
+		}
 		fluxFilePath := filepath.Join(fluxBaseDir, "bb-flux.yaml")
-		if err := kustomize.Build(fluxBaseDir, fluxFilePath, true); err != nil {
+		if err := kustomize.Build(fluxTmpDir, fluxFilePath, true); err != nil {
 			return fmt.Errorf("unable to build kustomization: %w", err)
 		}
 
@@ -139,14 +144,19 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 			if err != nil {
 				return nil
 			}
-			// Add the images to the list of images to be pulled down by Zarf.
 			fluxComponent.Images = append(fluxComponent.Images, images...)
 		}
 
 		fluxComponent.Manifests = append(fluxComponent.Manifests, fluxManifest)
+		pkg.Components = append(pkg.Components, fluxComponent)
 	}
 
 	bbRepo := fmt.Sprintf("%s@%s", repo, version)
+
+	if airgap {
+		bbRepo := fmt.Sprintf("%s@%s", repo, version)
+		bbComponent.Repos = append(bbComponent.Repos, bbRepo)
+	}
 
 	// Configure helm to pull down the Big Bang chart.
 	helmCfg := helm.New(
@@ -174,12 +184,6 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 	template, _, err := helmCfg.TemplateChart(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to template Big Bang Chart: %w", err)
-	}
-
-	// Add the Big Bang repo to the list of repos to be pulled down by Zarf.
-	if airgap {
-		bbRepo := fmt.Sprintf("%s@%s", repo, version)
-		bbComponent.Repos = append(bbComponent.Repos, bbRepo)
 	}
 
 	// Parse the template for GitRepository objects and add them to the list of repos to be pulled down by Zarf.
@@ -307,7 +311,7 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 	// This is done so that the Big Bang manifests are deployed first.
 	bbComponent.Manifests = append(manifests, bbComponent.Manifests...)
 
-	pkg.Components = append(pkg.Components, fluxComponent, bbComponent)
+	pkg.Components = append(pkg.Components, bbComponent)
 
 	err = utils.WriteYaml(filepath.Join(baseDir, "zarf.yaml"), pkg, helpers.ReadWriteUser)
 	if err != nil {
