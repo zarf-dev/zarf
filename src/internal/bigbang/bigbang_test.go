@@ -202,7 +202,7 @@ func TestAddBigBangManifests(t *testing.T) {
 		},
 		{
 			name:   "Airgap false with values files and v2beta1 version",
-			airgap: true,
+			airgap: false,
 			valuesFiles: []string{
 				filepath.Join("testdata", "addBBManifests", "airgap-false", "neuvector.yaml"),
 			},
@@ -218,23 +218,22 @@ func TestAddBigBangManifests(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			manifestDir := filepath.Join(tempDir, tt.name)
-			err := os.MkdirAll(manifestDir, os.ModePerm)
-			require.NoError(t, err)
-			defer os.RemoveAll(manifestDir)
-
-			// TODO test the manifest
-			_, err = addBigBangManifests(context.Background(), tt.airgap, manifestDir, tt.valuesFiles, tt.version, tt.repo)
+			var expectedManifests []string
+			for _, f := range tt.expectedFiles {
+				expectedManifests = append(expectedManifests, filepath.Join(tempDir, filepath.Base(f)))
+			}
+			expectedManifests = append(expectedManifests, tt.valuesFiles...)
+			manifest, err := addBigBangManifests(context.Background(), tt.airgap, tempDir, tt.valuesFiles, tt.version, tt.repo)
 			if tt.expectError {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
+			require.ElementsMatch(t, expectedManifests, manifest.Files)
 
-			// Compare generated files with expected files
 			for _, expectedFile := range tt.expectedFiles {
 				_, filename := filepath.Split(expectedFile)
-				generatedFile := filepath.Join(manifestDir, filename)
+				generatedFile := filepath.Join(tempDir, filename)
 				expectedContent, err := os.ReadFile(expectedFile)
 				require.NoError(t, err)
 				generatedContent, err := os.ReadFile(generatedFile)

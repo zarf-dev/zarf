@@ -27,6 +27,4 @@ spec:
       retries: 5
   valuesFrom:
   - kind: Secret
-    name: zarf-credentials
-  - kind: Secret
     name: bb-secret
