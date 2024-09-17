@@ -56,16 +56,9 @@ var packageCreateCmd = &cobra.Command{
 		}
 
 		v := common.GetViper()
-		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
-			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
+		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-		pkgClient, err := packager.New(&pkgConfig)
-		if err != nil {
-			return err
-		}
-		defer pkgClient.ClearTempPaths()
-
-		err = pkgClient.Create(cmd.Context())
+		err := packager2.Create(cmd.Context(), pkgConfig.CreateOpts)
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
 			common.PrintFindings(lintErr)
