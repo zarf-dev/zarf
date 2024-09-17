@@ -83,7 +83,6 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 	defer os.Remove(tmpDir)
 
 	validVersionResponse, err := isValidVersion(version)
-
 	if err != nil {
 		return fmt.Errorf("invalid version %s: %w", version, err)
 	}
@@ -167,8 +166,7 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 	)
 
 	// Download the chart from Git and save it to a temporary directory.
-	err = helmCfg.PackageChartFromGit(ctx, "")
-	if err != nil {
+	if err := helmCfg.PackageChartFromGit(ctx, ""); err != nil {
 		return fmt.Errorf("unable to download Big Bang Chart: %w", err)
 	}
 
@@ -534,7 +532,6 @@ func findImagesForBBChartRepo(ctx context.Context, repo string, values chartutil
 	}
 	defer os.RemoveAll(gitPath)
 
-	// Set the directory for the chart
 	chartPath := filepath.Join(gitPath, "chart")
 
 	images, err = helm.FindAnnotatedImagesForChart(chartPath, values)

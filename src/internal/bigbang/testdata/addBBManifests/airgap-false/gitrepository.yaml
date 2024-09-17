@@ -1,0 +1,14 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: GitRepository
+metadata:
+  name: bigbang
+spec:
+  ignore: |
+    # exclude file extensions
+    /**/*.md
+    /**/*.txt
+    /**/*.sh
+  interval: 10m
+  url: https://repo1.dso.mil/big-bang/bigbang.git
+  ref:
+    tag: 2.0.0

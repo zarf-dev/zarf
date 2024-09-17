@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bb-secret
+  namespace: bigbang
+stringData:
+  values.yaml: |
+    neuvector:
+      values:
+        k3s:
+          enabled: true

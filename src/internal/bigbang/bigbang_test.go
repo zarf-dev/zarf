@@ -188,19 +188,32 @@ func TestAddBigBangManifests(t *testing.T) {
 		expectError   bool
 	}{
 		{
-			name:        "Airgap true with values files",
+			name:        "Airgap true",
 			airgap:      true,
 			valuesFiles: []string{},
 			version:     "2.35.0",
 			repo:        "https://repo1.dso.mil/big-bang/bigbang",
 			expectedFiles: []string{
-				filepath.Join("testdata", "addBBManifests", "expected", "gitrepository.yaml"),
-				filepath.Join("testdata", "addBBManifests", "expected", "bb-zarf-credentials.yaml"),
-				filepath.Join("testdata", "addBBManifests", "expected", "helmrelease.yaml"),
+				filepath.Join("testdata", "addBBManifests", "airgap-true", "gitrepository.yaml"),
+				filepath.Join("testdata", "addBBManifests", "airgap-true", "bb-zarf-credentials.yaml"),
+				filepath.Join("testdata", "addBBManifests", "airgap-true", "helmrelease.yaml"),
 			},
 			expectError: false,
 		},
-		// Add more test cases as needed
+		{
+			name:   "Airgap false with values files and v2beta1 version",
+			airgap: true,
+			valuesFiles: []string{
+				filepath.Join("testdata", "addBBManifests", "airgap-false", "neuvector.yaml"),
+			},
+			version: "2.0.0",
+			repo:    "https://repo1.dso.mil/big-bang/bigbang",
+			expectedFiles: []string{
+				filepath.Join("testdata", "addBBManifests", "airgap-false", "gitrepository.yaml"),
+				filepath.Join("testdata", "addBBManifests", "airgap-false", "helmrelease.yaml"),
+			},
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -209,16 +222,6 @@ func TestAddBigBangManifests(t *testing.T) {
 			err := os.MkdirAll(manifestDir, os.ModePerm)
 			require.NoError(t, err)
 			defer os.RemoveAll(manifestDir)
-
-			// Copy valuesFiles to manifestDir
-			for _, valuesFile := range tt.valuesFiles {
-				dest := filepath.Join(manifestDir, filepath.Base(valuesFile))
-				input, err := os.ReadFile(valuesFile)
-				require.NoError(t, err)
-				if err := os.WriteFile(dest, input, 0644); err != nil {
-					t.Fatalf("Failed to write valuesFile to manifestDir: %v", err)
-				}
-			}
 
 			// TODO test the manifest
 			_, err = addBigBangManifests(context.Background(), tt.airgap, manifestDir, tt.valuesFiles, tt.version, tt.repo)
@@ -232,7 +235,6 @@ func TestAddBigBangManifests(t *testing.T) {
 			for _, expectedFile := range tt.expectedFiles {
 				_, filename := filepath.Split(expectedFile)
 				generatedFile := filepath.Join(manifestDir, filename)
-
 				expectedContent, err := os.ReadFile(expectedFile)
 				require.NoError(t, err)
 				generatedContent, err := os.ReadFile(generatedFile)
