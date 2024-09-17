@@ -328,33 +328,33 @@ func isValidVersion(version string) (bool, error) {
 // findBBResources takes a list of yaml objects (as a string) and
 // parses it for GitRepository objects that it then parses
 // to return the list of git repos and tags needed.
-func findBBResources(t string) (gitRepos map[string]string, helmReleaseDeps map[string]HelmReleaseDependency, helmReleaseValues map[string]map[string]interface{}, err error) {
+func findBBResources(t string) (map[string]string, map[string]HelmReleaseDependency, map[string]map[string]interface{}, error) {
 	// Break the template into separate resources.
 	yamls, err := utils.SplitYAMLToString([]byte(t))
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	gitRepos = map[string]string{}
-	helmReleaseDeps = map[string]HelmReleaseDependency{}
-	helmReleaseValues = map[string]map[string]interface{}{}
+	gitRepos := map[string]string{}
+	helmReleaseDeps := map[string]HelmReleaseDependency{}
+	helmReleaseValues := map[string]map[string]interface{}{}
 	secrets := map[string]corev1.Secret{}
 	configMaps := map[string]corev1.ConfigMap{}
 
 	for _, y := range yamls {
-		var (
-			h fluxHelmCtrl.HelmRelease
-			g fluxSrcCtrl.GitRepository
-			s corev1.Secret
-			c corev1.ConfigMap
-		)
+		var u unstructured.Unstructured
 
-		if err := yaml.Unmarshal([]byte(y), &h); err != nil {
-			continue
+		if err := yaml.Unmarshal([]byte(y), &u); err != nil {
+			return nil, nil, nil, err
 		}
 
-		// If the resource is a HelmRelease, parse it for the dependencies.
-		if h.Kind == fluxHelmCtrl.HelmReleaseKind {
+		switch u.GetKind() {
+		case fluxHelmCtrl.HelmReleaseKind:
+			var h fluxHelmCtrl.HelmRelease
+			if err := yaml.Unmarshal([]byte(y), &h); err != nil {
+				return nil, nil, nil, err
+			}
+
 			var deps []string
 			for _, d := range h.Spec.DependsOn {
 				depNamespacedName := getNamespacedNameFromStr(d.Namespace, d.Name)
@@ -362,8 +362,7 @@ func findBBResources(t string) (gitRepos map[string]string, helmReleaseDeps map[
 			}
 
 			namespacedName := getNamespacedNameFromMeta(h.ObjectMeta)
-			srcNamespacedName := getNamespacedNameFromStr(h.Spec.Chart.Spec.SourceRef.Namespace,
-				h.Spec.Chart.Spec.SourceRef.Name)
+			srcNamespacedName := getNamespacedNameFromStr(h.Spec.Chart.Spec.SourceRef.Namespace, h.Spec.Chart.Spec.SourceRef.Name)
 
 			helmReleaseDeps[namespacedName] = HelmReleaseDependency{
 				Metadata:               h.ObjectMeta,
@@ -372,53 +371,44 @@ func findBBResources(t string) (gitRepos map[string]string, helmReleaseDeps map[
 				ValuesFrom:             h.Spec.ValuesFrom,
 			}
 
-			// Skip the rest as this is not a GitRepository.
-			continue
-		}
-
-		if err := yaml.Unmarshal([]byte(y), &g); err != nil {
-			continue
-		}
-
-		// If the resource is a GitRepository, parse it for the URL and tag.
-		if g.Kind == fluxSrcCtrl.GitRepositoryKind && g.Spec.URL != "" {
-			ref := "master"
-
-			switch {
-			case g.Spec.Reference.Commit != "":
-				ref = g.Spec.Reference.Commit
-
-			case g.Spec.Reference.SemVer != "":
-				ref = g.Spec.Reference.SemVer
-
-			case g.Spec.Reference.Tag != "":
-				ref = g.Spec.Reference.Tag
-
-			case g.Spec.Reference.Branch != "":
-				ref = g.Spec.Reference.Branch
+		case fluxSrcCtrl.GitRepositoryKind:
+			var g fluxSrcCtrl.GitRepository
+			if err := yaml.Unmarshal([]byte(y), &g); err != nil {
+				return nil, nil, nil, err
 			}
 
-			// Set the URL and tag in the repo map
-			namespacedName := getNamespacedNameFromMeta(g.ObjectMeta)
-			gitRepos[namespacedName] = fmt.Sprintf("%s@%s", g.Spec.URL, ref)
-		}
+			if g.Spec.URL != "" {
+				ref := "master"
+				switch {
+				case g.Spec.Reference.Commit != "":
+					ref = g.Spec.Reference.Commit
+				case g.Spec.Reference.SemVer != "":
+					ref = g.Spec.Reference.SemVer
+				case g.Spec.Reference.Tag != "":
+					ref = g.Spec.Reference.Tag
+				case g.Spec.Reference.Branch != "":
+					ref = g.Spec.Reference.Branch
+				}
 
-		if err := yaml.Unmarshal([]byte(y), &s); err != nil {
-			continue
-		}
+				namespacedName := getNamespacedNameFromMeta(g.ObjectMeta)
+				gitRepos[namespacedName] = fmt.Sprintf("%s@%s", g.Spec.URL, ref)
+			}
 
-		// If the resource is a Secret, parse it so it can be used later for value templating.
-		if s.Kind == "Secret" {
+		case "Secret":
+			var s corev1.Secret
+			if err := yaml.Unmarshal([]byte(y), &s); err != nil {
+				return nil, nil, nil, err
+			}
+
 			namespacedName := getNamespacedNameFromMeta(s.ObjectMeta)
 			secrets[namespacedName] = s
-		}
 
-		if err := yaml.Unmarshal([]byte(y), &c); err != nil {
-			continue
-		}
+		case "ConfigMap":
+			var c corev1.ConfigMap
+			if err := yaml.Unmarshal([]byte(y), &c); err != nil {
+				return nil, nil, nil, err
+			}
 
-		// If the resource is a Secret, parse it so it can be used later for value templating.
-		if c.Kind == "ConfigMap" {
 			namespacedName := getNamespacedNameFromMeta(c.ObjectMeta)
 			configMaps[namespacedName] = c
 		}

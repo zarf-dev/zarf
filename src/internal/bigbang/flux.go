@@ -105,7 +105,6 @@ func readFluxImages(fluxFilePath string) (images []string, err error) {
 }
 
 // composeValues composes values from a Flux HelmRelease and Secrets Map
-// (loosely based on upstream https://github.com/fluxcd/helm-controller/blob/main/controllers/helmrelease_controller.go#L551)
 func composeValues(hr HelmReleaseDependency, secrets map[string]corev1.Secret, configMaps map[string]corev1.ConfigMap) (valuesMap chartutil.Values, err error) {
 	valuesMap = chartutil.Values{}
 

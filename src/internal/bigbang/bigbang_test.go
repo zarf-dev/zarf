@@ -4,8 +4,11 @@
 package bigbang
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/fluxcd/helm-controller/api/v2beta1"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -38,6 +41,9 @@ func TestRequiredBigBangVersions(t *testing.T) {
 }
 
 func TestFindBBResources(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("testdata", "find-bb-template-resources.yaml"))
+	require.NoError(t, err)
+	template := string(b)
 	tests := []struct {
 		name                      string
 		input                     string
@@ -47,51 +53,8 @@ func TestFindBBResources(t *testing.T) {
 		expectedErr               bool
 	}{
 		{
-			name: "Valid input with HelmRelease, GitRepository, Secret, and ConfigMap",
-			input: `
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
-kind: HelmRelease
-metadata:
-  name: my-helm-release
-  namespace: default
-spec:
-  chart:
-    spec:
-      sourceRef:
-        kind: GitRepository
-        name: my-git-repo
-        namespace: default
-  dependsOn:
-  - name: another-helm-release
-    namespace: istio
----
-apiVersion: source.toolkit.fluxcd.io/v1beta2
-kind: GitRepository
-metadata:
-  name: my-git-repo
-  namespace: default
-spec:
-  url: https://github.com/example/repo.git
-  ref:
-    branch: main
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: my-secret
-  namespace: default
-type: Opaque
-data:
-  key: dmFsdWU=
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: my-configmap
-  namespace: default
-data:
-  key: value
-`,
+			name:  "Valid input with HelmRelease, GitRepository, Secret, and ConfigMap",
+			input: template,
 			expectedGitRepos: map[string]string{
 				"default.my-git-repo": "https://github.com/example/repo.git@main",
 			},
@@ -103,11 +66,23 @@ data:
 					},
 					NamespacedDependencies: []string{"istio.another-helm-release"},
 					NamespacedSource:       "default.my-git-repo",
-					ValuesFrom:             nil,
+					ValuesFrom: []v2beta1.ValuesReference{
+						{
+							Kind: "ConfigMap",
+							Name: "my-configmap",
+						},
+						{
+							Kind: "Secret",
+							Name: "my-secret",
+						},
+					},
 				},
 			},
 			expectedHelmReleaseValues: map[string]map[string]interface{}{
-				"default.my-helm-release": {},
+				"default.my-helm-release": {
+					"key1": "value1",
+					"key2": "value2",
+				},
 			},
 			expectedErr: false,
 		},
