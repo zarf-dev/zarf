@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
+	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"helm.sh/helm/v3/pkg/chartutil"
 	v1 "k8s.io/api/apps/v1"
@@ -40,6 +40,7 @@ func (h HelmReleaseDependency) Dependencies() []string {
 
 // getFluxManifest Creates a component to deploy Flux.
 func getFluxManifest(ctx context.Context, dir, file, repo, version string) error {
+	//TODO I"m not sure raw/master is correct
 	remotePath := fmt.Sprintf("%s/-/raw/master/base/flux", repo)
 	ref := fmt.Sprintf("?ref_type=%s", version)
 
@@ -78,7 +79,6 @@ func readFluxImages(fluxFilePath string) (images []string, err error) {
 				return nil, fmt.Errorf("could not parse deployment: %w", err)
 			}
 
-			// Get the pod spec.
 			pod := deployment.Spec.Template.Spec
 
 			// Flux controllers do not have init containers today, but this is future proofing.
@@ -86,7 +86,6 @@ func readFluxImages(fluxFilePath string) (images []string, err error) {
 				images = append(images, container.Image)
 			}
 
-			// Add the main containers.
 			for _, container := range pod.Containers {
 				images = append(images, container.Image)
 			}

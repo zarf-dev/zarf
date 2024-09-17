@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/fluxcd/helm-controller/api/v2beta1"
+	fluxv2 "github.com/fluxcd/helm-controller/api/v2"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -66,7 +66,7 @@ func TestFindBBResources(t *testing.T) {
 					},
 					NamespacedDependencies: []string{"istio.another-helm-release"},
 					NamespacedSource:       "default.my-git-repo",
-					ValuesFrom: []v2beta1.ValuesReference{
+					ValuesFrom: []fluxv2.ValuesReference{
 						{
 							Kind: "ConfigMap",
 							Name: "my-configmap",
@@ -155,6 +155,88 @@ func TestGetValuesFromManifest(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tt.expectedOutput, output)
+			}
+		})
+	}
+}
+
+func TestAddBigBangManifests(t *testing.T) {
+	// Set up a temporary directory for the manifests
+
+	tempDir := t.TempDir()
+
+	// ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// 	// Extract the filename from the URL
+	// 	urlPath := r.URL.Path
+	// 	filename := path.Base(urlPath)
+	// 	filepath := path.Join("testdata", "downloaded", filename)
+	// 	data, err := os.ReadFile(filepath)
+	// 	require.NoError(t, err)
+	// 	w.Write(data)
+	// }))
+	// defer ts.Close()
+
+	// Define test cases
+	tests := []struct {
+		name          string
+		airgap        bool
+		valuesFiles   []string
+		version       string
+		repo          string
+		expectedFiles []string
+		expectError   bool
+	}{
+		{
+			name:        "Airgap true with values files",
+			airgap:      true,
+			valuesFiles: []string{},
+			version:     "2.35.0",
+			repo:        "https://repo1.dso.mil/big-bang/bigbang",
+			expectedFiles: []string{
+				filepath.Join("testdata", "addBBManifests", "expected", "gitrepository.yaml"),
+				filepath.Join("testdata", "addBBManifests", "expected", "bb-zarf-credentials.yaml"),
+				filepath.Join("testdata", "addBBManifests", "expected", "helmrelease.yaml"),
+			},
+			expectError: false,
+		},
+		// Add more test cases as needed
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manifestDir := filepath.Join(tempDir, tt.name)
+			err := os.MkdirAll(manifestDir, os.ModePerm)
+			require.NoError(t, err)
+			defer os.RemoveAll(manifestDir)
+
+			// Copy valuesFiles to manifestDir
+			for _, valuesFile := range tt.valuesFiles {
+				dest := filepath.Join(manifestDir, filepath.Base(valuesFile))
+				input, err := os.ReadFile(valuesFile)
+				require.NoError(t, err)
+				if err := os.WriteFile(dest, input, 0644); err != nil {
+					t.Fatalf("Failed to write valuesFile to manifestDir: %v", err)
+				}
+			}
+
+			// TODO test the manifest
+			_, err = addBigBangManifests(tt.airgap, manifestDir, tt.valuesFiles, tt.version, tt.repo)
+			if tt.expectError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+
+			// Compare generated files with expected files
+			for _, expectedFile := range tt.expectedFiles {
+				_, filename := filepath.Split(expectedFile)
+				generatedFile := filepath.Join(manifestDir, filename)
+
+				expectedContent, err := os.ReadFile(expectedFile)
+				require.NoError(t, err)
+				generatedContent, err := os.ReadFile(generatedFile)
+				require.NoError(t, err)
+				require.Equal(t, string(expectedContent), string(generatedContent))
 			}
 		})
 	}

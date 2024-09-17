@@ -12,11 +12,10 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
+	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2"
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1beta2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -27,7 +26,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"helm.sh/helm/v3/pkg/chartutil"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
@@ -38,10 +36,6 @@ const (
 	bbRepo               = "https://repo1.dso.mil/big-bang/bigbang.git"
 	bbMinRequiredVersion = "1.54.0"
 )
-
-var tenMins = metav1.Duration{
-	Duration: 10 * time.Minute,
-}
 
 func getValuesFromManifest(valuesFileManifest string) (string, error) {
 	file, err := os.ReadFile(valuesFileManifest)
@@ -88,19 +82,6 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 	}
 	defer os.Remove(tmpDir)
 
-	valuesFiles := []string{}
-	for idx, valuesFile := range valuesFileManifests {
-		valuesYaml, err := getValuesFromManifest(valuesFile)
-		if err != nil {
-			return err
-		}
-		valuesFilePath := filepath.Join(tmpDir, fmt.Sprintf("values-%d.yaml", idx))
-		if err := os.WriteFile(valuesFilePath, []byte(valuesYaml), helpers.ReadWriteUser); err != nil {
-			return err
-		}
-		valuesFiles = append(valuesFiles, valuesFilePath)
-	}
-
 	validVersionResponse, err := isValidVersion(version)
 
 	if err != nil {
@@ -110,7 +91,6 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 		return fmt.Errorf("version %s must be at least %s", version, bbMinRequiredVersion)
 	}
 
-	// By default, we want to deploy flux.
 	if !skipFlux {
 		fluxComponent := v1alpha1.ZarfComponent{Name: "flux", Required: helpers.BoolPtr(true)}
 		fluxTmpDir := filepath.Join(tmpDir, "flux")
@@ -158,6 +138,19 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 		bbComponent.Repos = append(bbComponent.Repos, bbRepo)
 	}
 
+	valuesFiles := []string{}
+	for idx, valuesFile := range valuesFileManifests {
+		valuesYaml, err := getValuesFromManifest(valuesFile)
+		if err != nil {
+			return err
+		}
+		valuesFilePath := filepath.Join(tmpDir, fmt.Sprintf("values-%d.yaml", idx))
+		if err := os.WriteFile(valuesFilePath, []byte(valuesYaml), helpers.ReadWriteUser); err != nil {
+			return err
+		}
+		valuesFiles = append(valuesFiles, valuesFilePath)
+	}
+
 	// Configure helm to pull down the Big Bang chart.
 	helmCfg := helm.New(
 		v1alpha1.ZarfChart{
@@ -197,19 +190,8 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 		}
 	}
 
-	// Generate a list of HelmReleases that need to be deployed in order.
-	dependencies := []utils.Dependency{}
-	for _, hrDep := range hrDependencies {
-		dependencies = append(dependencies, hrDep)
-	}
-	namespacedHelmReleaseNames, err := utils.SortDependencies(dependencies)
-	if err != nil {
-		return fmt.Errorf("unable to sort Big Bang HelmReleases: %w", err)
-	}
-
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
-	for _, hrNamespacedName := range namespacedHelmReleaseNames {
-		hr := hrDependencies[hrNamespacedName]
+	for _, hr := range hrDependencies {
 		healthCheck := v1alpha1.NamespacedObjectKindReference{
 			APIVersion: "v1",
 			Kind:       "HelmRelease",
@@ -297,19 +279,12 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 		return err
 	}
 
-	manifests := []v1alpha1.ZarfManifest{}
-
 	manifest, err := addBigBangManifests(airgap, manifestDir, valuesFileManifests, version, repo)
 	if err != nil {
 		return err
 	}
 
-	// Add the Big Bang manifests to the list of manifests to be pulled down by Zarf.
-	manifests = append(manifests, manifest)
-
-	// Prepend the Big Bang manifests to the list of manifests to be pulled down by Zarf.
-	// This is done so that the Big Bang manifests are deployed first.
-	bbComponent.Manifests = append(manifests, bbComponent.Manifests...)
+	bbComponent.Manifests = append(bbComponent.Manifests, manifest)
 
 	pkg.Components = append(pkg.Components, bbComponent)
 
@@ -465,18 +440,16 @@ func addBigBangManifests(airgap bool, manifestDir string, valuesFiles []string, 
 		return nil
 	}
 
-	fluxGitRepo, err := manifestGitRepo(version, repo)
+	gitRepoFile := "gitrepository.yaml"
+	remotePath := fmt.Sprintf("%s/-/raw/%s/base/%s?ref_type=tags", repo, version, gitRepoFile)
+	localPath := filepath.Join(manifestDir, gitRepoFile)
+	err := utils.DownloadToFile(context.TODO(), remotePath, localPath, "")
 	if err != nil {
 		return v1alpha1.ZarfManifest{}, err
 	}
-
-	// Create the GitRepository manifest.
-	if err := addManifest("bb-ext-gitrepository.yaml", fluxGitRepo); err != nil {
-		return v1alpha1.ZarfManifest{}, err
-	}
+	manifest.Files = append(manifest.Files, localPath)
 
 	var hrValues []fluxHelmCtrl.ValuesReference
-
 	// Only include the zarf-credentials secret if in airgap mode
 	if airgap {
 		zarfCredsManifest, err := manifestZarfCredentials(version)
@@ -484,7 +457,7 @@ func addBigBangManifests(airgap bool, manifestDir string, valuesFiles []string, 
 			return manifest, err
 		}
 		// Create the zarf-credentials secret manifest.
-		if err := addManifest("bb-ext-zarf-credentials.yaml", zarfCredsManifest); err != nil {
+		if err := addManifest("bb-zarf-credentials.yaml", zarfCredsManifest); err != nil {
 			return manifest, err
 		}
 
@@ -495,9 +468,26 @@ func addBigBangManifests(airgap bool, manifestDir string, valuesFiles []string, 
 		}}
 	}
 
-	// Loop through the valuesFrom list and create a manifest for each.s
+	// TODO test with v2beta1 version
+	helmRepoFile := "helmrelease.yaml"
+	remotePath = fmt.Sprintf("%s/-/raw/%s/base/%s?ref_type=tags", repo, version, helmRepoFile)
+	localPath = filepath.Join(manifestDir, helmRepoFile)
+	if err := utils.DownloadToFile(context.TODO(), remotePath, localPath, ""); err != nil {
+		return v1alpha1.ZarfManifest{}, err
+	}
+	manifest.Files = append(manifest.Files, localPath)
+
+	b, err := os.ReadFile(localPath)
+	if err != nil {
+		return v1alpha1.ZarfManifest{}, err
+	}
+	// Unmarshalling into a generic object since otherwise
+	var helmReleaseObj map[string]interface{}
+	if err := yaml.Unmarshal(b, &helmReleaseObj); err != nil {
+		return v1alpha1.ZarfManifest{}, err
+	}
+
 	for _, valuesFile := range valuesFiles {
-		// Get values file name, make sure it's a secret and add it here
 		file, err := os.ReadFile(valuesFile)
 		if err != nil {
 			return v1alpha1.ZarfManifest{}, err
@@ -516,9 +506,23 @@ func addBigBangManifests(airgap bool, manifestDir string, valuesFiles []string, 
 		})
 	}
 
-	if err := addManifest("bb-ext-helmrelease.yaml", manifestHelmRelease(hrValues)); err != nil {
+	if spec, ok := helmReleaseObj["spec"].(map[string]interface{}); ok {
+		spec["valuesFrom"] = hrValues
+	} else {
+		return v1alpha1.ZarfManifest{}, errors.New("unable to find spec in helmrelease.yaml")
+	}
+
+	path := path.Join(manifestDir, helmRepoFile)
+	out, err := yaml.Marshal(helmReleaseObj)
+	if err != nil {
 		return v1alpha1.ZarfManifest{}, err
 	}
+
+	if err := os.WriteFile(path, out, helpers.ReadWriteUser); err != nil {
+		return v1alpha1.ZarfManifest{}, err
+	}
+
+	manifest.Files = append(manifest.Files, path)
 
 	return manifest, nil
 }

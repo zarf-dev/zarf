@@ -6,8 +6,6 @@ package bigbang
 
 import (
 	"github.com/Masterminds/semver/v3"
-	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
-	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -78,82 +76,4 @@ func manifestZarfCredentials(version string) (corev1.Secret, error) {
 			"values.yaml": values,
 		},
 	}, nil
-}
-
-// manifestGitRepo generates a GitRepository object for the Big Bang umbrella repo.
-func manifestGitRepo(version, repo string) (fluxSrcCtrl.GitRepository, error) {
-	apiVersion := "source.toolkit.fluxcd.io/v1beta2"
-
-	// Set apiVersion to v1 on BB v2.7.0 or higher falling back to v1beta2 as needed
-	semverVersion, err := semver.NewVersion(version)
-	if err != nil {
-		return fluxSrcCtrl.GitRepository{}, err
-	}
-	c, err := semver.NewConstraint(">= 2.7.0")
-	if err != nil {
-		return fluxSrcCtrl.GitRepository{}, err
-	}
-	updateFlux := c.Check(semverVersion)
-	if updateFlux {
-		apiVersion = "source.toolkit.fluxcd.io/v1"
-	}
-
-	return fluxSrcCtrl.GitRepository{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       fluxSrcCtrl.GitRepositoryKind,
-			APIVersion: apiVersion,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      bb,
-			Namespace: bb,
-		},
-		Spec: fluxSrcCtrl.GitRepositorySpec{
-			URL:      repo,
-			Interval: tenMins,
-			Reference: &fluxSrcCtrl.GitRepositoryRef{
-				Tag: version,
-			},
-		},
-	}, nil
-}
-
-// manifestHelmRelease generates a HelmRelease object for the Big Bang umbrella repo.
-func manifestHelmRelease(values []fluxHelmCtrl.ValuesReference) fluxHelmCtrl.HelmRelease {
-	return fluxHelmCtrl.HelmRelease{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       fluxHelmCtrl.HelmReleaseKind,
-			APIVersion: "helm.toolkit.fluxcd.io/v2beta1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      bb,
-			Namespace: bb,
-		},
-		Spec: fluxHelmCtrl.HelmReleaseSpec{
-			Timeout: &tenMins,
-			Chart: &fluxHelmCtrl.HelmChartTemplate{
-				Spec: fluxHelmCtrl.HelmChartTemplateSpec{
-					Chart: "./chart",
-					SourceRef: fluxHelmCtrl.CrossNamespaceObjectReference{
-						Kind: fluxSrcCtrl.GitRepositoryKind,
-						Name: bb,
-					},
-				},
-			},
-			Install: &fluxHelmCtrl.Install{
-				Remediation: &fluxHelmCtrl.InstallRemediation{
-					Retries: -1,
-				},
-			},
-			Upgrade: &fluxHelmCtrl.Upgrade{
-				Remediation: &fluxHelmCtrl.UpgradeRemediation{
-					Retries: 5,
-				},
-				CleanupOnFail: true,
-			},
-			Rollback: &fluxHelmCtrl.Rollback{
-				CleanupOnFail: true,
-			},
-			ValuesFrom: values,
-		},
-	}
 }

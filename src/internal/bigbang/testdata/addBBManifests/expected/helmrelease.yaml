@@ -1,0 +1,30 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: bigbang
+spec:
+  chart:
+    spec:
+      chart: chart
+      sourceRef:
+        kind: GitRepository
+        name: bigbang
+  install:
+    remediation:
+      retries: -1
+  interval: 10m
+  releaseName: bigbang
+  rollback:
+    cleanupOnFail: false
+    timeout: 10m
+  targetNamespace: bigbang
+  test:
+    enable: false
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      remediateLastFailure: true
+      retries: 5
+  valuesFrom:
+  - kind: Secret
+    name: zarf-credentials

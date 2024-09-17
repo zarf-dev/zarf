@@ -6,6 +6,8 @@ package utils
 
 import "fmt"
 
+// TODO This file be deleted in v1 once the BB extension is deleted
+
 // Dependency is an interface that represents a node in a list of dependencies.
 type Dependency interface {
 	Name() string
