@@ -5,15 +5,11 @@
 package bigbang
 
 import (
-	"os"
-
 	"github.com/Masterminds/semver/v3"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2beta1"
 	fluxSrcCtrl "github.com/fluxcd/source-controller/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/yaml"
 )
 
 const bbV1ZarfCredentialsValues = `
@@ -119,21 +115,6 @@ func manifestGitRepo(version, repo string) (fluxSrcCtrl.GitRepository, error) {
 			},
 		},
 	}, nil
-}
-
-// getValuesFilesResource generates a Secret object for the Big Bang umbrella repo.
-func getValuesFilesResource(path string) (unstructured.Unstructured, error) {
-	// Read the file from the path.
-	file, err := os.ReadFile(path)
-	if err != nil {
-		return unstructured.Unstructured{}, err
-	}
-	var resource unstructured.Unstructured
-	if err := yaml.Unmarshal(file, &resource); err != nil {
-		return unstructured.Unstructured{}, err
-	}
-
-	return resource, nil
 }
 
 // manifestHelmRelease generates a HelmRelease object for the Big Bang umbrella repo.

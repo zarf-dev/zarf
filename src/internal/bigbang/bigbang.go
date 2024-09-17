@@ -43,10 +43,34 @@ var tenMins = metav1.Duration{
 	Duration: 10 * time.Minute,
 }
 
+func getValuesFromManifest(valuesFileManifest string) (string, error) {
+	file, err := os.ReadFile(valuesFileManifest)
+	if err != nil {
+		return "", err
+	}
+	var resource unstructured.Unstructured
+	if err := yaml.Unmarshal(file, &resource); err != nil {
+		return "", err
+	}
+	if resource.GetKind() != "Secret" && resource.GetKind() != "ConfigMap" {
+		return "", errors.New("values manifests must be a Secret or ConfigMap")
+	}
+	data, found, err := unstructured.NestedStringMap(resource.Object, "data")
+	if err != nil || !found {
+		data, found, err = unstructured.NestedStringMap(resource.Object, "stringData")
+		if err != nil || !found {
+			return "", fmt.Errorf("failed to get data from resource: %w", err)
+		}
+	}
+	valuesYaml, found := data["values.yaml"]
+	if !found {
+		return "", errors.New("values.yaml key must exist in data")
+	}
+	return valuesYaml, nil
+}
+
 // Create creates a Zarf.yaml file for a big bang package
 func Create(ctx context.Context, baseDir string, version string, valuesFileManifests []string, skipFlux bool, repo string, airgap bool) error {
-	manifests := []v1alpha1.ZarfManifest{}
-	valuesFiles := []string{}
 	bbComponent := v1alpha1.ZarfComponent{Name: "bigbang", Required: helpers.BoolPtr(true)}
 	fluxComponent := v1alpha1.ZarfComponent{Name: "flux", Required: helpers.BoolPtr(true)}
 	pkg := v1alpha1.ZarfPackage{
@@ -65,29 +89,15 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 	}
 	defer os.Remove(tmpDir)
 
+	valuesFiles := []string{}
 	for idx, valuesFile := range valuesFileManifests {
-		// TODO, maybe delete this function
-		resource, err := getValuesFilesResource(valuesFile)
+		valuesYaml, err := getValuesFromManifest(valuesFile)
 		if err != nil {
 			return err
 		}
-		if resource.GetKind() != "Secret" && resource.GetKind() != "ConfigMap" {
-			return errors.New("values manifests must be a Secret or ConfigMap")
-		}
-		data, found, err := unstructured.NestedStringMap(resource.Object, "data")
-		if err != nil || !found {
-			data, found, err = unstructured.NestedStringMap(resource.Object, "stringData")
-			if err != nil || !found {
-				return fmt.Errorf("failed to get data from resource: %w", err)
-			}
-		}
-		valuesYaml, found := data["values.yaml"]
-		if !found {
-			return errors.New("values.yaml key must exist in data")
-		}
 		valuesFilePath := filepath.Join(tmpDir, fmt.Sprintf("values-%d.yaml", idx))
 		if err := os.WriteFile(valuesFilePath, []byte(valuesYaml), helpers.ReadWriteUser); err != nil {
-			return fmt.Errorf("failed to write values.yaml file: %w", err)
+			return err
 		}
 		valuesFiles = append(valuesFiles, valuesFilePath)
 	}
@@ -283,7 +293,8 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 		return err
 	}
 
-	// Create the flux wrapper around Big Bang for deployment.
+	manifests := []v1alpha1.ZarfManifest{}
+
 	manifest, err := addBigBangManifests(airgap, manifestDir, valuesFileManifests, version, repo)
 	if err != nil {
 		return err
@@ -480,13 +491,16 @@ func addBigBangManifests(airgap bool, manifestDir string, valuesFiles []string, 
 		}}
 	}
 
-	// Loop through the valuesFrom list and create a manifest for each.
-	//TODO change this to take valuesFile resources
+	// Loop through the valuesFrom list and create a manifest for each.s
 	for _, valuesFile := range valuesFiles {
 		// Get values file name, make sure it's a secret and add it here
-		resource, err := getValuesFilesResource(valuesFile)
+		file, err := os.ReadFile(valuesFile)
 		if err != nil {
-			return manifest, err
+			return v1alpha1.ZarfManifest{}, err
+		}
+		var resource unstructured.Unstructured
+		if err := yaml.Unmarshal(file, &resource); err != nil {
+			return v1alpha1.ZarfManifest{}, err
 		}
 
 		manifest.Files = append(manifest.Files, valuesFile)

@@ -112,3 +112,50 @@ func TestFindBBResources(t *testing.T) {
 		})
 	}
 }
+
+func TestGetValuesFromManifest(t *testing.T) {
+	tests := []struct {
+		name           string
+		fileName       string
+		expectedOutput string
+		expectError    bool
+	}{
+		{
+			name:           "Valid Secret",
+			fileName:       "valid_secret.yaml",
+			expectedOutput: "key: value\n",
+			expectError:    false,
+		},
+		{
+			name:           "Valid ConfigMap",
+			fileName:       "valid_configmap.yaml",
+			expectedOutput: "key: value\n",
+			expectError:    false,
+		},
+		{
+			name:           "Invalid Kind",
+			fileName:       "invalid_kind.yaml",
+			expectedOutput: "",
+			expectError:    true,
+		},
+		{
+			name:           "Missing values.yaml",
+			fileName:       "missing_values.yaml",
+			expectedOutput: "",
+			expectError:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filePath := filepath.Join("testdata", "getValuesFromManifest", tt.fileName)
+			output, err := getValuesFromManifest(filePath)
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expectedOutput, output)
+			}
+		})
+	}
+}
