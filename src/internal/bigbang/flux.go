@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2"
@@ -28,26 +27,10 @@ type HelmReleaseDependency struct {
 	ValuesFrom             []fluxHelmCtrl.ValuesReference
 }
 
-// Name returns a namespaced name for the HelmRelease for dependency sorting.
-func (h HelmReleaseDependency) Name() string {
-	return getNamespacedNameFromMeta(h.Metadata)
-}
-
-// Dependencies returns a list of namespaced dependencies for the HelmRelease for dependency sorting.
-func (h HelmReleaseDependency) Dependencies() []string {
-	return h.NamespacedDependencies
-}
-
-// getFluxManifest Creates a component to deploy Flux.
-func getFluxManifest(ctx context.Context, dir, file, repo, version string) error {
-	//TODO I"m not sure raw/master is correct
-	remotePath := fmt.Sprintf("%s/-/raw/master/base/flux", repo)
-	ref := fmt.Sprintf("?ref_type=%s", version)
-
-	kustomizationPath := fmt.Sprintf("%s/%s%s", remotePath, file, ref)
-	localKustomizationPath := filepath.Join(dir, file)
-
-	err := utils.DownloadToFile(ctx, kustomizationPath, localKustomizationPath, "")
+// getBBFile gets a file from the BB repo
+func getBBFile(ctx context.Context, gitPath, localPath, repo, version string) error {
+	remotePath := fmt.Sprintf("%s/-/raw/%s/base/%s?ref_type=tags", repo, version, gitPath)
+	err := utils.DownloadToFile(ctx, remotePath, localPath, "")
 	if err != nil {
 		return err
 	}
@@ -130,7 +113,7 @@ func composeValues(hr HelmReleaseDependency, secrets map[string]corev1.Secret, c
 
 		values, err := chartutil.ReadValues([]byte(valuesData))
 		if err != nil {
-			return nil, fmt.Errorf("unable to read values from key '%s' in %s '%s': %w", v.GetValuesKey(), v.Kind, hr.Name(), err)
+			return nil, fmt.Errorf("unable to read values from key '%s' in %s '%s': %w", v.GetValuesKey(), v.Kind, hr.Metadata.Name, err)
 		}
 
 		valuesMap = helpers.MergeMapRecursive(valuesMap, values)

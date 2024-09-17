@@ -94,12 +94,12 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 	if !skipFlux {
 		fluxComponent := v1alpha1.ZarfComponent{Name: "flux", Required: helpers.BoolPtr(true)}
 		fluxTmpDir := filepath.Join(tmpDir, "flux")
-		err := getFluxManifest(ctx, fluxTmpDir, "kustomization.yaml", repo, version)
+		err := getBBFile(ctx, "flux/kustomization.yaml", filepath.Join(fluxTmpDir, "kustomization.yaml"), repo, version)
 		if err != nil {
 			return err
 		}
 
-		err = getFluxManifest(ctx, fluxTmpDir, "gotk-components.yaml", repo, version)
+		err = getBBFile(ctx, "flux/gotk-components.yaml", filepath.Join(fluxTmpDir, "gotk-components.yaml"), repo, version)
 		if err != nil {
 			return err
 		}
@@ -279,7 +279,7 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 		return err
 	}
 
-	manifest, err := addBigBangManifests(airgap, manifestDir, valuesFileManifests, version, repo)
+	manifest, err := addBigBangManifests(ctx, airgap, manifestDir, valuesFileManifests, version, repo)
 	if err != nil {
 		return err
 	}
@@ -417,7 +417,7 @@ func findBBResources(t string) (map[string]string, map[string]HelmReleaseDepende
 }
 
 // addBigBangManifests creates the manifests component for deploying Big Bang.
-func addBigBangManifests(airgap bool, manifestDir string, valuesFiles []string, version string, repo string) (v1alpha1.ZarfManifest, error) {
+func addBigBangManifests(ctx context.Context, airgap bool, manifestDir string, valuesFiles []string, version string, repo string) (v1alpha1.ZarfManifest, error) {
 	// Create a manifest component that we add to the zarf package for bigbang.
 	manifest := v1alpha1.ZarfManifest{
 		Name:      bb,
@@ -440,14 +440,11 @@ func addBigBangManifests(airgap bool, manifestDir string, valuesFiles []string, 
 		return nil
 	}
 
-	gitRepoFile := "gitrepository.yaml"
-	remotePath := fmt.Sprintf("%s/-/raw/%s/base/%s?ref_type=tags", repo, version, gitRepoFile)
-	localPath := filepath.Join(manifestDir, gitRepoFile)
-	err := utils.DownloadToFile(context.TODO(), remotePath, localPath, "")
-	if err != nil {
+	localGitRepoPath := filepath.Join(manifestDir, "gitrepository.yaml")
+	if err := getBBFile(ctx, "gitrepository.yaml", localGitRepoPath, repo, version); err != nil {
 		return v1alpha1.ZarfManifest{}, err
 	}
-	manifest.Files = append(manifest.Files, localPath)
+	manifest.Files = append(manifest.Files, localGitRepoPath)
 
 	var hrValues []fluxHelmCtrl.ValuesReference
 	// Only include the zarf-credentials secret if in airgap mode
@@ -469,19 +466,15 @@ func addBigBangManifests(airgap bool, manifestDir string, valuesFiles []string, 
 	}
 
 	// TODO test with v2beta1 version
-	helmRepoFile := "helmrelease.yaml"
-	remotePath = fmt.Sprintf("%s/-/raw/%s/base/%s?ref_type=tags", repo, version, helmRepoFile)
-	localPath = filepath.Join(manifestDir, helmRepoFile)
-	if err := utils.DownloadToFile(context.TODO(), remotePath, localPath, ""); err != nil {
+	localHelmReleasePath := filepath.Join(manifestDir, "helmrelease.yaml")
+	if err := getBBFile(ctx, "helmrelease.yaml", localHelmReleasePath, repo, version); err != nil {
 		return v1alpha1.ZarfManifest{}, err
 	}
-	manifest.Files = append(manifest.Files, localPath)
-
-	b, err := os.ReadFile(localPath)
+	b, err := os.ReadFile(localHelmReleasePath)
 	if err != nil {
 		return v1alpha1.ZarfManifest{}, err
 	}
-	// Unmarshalling into a generic object since otherwise
+	// Unmarshalling into a generic object since otherwise boolean fields will disappear when re-marshalling
 	var helmReleaseObj map[string]interface{}
 	if err := yaml.Unmarshal(b, &helmReleaseObj); err != nil {
 		return v1alpha1.ZarfManifest{}, err
@@ -511,18 +504,16 @@ func addBigBangManifests(airgap bool, manifestDir string, valuesFiles []string, 
 	} else {
 		return v1alpha1.ZarfManifest{}, errors.New("unable to find spec in helmrelease.yaml")
 	}
-
-	path := path.Join(manifestDir, helmRepoFile)
 	out, err := yaml.Marshal(helmReleaseObj)
 	if err != nil {
 		return v1alpha1.ZarfManifest{}, err
 	}
 
-	if err := os.WriteFile(path, out, helpers.ReadWriteUser); err != nil {
+	if err := os.WriteFile(localHelmReleasePath, out, helpers.ReadWriteUser); err != nil {
 		return v1alpha1.ZarfManifest{}, err
 	}
 
-	manifest.Files = append(manifest.Files, path)
+	manifest.Files = append(manifest.Files, localHelmReleasePath)
 
 	return manifest, nil
 }

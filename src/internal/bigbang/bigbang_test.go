@@ -4,6 +4,7 @@
 package bigbang
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -220,7 +221,7 @@ func TestAddBigBangManifests(t *testing.T) {
 			}
 
 			// TODO test the manifest
-			_, err = addBigBangManifests(tt.airgap, manifestDir, tt.valuesFiles, tt.version, tt.repo)
+			_, err = addBigBangManifests(context.Background(), tt.airgap, manifestDir, tt.valuesFiles, tt.version, tt.repo)
 			if tt.expectError {
 				require.Error(t, err)
 				return
