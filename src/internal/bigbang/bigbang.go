@@ -266,7 +266,6 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 			bbComponent.Images = append(bbComponent.Images, images...)
 		}
 
-		// Make sure the list of images is unique.
 		bbComponent.Images = helpers.Unique(bbComponent.Images)
 	}
 
@@ -463,7 +462,6 @@ func addBigBangManifests(ctx context.Context, airgap bool, manifestDir string, v
 		}}
 	}
 
-	// TODO test with v2beta1 version
 	localHelmReleasePath := filepath.Join(manifestDir, "helmrelease.yaml")
 	if err := getBBFile(ctx, "helmrelease.yaml", localHelmReleasePath, repo, version); err != nil {
 		return v1alpha1.ZarfManifest{}, err
