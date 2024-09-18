@@ -457,7 +457,7 @@ func createBBManifests(ctx context.Context, airgap bool, manifestDir string, val
 		Namespace: bb,
 	}
 
-	localGitRepoPath := filepath.Join(manifestDir, "gitrepository.yaml")
+	localGitRepoPath := filepath.Join(manifestDir, "bb-gitrepository.yaml")
 	if err := getBBFile(ctx, "gitrepository.yaml", localGitRepoPath, repo, version); err != nil {
 		return v1alpha1.ZarfManifest{}, err
 	}
@@ -483,7 +483,7 @@ func createBBManifests(ctx context.Context, airgap bool, manifestDir string, val
 		}}
 	}
 
-	localHelmReleasePath := filepath.Join(manifestDir, "helmrelease.yaml")
+	localHelmReleasePath := filepath.Join(manifestDir, "bb-helmrelease.yaml")
 	if err := getBBFile(ctx, "helmrelease.yaml", localHelmReleasePath, repo, version); err != nil {
 		return v1alpha1.ZarfManifest{}, err
 	}
