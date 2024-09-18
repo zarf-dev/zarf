@@ -226,7 +226,6 @@ func TestCreate(t *testing.T) {
 	tests := []struct {
 		name            string
 		airgap          bool
-		valuesFiles     []string
 		version         string
 		repo            string
 		skipFlux        bool
@@ -235,16 +234,22 @@ func TestCreate(t *testing.T) {
 		{
 			name:            "default BB install",
 			airgap:          true,
-			valuesFiles:     []string{},
 			version:         "2.35.0",
 			repo:            "https://repo1.dso.mil/big-bang/bigbang",
 			skipFlux:        false,
 			expectedPackage: filepath.Join("testdata", "create", "default.yaml"),
 		},
 		{
+			name:            "skip flux",
+			airgap:          true,
+			version:         "2.35.0",
+			repo:            "https://repo1.dso.mil/big-bang/bigbang",
+			skipFlux:        true,
+			expectedPackage: filepath.Join("testdata", "create", "skip_flux.yaml"),
+		},
+		{
 			name:            "Not air gapped",
 			airgap:          false,
-			valuesFiles:     []string{},
 			version:         "2.35.0",
 			repo:            "https://repo1.dso.mil/big-bang/bigbang",
 			skipFlux:        false,
