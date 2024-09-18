@@ -15,6 +15,8 @@ import (
 	"sort"
 	"strings"
 
+	"encoding/base64"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	fluxHelmCtrl "github.com/fluxcd/helm-controller/api/v2"
@@ -48,19 +50,37 @@ func getValuesFromManifest(valuesFileManifest string) (string, error) {
 	if err := yaml.Unmarshal(file, &resource); err != nil {
 		return "", err
 	}
-	if resource.GetKind() != "Secret" && resource.GetKind() != "ConfigMap" {
-		return "", errors.New("values manifests must be a Secret or ConfigMap")
-	}
-	data, found, err := unstructured.NestedStringMap(resource.Object, "data")
-	if err != nil || !found {
+	var data map[string]string
+	var found bool
+	var base64Decode bool
+	if resource.GetKind() == "Secret" {
 		data, found, err = unstructured.NestedStringMap(resource.Object, "stringData")
+		if err != nil || !found {
+			data, found, err = unstructured.NestedStringMap(resource.Object, "data")
+			if err != nil || !found {
+				return "", fmt.Errorf("failed to get data from resource: %w", err)
+			}
+			base64Decode = true
+		}
+	} else if resource.GetKind() == "ConfigMap" {
+		data, found, err = unstructured.NestedStringMap(resource.Object, "data")
 		if err != nil || !found {
 			return "", fmt.Errorf("failed to get data from resource: %w", err)
 		}
+	} else {
+		return "", errors.New("values manifests must be a Secret or ConfigMap")
 	}
+
 	valuesYaml, found := data["values.yaml"]
 	if !found {
 		return "", errors.New("values.yaml key must exist in data")
+	}
+	if base64Decode {
+		b, err := base64.StdEncoding.DecodeString(valuesYaml)
+		if err != nil {
+			return "", err
+		}
+		valuesYaml = string(b)
 	}
 	return valuesYaml, nil
 }

@@ -108,9 +108,15 @@ func TestGetValuesFromManifest(t *testing.T) {
 		expectedErr    error
 	}{
 		{
-			name:           "Valid Secret",
-			fileName:       "valid_secret.yaml",
+			name:           "Valid Secret string data",
+			fileName:       "valid_secret_string_data.yaml",
 			expectedOutput: "key: value\n",
+			expectedErr:    nil,
+		},
+		{
+			name:           "Valid Secret regular data",
+			fileName:       "valid_secret_data.yaml",
+			expectedOutput: "key: value",
 			expectedErr:    nil,
 		},
 		{
