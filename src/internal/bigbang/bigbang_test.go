@@ -200,7 +200,7 @@ func TestAddBigBangManifests(t *testing.T) {
 				expectedManifests = append(expectedManifests, filepath.Join(tempDir, filepath.Base(f)))
 			}
 			expectedManifests = append(expectedManifests, tt.valuesFiles...)
-			manifest, err := addBigBangManifests(context.Background(), tt.airgap, tempDir, tt.valuesFiles, tt.version, tt.repo)
+			manifest, err := createBBManifests(context.Background(), tt.airgap, tempDir, tt.valuesFiles, tt.version, tt.repo)
 			require.NoError(t, err)
 			require.ElementsMatch(t, expectedManifests, manifest.Files)
 

@@ -34,12 +34,257 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// Default location for pulling Big Bang.
+// Opts contains the options for the bigbang.Create function
+type Opts struct {
+	ValuesFiles []string
+	SkipFlux    bool
+	Airgap      bool
+	Repo        string
+	Version     string
+}
+
 const (
 	bb                   = "bigbang"
 	bbRepo               = "https://repo1.dso.mil/big-bang/bigbang.git"
 	bbMinRequiredVersion = "1.54.0"
 )
+
+// Create creates a Zarf.yaml file for a big bang package
+func Create(ctx context.Context, bbOpts Opts) error {
+	baseDir := "."
+	bbComponent := v1alpha1.ZarfComponent{Name: "bigbang", Required: helpers.BoolPtr(true)}
+	pkg := v1alpha1.ZarfPackage{
+		Kind:       v1alpha1.ZarfPackageConfig,
+		APIVersion: v1alpha1.APIVersion,
+		Metadata: v1alpha1.ZarfMetadata{
+			Name: "bigbang",
+			YOLO: !bbOpts.Airgap,
+		},
+		Components: []v1alpha1.ZarfComponent{},
+	}
+
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmpDir)
+
+	validVersionResponse, err := isValidVersion(bbOpts.Version)
+	if err != nil {
+		return fmt.Errorf("invalid version %s: %w", bbOpts.Version, err)
+	}
+	if !validVersionResponse {
+		return fmt.Errorf("version %s must be at least %s", bbOpts.Version, bbMinRequiredVersion)
+	}
+
+	if !bbOpts.SkipFlux {
+		fluxComponent := v1alpha1.ZarfComponent{Name: "flux", Required: helpers.BoolPtr(true)}
+		fluxTmpDir := filepath.Join(tmpDir, "flux")
+		err := getBBFile(ctx, "flux/kustomization.yaml", filepath.Join(fluxTmpDir, "kustomization.yaml"), bbOpts.Repo, bbOpts.Version)
+		if err != nil {
+			return err
+		}
+
+		err = getBBFile(ctx, "flux/gotk-components.yaml", filepath.Join(fluxTmpDir, "gotk-components.yaml"), bbOpts.Repo, bbOpts.Version)
+		if err != nil {
+			return err
+		}
+		fluxBaseDir := filepath.Join(baseDir, "flux")
+		err = os.Mkdir(fluxBaseDir, helpers.ReadWriteExecuteUser)
+		if err != nil && !errors.Is(err, os.ErrExist) {
+			return err
+		}
+		fluxFilePath := filepath.Join(fluxBaseDir, "bb-flux.yaml")
+		if err := kustomize.Build(fluxTmpDir, fluxFilePath, true); err != nil {
+			return fmt.Errorf("unable to build kustomization: %w", err)
+		}
+
+		fluxManifest := v1alpha1.ZarfManifest{
+			Name:      "flux-system",
+			Namespace: "flux-system",
+			Files:     []string{fluxFilePath},
+		}
+
+		if bbOpts.Airgap {
+			images, err := readFluxImages(fluxFilePath)
+			if err != nil {
+				return nil
+			}
+			fluxComponent.Images = append(fluxComponent.Images, images...)
+		}
+
+		fluxComponent.Manifests = append(fluxComponent.Manifests, fluxManifest)
+		pkg.Components = append(pkg.Components, fluxComponent)
+	}
+
+	bbRepo := fmt.Sprintf("%s@%s", bbOpts.Repo, bbOpts.Version)
+
+	if bbOpts.Airgap {
+		bbComponent.Repos = append(bbComponent.Repos, bbRepo)
+	}
+
+	valuesFiles := []string{}
+	for idx, valuesFile := range bbOpts.ValuesFiles {
+		valuesYaml, err := getValuesFromManifest(valuesFile)
+		if err != nil {
+			return err
+		}
+		valuesFilePath := filepath.Join(tmpDir, fmt.Sprintf("values-%d.yaml", idx))
+		if err := os.WriteFile(valuesFilePath, []byte(valuesYaml), helpers.ReadWriteUser); err != nil {
+			return err
+		}
+		valuesFiles = append(valuesFiles, valuesFilePath)
+	}
+
+	// Configure helm to pull down the Big Bang chart.
+	helmCfg := helm.New(
+		v1alpha1.ZarfChart{
+			Name:        bb,
+			Namespace:   bb,
+			URL:         bbRepo,
+			Version:     bbOpts.Version,
+			ValuesFiles: valuesFiles,
+			GitPath:     "./chart",
+		},
+		path.Join(tmpDir, bb),
+		path.Join(tmpDir, bb, "values"),
+		helm.WithVariableConfig(&variables.VariableConfig{}),
+	)
+
+	// Download the chart from Git and save it to a temporary directory.
+	if err := helmCfg.PackageChartFromGit(ctx, ""); err != nil {
+		return fmt.Errorf("unable to download Big Bang Chart: %w", err)
+	}
+
+	// Template the chart so we can see what GitRepositories are being referenced in the
+	// manifests created with the provided Helm.
+	template, _, err := helmCfg.TemplateChart(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to template Big Bang Chart: %w", err)
+	}
+
+	// Parse the template for GitRepository objects and add them to the list of repos to be pulled down by Zarf.
+	gitRepos, hrDependencies, hrValues, err := findBBResources(template)
+	if err != nil {
+		return fmt.Errorf("unable to find Big Bang resources: %w", err)
+	}
+	if bbOpts.Airgap {
+		for _, gitRepo := range gitRepos {
+			bbComponent.Repos = append(bbComponent.Repos, gitRepo)
+		}
+		slices.Sort(bbComponent.Repos)
+	}
+
+	// Sort so the dependencies are always the same between runs
+	sort.Slice(hrDependencies, func(i, j int) bool {
+		return hrDependencies[i].Metadata.Name < hrDependencies[j].Metadata.Name
+	})
+
+	// Add wait actions for each of the helm releases in generally the order they should be deployed.
+	for _, hr := range hrDependencies {
+		healthCheck := v1alpha1.NamespacedObjectKindReference{
+			APIVersion: "v1",
+			Kind:       "HelmRelease",
+			Name:       hr.Metadata.Name,
+			Namespace:  hr.Metadata.Namespace,
+		}
+
+		// TODO, ask radius method what's going on here
+
+		// In Big Bang the metrics-server is a special case that only deploy if needed.
+		// The check it, we need to look for the existence of APIService instead of the HelmRelease, which
+		// may not ever be created. See links below for more details.
+		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.54.0/chart/templates/metrics-server/helmrelease.yaml
+		// if hr.Metadata.Name == "metrics-server" {
+		// 	action.Description = "K8s metric server to exist or be deployed by Big Bang"
+		// 	action.Wait.Cluster = &v1alpha1.ZarfComponentActionWaitCluster{
+		// 		Kind: "APIService",
+		// 		// https://github.com/kubernetes-sigs/metrics-server#compatibility-matrix
+		// 		Name: "v1beta1.metrics.k8s.io",
+		// 	}
+		// }
+
+		bbComponent.HealthChecks = append(bbComponent.HealthChecks, healthCheck)
+	}
+
+	// TODO figure out if we care about including the remove or failure checks
+	failureGeneral := []string{
+		"get nodes -o wide",
+		"get hr -n bigbang",
+		"get gitrepo -n bigbang",
+		"get pods -A",
+	}
+	failureDebug := []string{
+		"describe hr -n bigbang",
+		"describe gitrepo -n bigbang",
+		"describe pods -A",
+		"describe nodes",
+		"get events -A",
+	}
+
+	// Add onFailure actions with additional troubleshooting information.
+	for _, cmd := range failureGeneral {
+		bbComponent.Actions.OnDeploy.OnFailure = append(bbComponent.Actions.OnDeploy.OnFailure, v1alpha1.ZarfComponentAction{
+			Cmd: fmt.Sprintf("./zarf tools kubectl %s", cmd),
+		})
+	}
+
+	for _, cmd := range failureDebug {
+		bbComponent.Actions.OnDeploy.OnFailure = append(bbComponent.Actions.OnDeploy.OnFailure, v1alpha1.ZarfComponentAction{
+			Mute:        helpers.BoolPtr(true),
+			Description: "Storing debug information to the log for troubleshooting.",
+			Cmd:         fmt.Sprintf("./zarf tools kubectl %s", cmd),
+		})
+	}
+
+	// Add a pre-remove action to suspend the Big Bang HelmReleases to prevent reconciliation during removal.
+	bbComponent.Actions.OnRemove.Before = append(bbComponent.Actions.OnRemove.Before, v1alpha1.ZarfComponentAction{
+		Description: "Suspend Big Bang HelmReleases to prevent reconciliation during removal.",
+		Cmd:         `./zarf tools kubectl patch helmrelease -n bigbang bigbang --type=merge -p '{"spec":{"suspend":true}}'`,
+	})
+
+	// Select the images needed to support the repos for this configuration of Big Bang.
+	if bbOpts.Airgap {
+		for _, hr := range hrDependencies {
+			namespacedName := getNamespacedNameFromMeta(hr.Metadata)
+			gitRepo := gitRepos[hr.NamespacedSource]
+			values := hrValues[namespacedName]
+
+			images, err := findImagesForBBChartRepo(ctx, gitRepo, values)
+			if err != nil {
+				return fmt.Errorf("unable to find images for chart repo: %w", err)
+			}
+
+			bbComponent.Images = append(bbComponent.Images, images...)
+		}
+
+		bbComponent.Images = helpers.Unique(bbComponent.Images)
+	}
+
+	manifestDir := filepath.Join(baseDir, "manifests")
+
+	err = os.Mkdir(manifestDir, helpers.ReadWriteExecuteUser)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		return err
+	}
+
+	manifest, err := createBBManifests(ctx, bbOpts.Airgap, manifestDir, bbOpts.ValuesFiles, bbOpts.Version, bbOpts.Repo)
+	if err != nil {
+		return err
+	}
+
+	bbComponent.Manifests = append(bbComponent.Manifests, manifest)
+
+	pkg.Components = append(pkg.Components, bbComponent)
+
+	outputName := "zarf.yaml"
+	if !helpers.InvalidPath(filepath.Join(baseDir, outputName)) {
+		outputName = fmt.Sprintf("bigbang-%s", outputName)
+		message.Warnf("zarf.yaml already exists, writing to %s", outputName)
+	}
+
+	return utils.WriteYaml(filepath.Join(baseDir, outputName), pkg, helpers.ReadWriteUser)
+}
 
 func getValuesFromManifest(valuesFileManifest string) (string, error) {
 	file, err := os.ReadFile(valuesFileManifest)
@@ -83,248 +328,6 @@ func getValuesFromManifest(valuesFileManifest string) (string, error) {
 		valuesYaml = string(b)
 	}
 	return valuesYaml, nil
-}
-
-// Create creates a Zarf.yaml file for a big bang package
-func Create(ctx context.Context, baseDir string, version string, valuesFileManifests []string, skipFlux bool, repo string, airgap bool) error {
-	bbComponent := v1alpha1.ZarfComponent{Name: "bigbang", Required: helpers.BoolPtr(true)}
-	pkg := v1alpha1.ZarfPackage{
-		Kind:       v1alpha1.ZarfPackageConfig,
-		APIVersion: v1alpha1.APIVersion,
-		Metadata: v1alpha1.ZarfMetadata{
-			Name: "bigbang",
-			YOLO: !airgap,
-		},
-		Components: []v1alpha1.ZarfComponent{},
-	}
-
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmpDir)
-
-	validVersionResponse, err := isValidVersion(version)
-	if err != nil {
-		return fmt.Errorf("invalid version %s: %w", version, err)
-	}
-	if !validVersionResponse {
-		return fmt.Errorf("version %s must be at least %s", version, bbMinRequiredVersion)
-	}
-
-	if !skipFlux {
-		fluxComponent := v1alpha1.ZarfComponent{Name: "flux", Required: helpers.BoolPtr(true)}
-		fluxTmpDir := filepath.Join(tmpDir, "flux")
-		err := getBBFile(ctx, "flux/kustomization.yaml", filepath.Join(fluxTmpDir, "kustomization.yaml"), repo, version)
-		if err != nil {
-			return err
-		}
-
-		err = getBBFile(ctx, "flux/gotk-components.yaml", filepath.Join(fluxTmpDir, "gotk-components.yaml"), repo, version)
-		if err != nil {
-			return err
-		}
-		fluxBaseDir := filepath.Join(baseDir, "flux")
-		err = os.Mkdir(fluxBaseDir, helpers.ReadWriteExecuteUser)
-		if err != nil && !errors.Is(err, os.ErrExist) {
-			return err
-		}
-		fluxFilePath := filepath.Join(fluxBaseDir, "bb-flux.yaml")
-		if err := kustomize.Build(fluxTmpDir, fluxFilePath, true); err != nil {
-			return fmt.Errorf("unable to build kustomization: %w", err)
-		}
-
-		fluxManifest := v1alpha1.ZarfManifest{
-			Name:      "flux-system",
-			Namespace: "flux-system",
-			Files:     []string{fluxFilePath},
-		}
-
-		if airgap {
-			images, err := readFluxImages(fluxFilePath)
-			if err != nil {
-				return nil
-			}
-			fluxComponent.Images = append(fluxComponent.Images, images...)
-		}
-
-		fluxComponent.Manifests = append(fluxComponent.Manifests, fluxManifest)
-		pkg.Components = append(pkg.Components, fluxComponent)
-	}
-
-	bbRepo := fmt.Sprintf("%s@%s", repo, version)
-
-	if airgap {
-		bbRepo := fmt.Sprintf("%s@%s", repo, version)
-		bbComponent.Repos = append(bbComponent.Repos, bbRepo)
-	}
-
-	valuesFiles := []string{}
-	for idx, valuesFile := range valuesFileManifests {
-		valuesYaml, err := getValuesFromManifest(valuesFile)
-		if err != nil {
-			return err
-		}
-		valuesFilePath := filepath.Join(tmpDir, fmt.Sprintf("values-%d.yaml", idx))
-		if err := os.WriteFile(valuesFilePath, []byte(valuesYaml), helpers.ReadWriteUser); err != nil {
-			return err
-		}
-		valuesFiles = append(valuesFiles, valuesFilePath)
-	}
-
-	// Configure helm to pull down the Big Bang chart.
-	helmCfg := helm.New(
-		v1alpha1.ZarfChart{
-			Name:        bb,
-			Namespace:   bb,
-			URL:         bbRepo,
-			Version:     version,
-			ValuesFiles: valuesFiles,
-			GitPath:     "./chart",
-		},
-		path.Join(tmpDir, bb),
-		path.Join(tmpDir, bb, "values"),
-		helm.WithVariableConfig(&variables.VariableConfig{}),
-	)
-
-	// Download the chart from Git and save it to a temporary directory.
-	if err := helmCfg.PackageChartFromGit(ctx, ""); err != nil {
-		return fmt.Errorf("unable to download Big Bang Chart: %w", err)
-	}
-
-	// Template the chart so we can see what GitRepositories are being referenced in the
-	// manifests created with the provided Helm.
-	template, _, err := helmCfg.TemplateChart(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to template Big Bang Chart: %w", err)
-	}
-
-	// Parse the template for GitRepository objects and add them to the list of repos to be pulled down by Zarf.
-	gitRepos, hrDependencies, hrValues, err := findBBResources(template)
-	if err != nil {
-		return fmt.Errorf("unable to find Big Bang resources: %w", err)
-	}
-	if airgap {
-		for _, gitRepo := range gitRepos {
-			bbComponent.Repos = append(bbComponent.Repos, gitRepo)
-		}
-		slices.Sort(bbComponent.Repos)
-	}
-
-	// Sort so the dependencies are always the same between runs
-	sort.Slice(hrDependencies, func(i, j int) bool {
-		return hrDependencies[i].Metadata.Name < hrDependencies[j].Metadata.Name
-	})
-
-	// Add wait actions for each of the helm releases in generally the order they should be deployed.
-	for _, hr := range hrDependencies {
-		healthCheck := v1alpha1.NamespacedObjectKindReference{
-			APIVersion: "v1",
-			Kind:       "HelmRelease",
-			Name:       hr.Metadata.Name,
-			Namespace:  hr.Metadata.Namespace,
-		}
-
-		// TODO, ask radius method what's going on here
-
-		// In Big Bang the metrics-server is a special case that only deploy if needed.
-		// The check it, we need to look for the existence of APIService instead of the HelmRelease, which
-		// may not ever be created. See links below for more details.
-		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.54.0/chart/templates/metrics-server/helmrelease.yaml
-		// if hr.Metadata.Name == "metrics-server" {
-		// 	action.Description = "K8s metric server to exist or be deployed by Big Bang"
-		// 	action.Wait.Cluster = &v1alpha1.ZarfComponentActionWaitCluster{
-		// 		Kind: "APIService",
-		// 		// https://github.com/kubernetes-sigs/metrics-server#compatibility-matrix
-		// 		Name: "v1beta1.metrics.k8s.io",
-		// 	}
-		// }
-
-		bbComponent.HealthChecks = append(bbComponent.HealthChecks, healthCheck)
-	}
-
-	t := true
-	failureGeneral := []string{
-		"get nodes -o wide",
-		"get hr -n bigbang",
-		"get gitrepo -n bigbang",
-		"get pods -A",
-	}
-	failureDebug := []string{
-		"describe hr -n bigbang",
-		"describe gitrepo -n bigbang",
-		"describe pods -A",
-		"describe nodes",
-		"get events -A",
-	}
-
-	// Add onFailure actions with additional troubleshooting information.
-	for _, cmd := range failureGeneral {
-		bbComponent.Actions.OnDeploy.OnFailure = append(bbComponent.Actions.OnDeploy.OnFailure, v1alpha1.ZarfComponentAction{
-			Cmd: fmt.Sprintf("./zarf tools kubectl %s", cmd),
-		})
-	}
-
-	for _, cmd := range failureDebug {
-		bbComponent.Actions.OnDeploy.OnFailure = append(bbComponent.Actions.OnDeploy.OnFailure, v1alpha1.ZarfComponentAction{
-			Mute:        &t,
-			Description: "Storing debug information to the log for troubleshooting.",
-			Cmd:         fmt.Sprintf("./zarf tools kubectl %s", cmd),
-		})
-	}
-
-	// Add a pre-remove action to suspend the Big Bang HelmReleases to prevent reconciliation during removal.
-	bbComponent.Actions.OnRemove.Before = append(bbComponent.Actions.OnRemove.Before, v1alpha1.ZarfComponentAction{
-		Description: "Suspend Big Bang HelmReleases to prevent reconciliation during removal.",
-		Cmd:         `./zarf tools kubectl patch helmrelease -n bigbang bigbang --type=merge -p '{"spec":{"suspend":true}}'`,
-	})
-
-	// Select the images needed to support the repos for this configuration of Big Bang.
-	if airgap {
-		for _, hr := range hrDependencies {
-			namespacedName := getNamespacedNameFromMeta(hr.Metadata)
-			gitRepo := gitRepos[hr.NamespacedSource]
-			values := hrValues[namespacedName]
-
-			images, err := findImagesForBBChartRepo(ctx, gitRepo, values)
-			if err != nil {
-				return fmt.Errorf("unable to find images for chart repo: %w", err)
-			}
-
-			bbComponent.Images = append(bbComponent.Images, images...)
-		}
-
-		bbComponent.Images = helpers.Unique(bbComponent.Images)
-	}
-
-	manifestDir := filepath.Join(baseDir, "manifests")
-
-	err = os.Mkdir(manifestDir, helpers.ReadWriteExecuteUser)
-	if err != nil && !errors.Is(err, os.ErrExist) {
-		return err
-	}
-
-	manifest, err := addBigBangManifests(ctx, airgap, manifestDir, valuesFileManifests, version, repo)
-	if err != nil {
-		return err
-	}
-
-	bbComponent.Manifests = append(bbComponent.Manifests, manifest)
-
-	pkg.Components = append(pkg.Components, bbComponent)
-
-	outputName := "zarf.yaml"
-	if !helpers.InvalidPath(filepath.Join(baseDir, outputName)) {
-		outputName = fmt.Sprintf("bigbang-%s", outputName)
-		message.Warnf("zarf.yaml already exists, writing to %s", outputName)
-	}
-
-	err = utils.WriteYaml(filepath.Join(baseDir, outputName), pkg, helpers.ReadWriteUser)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // isValidVersion check if the version is 1.54.0 or greater.
@@ -446,8 +449,8 @@ func findBBResources(t string) (map[string]string, []HelmReleaseDependency, map[
 	return gitRepos, helmReleaseDeps, helmReleaseValues, nil
 }
 
-// addBigBangManifests creates the manifests component for deploying Big Bang.
-func addBigBangManifests(ctx context.Context, airgap bool, manifestDir string, valuesFiles []string, version string, repo string) (v1alpha1.ZarfManifest, error) {
+// createBBManifests creates the manifests component for deploying Big Bang.
+func createBBManifests(ctx context.Context, airgap bool, manifestDir string, valuesFiles []string, version string, repo string) (v1alpha1.ZarfManifest, error) {
 	// Create a manifest component that we add to the zarf package for bigbang.
 	manifest := v1alpha1.ZarfManifest{
 		Name:      bb,
@@ -558,4 +561,13 @@ func findImagesForBBChartRepo(ctx context.Context, repo string, values chartutil
 	spinner.Success()
 
 	return images, err
+}
+
+func getBBFile(ctx context.Context, gitPath, localPath, repo, version string) error {
+	remotePath := fmt.Sprintf("%s/-/raw/%s/base/%s?ref_type=tags", repo, version, gitPath)
+	err := utils.DownloadToFile(ctx, remotePath, localPath, "")
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -44,6 +44,7 @@ var tenMins = metav1.Duration{
 // Run mutates a component that should deploy Big Bang to a set of manifests
 // that contain the flux deployment of Big Bang
 func Run(ctx context.Context, YOLO bool, tmpPaths *layout.ComponentPaths, c v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, error) {
+	message.Warn("The Big Bang extension is deprecated and will be removed in v1. Consider using the `zarf dev generate big-bang` command instead")
 	cfg := c.Extensions.BigBang
 	manifests := []v1alpha1.ZarfManifest{}
 

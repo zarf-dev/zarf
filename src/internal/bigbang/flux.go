@@ -5,7 +5,6 @@
 package bigbang
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -27,16 +26,6 @@ type HelmReleaseDependency struct {
 	ValuesFrom             []fluxHelmCtrl.ValuesReference
 }
 
-// getBBFile gets a file from the BB repo
-func getBBFile(ctx context.Context, gitPath, localPath, repo, version string) error {
-	remotePath := fmt.Sprintf("%s/-/raw/%s/base/%s?ref_type=tags", repo, version, gitPath)
-	err := utils.DownloadToFile(ctx, remotePath, localPath, "")
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // readFluxImages finds the images Flux needs to deploy
 func readFluxImages(fluxFilePath string) (images []string, err error) {
 	contents, err := os.ReadFile(fluxFilePath)
@@ -50,7 +39,6 @@ func readFluxImages(fluxFilePath string) (images []string, err error) {
 		return nil, err
 	}
 
-	// Loop through each resource and find the images.
 	for _, yaml := range yamls {
 		// Flux controllers are Deployments.
 		if yaml.GetKind() == "Deployment" {
@@ -59,7 +47,7 @@ func readFluxImages(fluxFilePath string) (images []string, err error) {
 
 			// Convert the unstructured content into a Deployment.
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(content, &deployment); err != nil {
-				return nil, fmt.Errorf("could not parse deployment: %w", err)
+				return nil, err
 			}
 
 			pod := deployment.Spec.Template.Spec
