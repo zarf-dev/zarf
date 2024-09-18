@@ -1,4 +1,4 @@
-apiVersion: helm.toolkit.fluxcd.io/v2
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
   name: bigbang
@@ -28,3 +28,5 @@ spec:
   valuesFrom:
   - kind: Secret
     name: zarf-credentials
+  - kind: Secret
+    name: bb-secret

@@ -482,7 +482,11 @@ func createBBManifests(ctx context.Context, airgap bool, manifestDir string, val
 	}
 
 	if spec, ok := helmReleaseObj["spec"].(map[string]interface{}); ok {
-		spec["valuesFrom"] = hrValues
+		if len(hrValues) > 0 {
+			spec["valuesFrom"] = hrValues
+		} else {
+			delete(spec, "valuesFrom")
+		}
 	} else {
 		return v1alpha1.ZarfManifest{}, errors.New("unable to find spec in helmrelease.yaml")
 	}

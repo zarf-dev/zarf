@@ -171,28 +171,28 @@ func TestAddBigBangManifests(t *testing.T) {
 		expectedFiles []string
 	}{
 		{
-			name:        "Airgap true",
-			airgap:      true,
+			name:        "Airgap false",
+			airgap:      false,
 			valuesFiles: []string{},
 			version:     "2.35.0",
 			repo:        "https://repo1.dso.mil/big-bang/bigbang",
 			expectedFiles: []string{
-				filepath.Join("testdata", "addBBManifests", "airgap-true", "bb-gitrepository.yaml"),
-				filepath.Join("testdata", "addBBManifests", "airgap-true", "bb-zarf-credentials.yaml"),
-				filepath.Join("testdata", "addBBManifests", "airgap-true", "bb-helmrelease.yaml"),
+				filepath.Join("testdata", "addBBManifests", "airgap-false", "bb-gitrepository.yaml"),
+				filepath.Join("testdata", "addBBManifests", "airgap-false", "bb-helmrelease.yaml"),
 			},
 		},
 		{
-			name:   "Airgap false with values files and v2beta1 version",
-			airgap: false,
+			name:   "Airgap true with values files and v2beta1 version",
+			airgap: true,
 			valuesFiles: []string{
-				filepath.Join("testdata", "addBBManifests", "airgap-false", "neuvector.yaml"),
+				filepath.Join("testdata", "addBBManifests", "airgap-true", "neuvector.yaml"),
 			},
 			version: "2.0.0",
 			repo:    "https://repo1.dso.mil/big-bang/bigbang",
 			expectedFiles: []string{
-				filepath.Join("testdata", "addBBManifests", "airgap-false", "bb-gitrepository.yaml"),
-				filepath.Join("testdata", "addBBManifests", "airgap-false", "bb-helmrelease.yaml"),
+				filepath.Join("testdata", "addBBManifests", "airgap-true", "bb-gitrepository.yaml"),
+				filepath.Join("testdata", "addBBManifests", "airgap-true", "bb-helmrelease.yaml"),
+				filepath.Join("testdata", "addBBManifests", "airgap-true", "bb-zarf-credentials.yaml"),
 			},
 		},
 	}
