@@ -47,4 +47,5 @@ zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --ve
 ### SEE ALSO
 
 * [zarf dev](/commands/zarf_dev/)	 - Commands useful for developing packages
+* [zarf dev generate big-bang](/commands/zarf_dev_generate_big-bang/)	 - Creates a zarf.yaml and associated manifests for a Big Bang Zarf package in the current directory
 
