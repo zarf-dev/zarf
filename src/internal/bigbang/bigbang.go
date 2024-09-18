@@ -507,8 +507,7 @@ func findImagesForBBChartRepo(ctx context.Context, repo string, values chartutil
 		return images, fmt.Errorf("cannot convert git repo %s to helm chart without a version tag", repo)
 	}
 
-	spinner := message.NewProgressSpinner("Discovering images in %s", repo)
-	defer spinner.Stop()
+	message.Infof("Discovering images in %s", repo)
 
 	gitPath, err := helm.DownloadChartFromGitToTemp(ctx, repo)
 	if err != nil {
@@ -522,8 +521,6 @@ func findImagesForBBChartRepo(ctx context.Context, repo string, values chartutil
 	if err != nil {
 		return images, err
 	}
-
-	spinner.Success()
 
 	return images, err
 }
