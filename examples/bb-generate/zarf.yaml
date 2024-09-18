@@ -1,3 +1,4 @@
+# zarf dev generate big-bang 2.35.0 --values-files=values-files/ingress.yaml,values-files/kyverno.yaml,values-files/loki.yaml,values-files/neuvector.yaml
 apiVersion: zarf.dev/v1alpha1
 kind: ZarfPackageConfig
 metadata:
@@ -67,18 +68,18 @@ components:
   - registry1.dso.mil/ironbank/opensource/grafana/tempo-query:2.5.0
   repos:
   - https://repo1.dso.mil/big-bang/bigbang@2.35.0
-  - https://repo1.dso.mil/big-bang/product/packages/kiali.git@1.89.0-bb.0
-  - https://repo1.dso.mil/big-bang/product/packages/kyverno.git@3.2.6-bb.0
-  - https://repo1.dso.mil/big-bang/product/packages/metrics-server.git@3.12.1-bb.4
-  - https://repo1.dso.mil/big-bang/product/packages/promtail.git@6.16.2-bb.3
-  - https://repo1.dso.mil/big-bang/product/packages/monitoring.git@62.1.0-bb.0
-  - https://repo1.dso.mil/big-bang/product/packages/neuvector.git@2.7.8-bb.1
   - https://repo1.dso.mil/big-bang/product/packages/grafana.git@8.4.6-bb.1
-  - https://repo1.dso.mil/big-bang/product/packages/istio-operator.git@1.22.4-bb.0
   - https://repo1.dso.mil/big-bang/product/packages/istio-controlplane.git@1.22.4-bb.1
+  - https://repo1.dso.mil/big-bang/product/packages/istio-operator.git@1.22.4-bb.0
+  - https://repo1.dso.mil/big-bang/product/packages/kiali.git@1.89.0-bb.0
   - https://repo1.dso.mil/big-bang/product/packages/kyverno-policies.git@3.2.5-bb.3
   - https://repo1.dso.mil/big-bang/product/packages/kyverno-reporter.git@2.24.1-bb.0
+  - https://repo1.dso.mil/big-bang/product/packages/kyverno.git@3.2.6-bb.0
   - https://repo1.dso.mil/big-bang/product/packages/loki.git@6.10.0-bb.0
+  - https://repo1.dso.mil/big-bang/product/packages/metrics-server.git@3.12.1-bb.4
+  - https://repo1.dso.mil/big-bang/product/packages/monitoring.git@62.1.0-bb.0
+  - https://repo1.dso.mil/big-bang/product/packages/neuvector.git@2.7.8-bb.1
+  - https://repo1.dso.mil/big-bang/product/packages/promtail.git@6.16.2-bb.3
   - https://repo1.dso.mil/big-bang/product/packages/tempo.git@1.10.3-bb.0
   actions:
     onDeploy:

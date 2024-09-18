@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -187,6 +188,7 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 		for _, gitRepo := range gitRepos {
 			bbComponent.Repos = append(bbComponent.Repos, gitRepo)
 		}
+		slices.Sort(bbComponent.Repos)
 	}
 
 	// Sort so the dependencies are always the same between runs
@@ -291,7 +293,13 @@ func Create(ctx context.Context, baseDir string, version string, valuesFileManif
 
 	pkg.Components = append(pkg.Components, bbComponent)
 
-	err = utils.WriteYaml(filepath.Join(baseDir, "zarf.yaml"), pkg, helpers.ReadWriteUser)
+	outputName := "zarf.yaml"
+	if !helpers.InvalidPath(filepath.Join(baseDir, outputName)) {
+		outputName = fmt.Sprintf("bigbang-%s", outputName)
+		message.Warnf("zarf.yaml already exists, writing to %s", outputName)
+	}
+
+	err = utils.WriteYaml(filepath.Join(baseDir, outputName), pkg, helpers.ReadWriteUser)
 	if err != nil {
 		return err
 	}

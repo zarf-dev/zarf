@@ -29,10 +29,10 @@ spec:
   - kind: Secret
     name: zarf-credentials
   - kind: Secret
-    name: bb-usr-vals-0-ingress
+    name: bb-ingress-vals
   - kind: ConfigMap
     name: kyverno-config
   - kind: ConfigMap
     name: loki-config
   - kind: Secret
-    name: bb-usr-vals-0-ingress
+    name: bb-neuvector-vals

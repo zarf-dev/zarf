@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: bb-usr-vals-0-ingress
+  name: bb-neuvector-vals
   namespace: bigbang
 stringData:
   values.yaml: |
