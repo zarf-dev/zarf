@@ -50,7 +50,7 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 
 	switch u.Scheme {
 	case "oci":
-		err := pullOCI(ctx, src, tmpPath, shasum, filter)
+		_, err := pullOCI(ctx, src, tmpPath, shasum, filter)
 		if err != nil {
 			return err
 		}
@@ -89,10 +89,10 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 	return nil
 }
 
-func pullOCI(ctx context.Context, src, tarPath, shasum string, filter filters.ComponentFilterStrategy) error {
+func pullOCI(ctx context.Context, src, tarPath, shasum string, filter filters.ComponentFilterStrategy) (bool, error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer os.Remove(tmpDir)
 	if shasum != "" {
@@ -101,40 +101,48 @@ func pullOCI(ctx context.Context, src, tarPath, shasum string, filter filters.Co
 	arch := config.GetArch()
 	remote, err := zoci.NewRemote(src, oci.PlatformForArch(arch))
 	if err != nil {
-		return err
+		return false, err
 	}
 	desc, err := remote.ResolveRoot(ctx)
 	if err != nil {
-		return fmt.Errorf("could not fetch images index: %w", err)
+		return false, fmt.Errorf("could not fetch images index: %w", err)
 	}
 	layersToPull := []ocispec.Descriptor{}
+	isPartial := false
 	if supportsFiltering(desc.Platform) {
+		root, err := remote.FetchRoot(ctx)
+		if err != nil {
+			return false, err
+		}
+		if len(root.Layers) != len(layersToPull) {
+			isPartial = true
+		}
 		pkg, err := remote.FetchZarfYAML(ctx)
 		if err != nil {
-			return err
+			return false, err
 		}
 		pkg.Components, err = filter.Apply(pkg)
 		if err != nil {
-			return err
+			return false, err
 		}
 		layersToPull, err = remote.LayersFromRequestedComponents(ctx, pkg.Components)
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 	_, err = remote.PullPackage(ctx, tmpDir, config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
-		return err
+		return false, err
 	}
 	allTheLayers, err := filepath.Glob(filepath.Join(tmpDir, "*"))
 	if err != nil {
-		return err
+		return false, err
 	}
 	err = archiver.Archive(allTheLayers, tarPath)
 	if err != nil {
-		return err
+		return false, err
 	}
-	return nil
+	return isPartial, nil
 }
 
 func pullHTTP(ctx context.Context, src, tarPath, shasum string) error {

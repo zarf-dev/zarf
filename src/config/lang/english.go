@@ -233,7 +233,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdPackageMirrorExample = `
 # Mirror resources to internal Zarf resources
 $ zarf package mirror-resources <your-package.tar.zst> \
-	--registry-url 127.0.0.1:31999 \
+	--registry-url http://zarf-docker-registry.zarf.svc.cluster.local:5000 \
 	--registry-push-username zarf-push \
 	--registry-push-password <generated-registry-push-password> \
 	--git-url http://zarf-gitea-http.zarf.svc.cluster.local:3000 \
