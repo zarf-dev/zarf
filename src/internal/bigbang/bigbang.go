@@ -42,6 +42,7 @@ type Opts struct {
 	Repo                string
 	Version             string
 	BaseDir             string
+	KubeVersion         string
 }
 
 const (
@@ -149,6 +150,7 @@ func Create(ctx context.Context, bbOpts Opts) error {
 		path.Join(tmpDir, bb),
 		path.Join(tmpDir, bb, "values"),
 		helm.WithVariableConfig(&variables.VariableConfig{}),
+		helm.WithKubeVersion(bbOpts.KubeVersion),
 	)
 
 	// Download the chart from Git and save it to a temporary directory.

@@ -341,6 +341,7 @@ func init() {
 	bigBangGenerateCommand.Flags().BoolVar(&bbOpts.SkipFlux, "skip-flux", false, "Skip the Flux component in the Big Bang package")
 	bigBangGenerateCommand.Flags().BoolVar(&bbOpts.Airgap, "airgap", true, "Whether or not this package is targeting an airgap environment")
 	bigBangGenerateCommand.Flags().StringVar(&bbOpts.Repo, "repo", "https://repo1.dso.mil/big-bang/bigbang", "The git repository to use for the Big Bang package")
+	bigBangGenerateCommand.Flags().StringVar(&bbOpts.KubeVersion, "kube-version", "", "Override the default KubeVersion used during the helm template portion of generate")
 
 	bindDevDeployFlags(v)
 	bindDevGenerateFlags(v)

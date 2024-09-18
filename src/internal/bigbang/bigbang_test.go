@@ -6,13 +6,17 @@ package bigbang
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	fluxv2 "github.com/fluxcd/helm-controller/api/v2"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 func TestRequiredBigBangVersions(t *testing.T) {
@@ -217,51 +221,71 @@ func TestAddBigBangManifests(t *testing.T) {
 	}
 }
 
-// func TestCreate(t *testing.T) {
-// 	t.Parallel()
-// 	tests := []struct {
-// 		name            string
-// 		airgap          bool
-// 		valuesFiles     []string
-// 		version         string
-// 		repo            string
-// 		skipFlux        bool
-// 		expectedPackage string
-// 	}{
-// 		{
-// 			name:            "default BB install",
-// 			airgap:          true,
-// 			valuesFiles:     []string{},
-// 			version:         "2.35.0",
-// 			repo:            "https://repo1.dso.mil/big-bang/bigbang",
-// 			skipFlux:        true,
-// 			expectedPackage: filepath.Join("testdata", "create", "default_zarf.yaml"),
-// 		},
-// 	}
+func TestCreate(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		airgap          bool
+		valuesFiles     []string
+		version         string
+		repo            string
+		skipFlux        bool
+		expectedPackage string
+	}{
+		{
+			name:            "default BB install",
+			airgap:          true,
+			valuesFiles:     []string{},
+			version:         "2.35.0",
+			repo:            "https://repo1.dso.mil/big-bang/bigbang",
+			skipFlux:        false,
+			expectedPackage: filepath.Join("testdata", "create", "default.yaml"),
+		},
+		{
+			name:            "Not air gapped",
+			airgap:          false,
+			valuesFiles:     []string{},
+			version:         "2.35.0",
+			repo:            "https://repo1.dso.mil/big-bang/bigbang",
+			skipFlux:        false,
+			expectedPackage: filepath.Join("testdata", "create", "not_airgap.yaml"),
+		},
+	}
 
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			t.Parallel()
-// 			tempDir := t.TempDir()
-// 			bbOpts := Opts{
-// 				Airgap:              tt.airgap,
-// 				ValuesFileManifests: nil,
-// 				Version:             tt.version,
-// 				Repo:                tt.repo,
-// 				SkipFlux:            tt.skipFlux,
-// 			}
-// 			err := Create(context.Background(), bbOpts)
-// 			require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			tempDir := t.TempDir()
+			bbOpts := Opts{
+				Airgap:              tt.airgap,
+				ValuesFileManifests: nil,
+				Version:             tt.version,
+				Repo:                tt.repo,
+				SkipFlux:            tt.skipFlux,
+				BaseDir:             tempDir,
+				KubeVersion:         "v1.30.0",
+			}
+			err := Create(context.Background(), bbOpts)
+			require.NoError(t, err)
 
-// 			for _, expectedFile := range tt.expectedPackage {
-// 				_, filename := filepath.Split(expectedFile)
-// 				generatedFile := filepath.Join(tempDir, filename)
-// 				expectedContent, err := os.ReadFile(expectedFile)
-// 				require.NoError(t, err)
-// 				generatedContent, err := os.ReadFile(generatedFile)
-// 				require.NoError(t, err)
-// 				require.Equal(t, string(expectedContent), string(generatedContent))
-// 			}
-// 		})
-// 	}
-// }
+			expectedContent, err := os.ReadFile(tt.expectedPackage)
+			require.NoError(t, err)
+			var expectedPkg v1alpha1.ZarfPackage
+			err = yaml.Unmarshal(expectedContent, &expectedPkg)
+			require.NoError(t, err)
+			actualContent, err := os.ReadFile(filepath.Join(tempDir, "zarf.yaml"))
+			require.NoError(t, err)
+			var actualPkg v1alpha1.ZarfPackage
+			err = yaml.Unmarshal(actualContent, &actualPkg)
+			require.NoError(t, err)
+			for i, c := range actualPkg.Components {
+				for j, m := range c.Manifests {
+					for k, f := range m.Files {
+						actualPkg.Components[i].Manifests[j].Files[k] = strings.TrimPrefix(f, fmt.Sprintf("%s/", tempDir))
+					}
+				}
+			}
+			require.Equal(t, expectedPkg, actualPkg)
+		})
+	}
+}

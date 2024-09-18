@@ -23,10 +23,6 @@ components:
     files:
     - manifests/bb-gitrepository.yaml
     - manifests/bb-zarf-credentials.yaml
-    - values-files/ingress.yaml
-    - values-files/kyverno.yaml
-    - values-files/loki.yaml
-    - values-files/neuvector.yaml
     - manifests/bb-helmrelease.yaml
   images:
   - registry1.dso.mil/ironbank/big-bang/grafana/grafana-plugins:11.1.4
@@ -81,27 +77,6 @@ components:
   - https://repo1.dso.mil/big-bang/product/packages/promtail.git@6.16.2-bb.3
   - https://repo1.dso.mil/big-bang/product/packages/tempo.git@1.10.3-bb.0
   actions:
-    onDeploy:
-      onFailure:
-      - cmd: ./zarf tools kubectl get nodes -o wide
-      - cmd: ./zarf tools kubectl get hr -n bigbang
-      - cmd: ./zarf tools kubectl get gitrepo -n bigbang
-      - cmd: ./zarf tools kubectl get pods -A
-      - mute: true
-        cmd: ./zarf tools kubectl describe hr -n bigbang
-        description: Storing debug information to the log for troubleshooting.
-      - mute: true
-        cmd: ./zarf tools kubectl describe gitrepo -n bigbang
-        description: Storing debug information to the log for troubleshooting.
-      - mute: true
-        cmd: ./zarf tools kubectl describe pods -A
-        description: Storing debug information to the log for troubleshooting.
-      - mute: true
-        cmd: ./zarf tools kubectl describe nodes
-        description: Storing debug information to the log for troubleshooting.
-      - mute: true
-        cmd: ./zarf tools kubectl get events -A
-        description: Storing debug information to the log for troubleshooting.
     onRemove:
       before:
       - cmd: ./zarf tools kubectl patch helmrelease -n bigbang bigbang --type=merge -p '{"spec":{"suspend":true}}'
@@ -139,10 +114,6 @@ components:
     kind: HelmRelease
     namespace: bigbang
     name: loki
-  - apiVersion: v1
-    kind: HelmRelease
-    namespace: bigbang
-    name: metrics-server
   - apiVersion: v1
     kind: HelmRelease
     namespace: bigbang
