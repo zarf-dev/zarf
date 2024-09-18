@@ -434,22 +434,6 @@ func addBigBangManifests(ctx context.Context, airgap bool, manifestDir string, v
 		Namespace: bb,
 	}
 
-	// Helper function to marshal and write a manifest and add it to the component.
-	addManifest := func(name string, data any) error {
-		path := path.Join(manifestDir, name)
-		out, err := yaml.Marshal(data)
-		if err != nil {
-			return err
-		}
-
-		if err := os.WriteFile(path, out, helpers.ReadWriteUser); err != nil {
-			return err
-		}
-
-		manifest.Files = append(manifest.Files, path)
-		return nil
-	}
-
 	localGitRepoPath := filepath.Join(manifestDir, "gitrepository.yaml")
 	if err := getBBFile(ctx, "gitrepository.yaml", localGitRepoPath, repo, version); err != nil {
 		return v1alpha1.ZarfManifest{}, err
@@ -459,14 +443,15 @@ func addBigBangManifests(ctx context.Context, airgap bool, manifestDir string, v
 	var hrValues []fluxHelmCtrl.ValuesReference
 	// Only include the zarf-credentials secret if in airgap mode
 	if airgap {
-		zarfCredsManifest, err := manifestZarfCredentials(version)
+		credsSecret, err := manifestZarfCredentials(version)
 		if err != nil {
-			return manifest, err
+			return v1alpha1.ZarfManifest{}, err
 		}
-		// Create the zarf-credentials secret manifest.
-		if err := addManifest("bb-zarf-credentials.yaml", zarfCredsManifest); err != nil {
-			return manifest, err
+		path := filepath.Join(manifestDir, "bb-zarf-credentials.yaml")
+		if err = os.WriteFile(path, []byte(credsSecret), helpers.ReadWriteUser); err != nil {
+			return v1alpha1.ZarfManifest{}, err
 		}
+		manifest.Files = append(manifest.Files, path)
 
 		// Create the list of values manifests starting with zarf-credentials.
 		hrValues = []fluxHelmCtrl.ValuesReference{{
