@@ -336,7 +336,7 @@ func init() {
 	devCmd.AddCommand(devLintCmd)
 	devGenerateCmd.AddCommand(bigBangGenerateCommand)
 
-	bigBangGenerateCommand.Flags().StringSliceVar(&bbOpts.ValuesFiles, "values-file-manifests", nil, "A comma separated list of configmap or secret manifests to pass to the Big Bang Helm Release. See https://fluxcd.io/flux/components/helm/helmreleases/#values-references")
+	bigBangGenerateCommand.Flags().StringSliceVar(&bbOpts.ValuesFileManifests, "values-file-manifests", nil, "A comma separated list of configmap or secret manifests to pass to the Big Bang Helm Release. See https://fluxcd.io/flux/components/helm/helmreleases/#values-references")
 	bigBangGenerateCommand.Flags().BoolVar(&bbOpts.SkipFlux, "skip-flux", false, "Skip the Flux component in the Big Bang package")
 	bigBangGenerateCommand.Flags().BoolVar(&bbOpts.Airgap, "airgap", true, "Whether or not this package is targeting an airgap environment")
 	bigBangGenerateCommand.Flags().StringVar(&bbOpts.Repo, "repo", "https://repo1.dso.mil/big-bang/bigbang", "The git repository to use for the Big Bang package")

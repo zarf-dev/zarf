@@ -36,11 +36,11 @@ import (
 
 // Opts contains the options for the bigbang.Create function
 type Opts struct {
-	ValuesFiles []string
-	SkipFlux    bool
-	Airgap      bool
-	Repo        string
-	Version     string
+	ValuesFileManifests []string
+	SkipFlux            bool
+	Airgap              bool
+	Repo                string
+	Version             string
 }
 
 const (
@@ -124,7 +124,7 @@ func Create(ctx context.Context, bbOpts Opts) error {
 	}
 
 	valuesFiles := []string{}
-	for idx, valuesFile := range bbOpts.ValuesFiles {
+	for idx, valuesFile := range bbOpts.ValuesFileManifests {
 		valuesYaml, err := getValuesFromManifest(valuesFile)
 		if err != nil {
 			return err
@@ -268,7 +268,7 @@ func Create(ctx context.Context, bbOpts Opts) error {
 		return err
 	}
 
-	manifest, err := createBBManifests(ctx, bbOpts.Airgap, manifestDir, bbOpts.ValuesFiles, bbOpts.Version, bbOpts.Repo)
+	manifest, err := createBBManifests(ctx, bbOpts.Airgap, manifestDir, bbOpts.ValuesFileManifests, bbOpts.Version, bbOpts.Repo)
 	if err != nil {
 		return err
 	}
