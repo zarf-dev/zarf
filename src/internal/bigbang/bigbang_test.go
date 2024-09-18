@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -198,6 +200,36 @@ func TestAddBigBangManifests(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
+			testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Expected URL format:
+				// /-/raw/{version}/base/{file}?ref_type=tags
+				// Example: /-/raw/2.35.0/base/gitrepository.yaml?ref_type=tags
+
+				// Split the URL path to extract version and file name
+				pathParts := strings.Split(r.URL.Path, "/")
+				if len(pathParts) < 5 {
+					http.Error(w, "Invalid URL path", http.StatusBadRequest)
+					return
+				}
+				version := pathParts[5]
+				gitPath := pathParts[7]
+				localFilePath := filepath.Join("testdata", "addBBManifests", "mock-downloads", version, gitPath)
+				data, err := os.ReadFile(localFilePath)
+				if err != nil {
+					http.Error(w, "File Not Found", http.StatusNotFound)
+					return
+				}
+
+				w.WriteHeader(http.StatusOK)
+				//nolint: errcheck // ignore
+				w.Write(data)
+			}))
+			defer testServer.Close()
+
+			testRepoURL := testServer.URL + "/big-bang/bigbang"
+			tt.repo = testRepoURL
+
 			tempDir := t.TempDir()
 			var expectedManifests []string
 			for _, f := range tt.expectedFiles {

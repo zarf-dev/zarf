@@ -1,0 +1,40 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: bigbang
+spec:
+  targetNamespace: bigbang
+  releaseName: bigbang
+  interval: 10m
+  chart:
+    spec:
+      chart: chart
+      sourceRef:
+        kind: GitRepository
+        name: bigbang
+  test:
+    enable: false
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    remediation:
+      retries: 5
+      remediateLastFailure: true
+    cleanupOnFail: true
+  rollback:
+    timeout: 10m
+    cleanupOnFail: false
+  valuesFrom:
+    # Optional secret injected with https://repo1.dso.mil/platform-one/big-bang/terraform-modules/big-bang-terraform-launcher
+    - kind: Secret
+      name: terraform
+      optional: true
+    - kind: Secret
+      name: common-bb
+    - kind: ConfigMap
+      name: common
+    - kind: Secret
+      name: environment-bb
+    - kind: ConfigMap
+      name: environment
