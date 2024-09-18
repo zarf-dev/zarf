@@ -41,6 +41,7 @@ type Opts struct {
 	Airgap              bool
 	Repo                string
 	Version             string
+	BaseDir             string
 }
 
 const (
@@ -51,7 +52,6 @@ const (
 
 // Create creates a Zarf.yaml file for a big bang package
 func Create(ctx context.Context, bbOpts Opts) error {
-	baseDir := "."
 	bbComponent := v1alpha1.ZarfComponent{Name: "bigbang", Required: helpers.BoolPtr(true)}
 	pkg := v1alpha1.ZarfPackage{
 		Kind:       v1alpha1.ZarfPackageConfig,
@@ -89,7 +89,7 @@ func Create(ctx context.Context, bbOpts Opts) error {
 		if err != nil {
 			return err
 		}
-		fluxBaseDir := filepath.Join(baseDir, "flux")
+		fluxBaseDir := filepath.Join(bbOpts.BaseDir, "flux")
 		err = os.Mkdir(fluxBaseDir, helpers.ReadWriteExecuteUser)
 		if err != nil && !errors.Is(err, os.ErrExist) {
 			return err
@@ -182,6 +182,14 @@ func Create(ctx context.Context, bbOpts Opts) error {
 
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
 	for _, hr := range hrDependencies {
+		// In Big Bang the metrics-server is a special case that only deploy if needed.
+		// The check it, we need to look for the existence of APIService instead of the HelmRelease, which
+		// may not ever be created. See links below for more details.
+		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.54.0/chart/templates/metrics-server/helmrelease.yaml
+		if hr.Metadata.Name == "metrics-server" {
+			continue
+		}
+
 		healthCheck := v1alpha1.NamespacedObjectKindReference{
 			APIVersion: "v1",
 			Kind:       "HelmRelease",
@@ -189,52 +197,7 @@ func Create(ctx context.Context, bbOpts Opts) error {
 			Namespace:  hr.Metadata.Namespace,
 		}
 
-		// TODO, ask radius method what's going on here
-
-		// In Big Bang the metrics-server is a special case that only deploy if needed.
-		// The check it, we need to look for the existence of APIService instead of the HelmRelease, which
-		// may not ever be created. See links below for more details.
-		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.54.0/chart/templates/metrics-server/helmrelease.yaml
-		// if hr.Metadata.Name == "metrics-server" {
-		// 	action.Description = "K8s metric server to exist or be deployed by Big Bang"
-		// 	action.Wait.Cluster = &v1alpha1.ZarfComponentActionWaitCluster{
-		// 		Kind: "APIService",
-		// 		// https://github.com/kubernetes-sigs/metrics-server#compatibility-matrix
-		// 		Name: "v1beta1.metrics.k8s.io",
-		// 	}
-		// }
-
 		bbComponent.HealthChecks = append(bbComponent.HealthChecks, healthCheck)
-	}
-
-	// TODO figure out if we care about including the remove or failure checks
-	failureGeneral := []string{
-		"get nodes -o wide",
-		"get hr -n bigbang",
-		"get gitrepo -n bigbang",
-		"get pods -A",
-	}
-	failureDebug := []string{
-		"describe hr -n bigbang",
-		"describe gitrepo -n bigbang",
-		"describe pods -A",
-		"describe nodes",
-		"get events -A",
-	}
-
-	// Add onFailure actions with additional troubleshooting information.
-	for _, cmd := range failureGeneral {
-		bbComponent.Actions.OnDeploy.OnFailure = append(bbComponent.Actions.OnDeploy.OnFailure, v1alpha1.ZarfComponentAction{
-			Cmd: fmt.Sprintf("./zarf tools kubectl %s", cmd),
-		})
-	}
-
-	for _, cmd := range failureDebug {
-		bbComponent.Actions.OnDeploy.OnFailure = append(bbComponent.Actions.OnDeploy.OnFailure, v1alpha1.ZarfComponentAction{
-			Mute:        helpers.BoolPtr(true),
-			Description: "Storing debug information to the log for troubleshooting.",
-			Cmd:         fmt.Sprintf("./zarf tools kubectl %s", cmd),
-		})
 	}
 
 	// Add a pre-remove action to suspend the Big Bang HelmReleases to prevent reconciliation during removal.
@@ -261,7 +224,7 @@ func Create(ctx context.Context, bbOpts Opts) error {
 		bbComponent.Images = helpers.Unique(bbComponent.Images)
 	}
 
-	manifestDir := filepath.Join(baseDir, "manifests")
+	manifestDir := filepath.Join(bbOpts.BaseDir, "manifests")
 
 	err = os.Mkdir(manifestDir, helpers.ReadWriteExecuteUser)
 	if err != nil && !errors.Is(err, os.ErrExist) {
@@ -278,12 +241,12 @@ func Create(ctx context.Context, bbOpts Opts) error {
 	pkg.Components = append(pkg.Components, bbComponent)
 
 	outputName := "zarf.yaml"
-	if !helpers.InvalidPath(filepath.Join(baseDir, outputName)) {
+	if !helpers.InvalidPath(filepath.Join(bbOpts.BaseDir, outputName)) {
 		outputName = fmt.Sprintf("bigbang-%s", outputName)
 		message.Warnf("zarf.yaml already exists, writing to %s", outputName)
 	}
 
-	return utils.WriteYaml(filepath.Join(baseDir, outputName), pkg, helpers.ReadWriteUser)
+	return utils.WriteYaml(filepath.Join(bbOpts.BaseDir, outputName), pkg, helpers.ReadWriteUser)
 }
 
 func getValuesFromManifest(valuesFileManifest string) (string, error) {

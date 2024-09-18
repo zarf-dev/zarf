@@ -108,6 +108,7 @@ var bigBangGenerateCommand = &cobra.Command{
 	Example: "zarf dev generate big-bang 2.3.4 --values-file-manifests=my-configmap.yaml,my-secret.yaml",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		bbOpts.Version = args[0]
+		bbOpts.BaseDir = "."
 		return bigbang.Create(cmd.Context(), bbOpts)
 	},
 }

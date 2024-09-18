@@ -218,65 +218,50 @@ func TestAddBigBangManifests(t *testing.T) {
 }
 
 // func TestCreate(t *testing.T) {
-// t.Parallel()
-// tests := []struct {
-// 	name          string
-// 	airgap        bool
-// 	valuesFiles   []string
-// 	version       string
-// 	repo          string
-// 	expectedFiles []string
-// }{
-// 	{
-// 		name:        "default BB install",
-// 		airgap:      true,
-// 		valuesFiles: []string{},
-// 		version:     "2.35.0",
-// 		repo:        "https://repo1.dso.mil/big-bang/bigbang",
-// 		expectedFiles: []string{
-// 			filepath.Join("testdata", "create", "bb-gitrepository.yaml"),
-// 			filepath.Join("testdata", "create", "bb-zarf-credentials.yaml"),
-// 			filepath.Join("testdata", "create", "bb-helmrelease.yaml"),
-// 			filepath.Join("testdata", "create", "zarf.yaml"),
+// 	t.Parallel()
+// 	tests := []struct {
+// 		name            string
+// 		airgap          bool
+// 		valuesFiles     []string
+// 		version         string
+// 		repo            string
+// 		skipFlux        bool
+// 		expectedPackage string
+// 	}{
+// 		{
+// 			name:            "default BB install",
+// 			airgap:          true,
+// 			valuesFiles:     []string{},
+// 			version:         "2.35.0",
+// 			repo:            "https://repo1.dso.mil/big-bang/bigbang",
+// 			skipFlux:        true,
+// 			expectedPackage: filepath.Join("testdata", "create", "default_zarf.yaml"),
 // 		},
-// 	},
-// 	{
-// 		name:   "Airgap false with values files and v2beta1 version",
-// 		airgap: false,
-// 		valuesFiles: []string{
-// 			filepath.Join("testdata", "addBBManifests", "airgap-false", "neuvector.yaml"),
-// 		},
-// 		version: "2.0.0",
-// 		repo:    "https://repo1.dso.mil/big-bang/bigbang",
-// 		expectedFiles: []string{
-// 			filepath.Join("testdata", "addBBManifests", "airgap-false", "gitrepository.yaml"),
-// 			filepath.Join("testdata", "addBBManifests", "airgap-false", "helmrelease.yaml"),
-// 		},
-// 	},
-// }
+// 	}
 
-// for _, tt := range tests {
-// 	t.Run(tt.name, func(t *testing.T) {
-// 		t.Parallel()
-// 		tempDir := t.TempDir()
-// 		var expectedManifests []string
-// 		for _, f := range tt.expectedFiles {
-// 			expectedManifests = append(expectedManifests, filepath.Join(tempDir, filepath.Base(f)))
-// 		}
-// 		expectedManifests = append(expectedManifests, tt.valuesFiles...)
-// 		manifest, err := createBBManifests(context.Background(), tt.airgap, tempDir, tt.valuesFiles, tt.version, tt.repo)
-// 		require.NoError(t, err)
-// 		require.ElementsMatch(t, expectedManifests, manifest.Files)
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			t.Parallel()
+// 			tempDir := t.TempDir()
+// 			bbOpts := Opts{
+// 				Airgap:              tt.airgap,
+// 				ValuesFileManifests: nil,
+// 				Version:             tt.version,
+// 				Repo:                tt.repo,
+// 				SkipFlux:            tt.skipFlux,
+// 			}
+// 			err := Create(context.Background(), bbOpts)
+// 			require.NoError(t, err)
 
-// 		for _, expectedFile := range tt.expectedFiles {
-// 			_, filename := filepath.Split(expectedFile)
-// 			generatedFile := filepath.Join(tempDir, filename)
-// 			expectedContent, err := os.ReadFile(expectedFile)
-// 			require.NoError(t, err)
-// 			generatedContent, err := os.ReadFile(generatedFile)
-// 			require.NoError(t, err)
-// 			require.Equal(t, string(expectedContent), string(generatedContent))
-// 		}
-// 	})
-// }
+// 			for _, expectedFile := range tt.expectedPackage {
+// 				_, filename := filepath.Split(expectedFile)
+// 				generatedFile := filepath.Join(tempDir, filename)
+// 				expectedContent, err := os.ReadFile(expectedFile)
+// 				require.NoError(t, err)
+// 				generatedContent, err := os.ReadFile(generatedFile)
+// 				require.NoError(t, err)
+// 				require.Equal(t, string(expectedContent), string(generatedContent))
+// 			}
+// 		})
+// 	}
 // }
