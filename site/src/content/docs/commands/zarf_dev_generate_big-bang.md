@@ -25,6 +25,7 @@ zarf dev generate big-bang 2.3.4 --values-file-manifests=my-configmap.yaml,my-se
 ```
       --airgap                          Whether or not this package is targeting an airgap environment (default true)
   -h, --help                            help for big-bang
+      --kube-version string             Override the default KubeVersion used during the helm template portion of generate
       --repo string                     The git repository to use for the Big Bang package (default "https://repo1.dso.mil/big-bang/bigbang")
       --skip-flux                       Skip the Flux component in the Big Bang package
       --values-file-manifests strings   A comma separated list of configmap or secret manifests to pass to the Big Bang Helm Release. See https://fluxcd.io/flux/components/helm/helmreleases/#values-references
