@@ -74,6 +74,65 @@ func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string) (*
 	return deployedPackage, nil
 }
 
+// UpdateDeployedPackage updates the deployed package metadata.
+func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg types.DeployedPackage) error {
+	secretName := config.ZarfPackagePrefix + depPkg.Name
+	packageSecretData, err := json.Marshal(depPkg)
+	if err != nil {
+		return err
+	}
+	packageSecret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: ZarfNamespaceName,
+			Labels: map[string]string{
+				ZarfManagedByLabel:   "zarf",
+				ZarfPackageInfoLabel: depPkg.Name,
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"data": packageSecretData,
+		},
+	}
+	err = func() error {
+		_, err := c.Clientset.CoreV1().Secrets(packageSecret.Namespace).Get(ctx, packageSecret.Name, metav1.GetOptions{})
+		if err != nil && !kerrors.IsNotFound(err) {
+			return err
+		}
+		if kerrors.IsNotFound(err) {
+			_, err = c.Clientset.CoreV1().Secrets(packageSecret.Namespace).Create(ctx, packageSecret, metav1.CreateOptions{})
+			if err != nil {
+				return fmt.Errorf("unable to create the deployed package secret: %w", err)
+			}
+			return nil
+		}
+		_, err = c.Clientset.CoreV1().Secrets(packageSecret.Namespace).Update(ctx, packageSecret, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("unable to update the deployed package secret: %w", err)
+		}
+		return nil
+	}()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// DeleteDeployedPackage removes the metadata for the deployed package.
+func (c *Cluster) DeleteDeployedPackage(ctx context.Context, packageName string) error {
+	secretName := config.ZarfPackagePrefix + packageName
+	err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).Delete(ctx, secretName, metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // StripZarfLabelsAndSecretsFromNamespaces removes metadata and secrets from existing namespaces no longer manged by Zarf.
 func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 	spinner := message.NewProgressSpinner("Removing zarf metadata & secrets from existing namespaces not managed by Zarf")
