@@ -78,6 +78,19 @@ func Create(ctx context.Context, bbOpts Opts) error {
 		return fmt.Errorf("version %s must be at least %s", bbOpts.Version, bbMinRequiredVersion)
 	}
 
+	valuesFiles := []string{}
+	for idx, valuesFile := range bbOpts.ValuesFileManifests {
+		valuesYaml, err := getValuesFromManifest(valuesFile)
+		if err != nil {
+			return err
+		}
+		valuesFilePath := filepath.Join(tmpDir, fmt.Sprintf("values-%d.yaml", idx))
+		if err := os.WriteFile(valuesFilePath, []byte(valuesYaml), helpers.ReadWriteUser); err != nil {
+			return err
+		}
+		valuesFiles = append(valuesFiles, valuesFilePath)
+	}
+
 	if !bbOpts.SkipFlux {
 		fluxComponent := v1alpha1.ZarfComponent{Name: "flux", Required: helpers.BoolPtr(true)}
 		fluxTmpDir := filepath.Join(tmpDir, "flux")
@@ -122,19 +135,6 @@ func Create(ctx context.Context, bbOpts Opts) error {
 
 	if bbOpts.Airgap {
 		bbComponent.Repos = append(bbComponent.Repos, bbRepo)
-	}
-
-	valuesFiles := []string{}
-	for idx, valuesFile := range bbOpts.ValuesFileManifests {
-		valuesYaml, err := getValuesFromManifest(valuesFile)
-		if err != nil {
-			return err
-		}
-		valuesFilePath := filepath.Join(tmpDir, fmt.Sprintf("values-%d.yaml", idx))
-		if err := os.WriteFile(valuesFilePath, []byte(valuesYaml), helpers.ReadWriteUser); err != nil {
-			return err
-		}
-		valuesFiles = append(valuesFiles, valuesFilePath)
 	}
 
 	// Configure helm to pull down the Big Bang chart.
@@ -258,7 +258,7 @@ func getValuesFromManifest(valuesFileManifest string) (string, error) {
 	}
 	var resource unstructured.Unstructured
 	if err := yaml.Unmarshal(file, &resource); err != nil {
-		return "", err
+		return "", fmt.Errorf("values file manifests must be kubernetes configmap or secret resources: %w", err)
 	}
 	var data map[string]string
 	var found bool
@@ -268,7 +268,7 @@ func getValuesFromManifest(valuesFileManifest string) (string, error) {
 		if err != nil || !found {
 			data, found, err = unstructured.NestedStringMap(resource.Object, "data")
 			if err != nil || !found {
-				return "", fmt.Errorf("failed to get data from resource: %w", err)
+				return "", fmt.Errorf("failed to get data from secret: %w", err)
 			}
 			base64Decode = true
 		}
