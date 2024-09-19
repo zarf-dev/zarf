@@ -19,11 +19,14 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/avast/retry-go/v4"
-	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/aggregator"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/collector"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
 	"sigs.k8s.io/cli-utils/pkg/object"
 
@@ -238,6 +241,43 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 	return deployedComponents, nil
 }
 
+// WaitForReady waits for all of the objects to reach a ready state.
+func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.ObjMetadata) error {
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	eventCh := sw.Watch(cancelCtx, objs, watcher.Options{})
+	statusCollector := collector.NewResourceStatusCollector(objs)
+	done := statusCollector.ListenWithObserver(eventCh, collector.ObserverFunc(
+		func(statusCollector *collector.ResourceStatusCollector, _ event.Event) {
+			rss := []*event.ResourceStatus{}
+			for _, rs := range statusCollector.ResourceStatuses {
+				if rs == nil {
+					fmt.Println("rs is nil")
+					continue
+				}
+				fmt.Println("this is rs", rs)
+				rss = append(rss, rs)
+			}
+			fmt.Println("this is the length of rss", len(rss))
+			desired := status.CurrentStatus
+			if aggregator.AggregateStatus(rss, desired) == desired {
+				cancel()
+				return
+			}
+		}),
+	)
+	<-done
+	if statusCollector.Error != nil {
+		return statusCollector.Error
+	}
+	// Only check parent context error, otherwise we would error when desired status is acheived.
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return nil
+}
+
 func runHealthChecks(ctx context.Context, watcher watcher.StatusWatcher, healthChecks []v1alpha1.NamespacedObjectKindReference) error {
 	objs := []object.ObjMetadata{}
 	for _, hc := range healthChecks {
@@ -255,7 +295,7 @@ func runHealthChecks(ctx context.Context, watcher watcher.StatusWatcher, healthC
 		}
 		objs = append(objs, obj)
 	}
-	err := pkgkubernetes.WaitForReady(ctx, watcher, objs)
+	err := WaitForReady(ctx, watcher, objs)
 	if err != nil {
 		return err
 	}
