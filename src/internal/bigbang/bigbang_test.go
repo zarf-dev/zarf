@@ -67,13 +67,17 @@ func TestFindBBResources(t *testing.T) {
 			},
 			expectedHelmReleaseDeps: []HelmReleaseDependency{
 				{
-					Metadata: metav1.ObjectMeta{
+					typeMeta: metav1.TypeMeta{
+						Kind:       "HelmRelease",
+						APIVersion: "helm.toolkit.fluxcd.io/v2beta1",
+					},
+					metadata: metav1.ObjectMeta{
 						Name:      "my-helm-release",
 						Namespace: "default",
 					},
-					NamespacedDependencies: []string{"istio.another-helm-release"},
-					NamespacedSource:       "default.my-git-repo",
-					ValuesFrom: []fluxv2.ValuesReference{
+					namespacedDependencies: []string{"istio.another-helm-release"},
+					namespacedSource:       "default.my-git-repo",
+					valuesFrom: []fluxv2.ValuesReference{
 						{
 							Kind: "ConfigMap",
 							Name: "my-configmap",

@@ -20,10 +20,11 @@ import (
 
 // HelmReleaseDependency is a struct that represents a Flux Helm Release from an HR DependsOn list.
 type HelmReleaseDependency struct {
-	Metadata               metav1.ObjectMeta
-	NamespacedDependencies []string
-	NamespacedSource       string
-	ValuesFrom             []fluxHelmCtrl.ValuesReference
+	typeMeta               metav1.TypeMeta
+	metadata               metav1.ObjectMeta
+	namespacedDependencies []string
+	namespacedSource       string
+	valuesFrom             []fluxHelmCtrl.ValuesReference
 }
 
 // readFluxImages finds the images Flux needs to deploy
@@ -70,9 +71,9 @@ func readFluxImages(fluxFilePath string) (images []string, err error) {
 func composeValues(hr HelmReleaseDependency, secrets map[string]corev1.Secret, configMaps map[string]corev1.ConfigMap) (valuesMap chartutil.Values, err error) {
 	valuesMap = chartutil.Values{}
 
-	for _, v := range hr.ValuesFrom {
+	for _, v := range hr.valuesFrom {
 		var valuesData string
-		namespacedName := getNamespacedNameFromStr(hr.Metadata.Namespace, v.Name)
+		namespacedName := getNamespacedNameFromStr(hr.metadata.Namespace, v.Name)
 
 		switch v.Kind {
 		case "ConfigMap":
@@ -101,7 +102,7 @@ func composeValues(hr HelmReleaseDependency, secrets map[string]corev1.Secret, c
 
 		values, err := chartutil.ReadValues([]byte(valuesData))
 		if err != nil {
-			return nil, fmt.Errorf("unable to read values from key '%s' in %s '%s': %w", v.GetValuesKey(), v.Kind, hr.Metadata.Name, err)
+			return nil, fmt.Errorf("unable to read values from key '%s' in %s '%s': %w", v.GetValuesKey(), v.Kind, hr.metadata.Name, err)
 		}
 
 		valuesMap = helpers.MergeMapRecursive(valuesMap, values)

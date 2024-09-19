@@ -179,7 +179,7 @@ func Create(ctx context.Context, bbOpts Opts) error {
 
 	// Sort so the dependencies are always the same between runs
 	sort.Slice(hrDependencies, func(i, j int) bool {
-		return hrDependencies[i].Metadata.Name < hrDependencies[j].Metadata.Name
+		return hrDependencies[i].metadata.Name < hrDependencies[j].metadata.Name
 	})
 
 	// Add wait actions for each of the helm releases in generally the order they should be deployed.
@@ -188,15 +188,15 @@ func Create(ctx context.Context, bbOpts Opts) error {
 		// The check it, we need to look for the existence of APIService instead of the HelmRelease, which
 		// may not ever be created. See links below for more details.
 		// https://repo1.dso.mil/big-bang/bigbang/-/blob/1.54.0/chart/templates/metrics-server/helmrelease.yaml
-		if hr.Metadata.Name == "metrics-server" {
+		if hr.metadata.Name == "metrics-server" {
 			continue
 		}
 
 		healthCheck := v1alpha1.NamespacedObjectKindReference{
 			APIVersion: "v1",
 			Kind:       "HelmRelease",
-			Name:       hr.Metadata.Name,
-			Namespace:  hr.Metadata.Namespace,
+			Name:       hr.metadata.Name,
+			Namespace:  hr.metadata.Namespace,
 		}
 
 		bbComponent.HealthChecks = append(bbComponent.HealthChecks, healthCheck)
@@ -211,8 +211,8 @@ func Create(ctx context.Context, bbOpts Opts) error {
 	// Select the images needed to support the repos for this configuration of Big Bang.
 	if bbOpts.Airgap {
 		for _, hr := range hrDependencies {
-			namespacedName := getNamespacedNameFromMeta(hr.Metadata)
-			gitRepo := gitRepos[hr.NamespacedSource]
+			namespacedName := getNamespacedNameFromMeta(hr.metadata)
+			gitRepo := gitRepos[hr.namespacedSource]
 			values := hrValues[namespacedName]
 
 			images, err := findImagesForBBChartRepo(ctx, gitRepo, values)
@@ -353,10 +353,11 @@ func findBBResources(t string) (map[string]string, []HelmReleaseDependency, map[
 			srcNamespacedName := getNamespacedNameFromStr(h.Spec.Chart.Spec.SourceRef.Namespace, h.Spec.Chart.Spec.SourceRef.Name)
 
 			helmReleaseDeps = append(helmReleaseDeps, HelmReleaseDependency{
-				Metadata:               h.ObjectMeta,
-				NamespacedDependencies: deps,
-				NamespacedSource:       srcNamespacedName,
-				ValuesFrom:             h.Spec.ValuesFrom,
+				typeMeta:               h.TypeMeta,
+				metadata:               h.ObjectMeta,
+				namespacedDependencies: deps,
+				namespacedSource:       srcNamespacedName,
+				valuesFrom:             h.Spec.ValuesFrom,
 			})
 
 		case fluxSrcCtrl.GitRepositoryKind:
@@ -403,7 +404,7 @@ func findBBResources(t string) (map[string]string, []HelmReleaseDependency, map[
 	}
 
 	for _, hr := range helmReleaseDeps {
-		namespacedName := getNamespacedNameFromMeta(hr.Metadata)
+		namespacedName := getNamespacedNameFromMeta(hr.metadata)
 		values, err := composeValues(hr, secrets, configMaps)
 		if err != nil {
 			return nil, nil, nil, err
