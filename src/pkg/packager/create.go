@@ -31,11 +31,11 @@ func (p *Packager) Create(ctx context.Context) error {
 
 	pc := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
 
-	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.Layout.ZarfYAML); err != nil {
+	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
 		return err
 	}
 
-	pkg, warnings, err := pc.LoadPackageDefinition(ctx, p.Layout)
+	pkg, warnings, err := pc.LoadPackageDefinition(ctx, p.layout)
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func (p *Packager) Create(ctx context.Context) error {
 		return fmt.Errorf("package creation canceled")
 	}
 
-	if err := pc.Assemble(ctx, p.Layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
+	if err := pc.Assemble(ctx, p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
 		return err
 	}
 
@@ -54,5 +54,5 @@ func (p *Packager) Create(ctx context.Context) error {
 		return err
 	}
 
-	return pc.Output(ctx, p.Layout, &p.cfg.Pkg)
+	return pc.Output(ctx, p.layout, &p.cfg.Pkg)
 }

@@ -18,7 +18,7 @@ import (
 func (p *Packager) Inspect(ctx context.Context) error {
 	wantSBOM := p.cfg.InspectOpts.ViewSBOM || p.cfg.InspectOpts.SBOMOutputDir != ""
 
-	pkg, _, err := p.source.LoadPackageMetadata(ctx, p.Layout, wantSBOM, true)
+	pkg, _, err := p.source.LoadPackageMetadata(ctx, p.layout, wantSBOM, true)
 	if err != nil {
 		return err
 	}
@@ -37,10 +37,10 @@ func (p *Packager) Inspect(ctx context.Context) error {
 		utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
 	}
 
-	sbomDir := p.Layout.SBOMs.Path
+	sbomDir := p.layout.SBOMs.Path
 
 	if p.cfg.InspectOpts.SBOMOutputDir != "" {
-		out, err := p.Layout.SBOMs.OutputSBOMFiles(p.cfg.InspectOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name)
+		out, err := p.layout.SBOMs.OutputSBOMFiles(p.cfg.InspectOpts.SBOMOutputDir, p.cfg.Pkg.Metadata.Name)
 		if err != nil {
 			return err
 		}

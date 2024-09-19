@@ -24,13 +24,13 @@ func (p *Packager) Mirror(ctx context.Context) error {
 		filters.BySelectState(p.cfg.PkgOpts.OptionalComponents),
 	)
 
-	pkg, warnings, err := p.source.LoadPackage(ctx, p.Layout, filter, true)
+	pkg, warnings, err := p.source.LoadPackage(ctx, p.layout, filter, true)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	p.cfg.Pkg = pkg
 
-	sbomViewFiles, sbomWarnings, err := p.Layout.SBOMs.StageSBOMViewFiles()
+	sbomViewFiles, sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (p *Packager) Mirror(ctx context.Context) error {
 
 // mirrorComponent mirrors a Zarf Component.
 func (p *Packager) mirrorComponent(ctx context.Context, component v1alpha1.ZarfComponent) error {
-	componentPaths := p.Layout.Components.Dirs[component.Name]
+	componentPaths := p.layout.Components.Dirs[component.Name]
 
 	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))

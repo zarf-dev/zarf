@@ -54,31 +54,31 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 
 		sc := creator.NewSkeletonCreator(p.cfg.CreateOpts, p.cfg.PublishOpts)
 
-		if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.Layout.ZarfYAML); err != nil {
+		if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
 			return err
 		}
 
-		p.cfg.Pkg, _, err = sc.LoadPackageDefinition(ctx, p.Layout)
+		p.cfg.Pkg, _, err = sc.LoadPackageDefinition(ctx, p.layout)
 		if err != nil {
 			return err
 		}
 
-		if err := sc.Assemble(ctx, p.Layout, p.cfg.Pkg.Components, ""); err != nil {
+		if err := sc.Assemble(ctx, p.layout, p.cfg.Pkg.Components, ""); err != nil {
 			return err
 		}
 
-		if err := sc.Output(ctx, p.Layout, &p.cfg.Pkg); err != nil {
+		if err := sc.Output(ctx, p.layout, &p.cfg.Pkg); err != nil {
 			return err
 		}
 	} else {
 		filter := filters.Empty()
-		p.cfg.Pkg, _, err = p.source.LoadPackage(ctx, p.Layout, filter, false)
+		p.cfg.Pkg, _, err = p.source.LoadPackage(ctx, p.layout, filter, false)
 		if err != nil {
 			return fmt.Errorf("unable to load the package: %w", err)
 		}
 
 		// Sign the package if a key has been provided
-		if err := p.Layout.SignPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword, !config.CommonOptions.Confirm); err != nil {
+		if err := p.layout.SignPackage(p.cfg.PublishOpts.SigningKeyPath, p.cfg.PublishOpts.SigningKeyPassword, !config.CommonOptions.Confirm); err != nil {
 			return err
 		}
 	}
@@ -102,7 +102,7 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref)
 
 	// Publish the package/skeleton to the registry
-	if err := remote.PublishPackage(ctx, &p.cfg.Pkg, p.Layout, config.CommonOptions.OCIConcurrency); err != nil {
+	if err := remote.PublishPackage(ctx, &p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency); err != nil {
 		return err
 	}
 	if p.cfg.CreateOpts.IsSkeleton {

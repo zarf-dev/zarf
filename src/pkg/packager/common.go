@@ -34,7 +34,7 @@ type Packager struct {
 	variableConfig *variables.VariableConfig
 	state          *types.ZarfState
 	cluster        *cluster.Cluster
-	Layout         *layout.PackagePaths
+	layout         *layout.PackagePaths
 	hpaModified    bool
 	source         sources.PackageSource
 }
@@ -61,7 +61,7 @@ func WithCluster(cluster *cluster.Cluster) Modifier {
 // This temp directory is used as the destination where p.source loads the package.
 func WithTemp(base string) Modifier {
 	return func(p *Packager) {
-		p.Layout = layout.New(base)
+		p.layout = layout.New(base)
 	}
 }
 
@@ -104,13 +104,13 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 	}
 
 	// If the temp directory is not set, set it to the default
-	if pkgr.Layout == nil {
+	if pkgr.layout == nil {
 		dir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 		if err != nil {
 			return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 		}
 		message.Debug("Using temporary directory:", dir)
-		pkgr.Layout = layout.New(dir)
+		pkgr.layout = layout.New(dir)
 	}
 
 	return pkgr, nil
@@ -119,7 +119,7 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 // ClearTempPaths removes the temp directory and any files within it.
 func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory, but don't throw an error if it fails
-	_ = os.RemoveAll(p.Layout.Base)
+	_ = os.RemoveAll(p.layout.Base)
 	_ = os.RemoveAll(layout.SBOMDir)
 }
 

@@ -199,6 +199,7 @@ var packageInspectCmd = &cobra.Command{
 			Shasum:                  pkgConfig.PkgOpts.Shasum,
 			PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+			Filter:                  filters.Empty(),
 		}
 
 		pkgPaths, err := packager2.LoadPackage(cmd.Context(), loadOpt)

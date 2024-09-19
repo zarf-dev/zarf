@@ -57,11 +57,11 @@ func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) 
 
 	c := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
 
-	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.Layout.ZarfYAML); err != nil {
+	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
 		return nil, err
 	}
 
-	pkg, warnings, err := c.LoadPackageDefinition(ctx, p.Layout)
+	pkg, warnings, err := c.LoadPackageDefinition(ctx, p.layout)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			}
 		}
 
-		componentPaths, err := p.Layout.Components.Create(component)
+		componentPaths, err := p.layout.Components.Create(component)
 		if err != nil {
 			return nil, err
 		}

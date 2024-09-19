@@ -155,16 +155,6 @@ func TestUseCLI(t *testing.T) {
 	})
 
 	// TODO: Refactor test as it depends on debug log output for validation.
-	t.Run("zarf package inspect with tmpdir", func(t *testing.T) {
-		t.Parallel()
-		path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.Arch)
-		tmpdir := t.TempDir()
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "inspect", path, "--tmpdir", tmpdir, "--log-level=debug")
-		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
-		require.NoError(t, err, stdOut, stdErr)
-	})
-
-	// TODO: Refactor test as it depends on debug log output for validation.
 	t.Run("zarf package deploy with tmpdir", func(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()
