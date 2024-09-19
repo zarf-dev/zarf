@@ -12,12 +12,12 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 )
 
 // ZarfInspectOptions tracks the user-defined preferences during a package inspection.
 type ZarfInspectOptions struct {
-
+	// PackagePaths
+	PackagePaths *layout.PackagePaths
 	// View SBOM contents while inspecting the package
 	ViewSBOM bool
 	// Location to output an SBOM into after package inspection
@@ -27,15 +27,15 @@ type ZarfInspectOptions struct {
 }
 
 // Inspect list the contents of a package.
-func Inspect(ctx context.Context, src sources.PackageSource, layout *layout.PackagePaths, options ZarfInspectOptions) (v1alpha1.ZarfPackage, error) {
+func Inspect(ctx context.Context, options ZarfInspectOptions) (v1alpha1.ZarfPackage, error) {
 	var err error
-	pkg, err := getPackageMetadata(ctx, src, layout, options.ViewSBOM, options.SBOMOutputDir)
+	pkg, err := getPackageMetadata(ctx, options.PackagePaths)
 	if err != nil {
 		return pkg, err
 	}
 
 	if getSBOM(options.ViewSBOM, options.SBOMOutputDir) {
-		err = handleSBOMOptions(layout, pkg, options.ViewSBOM, options.SBOMOutputDir)
+		err = handleSBOMOptions(options.PackagePaths, pkg, options.ViewSBOM, options.SBOMOutputDir)
 		if err != nil {
 			return pkg, err
 		}
@@ -45,9 +45,9 @@ func Inspect(ctx context.Context, src sources.PackageSource, layout *layout.Pack
 }
 
 // InspectList lists the images in a component action
-func InspectList(ctx context.Context, src sources.PackageSource, layout *layout.PackagePaths, options ZarfInspectOptions) ([]string, error) {
+func InspectList(ctx context.Context, options ZarfInspectOptions) ([]string, error) {
 	var imageList []string
-	pkg, err := getPackageMetadata(ctx, src, layout, options.ViewSBOM, options.SBOMOutputDir)
+	pkg, err := getPackageMetadata(ctx, options.PackagePaths)
 	if err != nil {
 		return nil, err
 	}
@@ -66,10 +66,8 @@ func InspectList(ctx context.Context, src sources.PackageSource, layout *layout.
 	return imageList, err
 }
 
-func getPackageMetadata(ctx context.Context, src sources.PackageSource, layout *layout.PackagePaths, viewSBOM bool, SBOMOutputDir string) (v1alpha1.ZarfPackage, error) {
-	SBOM := getSBOM(viewSBOM, SBOMOutputDir)
-
-	pkg, _, err := src.LoadPackageMetadata(ctx, layout, SBOM, true)
+func getPackageMetadata(_ context.Context, layout *layout.PackagePaths) (v1alpha1.ZarfPackage, error) {
+	pkg, _, err := layout.ReadZarfYAML()
 	if err != nil {
 		return pkg, err
 	}
