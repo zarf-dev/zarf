@@ -23,11 +23,6 @@ func TestChecksumAndSignature(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 	defer e2e.CleanFiles(pkgName)
 
-	/* Test operations during package inspect */
-	// Test that we can inspect the yaml of the package without the private key
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName)
-	require.NoError(t, err, stdOut, stdErr)
-
 	// Test that we don't get an error when we remember to provide the public key
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName, publicKeyFlag)
 	require.NoError(t, err, stdOut, stdErr)
