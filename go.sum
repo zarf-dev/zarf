@@ -609,6 +609,8 @@ github.com/defenseunicorns/pkg/helpers/v2 v2.0.1 h1:j08rz9vhyD9Bs+yKiyQMY2tSSejX
 github.com/defenseunicorns/pkg/helpers/v2 v2.0.1/go.mod h1:u1PAqOICZyiGIVA2v28g55bQH1GiAt0Bc4U9/rnWQvQ=
 github.com/defenseunicorns/pkg/kubernetes v0.2.0 h1:mVYZxmvpVa9zTC5U8wyNg1yoVAVkInJAg5qi9D0QoAQ=
 github.com/defenseunicorns/pkg/kubernetes v0.2.0/go.mod h1:AWB1iBbDO4VTmRO/E/8e0tVN0kkWbg+v8dhs9Hd9KXA=
+github.com/defenseunicorns/pkg/kubernetes v0.2.1-0.20240919191329-d9a7bd7d6e1d h1:HEGI/paP2fL1gSdKV/fDEHPHEU2F/7ZnXSFUiluUIYk=
+github.com/defenseunicorns/pkg/kubernetes v0.2.1-0.20240919191329-d9a7bd7d6e1d/go.mod h1:FsuKQGpPZOnZWifBse7v787+avtIu2lte5LTsaojDkY=
 github.com/defenseunicorns/pkg/oci v1.0.1 h1:WPrWRrae1L19X1vuhy6yYMR2zrTzgBbJHp3ImgUm4ZM=
 github.com/defenseunicorns/pkg/oci v1.0.1/go.mod h1:qZ3up/d0P81taW37fKR4lb19jJhQZJVtNOEJMu00dHQ=
 github.com/deitch/magic v0.0.0-20230404182410-1ff89d7342da h1:ZOjWpVsFZ06eIhnh4mkaceTiVoktdU67+M7KDHJ268M=
