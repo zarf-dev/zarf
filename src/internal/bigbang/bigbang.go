@@ -193,8 +193,8 @@ func Create(ctx context.Context, bbOpts Opts) error {
 		}
 
 		healthCheck := v1alpha1.NamespacedObjectKindReference{
-			APIVersion: "v1",
-			Kind:       "HelmRelease",
+			APIVersion: hr.typeMeta.APIVersion,
+			Kind:       hr.typeMeta.Kind,
 			Name:       hr.metadata.Name,
 			Namespace:  hr.metadata.Namespace,
 		}

@@ -70,51 +70,51 @@ components:
       - cmd: ./zarf tools kubectl patch helmrelease -n bigbang bigbang --type=merge -p '{"spec":{"suspend":true}}'
         description: Suspend Big Bang HelmReleases to prevent reconciliation during removal.
   healthChecks:
-  - apiVersion: v1
+  - apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     namespace: bigbang
     name: grafana
-  - apiVersion: v1
+  - apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     namespace: bigbang
     name: istio
-  - apiVersion: v1
+  - apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     namespace: bigbang
     name: istio-operator
-  - apiVersion: v1
+  - apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     namespace: bigbang
     name: kiali
-  - apiVersion: v1
+  - apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     namespace: bigbang
     name: kyverno
-  - apiVersion: v1
+  - apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     namespace: bigbang
     name: kyverno-policies
-  - apiVersion: v1
+  - apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     namespace: bigbang
     name: kyverno-reporter
-  - apiVersion: v1
+  - apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     namespace: bigbang
     name: loki
-  - apiVersion: v1
+  - apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     namespace: bigbang
     name: monitoring
-  - apiVersion: v1
+  - apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     namespace: bigbang
     name: neuvector
-  - apiVersion: v1
+  - apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     namespace: bigbang
     name: promtail
-  - apiVersion: v1
+  - apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     namespace: bigbang
     name: tempo
