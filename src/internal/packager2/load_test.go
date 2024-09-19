@@ -26,12 +26,12 @@ func TestLoadPackage(t *testing.T) {
 		{
 			name:   "tarball",
 			source: "./testdata/zarf-package-test-amd64-0.0.1.tar.zst",
-			shasum: "307294e3a066cebea6f04772c2ba31210b2753b40b0d5da86a1983c29c5545dd",
+			shasum: "b16816b9772b72f3395132a67333b149a5d6031cfe24520df372a81f40182da2",
 		},
 		{
 			name:   "split",
 			source: "./testdata/zarf-package-test-amd64-0.0.1.tar.zst.part000",
-			shasum: "6c0de217e3eeff224679ec0a26751655759a30f4aae7fbe793ca1617ddfc4228",
+			shasum: "19c22ed4f6981cb1475e13dd790daf89b63c04bcc475e6d066cdc0ce8843d897",
 		},
 	}
 	for _, tt := range tests {
