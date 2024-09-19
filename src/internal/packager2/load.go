@@ -136,7 +136,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackagePaths, er
 		if err := sources.ValidatePackageIntegrity(pkgPaths, pkg.Metadata.AggregateChecksum, isPartial); err != nil {
 			return nil, err
 		}
-		if opt.SkipSignatureValidation {
+		if !opt.SkipSignatureValidation {
 			if err := sources.ValidatePackageSignature(ctx, pkgPaths, opt.PublicKeyPath); err != nil {
 				return nil, err
 			}
