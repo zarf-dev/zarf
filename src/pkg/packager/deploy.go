@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -23,6 +24,9 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/restmapper"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/polling"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/aggregator"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/collector"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
@@ -31,6 +35,7 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/object"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/git"
@@ -45,6 +50,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
+	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -278,27 +284,118 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 	return nil
 }
 
-func runHealthChecks(ctx context.Context, watcher watcher.StatusWatcher, healthChecks []v1alpha1.NamespacedObjectKindReference) error {
-	objs := []object.ObjMetadata{}
-	for _, hc := range healthChecks {
-		gv, err := schema.ParseGroupVersion(hc.APIVersion)
-		if err != nil {
-			return err
+func desiredStatusNotifierFunc(cancelFunc context.CancelFunc,
+	desired status.Status) collector.ObserverFunc {
+	return func(rsc *collector.ResourceStatusCollector, _ event.Event) {
+		var rss []*event.ResourceStatus
+		for _, rs := range rsc.ResourceStatuses {
+			rss = append(rss, rs)
 		}
-		obj := object.ObjMetadata{
-			GroupKind: schema.GroupKind{
-				Group: gv.Group,
-				Kind:  hc.Kind,
-			},
-			Namespace: hc.Namespace,
-			Name:      hc.Name,
+		aggStatus := aggregator.AggregateStatus(rss, desired)
+		if aggStatus == desired {
+			cancelFunc()
 		}
-		objs = append(objs, obj)
 	}
-	err := WaitForReady(ctx, watcher, objs)
+}
+
+func Assess(ctx context.Context, timeout time.Duration, pollInterval time.Duration, poller *polling.StatusPoller, healthChecks []v1alpha1.NamespacedObjectKindReference) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	var objs object.ObjMetadataSet
+
+	for _, ref := range healthChecks {
+		gvk := schema.FromAPIVersionAndKind(ref.APIVersion, ref.Kind)
+
+		gk := schema.GroupKind{
+			Group: gvk.Group,
+			Kind:  ref.Kind,
+		}
+
+		objMeta := object.ObjMetadata{
+			Namespace: ref.Namespace,
+			Name:      ref.Name,
+			GroupKind: gk,
+		}
+
+		objs = append(objs, objMeta)
+	}
+
+	opts := polling.PollOptions{PollInterval: pollInterval}
+	eventsChan := poller.Poll(ctx, objs, opts)
+
+	coll := collector.NewResourceStatusCollector(objs)
+	done := coll.ListenWithObserver(eventsChan, desiredStatusNotifierFunc(cancel, status.CurrentStatus))
+
+	<-done
+
+	// we use sorted identifiers to loop over the resource statuses because a Go's map is unordered.
+	// sorting identifiers by object's name makes sure that the logs look stable for every run
+	sort.SliceStable(objs, func(i, j int) bool {
+		return strings.Compare(objs[i].Name, objs[j].Name) < 0
+	})
+	for _, id := range objs {
+		rs := coll.ResourceStatuses[id]
+		switch rs.Status {
+		case status.CurrentStatus:
+			fmt.Printf("%s: %s ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
+		case status.NotFoundStatus:
+			fmt.Printf("%s: %s not found", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
+		default:
+			fmt.Printf("%s: %s not ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
+		}
+	}
+	if coll.Error != nil || ctx.Err() == context.DeadlineExceeded {
+		return fmt.Errorf("timed out waiting for all resources to be ready")
+	}
+	return nil
+}
+
+func runHealthChecks(ctx context.Context, watcher watcher.StatusWatcher, healthChecks []v1alpha1.NamespacedObjectKindReference) error {
+	_, config, err := pkgkubernetes.ClientAndConfig()
 	if err != nil {
 		return err
 	}
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return err
+	}
+	groupResources, err := restmapper.GetAPIGroupResources(discoveryClient)
+	if err != nil {
+		return err
+	}
+	rm := restmapper.NewDiscoveryRESTMapper(groupResources)
+	client, err := k8sclient.New(config, k8sclient.Options{Mapper: rm})
+	if err != nil {
+
+	}
+
+	poller := polling.NewStatusPoller(client, rm, polling.Options{})
+	err = Assess(ctx, 15*time.Minute, 1*time.Second, poller, healthChecks)
+	if err != nil {
+		return err
+	}
+
+	// objs := []object.ObjMetadata{}
+	// for _, hc := range healthChecks {
+	// 	gv, err := schema.ParseGroupVersion(hc.APIVersion)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	obj := object.ObjMetadata{
+	// 		GroupKind: schema.GroupKind{
+	// 			Group: gv.Group,
+	// 			Kind:  hc.Kind,
+	// 		},
+	// 		Namespace: hc.Namespace,
+	// 		Name:      hc.Name,
+	// 	}
+	// 	objs = append(objs, obj)
+	// }
+	// err := WaitForReady(ctx, watcher, objs)
+	// if err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
