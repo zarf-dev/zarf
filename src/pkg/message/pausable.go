@@ -29,6 +29,6 @@ func (pw *PausableWriter) Resume() {
 }
 
 // Write writes the data to the underlying output writer
-func (pw *PausableWriter) Write(p []byte) (n int, err error) {
+func (pw *PausableWriter) Write(p []byte) (int, error) {
 	return pw.out.Write(p)
 }

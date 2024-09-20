@@ -1,5 +1,8 @@
-# Set this repository to use unix style line endings
 * text eol=lf
-*.png -text
-*.gif -text
-*.jpg -text
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.zst binary
+*.tar binary
+*.part00* binary

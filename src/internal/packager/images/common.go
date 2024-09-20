@@ -50,9 +50,9 @@ type PushConfig struct {
 func NoopOpt(*crane.Options) {}
 
 // WithGlobalInsecureFlag returns an option for crane that configures insecure
-// based upon Zarf's global --insecure flag.
+// based upon Zarf's global --insecure-skip-tls-verify (and --insecure) flags.
 func WithGlobalInsecureFlag() []crane.Option {
-	if config.CommonOptions.Insecure {
+	if config.CommonOptions.InsecureSkipTLSVerify {
 		return []crane.Option{crane.Insecure}
 	}
 	// passing a nil option will cause panic
@@ -103,7 +103,7 @@ func createPushOpts(cfg PushConfig, pb *message.ProgressBar) []crane.Option {
 	opts = append(opts, WithPushAuth(cfg.RegInfo))
 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig.InsecureSkipVerify = config.CommonOptions.Insecure
+	transport.TLSClientConfig.InsecureSkipVerify = config.CommonOptions.InsecureSkipTLSVerify
 	// TODO (@WSTARR) This is set to match the TLSHandshakeTimeout to potentially mitigate effects of https://github.com/zarf-dev/zarf/issues/1444
 	transport.ResponseHeaderTimeout = 10 * time.Second
 

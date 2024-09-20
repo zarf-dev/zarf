@@ -1,0 +1,9 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test
+  version: 0.0.1
+components:
+  - name: test
+    required: true
+    images:
+      - docker.io/library/alpine:3.20

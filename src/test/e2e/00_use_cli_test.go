@@ -50,6 +50,17 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, expectedShasum, "The expected SHASUM should equal the actual SHASUM")
 	})
 
+	t.Run("zarf package pull https", func(t *testing.T) {
+		t.Parallel()
+		packageShasum := "690799dbe8414238e11d4488754eee52ec264c1584cd0265e3b91e3e251e8b1a"
+		packageName := "zarf-init-amd64-v0.39.0.tar.zst"
+		_, _, err := e2e.Zarf(t, "package", "pull", fmt.Sprintf("https://github.com/zarf-dev/zarf/releases/download/v0.39.0/%s", packageName), "--shasum", packageShasum)
+		require.NoError(t, err)
+		require.FileExists(t, packageName)
+		err = os.Remove(packageName)
+		require.NoError(t, err)
+	})
+
 	t.Run("zarf version", func(t *testing.T) {
 		t.Parallel()
 		// Test `zarf version`

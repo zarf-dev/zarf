@@ -39,7 +39,7 @@ type Components struct {
 var ErrNotLoaded = fmt.Errorf("not loaded")
 
 // Archive archives a component.
-func (c *Components) Archive(component v1alpha1.ZarfComponent, cleanupTemp bool) (err error) {
+func (c *Components) Archive(component v1alpha1.ZarfComponent, cleanupTemp bool) error {
 	name := component.Name
 	if _, ok := c.Dirs[name]; !ok {
 		return &fs.PathError{
@@ -75,7 +75,7 @@ func (c *Components) Archive(component v1alpha1.ZarfComponent, cleanupTemp bool)
 }
 
 // Unarchive unarchives a component.
-func (c *Components) Unarchive(component v1alpha1.ZarfComponent) (err error) {
+func (c *Components) Unarchive(component v1alpha1.ZarfComponent) error {
 	name := component.Name
 	tb, ok := c.Tarballs[name]
 	if !ok {
@@ -138,7 +138,7 @@ func (c *Components) Unarchive(component v1alpha1.ZarfComponent) (err error) {
 }
 
 // Create creates a new component directory structure.
-func (c *Components) Create(component v1alpha1.ZarfComponent) (cp *ComponentPaths, err error) {
+func (c *Components) Create(component v1alpha1.ZarfComponent) (*ComponentPaths, error) {
 	name := component.Name
 
 	_, ok := c.Tarballs[name]
@@ -150,41 +150,41 @@ func (c *Components) Create(component v1alpha1.ZarfComponent) (cp *ComponentPath
 		}
 	}
 
-	if err = helpers.CreateDirectory(c.Base, helpers.ReadWriteExecuteUser); err != nil {
+	if err := helpers.CreateDirectory(c.Base, helpers.ReadWriteExecuteUser); err != nil {
 		return nil, err
 	}
 
 	base := filepath.Join(c.Base, name)
 
-	if err = helpers.CreateDirectory(base, helpers.ReadWriteExecuteUser); err != nil {
+	if err := helpers.CreateDirectory(base, helpers.ReadWriteExecuteUser); err != nil {
 		return nil, err
 	}
 
-	cp = &ComponentPaths{
+	cp := &ComponentPaths{
 		Base: base,
 	}
 
 	cp.Temp = filepath.Join(base, TempDir)
-	if err = helpers.CreateDirectory(cp.Temp, helpers.ReadWriteExecuteUser); err != nil {
+	if err := helpers.CreateDirectory(cp.Temp, helpers.ReadWriteExecuteUser); err != nil {
 		return nil, err
 	}
 
 	if len(component.Files) > 0 {
 		cp.Files = filepath.Join(base, FilesDir)
-		if err = helpers.CreateDirectory(cp.Files, helpers.ReadWriteExecuteUser); err != nil {
+		if err := helpers.CreateDirectory(cp.Files, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(component.Charts) > 0 {
 		cp.Charts = filepath.Join(base, ChartsDir)
-		if err = helpers.CreateDirectory(cp.Charts, helpers.ReadWriteExecuteUser); err != nil {
+		if err := helpers.CreateDirectory(cp.Charts, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 		for _, chart := range component.Charts {
 			cp.Values = filepath.Join(base, ValuesDir)
 			if len(chart.ValuesFiles) > 0 {
-				if err = helpers.CreateDirectory(cp.Values, helpers.ReadWriteExecuteUser); err != nil {
+				if err := helpers.CreateDirectory(cp.Values, helpers.ReadWriteExecuteUser); err != nil {
 					return nil, err
 				}
 				break
@@ -194,21 +194,21 @@ func (c *Components) Create(component v1alpha1.ZarfComponent) (cp *ComponentPath
 
 	if len(component.Repos) > 0 {
 		cp.Repos = filepath.Join(base, ReposDir)
-		if err = helpers.CreateDirectory(cp.Repos, helpers.ReadWriteExecuteUser); err != nil {
+		if err := helpers.CreateDirectory(cp.Repos, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(component.Manifests) > 0 {
 		cp.Manifests = filepath.Join(base, ManifestsDir)
-		if err = helpers.CreateDirectory(cp.Manifests, helpers.ReadWriteExecuteUser); err != nil {
+		if err := helpers.CreateDirectory(cp.Manifests, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(component.DataInjections) > 0 {
 		cp.DataInjections = filepath.Join(base, DataInjectionsDir)
-		if err = helpers.CreateDirectory(cp.DataInjections, helpers.ReadWriteExecuteUser); err != nil {
+		if err := helpers.CreateDirectory(cp.DataInjections, helpers.ReadWriteExecuteUser); err != nil {
 			return nil, err
 		}
 	}

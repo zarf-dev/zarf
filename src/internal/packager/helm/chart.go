@@ -143,7 +143,7 @@ func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues 
 	client.IncludeCRDs = true
 	// TODO: Further research this with regular/OCI charts
 	client.Verify = false
-	client.InsecureSkipTLSverify = config.CommonOptions.Insecure
+	client.InsecureSkipTLSverify = config.CommonOptions.InsecureSkipTLSVerify
 	if h.kubeVersion != "" {
 		parsedKubeVersion, err := chartutil.ParseKubeVersion(h.kubeVersion)
 		if err != nil {

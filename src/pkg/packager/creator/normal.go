@@ -281,14 +281,17 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
 		message.HorizontalRule()
-		flags := ""
-		if config.CommonOptions.Insecure {
-			flags = "--insecure"
+		flags := []string{}
+		if config.CommonOptions.PlainHTTP {
+			flags = append(flags, "--plain-http")
+		}
+		if config.CommonOptions.InsecureSkipTLSVerify {
+			flags = append(flags, "--insecure-skip-tls-verify")
 		}
 		message.Title("To inspect/deploy/pull:", "")
-		message.ZarfCommand("package inspect %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
-		message.ZarfCommand("package deploy %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
-		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), flags)
+		message.ZarfCommand("package inspect %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), strings.Join(flags, " "))
+		message.ZarfCommand("package deploy %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), strings.Join(flags, " "))
+		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), strings.Join(flags, " "))
 	} else {
 		// Use the output path if the user specified it.
 		packageName := fmt.Sprintf("%s%s", sources.NameFromMetadata(pkg, pc.createOpts.IsSkeleton), sources.PkgSuffix(pkg.Metadata.Uncompressed))

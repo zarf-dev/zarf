@@ -32,8 +32,8 @@ type URLSource struct {
 
 // Collect downloads a package from the source URL.
 func (s *URLSource) Collect(ctx context.Context, dir string) (string, error) {
-	if !config.CommonOptions.Insecure && s.Shasum == "" && !strings.HasPrefix(s.PackageSource, helpers.SGETURLPrefix) {
-		return "", fmt.Errorf("remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum")
+	if s.Shasum == "" && !strings.HasPrefix(s.PackageSource, helpers.SGETURLPrefix) {
+		return "", fmt.Errorf("remote package provided without a shasum, please provide one with --shasum")
 	}
 	var packageURL string
 	if s.Shasum != "" {

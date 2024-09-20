@@ -19,11 +19,15 @@ func PromptSigPassword() ([]byte, error) {
 	prompt := &survey.Password{
 		Message: "Private key password (empty for no password): ",
 	}
-	return []byte(password), survey.AskOne(prompt, &password)
+	err := survey.AskOne(prompt, &password)
+	if err != nil {
+		return []byte{}, err
+	}
+	return []byte(password), nil
 }
 
 // PromptVariable prompts the user for a value for a variable
-func PromptVariable(variable v1alpha1.InteractiveVariable) (value string, err error) {
+func PromptVariable(variable v1alpha1.InteractiveVariable) (string, error) {
 	if variable.Description != "" {
 		message.Question(variable.Description)
 	}
@@ -33,5 +37,10 @@ func PromptVariable(variable v1alpha1.InteractiveVariable) (value string, err er
 		Default: variable.Default,
 	}
 
-	return value, survey.AskOne(prompt, &value)
+	var value string
+	err := survey.AskOne(prompt, &value)
+	if err != nil {
+		return "", err
+	}
+	return value, nil
 }

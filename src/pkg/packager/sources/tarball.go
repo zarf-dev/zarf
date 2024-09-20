@@ -107,8 +107,10 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 
 		spinner.Success()
 
-		if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
-			return pkg, nil, err
+		if !s.SkipSignatureValidation {
+			if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
+				return pkg, nil, err
+			}
 		}
 	}
 
@@ -185,11 +187,13 @@ func (s *TarballSource) LoadPackageMetadata(ctx context.Context, dst *layout.Pac
 			spinner.Success()
 		}
 
-		if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
-			if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
-				message.Warn("The package was signed but no public key was provided, skipping signature validation")
-			} else {
-				return pkg, nil, err
+		if !s.SkipSignatureValidation {
+			if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
+				if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
+					message.Warn("The package was signed but no public key was provided, skipping signature validation")
+				} else {
+					return pkg, nil, err
+				}
 			}
 		}
 	}

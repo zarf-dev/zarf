@@ -192,7 +192,7 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 		Verify:  downloader.VerifyNever,
 		Getters: getter.All(pull.Settings),
 		Options: []getter.Option{
-			getter.WithInsecureSkipVerifyTLS(config.CommonOptions.Insecure),
+			getter.WithInsecureSkipVerifyTLS(config.CommonOptions.InsecureSkipTLSVerify),
 			getter.WithBasicAuth(username, password),
 		},
 	}

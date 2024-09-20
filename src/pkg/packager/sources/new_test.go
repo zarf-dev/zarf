@@ -155,7 +155,7 @@ func TestPackageSource(t *testing.T) {
 		{
 			name:        "http-insecure",
 			src:         fmt.Sprintf("%s/zarf-package-wordpress-amd64-16.0.4.tar.zst", ts.URL),
-			expectedErr: "remote package provided without a shasum, use --insecure to ignore, or provide one w/ --shasum",
+			expectedErr: "remote package provided without a shasum, please provide one with --shasum",
 		},
 	}
 	for _, tt := range tests {

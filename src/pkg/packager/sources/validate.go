@@ -15,7 +15,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -25,16 +24,11 @@ var (
 	// ErrPkgKeyButNoSig is returned when a key was provided but the package is not signed
 	ErrPkgKeyButNoSig = errors.New("a key was provided but the package is not signed - the package may be corrupted or the --key flag was erroneously specified")
 	// ErrPkgSigButNoKey is returned when a package is signed but no key was provided
-	ErrPkgSigButNoKey = errors.New("package is signed but no key was provided - add a key with the --key flag or use the --insecure flag and run the command again")
+	ErrPkgSigButNoKey = errors.New("package is signed but no key was provided - add a key with the --key flag or use the --skip-signature-validation flag and run the command again")
 )
 
 // ValidatePackageSignature validates the signature of a package
 func ValidatePackageSignature(ctx context.Context, paths *layout.PackagePaths, publicKeyPath string) error {
-	// If the insecure flag was provided ignore the signature validation
-	if config.CommonOptions.Insecure {
-		return nil
-	}
-
 	if publicKeyPath != "" {
 		message.Debugf("Using public key %q for signature validation", publicKeyPath)
 	}

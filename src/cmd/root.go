@@ -37,6 +37,12 @@ var (
 var rootCmd = &cobra.Command{
 	Use: "zarf COMMAND",
 	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+		// If --insecure was provided, set --insecure-skip-tls-verify and --plain-http to match
+		if config.CommonOptions.Insecure {
+			config.CommonOptions.InsecureSkipTLSVerify = true
+			config.CommonOptions.PlainHTTP = true
+		}
+
 		// Skip for vendor only commands
 		if common.CheckVendorOnlyFromPath(cmd) {
 			return nil
@@ -121,4 +127,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(common.VZarfCache), lang.RootCmdFlagCachePath)
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(common.VTmpDir), lang.RootCmdFlagTempDir)
 	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(common.VInsecure), lang.RootCmdFlagInsecure)
+	rootCmd.PersistentFlags().MarkDeprecated("insecure", "please use --plain-http, --insecure-skip-tls-verify, or --skip-signature-validation instead.")
+	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.PlainHTTP, "plain-http", v.GetBool(common.VPlainHTTP), lang.RootCmdFlagPlainHTTP)
+	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", v.GetBool(common.VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
 }

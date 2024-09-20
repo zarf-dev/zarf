@@ -24,13 +24,23 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
-var inClusterCredentialArgs = []string{
+var inClusterMirrorCredentialArgs = []string{
 	"--git-push-username=git-user",
 	"--git-push-password=superSecurePassword",
 	"--git-url=http://gitea-http.git-server.svc.cluster.local:3000",
 	"--registry-push-username=push-user",
 	"--registry-push-password=superSecurePassword",
-	"--registry-url=127.0.0.1:31999"}
+	"--registry-url=http://external-registry-docker-registry.external-registry.svc.cluster.local:5000",
+}
+
+var inClusterInitCredentialArgs = []string{
+	"--git-push-username=git-user",
+	"--git-push-password=superSecurePassword",
+	"--git-url=http://gitea-http.git-server.svc.cluster.local:3000",
+	"--registry-push-username=push-user",
+	"--registry-push-password=superSecurePassword",
+	"--registry-url=127.0.0.1:31999",
+}
 
 type ExtInClusterTestSuite struct {
 	suite.Suite
@@ -97,7 +107,7 @@ func (suite *ExtInClusterTestSuite) TearDownSuite() {
 func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	// Use Zarf to mirror a package to the services (do this as test 0 so that the registry is unpolluted)
 	mirrorArgs := []string{"package", "mirror-resources", "../../../build/zarf-package-argocd-amd64.tar.zst", "--confirm"}
-	mirrorArgs = append(mirrorArgs, inClusterCredentialArgs...)
+	mirrorArgs = append(mirrorArgs, inClusterMirrorCredentialArgs...)
 	err := exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
 	suite.NoError(err, "unable to mirror the package with zarf")
 
@@ -143,7 +153,7 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	// Use Zarf to initialize the cluster
 	initArgs := []string{"init", "--confirm"}
-	initArgs = append(initArgs, inClusterCredentialArgs...)
+	initArgs = append(initArgs, inClusterInitCredentialArgs...)
 	err := exec.CmdWithPrint(zarfBinPath, initArgs...)
 	suite.NoError(err, "unable to initialize the k8s server with zarf")
 	temp := suite.T().TempDir()
