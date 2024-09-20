@@ -16,8 +16,8 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
@@ -38,6 +38,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"golang.org/x/sync/errgroup"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 )
 
 func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
@@ -229,22 +231,44 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 	toPull := maps.Clone(fetched)
 
-	err = retry.Do(func() error {
-		saved, err := SaveConcurrent(ctx, cranePath, toPull)
-		for k := range saved {
-			delete(toPull, k)
-		}
-		return err
-	}, retry.Context(ctx), retry.Attempts(2))
-	if err != nil {
-		message.Warnf("Failed to save images in parallel, falling back to sequential save: %s", err.Error())
-		err = retry.Do(func() error {
-			saved, err := SaveSequential(ctx, cranePath, toPull)
+	err = retry.OnError(
+		// backoff configuration with 2 retries and InitialDuration of 100ms
+		wait.Backoff{
+			Duration: 100 * time.Millisecond,
+			Jitter:   1,
+			Factor:   2,
+			Steps:    2,
+		},
+		// always retry
+		func(err error) bool { return true },
+		// the actual action
+		func() error {
+			saved, err := SaveConcurrent(ctx, cranePath, toPull)
 			for k := range saved {
 				delete(toPull, k)
 			}
 			return err
-		}, retry.Context(ctx), retry.Attempts(2))
+		})
+	if err != nil {
+		message.Warnf("Failed to save images in parallel, falling back to sequential save: %s", err.Error())
+		err = retry.OnError(
+			// backoff configuration with 2 retries and InitialDuration of 100ms
+			wait.Backoff{
+				Duration: 100 * time.Millisecond,
+				Jitter:   1,
+				Factor:   2,
+				Steps:    2,
+			},
+			// always retry
+			func(err error) bool { return true },
+			// the actual action
+			func() error {
+				saved, err := SaveSequential(ctx, cranePath, toPull)
+				for k := range saved {
+					delete(toPull, k)
+				}
+				return err
+			})
 		if err != nil {
 			return nil, err
 		}

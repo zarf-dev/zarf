@@ -10,12 +10,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/dns"
@@ -111,59 +112,70 @@ func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgPaths layo
 	}
 
 	for refInfo, img := range images {
-		err = retry.Do(func() error {
-			pushImage := func(registryUrl string) error {
-				names := []string{}
-				if !noImgChecksum {
-					offlineNameCRC, err := transform.ImageTransformHost(registryUrl, refInfo.Reference)
-					if err != nil {
-						return retry.Unrecoverable(err)
+		err = retry.OnError(
+			// backoff configuration with retries and InitialDuration of 500ms
+			wait.Backoff{
+				Duration: 500 * time.Millisecond,
+				Jitter:   1,
+				Factor:   2,
+				Steps:    retries,
+			},
+			// retry unless we got an unrecoverable error
+			isUnrecoverable,
+			// the actual action
+			func() error {
+				pushImage := func(registryUrl string) error {
+					names := []string{}
+					if !noImgChecksum {
+						offlineNameCRC, err := transform.ImageTransformHost(registryUrl, refInfo.Reference)
+						if err != nil {
+							return unrecoverableError{err}
+						}
+						names = append(names, offlineNameCRC)
 					}
-					names = append(names, offlineNameCRC)
+					offlineName, err := transform.ImageTransformHostWithoutChecksum(registryUrl, refInfo.Reference)
+					if err != nil {
+						return unrecoverableError{err}
+					}
+					names = append(names, offlineName)
+					for _, name := range names {
+						message.Infof("Pushing image %s", name)
+						err = crane.Push(img, name, pushOptions...)
+						if err != nil {
+							return err
+						}
+					}
+					return nil
 				}
-				offlineName, err := transform.ImageTransformHostWithoutChecksum(registryUrl, refInfo.Reference)
+
+				if !dns.IsServiceURL(regInfo.Address) {
+					return pushImage(regInfo.Address)
+				}
+
+				if c == nil {
+					return unrecoverableError{errors.New("cannot push to internal OCI registry when cluster is nil")}
+				}
+				namespace, name, port, err := dns.ParseServiceURL(regInfo.Address)
 				if err != nil {
-					return retry.Unrecoverable(err)
+					return err
 				}
-				names = append(names, offlineName)
-				for _, name := range names {
-					message.Infof("Pushing image %s", name)
-					err = crane.Push(img, name, pushOptions...)
-					if err != nil {
-						return err
-					}
+				tunnel, err := c.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
+				if err != nil {
+					return err
+				}
+				_, err = tunnel.Connect(ctx)
+				if err != nil {
+					return err
+				}
+				defer tunnel.Close()
+				err = tunnel.Wrap(func() error {
+					return pushImage(tunnel.Endpoint())
+				})
+				if err != nil {
+					return err
 				}
 				return nil
-			}
-
-			if !dns.IsServiceURL(regInfo.Address) {
-				return pushImage(regInfo.Address)
-			}
-
-			if c == nil {
-				return retry.Unrecoverable(errors.New("cannot push to internal OCI registry when cluster is nil"))
-			}
-			namespace, name, port, err := dns.ParseServiceURL(regInfo.Address)
-			if err != nil {
-				return err
-			}
-			tunnel, err := c.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
-			if err != nil {
-				return err
-			}
-			_, err = tunnel.Connect(ctx)
-			if err != nil {
-				return err
-			}
-			defer tunnel.Close()
-			err = tunnel.Wrap(func() error {
-				return pushImage(tunnel.Endpoint())
 			})
-			if err != nil {
-				return err
-			}
-			return nil
-		}, retry.Context(ctx), retry.Attempts(uint(retries)), retry.Delay(500*time.Millisecond))
 		if err != nil {
 			return err
 		}
@@ -188,59 +200,91 @@ func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgPaths lay
 			if err != nil {
 				return err
 			}
-			err = retry.Do(func() error {
-				if !dns.IsServiceURL(gitInfo.Address) {
-					message.Infof("Pushing repository %s to server %s", repoURL, gitInfo.Address)
-					err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword)
-					if err != nil {
-						return err
-					}
-					return nil
-				}
+			err = retry.OnError(
+				// backoff configuration with retries and InitialDuration of 500ms
+				wait.Backoff{
+					Duration: 500 * time.Millisecond,
+					Jitter:   1,
+					Factor:   2,
+					Steps:    retries,
+				},
+				// retry unless we got an unrecoverable error
+				isUnrecoverable,
+				// the actual action
+				func() error {
 
-				if c == nil {
-					return retry.Unrecoverable(errors.New("cannot push to internal Git server when cluster is nil"))
-				}
-				namespace, name, port, err := dns.ParseServiceURL(gitInfo.Address)
-				if err != nil {
-					return retry.Unrecoverable(err)
-				}
-				tunnel, err := c.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
-				if err != nil {
-					return err
-				}
-				_, err = tunnel.Connect(ctx)
-				if err != nil {
-					return err
-				}
-				defer tunnel.Close()
-				giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), gitInfo.PushUsername, gitInfo.PushPassword)
-				if err != nil {
-					return err
-				}
-				return tunnel.Wrap(func() error {
-					message.Infof("Pushing repository %s to server %s", repoURL, tunnel.HTTPEndpoint())
-					err = repository.Push(ctx, tunnel.HTTPEndpoint(), gitInfo.PushUsername, gitInfo.PushPassword)
+					if !dns.IsServiceURL(gitInfo.Address) {
+						message.Infof("Pushing repository %s to server %s", repoURL, gitInfo.Address)
+						err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword)
+						if err != nil {
+							return err
+						}
+						return nil
+					}
+
+					if c == nil {
+						return unrecoverableError{errors.New("cannot push to internal Git server when cluster is nil")}
+					}
+					namespace, name, port, err := dns.ParseServiceURL(gitInfo.Address)
+					if err != nil {
+						return unrecoverableError{err}
+					}
+					tunnel, err := c.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
 					if err != nil {
 						return err
 					}
-					// Add the read-only user to this repo
-					// TODO: This should not be done here. Or the function name should be changed.
-					repoName, err := transform.GitURLtoRepoName(repoURL)
+					_, err = tunnel.Connect(ctx)
 					if err != nil {
-						return retry.Unrecoverable(err)
+						return err
 					}
-					err = giteaClient.AddReadOnlyUserToRepository(ctx, repoName, gitInfo.PullUsername)
+					defer tunnel.Close()
+					giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), gitInfo.PushUsername, gitInfo.PushPassword)
 					if err != nil {
-						return fmt.Errorf("unable to add the read only user to the repo %s: %w", repoName, err)
+						return err
 					}
-					return nil
+					return tunnel.Wrap(func() error {
+						message.Infof("Pushing repository %s to server %s", repoURL, tunnel.HTTPEndpoint())
+						err = repository.Push(ctx, tunnel.HTTPEndpoint(), gitInfo.PushUsername, gitInfo.PushPassword)
+						if err != nil {
+							return err
+						}
+						// Add the read-only user to this repo
+						// TODO: This should not be done here. Or the function name should be changed.
+						repoName, err := transform.GitURLtoRepoName(repoURL)
+						if err != nil {
+							return unrecoverableError{err}
+						}
+						err = giteaClient.AddReadOnlyUserToRepository(ctx, repoName, gitInfo.PullUsername)
+						if err != nil {
+							return fmt.Errorf("unable to add the read only user to the repo %s: %w", repoName, err)
+						}
+						return nil
+					})
 				})
-			}, retry.Context(ctx), retry.Attempts(uint(retries)), retry.Delay(500*time.Millisecond))
 			if err != nil {
 				return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 			}
 		}
 	}
 	return nil
+}
+
+func isUnrecoverable(err error) bool {
+	return !errors.Is(err, unrecoverableError{})
+}
+
+var _ error = &unrecoverableError{}
+
+type unrecoverableError struct {
+	error
+}
+
+// Error gives a human-readable description of the error.
+func (e unrecoverableError) Error() string {
+	return e.error.Error()
+}
+
+// Unwrap implements errors.Unwrap
+func (e unrecoverableError) Unwrap() error {
+	return e.error
 }

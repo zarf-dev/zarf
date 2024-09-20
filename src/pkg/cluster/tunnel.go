@@ -13,15 +13,17 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
+	"k8s.io/client-go/util/retry"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
@@ -352,13 +354,26 @@ func (tunnel *Tunnel) Wrap(function func() error) error {
 
 // Connect will establish a tunnel to the specified target.
 func (tunnel *Tunnel) Connect(ctx context.Context) (string, error) {
-	url, err := retry.DoWithData(func() (string, error) {
-		url, err := tunnel.establish(ctx)
-		if err != nil {
-			return "", err
-		}
-		return url, nil
-	}, retry.Context(ctx), retry.Attempts(6))
+	var url string
+	err := retry.OnError(
+		// backoff configuration with 2 retries and InitialDuration of 100ms
+		wait.Backoff{
+			Duration: 100 * time.Millisecond,
+			Jitter:   1,
+			Factor:   2,
+			Steps:    6,
+		},
+		// always retry
+		func(err error) bool { return true },
+		// the actual action
+		func() error {
+			iurl, ierr := tunnel.establish(ctx)
+			if ierr != nil {
+				return ierr
+			}
+			url = iurl
+			return nil
+		})
 	if err != nil {
 		return "", err
 	}

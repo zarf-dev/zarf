@@ -9,11 +9,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -53,78 +54,87 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		registryURL = cfg.RegInfo.Address
 	)
 
-	err = retry.Do(func() error {
-		c, _ := cluster.NewCluster()
-		if c != nil {
-			registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegInfo)
-			if err != nil {
-				return err
-			}
-			if tunnel != nil {
-				defer tunnel.Close()
-			}
-		}
-
-		progress := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
-		defer progress.Close()
-		pushOptions := createPushOpts(cfg, progress)
-
-		pushImage := func(img v1.Image, name string) error {
-			if tunnel != nil {
-				return tunnel.Wrap(func() error { return crane.Push(img, name, pushOptions...) })
-			}
-
-			return crane.Push(img, name, pushOptions...)
-		}
-
-		pushed := []transform.Image{}
-		defer func() {
-			for _, refInfo := range pushed {
-				delete(toPush, refInfo)
-			}
-		}()
-		for refInfo, img := range toPush {
-			refTruncated := helpers.Truncate(refInfo.Reference, 55, true)
-			progress.Updatef(fmt.Sprintf("Pushing %s", refTruncated))
-
-			size, err := calcImgSize(img)
-			if err != nil {
-				return err
+	err = retry.OnError(
+		// constant backoff configuration with cfg.Retries and InitialDuration of 500ms
+		wait.Backoff{
+			Duration: 500 * time.Millisecond,
+			Steps:    cfg.Retries,
+		},
+		// always retry
+		func(err error) bool { return true },
+		// the actual action
+		func() error {
+			c, _ := cluster.NewCluster()
+			if c != nil {
+				registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegInfo)
+				if err != nil {
+					return err
+				}
+				if tunnel != nil {
+					defer tunnel.Close()
+				}
 			}
 
-			// If this is not a no checksum image push it for use with the Zarf agent
-			if !cfg.NoChecksum {
-				offlineNameCRC, err := transform.ImageTransformHost(registryURL, refInfo.Reference)
+			progress := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
+			defer progress.Close()
+			pushOptions := createPushOpts(cfg, progress)
+
+			pushImage := func(img v1.Image, name string) error {
+				if tunnel != nil {
+					return tunnel.Wrap(func() error { return crane.Push(img, name, pushOptions...) })
+				}
+
+				return crane.Push(img, name, pushOptions...)
+			}
+
+			pushed := []transform.Image{}
+			defer func() {
+				for _, refInfo := range pushed {
+					delete(toPush, refInfo)
+				}
+			}()
+			for refInfo, img := range toPush {
+				refTruncated := helpers.Truncate(refInfo.Reference, 55, true)
+				progress.Updatef(fmt.Sprintf("Pushing %s", refTruncated))
+
+				size, err := calcImgSize(img)
 				if err != nil {
 					return err
 				}
 
-				if err = pushImage(img, offlineNameCRC); err != nil {
+				// If this is not a no checksum image push it for use with the Zarf agent
+				if !cfg.NoChecksum {
+					offlineNameCRC, err := transform.ImageTransformHost(registryURL, refInfo.Reference)
+					if err != nil {
+						return err
+					}
+
+					if err = pushImage(img, offlineNameCRC); err != nil {
+						return err
+					}
+
+					totalSize -= size
+				}
+
+				// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
+				// (this may result in collisions but this is acceptable for this use case)
+				offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, refInfo.Reference)
+				if err != nil {
 					return err
 				}
 
+				message.Debugf("push %s -> %s)", refInfo.Reference, offlineName)
+
+				if err = pushImage(img, offlineName); err != nil {
+					return err
+				}
+
+				pushed = append(pushed, refInfo)
 				totalSize -= size
 			}
-
-			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
-			// (this may result in collisions but this is acceptable for this use case)
-			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, refInfo.Reference)
-			if err != nil {
-				return err
-			}
-
-			message.Debugf("push %s -> %s)", refInfo.Reference, offlineName)
-
-			if err = pushImage(img, offlineName); err != nil {
-				return err
-			}
-
-			pushed = append(pushed, refInfo)
-			totalSize -= size
-		}
-		progress.Successf("Pushed %d images", len(cfg.ImageList))
-		return nil
-	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
+			progress.Successf("Pushed %d images", len(cfg.ImageList))
+			return nil
+		})
 	if err != nil {
 		return err
 	}

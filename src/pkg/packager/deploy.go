@@ -18,12 +18,13 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/avast/retry-go/v4"
 	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
 	"sigs.k8s.io/cli-utils/pkg/object"
 
@@ -595,57 +596,68 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 		if err != nil {
 			return err
 		}
-		err = retry.Do(func() error {
-			namespace, name, port, err := serviceInfoFromServiceURL(p.state.GitServer.Address)
+		err = retry.OnError(
+			// backoff configuration with p.cfg.PkgOpts.Retries and InitialDuration of 500ms
+			wait.Backoff{
+				Duration: 500 * time.Millisecond,
+				Jitter:   1,
+				Factor:   2,
+				Steps:    p.cfg.PkgOpts.Retries,
+			},
+			// always retry
+			func(err error) bool { return true },
+			// the actual action
+			func() error {
+				namespace, name, port, err := serviceInfoFromServiceURL(p.state.GitServer.Address)
 
-			// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
-			// TODO: Find a better way as ignoring the error is not a good solution to decide to port forward.
-			if err == nil {
-				if !p.isConnectedToCluster() {
-					connectCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-					defer cancel()
-					err := p.connectToCluster(connectCtx)
+				// If this is a service (svcInfo is not nil), create a port-forward tunnel to that resource
+				// TODO: Find a better way as ignoring the error is not a good solution to decide to port forward.
+				if err == nil {
+					if !p.isConnectedToCluster() {
+						connectCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+						defer cancel()
+						err := p.connectToCluster(connectCtx)
+						if err != nil {
+							return err
+						}
+					}
+					tunnel, err := p.cluster.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
 					if err != nil {
 						return err
 					}
-				}
-				tunnel, err := p.cluster.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
-				if err != nil {
-					return err
-				}
-				_, err = tunnel.Connect(ctx)
-				if err != nil {
-					return err
-				}
-				defer tunnel.Close()
-				giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
-				if err != nil {
-					return err
-				}
-				return tunnel.Wrap(func() error {
-					err = repository.Push(ctx, tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+					_, err = tunnel.Connect(ctx)
 					if err != nil {
 						return err
 					}
-					// Add the read-only user to this repo
-					repoName, err := transform.GitURLtoRepoName(repoURL)
+					defer tunnel.Close()
+					giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
 					if err != nil {
 						return err
 					}
-					err = giteaClient.AddReadOnlyUserToRepository(ctx, repoName, p.state.GitServer.PullUsername)
-					if err != nil {
-						return fmt.Errorf("unable to add the read only user to the repo %s: %w", repoName, err)
-					}
-					return nil
-				})
-			}
+					return tunnel.Wrap(func() error {
+						err = repository.Push(ctx, tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+						if err != nil {
+							return err
+						}
+						// Add the read-only user to this repo
+						repoName, err := transform.GitURLtoRepoName(repoURL)
+						if err != nil {
+							return err
+						}
+						err = giteaClient.AddReadOnlyUserToRepository(ctx, repoName, p.state.GitServer.PullUsername)
+						if err != nil {
+							return fmt.Errorf("unable to add the read only user to the repo %s: %w", repoName, err)
+						}
+						return nil
+					})
+				}
 
-			err = repository.Push(ctx, p.state.GitServer.Address, p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
-			if err != nil {
-				return err
-			}
-			return nil
-		}, retry.Context(ctx), retry.Attempts(uint(p.cfg.PkgOpts.Retries)), retry.Delay(500*time.Millisecond))
+				err = repository.Push(ctx, p.state.GitServer.Address, p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
 		if err != nil {
 			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/avast/retry-go/v4"
 	plutoversionsfile "github.com/fairwindsops/pluto/v5"
 	plutoapi "github.com/fairwindsops/pluto/v5/pkg/api"
 	goyaml "github.com/goccy/go-yaml"
@@ -22,6 +21,8 @@ import (
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/yaml"
 
 	"github.com/zarf-dev/zarf/src/config"
@@ -59,37 +60,48 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 
 	histClient := action.NewHistory(h.actionConfig)
 
-	err = retry.Do(func() error {
-		var err error
+	err = retry.OnError(
+		// backoff configuration with h.retries and InitialDuration of 500ms
+		wait.Backoff{
+			Duration: 500 * time.Millisecond,
+			Jitter:   1,
+			Factor:   2,
+			Steps:    h.retries,
+		},
+		// always retry
+		func(err error) bool { return true },
+		// the actual action
+		func() error {
+			var err error
 
-		releases, histErr := histClient.Run(h.chart.ReleaseName)
+			releases, histErr := histClient.Run(h.chart.ReleaseName)
 
-		spinner.Updatef("Checking for existing helm deployment")
+			spinner.Updatef("Checking for existing helm deployment")
 
-		if errors.Is(histErr, driver.ErrReleaseNotFound) {
-			// No prior release, try to install it.
-			spinner.Updatef("Attempting chart installation")
+			if errors.Is(histErr, driver.ErrReleaseNotFound) {
+				// No prior release, try to install it.
+				spinner.Updatef("Attempting chart installation")
 
-			_, err = h.installChart(postRender)
-		} else if histErr == nil && len(releases) > 0 {
-			// Otherwise, there is a prior release so upgrade it.
-			spinner.Updatef("Attempting chart upgrade")
+				_, err = h.installChart(postRender)
+			} else if histErr == nil && len(releases) > 0 {
+				// Otherwise, there is a prior release so upgrade it.
+				spinner.Updatef("Attempting chart upgrade")
 
-			lastRelease := releases[len(releases)-1]
+				lastRelease := releases[len(releases)-1]
 
-			_, err = h.upgradeChart(lastRelease, postRender)
-		} else {
-			// 😭 things aren't working
-			return fmt.Errorf("unable to verify the chart installation status: %w", histErr)
-		}
+				_, err = h.upgradeChart(lastRelease, postRender)
+			} else {
+				// 😭 things aren't working
+				return fmt.Errorf("unable to verify the chart installation status: %w", histErr)
+			}
 
-		if err != nil {
-			return err
-		}
+			if err != nil {
+				return err
+			}
 
-		spinner.Success()
-		return nil
-	}, retry.Context(ctx), retry.Attempts(uint(h.retries)), retry.Delay(500*time.Millisecond))
+			spinner.Success()
+			return nil
+		})
 	if err != nil {
 		removeMsg := "if you need to remove the failed chart, use `zarf package remove`"
 		installErr := fmt.Errorf("unable to install chart after %d attempts: %w: %s", h.retries, err, removeMsg)
