@@ -79,16 +79,20 @@ func Create(ctx context.Context, bbOpts Opts) error {
 	}
 
 	valuesFiles := []string{}
-	for idx, valuesFile := range bbOpts.ValuesFileManifests {
-		valuesYaml, err := getValuesFromManifest(valuesFile)
+	for i, valuesFile := range bbOpts.ValuesFileManifests {
+		valuesYamls, err := getValuesFromManifest(valuesFile)
 		if err != nil {
 			return err
 		}
-		valuesFilePath := filepath.Join(tmpDir, fmt.Sprintf("values-%d.yaml", idx))
-		if err := os.WriteFile(valuesFilePath, []byte(valuesYaml), helpers.ReadWriteUser); err != nil {
-			return err
+		// There can be multiple resources in a single manifests creating values file
+		// We create a values file for each one, these values files are temporary and allow us to template the chart correctly
+		for j, valuesYaml := range valuesYamls {
+			valuesFilePath := filepath.Join(tmpDir, fmt.Sprintf("values-%d-%d.yaml", i, j))
+			if err := os.WriteFile(valuesFilePath, []byte(valuesYaml), helpers.ReadWriteUser); err != nil {
+				return err
+			}
+			valuesFiles = append(valuesFiles, valuesFilePath)
 		}
-		valuesFiles = append(valuesFiles, valuesFilePath)
 	}
 
 	if !bbOpts.SkipFlux {
@@ -251,48 +255,52 @@ func Create(ctx context.Context, bbOpts Opts) error {
 	return utils.WriteYaml(filepath.Join(bbOpts.BaseDir, outputName), pkg, helpers.ReadWriteUser)
 }
 
-func getValuesFromManifest(valuesFileManifest string) (string, error) {
+func getValuesFromManifest(valuesFileManifest string) ([]string, error) {
 	file, err := os.ReadFile(valuesFileManifest)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	var resource unstructured.Unstructured
-	if err := yaml.Unmarshal(file, &resource); err != nil {
-		return "", fmt.Errorf("values file manifests must be kubernetes configmap or secret resources: %w", err)
+	resources, err := utils.SplitYAML(file)
+	if err != nil {
+		return nil, fmt.Errorf("values file manifests must be kubernetes manifests: %w", err)
 	}
-	var data map[string]string
-	var found bool
-	var base64Decode bool
-	if resource.GetKind() == "Secret" {
-		data, found, err = unstructured.NestedStringMap(resource.Object, "stringData")
-		if err != nil || !found {
+	var fileContents []string
+	for _, resource := range resources {
+		var data map[string]string
+		var found bool
+		var base64Decode bool
+		if resource.GetKind() == "Secret" {
+			data, found, err = unstructured.NestedStringMap(resource.Object, "stringData")
+			if err != nil || !found {
+				data, found, err = unstructured.NestedStringMap(resource.Object, "data")
+				if err != nil || !found {
+					return nil, fmt.Errorf("failed to get data from secret: %w", err)
+				}
+				base64Decode = true
+			}
+		} else if resource.GetKind() == "ConfigMap" {
 			data, found, err = unstructured.NestedStringMap(resource.Object, "data")
 			if err != nil || !found {
-				return "", fmt.Errorf("failed to get data from secret: %w", err)
+				return nil, fmt.Errorf("failed to get data from resource: %w", err)
 			}
-			base64Decode = true
+		} else {
+			return nil, errors.New("values manifests must be a Secret or ConfigMap")
 		}
-	} else if resource.GetKind() == "ConfigMap" {
-		data, found, err = unstructured.NestedStringMap(resource.Object, "data")
-		if err != nil || !found {
-			return "", fmt.Errorf("failed to get data from resource: %w", err)
-		}
-	} else {
-		return "", errors.New("values manifests must be a Secret or ConfigMap")
-	}
 
-	valuesYaml, found := data["values.yaml"]
-	if !found {
-		return "", errors.New("values.yaml key must exist in data")
-	}
-	if base64Decode {
-		b, err := base64.StdEncoding.DecodeString(valuesYaml)
-		if err != nil {
-			return "", err
+		valuesYaml, found := data["values.yaml"]
+		if !found {
+			return nil, errors.New("values.yaml key must exist in data")
 		}
-		valuesYaml = string(b)
+		if base64Decode {
+			b, err := base64.StdEncoding.DecodeString(valuesYaml)
+			if err != nil {
+				return nil, err
+			}
+			valuesYaml = string(b)
+		}
+		fileContents = append(fileContents, valuesYaml)
 	}
-	return valuesYaml, nil
+	return fileContents, nil
 }
 
 // isValidVersion check if the version is 1.54.0 or greater.
@@ -468,18 +476,18 @@ func createBBManifests(ctx context.Context, airgap bool, manifestDir string, val
 		if err != nil {
 			return v1alpha1.ZarfManifest{}, err
 		}
-		var resource unstructured.Unstructured
-		if err := yaml.Unmarshal(file, &resource); err != nil {
+		manifest.Files = append(manifest.Files, valuesFile)
+		resources, err := utils.SplitYAML(file)
+		if err != nil {
 			return v1alpha1.ZarfManifest{}, err
 		}
-
-		manifest.Files = append(manifest.Files, valuesFile)
-
-		// Add it to the list of valuesFrom for the HelmRelease
-		hrValues = append(hrValues, fluxHelmCtrl.ValuesReference{
-			Kind: resource.GetKind(),
-			Name: resource.GetName(),
-		})
+		for _, resource := range resources {
+			// Add it to the list of valuesFrom for the HelmRelease
+			hrValues = append(hrValues, fluxHelmCtrl.ValuesReference{
+				Kind: resource.GetKind(),
+				Name: resource.GetName(),
+			})
+		}
 	}
 
 	if spec, ok := helmReleaseObj["spec"].(map[string]interface{}); ok {

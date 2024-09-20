@@ -112,40 +112,40 @@ func TestFindBBResources(t *testing.T) {
 func TestGetValuesFromManifest(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name           string
-		fileName       string
-		expectedOutput string
-		expectedErr    error
+		name        string
+		fileName    string
+		expected    []string
+		expectedErr error
 	}{
 		{
-			name:           "Valid Secret string data",
-			fileName:       "valid_secret_string_data.yaml",
-			expectedOutput: "key: value\n",
-			expectedErr:    nil,
+			name:        "Valid Secret string data",
+			fileName:    "valid_secret_string_data.yaml",
+			expected:    []string{"key: value\n"},
+			expectedErr: nil,
 		},
 		{
-			name:           "Valid Secret regular data",
-			fileName:       "valid_secret_data.yaml",
-			expectedOutput: "key: value",
-			expectedErr:    nil,
+			name:        "Valid Secret regular data",
+			fileName:    "valid_secret_data.yaml",
+			expected:    []string{"key: value"},
+			expectedErr: nil,
 		},
 		{
-			name:           "Valid ConfigMap",
-			fileName:       "valid_configmap.yaml",
-			expectedOutput: "key: value\n",
-			expectedErr:    nil,
+			name:        "Valid ConfigMap and secret",
+			fileName:    "multiple_resources.yaml",
+			expected:    []string{"key: value\n", "key2: value2\n"},
+			expectedErr: nil,
 		},
 		{
-			name:           "Invalid Kind",
-			fileName:       "invalid_kind.yaml",
-			expectedOutput: "",
-			expectedErr:    errors.New("values manifests must be a Secret or ConfigMap"),
+			name:        "Invalid Kind",
+			fileName:    "invalid_kind.yaml",
+			expected:    nil,
+			expectedErr: errors.New("values manifests must be a Secret or ConfigMap"),
 		},
 		{
-			name:           "Missing values.yaml",
-			fileName:       "missing_values.yaml",
-			expectedOutput: "",
-			expectedErr:    errors.New("values.yaml key must exist in data"),
+			name:        "Missing values.yaml",
+			fileName:    "missing_values.yaml",
+			expected:    nil,
+			expectedErr: errors.New("values.yaml key must exist in data"),
 		},
 	}
 
@@ -153,13 +153,13 @@ func TestGetValuesFromManifest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			filePath := filepath.Join("testdata", "getValuesFromManifest", tt.fileName)
-			output, err := getValuesFromManifest(filePath)
+			actual, err := getValuesFromManifest(filePath)
 			if tt.expectedErr != nil {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, tt.expectedOutput, output)
+			require.Equal(t, tt.expected, actual)
 		})
 	}
 }
