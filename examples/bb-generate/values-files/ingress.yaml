@@ -1,4 +1,3 @@
-
 # Configure Istio
 domain: "###ZARF_VAR_DOMAIN###"
 
