@@ -23,7 +23,6 @@ components:
     files:
     - manifests/bb-gitrepository.yaml
     - manifests/bb-zarf-credentials.yaml
-    - values-files/ingress.yaml
     - values-files/kyverno.yaml
     - values-files/loki.yaml
     - values-files/neuvector.yaml
@@ -140,4 +139,4 @@ components:
 x-mdx: |
   This package deploys [Big Bang](https://repo1.dso.mil/platform-one/big-bang/bigbang)
 
-  It was generated using the command `zarf dev generate big-bang 2.35.0 --values-file-manifests=values-files/ingress.yaml,values-files/kyverno.yaml,values-files/loki.yaml,values-files/neuvector.yaml`
+  It was generated using the command `zarf dev generate big-bang 2.35.0 --values-file-manifests=values-files/kyverno.yaml,values-files/loki.yaml,values-files/neuvector.yaml`

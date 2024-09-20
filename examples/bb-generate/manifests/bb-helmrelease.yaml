@@ -28,8 +28,6 @@ spec:
   valuesFrom:
   - kind: Secret
     name: zarf-credentials
-  - kind: Secret
-    name: bb-ingress-vals
   - kind: ConfigMap
     name: kyverno-config
   - kind: ConfigMap
