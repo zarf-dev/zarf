@@ -6,7 +6,6 @@ package bigbang
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -520,7 +519,7 @@ func TestCreate(t *testing.T) {
 			for i, c := range tt.pkg.Components {
 				for j, m := range c.Manifests {
 					for k, f := range m.Files {
-						tt.pkg.Components[i].Manifests[j].Files[k] = fmt.Sprintf("%s/%s", tempDir, f)
+						tt.pkg.Components[i].Manifests[j].Files[k] = filepath.Join(tempDir, f)
 					}
 				}
 			}
