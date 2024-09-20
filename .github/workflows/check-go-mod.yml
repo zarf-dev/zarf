@@ -1,0 +1,22 @@
+name: Check for go mod changes
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-go-mod:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Setup golang
+        uses: ./.github/actions/golang
+
+      - name: Test go mod
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
