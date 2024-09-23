@@ -165,8 +165,8 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alph
 			return nil, err
 		}
 		packageNeedsWait, _, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
-		if !packageNeedsWait {
-			return deployedPackage, nil
+		if packageNeedsWait {
+			return nil, errors.New("wait on running webhook")
 		}
 		return deployedPackage, nil
 	}, retry.Context(waitCtx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
