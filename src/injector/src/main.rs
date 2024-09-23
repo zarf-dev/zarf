@@ -8,6 +8,7 @@ use std::io;
 use std::io::Read;
 use std::io::Write;
 use std::path::PathBuf;
+use std::process::exit;
 
 use axum::{
     body::Body,
@@ -257,14 +258,15 @@ async fn handle_get_digest(tag: String) -> Response {
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
     let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        println!("Usage: {} <sha256sum>", args[0]);
+        exit(1);
+    }
 
     println!("unpacking: {}", args[1]);
-    let payload_sha = &args[1];
-
-    unpack(payload_sha);
+    unpack(&args[1]);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:5000").await.unwrap();
     println!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, start_seed_registry()).await.unwrap();
-    println!("Usage: {} <sha256sum>", args[1]);
 }
