@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -21,8 +22,8 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -33,7 +34,7 @@ import (
 // MirrorOptions are the options for Mirror.
 type MirrorOptions struct {
 	Cluster         *cluster.Cluster
-	PackagePaths    layout.PackagePaths
+	PkgLayout       *layout.PackageLayout
 	Filter          filters.ComponentFilterStrategy
 	RegistryInfo    types.RegistryInfo
 	GitInfo         types.GitServerInfo
@@ -43,33 +44,28 @@ type MirrorOptions struct {
 
 // Mirror mirrors the package contents to the given registry and git server.
 func Mirror(ctx context.Context, opt MirrorOptions) error {
-	err := pushImagesToRegistry(ctx, opt.Cluster, opt.PackagePaths, opt.Filter, opt.RegistryInfo, opt.NoImageChecksum, opt.Retries)
+	err := pushImagesToRegistry(ctx, opt.Cluster, opt.PkgLayout, opt.Filter, opt.RegistryInfo, opt.NoImageChecksum, opt.Retries)
 	if err != nil {
 		return err
 	}
-	err = pushReposToRepository(ctx, opt.Cluster, opt.PackagePaths, opt.Filter, opt.GitInfo, opt.Retries)
+	err = pushReposToRepository(ctx, opt.Cluster, opt.PkgLayout, opt.Filter, opt.GitInfo, opt.Retries)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgPaths layout.PackagePaths, filter filters.ComponentFilterStrategy, regInfo types.RegistryInfo, noImgChecksum bool, retries int) error {
+func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, regInfo types.RegistryInfo, noImgChecksum bool, retries int) error {
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
-	pkg, _, err := pkgPaths.ReadZarfYAML()
+	components, err := filter.Apply(pkgLayout.Pkg)
 	if err != nil {
 		return err
 	}
-	components, err := filter.Apply(pkg)
-	if err != nil {
-		return err
-	}
-	pkg.Components = components
 
 	images := map[transform.Image]v1.Image{}
-	for _, component := range pkg.Components {
+	for _, component := range components {
 		for _, img := range component.Images {
 			ref, err := transform.ParseImageRef(img)
 			if err != nil {
@@ -78,11 +74,11 @@ func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgPaths layo
 			if _, ok := images[ref]; ok {
 				continue
 			}
-			ociImage, err := utils.LoadOCIImage(pkgPaths.Images.Base, ref)
+			img, err := pkgLayout.GetImage(ref)
 			if err != nil {
 				return err
 			}
-			images[ref] = ociImage
+			images[ref] = img
 		}
 	}
 	if len(images) == 0 {
@@ -96,7 +92,7 @@ func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgPaths layo
 	transportWithProgressBar := helpers.NewTransport(transport, nil)
 
 	pushOptions := []crane.Option{
-		crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: pkg.Build.Architecture}),
+		crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: pkgLayout.Pkg.Build.Architecture}),
 		crane.WithTransport(transportWithProgressBar),
 		crane.WithAuth(authn.FromConfig(authn.AuthConfig{
 			Username: regInfo.PushUsername,
@@ -171,20 +167,23 @@ func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgPaths layo
 	return nil
 }
 
-func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgPaths layout.PackagePaths, filter filters.ComponentFilterStrategy, gitInfo types.GitServerInfo, retries int) error {
-	pkg, _, err := pkgPaths.ReadZarfYAML()
+func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, gitInfo types.GitServerInfo, retries int) error {
+	components, err := filter.Apply(pkgLayout.Pkg)
 	if err != nil {
 		return err
 	}
-	components, err := filter.Apply(pkg)
-	if err != nil {
-		return err
-	}
-	pkg.Components = components
-
-	for _, component := range pkg.Components {
+	for _, component := range components {
 		for _, repoURL := range component.Repos {
-			repository, err := git.Open(pkgPaths.Components.Dirs[component.Name].Repos, repoURL)
+			tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+			if err != nil {
+				return err
+			}
+			defer os.RemoveAll(tmpDir)
+			reposPath, err := pkgLayout.GetComponentDir(tmpDir, component.Name, layout.RepoComponentDir)
+			if err != nil {
+				return err
+			}
+			repository, err := git.Open(reposPath, repoURL)
 			if err != nil {
 				return err
 			}
