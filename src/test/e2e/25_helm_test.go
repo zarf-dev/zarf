@@ -99,7 +99,7 @@ func testHelmEscaping(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the configmap was deployed, escaped, and contains all of its data
-	kubectlOut, _ := exec.Command("kubectl", "describe", "cm", "dont-template-me").Output()
+	kubectlOut, _ := exec.Command("kubectl", "-n", "default", "describe", "cm", "dont-template-me").Output()
 	require.Contains(t, string(kubectlOut), `alert: OOMKilled {{ "{{ \"random.Values\" }}" }}`)
 	require.Contains(t, string(kubectlOut), "backtick1: \"content with backticks `some random things`\"")
 	require.Contains(t, string(kubectlOut), "backtick2: \"nested templating with backticks {{` random.Values `}}\"")

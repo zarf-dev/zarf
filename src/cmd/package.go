@@ -296,18 +296,20 @@ var packageRemoveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		pkgConfig.PkgOpts.PackageSource = packageSource
-		src, err := identifyAndFallbackToClusterSource()
+		filter := filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.BySelectState(pkgConfig.PkgOpts.OptionalComponents),
+		)
+		cluster, _ := cluster.NewCluster()
+		removeOpt := packager2.RemoveOptions{
+			Source:                  packageSource,
+			Cluster:                 cluster,
+			Filter:                  filter,
+			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		}
+		err = packager2.Remove(cmd.Context(), removeOpt)
 		if err != nil {
 			return err
-		}
-		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
-		if err != nil {
-			return err
-		}
-		defer pkgClient.ClearTempPaths()
-		if err := pkgClient.Remove(cmd.Context()); err != nil {
-			return fmt.Errorf("unable to remove the package with an error of: %w", err)
 		}
 		return nil
 	},
@@ -408,7 +410,9 @@ func choosePackage(args []string) (string, error) {
 	return path, nil
 }
 
-// TODO: This code does not seem to do what it was intended.
+// NOTE: If the source is identified nil is returned because packager will create the source if it is nil.
+// If it can't be identified the cluster source is used causing packager to ignore the configured package source.
+// Use of cluster package source is limited to a few functions which is why this is not the default behavior.
 func identifyAndFallbackToClusterSource() (sources.PackageSource, error) {
 	identifiedSrc := sources.Identify(pkgConfig.PkgOpts.PackageSource)
 	if identifiedSrc == "" {
