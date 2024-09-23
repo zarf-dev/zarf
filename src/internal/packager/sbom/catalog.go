@@ -168,9 +168,7 @@ func (b *Builder) createImageSBOM(ctx context.Context, img v1.Image, src string)
 		Reference: refInfo.Reference,
 	})
 
-	cfg := syft.DefaultCreateSBOMConfig()
-	cfg.ToolName = "zarf"
-	cfg.ToolVersion = config.CLIVersion
+	cfg := getDefaultSyftConfig()
 	sbom, err := syft.CreateSBOM(ctx, syftSrc, cfg)
 	if err != nil {
 		return nil, err
@@ -213,10 +211,7 @@ func (b *Builder) createFileSBOM(ctx context.Context, componentSBOM layout.Compo
 			return nil, err
 		}
 
-		cfg := syft.DefaultCreateSBOMConfig()
-		cfg.ToolName = "zarf"
-		cfg.ToolVersion = config.CLIVersion
-
+		cfg := getDefaultSyftConfig()
 		sbom, err := syft.CreateSBOM(ctx, fileSrc, cfg)
 		if err != nil {
 			return nil, err
@@ -253,7 +248,8 @@ func (b *Builder) createFileSBOM(ctx context.Context, componentSBOM layout.Compo
 
 	artifact := sbom.SBOM{
 		Descriptor: sbom.Descriptor{
-			Name: "zarf",
+			Name:    "zarf",
+			Version: config.CLIVersion,
 		},
 		Source: parentSource.Describe(),
 		Artifacts: sbom.Artifacts{
@@ -291,4 +287,11 @@ func (b *Builder) getNormalizedFileName(identifier string) string {
 func (b *Builder) createSBOMFile(filename string) (*os.File, error) {
 	path := filepath.Join(b.outputDir, b.getNormalizedFileName(filename))
 	return os.Create(path)
+}
+
+func getDefaultSyftConfig() *syft.CreateSBOMConfig {
+	cfg := syft.DefaultCreateSBOMConfig()
+	cfg.ToolName = "zarf"
+	cfg.ToolVersion = config.CLIVersion
+	return cfg
 }
