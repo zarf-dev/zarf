@@ -16,9 +16,6 @@ import (
 	"github.com/anchore/stereoscope/pkg/image"
 	"github.com/anchore/syft/syft"
 	"github.com/anchore/syft/syft/artifact"
-	"github.com/anchore/syft/syft/cataloging"
-	"github.com/anchore/syft/syft/cataloging/filecataloging"
-	"github.com/anchore/syft/syft/cataloging/pkgcataloging"
 	syftFile "github.com/anchore/syft/syft/file"
 	"github.com/anchore/syft/syft/format"
 	"github.com/anchore/syft/syft/format/syftjson"
@@ -54,7 +51,7 @@ var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 var componentPrefix = "zarf-component-"
 
 // Catalog catalogs the given components and images to create an SBOM.
-func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imageList []transform.Image, paths *layout.PackagePaths) error {
+func Catalog(ctx context.Context, componentSBOMs map[string]*layout.ComponentSBOM, imageList []transform.Image, paths *layout.PackagePaths) error {
 	imageCount := len(imageList)
 	componentCount := len(componentSBOMs)
 	builder := Builder{
@@ -88,7 +85,7 @@ func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imageList []transf
 			return err
 		}
 
-		jsonData, err := builder.createImageSBOM(img, refInfo.Reference)
+		jsonData, err := builder.createImageSBOM(ctx, img, refInfo.Reference)
 		if err != nil {
 			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", refInfo.Reference)
 			return err
@@ -113,7 +110,7 @@ func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imageList []transf
 			continue
 		}
 
-		jsonData, err := builder.createFileSBOM(*componentSBOMs[component], component)
+		jsonData, err := builder.createFileSBOM(ctx, *componentSBOMs[component], component)
 		if err != nil {
 			builder.spinner.Errorf(err, "Unable to create SBOM for component %s", component)
 			return err
@@ -147,7 +144,7 @@ func Catalog(componentSBOMs map[string]*layout.ComponentSBOM, imageList []transf
 
 // createImageSBOM uses syft to generate SBOM for an image,
 // some code/structure migrated from https://github.com/testifysec/go-witness/blob/v0.1.12/attestation/syft/syft.go.
-func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
+func (b *Builder) createImageSBOM(ctx context.Context, img v1.Image, src string) ([]byte, error) {
 	// Get the image reference.
 	refInfo, err := transform.ParseImageRef(src)
 	if err != nil {
@@ -174,7 +171,7 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 	cfg := syft.DefaultCreateSBOMConfig()
 	cfg.ToolName = "zarf"
 	cfg.ToolVersion = config.CLIVersion
-	sbom, err := syft.CreateSBOM(context.TODO(), syftSrc, cfg)
+	sbom, err := syft.CreateSBOM(ctx, syftSrc, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +198,7 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 }
 
 // createPathSBOM uses syft to generate SBOM for a filepath.
-func (b *Builder) createFileSBOM(componentSBOM layout.ComponentSBOM, component string) ([]byte, error) {
+func (b *Builder) createFileSBOM(ctx context.Context, componentSBOM layout.ComponentSBOM, component string) ([]byte, error) {
 	catalog := pkg.NewCollection()
 	relationships := []artifact.Relationship{}
 	parentSource, err := directorysource.NewFromPath(componentSBOM.Component.Base)
@@ -216,26 +213,11 @@ func (b *Builder) createFileSBOM(componentSBOM layout.ComponentSBOM, component s
 			return nil, err
 		}
 
-		// Dogsled distro since this is not a linux image we are scanning
-		// cat, rel, _, err := syft.CatalogPackages(fileSource, cataloger.DefaultConfig())
-		// if err != nil {
-		// 	return nil, err
-		// }
+		cfg := syft.DefaultCreateSBOMConfig()
+		cfg.ToolName = "zarf"
+		cfg.ToolVersion = config.CLIVersion
 
-		cfg := &syft.CreateSBOMConfig{
-			Search:         cataloging.DefaultSearchConfig(),
-			Relationships:  cataloging.DefaultRelationshipsConfig(),
-			DataGeneration: cataloging.DefaultDataGenerationConfig(),
-			Packages:       pkgcataloging.DefaultConfig(),
-			Files:          filecataloging.DefaultConfig(),
-			Parallelism:    1,
-
-			//TODO do we want Zarf here?
-			ToolName:    "zarf",
-			ToolVersion: config.CLIVersion,
-		}
-
-		sbom, err := syft.CreateSBOM(context.TODO(), fileSrc, cfg)
+		sbom, err := syft.CreateSBOM(ctx, fileSrc, cfg)
 		if err != nil {
 			return nil, err
 		}
