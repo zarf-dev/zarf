@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
@@ -29,16 +29,17 @@ func (c *Cluster) DeleteZarfNamespace(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = retry.Do(func() error {
-		_, err := c.Clientset.CoreV1().Namespaces().Get(ctx, ZarfNamespaceName, metav1.GetOptions{})
-		if kerrors.IsNotFound(err) {
-			return nil
+	// returning false, or an error continues polling, true stops it
+	err = wait.PollUntilContextCancel(ctx, time.Second, false, func(context.Context) (bool, error) {
+		_, ierr := c.Clientset.CoreV1().Namespaces().Get(ctx, ZarfNamespaceName, metav1.GetOptions{})
+		if kerrors.IsNotFound(ierr) {
+			return true, nil
 		}
-		if err != nil {
-			return err
+		if ierr != nil {
+			return false, ierr
 		}
-		return fmt.Errorf("namespace still exists")
-	}, retry.Context(ctx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
+		return false, fmt.Errorf("namespace still exists")
+	})
 	if err != nil {
 		return err
 	}

@@ -15,8 +15,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -127,15 +127,13 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		// Wait up to 2 minutes for the default service account to be created.
 		// Some clusters seem to take a while to create this, see https://github.com/kubernetes/kubernetes/issues/66689.
 		// The default SA is required for pods to start properly.
-		saCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-		defer cancel()
-		err = retry.Do(func() error {
-			_, err := c.Clientset.CoreV1().ServiceAccounts(ZarfNamespaceName).Get(saCtx, "default", metav1.GetOptions{})
-			if err != nil {
-				return err
+		err = wait.PollUntilContextTimeout(ctx, time.Second, 2*time.Minute, false, func(saCtx context.Context) (bool, error) {
+			_, ierr := c.Clientset.CoreV1().ServiceAccounts(ZarfNamespaceName).Get(saCtx, "default", metav1.GetOptions{})
+			if ierr != nil {
+				return false, ierr
 			}
-			return nil
-		}, retry.Context(saCtx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
+			return true, nil
+		})
 		if err != nil {
 			return fmt.Errorf("unable get default Zarf service account: %w", err)
 		}

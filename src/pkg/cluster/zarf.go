@@ -16,8 +16,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
@@ -157,19 +157,18 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alph
 	if waitSeconds > 0 {
 		waitDuration = time.Duration(waitSeconds) * time.Second
 	}
-	waitCtx, cancel := context.WithTimeout(ctx, waitDuration)
-	defer cancel()
-	deployedPackage, err = retry.DoWithData(func() (*types.DeployedPackage, error) {
-		deployedPackage, err = c.GetDeployedPackage(waitCtx, deployedPackage.Name)
-		if err != nil {
-			return nil, err
+	err = wait.PollUntilContextTimeout(ctx, time.Second, waitDuration, false, func(waitCtx context.Context) (bool, error) {
+		pkg, ierr := c.GetDeployedPackage(waitCtx, deployedPackage.Name)
+		if ierr != nil {
+			return false, ierr
 		}
+		deployedPackage = pkg
 		packageNeedsWait, _, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
 		if !packageNeedsWait {
-			return deployedPackage, nil
+			return true, nil
 		}
-		return deployedPackage, nil
-	}, retry.Context(waitCtx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
+		return true, nil
+	})
 	if err != nil {
 		return nil, err
 	}

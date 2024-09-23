@@ -17,9 +17,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -171,13 +171,14 @@ type podFilter func(pod corev1.Pod) bool
 // If the timeout is reached, an empty list will be returned.
 // TODO: Test, refactor and/or remove.
 func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interface, target podLookup, include podFilter) ([]corev1.Pod, error) {
-	readyPods, err := retry.DoWithData(func() ([]corev1.Pod, error) {
+	var readyPods []corev1.Pod
+	err := wait.PollUntilContextCancel(ctx, time.Second, false, func(context.Context) (bool, error) {
 		listOpts := metav1.ListOptions{
 			LabelSelector: target.Selector,
 		}
 		podList, err := clientset.CoreV1().Pods(target.Namespace).List(ctx, listOpts)
 		if err != nil {
-			return nil, err
+			return false, err
 		}
 		message.Debugf("Found %d pods for target %#v", len(podList.Items), target)
 		// Sort the pods from newest to oldest
@@ -185,7 +186,7 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 			return podList.Items[i].CreationTimestamp.After(podList.Items[j].CreationTimestamp.Time)
 		})
 
-		readyPods := []corev1.Pod{}
+		readyPods = []corev1.Pod{}
 		for _, pod := range podList.Items {
 			message.Debugf("Testing pod %q", pod.Name)
 
@@ -227,10 +228,10 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 			}
 		}
 		if len(readyPods) == 0 {
-			return nil, fmt.Errorf("no ready pods found")
+			return false, fmt.Errorf("no ready pods found")
 		}
-		return readyPods, nil
-	}, retry.Context(ctx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
+		return true, nil
+	})
 	if err != nil {
 		return nil, err
 	}

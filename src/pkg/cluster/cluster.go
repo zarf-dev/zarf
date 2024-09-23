@@ -12,11 +12,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
 
-	"github.com/avast/retry-go/v4"
 	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -45,25 +45,26 @@ func NewClusterWithWait(ctx context.Context) (*Cluster, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = retry.Do(func() error {
+	// returning false, or an error continues polling, true stops it
+	err = wait.PollUntilContextCancel(ctx, time.Second, false, func(context.Context) (bool, error) {
 		nodeList, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 		if err != nil {
-			return err
+			return false, err
 		}
 		if len(nodeList.Items) < 1 {
-			return fmt.Errorf("cluster does not have any nodes")
+			return false, fmt.Errorf("cluster does not have any nodes")
 		}
 		pods, err := c.Clientset.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
-			return err
+			return false, err
 		}
 		for _, pod := range pods.Items {
 			if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodRunning {
-				return nil
+				return true, nil
 			}
 		}
-		return fmt.Errorf("no pods are in succeeded or running state")
-	}, retry.Context(ctx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
+		return false, fmt.Errorf("no pods are in succeeded or running state")
+	})
 	if err != nil {
 		return nil, err
 	}
