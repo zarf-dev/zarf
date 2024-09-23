@@ -19,7 +19,9 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/mholt/archiver/v3"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
@@ -162,6 +164,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackagePaths, er
 	return pkgPaths, nil
 }
 
+// identifySource returns the source type for the given source.
 func identifySource(src string) (string, error) {
 	parsed, err := url.Parse(src)
 	if err == nil && parsed.Scheme != "" && parsed.Host != "" {
@@ -222,4 +225,34 @@ func assembleSplitTar(src, tarPath string) error {
 		}
 	}
 	return nil
+}
+
+func packageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool) (v1alpha1.ZarfPackage, error) {
+	_, err := identifySource(src)
+	if err != nil {
+		if cluster == nil {
+			return v1alpha1.ZarfPackage{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
+		}
+		depPkg, err := cluster.GetDeployedPackage(ctx, src)
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, err
+		}
+		return depPkg.Data, nil
+	}
+
+	loadOpt := LoadOptions{
+		Source:                  src,
+		SkipSignatureValidation: skipSignatureValidation,
+		Filter:                  filters.Empty(),
+	}
+	pkgPaths, err := LoadPackage(ctx, loadOpt)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	defer os.RemoveAll(pkgPaths.Base)
+	pkg, _, err := pkgPaths.ReadZarfYAML()
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	return pkg, nil
 }
