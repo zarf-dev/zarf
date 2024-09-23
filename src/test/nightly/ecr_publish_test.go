@@ -71,7 +71,7 @@ func TestECRPublishing(t *testing.T) {
 
 	// Ensure we get a warning when trying to inspect the package without providing the public key
 	// and the insecure flag
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", testPackageFileName, "--insecure")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", testPackageFileName, "--skip-signature-validation")
 	require.NoError(t, err, stdOut, stdErr)
 	require.NotContains(t, stdErr, "Validating SBOM checksums")
 
