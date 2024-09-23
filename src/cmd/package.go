@@ -194,27 +194,14 @@ var packageInspectCmd = &cobra.Command{
 			return err
 		}
 
-		loadOpt := packager2.LoadOptions{
-			Source:                  src,
-			Shasum:                  pkgConfig.PkgOpts.Shasum,
-			PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
-			Filter:                  filters.Empty(),
-		}
-
-		pkgPaths, err := packager2.LoadPackage(cmd.Context(), loadOpt)
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(pkgPaths.Base)
-
 		cluster, _ := cluster.NewCluster()
 		inspectOpt := packager2.ZarfInspectOptions{
-			PackagePaths:  pkgPaths,
-			Cluster:       cluster,
-			ListImages:    pkgConfig.InspectOpts.ListImages,
-			ViewSBOM:      pkgConfig.InspectOpts.ViewSBOM,
-			SBOMOutputDir: pkgConfig.InspectOpts.SBOMOutputDir,
+			Source:                  src,
+			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+			Cluster:                 cluster,
+			ListImages:              pkgConfig.InspectOpts.ListImages,
+			ViewSBOM:                pkgConfig.InspectOpts.ViewSBOM,
+			SBOMOutputDir:           pkgConfig.InspectOpts.SBOMOutputDir,
 		}
 
 		if pkgConfig.InspectOpts.ListImages {

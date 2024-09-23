@@ -12,28 +12,29 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 )
 
 // ZarfInspectOptions tracks the user-defined preferences during a package inspection.
 type ZarfInspectOptions struct {
-	PackagePaths  *layout.PackagePaths
-	Cluster       *cluster.Cluster
-	ViewSBOM      bool
-	SBOMOutputDir string
-	ListImages    bool
+	Source                  string
+	Cluster                 *cluster.Cluster
+	ViewSBOM                bool
+	SBOMOutputDir           string
+	ListImages              bool
+	SkipSignatureValidation bool
 }
 
 // Inspect list the contents of a package.
-func Inspect(ctx context.Context, options ZarfInspectOptions) (v1alpha1.ZarfPackage, error) {
+func Inspect(ctx context.Context, opt ZarfInspectOptions) (v1alpha1.ZarfPackage, error) {
 	var err error
-	pkg, err := getPackageMetadata(ctx, options.PackagePaths)
+	pkg, err := getPackageMetadata(ctx, opt)
 	if err != nil {
 		return pkg, err
 	}
 
-	if getSBOM(options.ViewSBOM, options.SBOMOutputDir) {
-		err = handleSBOMOptions(options.PackagePaths, pkg, options.ViewSBOM, options.SBOMOutputDir)
+	if getSBOM(opt.ViewSBOM, opt.SBOMOutputDir) {
+		err = handleSBOMOptions(ctx, pkg, opt)
 		if err != nil {
 			return pkg, err
 		}
@@ -43,9 +44,9 @@ func Inspect(ctx context.Context, options ZarfInspectOptions) (v1alpha1.ZarfPack
 }
 
 // InspectList lists the images in a component action
-func InspectList(ctx context.Context, options ZarfInspectOptions) ([]string, error) {
+func InspectList(ctx context.Context, opt ZarfInspectOptions) ([]string, error) {
 	var imageList []string
-	pkg, err := getPackageMetadata(ctx, options.PackagePaths)
+	pkg, err := getPackageMetadata(ctx, opt)
 	if err != nil {
 		return nil, err
 	}
@@ -64,27 +65,37 @@ func InspectList(ctx context.Context, options ZarfInspectOptions) ([]string, err
 	return imageList, err
 }
 
-func getPackageMetadata(_ context.Context, layout *layout.PackagePaths) (v1alpha1.ZarfPackage, error) {
-	pkg, _, err := layout.ReadZarfYAML()
+func getPackageMetadata(ctx context.Context, opt ZarfInspectOptions) (v1alpha1.ZarfPackage, error) {
+	pkg, err := packageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation)
 	if err != nil {
 		return pkg, err
 	}
+
 	return pkg, nil
 }
 
-func handleSBOMOptions(layout *layout.PackagePaths, pkg v1alpha1.ZarfPackage, viewSBOM bool, SBOMOutputDir string) error {
-	if SBOMOutputDir != "" {
-		out, err := layout.SBOMs.OutputSBOMFiles(SBOMOutputDir, pkg.Metadata.Name)
+func handleSBOMOptions(ctx context.Context, pkg v1alpha1.ZarfPackage, opt ZarfInspectOptions) error {
+	loadOpt := LoadOptions{
+		Source:                  opt.Source,
+		SkipSignatureValidation: opt.SkipSignatureValidation,
+		Filter:                  filters.Empty(),
+	}
+	layout, err := LoadPackage(ctx, loadOpt)
+	if err != nil {
+		return err
+	}
+	if opt.SBOMOutputDir != "" {
+		out, err := layout.SBOMs.OutputSBOMFiles(opt.SBOMOutputDir, pkg.Metadata.Name)
 		if err != nil {
 			return err
 		}
-		if viewSBOM {
+		if opt.ViewSBOM {
 			err := sbom.ViewSBOMFiles(out)
 			if err != nil {
 				return err
 			}
 		}
-	} else if viewSBOM {
+	} else if opt.ViewSBOM {
 		err := sbom.ViewSBOMFiles(layout.SBOMs.Path)
 		if err != nil {
 			return err
