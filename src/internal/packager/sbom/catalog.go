@@ -5,6 +5,7 @@
 package sbom
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"os"
@@ -15,14 +16,19 @@ import (
 	"github.com/anchore/stereoscope/pkg/image"
 	"github.com/anchore/syft/syft"
 	"github.com/anchore/syft/syft/artifact"
+	"github.com/anchore/syft/syft/cataloging"
+	"github.com/anchore/syft/syft/cataloging/filecataloging"
+	"github.com/anchore/syft/syft/cataloging/pkgcataloging"
 	syftFile "github.com/anchore/syft/syft/file"
 	"github.com/anchore/syft/syft/format"
 	"github.com/anchore/syft/syft/format/syftjson"
 	"github.com/anchore/syft/syft/linux"
 	"github.com/anchore/syft/syft/pkg"
-	"github.com/anchore/syft/syft/pkg/cataloger"
 	"github.com/anchore/syft/syft/sbom"
 	"github.com/anchore/syft/syft/source"
+	"github.com/anchore/syft/syft/source/directorysource"
+	"github.com/anchore/syft/syft/source/filesource"
+	"github.com/anchore/syft/syft/source/stereoscopesource"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -161,29 +167,19 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 		return nil, err
 	}
 
-	syftSource, err := source.NewFromStereoscopeImageObject(syftImage, refInfo.Reference, nil)
+	syftSrc := stereoscopesource.New(syftImage, stereoscopesource.ImageConfig{
+		Reference: refInfo.Reference,
+	})
+
+	cfg := syft.DefaultCreateSBOMConfig()
+	cfg.ToolName = "zarf"
+	cfg.ToolVersion = config.CLIVersion
+	sbom, err := syft.CreateSBOM(context.TODO(), syftSrc, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	catalog, relationships, distro, err := syft.CatalogPackages(syftSource, cataloger.DefaultConfig())
-	if err != nil {
-		return nil, err
-	}
-
-	artifact := sbom.SBOM{
-		Descriptor: sbom.Descriptor{
-			Name: "zarf",
-		},
-		Source: syftSource.Describe(),
-		Artifacts: sbom.Artifacts{
-			Packages:          catalog,
-			LinuxDistribution: distro,
-		},
-		Relationships: relationships,
-	}
-
-	jsonData, err := format.Encode(artifact, syftjson.NewFormatEncoder())
+	jsonData, err := format.Encode(*sbom, syftjson.NewFormatEncoder())
 	if err != nil {
 		return nil, err
 	}
@@ -208,44 +204,62 @@ func (b *Builder) createImageSBOM(img v1.Image, src string) ([]byte, error) {
 func (b *Builder) createFileSBOM(componentSBOM layout.ComponentSBOM, component string) ([]byte, error) {
 	catalog := pkg.NewCollection()
 	relationships := []artifact.Relationship{}
-	parentSource, err := source.NewFromDirectoryPath(componentSBOM.Component.Base)
+	parentSource, err := directorysource.NewFromPath(componentSBOM.Component.Base)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, sbomFile := range componentSBOM.Files {
 		// Create the sbom source
-		fileSource, err := source.NewFromFile(source.FileConfig{Path: sbomFile})
+		fileSrc, err := filesource.NewFromPath(sbomFile)
 		if err != nil {
 			return nil, err
 		}
 
 		// Dogsled distro since this is not a linux image we are scanning
-		cat, rel, _, err := syft.CatalogPackages(fileSource, cataloger.DefaultConfig())
+		// cat, rel, _, err := syft.CatalogPackages(fileSource, cataloger.DefaultConfig())
+		// if err != nil {
+		// 	return nil, err
+		// }
+
+		cfg := &syft.CreateSBOMConfig{
+			Search:         cataloging.DefaultSearchConfig(),
+			Relationships:  cataloging.DefaultRelationshipsConfig(),
+			DataGeneration: cataloging.DefaultDataGenerationConfig(),
+			Packages:       pkgcataloging.DefaultConfig(),
+			Files:          filecataloging.DefaultConfig(),
+			Parallelism:    1,
+
+			//TODO do we want Zarf here?
+			ToolName:    "zarf",
+			ToolVersion: config.CLIVersion,
+		}
+
+		sbom, err := syft.CreateSBOM(context.TODO(), fileSrc, cfg)
 		if err != nil {
 			return nil, err
 		}
 
-		for pkg := range cat.Enumerate() {
+		for pkg := range sbom.Artifacts.Packages.Enumerate() {
 			containsSource := false
 
 			// See if the source locations for this package contain the file Zarf indexed
 			for _, location := range pkg.Locations.ToSlice() {
-				if location.RealPath == fileSource.Describe().Metadata.(source.FileSourceMetadata).Path {
+				if location.RealPath == fileSrc.Describe().Metadata.(source.FileMetadata).Path {
 					containsSource = true
 				}
 			}
 
 			// If the locations do not contain the source file (i.e. the package was inside a tarball), add the file source
 			if !containsSource {
-				sourceLocation := syftFile.NewLocation(fileSource.Describe().Metadata.(source.FileSourceMetadata).Path)
+				sourceLocation := syftFile.NewLocation(fileSrc.Describe().Metadata.(source.FileMetadata).Path)
 				pkg.Locations.Add(sourceLocation)
 			}
 
 			catalog.Add(pkg)
 		}
 
-		for _, r := range rel {
+		for _, r := range sbom.Relationships {
 			relationships = append(relationships, artifact.Relationship{
 				From: parentSource,
 				To:   r.To,
