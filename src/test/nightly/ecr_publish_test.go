@@ -70,10 +70,10 @@ func TestECRPublishing(t *testing.T) {
 	defer e2e.CleanFiles(testPackageFileName)
 
 	// Ensure we get a warning when trying to inspect the package without providing the public key
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", testPackageFileName)
+	// and the insecure flag
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", testPackageFileName, "--insecure")
 	require.NoError(t, err, stdOut, stdErr)
 	require.NotContains(t, stdErr, "Validating SBOM checksums")
-	require.Contains(t, stdErr, "The package was signed but no public key was provided, skipping signature validation")
 
 	// Validate that we get no warnings when inspecting the package while providing the public key
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", testPackageFileName, keyFlag)

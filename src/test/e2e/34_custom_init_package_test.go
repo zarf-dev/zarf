@@ -26,7 +26,7 @@ func TestCustomInit(t *testing.T) {
 
 	/* Test operations during package inspect */
 	// Test that we can inspect the yaml of the package without the private key
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName, "--insecure")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Test that we don't get an error when we remember to provide the public key
