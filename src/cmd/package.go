@@ -208,8 +208,10 @@ var packageInspectCmd = &cobra.Command{
 		}
 		defer os.RemoveAll(pkgPaths.Base)
 
+		cluster, _ := cluster.NewCluster()
 		inspectOpt := packager2.ZarfInspectOptions{
 			PackagePaths:  pkgPaths,
+			Cluster:       cluster,
 			ListImages:    pkgConfig.InspectOpts.ListImages,
 			ViewSBOM:      pkgConfig.InspectOpts.ViewSBOM,
 			SBOMOutputDir: pkgConfig.InspectOpts.SBOMOutputDir,

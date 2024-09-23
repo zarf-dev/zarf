@@ -24,7 +24,7 @@ func (p *Packager) Inspect(ctx context.Context) error {
 	}
 	p.cfg.Pkg = pkg
 
-	if p.cfg.InspectOpts.ListImages && len(p.cfg.Pkg.Components) > 0 {
+	if p.cfg.InspectOpts.ListImages {
 		imageList := []string{}
 		for _, component := range p.cfg.Pkg.Components {
 			imageList = append(imageList, component.Images...)

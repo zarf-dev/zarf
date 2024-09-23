@@ -27,6 +27,11 @@ func TestChecksumAndSignature(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName, publicKeyFlag)
 	require.NoError(t, err, stdOut, stdErr)
 
+	/* Test operations during package inspect */
+	// Test that we can inspect the yaml of the package without the private key
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName, "--insecure")
+	require.NoError(t, err, stdOut, stdErr)
+
 	/* Test operations during package deploy */
 	// Test that we get an error when trying to deploy a package without providing the public key
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgName, "--confirm")

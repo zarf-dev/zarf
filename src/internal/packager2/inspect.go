@@ -11,19 +11,17 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 )
 
 // ZarfInspectOptions tracks the user-defined preferences during a package inspection.
 type ZarfInspectOptions struct {
-	// PackagePaths
-	PackagePaths *layout.PackagePaths
-	// View SBOM contents while inspecting the package
-	ViewSBOM bool
-	// Location to output an SBOM into after package inspection
+	PackagePaths  *layout.PackagePaths
+	Cluster       *cluster.Cluster
+	ViewSBOM      bool
 	SBOMOutputDir string
-	// ListImages will list the images in the package
-	ListImages bool
+	ListImages    bool
 }
 
 // Inspect list the contents of a package.
