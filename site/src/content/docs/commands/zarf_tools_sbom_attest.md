@@ -21,16 +21,18 @@ zarf tools sbom attest --output [FORMAT] <IMAGE> [flags]
 ### Options
 
 ```
-      --base-path string         base directory for scanning, no links will be followed above this directory, and all paths will be reported relative to this directory
-      --catalogers stringArray   enable one or more package catalogers
-      --exclude stringArray      exclude paths from being scanned using a glob expression
-  -h, --help                     help for attest
-      --name string              set the name of the target being analyzed (DEPRECATED: use: source-name)
-  -o, --output stringArray       report output format (<format>=<file> to output to a file), formats=[cyclonedx-json cyclonedx-xml github-json spdx-json spdx-tag-value syft-json syft-table syft-text template] (default [syft-json])
-      --platform string          an optional platform specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64', 'linux')
-  -s, --scope string             selection of layers to catalog, options=[squashed all-layers]
-      --source-name string       set the name of the target being analyzed
-      --source-version string    set the version of the target being analyzed
+      --base-path string                          base directory for scanning, no links will be followed above this directory, and all paths will be reported relative to this directory
+      --exclude stringArray                       exclude paths from being scanned using a glob expression
+      --from stringArray                          specify the source behavior to use (e.g. docker, registry, oci-dir, ...)
+  -h, --help                                      help for attest
+  -k, --key string                                the key to use for the attestation
+  -o, --output stringArray                        report output format (<format>=<file> to output to a file), formats=[cyclonedx-json cyclonedx-xml github-json spdx-json spdx-tag-value syft-json syft-table syft-text template] (default [syft-json])
+      --override-default-catalogers stringArray   set the base set of catalogers to use (defaults to 'image' or 'directory' depending on the scan source)
+      --platform string                           an optional platform specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64', 'linux')
+  -s, --scope string                              selection of layers to catalog, options=[squashed all-layers]
+      --select-catalogers stringArray             add, remove, and filter the catalogers to be used
+      --source-name string                        set the name of the target being analyzed
+      --source-version string                     set the version of the target being analyzed
 ```
 
 ### Options inherited from parent commands

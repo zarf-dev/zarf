@@ -216,7 +216,7 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 	} else {
 		dst.AddSBOMs()
-		if err := sbom.Catalog(componentSBOMs, sbomImageList, dst); err != nil {
+		if err := sbom.Catalog(ctx, componentSBOMs, sbomImageList, dst); err != nil {
 			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 		}
 	}
