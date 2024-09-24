@@ -70,7 +70,7 @@ func (suite *PullInspectTestSuite) Test_1_Remote_Inspect() {
 	// Test inspect on a public package.
 	// NOTE: This also makes sure that Zarf does not attempt auth when inspecting a public package.
 	ref := fmt.Sprintf("oci://ghcr.io/zarf-dev/packages/dos-games:1.0.0-%s", e2e.Arch)
-	_, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", ref)
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", ref, "--skip-signature-validation")
 	suite.NoError(err, stdErr)
 }
 

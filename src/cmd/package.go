@@ -30,7 +30,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
-	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -188,26 +188,39 @@ var packageInspectCmd = &cobra.Command{
 		}
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		packageSource, err := choosePackage(args)
+		src, err := choosePackage(args)
 		if err != nil {
 			return err
 		}
-		pkgConfig.PkgOpts.PackageSource = packageSource
-		src, err := identifyAndFallbackToClusterSource()
-		if err != nil {
-			return err
+
+		cluster, _ := cluster.NewCluster()
+		inspectOpt := packager2.ZarfInspectOptions{
+			Source:                  src,
+			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+			Cluster:                 cluster,
+			ListImages:              pkgConfig.InspectOpts.ListImages,
+			ViewSBOM:                pkgConfig.InspectOpts.ViewSBOM,
+			SBOMOutputDir:           pkgConfig.InspectOpts.SBOMOutputDir,
+			PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		}
-		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
-		if err != nil {
-			return err
+
+		if pkgConfig.InspectOpts.ListImages {
+			output, err := packager2.InspectList(cmd.Context(), inspectOpt)
+			if err != nil {
+				return fmt.Errorf("failed to inspect package: %w", err)
+			}
+			for _, image := range output {
+				fmt.Fprintln(os.Stdout, "-", image)
+			}
 		}
-		defer pkgClient.ClearTempPaths()
-		if err := pkgClient.Inspect(cmd.Context()); err != nil {
+
+		output, err := packager2.Inspect(cmd.Context(), inspectOpt)
+		if err != nil {
 			return fmt.Errorf("failed to inspect package: %w", err)
 		}
+		utils.ColorPrintYAML(output, nil, false)
 		return nil
 	},
-	ValidArgsFunction: getPackageCompletionArgs,
 }
 
 var packageListCmd = &cobra.Command{
@@ -280,6 +293,7 @@ var packageRemoveCmd = &cobra.Command{
 			Cluster:                 cluster,
 			Filter:                  filter,
 			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+			PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		}
 		err = packager2.Remove(cmd.Context(), removeOpt)
 		if err != nil {
@@ -382,22 +396,6 @@ func choosePackage(args []string) (string, error) {
 	}
 
 	return path, nil
-}
-
-// NOTE: If the source is identified nil is returned because packager will create the source if it is nil.
-// If it can't be identified the cluster source is used causing packager to ignore the configured package source.
-// Use of cluster package source is limited to a few functions which is why this is not the default behavior.
-func identifyAndFallbackToClusterSource() (sources.PackageSource, error) {
-	identifiedSrc := sources.Identify(pkgConfig.PkgOpts.PackageSource)
-	if identifiedSrc == "" {
-		message.Debugf(lang.CmdPackageClusterSourceFallback, pkgConfig.PkgOpts.PackageSource)
-		src, err := sources.NewClusterSource(&pkgConfig.PkgOpts)
-		if err != nil {
-			return nil, fmt.Errorf("unable to identify source from %s: %w", pkgConfig.PkgOpts.PackageSource, err)
-		}
-		return src, nil
-	}
-	return nil, nil
 }
 
 func getPackageCompletionArgs(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

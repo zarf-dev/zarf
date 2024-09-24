@@ -28,11 +28,12 @@ type RemoveOptions struct {
 	Cluster                 *cluster.Cluster
 	Filter                  filters.ComponentFilterStrategy
 	SkipSignatureValidation bool
+	PublicKeyPath           string
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
 func Remove(ctx context.Context, opt RemoveOptions) error {
-	pkg, err := packageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation)
+	pkg, err := packageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath)
 	if err != nil {
 		return err
 	}
