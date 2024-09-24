@@ -145,7 +145,7 @@ func (r *Repository) Path() string {
 }
 
 // Push pushes the repository to the remote git server.
-func (r *Repository) Push(ctx context.Context, address, username, password string) error {
+func (r *Repository) Push(ctx context.Context, address, username, password string, forcePushRepos bool) error {
 	repo, err := git.PlainOpen(r.path)
 	if err != nil {
 		return fmt.Errorf("not a valid git repo or unable to open: %w", err)
@@ -208,7 +208,7 @@ func (r *Repository) Push(ctx context.Context, address, username, password strin
 		RemoteName: offlineRemoteName,
 		Auth:       &gitCred,
 		// TODO: (@JEFFMCCOY) add the parsing for the `+` force prefix (see https://github.com/zarf-dev/zarf/issues/1410)
-		//Force: isForce,
+		Force: forcePushRepos,
 		// If a provided refspec doesn't push anything, it is just ignored
 		RefSpecs: []config.RefSpec{
 			"refs/heads/*:refs/heads/*",

@@ -216,6 +216,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdPackageFlagConcurrency             = "Number of concurrent layer operations to perform when interacting with a remote package."
 	CmdPackageFlagFlagPublicKey           = "Path to public key file for validating signed packages"
 	CmdPackageFlagSkipSignatureValidation = "Skip validating the signature of the Zarf package"
+	CmdPackageForcePushRepos              = "Force push all repositories to gitea during deployment"
 	CmdPackageFlagRetries                 = "Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs"
 
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
