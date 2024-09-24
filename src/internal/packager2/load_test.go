@@ -154,7 +154,7 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	}
 	_, err = c.RecordPackageDeployment(ctx, pkg, nil, 1)
 	require.NoError(t, err)
-	// pkg, err = packageFromSourceOrCluster(ctx, c, "test", false)
-	// require.NoError(t, err)
-	// require.Equal(t, "test", pkg.Metadata.Name)
+	pkg, err = packageFromSourceOrCluster(ctx, c, "test", false)
+	require.NoError(t, err)
+	require.Equal(t, "test", pkg.Metadata.Name)
 }
