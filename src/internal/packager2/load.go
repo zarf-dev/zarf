@@ -239,20 +239,6 @@ func packageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, s
 		}
 		return depPkg.Data, nil
 	}
-
-	loadOpt := LoadOptions{
-		Source:                  src,
-		SkipSignatureValidation: skipSignatureValidation,
-		Filter:                  filters.Empty(),
-	}
-	pkgPaths, err := LoadPackage(ctx, loadOpt)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	defer os.RemoveAll(pkgPaths.Base)
-	pkg, _, err := pkgPaths.ReadZarfYAML()
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	return pkg, nil
+	//todo(schristoff): :/
+	return v1alpha1.ZarfPackage{}, nil
 }
