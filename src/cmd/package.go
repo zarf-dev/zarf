@@ -30,7 +30,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
-	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -397,22 +396,6 @@ func choosePackage(args []string) (string, error) {
 	}
 
 	return path, nil
-}
-
-// NOTE: If the source is identified nil is returned because packager will create the source if it is nil.
-// If it can't be identified the cluster source is used causing packager to ignore the configured package source.
-// Use of cluster package source is limited to a few functions which is why this is not the default behavior.
-func identifyAndFallbackToClusterSource() (sources.PackageSource, error) {
-	identifiedSrc := sources.Identify(pkgConfig.PkgOpts.PackageSource)
-	if identifiedSrc == "" {
-		message.Debugf(lang.CmdPackageClusterSourceFallback, pkgConfig.PkgOpts.PackageSource)
-		src, err := sources.NewClusterSource(&pkgConfig.PkgOpts)
-		if err != nil {
-			return nil, fmt.Errorf("unable to identify source from %s: %w", pkgConfig.PkgOpts.PackageSource, err)
-		}
-		return src, nil
-	}
-	return nil, nil
 }
 
 func getPackageCompletionArgs(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
