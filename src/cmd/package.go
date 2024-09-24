@@ -202,6 +202,7 @@ var packageInspectCmd = &cobra.Command{
 			ListImages:              pkgConfig.InspectOpts.ListImages,
 			ViewSBOM:                pkgConfig.InspectOpts.ViewSBOM,
 			SBOMOutputDir:           pkgConfig.InspectOpts.SBOMOutputDir,
+			PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		}
 
 		if pkgConfig.InspectOpts.ListImages {
@@ -293,6 +294,7 @@ var packageRemoveCmd = &cobra.Command{
 			Cluster:                 cluster,
 			Filter:                  filter,
 			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+			PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		}
 		err = packager2.Remove(cmd.Context(), removeOpt)
 		if err != nil {

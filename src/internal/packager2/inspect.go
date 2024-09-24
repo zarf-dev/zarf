@@ -23,6 +23,7 @@ type ZarfInspectOptions struct {
 	SBOMOutputDir           string
 	ListImages              bool
 	SkipSignatureValidation bool
+	PublicKeyPath           string
 }
 
 // Inspect list the contents of a package.
@@ -66,7 +67,7 @@ func InspectList(ctx context.Context, opt ZarfInspectOptions) ([]string, error) 
 }
 
 func getPackageMetadata(ctx context.Context, opt ZarfInspectOptions) (v1alpha1.ZarfPackage, error) {
-	pkg, err := packageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation)
+	pkg, err := packageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath)
 	if err != nil {
 		return pkg, err
 	}
@@ -79,6 +80,7 @@ func handleSBOMOptions(ctx context.Context, pkg v1alpha1.ZarfPackage, opt ZarfIn
 		Source:                  opt.Source,
 		SkipSignatureValidation: opt.SkipSignatureValidation,
 		Filter:                  filters.Empty(),
+		PublicKeyPath:           opt.PublicKeyPath,
 	}
 	layout, err := LoadPackage(ctx, loadOpt)
 	if err != nil {
