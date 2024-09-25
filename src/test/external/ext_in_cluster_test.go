@@ -203,7 +203,7 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	// FIXME(mkcp): This code always fails to clean up the tmpdir. We're passing it a directory with contents and we
 	//  need os.RemoveAll(temp) instead. However, we're also getting what looks to be a bug with concurrent  writers
 	//  causing a subtest to panic when we call RemoveAll(). Fixing this would require removing the shared state.
-	_ = os.Remove(temp) // nolint:errcheck
+	_ = os.Remove(temp) //nolint:errcheck
 }
 
 func TestExtInClusterTestSuite(t *testing.T) {
