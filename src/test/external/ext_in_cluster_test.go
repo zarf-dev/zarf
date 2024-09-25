@@ -201,9 +201,12 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	suite.NoError(err, "unable to teardown zarf")
 
 	// FIXME(mkcp): This code always fails to clean up the tmpdir. We're passing it a directory with contents and we
-	//  need os.RemoveAll(temp) instead. However, we're also getting what looks to be a bug with concurrent  writers
-	//  causing a subtest to panic when we call RemoveAll(). Fixing this would require removing the shared state.
-	_ = os.Remove(temp) //nolint:errcheck
+	//  			need os.RemoveAll(temp) instead. However, we're also getting what looks to be a bug with concurrent
+	//     			writers causing a subtest to panic when we call RemoveAll(). Fixing this would require removing the
+	// 				shared state.
+	// REVIEW(mkcp): Thinking we delete this and
+	err = os.RemoveAll(temp) //nolint:errcheck
+	suite.NoError(err, "failed to clean up tempdir")
 }
 
 func TestExtInClusterTestSuite(t *testing.T) {

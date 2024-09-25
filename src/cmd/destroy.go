@@ -31,7 +31,7 @@ var destroyCmd = &cobra.Command{
 	Aliases: []string{"d"},
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
-	// FIXME(mkcp): This function deeply needs a refactor and un-nesting.
+	// TODO(mkcp): refactor and de-nest this function.
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
 		timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)

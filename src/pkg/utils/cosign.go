@@ -231,8 +231,7 @@ func GetCosignArtifacts(image string) ([]string, error) {
 		return nil, err
 	}
 
-	// FIXME(mkcp): Re-review how this function is used and whether a signed entity err-miss is something we should pass
-	// up to the caller. Needs a comment if nothing else.
+	// Return empty if we don't have a signature on the image
 	var remoteOpts []ociremote.Option
 	simg, _ := ociremote.SignedEntity(ref, remoteOpts...)
 	if simg == nil {
