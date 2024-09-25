@@ -61,7 +61,8 @@ func TestSplitFile(t *testing.T) {
 			require.NoError(t, err)
 			_, err = f.Write(b)
 			require.NoError(t, err)
-			f.Close()
+			err = f.Close()
+			require.NoError(t, err)
 
 			err = splitFile(p, tt.chunkSize)
 			require.NoError(t, err)
