@@ -99,10 +99,10 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 		return "", err
 	}
 	// Verify that we can write to the path
-	// FIXME(mkcp): Decompose this into a helper function
 	if helpers.InvalidPath(absCachePath) {
 		// Create the directory if the path is invalid
-		if err := helpers.CreateDirectory(absCachePath, helpers.ReadExecuteAllWriteUser); err != nil {
+		err = helpers.CreateDirectory(absCachePath, helpers.ReadExecuteAllWriteUser)
+		if err != nil {
 			return "", fmt.Errorf("unable to create the cache directory %s: %w", absCachePath, err)
 		}
 	}
@@ -138,7 +138,7 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, er
 	message.Note(lang.CmdInitPullNote)
 
 	// Prompt the user if --confirm not specified
-	// FIXME(mkcp): This condition can never be met
+	// REVIEW(mkcp): It looks like this condition can't be met - maybe --confirm was removed at some point?
 	if !confirmDownload {
 		prompt := &survey.Confirm{
 			Message: lang.CmdInitPullConfirm,
