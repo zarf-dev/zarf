@@ -147,7 +147,6 @@ func (suite *ExtOutClusterTestSuite) Test_1_Deploy() {
 func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	// Deploy the flux example package
 	temp := suite.T().TempDir()
-	defer os.Remove(temp)
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
 
 	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--confirm"}
@@ -158,6 +157,10 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	deployArgs = []string{"package", "deploy", path, "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err)
+
+	// Clean up tmpdir
+	err = os.RemoveAll(temp)
+	suite.NoError(err, "unable to remove temporary directory")
 }
 
 func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
