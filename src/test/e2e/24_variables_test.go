@@ -44,8 +44,8 @@ func TestVariables(t *testing.T) {
 
 	// Test that not specifying a prompted variable results in an error
 	_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
-	require.NoError(t, err)
 	expectedOutString = "variable 'SITE_NAME' must be '--set' when using the '--confirm' flag"
+	require.Error(t, err)
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test that specifying an invalid variable value results in an error
