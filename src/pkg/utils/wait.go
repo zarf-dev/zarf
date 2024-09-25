@@ -197,7 +197,11 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 					message.Debug(err)
 					continue
 				}
-				defer conn.Close()
+				err = conn.Close()
+				if err != nil {
+					message.Debug(err)
+					continue
+				}
 			}
 
 			// Yay, we made it!
