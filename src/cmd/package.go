@@ -219,7 +219,10 @@ var packageInspectCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to inspect package: %w", err)
 		}
-		utils.ColorPrintYAML(output, nil, false)
+		err = utils.ColorPrintYAML(output, nil, false)
+		if err != nil {
+			return err
+		}
 		return nil
 	},
 }
