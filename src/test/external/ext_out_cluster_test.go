@@ -58,13 +58,17 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 
 	// Teardown any leftovers from previous tests
-	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)
-	_ = exec.CmdWithPrint("docker", "rm", "-f", "k3d-"+registryHost)
-	_ = exec.CmdWithPrint("docker", "compose", "down")
-	_ = exec.CmdWithPrint("docker", "network", "remove", network)
+	err := exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)
+	suite.NoError(err, "unable to teardown cluster")
+	err = exec.CmdWithPrint("docker", "rm", "-f", "k3d-"+registryHost)
+	suite.NoError(err, "unable to teardown k3d registry")
+	err = exec.CmdWithPrint("docker", "compose", "down")
+	suite.NoError(err, "unable to teardown docker compose resources")
+	err = exec.CmdWithPrint("docker", "network", "remove", network)
+	suite.NoError(err, "unable to teardown docker network resources")
 
-	// Setup a network for everything to live inside
-	err := exec.CmdWithPrint("docker", "network", "create", "--driver=bridge", "--subnet="+subnet, "--gateway="+gateway, network)
+	// Set up a network for everything to live inside
+	err = exec.CmdWithPrint("docker", "network", "create", "--driver=bridge", "--subnet="+subnet, "--gateway="+gateway, network)
 	suite.NoError(err, "unable to create the k3d registry")
 
 	// Install a k3d-managed registry server to act as the 'remote' container registry
