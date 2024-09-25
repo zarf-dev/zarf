@@ -18,12 +18,15 @@ import (
 )
 
 // splitFile will split the file into chunks and remove the original file.
-func splitFile(srcPath string, chunkSize int) error {
+func splitFile(srcPath string, chunkSize int) (err error) {
 	srcFile, err := os.Open(srcPath)
 	if err != nil {
 		return err
 	}
-	defer srcFile.Close()
+	defer func(srcFile *os.File) {
+		err2 := srcFile.Close()
+		err = errors.Join(err, err2)
+	}(srcFile)
 	fi, err := srcFile.Stat()
 	if err != nil {
 		return err
@@ -31,17 +34,25 @@ func splitFile(srcPath string, chunkSize int) error {
 
 	title := fmt.Sprintf("[0/%d] MB bytes written", fi.Size()/1000/1000)
 	progressBar := message.NewProgressBar(fi.Size(), title)
-	defer progressBar.Close()
+	defer func(progressBar *message.ProgressBar) {
+		err2 := progressBar.Close()
+		err = errors.Join(err, err2)
+	}(progressBar)
 
 	hash := sha256.New()
 	fileCount := 0
+	// TODO(mkcp): The inside of this loop should be wrapped in a closure so we can close the destination file each
+	//   iteration as soon as we're done writing.
 	for {
 		path := fmt.Sprintf("%s.part%03d", srcPath, fileCount+1)
 		dstFile, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, helpers.ReadAllWriteUser)
 		if err != nil {
 			return err
 		}
-		defer dstFile.Close()
+		defer func(dstFile *os.File) {
+			err2 := dstFile.Close()
+			err = errors.Join(err, err2)
+		}(dstFile)
 
 		written, copyErr := io.CopyN(dstFile, srcFile, int64(chunkSize))
 		if copyErr != nil && !errors.Is(copyErr, io.EOF) {
