@@ -11,7 +11,7 @@ replace modernc.org/sqlite => modernc.org/sqlite v1.32.0
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.3.0
-	github.com/agnivade/levenshtein v1.1.1
+	github.com/agnivade/levenshtein v1.2.0
 	github.com/anchore/clio v0.0.0-20240705045624-ac88e09ad9d0
 	github.com/anchore/stereoscope v0.0.3
 	github.com/anchore/syft v1.12.2
