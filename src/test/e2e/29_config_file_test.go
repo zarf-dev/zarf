@@ -26,7 +26,6 @@ func TestConfigFile(t *testing.T) {
 
 	// Test the config file environment variable
 	t.Setenv("ZARF_CONFIG", filepath.Join(dir, config))
-	defer os.Unsetenv("ZARF_CONFIG")
 	configFileTests(t, dir, path)
 
 	configFileDefaultTests(t)
@@ -34,7 +33,10 @@ func TestConfigFile(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
+	// Cleanup
 	e2e.CleanFiles(path)
+	err = os.Unsetenv("ZARF_CONFIG")
+	require.NoError(t, err)
 }
 
 func configFileTests(t *testing.T, dir, path string) {
@@ -140,29 +142,36 @@ func configFileDefaultTests(t *testing.T) {
 
 	// Test remaining default initializers
 	t.Setenv("ZARF_CONFIG", filepath.Join("src", "test", "zarf-config-test.toml"))
-	defer os.Unsetenv("ZARF_CONFIG")
 
 	// Test global flags
-	stdOut, _, _ := e2e.Zarf(t, "--help")
+	stdOut, _, err := e2e.Zarf(t, "--help")
+	require.NoError(t, err)
 	for _, test := range globalFlags {
-		require.Contains(t, string(stdOut), test)
+		require.Contains(t, stdOut, test)
 	}
 
 	// Test init flags
-	stdOut, _, _ = e2e.Zarf(t, "init", "--help")
+	stdOut, _, err = e2e.Zarf(t, "init", "--help")
+	require.NoError(t, err)
 	for _, test := range initFlags {
-		require.Contains(t, string(stdOut), test)
+		require.Contains(t, stdOut, test)
 	}
 
 	// Test package create flags
-	stdOut, _, _ = e2e.Zarf(t, "package", "create", "--help")
+	stdOut, _, err = e2e.Zarf(t, "package", "create", "--help")
+	require.NoError(t, err)
 	for _, test := range packageCreateFlags {
-		require.Contains(t, string(stdOut), test)
+		require.Contains(t, stdOut, test)
 	}
 
 	// Test package deploy flags
-	stdOut, _, _ = e2e.Zarf(t, "package", "deploy", "--help")
+	stdOut, _, err = e2e.Zarf(t, "package", "deploy", "--help")
+	require.NoError(t, err)
 	for _, test := range packageDeployFlags {
-		require.Contains(t, string(stdOut), test)
+		require.Contains(t, stdOut, test)
 	}
+
+	// Cleanup
+	err = os.Unsetenv("ZARF_CONFIG")
+	require.NoError(t, err)
 }

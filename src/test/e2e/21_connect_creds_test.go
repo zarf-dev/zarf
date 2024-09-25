@@ -74,7 +74,6 @@ func TestMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
 
 	// Read the response body
 	body, err := io.ReadAll(resp.Body)
@@ -86,6 +85,9 @@ func TestMetrics(t *testing.T) {
 	require.Contains(t, string(body), desiredString)
 	require.NoError(t, err, resp)
 	require.Equal(t, 200, resp.StatusCode)
+
+	err = resp.Body.Close()
+	require.NoError(t, err)
 }
 
 func connectToZarfServices(ctx context.Context, t *testing.T) {
