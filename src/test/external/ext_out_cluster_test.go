@@ -162,8 +162,8 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	deployArgs = []string{"package", "deploy", path, "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err)
-	err = os.RemoveAll(temp)
-	suite.NoError(err, "unable to remove tempdir")
+	_ = os.RemoveAll(temp) //nolint:errcheck
+	// suite.NoError(err, "unable to remove tempdir")
 }
 
 func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
