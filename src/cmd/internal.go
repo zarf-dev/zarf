@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -348,8 +349,8 @@ var isValidHostname = &cobra.Command{
 	Short: lang.CmdInternalIsValidHostnameShort,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if valid := helpers.IsValidHostName(); !valid {
-			hostname, _ := os.Hostname()
-			return fmt.Errorf("the hostname %s is not valid. Ensure the hostname meets RFC1123 requirements https://www.rfc-editor.org/rfc/rfc1123.html", hostname)
+			hostname, err := os.Hostname()
+			return fmt.Errorf("the hostname %s is not valid. Ensure the hostname meets RFC1123 requirements https://www.rfc-editor.org/rfc/rfc1123.html, error=%w", hostname, err)
 		}
 		return nil
 	},
@@ -388,6 +389,9 @@ func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {
 	if cmd.PersistentFlags().Lookup(flagDummy) == nil {
 		var dummyStr string
 		cmd.PersistentFlags().StringVar(&dummyStr, flagDummy, "", "")
-		cmd.PersistentFlags().MarkHidden(flagDummy)
+		err := cmd.PersistentFlags().MarkHidden(flagDummy)
+		if err != nil {
+			slog.Debug("Unable to add hidden dummy flag", "error", err)
+		}
 	}
 }

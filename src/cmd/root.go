@@ -77,10 +77,10 @@ var rootCmd = &cobra.Command{
 	SilenceErrors: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		zarfLogo := message.GetLogo()
-		_, _ = fmt.Fprintln(os.Stderr, zarfLogo) //nolint:errcheck
+		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 		err := cmd.Help()
 		if err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, err) //nolint:errcheck
+			_, _ = fmt.Fprintln(os.Stderr, err)
 		}
 
 		if len(args) > 0 {
