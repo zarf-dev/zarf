@@ -57,7 +57,6 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) error {
 	if err != nil {
 		return err
 	}
-	defer textFile.Close()
 
 	// This regex takes a line and parses the text before and after a discovered template: https://regex101.com/r/ilUxAz/1
 	regexTemplateLine := regexp.MustCompile(fmt.Sprintf("(?P<preTemplate>.*?)(?P<template>%s)(?P<postTemplate>.*)", templateRegex))
@@ -128,6 +127,12 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) error {
 			text += fmt.Sprintf("%s%s", preTemplate, value)
 			line = matches[regexTemplateLine.SubexpIndex("postTemplate")]
 		}
+	}
+
+	// We're done scanning, close our file
+	err = textFile.Close()
+	if err != nil {
+		return err
 	}
 
 	return os.WriteFile(path, []byte(text), helpers.ReadWriteUser)
