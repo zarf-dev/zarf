@@ -233,7 +233,7 @@ func GetCosignArtifacts(image string) ([]string, error) {
 
 	// Return empty if we don't have a signature on the image
 	var remoteOpts []ociremote.Option
-	simg, _ := ociremote.SignedEntity(ref, remoteOpts...)
+	simg, _ := ociremote.SignedEntity(ref, remoteOpts...) //nolint:errcheck
 	if simg == nil {
 		return nil, nil
 	}
