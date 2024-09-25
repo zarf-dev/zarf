@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 
@@ -58,8 +59,10 @@ var destroyCmd = &cobra.Command{
 
 			// Run all the scripts!
 			pattern := regexp.MustCompile(`(?mi)zarf-clean-.+\.sh$`)
-			// TODO(mkcp): Handle this error
-			scripts, _ := helpers.RecursiveFileList(config.ZarfCleanupScriptsPath, pattern, true)
+			scripts, err := helpers.RecursiveFileList(config.ZarfCleanupScriptsPath, pattern, true)
+			if err != nil {
+				return err
+			}
 			// Iterate over all matching zarf-clean scripts and exec them
 			for _, script := range scripts {
 				// Run the matched script
@@ -73,9 +76,11 @@ var destroyCmd = &cobra.Command{
 					return fmt.Errorf("received an error when executing the script %s: %w", script, err)
 				}
 
-				// Try to remove the script, but ignore any errors
-				// TODO(mkcp): Should we be ignoring this error? Setup handling or retry, or lintignore
-				_ = os.Remove(script)
+				// Try to remove the script, but ignore any errors and debug log them
+				err = os.Remove(script)
+				if err != nil {
+					slog.Debug("Unable to remove script", "script", script, "error", err)
+				}
 			}
 		} else {
 			// Perform chart uninstallation
