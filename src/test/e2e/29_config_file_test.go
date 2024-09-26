@@ -20,12 +20,16 @@ func TestConfigFile(t *testing.T) {
 		path   = fmt.Sprintf("zarf-package-config-file-%s.tar.zst", e2e.Arch)
 		dir    = "examples/config-file"
 		config = "zarf-config.toml"
+		envKey = "ZARF_CONFIG"
 	)
 
 	e2e.CleanFiles(path)
 
 	// Test the config file environment variable
-	t.Setenv("ZARF_CONFIG", filepath.Join(dir, config))
+	t.Setenv(envKey, filepath.Join(dir, config))
+	defer func() {
+		require.NoError(t, os.Unsetenv(envKey))
+	}()
 	configFileTests(t, dir, path)
 
 	configFileDefaultTests(t)
@@ -35,8 +39,6 @@ func TestConfigFile(t *testing.T) {
 
 	// Cleanup
 	e2e.CleanFiles(path)
-	err = os.Unsetenv("ZARF_CONFIG")
-	require.NoError(t, err)
 }
 
 func configFileTests(t *testing.T, dir, path string) {
@@ -141,7 +143,11 @@ func configFileDefaultTests(t *testing.T) {
 	}
 
 	// Test remaining default initializers
-	t.Setenv("ZARF_CONFIG", filepath.Join("src", "test", "zarf-config-test.toml"))
+	envKey := "ZARF_CONFIG"
+	t.Setenv(envKey, filepath.Join("src", "test", "zarf-config-test.toml"))
+	defer func() {
+		require.NoError(t, os.Unsetenv(envKey))
+	}()
 
 	// Test global flags
 	stdOut, _, err := e2e.Zarf(t, "--help")
@@ -170,8 +176,4 @@ func configFileDefaultTests(t *testing.T) {
 	for _, test := range packageDeployFlags {
 		require.Contains(t, stdOut, test)
 	}
-
-	// Cleanup
-	err = os.Unsetenv("ZARF_CONFIG")
-	require.NoError(t, err)
 }

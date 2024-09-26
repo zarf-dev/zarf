@@ -71,6 +71,9 @@ func TestMetrics(t *testing.T) {
 	client := &http.Client{Transport: tr}
 	httpsEndpoint := strings.ReplaceAll(tunnel.HTTPEndpoint(), "http", "https")
 	resp, err := client.Get(httpsEndpoint + "/metrics")
+	defer func() {
+		require.NoError(t, resp.Body.Close())
+	}()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,9 +88,6 @@ func TestMetrics(t *testing.T) {
 	require.Contains(t, string(body), desiredString)
 	require.NoError(t, err, resp)
 	require.Equal(t, 200, resp.StatusCode)
-
-	err = resp.Body.Close()
-	require.NoError(t, err)
 }
 
 func connectToZarfServices(ctx context.Context, t *testing.T) {
