@@ -6,9 +6,7 @@ package test
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"regexp"
 	"runtime"
@@ -55,16 +53,13 @@ func GetCLIName() string {
 }
 
 // Zarf executes a Zarf command.
-func (e2e *ZarfE2ETest) Zarf(t *testing.T, args ...string) (_ string, _ string, err error) {
+func (e2e *ZarfE2ETest) Zarf(t *testing.T, args ...string) (string, string, error) {
 	if !slices.Contains(args, "--tmpdir") && !slices.Contains(args, "tools") {
 		tmpdir, err := os.MkdirTemp("", "zarf-")
 		if err != nil {
 			return "", "", err
 		}
-		defer func(path string) {
-			errRemove := os.RemoveAll(path)
-			err = errors.Join(err, errRemove)
-		}(tmpdir)
+		defer os.RemoveAll(tmpdir)
 		args = append(args, "--tmpdir", tmpdir)
 	}
 	if !slices.Contains(args, "--zarf-cache") && !slices.Contains(args, "tools") && os.Getenv("CI") == "true" {
@@ -79,10 +74,7 @@ func (e2e *ZarfE2ETest) Zarf(t *testing.T, args ...string) (_ string, _ string, 
 			return "", "", err
 		}
 		args = append(args, "--zarf-cache", cacheDir)
-		defer func(path string) {
-			errRemove := os.RemoveAll(path)
-			err = errors.Join(err, errRemove)
-		}(cacheDir)
+		defer os.RemoveAll(cacheDir)
 	}
 	return exec.CmdWithTesting(t, exec.PrintCfg(), e2e.ZarfBinPath, args...)
 }
@@ -97,10 +89,7 @@ func (e2e *ZarfE2ETest) Kubectl(t *testing.T, args ...string) (string, string, e
 // CleanFiles removes files and directories that have been created during the test.
 func (e2e *ZarfE2ETest) CleanFiles(files ...string) {
 	for _, file := range files {
-		err := os.RemoveAll(file)
-		if err != nil {
-			slog.Debug("Unable to cleanup files", "files", files, "error", err)
-		}
+		_ = os.RemoveAll(file)
 	}
 }
 

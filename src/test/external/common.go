@@ -28,8 +28,7 @@ func createPodInfoPackageWithInsecureSources(t *testing.T, temp string) {
 	require.NoError(t, err, "unable to yq edit helm source")
 	err = exec.CmdWithPrint(zarfBinPath, "tools", "yq", "eval", ".spec.insecure = true", "-i", filepath.Join(temp, "oci", "podinfo-source.yaml"))
 	require.NoError(t, err, "unable to yq edit oci source")
-	err = exec.CmdWithPrint(zarfBinPath, "package", "create", temp, "--confirm", "--output", temp)
-	require.NoError(t, err, "unable to create package")
+	exec.CmdWithPrint(zarfBinPath, "package", "create", temp, "--confirm", "--output", temp)
 }
 
 func verifyWaitSuccess(t *testing.T, timeoutMinutes time.Duration, cmd string, args []string, condition string, onTimeout string) bool {

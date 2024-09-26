@@ -140,6 +140,8 @@ func (suite *PublishCopySkeletonSuite) Test_2_FilePaths() {
 		var pkg v1alpha1.ZarfPackage
 
 		unpacked := strings.TrimSuffix(pkgTar, ".tar.zst")
+		defer os.RemoveAll(unpacked)
+		defer os.RemoveAll(pkgTar)
 		_, _, err := e2e.Zarf(suite.T(), "tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
 		suite.NoError(err)
 		suite.DirExists(unpacked)
@@ -174,12 +176,6 @@ func (suite *PublishCopySkeletonSuite) Test_2_FilePaths() {
 			isSkeleton = true
 		}
 		suite.verifyComponentPaths(unpacked, components, isSkeleton)
-
-		// Cleanup resources
-		err = os.RemoveAll(unpacked)
-		suite.NoError(err)
-		err = os.RemoveAll(pkgTar)
-		suite.NoError(err)
 	}
 }
 

@@ -58,12 +58,10 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 
 	// Teardown any leftovers from previous tests
-	// NOTE(mkcp): We dogsled these errors because some of these commands will error if they don't cleanup a resource,
-	//   which is ok. A better solution would be checking for none or unexpected kinds of errors.
-	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)   //nolint:errcheck
-	_ = exec.CmdWithPrint("docker", "rm", "-f", "k3d-"+registryHost) //nolint:errcheck
-	_ = exec.CmdWithPrint("docker", "compose", "down")               //nolint:errcheck
-	_ = exec.CmdWithPrint("docker", "network", "remove", network)    //nolint:errcheck
+	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)
+	_ = exec.CmdWithPrint("docker", "rm", "-f", "k3d-"+registryHost)
+	_ = exec.CmdWithPrint("docker", "compose", "down")
+	_ = exec.CmdWithPrint("docker", "network", "remove", network)
 
 	// Setup a network for everything to live inside
 	err := exec.CmdWithPrint("docker", "network", "create", "--driver=bridge", "--subnet="+subnet, "--gateway="+gateway, network)
@@ -149,6 +147,7 @@ func (suite *ExtOutClusterTestSuite) Test_1_Deploy() {
 func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	// Deploy the flux example package
 	temp := suite.T().TempDir()
+	defer os.Remove(temp)
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
 
 	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--confirm"}
@@ -159,10 +158,6 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	deployArgs = []string{"package", "deploy", path, "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err)
-
-	// Clean up tmpdir
-	err = os.RemoveAll(temp)
-	suite.NoError(err, "unable to remove temporary directory")
 }
 
 func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
@@ -173,12 +168,12 @@ func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
 
 	tempDir := suite.T().TempDir()
 	repoPath := filepath.Join(tempDir, "repositories.yaml")
-	err := os.Setenv("HELM_REPOSITORY_CONFIG", repoPath)
-	suite.NoError(err, "unable to set HELM_REPOSITORY_CONFIG")
+	os.Setenv("HELM_REPOSITORY_CONFIG", repoPath)
+	defer os.Unsetenv("HELM_REPOSITORY_CONFIG")
 
 	packagePath := filepath.Join("..", "packages", "external-helm-auth")
 	findImageArgs := []string{"dev", "find-images", packagePath}
-	err = exec.CmdWithPrint(zarfBinPath, findImageArgs...)
+	err := exec.CmdWithPrint(zarfBinPath, findImageArgs...)
 	suite.Error(err, "Since auth has not been setup, this should fail")
 
 	repoFile := repo.NewFile()
@@ -200,10 +195,6 @@ func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
 	packageCreateArgs := []string{"package", "create", packagePath, fmt.Sprintf("--output=%s", tempDir), "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, packageCreateArgs...)
 	suite.NoError(err, "Unable to create package, helm auth likely failed")
-
-	// Cleanup env var
-	err = os.Unsetenv("HELM_REPOSITORY_CONFIG")
-	suite.NoError(err, "unable to unset HELM_REPOSITORY_CONFIG")
 }
 
 func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, username string, password string) {
@@ -222,6 +213,7 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 
 	file, err := os.Open(podinfoTarballPath)
 	suite.NoError(err)
+	defer file.Close()
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -229,12 +221,7 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 	suite.NoError(err)
 	_, err = io.Copy(part, file)
 	suite.NoError(err)
-
-	// Cleanup file and writer
-	err = file.Close()
-	suite.NoError(err, "unable to close file")
-	err = writer.Close()
-	suite.NoError(err, "unable to close writer")
+	writer.Close()
 
 	req, err := http.NewRequest("POST", url, body)
 	suite.NoError(err)
@@ -246,8 +233,7 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 
 	resp, err := client.Do(req)
 	suite.NoError(err)
-	err = resp.Body.Close()
-	suite.NoError(err, "unable to close response body")
+	resp.Body.Close()
 }
 
 func (suite *ExtOutClusterTestSuite) makeGiteaUserPrivate(baseURL string, username string, password string) {
@@ -272,12 +258,10 @@ func (suite *ExtOutClusterTestSuite) makeGiteaUserPrivate(baseURL string, userna
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	suite.NoError(err)
+	defer resp.Body.Close()
+
 	_, err = io.ReadAll(resp.Body)
 	suite.NoError(err)
-
-	// Cleanup
-	err = resp.Body.Close()
-	suite.NoError(err, "unable to close response body")
 }
 
 func TestExtOurClusterTestSuite(t *testing.T) {

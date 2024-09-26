@@ -157,6 +157,7 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	err := exec.CmdWithPrint(zarfBinPath, initArgs...)
 	suite.NoError(err, "unable to initialize the k8s server with zarf")
 	temp := suite.T().TempDir()
+	defer os.Remove(temp)
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
 
 	// Deploy the flux example package
@@ -199,10 +200,6 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 
 	_, _, err = exec.CmdWithTesting(suite.T(), exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")
 	suite.NoError(err, "unable to teardown zarf")
-
-	// Cleanup tmpdir
-	err = os.RemoveAll(temp)
-	suite.NoError(err, "failed to clean up tempdir")
 }
 
 func TestExtInClusterTestSuite(t *testing.T) {

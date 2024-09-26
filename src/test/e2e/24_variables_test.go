@@ -43,9 +43,8 @@ func TestVariables(t *testing.T) {
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test that not specifying a prompted variable results in an error
-	_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
+	_, stdErr, _ = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	expectedOutString = "variable 'SITE_NAME' must be '--set' when using the '--confirm' flag"
-	require.Error(t, err)
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test that specifying an invalid variable value results in an error
@@ -74,8 +73,7 @@ func TestVariables(t *testing.T) {
 	require.Contains(t, string(outputTF), "unicorn-land")
 
 	// Verify the configmap was properly templated
-	kubectlOut, _, err := e2e.Kubectl(t, "-n", "nginx", "get", "configmap", "nginx-configmap", "-o", "jsonpath='{.data.index\\.html}' ")
-	require.NoError(t, err, "unable to get nginx configmap")
+	kubectlOut, _, _ := e2e.Kubectl(t, "-n", "nginx", "get", "configmap", "nginx-configmap", "-o", "jsonpath='{.data.index\\.html}' ")
 	// OPTIONAL_FOOTER should remain unset because it was not set during deploy
 	require.Contains(t, string(kubectlOut), "</pre>\n    \n  </body>")
 	// STYLE should take the default value

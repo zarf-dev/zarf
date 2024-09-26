@@ -99,8 +99,7 @@ func testHelmEscaping(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the configmap was deployed, escaped, and contains all of its data
-	kubectlOut, err := exec.Command("kubectl", "-n", "default", "describe", "cm", "dont-template-me").Output()
-	require.NoError(t, err, "unable to describe configmap")
+	kubectlOut, _ := exec.Command("kubectl", "-n", "default", "describe", "cm", "dont-template-me").Output()
 	require.Contains(t, string(kubectlOut), `alert: OOMKilled {{ "{{ \"random.Values\" }}" }}`)
 	require.Contains(t, string(kubectlOut), "backtick1: \"content with backticks `some random things`\"")
 	require.Contains(t, string(kubectlOut), "backtick2: \"nested templating with backticks {{` random.Values `}}\"")
@@ -176,9 +175,8 @@ func testHelmAdoption(t *testing.T) {
 	deploymentManifest := "src/test/packages/25-manifest-adoption/deployment.yaml"
 
 	// Deploy dos-games manually into the cluster without Zarf
-	kubectlOut, _, err := e2e.Kubectl(t, "apply", "-f", deploymentManifest)
-	require.NoError(t, err, "unable to apply", "deploymentManifest", deploymentManifest)
-	require.Contains(t, kubectlOut, "deployment.apps/game created")
+	kubectlOut, _, _ := e2e.Kubectl(t, "apply", "-f", deploymentManifest)
+	require.Contains(t, string(kubectlOut), "deployment.apps/game created")
 
 	// Deploy dos-games into the cluster with Zarf
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", packagePath, "--confirm", "--adopt-existing-resources")

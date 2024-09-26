@@ -29,11 +29,9 @@ func TestLint(t *testing.T) {
 
 		testPackagePath := filepath.Join("src", "test", "packages", "12-lint")
 		configPath := filepath.Join(testPackagePath, "zarf-config.toml")
-		osSetErr := os.Setenv("ZARF_CONFIG", configPath)
-		require.NoError(t, osSetErr, "Unable to set ZARF_CONFIG")
+		os.Setenv("ZARF_CONFIG", configPath)
 		_, stderr, err := e2e.Zarf(t, "dev", "lint", testPackagePath, "-f", "good-flavor")
-		osUnsetErr := os.Unsetenv("ZARF_CONFIG")
-		require.NoError(t, osUnsetErr, "Unable to cleanup ZARF_CONFIG")
+		os.Unsetenv("ZARF_CONFIG")
 		require.Error(t, err, "Require an exit code since there was warnings / errors")
 		strippedStderr := e2e.StripMessageFormatting(stderr)
 
