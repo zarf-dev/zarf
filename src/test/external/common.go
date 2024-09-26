@@ -5,6 +5,7 @@
 package external
 
 import (
+	"errors"
 	"path"
 	"path/filepath"
 	"strings"
@@ -31,7 +32,7 @@ func createPodInfoPackageWithInsecureSources(t *testing.T, temp string) {
 	exec.CmdWithPrint(zarfBinPath, "package", "create", temp, "--confirm", "--output", temp)
 }
 
-func verifyWaitSuccess(t *testing.T, timeoutMinutes time.Duration, cmd string, args []string, condition string, onTimeout string) bool {
+func verifyWaitSuccess(t *testing.T, timeoutMinutes time.Duration, cmd string, args []string, condition string) error {
 	timeout := time.After(timeoutMinutes * time.Minute)
 	for {
 		// delay check 3 seconds
@@ -39,9 +40,7 @@ func verifyWaitSuccess(t *testing.T, timeoutMinutes time.Duration, cmd string, a
 		select {
 		// on timeout abort
 		case <-timeout:
-			t.Error(onTimeout)
-
-			return false
+			return errors.New("unable to verify the gitea container installed successfully")
 
 			// after delay, try running
 		default:
@@ -52,7 +51,7 @@ func verifyWaitSuccess(t *testing.T, timeoutMinutes time.Duration, cmd string, a
 				t.Log(string(stdOut), err)
 			}
 			if strings.Contains(string(stdOut), condition) {
-				return true
+				return nil
 			}
 		}
 	}
