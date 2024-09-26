@@ -32,7 +32,7 @@ func createPodInfoPackageWithInsecureSources(t *testing.T, temp string) {
 	exec.CmdWithPrint(zarfBinPath, "package", "create", temp, "--confirm", "--output", temp)
 }
 
-func verifyWaitSuccess(t *testing.T, timeoutMinutes time.Duration, cmd string, args []string, condition string) error {
+func waitForCondition(t *testing.T, timeoutMinutes time.Duration, cmd string, args []string, condition string) error {
 	timeout := time.After(timeoutMinutes * time.Minute)
 	for {
 		// delay check 3 seconds
@@ -40,7 +40,7 @@ func verifyWaitSuccess(t *testing.T, timeoutMinutes time.Duration, cmd string, a
 		select {
 		// on timeout abort
 		case <-timeout:
-			return errors.New("unable to verify the gitea container installed successfully")
+			return errors.New("timed out waiting for condition")
 
 			// after delay, try running
 		default:

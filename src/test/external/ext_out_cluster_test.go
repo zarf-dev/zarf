@@ -82,7 +82,7 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 
 	// Wait for gitea to deploy properly
 	giteaArgs := []string{"inspect", "-f", "{{.State.Health.Status}}", "gitea.localhost"}
-	err = verifyWaitSuccess(suite.T(), 2, "docker", giteaArgs, "healthy")
+	err = waitForCondition(suite.T(), 2, "docker", giteaArgs, "healthy")
 	suite.NoError(err)
 
 	// Connect gitea to the k3d network
