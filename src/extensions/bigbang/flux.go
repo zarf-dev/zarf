@@ -6,6 +6,7 @@ package bigbang
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -57,8 +58,11 @@ func getFlux(baseDir string, cfg *extensions.BigBang) (manifest v1alpha1.ZarfMan
 		Resources: []string{remotePath},
 	}
 
-	for _, path := range cfg.FluxPatchFiles {
-		absFluxPatchPath, _ := filepath.Abs(path)
+	for _, p := range cfg.FluxPatchFiles {
+		absFluxPatchPath, errAbs := filepath.Abs(p)
+		if errAbs != nil {
+			slog.Debug("unable to get absolute filepath", "error", errAbs)
+		}
 		fluxKustomization.Patches = append(fluxKustomization.Patches, krustytypes.Patch{Path: absFluxPatchPath})
 	}
 
@@ -94,7 +98,10 @@ func readFluxImages(localPath string) (images []string, err error) {
 	}
 
 	// Break the manifest into separate resources.
-	yamls, _ := utils.SplitYAML(contents)
+	yamls, err := utils.SplitYAML(contents)
+	if err != nil {
+		return images, fmt.Errorf("unable to split YAML: %w", err)
+	}
 
 	// Loop through each resource and find the images.
 	for _, yaml := range yamls {

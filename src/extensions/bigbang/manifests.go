@@ -5,6 +5,7 @@
 package bigbang
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -84,15 +85,22 @@ func manifestZarfCredentials(version string) corev1.Secret {
 }
 
 // manifestGitRepo generates a GitRepository object for the Big Bang umbrella repo.
-func manifestGitRepo(cfg *extensions.BigBang) fluxSrcCtrl.GitRepository {
+func manifestGitRepo(cfg *extensions.BigBang) (fluxSrcCtrl.GitRepository, error) {
 	apiVersion := "source.toolkit.fluxcd.io/v1beta2"
 
 	// Set apiVersion to v1 on BB v2.7.0 or higher falling back to v1beta2 as needed
-	semverVersion, _ := semver.NewVersion(cfg.Version)
+	// TODO(mkcp): refactor to reduce nesting
+	semverVersion, _ := semver.NewVersion(cfg.Version) // TODO(mkcp): Intentionally ignore
 	if semverVersion != nil {
-		c, _ := semver.NewConstraint(">= 2.7.0")
+		c, err := semver.NewConstraint(">= 2.7.0")
+		if err != nil {
+			return fluxSrcCtrl.GitRepository{}, err
+		}
 		if c != nil {
-			updateFlux, _ := c.Validate(semverVersion)
+			updateFlux, err := c.Validate(semverVersion)
+			if err != nil {
+				return fluxSrcCtrl.GitRepository{}, errors.Join(err...)
+			}
 			if updateFlux && !cfg.SkipFlux {
 				apiVersion = "source.toolkit.fluxcd.io/v1"
 			}
@@ -115,7 +123,7 @@ func manifestGitRepo(cfg *extensions.BigBang) fluxSrcCtrl.GitRepository {
 				Tag: cfg.Version,
 			},
 		},
-	}
+	}, nil
 }
 
 // manifestValuesFile generates a Secret object for the Big Bang umbrella repo.

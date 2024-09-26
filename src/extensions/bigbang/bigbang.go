@@ -6,6 +6,7 @@ package bigbang
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -330,15 +331,20 @@ func Compose(c *v1alpha1.ZarfComponent, override v1alpha1.ZarfComponent, relativ
 // isValidVersion check if the version is 1.54.0 or greater.
 func isValidVersion(version string) (bool, error) {
 	specifiedVersion, err := semver.NewVersion(version)
-
 	if err != nil {
 		return false, err
 	}
 
-	minRequiredVersion, _ := semver.NewVersion(bbMinRequiredVersion)
+	minRequiredVersion, err := semver.NewVersion(bbMinRequiredVersion)
+	if err != nil {
+		return false, err
+	}
 
 	// Evaluating pre-releases too
-	c, _ := semver.NewConstraint(fmt.Sprintf(">= %s-0", minRequiredVersion))
+	c, err := semver.NewConstraint(fmt.Sprintf(">= %s-0", minRequiredVersion))
+	if err != nil {
+		return false, err
+	}
 
 	// This extension requires BB 1.54.0 or greater.
 	return c.Check(specifiedVersion), nil
@@ -349,7 +355,10 @@ func isValidVersion(version string) (bool, error) {
 // to return the list of git repos and tags needed.
 func findBBResources(t string) (gitRepos map[string]string, helmReleaseDeps map[string]HelmReleaseDependency, helmReleaseValues map[string]map[string]interface{}, err error) {
 	// Break the template into separate resources.
-	yamls, _ := utils.SplitYAMLToString([]byte(t))
+	yamls, err := utils.SplitYAMLToString([]byte(t))
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	gitRepos = map[string]string{}
 	helmReleaseDeps = map[string]HelmReleaseDependency{}
@@ -462,22 +471,26 @@ func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang)
 
 	// Helper function to marshal and write a manifest and add it to the component.
 	addManifest := func(name string, data any) error {
-		path := path.Join(manifestDir, name)
+		p := path.Join(manifestDir, name)
 		out, err := yaml.Marshal(data)
 		if err != nil {
 			return err
 		}
 
-		if err := os.WriteFile(path, out, helpers.ReadWriteUser); err != nil {
+		if err := os.WriteFile(p, out, helpers.ReadWriteUser); err != nil {
 			return err
 		}
 
-		manifest.Files = append(manifest.Files, path)
+		manifest.Files = append(manifest.Files, p)
 		return nil
 	}
 
 	// Create the GitRepository manifest.
-	if err := addManifest("bb-ext-gitrepository.yaml", manifestGitRepo(cfg)); err != nil {
+	repo, err := manifestGitRepo(cfg)
+	if err != nil {
+		return manifest, err
+	}
+	if err := addManifest("bb-ext-gitrepository.yaml", repo); err != nil {
 		return manifest, err
 	}
 
@@ -504,8 +517,8 @@ func addBigBangManifests(YOLO bool, manifestDir string, cfg *extensions.BigBang)
 			return manifest, err
 		}
 
-		path := fmt.Sprintf("%s.yaml", data.Name)
-		if err := addManifest(path, data); err != nil {
+		p := fmt.Sprintf("%s.yaml", data.Name)
+		if err := addManifest(p, data); err != nil {
 			return manifest, err
 		}
 
@@ -537,7 +550,12 @@ func findImagesforBBChartRepo(ctx context.Context, repo string, values chartutil
 	if err != nil {
 		return images, err
 	}
-	defer os.RemoveAll(gitPath)
+
+	// Always cleanup tempdir
+	defer func(path string) {
+		removeErr := os.RemoveAll(path)
+		err = errors.Join(err, removeErr)
+	}(gitPath)
 
 	// Set the directory for the chart
 	chartPath := filepath.Join(gitPath, "chart")

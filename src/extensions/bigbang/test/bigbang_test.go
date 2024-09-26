@@ -163,10 +163,15 @@ func getReleases() (latest, previous string, err error) {
 	if err != nil {
 		return latest, previous, err
 	}
-	defer resp.Body.Close()
 
 	// Read the response body
 	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return latest, previous, err
+	}
+
+	// Cleanup response
+	err = resp.Body.Close()
 	if err != nil {
 		return latest, previous, err
 	}
