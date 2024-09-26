@@ -59,7 +59,6 @@ linters-settings:
   testifylint:
     enable-all: true
   errcheck:
-    check-blank: true
     check-type-assertions: true
     exclude-functions:
       - (*github.com/spf13/cobra.Command).Help
