@@ -133,12 +133,10 @@ func TestReplaceTextTemplate(t *testing.T) {
 			tmpDir := t.TempDir()
 			tc.path = filepath.Join(tmpDir, "templates.test")
 
-			f, err := os.Create(tc.path)
-			require.NoError(t, err)
+			f, _ := os.Create(tc.path)
+			defer f.Close()
 
-			_, err = f.WriteString(start)
-			require.NoError(t, err)
-			err = f.Close()
+			_, err := f.WriteString(start)
 			require.NoError(t, err)
 		}
 
@@ -147,8 +145,7 @@ func TestReplaceTextTemplate(t *testing.T) {
 			require.Error(t, gotErr)
 		} else {
 			require.NoError(t, gotErr)
-			gotContents, err := os.ReadFile(tc.path)
-			require.NoError(t, err)
+			gotContents, _ := os.ReadFile(tc.path)
 			require.Equal(t, tc.wantContents, string(gotContents))
 		}
 	}

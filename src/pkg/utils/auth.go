@@ -23,10 +23,7 @@ type Credential struct {
 
 // FindAuthForHost finds the authentication scheme for a given host using .git-credentials then .netrc.
 func FindAuthForHost(baseURL string) (*Credential, error) {
-	homePath, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
+	homePath, _ := os.UserHomeDir()
 
 	// Read the ~/.git-credentials file
 	credentialsPath := filepath.Join(homePath, ".git-credentials")
@@ -63,6 +60,7 @@ func credentialParser(path string) ([]Credential, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 
 	var credentials []Credential
 	scanner := bufio.NewScanner(file)
@@ -81,10 +79,6 @@ func credentialParser(path string) ([]Credential, error) {
 		}
 		credentials = append(credentials, credential)
 	}
-	err = file.Close()
-	if err != nil {
-		return nil, err
-	}
 	return credentials, nil
 }
 
@@ -97,6 +91,7 @@ func netrcParser(path string) ([]Credential, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 
 	var credentials []Credential
 	scanner := bufio.NewScanner(file)
@@ -156,13 +151,6 @@ func netrcParser(path string) ([]Credential, error) {
 			}
 		}
 	}
-
-	// Close our file and handle any errors now that we're done scanning
-	err = file.Close()
-	if err != nil {
-		return nil, err
-	}
-
 	// Append the last machine (if exists) at the end of the file
 	if activeMachine != nil {
 		credentials = appendNetrcMachine(activeMachine, credentials)

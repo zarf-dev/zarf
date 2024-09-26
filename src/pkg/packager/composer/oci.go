@@ -64,11 +64,7 @@ func (ic *ImportChain) fetchOCISkeleton(ctx context.Context) error {
 
 	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", name)))
 
-	absCachePath, err := config.GetAbsCachePath()
-	if err != nil {
-		return err
-	}
-	cache := filepath.Join(absCachePath, "oci")
+	cache := filepath.Join(config.GetAbsCachePath(), "oci")
 	if err := helpers.CreateDirectory(cache, helpers.ReadWriteExecuteUser); err != nil {
 		return err
 	}

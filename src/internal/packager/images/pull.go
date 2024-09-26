@@ -300,11 +300,7 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
 			if err != nil {
 				return err
 			}
-			absPath, err := config.GetAbsCachePath()
-			if err != nil {
-				return err
-			}
-			cacheDir := filepath.Join(absPath, layout.ImagesDir)
+			cacheDir := filepath.Join(config.GetAbsCachePath(), layout.ImagesDir)
 			location := filepath.Join(cacheDir, digest.String())
 			info, err := os.Stat(location)
 			if errors.Is(err, fs.ErrNotExist) {

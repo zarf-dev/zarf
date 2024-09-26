@@ -54,13 +54,9 @@ var componentPrefix = "zarf-component-"
 func Catalog(ctx context.Context, componentSBOMs map[string]*layout.ComponentSBOM, imageList []transform.Image, paths *layout.PackagePaths) error {
 	imageCount := len(imageList)
 	componentCount := len(componentSBOMs)
-	cachePath, err := config.GetAbsCachePath()
-	if err != nil {
-		return err
-	}
 	builder := Builder{
 		spinner:    message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
-		cachePath:  cachePath,
+		cachePath:  config.GetAbsCachePath(),
 		imagesPath: paths.Images.Base,
 		outputDir:  paths.SBOMs.Path,
 	}

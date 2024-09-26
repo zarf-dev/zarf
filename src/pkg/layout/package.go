@@ -5,9 +5,7 @@
 package layout
 
 import (
-	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -79,7 +77,7 @@ func (pp *PackagePaths) ReadZarfYAML() (v1alpha1.ZarfPackage, []string, error) {
 }
 
 // MigrateLegacy migrates a legacy package layout to the new layout.
-func (pp *PackagePaths) MigrateLegacy() (err error) {
+func (pp *PackagePaths) MigrateLegacy() error {
 	var pkg v1alpha1.ZarfPackage
 	base := pp.Base
 
@@ -115,10 +113,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 	if !helpers.InvalidPath(legacyImagesTar) {
 		pp = pp.AddImages()
 		message.Debugf("Migrating %q to %q", legacyImagesTar, pp.Images.Base)
-		defer func(name string) {
-			err2 := os.Remove(name)
-			err = errors.Join(err, err2)
-		}(legacyImagesTar)
+		defer os.Remove(legacyImagesTar)
 		imgTags := []string{}
 		for _, component := range pkg.Components {
 			imgTags = append(imgTags, component.Images...)
@@ -328,10 +323,7 @@ func (pp *PackagePaths) Files() map[string]string {
 	pathMap := make(map[string]string)
 
 	stripBase := func(path string) string {
-		rel, err := filepath.Rel(pp.Base, path)
-		if err != nil {
-			slog.Debug("unable to strip base from path", "error", err)
-		}
+		rel, _ := filepath.Rel(pp.Base, path)
 		// Convert from the OS path separator to the standard '/' for Windows support
 		return filepath.ToSlash(rel)
 	}

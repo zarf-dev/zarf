@@ -117,10 +117,7 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 				},
 			})
 		}
-		err := utils.ColorPrintYAML(ex, nil, true)
-		if err != nil {
-			return err
-		}
+		utils.ColorPrintYAML(ex, nil, true)
 	}
 	return nil
 }

@@ -50,10 +50,7 @@ func (c *Components) Archive(component v1alpha1.ZarfComponent, cleanupTemp bool)
 	}
 	base := c.Dirs[name].Base
 	if cleanupTemp {
-		err := os.RemoveAll(c.Dirs[name].Temp)
-		if err != nil {
-			return err
-		}
+		_ = os.RemoveAll(c.Dirs[name].Temp)
 	}
 	size, err := helpers.GetDirSize(base)
 	if err != nil {

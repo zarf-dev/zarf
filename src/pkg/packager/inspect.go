@@ -34,10 +34,7 @@ func (p *Packager) Inspect(ctx context.Context) error {
 			fmt.Fprintln(os.Stdout, "-", image)
 		}
 	} else {
-		err := utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
-		if err != nil {
-			return err
-		}
+		utils.ColorPrintYAML(p.cfg.Pkg, nil, false)
 	}
 
 	sbomDir := p.layout.SBOMs.Path

@@ -6,7 +6,6 @@ package packager
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -22,10 +21,7 @@ import (
 func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles []string) bool {
 	pterm.Println()
 	message.HeaderInfof("📦 PACKAGE DEFINITION")
-	err := utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(stage), true)
-	if err != nil {
-		slog.Error("unable to print yaml", "error", err)
-	}
+	utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(stage), true)
 
 	// Print any potential breaking changes (if this is a Deploy confirm) between this CLI version and the deployed init package
 	if stage == config.ZarfDeployStage {

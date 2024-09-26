@@ -36,11 +36,8 @@ func yamlFormat(attr color.Attribute) string {
 }
 
 // ColorPrintYAML pretty prints a yaml file to the console.
-func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) error {
-	text, err := goyaml.Marshal(data)
-	if err != nil {
-		return err
-	}
+func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) {
+	text, _ := goyaml.Marshal(data)
 	tokens := lexer.Tokenize(string(text))
 
 	if spaceRootLists {
@@ -105,7 +102,6 @@ func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) erro
 
 	pterm.Println()
 	pterm.Println(outputYAML)
-	return nil
 }
 
 // AddRootListHint adds a hint string for a given root list key and value.

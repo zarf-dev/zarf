@@ -6,7 +6,6 @@ package message
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 
 	"github.com/pterm/pterm"
@@ -23,11 +22,10 @@ type ProgressBar struct {
 // NewProgressBar creates a new ProgressBar instance from a total value and a format.
 func NewProgressBar(total int64, text string) *ProgressBar {
 	var progress *pterm.ProgressbarPrinter
-	var err error
 	if NoProgress {
 		Info(text)
 	} else {
-		progress, err = pterm.DefaultProgressbar.
+		progress, _ = pterm.DefaultProgressbar.
 			WithTotal(int(total)).
 			WithShowCount(false).
 			WithTitle(padding + text).
@@ -35,9 +33,6 @@ func NewProgressBar(total int64, text string) *ProgressBar {
 			WithMaxWidth(TermWidth).
 			WithWriter(os.Stderr).
 			Start()
-		if err != nil {
-			slog.Debug("Unable to create default progressbar", "error", err)
-		}
 	}
 
 	return &ProgressBar{
@@ -58,10 +53,7 @@ func (p *ProgressBar) Updatef(format string, a ...any) {
 
 // Failf marks the ProgressBar as failed in the CLI.
 func (p *ProgressBar) Failf(format string, a ...any) {
-	err := p.Close()
-	if err != nil {
-		slog.Debug("unable to close failed progressbar", "error", err)
-	}
+	p.Close()
 	Warnf(format, a...)
 }
 
@@ -111,10 +103,7 @@ func (p *ProgressBar) Write(data []byte) (int, error) {
 
 // Successf marks the ProgressBar as successful in the CLI.
 func (p *ProgressBar) Successf(format string, a ...any) {
-	err := p.Close()
-	if err != nil {
-		slog.Debug("unable to close successful progressbar", "error", err)
-	}
+	p.Close()
 	pterm.Success.Printfln(format, a...)
 }
 

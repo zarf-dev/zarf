@@ -5,7 +5,6 @@
 package tools
 
 import (
-	"log/slog"
 	"os"
 
 	"github.com/zarf-dev/zarf/src/cmd/tools/helm"
@@ -25,10 +24,7 @@ func init() {
 		helmArgs = os.Args[3:]
 	}
 	// The inclusion of Helm in this manner should be changed once https://github.com/helm/helm/pull/12725 is merged
-	helmCmd, err := helm.NewRootCmd(actionConfig, os.Stdout, helmArgs)
-	if err != nil {
-		slog.Error("Failed to initialize helm command", "error", err)
-	}
+	helmCmd, _ := helm.NewRootCmd(actionConfig, os.Stdout, helmArgs)
 	helmCmd.Short = lang.CmdToolsHelmShort
 	helmCmd.Long = lang.CmdToolsHelmLong
 	helmCmd.AddCommand(newVersionCmd("helm", helmVersion))

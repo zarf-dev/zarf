@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -48,7 +47,7 @@ func NewClient(endpoint, username, password string) (*Client, error) {
 }
 
 // DoRequest performs a request to the Gitea API at the given path.
-func (g *Client) DoRequest(ctx context.Context, method string, path string, body []byte) (_ []byte, _ int, err error) {
+func (g *Client) DoRequest(ctx context.Context, method string, path string, body []byte) ([]byte, int, error) {
 	u, err := g.endpoint.Parse(path)
 	if err != nil {
 		return nil, 0, err
@@ -61,14 +60,10 @@ func (g *Client) DoRequest(ctx context.Context, method string, path string, body
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("content-type", "application/json")
 	resp, err := g.httpClient.Do(req)
-	// Ensure we close the body of the http client and capture the error
-	defer func() {
-		errClose := resp.Body.Close()
-		err = errors.Join(err, errClose)
-	}()
 	if err != nil {
 		return nil, 0, err
 	}
+	defer resp.Body.Close()
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, 0, err

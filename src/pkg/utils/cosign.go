@@ -228,27 +228,26 @@ func GetCosignArtifacts(image string) ([]string, error) {
 
 	ref, err := name.ParseReference(image, nameOpts...)
 	if err != nil {
-		return nil, err
+		return []string{}, err
 	}
 
-	// Return empty if we don't have a signature on the image
 	var remoteOpts []ociremote.Option
-	simg, _ := ociremote.SignedEntity(ref, remoteOpts...) //nolint:errcheck
+	simg, _ := ociremote.SignedEntity(ref, remoteOpts...)
 	if simg == nil {
-		return nil, nil
+		return []string{}, nil
 	}
 
 	// Errors are dogsled because these functions always return a name.Tag which we can check for layers
-	sigRef, _ := ociremote.SignatureTag(ref, remoteOpts...)   //nolint:errcheck
-	attRef, _ := ociremote.AttestationTag(ref, remoteOpts...) //nolint:errcheck
+	sigRef, _ := ociremote.SignatureTag(ref, remoteOpts...)
+	attRef, _ := ociremote.AttestationTag(ref, remoteOpts...)
 
 	ss, err := simg.Signatures()
 	if err != nil {
-		return nil, err
+		return []string{}, err
 	}
 	ssLayers, err := ss.Layers()
 	if err != nil {
-		return nil, err
+		return []string{}, err
 	}
 
 	var cosignArtifactList = make([]string, 0)
@@ -258,11 +257,11 @@ func GetCosignArtifacts(image string) ([]string, error) {
 
 	atts, err := simg.Attestations()
 	if err != nil {
-		return nil, err
+		return []string{}, err
 	}
 	aLayers, err := atts.Layers()
 	if err != nil {
-		return nil, err
+		return []string{}, err
 	}
 	if 0 < len(aLayers) {
 		cosignArtifactList = append(cosignArtifactList, attRef.String())
