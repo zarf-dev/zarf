@@ -6,6 +6,7 @@ package zoci
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -32,7 +33,7 @@ var (
 //   - zarf.yaml
 //   - checksums.txt
 //   - zarf.yaml.sig
-func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (_ []ocispec.Descriptor, err error) {
 	isPartialPull := len(layersToPull) > 0
 	r.Log().Debug(fmt.Sprintf("Pulling %s", r.Repo().Reference))
 
@@ -62,7 +63,10 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	if err != nil {
 		return nil, err
 	}
-	defer dst.Close()
+	defer func(dst *file.Store) {
+		err2 := dst.Close()
+		err = errors.Join(err, err2)
+	}(dst)
 
 	copyOpts := r.GetDefaultCopyOpts()
 	copyOpts.Concurrency = concurrency
