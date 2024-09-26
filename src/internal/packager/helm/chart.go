@@ -70,14 +70,14 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 			// No prior release, try to install it.
 			spinner.Updatef("Attempting chart installation")
 
-			_, err = h.installChart(postRender)
+			_, err = h.installChart(ctx, postRender)
 		} else if histErr == nil && len(releases) > 0 {
 			// Otherwise, there is a prior release so upgrade it.
 			spinner.Updatef("Attempting chart upgrade")
 
 			lastRelease := releases[len(releases)-1]
 
-			_, err = h.upgradeChart(lastRelease, postRender)
+			_, err = h.upgradeChart(ctx, lastRelease, postRender)
 		} else {
 			// 😭 things aren't working
 			return fmt.Errorf("unable to verify the chart installation status: %w", histErr)
@@ -172,7 +172,7 @@ func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues 
 	}
 
 	// Perform the loadedChart installation.
-	templatedChart, err := client.Run(loadedChart, chartValues)
+	templatedChart, err := client.RunWithContext(ctx, loadedChart, chartValues)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating helm chart template: %w", err)
 	}
@@ -241,7 +241,7 @@ func (h *Helm) UpdateReleaseValues(ctx context.Context, updatedValues map[string
 		client.Wait = true
 
 		// Perform the loadedChart upgrade.
-		_, err = client.Run(h.chart.ReleaseName, lastRelease.Chart, updatedValues)
+		_, err = client.RunWithContext(ctx, h.chart.ReleaseName, lastRelease.Chart, updatedValues)
 		if err != nil {
 			return err
 		}
@@ -254,7 +254,7 @@ func (h *Helm) UpdateReleaseValues(ctx context.Context, updatedValues map[string
 	return fmt.Errorf("unable to find the %s helm release", h.chart.ReleaseName)
 }
 
-func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
+func (h *Helm) installChart(ctx context.Context, postRender *renderer) (*release.Release, error) {
 	// Bind the helm action.
 	client := action.NewInstall(h.actionConfig)
 
@@ -282,10 +282,10 @@ func (h *Helm) installChart(postRender *renderer) (*release.Release, error) {
 	}
 
 	// Perform the loadedChart installation.
-	return client.Run(loadedChart, chartValues)
+	return client.RunWithContext(ctx, loadedChart, chartValues)
 }
 
-func (h *Helm) upgradeChart(lastRelease *release.Release, postRender *renderer) (*release.Release, error) {
+func (h *Helm) upgradeChart(ctx context.Context, lastRelease *release.Release, postRender *renderer) (*release.Release, error) {
 	// Migrate any deprecated APIs (if applicable)
 	err := h.migrateDeprecatedAPIs(lastRelease)
 	if err != nil {
@@ -315,7 +315,7 @@ func (h *Helm) upgradeChart(lastRelease *release.Release, postRender *renderer) 
 	}
 
 	// Perform the loadedChart upgrade.
-	return client.Run(h.chart.ReleaseName, loadedChart, chartValues)
+	return client.RunWithContext(ctx, h.chart.ReleaseName, loadedChart, chartValues)
 }
 
 func (h *Helm) rollbackChart(name string, version int) error {
