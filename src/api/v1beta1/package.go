@@ -145,7 +145,8 @@ type ZarfMetadata struct {
 	Architecture string `json:"architecture,omitempty" jsonschema:"example=arm64,example=amd64"`
 	// Default to true, when false components cannot have images or git repos as they will be pulled from the internet
 	Airgap *bool `json:"airgap,omitempty"`
-	// Annotations are key-value pairs that can be used to store metadata about the package.
+	// Annotations contains arbitrary metadata about the package.
+	// Users are encouraged to follow OCI image-spec [annotation rules](https://github.com/opencontainers/image-spec/blob/v1.1.0/annotations.md).
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 

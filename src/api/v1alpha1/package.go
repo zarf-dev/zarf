@@ -170,6 +170,9 @@ type ZarfMetadata struct {
 	Vendor string `json:"vendor,omitempty"`
 	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
 	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
+	// Annotations contains arbitrary metadata about the package.
+	// Users are encouraged to follow OCI image-spec [annotation rules](https://github.com/opencontainers/image-spec/blob/v1.1.0/annotations.md).
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
