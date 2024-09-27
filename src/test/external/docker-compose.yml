@@ -21,6 +21,11 @@ services:
     ports:
       - "3000:3000"
       - "222:22"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://gitea.localhost:3000/api/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
   init:
     image: gitea/gitea:1.18.1
     container_name: gitea.init
