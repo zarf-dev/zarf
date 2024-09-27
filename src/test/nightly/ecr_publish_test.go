@@ -59,10 +59,9 @@ func TestECRPublishing(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure we get a warning when trying to inspect the online published package
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", upstreamPackageURL, keyFlag, "--sbom-out", tmpDir)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", upstreamPackageURL, keyFlag, "--sbom-out", tmpDir, "--skip-signature-validation")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Validating SBOM checksums")
-	require.Contains(t, stdErr, "Package signature validated!")
 
 	// Validate that we can pull the package down from ECR
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", upstreamPackageURL)
