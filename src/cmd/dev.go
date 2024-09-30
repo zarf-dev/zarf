@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -334,11 +333,11 @@ func init() {
 
 	err := devFindImagesCmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
 	if err != nil {
-		slog.Debug("Unable to mark dev-find-images flag as set", "error", err)
+		message.Debug("Unable to mark dev-find-images flag as set", "error", err)
 	}
 	err = devFindImagesCmd.Flags().MarkHidden("set")
 	if err != nil {
-		slog.Debug("Unable to mark dev-find-images flag as hidden", "error", err)
+		message.Debug("Unable to mark dev-find-images flag as hidden", "error", err)
 	}
 	devFindImagesCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)

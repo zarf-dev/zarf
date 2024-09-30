@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -388,19 +387,19 @@ func choosePackage(args []string) (string, error) {
 			tarPath := config.ZarfPackagePrefix + toComplete + "*.tar"
 			files, err := filepath.Glob(tarPath)
 			if err != nil {
-				slog.Debug("Unable to glob", "tarPath", tarPath, "error", err)
+				message.Debug("Unable to glob", "tarPath", tarPath, "error", err)
 			}
 
 			zstPath := config.ZarfPackagePrefix + toComplete + "*.tar.zst"
 			zstFiles, err := filepath.Glob(zstPath)
 			if err != nil {
-				slog.Debug("Unable to glob", "zstPath", zstPath, "error", err)
+				message.Debug("Unable to glob", "zstPath", zstPath, "error", err)
 			}
 
 			splitPath := config.ZarfPackagePrefix + toComplete + "*.part000"
 			splitFiles, err := filepath.Glob(splitPath)
 			if err != nil {
-				slog.Debug("Unable to glob", "splitPath", splitPath, "error", err)
+				message.Debug("Unable to glob", "splitPath", splitPath, "error", err)
 			}
 
 			files = append(files, zstFiles...)
@@ -428,7 +427,7 @@ func getPackageCompletionArgs(cmd *cobra.Command, _ []string, _ string) ([]strin
 
 	deployedZarfPackages, err := c.GetDeployedZarfPackages(ctx)
 	if err != nil {
-		slog.Error("Unable to get deployed zarf packages for package completion args", "error", err)
+		message.Debug("Unable to get deployed zarf packages for package completion args", "error", err)
 	}
 	// Populate list of package names
 	for _, pkg := range deployedZarfPackages {
@@ -500,15 +499,15 @@ func bindCreateFlags(v *viper.Viper) {
 
 	errOD := createFlags.MarkHidden("output-directory")
 	if errOD != nil {
-		slog.Debug("Unable to mark flag output-directory", "error", errOD)
+		message.Debug("Unable to mark flag output-directory", "error", errOD)
 	}
 	errKey := createFlags.MarkHidden("key")
 	if errKey != nil {
-		slog.Debug("Unable to mark flag key", "error", errKey)
+		message.Debug("Unable to mark flag key", "error", errKey)
 	}
 	errKP := createFlags.MarkHidden("key-pass")
 	if errKP != nil {
-		slog.Debug("Unable to mark flag key-pass", "error", errKP)
+		message.Debug("Unable to mark flag key-pass", "error", errKP)
 	}
 }
 
@@ -532,7 +531,7 @@ func bindDeployFlags(v *viper.Viper) {
 
 	err := deployFlags.MarkHidden("sget")
 	if err != nil {
-		slog.Debug("Unable to mark flag sget", "error", err)
+		message.Debug("Unable to mark flag sget", "error", err)
 	}
 }
 

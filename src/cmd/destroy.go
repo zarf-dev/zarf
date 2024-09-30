@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"regexp"
 
@@ -79,7 +78,7 @@ var destroyCmd = &cobra.Command{
 				// Try to remove the script, but ignore any errors and debug log them
 				err = os.Remove(script)
 				if err != nil {
-					slog.Debug("Unable to remove script", "script", script, "error", err)
+					message.Debug("Unable to remove script", "script", script, "error", err)
 				}
 			}
 		} else {

@@ -7,7 +7,6 @@ package layout
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -330,7 +329,7 @@ func (pp *PackagePaths) Files() map[string]string {
 	stripBase := func(path string) string {
 		rel, err := filepath.Rel(pp.Base, path)
 		if err != nil {
-			slog.Debug("unable to strip base from path", "error", err)
+			message.Debug("unable to strip base from path", "error", err)
 		}
 		// Convert from the OS path separator to the standard '/' for Windows support
 		return filepath.ToSlash(rel)

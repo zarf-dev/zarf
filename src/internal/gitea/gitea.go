@@ -61,14 +61,14 @@ func (g *Client) DoRequest(ctx context.Context, method string, path string, body
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("content-type", "application/json")
 	resp, err := g.httpClient.Do(req)
-	// Ensure we close the body of the http client and capture the error
+	if err != nil {
+		return nil, 0, err
+	}
 	defer func() {
 		errClose := resp.Body.Close()
 		err = errors.Join(err, errClose)
 	}()
-	if err != nil {
-		return nil, 0, err
-	}
+
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, 0, err

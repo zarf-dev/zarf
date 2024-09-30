@@ -36,7 +36,7 @@ func NewProgressBar(total int64, text string) *ProgressBar {
 			WithWriter(os.Stderr).
 			Start()
 		if err != nil {
-			slog.Debug("Unable to create default progressbar", "error", err)
+			message.Debug("Unable to create default progressbar", "error", err)
 		}
 	}
 

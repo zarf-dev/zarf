@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -391,7 +390,7 @@ func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {
 		cmd.PersistentFlags().StringVar(&dummyStr, flagDummy, "", "")
 		err := cmd.PersistentFlags().MarkHidden(flagDummy)
 		if err != nil {
-			slog.Debug("Unable to add hidden dummy flag", "error", err)
+			message.Debug("Unable to add hidden dummy flag", "error", err)
 		}
 	}
 }
