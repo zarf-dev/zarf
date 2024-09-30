@@ -6,6 +6,7 @@ package variables
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -49,7 +50,7 @@ func (vc *VariableConfig) GetAllTemplates() map[string]*TextTemplate {
 }
 
 // ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place.
-func (vc *VariableConfig) ReplaceTextTemplate(path string) error {
+func (vc *VariableConfig) ReplaceTextTemplate(path string) (err error) {
 	templateRegex := fmt.Sprintf("###%s_[A-Z0-9_]+###", strings.ToUpper(vc.templatePrefix))
 	templateMap := vc.GetAllTemplates()
 
@@ -57,6 +58,10 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err2 := textFile.Close()
+		err = errors.Join(err, err2)
+	}()
 
 	// This regex takes a line and parses the text before and after a discovered template: https://regex101.com/r/ilUxAz/1
 	regexTemplateLine := regexp.MustCompile(fmt.Sprintf("(?P<preTemplate>.*?)(?P<template>%s)(?P<postTemplate>.*)", templateRegex))
@@ -129,11 +134,10 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) error {
 		}
 	}
 
-	// We're done scanning, close our file
-	err = textFile.Close()
+	// NOTE(mkcp): The extra if err != nil is not necessary, but is here to be explicit
+	err = os.WriteFile(path, []byte(text), helpers.ReadWriteUser)
 	if err != nil {
 		return err
 	}
-
-	return os.WriteFile(path, []byte(text), helpers.ReadWriteUser)
+	return err // must return err for defer errors.Join
 }

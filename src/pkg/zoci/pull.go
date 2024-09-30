@@ -77,7 +77,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	if err != nil {
 		return nil, err
 	}
-	return layersToPull, nil
+	return layersToPull, err // must return err for defer errors.Join
 }
 
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.

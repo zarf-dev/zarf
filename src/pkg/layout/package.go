@@ -83,6 +83,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 	base := pp.Base
 
 	// legacy layout does not contain a checksums file, nor a signature
+	// TODO(mkcp): This can be un-nested as an early return
 	if helpers.InvalidPath(pp.Checksums) && pp.Signature == "" {
 		if err := utils.ReadYaml(pp.ZarfYAML, &pkg); err != nil {
 			return err
@@ -160,7 +161,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 		}
 	}
 
-	return nil
+	return err // must return err here for defer errors.Join
 }
 
 // IsLegacyLayout returns true if the package is using the legacy layout.

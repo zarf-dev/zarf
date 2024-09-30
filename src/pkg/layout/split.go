@@ -112,5 +112,5 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 	}
 	progressBar.Successf("Package split across %d files", fileCount+1)
 
-	return nil
+	return err // must return err for defer errors.Join
 }

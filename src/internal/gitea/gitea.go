@@ -73,7 +73,7 @@ func (g *Client) DoRequest(ctx context.Context, method string, path string, body
 	if err != nil {
 		return nil, 0, err
 	}
-	return b, resp.StatusCode, nil
+	return b, resp.StatusCode, err // must return err for defer errors.Join
 }
 
 // CreateReadOnlyUser creates a non-admin Zarf user.

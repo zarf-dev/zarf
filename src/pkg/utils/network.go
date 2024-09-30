@@ -92,15 +92,19 @@ func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) (err er
 		}
 	}
 
-	return nil
+	return err
 }
 
-func httpGetFile(url string, destinationFile *os.File) error {
+func httpGetFile(url string, destinationFile *os.File) (err error) {
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("unable to download the file %s", url)
 	}
+	defer func() {
+		err2 := resp.Body.Close()
+		err = errors.Join(err, err2)
+	}()
 
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
@@ -116,13 +120,7 @@ func httpGetFile(url string, destinationFile *os.File) error {
 		return err
 	}
 
-	// Close resp body now that we're done reading from it
-	err = resp.Body.Close()
-	if err != nil {
-		return err
-	}
-
 	title = fmt.Sprintf("Downloaded %s", url)
 	progressBar.Successf("%s", title)
-	return nil
+	return err // Must return err for defer errors.Join
 }

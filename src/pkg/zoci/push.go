@@ -92,7 +92,7 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *v1alpha1.ZarfPackage, 
 	}
 
 	progressBar.Successf("Published %s [%s]", r.Repo().Reference, ZarfLayerMediaTypeBlob)
-	return nil
+	return err // must return err for defer errors.Join
 }
 
 func annotationsFromMetadata(metadata *v1alpha1.ZarfMetadata) map[string]string {
