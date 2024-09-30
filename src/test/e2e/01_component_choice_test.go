@@ -19,7 +19,7 @@ func TestComponentChoice(t *testing.T) {
 		secondFile = "second-choice-file.txt"
 	)
 	t.Cleanup(func() {
-		e2e.CleanFiles(firstFile, secondFile)
+		e2e.CleanFiles(t, firstFile, secondFile)
 	})
 
 	path := fmt.Sprintf("build/zarf-package-component-choice-%s.tar.zst", e2e.Arch)

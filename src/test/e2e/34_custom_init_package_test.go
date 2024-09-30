@@ -22,7 +22,7 @@ func TestCustomInit(t *testing.T) {
 
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", buildPath, privateKeyFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	defer e2e.CleanFiles(pkgName)
+	defer e2e.CleanFiles(t, pkgName)
 
 	/* Test operations during package inspect */
 	// Test that we can inspect the yaml of the package without the private key

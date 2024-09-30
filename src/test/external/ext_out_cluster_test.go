@@ -58,10 +58,12 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 
 	// Teardown any leftovers from previous tests
-	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)
-	_ = exec.CmdWithPrint("docker", "rm", "-f", "k3d-"+registryHost)
-	_ = exec.CmdWithPrint("docker", "compose", "down")
-	_ = exec.CmdWithPrint("docker", "network", "remove", network)
+	// NOTE(mkcp): We dogsled these errors because some of these commands will error if they don't cleanup a resource,
+	//   which is ok. A better solution would be checking for none or unexpected kinds of errors.
+	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)   // TODO(mkcp): intentionally ignored, mark nolint
+	_ = exec.CmdWithPrint("docker", "rm", "-f", "k3d-"+registryHost) // TODO(mkcp): intentionally ignored, mark nolint
+	_ = exec.CmdWithPrint("docker", "compose", "down")               // TODO(mkcp): intentionally ignored, mark nolint
+	_ = exec.CmdWithPrint("docker", "network", "remove", network)    // TODO(mkcp): intentionally ignored, mark nolint
 
 	// Setup a network for everything to live inside
 	err := exec.CmdWithPrint("docker", "network", "create", "--driver=bridge", "--subnet="+subnet, "--gateway="+gateway, network)
@@ -146,7 +148,9 @@ func (suite *ExtOutClusterTestSuite) Test_1_Deploy() {
 func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	// Deploy the flux example package
 	temp := suite.T().TempDir()
-	defer os.Remove(temp)
+	defer func() {
+		suite.NoError(os.RemoveAll(temp), "unable to remove temporary directory")
+	}()
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
 
 	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--confirm"}
@@ -161,18 +165,22 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 
 func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
 	baseURL := fmt.Sprintf("http://%s:3000", giteaHost)
+	envKey := "HELM_REPOSITORY_CONFIG"
 
 	suite.createHelmChartInGitea(baseURL, giteaUser, commonPassword)
 	suite.makeGiteaUserPrivate(baseURL, giteaUser, commonPassword)
 
 	tempDir := suite.T().TempDir()
 	repoPath := filepath.Join(tempDir, "repositories.yaml")
-	os.Setenv("HELM_REPOSITORY_CONFIG", repoPath)
-	defer os.Unsetenv("HELM_REPOSITORY_CONFIG")
+	err := os.Setenv(envKey, repoPath)
+	suite.NoError(err)
+	defer func() {
+		suite.NoError(os.Unsetenv(envKey))
+	}()
 
 	packagePath := filepath.Join("..", "packages", "external-helm-auth")
 	findImageArgs := []string{"dev", "find-images", packagePath}
-	err := exec.CmdWithPrint(zarfBinPath, findImageArgs...)
+	err = exec.CmdWithPrint(zarfBinPath, findImageArgs...)
 	suite.Error(err, "Since auth has not been setup, this should fail")
 
 	repoFile := repo.NewFile()
@@ -212,7 +220,9 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 
 	file, err := os.Open(podinfoTarballPath)
 	suite.NoError(err)
-	defer file.Close()
+	defer func() {
+		suite.NoError(file.Close(), "unable to close file")
+	}()
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -220,7 +230,8 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 	suite.NoError(err)
 	_, err = io.Copy(part, file)
 	suite.NoError(err)
-	writer.Close()
+	err = writer.Close()
+	suite.NoError(err, "unable to close writer")
 
 	req, err := http.NewRequest("POST", url, body)
 	suite.NoError(err)
@@ -229,10 +240,10 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 	req.SetBasicAuth(username, password)
 
 	client := &http.Client{}
-
 	resp, err := client.Do(req)
 	suite.NoError(err)
-	resp.Body.Close()
+	err = resp.Body.Close()
+	suite.NoError(err, "unable to close response body")
 }
 
 func (suite *ExtOutClusterTestSuite) makeGiteaUserPrivate(baseURL string, username string, password string) {
@@ -257,8 +268,9 @@ func (suite *ExtOutClusterTestSuite) makeGiteaUserPrivate(baseURL string, userna
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	suite.NoError(err)
-	defer resp.Body.Close()
-
+	defer func() {
+		suite.NoError(resp.Body.Close())
+	}()
 	_, err = io.ReadAll(resp.Body)
 	suite.NoError(err)
 }

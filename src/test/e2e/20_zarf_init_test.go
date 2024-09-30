@@ -32,7 +32,7 @@ func TestZarfInit(t *testing.T) {
 		expectedErrorMessage  = "unable to run component before action: command \"Check that the host architecture matches the package architecture\""
 	)
 	t.Cleanup(func() {
-		e2e.CleanFiles(mismatchedInitPackage)
+		e2e.CleanFiles(t, mismatchedInitPackage)
 	})
 
 	if runtime.GOOS == "linux" {
@@ -104,8 +104,8 @@ func TestZarfInit(t *testing.T) {
 	verifyZarfServiceLabels(t)
 
 	// Special sizing-hacking for reducing resources where Kind + CI eats a lot of free cycles (ignore errors)
-	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1")
-	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")
+	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1") // TODO(mkcp): intentionally ignored, mark nolint
+	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")     // TODO(mkcp): intentionally ignored, mark nolint
 }
 
 func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.ZarfState) {

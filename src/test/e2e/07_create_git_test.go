@@ -23,7 +23,7 @@ func TestCreateGit(t *testing.T) {
 	path := fmt.Sprintf("build/zarf-package-git-data-%s-0.0.1.tar.zst", e2e.Arch)
 	stdOut, stdErr, err := e2e.Zarf(t, "tools", "archiver", "decompress", path, extractDir, "--unarchive-all")
 	require.NoError(t, err, stdOut, stdErr)
-	defer e2e.CleanFiles(extractDir)
+	defer e2e.CleanFiles(t, extractDir)
 
 	// Verify the full-repo component
 	gitDir := fmt.Sprintf("%s/components/full-repo/repos/zarf-public-test-2395699829/.git", extractDir)
