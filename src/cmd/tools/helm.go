@@ -5,8 +5,9 @@
 package tools
 
 import (
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"os"
+
+	"github.com/zarf-dev/zarf/src/pkg/message"
 
 	"github.com/zarf-dev/zarf/src/cmd/tools/helm"
 	"github.com/zarf-dev/zarf/src/config/lang"
