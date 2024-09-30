@@ -6,7 +6,6 @@ package message
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 
 	"github.com/pterm/pterm"
@@ -60,7 +59,7 @@ func (p *ProgressBar) Updatef(format string, a ...any) {
 func (p *ProgressBar) Failf(format string, a ...any) {
 	err := p.Close()
 	if err != nil {
-		slog.Debug("unable to close failed progressbar", "error", err)
+		Debug("unable to close failed progressbar", "error", err)
 	}
 	Warnf(format, a...)
 }
@@ -113,7 +112,7 @@ func (p *ProgressBar) Write(data []byte) (int, error) {
 func (p *ProgressBar) Successf(format string, a ...any) {
 	err := p.Close()
 	if err != nil {
-		slog.Debug("unable to close successful progressbar", "error", err)
+		Debug("unable to close successful progressbar", "error", err)
 	}
 	pterm.Success.Printfln(format, a...)
 }
