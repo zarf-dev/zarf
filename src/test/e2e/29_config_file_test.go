@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const envKey = "ZARF_CONFIG"
+
 func TestConfigFile(t *testing.T) {
 	t.Log("E2E: Config file")
 
@@ -20,7 +22,6 @@ func TestConfigFile(t *testing.T) {
 		path   = fmt.Sprintf("zarf-package-config-file-%s.tar.zst", e2e.Arch)
 		dir    = "examples/config-file"
 		config = "zarf-config.toml"
-		envKey = "ZARF_CONFIG"
 	)
 
 	e2e.CleanFiles(t, path)
@@ -143,7 +144,6 @@ func configFileDefaultTests(t *testing.T) {
 	}
 
 	// Test remaining default initializers
-	envKey := "ZARF_CONFIG"
 	t.Setenv(envKey, filepath.Join("src", "test", "zarf-config-test.toml"))
 	defer func() {
 		require.NoError(t, os.Unsetenv(envKey))
