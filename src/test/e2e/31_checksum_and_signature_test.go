@@ -21,7 +21,7 @@ func TestChecksumAndSignature(t *testing.T) {
 
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", testPackageDirPath, privateKeyFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	defer e2e.CleanFiles(pkgName)
+	defer e2e.CleanFiles(t, pkgName)
 
 	// Test that we don't get an error when we remember to provide the public key
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName, publicKeyFlag)

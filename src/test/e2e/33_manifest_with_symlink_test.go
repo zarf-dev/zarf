@@ -22,10 +22,10 @@ func TestManifestWithSymlink(t *testing.T) {
 
 	path := fmt.Sprintf("build/zarf-package-manifest-with-symlink-%s-0.0.1.tar.zst", e2e.Arch)
 	require.FileExists(t, path)
-	defer e2e.CleanFiles(path)
+	defer e2e.CleanFiles(t, path)
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
-	defer e2e.CleanFiles("temp/manifests")
+	defer e2e.CleanFiles(t, "temp/manifests")
 	require.NoError(t, err, stdOut, stdErr)
 	require.FileExists(t, "temp/manifests/resources/img", "Symlink does not exist in the package as expected.")
 }

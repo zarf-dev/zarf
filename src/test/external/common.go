@@ -5,6 +5,7 @@
 package external
 
 import (
+	"errors"
 	"path"
 	"path/filepath"
 	"strings"
@@ -28,10 +29,11 @@ func createPodInfoPackageWithInsecureSources(t *testing.T, temp string) {
 	require.NoError(t, err, "unable to yq edit helm source")
 	err = exec.CmdWithPrint(zarfBinPath, "tools", "yq", "eval", ".spec.insecure = true", "-i", filepath.Join(temp, "oci", "podinfo-source.yaml"))
 	require.NoError(t, err, "unable to yq edit oci source")
-	exec.CmdWithPrint(zarfBinPath, "package", "create", temp, "--confirm", "--output", temp)
+	err = exec.CmdWithPrint(zarfBinPath, "package", "create", temp, "--confirm", "--output", temp)
+	require.NoError(t, err, "unable to create package")
 }
 
-func verifyWaitSuccess(t *testing.T, timeoutMinutes time.Duration, cmd string, args []string, condition string, onTimeout string) bool {
+func waitForCondition(t *testing.T, timeoutMinutes time.Duration, cmd string, args []string, condition string) error {
 	timeout := time.After(timeoutMinutes * time.Minute)
 	for {
 		// delay check 3 seconds
@@ -39,9 +41,7 @@ func verifyWaitSuccess(t *testing.T, timeoutMinutes time.Duration, cmd string, a
 		select {
 		// on timeout abort
 		case <-timeout:
-			t.Error(onTimeout)
-
-			return false
+			return errors.New("timed out waiting for condition")
 
 			// after delay, try running
 		default:
@@ -52,7 +52,7 @@ func verifyWaitSuccess(t *testing.T, timeoutMinutes time.Duration, cmd string, a
 				t.Log(string(stdOut), err)
 			}
 			if strings.Contains(string(stdOut), condition) {
-				return true
+				return nil
 			}
 		}
 	}

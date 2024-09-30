@@ -51,7 +51,7 @@ func TestNoWait(t *testing.T) {
 	case <-time.After(30 * time.Second):
 		t.Error("Timeout waiting for zarf deploy (it tried to wait)")
 		t.Log("Removing hanging namespace...")
-		_, _, _ = e2e.Kubectl(t, "delete", "namespace", "no-wait", "--force=true", "--wait=false", "--grace-period=0")
+		_, _, _ = e2e.Kubectl(t, "delete", "namespace", "no-wait", "--force=true", "--wait=false", "--grace-period=0") // TODO(mkcp): intentionally ignored, mark nolint
 	}
 	require.NoError(t, err, stdOut, stdErr)
 

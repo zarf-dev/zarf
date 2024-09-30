@@ -154,10 +154,14 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	// Use Zarf to initialize the cluster
 	initArgs := []string{"init", "--confirm"}
 	initArgs = append(initArgs, inClusterInitCredentialArgs...)
+
 	err := exec.CmdWithPrint(zarfBinPath, initArgs...)
 	suite.NoError(err, "unable to initialize the k8s server with zarf")
+
 	temp := suite.T().TempDir()
-	defer os.Remove(temp)
+	defer func() {
+		suite.NoError(os.RemoveAll(temp), "failed to clean up tempdir")
+	}()
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
 
 	// Deploy the flux example package

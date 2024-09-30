@@ -65,5 +65,5 @@ func TestCreateTemplating(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(filesJSON), "pandas")
 
-	e2e.CleanFiles(pkgName, fileFoldersPkgName)
+	e2e.CleanFiles(t, pkgName, fileFoldersPkgName)
 }

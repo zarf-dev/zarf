@@ -137,45 +137,54 @@ func (suite *PublishCopySkeletonSuite) Test_2_FilePaths() {
 	}
 
 	for _, pkgTar := range pkgTars {
-		var pkg v1alpha1.ZarfPackage
+		// Wrap in a fn to ensure our defers cleanup resources on each iteration
+		func() {
+			var pkg v1alpha1.ZarfPackage
 
-		unpacked := strings.TrimSuffix(pkgTar, ".tar.zst")
-		defer os.RemoveAll(unpacked)
-		defer os.RemoveAll(pkgTar)
-		_, _, err := e2e.Zarf(suite.T(), "tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
-		suite.NoError(err)
-		suite.DirExists(unpacked)
+			unpacked := strings.TrimSuffix(pkgTar, ".tar.zst")
+			_, _, err := e2e.Zarf(suite.T(), "tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
+			suite.NoError(err)
+			suite.DirExists(unpacked)
 
-		// Verify skeleton contains kustomize-generated manifests.
-		if strings.HasSuffix(pkgTar, "zarf-package-test-compose-package-skeleton-0.0.1.tar.zst") {
-			kustomizeGeneratedManifests := []string{
-				"kustomization-connect-service-0.yaml",
-				"kustomization-connect-service-1.yaml",
-				"kustomization-connect-service-two-0.yaml",
+			// Cleanup resources
+			defer func() {
+				suite.NoError(os.RemoveAll(unpacked))
+			}()
+			defer func() {
+				suite.NoError(os.RemoveAll(pkgTar))
+			}()
+
+			// Verify skeleton contains kustomize-generated manifests.
+			if strings.HasSuffix(pkgTar, "zarf-package-test-compose-package-skeleton-0.0.1.tar.zst") {
+				kustomizeGeneratedManifests := []string{
+					"kustomization-connect-service-0.yaml",
+					"kustomization-connect-service-1.yaml",
+					"kustomization-connect-service-two-0.yaml",
+				}
+				manifestDir := filepath.Join(unpacked, "components", "test-compose-package", "manifests")
+				for _, manifest := range kustomizeGeneratedManifests {
+					manifestPath := filepath.Join(manifestDir, manifest)
+					suite.FileExists(manifestPath, "expected to find kustomize-generated manifest: %q", manifestPath)
+					var configMap corev1.ConfigMap
+					err := utils.ReadYaml(manifestPath, &configMap)
+					suite.NoError(err)
+					suite.Equal("ConfigMap", configMap.Kind, "expected manifest %q to be of kind ConfigMap", manifestPath)
+				}
 			}
-			manifestDir := filepath.Join(unpacked, "components", "test-compose-package", "manifests")
-			for _, manifest := range kustomizeGeneratedManifests {
-				manifestPath := filepath.Join(manifestDir, manifest)
-				suite.FileExists(manifestPath, "expected to find kustomize-generated manifest: %q", manifestPath)
-				var configMap corev1.ConfigMap
-				err := utils.ReadYaml(manifestPath, &configMap)
-				suite.NoError(err)
-				suite.Equal("ConfigMap", configMap.Kind, "expected manifest %q to be of kind ConfigMap", manifestPath)
+
+			err = utils.ReadYaml(filepath.Join(unpacked, layout.ZarfYAML), &pkg)
+			suite.NoError(err)
+			suite.NotNil(pkg)
+
+			components := pkg.Components
+			suite.NotNil(components)
+
+			isSkeleton := false
+			if strings.Contains(pkgTar, "-skeleton-") {
+				isSkeleton = true
 			}
-		}
-
-		err = utils.ReadYaml(filepath.Join(unpacked, layout.ZarfYAML), &pkg)
-		suite.NoError(err)
-		suite.NotNil(pkg)
-
-		components := pkg.Components
-		suite.NotNil(components)
-
-		isSkeleton := false
-		if strings.Contains(pkgTar, "-skeleton-") {
-			isSkeleton = true
-		}
-		suite.verifyComponentPaths(unpacked, components, isSkeleton)
+			suite.verifyComponentPaths(unpacked, components, isSkeleton)
+		}()
 	}
 }
 
