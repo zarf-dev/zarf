@@ -28,7 +28,7 @@ func TestMultiPartPackage(t *testing.T) {
 		outputFile = "multi-part-demo.dat"
 	)
 
-	e2e.CleanFiles(deployPath, outputFile)
+	e2e.CleanFiles(t, deployPath, outputFile)
 
 	// Create the package with a max size of 20MB
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", createPath, "--max-package-size=20", "--confirm")
@@ -73,8 +73,8 @@ func TestMultiPartPackage(t *testing.T) {
 	err = helpers.SHAsMatch(parts[0], pkgData.Sha256Sum)
 	require.NoError(t, err)
 
-	e2e.CleanFiles(parts...)
-	e2e.CleanFiles(outputFile)
+	e2e.CleanFiles(t, parts...)
+	e2e.CleanFiles(t, outputFile)
 }
 
 func TestReproducibleTarballs(t *testing.T) {
@@ -98,7 +98,7 @@ func TestReproducibleTarballs(t *testing.T) {
 	err = utils.ReadYaml(filepath.Join(unpack1, layout.ZarfYAML), &pkg1)
 	require.NoError(t, err)
 
-	e2e.CleanFiles(unpack1, tb)
+	e2e.CleanFiles(t, unpack1, tb)
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", createPath, "--confirm", "--output", tmp)
 	require.NoError(t, err, stdOut, stdErr)

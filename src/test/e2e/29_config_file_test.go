@@ -23,7 +23,7 @@ func TestConfigFile(t *testing.T) {
 		envKey = "ZARF_CONFIG"
 	)
 
-	e2e.CleanFiles(path)
+	e2e.CleanFiles(t, path)
 
 	// Test the config file environment variable
 	t.Setenv(envKey, filepath.Join(dir, config))
@@ -38,7 +38,7 @@ func TestConfigFile(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Cleanup
-	e2e.CleanFiles(path)
+	e2e.CleanFiles(t, path)
 }
 
 func configFileTests(t *testing.T, dir, path string) {

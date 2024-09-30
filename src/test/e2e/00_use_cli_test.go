@@ -27,9 +27,9 @@ func TestUseCLI(t *testing.T) {
 		expectedShasum := "61b50898f982d015ed87093ba822de0fe011cec6dd67db39f99d8c56391a6109\n"
 		shasumTestFilePath := "shasum-test-file"
 
-		e2e.CleanFiles(shasumTestFilePath)
+		e2e.CleanFiles(t, shasumTestFilePath)
 		t.Cleanup(func() {
-			e2e.CleanFiles(shasumTestFilePath)
+			e2e.CleanFiles(t, shasumTestFilePath)
 		})
 
 		err := os.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), helpers.ReadWriteUser)
@@ -139,7 +139,7 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, "binaries/eksctl_Darwin_arm64")
 		require.FileExists(t, "binaries/eksctl_Linux_x86_64")
 
-		e2e.CleanFiles("binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", path, "eks.yaml")
+		e2e.CleanFiles(t, "binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", path, "eks.yaml")
 	})
 
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {
@@ -165,7 +165,7 @@ func TestUseCLI(t *testing.T) {
 			secondFile = "second-choice-file.txt"
 		)
 		t.Cleanup(func() {
-			e2e.CleanFiles(firstFile, secondFile)
+			e2e.CleanFiles(t, firstFile, secondFile)
 		})
 		path := fmt.Sprintf("build/zarf-package-component-choice-%s.tar.zst", e2e.Arch)
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
@@ -198,7 +198,7 @@ func TestUseCLI(t *testing.T) {
 		tlsCert := "tls.crt"
 		tlsKey := "tls.key"
 		t.Cleanup(func() {
-			e2e.CleanFiles(tlsCA, tlsCert, tlsKey)
+			e2e.CleanFiles(t, tlsCA, tlsCert, tlsKey)
 		})
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "gen-pki", "github.com", "--sub-alt-name", "google.com")
 		require.NoError(t, err, stdOut, stdErr)

@@ -66,7 +66,7 @@ func TestECRPublishing(t *testing.T) {
 	// Validate that we can pull the package down from ECR
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", upstreamPackageURL)
 	require.NoError(t, err, stdOut, stdErr)
-	defer e2e.CleanFiles(testPackageFileName)
+	defer e2e.CleanFiles(t, testPackageFileName)
 
 	// Ensure we get a warning when trying to inspect the package without providing the public key
 	// and the insecure flag

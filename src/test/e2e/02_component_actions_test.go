@@ -26,8 +26,8 @@ func TestComponentActions(t *testing.T) {
 	}
 
 	allArtifacts := append(deployArtifacts, createArtifacts...)
-	e2e.CleanFiles(allArtifacts...)
-	defer e2e.CleanFiles(allArtifacts...)
+	e2e.CleanFiles(t, allArtifacts...)
+	defer e2e.CleanFiles(t, allArtifacts...)
 
 	/* Create */
 	// Try creating the package to test the onCreate actions.
@@ -111,7 +111,7 @@ func TestComponentActions(t *testing.T) {
 		require.FileExists(t, deployWithEnvVarArtifact)
 
 		// Remove the env var file at the end of the test
-		e2e.CleanFiles(deployWithEnvVarArtifact)
+		e2e.CleanFiles(t, deployWithEnvVarArtifact)
 	})
 
 	t.Run("action on-deploy-with-template", func(t *testing.T) {
@@ -128,7 +128,7 @@ func TestComponentActions(t *testing.T) {
 		require.Contains(t, string(outTemplated), "The snake says ###ZARF_VAR_SNAKE_SOUND###")
 
 		// Remove the templated file so we can test with dynamic variables
-		e2e.CleanFiles(deployTemplatedArtifact)
+		e2e.CleanFiles(t, deployTemplatedArtifact)
 
 		// Test using a templated file with dynamic variables
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-template-use-of-variable,on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables", "--confirm")
@@ -140,7 +140,7 @@ func TestComponentActions(t *testing.T) {
 		require.Contains(t, string(outTemplated), "The snake says hiss")
 
 		// Remove the templated file at the end of the test
-		e2e.CleanFiles(deployTemplatedArtifact)
+		e2e.CleanFiles(t, deployTemplatedArtifact)
 	})
 
 	t.Run("action on-deploy-immediate-failure", func(t *testing.T) {

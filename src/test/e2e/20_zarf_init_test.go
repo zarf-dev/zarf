@@ -32,7 +32,7 @@ func TestZarfInit(t *testing.T) {
 		expectedErrorMessage  = "unable to run component before action: command \"Check that the host architecture matches the package architecture\""
 	)
 	t.Cleanup(func() {
-		e2e.CleanFiles(mismatchedInitPackage)
+		e2e.CleanFiles(t, mismatchedInitPackage)
 	})
 
 	if runtime.GOOS == "linux" {

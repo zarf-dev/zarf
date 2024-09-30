@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"regexp"
 	"runtime"
@@ -95,12 +94,10 @@ func (e2e *ZarfE2ETest) Kubectl(t *testing.T, args ...string) (string, string, e
 }
 
 // CleanFiles removes files and directories that have been created during the test.
-func (e2e *ZarfE2ETest) CleanFiles(files ...string) {
+func (e2e *ZarfE2ETest) CleanFiles(t *testing.T, files ...string) {
 	for _, file := range files {
 		err := os.RemoveAll(file)
-		if err != nil {
-			slog.Debug("Unable to cleanup files", "files", files, "error", err)
-		}
+		require.NoError(t, err)
 	}
 }
 

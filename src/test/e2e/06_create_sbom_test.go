@@ -29,7 +29,7 @@ func TestCreateSBOM(t *testing.T) {
 	require.FileExists(t, filepath.Join(sbomPath, "dos-games", "ghcr.io_zarf-dev_doom-game_0.0.1.json"))
 
 	// Clean the SBOM path so it is force to be recreated
-	e2e.CleanFiles(sbomPath)
+	e2e.CleanFiles(t, sbomPath)
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName, "--sbom-out", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
@@ -68,5 +68,5 @@ func TestCreateSBOM(t *testing.T) {
 	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "compare.html"))
 	require.NoError(t, err)
 
-	e2e.CleanFiles(pkgName)
+	e2e.CleanFiles(t, pkgName)
 }

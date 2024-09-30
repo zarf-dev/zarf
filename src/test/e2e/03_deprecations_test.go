@@ -24,14 +24,14 @@ func TestDeprecatedComponentScripts(t *testing.T) {
 		"test-deprecated-deploy-after-hook.txt",
 	}
 	allArtifacts := append(deployArtifacts, prepareArtifact)
-	e2e.CleanFiles(allArtifacts...)
-	defer e2e.CleanFiles(allArtifacts...)
+	e2e.CleanFiles(t, allArtifacts...)
+	defer e2e.CleanFiles(t, allArtifacts...)
 
 	// 1. Try creating the package to test the create scripts
 	testPackagePath := fmt.Sprintf("%s/zarf-package-deprecated-component-scripts-%s.tar.zst", testPackageDirPath, e2e.Arch)
 	outputFlag := fmt.Sprintf("-o=%s", testPackageDirPath)
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", testPackageDirPath, outputFlag, "--confirm")
-	defer e2e.CleanFiles(testPackagePath)
+	defer e2e.CleanFiles(t, testPackagePath)
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Component '1-test-deprecated-prepare-scripts' is using scripts")
 	require.Contains(t, stdErr, "Component '2-test-deprecated-deploy-scripts' is using scripts")
@@ -71,8 +71,8 @@ func TestDeprecatedSetAndPackageVariables(t *testing.T) {
 		"test-deprecated-deploy-after-hook.txt",
 	}
 	allArtifacts := append(deployArtifacts, prepareArtifact)
-	e2e.CleanFiles(allArtifacts...)
-	defer e2e.CleanFiles(allArtifacts...)
+	e2e.CleanFiles(t, allArtifacts...)
+	defer e2e.CleanFiles(t, allArtifacts...)
 
 	// 2. Try creating the package to test the create scripts
 	testPackagePath := fmt.Sprintf("%s/zarf-package-deprecated-set-variable-%s.tar.zst", testPackageDirPath, e2e.Arch)
@@ -85,7 +85,7 @@ func TestDeprecatedSetAndPackageVariables(t *testing.T) {
 
 	// Check that the command displays a warning on create
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", testPackageDirPath, outputFlag, "--confirm", "--set", "ECHO=Zarf-The-Axolotl")
-	defer e2e.CleanFiles(testPackagePath)
+	defer e2e.CleanFiles(t, testPackagePath)
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "Component '1-test-deprecated-set-variable' is using setVariable")
 	require.Contains(t, stdErr, "deprecated syntax ###ZARF_PKG_VAR_ECHO###")

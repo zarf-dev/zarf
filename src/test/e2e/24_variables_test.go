@@ -24,7 +24,7 @@ func TestVariables(t *testing.T) {
 
 	tfPath := "modified-terraform.tf"
 
-	e2e.CleanFiles(tfPath, evilPath)
+	e2e.CleanFiles(t, tfPath, evilPath)
 
 	// Test that specifying an invalid setVariable value results in an error
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", evilSrc, "--set", "NUMB3R5=K1TT3H", "--confirm")
@@ -93,5 +93,5 @@ func TestVariables(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	e2e.CleanFiles(tfPath, evilPath)
+	e2e.CleanFiles(t, tfPath, evilPath)
 }

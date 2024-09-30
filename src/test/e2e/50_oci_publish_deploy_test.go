@@ -37,7 +37,7 @@ func (suite *PublishDeploySuiteTestSuite) SetupSuite() {
 
 func (suite *PublishDeploySuiteTestSuite) TearDownSuite() {
 	local := fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch)
-	e2e.CleanFiles(local)
+	e2e.CleanFiles(suite.Suite.T(), local)
 }
 
 func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
@@ -103,7 +103,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_2_Pull_And_Deploy() {
 	suite.T().Log("E2E: Package Pull oci:// && Package Deploy tarball")
 
 	local := fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch)
-	defer e2e.CleanFiles(local)
+	defer e2e.CleanFiles(suite.T(), local)
 	// Verify the package was pulled.
 	suite.FileExists(local)
 
