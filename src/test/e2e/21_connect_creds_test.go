@@ -71,12 +71,12 @@ func TestMetrics(t *testing.T) {
 	client := &http.Client{Transport: tr}
 	httpsEndpoint := strings.ReplaceAll(tunnel.HTTPEndpoint(), "http", "https")
 	resp, err := client.Get(httpsEndpoint + "/metrics")
-	defer func() {
-		require.NoError(t, resp.Body.Close())
-	}()
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		require.NoError(t, resp.Body.Close())
+	}()
 
 	// Read the response body
 	body, err := io.ReadAll(resp.Body)
