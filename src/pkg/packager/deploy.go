@@ -470,9 +470,9 @@ func (p *Packager) processComponentFiles(component v1alpha1.ZarfComponent, pkgLo
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
-		err2 := helpers.CreatePathAndCopy(fileLocation, file.Target)
-		if err2 != nil {
-			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err2)
+		err = helpers.CreatePathAndCopy(fileLocation, file.Target)
+		if err != nil {
+			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
 		}
 
 		// Loop over all symlinks and create them
