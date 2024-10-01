@@ -23,6 +23,7 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 	if err != nil {
 		return err
 	}
+	// Ensure we close our sourcefile, even if we error out.
 	defer func() {
 		err2 := srcFile.Close()
 		err = errors.Join(err, err2)
@@ -50,7 +51,6 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 		if err != nil {
 			return err
 		}
-		// FIXME(mkcp): Does removing the defer-double close break windows?
 		defer func(dstFile *os.File) {
 			err2 := dstFile.Close()
 			err = errors.Join(err, err2)
@@ -73,14 +73,13 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 			return err
 		}
 
-		// FIXME(mkcp): Does inline close fix windows?
-		// err = dstFile.Close()
-		// if err != nil {
-		// 	return err
-		// }
-
 		// EOF error could be returned on 0 bytes written.
 		if written == 0 {
+			// NOTE(mkcp): We have to close the file before removing it or windows will break with a file-in-use err.
+			err = dstFile.Close()
+			if err != nil {
+				return err
+			}
 			err = os.Remove(path)
 			if err != nil {
 				return err
@@ -95,11 +94,11 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 	}
 
 	// Remove original file
-	// FIXME(mkcp): This should be a defer above
-	// err = srcFile.Close()
-	// if err != nil {
-	// 	return err
-	// }
+	// NOTE(mkcp): We have to close the file before removing or windows can break with a file-in-use err.
+	err = srcFile.Close()
+	if err != nil {
+		return err
+	}
 	err = os.Remove(srcPath)
 	if err != nil {
 		return err
