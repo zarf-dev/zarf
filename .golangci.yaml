@@ -59,6 +59,7 @@ linters-settings:
   testifylint:
     enable-all: true
   errcheck:
+    check-blank: true
     check-type-assertions: true
     exclude-functions:
       - (*github.com/spf13/cobra.Command).Help
@@ -68,10 +69,14 @@ linters-settings:
 issues:
   # Revive rules that are disabled by default.
   include:
+    - EXC0001
     - EXC0012
     - EXC0013
     - EXC0014
     - EXC0015
-  # Exclude linting code copied from Helm.
   exclude-dirs:
-    - "src/cmd/tools/helm"
+    - "src/cmd/tools/helm"     # Exclude linting code copied from Helm.
+    - "src/pkg/packager"       # TODO(mkcp): Delete packager rules once refactor is complete
+    - "src/internal/packager"  # TODO(mkcp): Delete packager rules once refactor is complete
+    - "src/internal/packager2" # TODO(mkcp): Delete packager rules once refactor is complete
+    - "src/extensions"         # TODO(mkcp): Delete this rule once BigBang extension has been extracted
