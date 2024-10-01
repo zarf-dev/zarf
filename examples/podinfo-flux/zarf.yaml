@@ -11,14 +11,14 @@ components:
       - name: flux-install
         namespace: flux
         files:
-          - https://github.com/fluxcd/flux2/releases/download/v2.3.0/install.yaml
+          - https://github.com/fluxcd/flux2/releases/download/v2.4.0/install.yaml
     images:
-      - ghcr.io/fluxcd/helm-controller:v1.0.1
-      - ghcr.io/fluxcd/image-automation-controller:v0.38.0
-      - ghcr.io/fluxcd/image-reflector-controller:v0.32.0
-      - ghcr.io/fluxcd/kustomize-controller:v1.3.0
-      - ghcr.io/fluxcd/notification-controller:v1.3.0
-      - ghcr.io/fluxcd/source-controller:v1.3.0
+      - ghcr.io/fluxcd/helm-controller:v1.1.0
+      - ghcr.io/fluxcd/image-automation-controller:v0.39.0
+      - ghcr.io/fluxcd/image-reflector-controller:v0.33.0
+      - ghcr.io/fluxcd/kustomize-controller:v1.4.0
+      - ghcr.io/fluxcd/notification-controller:v1.4.0
+      - ghcr.io/fluxcd/source-controller:v1.4.1
 
   - name: podinfo-via-flux-git
     description: Example deployment via flux (git) using the famous podinfo example
