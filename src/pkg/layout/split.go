@@ -23,6 +23,11 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err2 := srcFile.Close()
+		err = errors.Join(err, err2)
+	}()
+
 	fi, err := srcFile.Stat()
 	if err != nil {
 		return err
@@ -45,10 +50,11 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 		if err != nil {
 			return err
 		}
-		defer func(dstFile *os.File) {
-			err2 := dstFile.Close()
-			err = errors.Join(err, err2)
-		}(dstFile)
+		// FIXME(mkcp): Does removing the defer-double close break windows?
+		// defer func(dstFile *os.File) {
+		// 	err2 := dstFile.Close()
+		// 	err = errors.Join(err, err2)
+		// }(dstFile)
 
 		written, copyErr := io.CopyN(dstFile, srcFile, int64(chunkSize))
 		if copyErr != nil && !errors.Is(copyErr, io.EOF) {
@@ -89,10 +95,11 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 	}
 
 	// Remove original file
-	err = srcFile.Close()
-	if err != nil {
-		return err
-	}
+	// FIXME(mkcp): This should be a defer above
+	// err = srcFile.Close()
+	// if err != nil {
+	// 	return err
+	// }
 	err = os.Remove(srcPath)
 	if err != nil {
 		return err
