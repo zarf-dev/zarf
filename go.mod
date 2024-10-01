@@ -45,7 +45,7 @@ require (
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.8
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.8
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.8
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.8
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.9
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
@@ -361,7 +361,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jedisct1/go-minisign v0.0.0-20230811132847-661be99b8267 // indirect
-	github.com/jellydator/ttlcache/v3 v3.2.0 // indirect
+	github.com/jellydator/ttlcache/v3 v3.3.0 // indirect
 	github.com/jinzhu/copier v0.4.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
