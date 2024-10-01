@@ -153,14 +153,15 @@ var packageMirrorCmd = &cobra.Command{
 			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 			Filter:                  filter,
 		}
-		pkgPaths, err := packager2.LoadPackage(cmd.Context(), loadOpt)
+		pkgLayout, err := packager2.LoadPackage(cmd.Context(), loadOpt)
 		if err != nil {
 			return err
 		}
-		defer os.RemoveAll(pkgPaths.Base)
+		//nolint: errcheck // ignore
+		defer pkgLayout.Cleanup()
 		mirrorOpt := packager2.MirrorOptions{
 			Cluster:         c,
-			PackagePaths:    *pkgPaths,
+			PkgLayout:       pkgLayout,
 			Filter:          filter,
 			RegistryInfo:    pkgConfig.InitOpts.RegistryInfo,
 			GitInfo:         pkgConfig.InitOpts.GitServer,
