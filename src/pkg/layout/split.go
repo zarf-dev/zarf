@@ -51,10 +51,10 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 			return err
 		}
 		// FIXME(mkcp): Does removing the defer-double close break windows?
-		// defer func(dstFile *os.File) {
-		// 	err2 := dstFile.Close()
-		// 	err = errors.Join(err, err2)
-		// }(dstFile)
+		defer func(dstFile *os.File) {
+			err2 := dstFile.Close()
+			err = errors.Join(err, err2)
+		}(dstFile)
 
 		written, copyErr := io.CopyN(dstFile, srcFile, int64(chunkSize))
 		if copyErr != nil && !errors.Is(copyErr, io.EOF) {
@@ -74,10 +74,10 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 		}
 
 		// FIXME(mkcp): Does inline close fix windows?
-		err = dstFile.Close()
-		if err != nil {
-			return err
-		}
+		// err = dstFile.Close()
+		// if err != nil {
+		// 	return err
+		// }
 
 		// EOF error could be returned on 0 bytes written.
 		if written == 0 {
