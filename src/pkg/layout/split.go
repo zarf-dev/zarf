@@ -23,6 +23,11 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err2 := srcFile.Close()
+		errors.Join(err, err2)
+	}()
+
 	fi, err := srcFile.Stat()
 	if err != nil {
 		return err
@@ -66,10 +71,6 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 		if err != nil {
 			return err
 		}
-		err = dstFile.Close()
-		if err != nil {
-			return err
-		}
 
 		// EOF error could be returned on 0 bytes written.
 		if written == 0 {
@@ -86,11 +87,7 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 		}
 	}
 
-	// Remove original file
-	err = srcFile.Close()
-	if err != nil {
-		return err
-	}
+	// Done, lets cleanup the src
 	err = os.Remove(srcPath)
 	if err != nil {
 		return err
@@ -112,5 +109,5 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 	}
 	progressBar.Successf("Package split across %d files", fileCount+1)
 
-	return err // must return err for defer errors.Join
+	return nil
 }

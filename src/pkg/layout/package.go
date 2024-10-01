@@ -161,7 +161,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 		}
 	}
 
-	return err // must return err here for defer errors.Join
+	return nil
 }
 
 // IsLegacyLayout returns true if the package is using the legacy layout.

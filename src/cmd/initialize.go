@@ -129,7 +129,6 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, er
 		return "", lang.ErrInitNotFound
 	}
 
-	var confirmDownload bool
 	url := zoci.GetInitPackageURL(config.CLIVersion)
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
@@ -137,15 +136,12 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, er
 
 	message.Note(lang.CmdInitPullNote)
 
-	// Prompt the user if --confirm not specified
-	// REVIEW(mkcp): It looks like this condition can't be met - maybe --confirm was removed at some point?
-	if !confirmDownload {
-		prompt := &survey.Confirm{
-			Message: lang.CmdInitPullConfirm,
-		}
-		if err := survey.AskOne(prompt, &confirmDownload); err != nil {
-			return "", fmt.Errorf("confirm download canceled: %w", err)
-		}
+	var confirmDownload bool
+	prompt := &survey.Confirm{
+		Message: lang.CmdInitPullConfirm,
+	}
+	if err := survey.AskOne(prompt, &confirmDownload); err != nil {
+		return "", fmt.Errorf("confirm download canceled: %w", err)
 	}
 
 	// If the user wants to download the init-package, download it

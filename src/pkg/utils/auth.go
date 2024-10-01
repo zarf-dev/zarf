@@ -55,7 +55,7 @@ func FindAuthForHost(baseURL string) (*Credential, error) {
 }
 
 // credentialParser parses a user's .git-credentials file to find git creds for hosts.
-func credentialParser(path string) ([]Credential, error) {
+func credentialParser(path string) (_ []Credential, err error) {
 	file, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
@@ -63,6 +63,10 @@ func credentialParser(path string) ([]Credential, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		err2 := file.Close()
+		errors.Join(err, err2)
+	}()
 
 	var credentials []Credential
 	scanner := bufio.NewScanner(file)
@@ -80,10 +84,6 @@ func credentialParser(path string) ([]Credential, error) {
 			},
 		}
 		credentials = append(credentials, credential)
-	}
-	err = file.Close()
-	if err != nil {
-		return nil, err
 	}
 	return credentials, nil
 }

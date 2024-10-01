@@ -139,5 +139,5 @@ func (vc *VariableConfig) ReplaceTextTemplate(path string) (err error) {
 	if err != nil {
 		return err
 	}
-	return err // must return err for defer errors.Join
+	return nil
 }

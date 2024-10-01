@@ -78,7 +78,7 @@ var destroyCmd = &cobra.Command{
 				// Try to remove the script, but ignore any errors and debug log them
 				err = os.Remove(script)
 				if err != nil {
-					message.Debug("Unable to remove script", "script", script, "error", err)
+					message.WarnErr(err, fmt.Sprintf("Unable to remove script. script=%s", script))
 				}
 			}
 		} else {

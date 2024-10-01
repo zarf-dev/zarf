@@ -223,7 +223,7 @@ var devSha256SumCmd = &cobra.Command{
 			return errors.Join(hashErr, err)
 		}
 		fmt.Println(hash)
-		return err // Must return err for defer errors.Join
+		return nil
 	},
 }
 

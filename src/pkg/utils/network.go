@@ -122,5 +122,5 @@ func httpGetFile(url string, destinationFile *os.File) (err error) {
 
 	title = fmt.Sprintf("Downloaded %s", url)
 	progressBar.Successf("%s", title)
-	return err // Must return err for defer errors.Join
+	return nil
 }
