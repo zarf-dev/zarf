@@ -60,10 +60,10 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	// Teardown any leftovers from previous tests
 	// NOTE(mkcp): We dogsled these errors because some of these commands will error if they don't cleanup a resource,
 	//   which is ok. A better solution would be checking for none or unexpected kinds of errors.
-	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)   // TODO(mkcp): intentionally ignored, mark nolint
-	_ = exec.CmdWithPrint("docker", "rm", "-f", "k3d-"+registryHost) // TODO(mkcp): intentionally ignored, mark nolint
-	_ = exec.CmdWithPrint("docker", "compose", "down")               // TODO(mkcp): intentionally ignored, mark nolint
-	_ = exec.CmdWithPrint("docker", "network", "remove", network)    // TODO(mkcp): intentionally ignored, mark nolint
+	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)   //nolint:errcheck
+	_ = exec.CmdWithPrint("docker", "rm", "-f", "k3d-"+registryHost) //nolint:errcheck
+	_ = exec.CmdWithPrint("docker", "compose", "down")               //nolint:errcheck
+	_ = exec.CmdWithPrint("docker", "network", "remove", network)    //nolint:errcheck
 
 	// Setup a network for everything to live inside
 	err := exec.CmdWithPrint("docker", "network", "create", "--driver=bridge", "--subnet="+subnet, "--gateway="+gateway, network)
