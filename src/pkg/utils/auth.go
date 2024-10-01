@@ -65,7 +65,7 @@ func credentialParser(path string) (_ []Credential, err error) {
 	}
 	defer func() {
 		err2 := file.Close()
-		errors.Join(err, err2)
+		err = errors.Join(err, err2)
 	}()
 
 	var credentials []Credential

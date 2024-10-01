@@ -25,7 +25,7 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 	}
 	defer func() {
 		err2 := srcFile.Close()
-		errors.Join(err, err2)
+		err = errors.Join(err, err2)
 	}()
 
 	fi, err := srcFile.Stat()
