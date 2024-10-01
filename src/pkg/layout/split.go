@@ -26,7 +26,10 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 	// Ensure we close our sourcefile, even if we error out.
 	defer func() {
 		err2 := srcFile.Close()
-		err = errors.Join(err, err2)
+		// Ignore if file is already closed
+		if !errors.Is(err2, os.ErrClosed) {
+			err = errors.Join(err, err2)
+		}
 	}()
 
 	fi, err := srcFile.Stat()
@@ -53,7 +56,10 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 		}
 		defer func(dstFile *os.File) {
 			err2 := dstFile.Close()
-			err = errors.Join(err, err2)
+			// Ignore if file is already closed
+			if !errors.Is(err2, os.ErrClosed) {
+				err = errors.Join(err, err2)
+			}
 		}(dstFile)
 
 		written, copyErr := io.CopyN(dstFile, srcFile, int64(chunkSize))
