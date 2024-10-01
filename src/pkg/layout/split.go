@@ -45,10 +45,10 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 		if err != nil {
 			return err
 		}
-		// defer func(dstFile *os.File) {
-		// 	err2 := dstFile.Close()
-		// 	err = errors.Join(err, err2)
-		// }(dstFile)
+		defer func(dstFile *os.File) {
+			err2 := dstFile.Close()
+			err = errors.Join(err, err2)
+		}(dstFile)
 
 		written, copyErr := io.CopyN(dstFile, srcFile, int64(chunkSize))
 		if copyErr != nil && !errors.Is(copyErr, io.EOF) {
@@ -67,7 +67,7 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 			return err
 		}
 
-		// Does inline close fix windows?
+		// FIXME(mkcp): Does inline close fix windows?
 		err = dstFile.Close()
 		if err != nil {
 			return err
