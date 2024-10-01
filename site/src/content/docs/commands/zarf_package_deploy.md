@@ -53,4 +53,5 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
 
 ### SEE ALSO
 
-- [zarf package](/commands/zarf_package/) - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf package](/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
+
