@@ -139,7 +139,6 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	if !h.chart.NoWait {
 		// This re-uses the timeout from helm. This will increase the total amount of time a timeout can take
 		// However it is unlikely this step will take long
-		// The other option is to use the same context with as the helm install, this gets tricky with retries
 		healthChecksCtx, cancel := context.WithTimeout(ctx, h.timeout)
 		defer cancel()
 		spinner.Updatef("Running health checks")
