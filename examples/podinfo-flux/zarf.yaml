@@ -108,6 +108,4 @@ x-mdx: |
 
   The Zarf agent will only automatically add the `insecure` key if the internal registry is used. If you are using a http registry outside of the cluster you will need to manually add this key.
 
-  Due to an upstream bug, HelmRepositories with an insecure registry must use IP address instead of a hostname. This is not an issue with the internal Zarf registry, which is always an IP address, but will cause Flux HelmRepositories to break if Zarf is using an external http registry with a hostname.
-
   :::
