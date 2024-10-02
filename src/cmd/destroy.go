@@ -30,6 +30,7 @@ var destroyCmd = &cobra.Command{
 	Aliases: []string{"d"},
 	Short:   lang.CmdDestroyShort,
 	Long:    lang.CmdDestroyLong,
+	// TODO(mkcp): refactor and de-nest this function.
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
 		timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
@@ -57,7 +58,10 @@ var destroyCmd = &cobra.Command{
 
 			// Run all the scripts!
 			pattern := regexp.MustCompile(`(?mi)zarf-clean-.+\.sh$`)
-			scripts, _ := helpers.RecursiveFileList(config.ZarfCleanupScriptsPath, pattern, true)
+			scripts, err := helpers.RecursiveFileList(config.ZarfCleanupScriptsPath, pattern, true)
+			if err != nil {
+				return err
+			}
 			// Iterate over all matching zarf-clean scripts and exec them
 			for _, script := range scripts {
 				// Run the matched script
@@ -71,8 +75,11 @@ var destroyCmd = &cobra.Command{
 					return fmt.Errorf("received an error when executing the script %s: %w", script, err)
 				}
 
-				// Try to remove the script, but ignore any errors
-				_ = os.Remove(script)
+				// Try to remove the script, but ignore any errors and debug log them
+				err = os.Remove(script)
+				if err != nil {
+					message.WarnErr(err, fmt.Sprintf("Unable to remove script. script=%s", script))
+				}
 			}
 		} else {
 			// Perform chart uninstallation

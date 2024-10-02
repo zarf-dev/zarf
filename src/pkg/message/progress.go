@@ -22,10 +22,11 @@ type ProgressBar struct {
 // NewProgressBar creates a new ProgressBar instance from a total value and a format.
 func NewProgressBar(total int64, text string) *ProgressBar {
 	var progress *pterm.ProgressbarPrinter
+	var err error
 	if NoProgress {
 		Info(text)
 	} else {
-		progress, _ = pterm.DefaultProgressbar.
+		progress, err = pterm.DefaultProgressbar.
 			WithTotal(int(total)).
 			WithShowCount(false).
 			WithTitle(padding + text).
@@ -33,6 +34,9 @@ func NewProgressBar(total int64, text string) *ProgressBar {
 			WithMaxWidth(TermWidth).
 			WithWriter(os.Stderr).
 			Start()
+		if err != nil {
+			WarnErr(err, "Unable to create default progressbar")
+		}
 	}
 
 	return &ProgressBar{
@@ -53,7 +57,10 @@ func (p *ProgressBar) Updatef(format string, a ...any) {
 
 // Failf marks the ProgressBar as failed in the CLI.
 func (p *ProgressBar) Failf(format string, a ...any) {
-	p.Close()
+	err := p.Close()
+	if err != nil {
+		Debug("unable to close failed progressbar", "error", err)
+	}
 	Warnf(format, a...)
 }
 
@@ -103,7 +110,10 @@ func (p *ProgressBar) Write(data []byte) (int, error) {
 
 // Successf marks the ProgressBar as successful in the CLI.
 func (p *ProgressBar) Successf(format string, a ...any) {
-	p.Close()
+	err := p.Close()
+	if err != nil {
+		Debug("unable to close successful progressbar", "error", err)
+	}
 	pterm.Success.Printfln(format, a...)
 }
 
