@@ -160,7 +160,7 @@ var packageMirrorCmd = &cobra.Command{
 		defer func() {
 			// Cleanup package files
 			err = errors.Join(err, pkgLayout.Cleanup())
-    }()
+		}()
 
 		mirrorOpt := packager2.MirrorOptions{
 			Cluster:         c,
