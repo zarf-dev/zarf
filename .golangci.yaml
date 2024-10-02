@@ -79,4 +79,3 @@ issues:
     - "src/pkg/packager"       # TODO(mkcp): Delete packager rules once refactor is complete
     - "src/internal/packager"  # TODO(mkcp): Delete packager rules once refactor is complete
     - "src/internal/packager2" # TODO(mkcp): Delete packager rules once refactor is complete
-    - "src/extensions"         # TODO(mkcp): Delete this rule once BigBang extension has been extracted
