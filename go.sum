@@ -221,8 +221,8 @@ github.com/AliyunContainerService/ack-ram-tool/pkg/credentials/alibabacloudsdkgo
 github.com/AliyunContainerService/ack-ram-tool/pkg/credentials/alibabacloudsdkgo/helper v0.2.0/go.mod h1:GgeIE+1be8Ivm7Sh4RgwI42aTtC9qrcj+Y9Y6CjJhJs=
 github.com/Azure/azure-sdk-for-go v68.0.0+incompatible h1:fcYLmCpyNYRnvJbPerq7U0hS+6+I79yEDJBqVNcqUzU=
 github.com/Azure/azure-sdk-for-go v68.0.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
-github.com/Azure/azure-sdk-for-go/sdk/azcore v1.13.0 h1:GJHeeA2N7xrG3q30L2UXDyuWRzDM900/65j70wcM4Ww=
-github.com/Azure/azure-sdk-for-go/sdk/azcore v1.13.0/go.mod h1:l38EPgmsp71HHLq9j7De57JcKOWPyhrsW1Awm1JS6K0=
+github.com/Azure/azure-sdk-for-go/sdk/azcore v1.14.0 h1:nyQWyZvwGTvunIMxi1Y9uXkcyr+I7TeNrr/foo4Kpk8=
+github.com/Azure/azure-sdk-for-go/sdk/azcore v1.14.0/go.mod h1:l38EPgmsp71HHLq9j7De57JcKOWPyhrsW1Awm1JS6K0=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.7.0 h1:tfLQ34V6F7tVSwoTf/4lH5sE0o6eCJuNDTmH09nDpbc=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.7.0/go.mod h1:9kIvujWAA58nmPmWB1m23fyWic1kYZMxD9CxaWn4Qpg=
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.10.0 h1:ywEEhmNahHBihViHepv3xPBn1663uRv2t2q/ESv9seY=
@@ -1565,8 +1565,8 @@ github.com/sigstore/sigstore-go v0.6.1 h1:tGkkv1oDIER+QYU5MrjqlttQOVDWfSkmYwMqkJ
 github.com/sigstore/sigstore-go v0.6.1/go.mod h1:Xe5GHmUeACRFbomUWzVkf/xYCn8xVifb9DgqJrV2dIw=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.8 h1:2zHmUvaYCwV6LVeTo+OAkTm8ykOGzA9uFlAjwDPAUWM=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.8/go.mod h1:OEhheBplZinUsm7W9BupafztVZV3ldkAxEHbpAeC0Pk=
-github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.8 h1:RKk4Z+qMaLORUdT7zntwMqKiYAej1VQlCswg0S7xNSY=
-github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.8/go.mod h1:dMJdlBWKHMu2xf0wIKpbo7+QfG+RzVkBB3nHP8EMM5o=
+github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.9 h1:eXFm3cte0hvxxYsvGpCMd7aBusEgKJdlUw1Fb5AZQpw=
+github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.9/go.mod h1:RYy9GKnFKKwqbg3Uc6rUyhQdichSVkFlfxnY6f7cAWc=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.8 h1:89Xtxj8oqZt3UlSpCP4wApFvnQ2Z/dgowW5QOVhQigI=
 github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.8/go.mod h1:Wa4xn/H3pU/yW/6tHiMXTpObBtBSGC5q29KYFEPKN6o=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.9 h1:E+bvFTS6uM//iSAeneNj5pubzntQmio/yAKFzmRzzD0=
