@@ -6,7 +6,6 @@ package packager
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 
