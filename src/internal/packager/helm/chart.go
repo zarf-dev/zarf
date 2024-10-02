@@ -63,12 +63,14 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	histClient := action.NewHistory(h.actionConfig)
 	var release *release.Release
 
+	var helmOpStart time.Time
 	err = retry.Do(func() error {
 		var err error
 
 		releases, histErr := histClient.Run(h.chart.ReleaseName)
 
 		spinner.Updatef("Checking for existing helm deployment")
+		helmOpStart = time.Now()
 
 		if errors.Is(histErr, driver.ErrReleaseNotFound) {
 			// No prior release, try to install it.
@@ -137,9 +139,9 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		})
 	}
 	if !h.chart.NoWait {
-		// This re-uses the timeout from helm. This will increase the total amount of time a timeout can take
-		// However it is unlikely this step will take long
-		healthChecksCtx, cancel := context.WithTimeout(ctx, h.timeout)
+		// Ensure we don't go past the timeout by getting the time since the helm operation started
+		healthCheckTimeout := h.timeout - time.Since(helmOpStart)
+		healthChecksCtx, cancel := context.WithTimeout(ctx, healthCheckTimeout)
 		defer cancel()
 		spinner.Updatef("Running health checks")
 		if err := healthchecks.Run(healthChecksCtx, h.cluster.Watcher, healthChecks); err != nil {
