@@ -21,14 +21,6 @@ components:
       name: import-component-oci
       path: oci-import
 
-  # Test big bang extension files
-  - name: import-big-bang
-    description: "import-big-bang == ###ZARF_COMPONENT_NAME###"
-    required: false
-    import:
-      name: bigbang
-      url: oci://localhost:31888/big-bang-min:2.10.0
-
   # Test file imports including cosignKeyPath
   - name: file-imports
     description: "file-imports == ###ZARF_COMPONENT_NAME###"
