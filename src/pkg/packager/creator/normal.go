@@ -21,7 +21,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/extensions/bigbang"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
@@ -84,12 +83,6 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 	}
 
 	warnings = append(warnings, templateWarnings...)
-
-	// After templates are filled process any create extensions
-	pkg.Components, err = pc.processExtensions(ctx, pkg.Components, src, pkg.Metadata.YOLO)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, nil, err
-	}
 
 	// If we are creating a differential package, remove duplicate images and repos.
 	if pc.createOpts.DifferentialPackagePath != "" {
@@ -335,27 +328,6 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		}
 	}
 	return nil
-}
-
-func (pc *PackageCreator) processExtensions(ctx context.Context, components []v1alpha1.ZarfComponent, layout *layout.PackagePaths, isYOLO bool) (processedComponents []v1alpha1.ZarfComponent, err error) {
-	// Create component paths and process extensions for each component.
-	for _, c := range components {
-		componentPaths, err := layout.Components.Create(c)
-		if err != nil {
-			return nil, err
-		}
-
-		// Big Bang
-		if c.Extensions.BigBang != nil {
-			if c, err = bigbang.Run(ctx, isYOLO, componentPaths, c); err != nil {
-				return nil, fmt.Errorf("unable to process bigbang extension: %w", err)
-			}
-		}
-
-		processedComponents = append(processedComponents, c)
-	}
-
-	return processedComponents, nil
 }
 
 func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.ZarfComponent, dst *layout.PackagePaths) error {

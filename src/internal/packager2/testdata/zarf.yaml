@@ -5,5 +5,10 @@ metadata:
 components:
   - name: test
     required: true
+    manifests:
+      - name: deployment
+        namespace: nginx
+        files:
+          - deployment.yaml
     images:
       - docker.io/library/alpine:3.20

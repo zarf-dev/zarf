@@ -89,7 +89,7 @@ func credentialParser(path string) (_ []Credential, err error) {
 }
 
 // netrcParser parses a user's .netrc file using the method curl did pre 7.84.0: https://daniel.haxx.se/blog/2022/05/31/netrc-pains/.
-func netrcParser(path string) ([]Credential, error) {
+func netrcParser(path string) (_ []Credential, _ error) {
 	file, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
@@ -97,6 +97,10 @@ func netrcParser(path string) ([]Credential, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		err2 := file.Close()
+		err = errors.Join(err, err2)
+	}()
 
 	var credentials []Credential
 	scanner := bufio.NewScanner(file)
@@ -155,12 +159,6 @@ func netrcParser(path string) ([]Credential, error) {
 				}
 			}
 		}
-	}
-
-	// Close our file and handle any errors now that we're done scanning
-	err = file.Close()
-	if err != nil {
-		return nil, err
 	}
 
 	// Append the last machine (if exists) at the end of the file

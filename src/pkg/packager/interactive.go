@@ -24,7 +24,7 @@ func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles 
 	message.HeaderInfof("📦 PACKAGE DEFINITION")
 	err := utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(stage), true)
 	if err != nil {
-		slog.Error("unable to print yaml", "error", err)
+		message.WarnErr(err, "unable to print yaml")
 	}
 
 	// Print any potential breaking changes (if this is a Deploy confirm) between this CLI version and the deployed init package

@@ -4,10 +4,8 @@
 package packager2
 
 import (
-	"archive/tar"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -17,14 +15,12 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/mholt/archiver/v3"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
-	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -39,7 +35,7 @@ type LoadOptions struct {
 }
 
 // LoadPackage optionally fetches and loads the package from the given source.
-func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackagePaths, error) {
+func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, error) {
 	srcType, err := identifySource(opt.Source)
 	if err != nil {
 		return nil, err
@@ -81,87 +77,16 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackagePaths, er
 		}
 	}
 
-	// Extract the package
-	packageDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	layoutOpt := layout.PackageLayoutOptions{
+		PublicKeyPath:           opt.PublicKeyPath,
+		SkipSignatureValidation: opt.SkipSignatureValidation,
+		IsPartial:               isPartial,
+	}
+	pkgLayout, err := layout.LoadFromTar(ctx, tarPath, layoutOpt)
 	if err != nil {
 		return nil, err
 	}
-	pathsExtracted := []string{}
-	err = archiver.Walk(tarPath, func(f archiver.File) error {
-		if f.IsDir() {
-			return nil
-		}
-		header, ok := f.Header.(*tar.Header)
-		if !ok {
-			return fmt.Errorf("expected header to be *tar.Header but was %T", f.Header)
-		}
-		// If path has nested directories we want to create them.
-		dir := filepath.Dir(header.Name)
-		if dir != "." {
-			err := os.MkdirAll(filepath.Join(packageDir, dir), helpers.ReadExecuteAllWriteUser)
-			if err != nil {
-				return err
-			}
-		}
-		dst, err := os.Create(filepath.Join(packageDir, header.Name))
-		if err != nil {
-			return err
-		}
-		defer dst.Close()
-		_, err = io.Copy(dst, f)
-		if err != nil {
-			return err
-		}
-		pathsExtracted = append(pathsExtracted, header.Name)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Load the package paths
-	pkgPaths := layout.New(packageDir)
-	pkgPaths.SetFromPaths(pathsExtracted)
-	pkg, _, err := pkgPaths.ReadZarfYAML()
-	if err != nil {
-		return nil, err
-	}
-	// TODO: Filter is not persistently applied.
-	pkg.Components, err = opt.Filter.Apply(pkg)
-	if err != nil {
-		return nil, err
-	}
-	if err := pkgPaths.MigrateLegacy(); err != nil {
-		return nil, err
-	}
-	if !pkgPaths.IsLegacyLayout() {
-		if err := sources.ValidatePackageIntegrity(pkgPaths, pkg.Metadata.AggregateChecksum, isPartial); err != nil {
-			return nil, err
-		}
-		if !opt.SkipSignatureValidation {
-			if err := sources.ValidatePackageSignature(ctx, pkgPaths, opt.PublicKeyPath); err != nil {
-				return nil, err
-			}
-		}
-	}
-	for _, component := range pkg.Components {
-		if err := pkgPaths.Components.Unarchive(component); err != nil {
-			if errors.Is(err, layout.ErrNotLoaded) {
-				_, err := pkgPaths.Components.Create(component)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				return nil, err
-			}
-		}
-	}
-	if pkgPaths.SBOMs.Path != "" {
-		if err := pkgPaths.SBOMs.Unarchive(); err != nil {
-			return nil, err
-		}
-	}
-	return pkgPaths, nil
+	return pkgLayout, nil
 }
 
 // identifySource returns the source type for the given source.
@@ -246,14 +171,11 @@ func packageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, s
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           publicKeyPath,
 	}
-	pkgPaths, err := LoadPackage(ctx, loadOpt)
+	p, err := LoadPackage(ctx, loadOpt)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	defer os.RemoveAll(pkgPaths.Base)
-	pkg, _, err := pkgPaths.ReadZarfYAML()
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	return pkg, nil
+	//nolint: errcheck // ignore
+	defer p.Cleanup()
+	return p.Pkg, nil
 }

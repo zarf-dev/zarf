@@ -130,16 +130,20 @@ func TestReplaceTextTemplate(t *testing.T) {
 
 	for _, tc := range tests {
 		if tc.path == "" {
-			tmpDir := t.TempDir()
-			tc.path = filepath.Join(tmpDir, "templates.test")
+			func() {
+				tmpDir := t.TempDir()
+				tc.path = filepath.Join(tmpDir, "templates.test")
 
-			f, err := os.Create(tc.path)
-			require.NoError(t, err)
+				f, err := os.Create(tc.path)
+				require.NoError(t, err)
 
-			_, err = f.WriteString(start)
-			require.NoError(t, err)
-			err = f.Close()
-			require.NoError(t, err)
+				defer func() {
+					require.NoError(t, f.Close())
+				}()
+
+				_, err = f.WriteString(start)
+				require.NoError(t, err)
+			}()
 		}
 
 		gotErr := tc.vc.ReplaceTextTemplate(tc.path)

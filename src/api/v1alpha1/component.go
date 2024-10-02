@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"github.com/invopop/jsonschema"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
 )
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
@@ -52,9 +51,6 @@ type ZarfComponent struct {
 
 	// List of git repos to include in the package.
 	Repos []string `json:"repos,omitempty"`
-
-	// Extend component functionality with additional features.
-	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty"`
 
 	// [Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0.
 	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"deprecated=true"`
