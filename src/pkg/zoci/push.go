@@ -6,6 +6,7 @@ package zoci
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -19,12 +20,15 @@ import (
 )
 
 // PublishPackage publishes the zarf package to the remote repository.
-func (r *Remote) PublishPackage(ctx context.Context, pkg *v1alpha1.ZarfPackage, paths *layout.PackagePaths, concurrency int) error {
+func (r *Remote) PublishPackage(ctx context.Context, pkg *v1alpha1.ZarfPackage, paths *layout.PackagePaths, concurrency int) (err error) {
 	src, err := file.New(paths.Base)
 	if err != nil {
 		return err
 	}
-	defer src.Close()
+	defer func(src *file.Store) {
+		err2 := src.Close()
+		err = errors.Join(err, err2)
+	}(src)
 
 	r.Log().Info(fmt.Sprintf("Publishing package to %s", r.Repo().Reference))
 	spinner := message.NewProgressSpinner("")
@@ -71,7 +75,10 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *v1alpha1.ZarfPackage, 
 	total += manifestConfigDesc.Size
 
 	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", r.Repo().Reference.Repository, r.Repo().Reference.Reference))
-	defer progressBar.Close()
+	defer func(progressBar *message.ProgressBar) {
+		err2 := progressBar.Close()
+		err = errors.Join(err, err2)
+	}(progressBar)
 	r.SetProgressWriter(progressBar)
 	defer r.ClearProgressWriter()
 

@@ -177,12 +177,16 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 
 		dst.AddImages()
 
+		cachePath, err := config.GetAbsCachePath()
+		if err != nil {
+			return err
+		}
 		pullCfg := images.PullConfig{
 			DestinationDirectory: dst.Images.Base,
 			ImageList:            imageList,
 			Arch:                 arch,
 			RegistryOverrides:    pc.createOpts.RegistryOverrides,
-			CacheDirectory:       filepath.Join(config.GetAbsCachePath(), layout.ImagesDir),
+			CacheDirectory:       filepath.Join(cachePath, layout.ImagesDir),
 		}
 
 		pulled, err := images.Pull(ctx, pullCfg)

@@ -438,8 +438,11 @@ func (p *Packager) processComponentFiles(component v1alpha1.ZarfComponent, pkgLo
 		}
 
 		// Replace temp target directory and home directory
-		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.layout.Base, 1)
-		file.Target = config.GetAbsHomePath(file.Target)
+		target, err := config.GetAbsHomePath(strings.Replace(file.Target, "###ZARF_TEMP###", p.layout.Base, 1))
+		if err != nil {
+			return err
+		}
+		file.Target = target
 
 		fileList := []string{}
 		if helpers.IsDir(fileLocation) {
@@ -467,7 +470,7 @@ func (p *Packager) processComponentFiles(component v1alpha1.ZarfComponent, pkgLo
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
-		err := helpers.CreatePathAndCopy(fileLocation, file.Target)
+		err = helpers.CreatePathAndCopy(fileLocation, file.Target)
 		if err != nil {
 			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
 		}
