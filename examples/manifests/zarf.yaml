@@ -12,17 +12,6 @@ components:
         files:
           # local manifests are specified relative to the `zarf.yaml` that uses them:
           - httpd-deployment.yaml
-    actions:
-      onDeploy:
-        # the following checks were computed by viewing the success state of the package deployment
-        # and creating `wait` actions that match
-        after:
-          - wait:
-              cluster:
-                kind: deployment
-                name: httpd-deployment
-                namespace: httpd
-                condition: "{.status.readyReplicas}=2"
     # image discovery is supported in all manifests and charts using:
     # zarf prepare find-images
     images:
@@ -38,17 +27,6 @@ components:
           - https://k8s.io/examples/application/deployment.yaml@c57f73449b26eae02ca2a549c388807d49ef6d3f2dc040a9bbb1290128d97157
           # this sha256 can be discovered using:
           # zarf prepare sha256sum https://k8s.io/examples/application/deployment.yaml
-    actions:
-      onDeploy:
-        # the following checks were computed by viewing the success state of the package deployment
-        # and creating `wait` actions that match
-        after:
-          - wait:
-              cluster:
-                kind: deployment
-                name: nginx-deployment
-                namespace: nginx
-                condition: available
     # image discovery is supported in all manifests and charts using:
     # zarf prepare find-images
     images:

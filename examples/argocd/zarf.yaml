@@ -38,6 +38,7 @@ components:
       onDeploy:
         after:
           # This will use a wait action to wait for the pods to be ready
+          # TODO is this necessary ?
           - description: Podinfo pod to be ready via wait action
             wait:
               cluster:
