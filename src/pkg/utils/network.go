@@ -92,7 +92,7 @@ func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) (err er
 		}
 	}
 
-	return err
+	return nil
 }
 
 func httpGetFile(url string, destinationFile *os.File) (err error) {
