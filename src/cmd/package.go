@@ -197,10 +197,7 @@ var packageInspectCmd = &cobra.Command{
 			return err
 		}
 
-		cluster, err := cluster.NewCluster()
-		if err != nil {
-			return err
-		}
+		cluster, _ := cluster.NewCluster() //nolint:errcheck
 		inspectOpt := packager2.ZarfInspectOptions{
 			Source:                  src,
 			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
