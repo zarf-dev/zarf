@@ -42,14 +42,6 @@ metadata:
   namespace: ns
 `
 
-func yamlToUnstructured(t *testing.T, yml string) *unstructured.Unstructured {
-	t.Helper()
-	m := make(map[string]interface{})
-	err := yaml.Unmarshal([]byte(yml), &m)
-	require.NoError(t, err)
-	return &unstructured.Unstructured{Object: m}
-}
-
 func TestRunHealthChecks(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -78,7 +70,10 @@ func TestRunHealthChecks(t *testing.T) {
 			)
 			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 			defer cancel()
-			pod := yamlToUnstructured(t, tt.podYaml)
+			m := make(map[string]interface{})
+			err := yaml.Unmarshal([]byte(tt.podYaml), &m)
+			require.NoError(t, err)
+			pod := &unstructured.Unstructured{Object: m}
 			statusWatcher := watcher.NewDefaultStatusWatcher(fakeClient, fakeMapper)
 			podGVR := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
 			require.NoError(t, fakeClient.Tracker().Create(podGVR, pod, pod.GetNamespace()))
@@ -90,7 +85,7 @@ func TestRunHealthChecks(t *testing.T) {
 					Name:       pod.GetName(),
 				},
 			}
-			err := Run(ctx, statusWatcher, objs)
+			err = Run(ctx, statusWatcher, objs)
 			if tt.expectErr != nil {
 				require.ErrorIs(t, err, tt.expectErr)
 				return
