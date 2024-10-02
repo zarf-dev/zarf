@@ -157,7 +157,10 @@ var packageMirrorCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer pkgLayout.Cleanup() //nolint:errcheck
+		defer func() {
+			// Cleanup package files
+			err = errors.Join(err, pkgLayout.Cleanup())
+		}()
 
 		mirrorOpt := packager2.MirrorOptions{
 			Cluster:         c,
@@ -294,10 +297,7 @@ var packageRemoveCmd = &cobra.Command{
 			filters.ByLocalOS(runtime.GOOS),
 			filters.BySelectState(pkgConfig.PkgOpts.OptionalComponents),
 		)
-		cluster, err := cluster.NewCluster()
-		if err != nil {
-			return err
-		}
+		cluster, _ := cluster.NewCluster() //nolint:errcheck
 		removeOpt := packager2.RemoveOptions{
 			Source:                  packageSource,
 			Cluster:                 cluster,
