@@ -28,7 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
-	"github.com/zarf-dev/zarf/src/internal/packager/healthchecks"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"

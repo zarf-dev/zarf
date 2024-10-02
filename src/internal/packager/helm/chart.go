@@ -27,7 +27,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager/healthchecks"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
