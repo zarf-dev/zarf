@@ -58,7 +58,7 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	// NOTE(mkcp): We dogsled these errors because some of these commands will error if they don't cleanup a resource,
 	//   which is ok. A better solution would be checking for none or unexpected kinds of errors.
 	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)   //nolint:errcheck
-	_ = exec.CmdWithPrint("docker", "rm", "-f", "k3d-"+registryHost) //nolint:errcheck
+	_ = exec.CmdWithPrint("k3d", "registry", "delete", registryHost) //nolint:errcheck
 	_ = exec.CmdWithPrint("docker", "compose", "down")               //nolint:errcheck
 	_ = exec.CmdWithPrint("docker", "network", "remove", network)    //nolint:errcheck
 
