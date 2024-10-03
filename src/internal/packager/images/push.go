@@ -6,11 +6,9 @@ package images
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -64,9 +62,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				defer tunnel.Close()
 			}
 		}
-
-		progress := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
-		defer progress.Close()
 		pushOptions := createPushOpts(cfg)
 
 		pushImage := func(img v1.Image, name string) error {
@@ -84,8 +79,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 		}()
 		for refInfo, img := range toPush {
-			refTruncated := helpers.Truncate(refInfo.Reference, 55, true)
-			progress.Updatef(fmt.Sprintf("Pushing %s", refTruncated))
 
 			size, err := calcImgSize(img)
 			if err != nil {
@@ -122,7 +115,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			pushed = append(pushed, refInfo)
 			totalSize -= size
 		}
-		progress.Successf("Pushed %d images", len(cfg.ImageList))
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
 	if err != nil {
