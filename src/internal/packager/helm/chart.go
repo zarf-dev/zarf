@@ -63,27 +63,32 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	histClient := action.NewHistory(h.actionConfig)
 	var release *release.Release
 
-	var helmOpStart time.Time
+	var helmCtx context.Context
+	var helmCtxCancel context.CancelFunc
+
 	err = retry.Do(func() error {
 		var err error
 
 		releases, histErr := histClient.Run(h.chart.ReleaseName)
 
 		spinner.Updatef("Checking for existing helm deployment")
-		helmOpStart = time.Now()
-
+		// cancel context from previous retry if it exists
+		if helmCtxCancel != nil {
+			helmCtxCancel()
+		}
+		helmCtx, helmCtxCancel = context.WithTimeout(ctx, h.timeout)
 		if errors.Is(histErr, driver.ErrReleaseNotFound) {
 			// No prior release, try to install it.
 			spinner.Updatef("Attempting chart installation")
 
-			release, err = h.installChart(ctx, postRender)
+			release, err = h.installChart(helmCtx, postRender)
 		} else if histErr == nil && len(releases) > 0 {
 			// Otherwise, there is a prior release so upgrade it.
 			spinner.Updatef("Attempting chart upgrade")
 
 			lastRelease := releases[len(releases)-1]
 
-			release, err = h.upgradeChart(ctx, lastRelease, postRender)
+			release, err = h.upgradeChart(helmCtx, lastRelease, postRender)
 		} else {
 			return fmt.Errorf("unable to verify the chart installation status: %w", histErr)
 		}
@@ -95,6 +100,7 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		spinner.Success()
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(h.retries)), retry.Delay(500*time.Millisecond))
+	defer helmCtxCancel()
 	if err != nil {
 		removeMsg := "if you need to remove the failed chart, use `zarf package remove`"
 		installErr := fmt.Errorf("unable to install chart after %d attempts: %w: %s", h.retries, err, removeMsg)
@@ -139,12 +145,9 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		})
 	}
 	if !h.chart.NoWait {
-		// Ensure we don't go past the timeout by getting the time since the helm operation started
-		healthCheckTimeout := h.timeout - time.Since(helmOpStart)
-		healthChecksCtx, cancel := context.WithTimeout(ctx, healthCheckTimeout)
-		defer cancel()
+		// Ensure we don't go past the timeout by using a context initialized with the helm timeout
 		spinner.Updatef("Running health checks")
-		if err := healthchecks.Run(healthChecksCtx, h.cluster.Watcher, healthChecks); err != nil {
+		if err := healthchecks.Run(helmCtx, h.cluster.Watcher, healthChecks); err != nil {
 			return nil, "", err
 		}
 	}
