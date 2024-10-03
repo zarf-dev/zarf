@@ -128,7 +128,7 @@ var packageMirrorCmd = &cobra.Command{
 			pkgConfig.PkgOpts.SkipSignatureValidation = true
 		}
 	},
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		var c *cluster.Cluster
 		if dns.IsServiceURL(pkgConfig.InitOpts.RegistryInfo.Address) || dns.IsServiceURL(pkgConfig.InitOpts.GitServer.Address) {
 			var err error
@@ -157,8 +157,11 @@ var packageMirrorCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		//nolint: errcheck // ignore
-		defer pkgLayout.Cleanup()
+		defer func() {
+			// Cleanup package files
+			err = errors.Join(err, pkgLayout.Cleanup())
+		}()
+
 		mirrorOpt := packager2.MirrorOptions{
 			Cluster:         c,
 			PkgLayout:       pkgLayout,
@@ -194,7 +197,7 @@ var packageInspectCmd = &cobra.Command{
 			return err
 		}
 
-		cluster, _ := cluster.NewCluster()
+		cluster, _ := cluster.NewCluster() //nolint:errcheck
 		inspectOpt := packager2.ZarfInspectOptions{
 			Source:                  src,
 			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
@@ -211,7 +214,10 @@ var packageInspectCmd = &cobra.Command{
 				return fmt.Errorf("failed to inspect package: %w", err)
 			}
 			for _, image := range output {
-				fmt.Fprintln(os.Stdout, "-", image)
+				_, err := fmt.Fprintln(os.Stdout, "-", image)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -291,7 +297,7 @@ var packageRemoveCmd = &cobra.Command{
 			filters.ByLocalOS(runtime.GOOS),
 			filters.BySelectState(pkgConfig.PkgOpts.OptionalComponents),
 		)
-		cluster, _ := cluster.NewCluster()
+		cluster, _ := cluster.NewCluster() //nolint:errcheck
 		removeOpt := packager2.RemoveOptions{
 			Source:                  packageSource,
 			Cluster:                 cluster,
