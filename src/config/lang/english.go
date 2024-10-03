@@ -355,7 +355,7 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevFlagRepoChartPath        = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdDevFlagGitAccount           = "User or organization name for the git account that the repos are created under."
 	CmdDevFlagKubeVersion          = "Override the default helm template KubeVersion when performing a package chart template"
-	CmdDevFlagFindImagesRegistry   = "Override the ###ZARF_REGISTRY### value"
+	CmdDevFlagRegistry             = "Override the ###ZARF_REGISTRY### value"
 	CmdDevFlagFindImagesWhy        = "Prints the source manifest for the specified image"
 	CmdDevFlagFindImagesSkipCosign = "Skip searching for cosign artifacts related to discovered images"
 
