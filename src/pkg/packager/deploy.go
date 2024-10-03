@@ -177,9 +177,8 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 
 		// Update the package secret to indicate that we are attempting to deploy this component
 		if p.isConnectedToCluster() {
-			_, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents)
-			if err != nil {
-				return nil, err
+			if _, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents); err != nil {
+				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
 
@@ -204,9 +203,8 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 			onFailure()
 
 			if p.isConnectedToCluster() {
-				_, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents)
-				if err != nil {
-					return nil, err
+				if _, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents); err != nil {
+					message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 				}
 			}
 			return nil, fmt.Errorf("unable to deploy component %q: %w", component.Name, deployErr)
@@ -215,9 +213,8 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 		// Update the package secret to indicate that we successfully deployed this component
 		deployedComponents[idx].InstalledCharts = charts
 		if p.isConnectedToCluster() {
-			_, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents)
-			if err != nil {
-				return nil, err
+			if _, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents); err != nil {
+				message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
 

@@ -231,7 +231,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		return secret, nil
 	}()
 	if err != nil {
-		return nil, fmt.Errorf("failed to record package deployment in secret '%s'", deployedPackageSecret.Name)
+		return nil, fmt.Errorf("failed to record package deployment in secret '%s': %w", deployedPackageSecret.Name, err)
 	}
 	if err := json.Unmarshal(updatedSecret.Data["data"], &deployedPackage); err != nil {
 		return nil, err
