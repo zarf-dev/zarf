@@ -89,11 +89,11 @@ func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgLayout *la
 	transport.TLSClientConfig.InsecureSkipVerify = config.CommonOptions.InsecureSkipTLSVerify
 	// TODO (@WSTARR) This is set to match the TLSHandshakeTimeout to potentially mitigate effects of https://github.com/zarf-dev/zarf/issues/1444
 	transport.ResponseHeaderTimeout = 10 * time.Second
-	transportWithProgressBar := helpers.NewTransport(transport, nil)
+	transportWithoutProgressBar := helpers.NewTransport(transport, nil)
 
 	pushOptions := []crane.Option{
 		crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: pkgLayout.Pkg.Build.Architecture}),
-		crane.WithTransport(transportWithProgressBar),
+		crane.WithTransport(transportWithoutProgressBar),
 		crane.WithAuth(authn.FromConfig(authn.AuthConfig{
 			Username: regInfo.PushUsername,
 			Password: regInfo.PushPassword,

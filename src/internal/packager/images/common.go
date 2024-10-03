@@ -107,9 +107,9 @@ func createPushOpts(cfg PushConfig, pb *message.ProgressBar) []crane.Option {
 	// TODO (@WSTARR) This is set to match the TLSHandshakeTimeout to potentially mitigate effects of https://github.com/zarf-dev/zarf/issues/1444
 	transport.ResponseHeaderTimeout = 10 * time.Second
 
-	transportWithProgressBar := helpers.NewTransport(transport, pb)
+	transportWithoutProgressBar := helpers.NewTransport(transport, nil)
 
-	opts = append(opts, crane.WithTransport(transportWithProgressBar))
+	opts = append(opts, crane.WithTransport(transportWithoutProgressBar))
 
 	return opts
 }
