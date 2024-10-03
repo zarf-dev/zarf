@@ -29,6 +29,7 @@ zarf dev deploy [flags]
   -h, --help                               help for deploy
       --no-yolo                            Disable the YOLO mode default override and create / deploy the package as-defined
       --registry-override stringToString   Specify a map of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet) (default [])
+      --registry-url string                Override the ###ZARF_REGISTRY### value (default "127.0.0.1:31999")
       --retries int                        Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
       --skip-webhooks                      [alpha] Skip waiting for external webhooks to execute as each package component is deployed
       --timeout duration                   Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
