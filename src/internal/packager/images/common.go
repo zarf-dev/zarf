@@ -13,7 +13,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -98,7 +97,7 @@ func WithPushAuth(ri types.RegistryInfo) crane.Option {
 	return WithBasicAuth(ri.PushUsername, ri.PushPassword)
 }
 
-func createPushOpts(cfg PushConfig, pb *message.ProgressBar) []crane.Option {
+func createPushOpts(cfg PushConfig) []crane.Option {
 	opts := CommonOpts(cfg.Arch)
 	opts = append(opts, WithPushAuth(cfg.RegInfo))
 

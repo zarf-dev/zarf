@@ -67,7 +67,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 		progress := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
 		defer progress.Close()
-		pushOptions := createPushOpts(cfg, progress)
+		pushOptions := createPushOpts(cfg)
 
 		pushImage := func(img v1.Image, name string) error {
 			if tunnel != nil {
