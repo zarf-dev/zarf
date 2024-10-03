@@ -30,7 +30,6 @@ const (
 	subnet         = "172.31.0.0/16"
 	gateway        = "172.31.0.1"
 	giteaIP        = "172.31.0.99"
-	registryIP     = "172.31.0.10"
 	giteaHost      = "gitea.localhost"
 	registryHost   = "registry.localhost"
 	clusterName    = "zarf-external-test"
@@ -45,9 +44,7 @@ var outClusterCredentialArgs = []string{
 	"--git-url=http://" + giteaHost + ":3000",
 	"--registry-push-username=" + registryUser,
 	"--registry-push-password=" + commonPassword,
-	// TODO @AustinAbro321 once flux updates to a version of helm using ORAS v1.2.5 or greater we can switch back
-	// to using the registry host rather than creating an IP https://github.com/helm/helm/pull/12998
-	"--registry-url=" + registryIP + ":5000"}
+	"--registry-url=k3d-" + registryHost + ":5000"}
 
 type ExtOutClusterTestSuite struct {
 	suite.Suite
@@ -70,12 +67,12 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	suite.NoError(err, "unable to create the k3d registry")
 
 	// Install a k3d-managed registry server to act as the 'remote' container registry
-	err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "5000:5000", "--name", "k3d-"+registryHost, "registry:2.8.3")
+	err = exec.CmdWithPrint("k3d", "registry", "create", registryHost, "--port", "5000")
 	suite.NoError(err, "unable to create the k3d registry")
 
 	// Create a k3d cluster with the proper networking and aliases
-	err = exec.CmdWithPrint("k3d", "cluster", "create", clusterName, "--registry-config", "registries.yaml",
-		"--host-alias", registryIP+":"+registryHost, "--host-alias", giteaIP+":"+giteaHost, "--network", network)
+	err = exec.CmdWithPrint("k3d", "cluster", "create", clusterName, "--registry-use",
+		"k3d-"+registryHost+":5000", "--host-alias", giteaIP+":"+giteaHost, "--network", network)
 	suite.NoError(err, "unable to create the k3d cluster")
 
 	// Install a gitea server via docker compose to act as the 'remote' git server
@@ -90,8 +87,6 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	// Connect gitea to the k3d network
 	err = exec.CmdWithPrint("docker", "network", "connect", "--ip", giteaIP, network, giteaHost)
 	suite.NoError(err, "unable to connect the gitea-server to k3d")
-	err = exec.CmdWithPrint("docker", "network", "connect", "--ip", registryIP, network, "k3d-"+registryHost)
-	suite.NoError(err, "unable to connect the registry-server to k3d")
 }
 
 func (suite *ExtOutClusterTestSuite) TearDownSuite() {
@@ -102,7 +97,7 @@ func (suite *ExtOutClusterTestSuite) TearDownSuite() {
 	err = exec.CmdWithPrint("docker", "compose", "down")
 	suite.NoError(err, "unable to teardown the gitea-server")
 
-	err = exec.CmdWithPrint("docker", "rm", "-f", "k3d-"+registryHost)
+	err = exec.CmdWithPrint("k3d", "registry", "delete", registryHost)
 	suite.NoError(err, "unable to teardown the k3d registry")
 
 	err = exec.CmdWithPrint("docker", "network", "remove", network)
