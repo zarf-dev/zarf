@@ -25,7 +25,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
 	toPush := map[transform.Image]v1.Image{}
-	var totalSize int64
 	// Build an image list from the references
 	for _, refInfo := range cfg.ImageList {
 		img, err := utils.LoadOCIImage(cfg.SourceDirectory, refInfo)
@@ -33,16 +32,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			return err
 		}
 		toPush[refInfo] = img
-		imgSize, err := calcImgSize(img)
-		if err != nil {
-			return err
-		}
-		totalSize += imgSize
-	}
-
-	// If this is not a no checksum image push we will be pushing two images (the second will go faster as it checks the same layers)
-	if !cfg.NoChecksum {
-		totalSize = totalSize * 2
 	}
 
 	var (
@@ -80,11 +69,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		}()
 		for refInfo, img := range toPush {
 
-			size, err := calcImgSize(img)
-			if err != nil {
-				return err
-			}
-
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
 				offlineNameCRC, err := transform.ImageTransformHost(registryURL, refInfo.Reference)
@@ -96,7 +80,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 					return err
 				}
 
-				totalSize -= size
 			}
 
 			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
@@ -113,7 +96,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 
 			pushed = append(pushed, refInfo)
-			totalSize -= size
 		}
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
@@ -122,26 +104,4 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	}
 
 	return nil
-}
-
-func calcImgSize(img v1.Image) (int64, error) {
-	size, err := img.Size()
-	if err != nil {
-		return size, err
-	}
-
-	layers, err := img.Layers()
-	if err != nil {
-		return size, err
-	}
-
-	for _, layer := range layers {
-		ls, err := layer.Size()
-		if err != nil {
-			return size, err
-		}
-		size += ls
-	}
-
-	return size, nil
 }
