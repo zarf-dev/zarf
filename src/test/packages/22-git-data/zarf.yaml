@@ -60,6 +60,6 @@ components:
             description: Check that the package secret has been updated with the deployed component
             maxRetries: 3
         onSuccess:
-          - cmd: test $(./zarf tools kubectl get secret -n zarf zarf-package-git-data-test -o jsonpath='{.data.*}' | base64 --decode | jq -r .deployedComponents | jq '. | length') -eq 3
+          - cmd: test $(./zarf tools kubectl get secret -n zarf zarf-package-git-data-test -o jsonpath='{.data.*}' | base64 --decode | jq -r .deployedComponents | jq '. | length') -eq 4
             description: Check that the package secret has been updated with the deployed component
             maxRetries: 3

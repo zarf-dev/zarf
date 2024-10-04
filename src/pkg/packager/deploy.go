@@ -175,13 +175,6 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 		deployedComponents = append(deployedComponents, deployedComponent)
 		idx := len(deployedComponents) - 1
 
-		// Update the package secret to indicate that we are attempting to deploy this component
-		if p.isConnectedToCluster() {
-			if _, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents); err != nil {
-				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
-			}
-		}
-
 		// Deploy the component
 		var charts []types.InstalledChart
 		var deployErr error
