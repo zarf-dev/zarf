@@ -33,9 +33,6 @@ const (
 	TermWidth = 100
 )
 
-// NoProgress tracks whether spinner/progress bars show updates.
-var NoProgress bool
-
 // RuleLine creates a line of ━ as wide as the terminal
 var RuleLine = strings.Repeat("━", TermWidth)
 

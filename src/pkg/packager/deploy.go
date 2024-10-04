@@ -401,12 +401,9 @@ func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfC
 	if len(component.HealthChecks) > 0 {
 		healthCheckContext, cancel := context.WithTimeout(ctx, p.cfg.DeployOpts.Timeout)
 		defer cancel()
-		spinner := message.NewProgressSpinner("Running health checks")
-		defer spinner.Stop()
 		if err = runHealthChecks(healthCheckContext, p.cluster.Watcher, component.HealthChecks); err != nil {
 			return nil, fmt.Errorf("health checks failed: %w", err)
 		}
-		spinner.Success()
 	}
 
 	err = g.Wait()
@@ -418,12 +415,7 @@ func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfC
 
 // Move files onto the host of the machine performing the deployment.
 func (p *Packager) processComponentFiles(component v1alpha1.ZarfComponent, pkgLocation string) error {
-	spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
-	defer spinner.Stop()
-
 	for fileIdx, file := range component.Files {
-		spinner.Updatef("Loading %s", file.Target)
-
 		fileLocation := filepath.Join(pkgLocation, strconv.Itoa(fileIdx), filepath.Base(file.Target))
 		if helpers.InvalidPath(fileLocation) {
 			fileLocation = filepath.Join(pkgLocation, strconv.Itoa(fileIdx))
@@ -431,7 +423,6 @@ func (p *Packager) processComponentFiles(component v1alpha1.ZarfComponent, pkgLo
 
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
-			spinner.Updatef("Validating SHASUM for %s", file.Target)
 			if err := helpers.SHAsMatch(fileLocation, file.Shasum); err != nil {
 				return err
 			}
@@ -461,7 +452,6 @@ func (p *Packager) processComponentFiles(component v1alpha1.ZarfComponent, pkgLo
 
 			// If the file is a text file, template it
 			if isText {
-				spinner.Updatef("Templating %s", file.Target)
 				if err := p.variableConfig.ReplaceTextTemplate(subFile); err != nil {
 					return fmt.Errorf("unable to template file %s: %w", subFile, err)
 				}
@@ -469,7 +459,6 @@ func (p *Packager) processComponentFiles(component v1alpha1.ZarfComponent, pkgLo
 		}
 
 		// Copy the file to the destination
-		spinner.Updatef("Saving %s", file.Target)
 		err = helpers.CreatePathAndCopy(fileLocation, file.Target)
 		if err != nil {
 			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
@@ -477,7 +466,6 @@ func (p *Packager) processComponentFiles(component v1alpha1.ZarfComponent, pkgLo
 
 		// Loop over all symlinks and create them
 		for _, link := range file.Symlinks {
-			spinner.Updatef("Adding symlink %s->%s", link, file.Target)
 			// Try to remove the filepath if it exists
 			_ = os.RemoveAll(link)
 			// Make sure the parent directory exists
@@ -492,18 +480,12 @@ func (p *Packager) processComponentFiles(component v1alpha1.ZarfComponent, pkgLo
 		// Cleanup now to reduce disk pressure
 		_ = os.RemoveAll(fileLocation)
 	}
-
-	spinner.Success()
-
 	return nil
 }
 
 // setupState fetches the current ZarfState from the k8s cluster and sets the packager to use it
 func (p *Packager) setupState(ctx context.Context) error {
 	// If we are touching K8s, make sure we can talk to it once per deployment
-	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
-	defer spinner.Stop()
-
 	state, err := p.cluster.LoadZarfState(ctx)
 	// We ignore the error if in YOLO mode because Zarf should not be initiated.
 	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
@@ -519,7 +501,6 @@ func (p *Packager) setupState(ctx context.Context) error {
 		state.Distro = "YOLO"
 
 		// Try to create the zarf namespace
-		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := cluster.NewZarfManagedNamespace(cluster.ZarfNamespaceName)
 		err := func() error {
 			_, err := p.cluster.Clientset.CoreV1().Namespaces().Create(ctx, zarfNamespace, metav1.CreateOptions{})
@@ -547,8 +528,6 @@ func (p *Packager) setupState(ctx context.Context) error {
 	}
 
 	p.state = state
-
-	spinner.Success()
 	return nil
 }
 

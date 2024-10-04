@@ -78,15 +78,9 @@ func runAction(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefau
 	} else {
 		cmdEscaped = helpers.Truncate(cmd, 60, false)
 	}
-
-	spinner := message.NewProgressSpinner("Running \"%s\"", cmdEscaped)
-	// Persist the spinner output so it doesn't get overwritten by the command output.
-	spinner.EnablePreserveWrites()
-
 	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates())
 
 	if cmd, err = actionCmdMutation(ctx, cmd, actionDefaults.Shell); err != nil {
-		spinner.Errorf(err, "Error mutating command: %s", cmdEscaped)
 	}
 
 	duration := time.Duration(actionDefaults.MaxTotalSeconds) * time.Second
@@ -99,7 +93,7 @@ retryCmd:
 		// Perform the action run.
 		tryCmd := func(ctx context.Context) error {
 			// Try running the command and continue the retry loop if it fails.
-			if out, err = actionRun(ctx, actionDefaults, cmd, actionDefaults.Shell, spinner); err != nil {
+			if out, err = actionRun(ctx, actionDefaults, cmd, actionDefaults.Shell); err != nil {
 				return err
 			}
 
@@ -113,20 +107,12 @@ retryCmd:
 				}
 			}
 
-			// If the action has a wait, change the spinner message to reflect that on success.
-			if action.Wait != nil {
-				spinner.Successf("Wait for \"%s\" succeeded", cmdEscaped)
-			} else {
-				spinner.Successf("Completed \"%s\"", cmdEscaped)
-			}
-
 			// If the command ran successfully, continue to the next action.
 			return nil
 		}
 
 		// If no timeout is set, run the command and return or continue retrying.
 		if actionDefaults.MaxTotalSeconds < 1 {
-			spinner.Updatef("Waiting for \"%s\" (no timeout)", cmdEscaped)
 			//TODO (schristoff): Make it so tryCmd can take a normal ctx
 			if err := tryCmd(context.Background()); err != nil {
 				continue retryCmd
@@ -136,7 +122,6 @@ retryCmd:
 		}
 
 		// Run the command on repeat until success or timeout.
-		spinner.Updatef("Waiting for \"%s\" (timeout: %ds)", cmdEscaped, actionDefaults.MaxTotalSeconds)
 		select {
 		// On timeout break the loop to abort.
 		case <-timeout:
@@ -275,7 +260,7 @@ func actionGetCfg(_ context.Context, cfg v1alpha1.ZarfComponentActionDefaults, a
 	return cfg
 }
 
-func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cmd string, shellPref v1alpha1.Shell, spinner *message.Spinner) (string, error) {
+func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cmd string, shellPref v1alpha1.Shell) (string, error) {
 	shell, shellArgs := exec.GetOSShell(shellPref)
 
 	message.Debugf("Running command in %s: %s", shell, cmd)
@@ -284,12 +269,6 @@ func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cm
 		Env: cfg.Env,
 		Dir: cfg.Dir,
 	}
-
-	if !cfg.Mute {
-		execCfg.Stdout = spinner
-		execCfg.Stderr = spinner
-	}
-
 	out, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, append(shellArgs, cmd)...)
 	// Dump final complete output (respect mute to prevent sensitive values from hitting the logs).
 	if !cfg.Mute {

@@ -23,20 +23,16 @@ type ProgressBar struct {
 func NewProgressBar(total int64, text string) *ProgressBar {
 	var progress *pterm.ProgressbarPrinter
 	var err error
-	if NoProgress {
-		Info(text)
-	} else {
-		progress, err = pterm.DefaultProgressbar.
-			WithTotal(int(total)).
-			WithShowCount(false).
-			WithTitle(padding + text).
-			WithRemoveWhenDone(true).
-			WithMaxWidth(TermWidth).
-			WithWriter(os.Stderr).
-			Start()
-		if err != nil {
-			WarnErr(err, "Unable to create default progressbar")
-		}
+	progress, err = pterm.DefaultProgressbar.
+		WithTotal(int(total)).
+		WithShowCount(false).
+		WithTitle(padding + text).
+		WithRemoveWhenDone(true).
+		WithMaxWidth(TermWidth).
+		WithWriter(os.Stderr).
+		Start()
+	if err != nil {
+		WarnErr(err, "Unable to create default progressbar")
 	}
 
 	return &ProgressBar{
@@ -48,10 +44,6 @@ func NewProgressBar(total int64, text string) *ProgressBar {
 // Updatef updates the ProgressBar with new text.
 func (p *ProgressBar) Updatef(format string, a ...any) {
 	msg := fmt.Sprintf(format, a...)
-	if NoProgress {
-		debugPrinter(2, msg)
-		return
-	}
 	p.progress.UpdateTitle(padding + msg)
 }
 
@@ -78,10 +70,6 @@ func (p *ProgressBar) Close() error {
 
 // Update updates the ProgressBar with completed progress and new text.
 func (p *ProgressBar) Update(complete int64, text string) {
-	if NoProgress {
-		debugPrinter(2, text)
-		return
-	}
 	p.progress.UpdateTitle(padding + text)
 	chunk := int(complete) - p.progress.Current
 	p.Add(chunk)

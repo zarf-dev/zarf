@@ -42,7 +42,6 @@ func SetupCLI(logLevel string, skipLogFile, noColor bool) error {
 	// Disable progress bars for CI envs
 	if os.Getenv("CI") == "true" {
 		message.Debug("CI environment detected, disabling progress bars")
-		message.NoProgress = true
 	}
 
 	if !skipLogFile {

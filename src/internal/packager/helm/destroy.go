@@ -5,6 +5,7 @@
 package helm
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -14,17 +15,13 @@ import (
 
 // Destroy removes ZarfInitPackage charts from the cluster and optionally all Zarf-installed charts.
 func Destroy(purgeAllZarfInstallations bool) {
-	spinner := message.NewProgressSpinner("Removing Zarf-installed charts")
-	defer spinner.Stop()
-
 	h := Helm{}
 
 	// Initially load the actionConfig without a namespace
-	err := h.createActionConfig("", spinner)
+	err := h.createActionConfig("")
 	if err != nil {
 		// Don't fatal since this is a removal action
-		spinner.Errorf(err, "Unable to initialize the K8s client")
-		return
+		message.Warn(fmt.Sprintf("could not load the action config: %w", err))
 	}
 
 	// Match a name that begins with "zarf-"
@@ -41,7 +38,7 @@ func Destroy(purgeAllZarfInstallations bool) {
 	releases, err := list.Run()
 	if err != nil {
 		// Don't fatal since this is a removal action
-		spinner.Errorf(err, "Unable to get the list of installed charts")
+		message.Warn(fmt.Sprint("unable to get the list of installed charts: %w", err))
 	}
 
 	// Iterate over all releases
@@ -52,13 +49,10 @@ func Destroy(purgeAllZarfInstallations bool) {
 		}
 		// Filter on zarf releases
 		if zarfPrefix.MatchString(release.Name) {
-			spinner.Updatef("Uninstalling helm chart %s/%s", release.Namespace, release.Name)
-			if err = h.RemoveChart(release.Namespace, release.Name, spinner); err != nil {
+			if err = h.RemoveChart(release.Namespace, release.Name); err != nil {
 				// Don't fatal since this is a removal action
-				spinner.Errorf(err, "Unable to uninstall the chart")
+				message.Warn(fmt.Sprintf("unable to uninstall the chart: %w", err))
 			}
 		}
 	}
-
-	spinner.Success()
 }

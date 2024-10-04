@@ -35,11 +35,6 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	if fromMessage == "" {
 		fromMessage = "Zarf-generated helm chart"
 	}
-	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s",
-		h.chart.Name,
-		h.chart.Version,
-		fromMessage)
-	defer spinner.Stop()
 
 	// If no release name is specified, use the chart name.
 	if h.chart.ReleaseName == "" {
@@ -47,7 +42,7 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	}
 
 	// Setup K8s connection.
-	err := h.createActionConfig(h.chart.Namespace, spinner)
+	err := h.createActionConfig(h.chart.Namespace)
 	if err != nil {
 		return nil, "", fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
@@ -63,31 +58,19 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		var err error
 
 		releases, histErr := histClient.Run(h.chart.ReleaseName)
-
-		spinner.Updatef("Checking for existing helm deployment")
-
 		if errors.Is(histErr, driver.ErrReleaseNotFound) {
-			// No prior release, try to install it.
-			spinner.Updatef("Attempting chart installation")
-
 			_, err = h.installChart(ctx, postRender)
 		} else if histErr == nil && len(releases) > 0 {
-			// Otherwise, there is a prior release so upgrade it.
-			spinner.Updatef("Attempting chart upgrade")
-
 			lastRelease := releases[len(releases)-1]
 
 			_, err = h.upgradeChart(ctx, lastRelease, postRender)
 		} else {
-			// 😭 things aren't working
 			return fmt.Errorf("unable to verify the chart installation status: %w", histErr)
 		}
 
 		if err != nil {
 			return err
 		}
-
-		spinner.Success()
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(h.retries)), retry.Delay(500*time.Millisecond))
 	if err != nil {
@@ -110,7 +93,6 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		}
 
 		// Attempt to rollback on a failed upgrade.
-		spinner.Updatef("Performing chart rollback")
 		err = h.rollbackChart(h.chart.ReleaseName, previouslyDeployedVersion)
 		if err != nil {
 			return nil, "", fmt.Errorf("%w: unable to rollback: %w", installErr, err)
@@ -124,10 +106,7 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 
 // TemplateChart generates a helm template from a given chart.
 func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues chartutil.Values, err error) {
-	spinner := message.NewProgressSpinner("Templating helm chart %s", h.chart.Name)
-	defer spinner.Stop()
-
-	err = h.createActionConfig(h.chart.Namespace, spinner)
+	err = h.createActionConfig(h.chart.Namespace)
 
 	// Setup K8s connection.
 	if err != nil {
@@ -182,16 +161,13 @@ func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues 
 	for _, hook := range templatedChart.Hooks {
 		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest)
 	}
-
-	spinner.Success()
-
 	return manifest, chartValues, nil
 }
 
 // RemoveChart removes a chart from the cluster.
-func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinner) error {
+func (h *Helm) RemoveChart(namespace string, name string) error {
 	// Establish a new actionConfig for the namespace.
-	_ = h.createActionConfig(namespace, spinner)
+	_ = h.createActionConfig(namespace)
 	// Perform the uninstall.
 	response, err := h.uninstallChart(name)
 	message.Debug(response)
@@ -201,10 +177,7 @@ func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinn
 // UpdateReleaseValues updates values for a given chart release
 // (note: this only works on single-deep charts, charts with dependencies (like loki-stack) will not work)
 func (h *Helm) UpdateReleaseValues(ctx context.Context, updatedValues map[string]interface{}) error {
-	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.chart.ReleaseName)
-	defer spinner.Stop()
-
-	err := h.createActionConfig(h.chart.Namespace, spinner)
+	err := h.createActionConfig(h.chart.Namespace)
 	if err != nil {
 		return fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
@@ -245,9 +218,6 @@ func (h *Helm) UpdateReleaseValues(ctx context.Context, updatedValues map[string
 		if err != nil {
 			return err
 		}
-
-		spinner.Success()
-
 		return nil
 	}
 

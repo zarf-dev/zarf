@@ -48,9 +48,6 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	// Remove the custom protocol header from the url
 	image = strings.TrimPrefix(image, helpers.SGETURLPrefix)
 
-	spinner := message.NewProgressSpinner("Loading signed file %s", image)
-	defer spinner.Stop()
-
 	ref, err := name.ParseReference(image)
 	if err != nil {
 		return err
@@ -91,8 +88,6 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	// 2. We're going to find an x509 certificate on the signature and verify against Fulcio root trust
 	// TODO(nsmith5): Refactor this verification logic to pass back _how_ verification
 	// was performed so we don't need to use this fragile logic here.
-	fulcioVerified := co.SigVerifier == nil
-
 	co.RootCerts, err = fulcio.GetRoots()
 	if err != nil {
 		return fmt.Errorf("getting Fulcio roots: %w", err)
@@ -131,10 +126,6 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 		verifyMsg += "PUBLIC KEY. "
 	}
 
-	if fulcioVerified {
-		spinner.Updatef("KEYLESS (OIDC). ")
-	}
-
 	for _, sig := range sp {
 		if cert, err := sig.Cert(); err == nil && cert != nil {
 			message.Debugf("Certificate subject: %s", cert.Subject)
@@ -147,8 +138,7 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 
 		p, err := sig.Payload()
 		if err != nil {
-			spinner.Errorf(err, "Error getting payload")
-			return err
+			return fmt.Errorf("error getting payload: %w", err)
 		}
 		message.Debug(string(p))
 	}
@@ -171,8 +161,6 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	}
 
 	_, err = io.Copy(out, rc)
-	spinner.Successf(verifyMsg)
-
 	return err
 }
 

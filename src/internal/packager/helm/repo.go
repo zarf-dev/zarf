@@ -68,9 +68,6 @@ func (h *Helm) PackageChart(ctx context.Context, cosignKeyPath string) error {
 
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
 func (h *Helm) PackageChartFromLocalFiles(ctx context.Context, cosignKeyPath string) error {
-	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.chart.Name, h.chart.Version, h.chart.LocalPath)
-	defer spinner.Stop()
-
 	// Load and validate the chart
 	cl, _, err := h.loadAndValidateChart(h.chart.LocalPath)
 	if err != nil {
@@ -105,17 +102,11 @@ func (h *Helm) PackageChartFromLocalFiles(ctx context.Context, cosignKeyPath str
 	if err != nil {
 		return err
 	}
-
-	spinner.Success()
-
 	return nil
 }
 
 // PackageChartFromGit is a special implementation of chart archiving that supports the https://p1.dso.mil/#/products/big-bang/ model.
 func (h *Helm) PackageChartFromGit(ctx context.Context, cosignKeyPath string) error {
-	spinner := message.NewProgressSpinner("Processing helm chart %s", h.chart.Name)
-	defer spinner.Stop()
-
 	// Retrieve the repo containing the chart
 	gitPath, err := DownloadChartFromGitToTemp(ctx, h.chart.URL)
 	if err != nil {
@@ -130,9 +121,6 @@ func (h *Helm) PackageChartFromGit(ctx context.Context, cosignKeyPath string) er
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
 func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string) error {
-	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.chart.Name, h.chart.Version, h.chart.URL)
-	defer spinner.Stop()
-
 	// Set up the helm pull config
 	pull := action.NewPull()
 	pull.Settings = cli.New()
@@ -186,7 +174,6 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 
 	// Set up the chart chartDownloader
 	chartDownloader := downloader.ChartDownloader{
-		Out:            spinner,
 		RegistryClient: regClient,
 		// TODO: Further research this with regular/OCI charts
 		Verify:  downloader.VerifyNever,
@@ -220,8 +207,6 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 	if err != nil {
 		return err
 	}
-
-	spinner.Success()
 
 	return nil
 }

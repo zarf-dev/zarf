@@ -70,14 +70,9 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 	}
 
 	if !dst.IsLegacyLayout() {
-		spinner := message.NewProgressSpinner("Validating pulled layer checksums")
-		defer spinner.Stop()
-
 		if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, isPartial); err != nil {
 			return pkg, nil, err
 		}
-
-		spinner.Success()
 
 		if !s.SkipSignatureValidation {
 			if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
@@ -133,14 +128,9 @@ func (s *OCISource) LoadPackageMetadata(ctx context.Context, dst *layout.Package
 
 	if !dst.IsLegacyLayout() {
 		if wantSBOM {
-			spinner := message.NewProgressSpinner("Validating SBOM checksums")
-			defer spinner.Stop()
-
 			if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, true); err != nil {
 				return pkg, nil, err
 			}
-
-			spinner.Success()
 		}
 
 		if !s.SkipSignatureValidation {
@@ -184,15 +174,9 @@ func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 	if err := utils.ReadYaml(loaded.ZarfYAML, &pkg); err != nil {
 		return "", err
 	}
-
-	spinner := message.NewProgressSpinner("Validating full package checksums")
-	defer spinner.Stop()
-
 	if err := ValidatePackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, false); err != nil {
 		return "", err
 	}
-
-	spinner.Success()
 
 	// TODO (@Noxsios) remove the suffix check at v1.0.0
 	isSkeleton := pkg.Build.Architecture == zoci.SkeletonArch || strings.HasSuffix(s.Repo().Reference.Reference, zoci.SkeletonArch)

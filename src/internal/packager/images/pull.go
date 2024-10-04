@@ -62,14 +62,7 @@ func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
 
 // Pull pulls all of the images from the given config.
 func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, error) {
-	var longer string
 	imageCount := len(cfg.ImageList)
-	// Give some additional user feedback on larger image sets
-	if imageCount > 15 {
-		longer = "This step may take a couple of minutes to complete."
-	} else if imageCount > 5 {
-		longer = "This step may take several seconds to complete."
-	}
 
 	if err := helpers.CreateDirectory(cfg.DestinationDirectory, helpers.ReadExecuteAllWriteUser); err != nil {
 		return nil, fmt.Errorf("failed to create image path %s: %w", cfg.DestinationDirectory, err)
@@ -79,10 +72,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	if err != nil {
 		return nil, err
 	}
-
-	spinner := message.NewProgressSpinner("Fetching info for %d images. %s", imageCount, longer)
-	defer spinner.Stop()
-
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
@@ -95,14 +84,11 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 	fetched := map[transform.Image]v1.Image{}
 
-	var counter, totalBytes atomic.Int64
+	var totalBytes atomic.Int64
 
 	for _, refInfo := range cfg.ImageList {
 		refInfo := refInfo
 		eg.Go(func() error {
-			idx := counter.Add(1)
-			spinner.Updatef("Fetching image info (%d of %d)", idx, imageCount)
-
 			ref := refInfo.Reference
 			for k, v := range cfg.RegistryOverrides {
 				if strings.HasPrefix(refInfo.Reference, k) {
@@ -220,9 +206,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
-
-	spinner.Successf("Fetched info for %d images", imageCount)
-
 	doneSaving := make(chan error)
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
 	go utils.RenderProgressBarForLocalDirWrite(cfg.DestinationDirectory, totalBytes.Load(), doneSaving, updateText, updateText)

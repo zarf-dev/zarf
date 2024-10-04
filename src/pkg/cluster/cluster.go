@@ -18,8 +18,6 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
-
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 const (
@@ -38,9 +36,6 @@ type Cluster struct {
 
 // NewClusterWithWait creates a new Cluster instance and waits for the given timeout for the cluster to be ready.
 func NewClusterWithWait(ctx context.Context) (*Cluster, error) {
-	spinner := message.NewProgressSpinner("Waiting for cluster connection")
-	defer spinner.Stop()
-
 	c, err := NewCluster()
 	if err != nil {
 		return nil, err
@@ -67,9 +62,6 @@ func NewClusterWithWait(ctx context.Context) (*Cluster, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	spinner.Success()
-
 	return c, nil
 }
 

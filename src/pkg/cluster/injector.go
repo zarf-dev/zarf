@@ -27,7 +27,6 @@ import (
 	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -39,10 +38,6 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	if err != nil {
 		return err
 	}
-
-	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
-	defer spinner.Stop()
-
 	resReq := corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse(".5"),
@@ -58,7 +53,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return err
 	}
 
-	payloadCmNames, shasum, err := c.createPayloadConfigMaps(ctx, spinner, tmpDir, imagesDir, injectorSeedSrcs)
+	payloadCmNames, shasum, err := c.createPayloadConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs)
 	if err != nil {
 		return fmt.Errorf("unable to generate the injector payload configmaps: %w", err)
 	}
@@ -121,8 +116,6 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	if err != nil {
 		return err
 	}
-
-	spinner.Success()
 	return nil
 }
 
@@ -186,7 +179,7 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	return nil
 }
 
-func (c *Cluster) createPayloadConfigMaps(ctx context.Context, spinner *message.Spinner, tmpDir, imagesDir string, injectorSeedSrcs []string) ([]string, string, error) {
+func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string) ([]string, string, error) {
 	tarPath := filepath.Join(tmpDir, "payload.tar.gz")
 	seedImagesDir := filepath.Join(tmpDir, "seed-images")
 	if err := helpers.CreateDirectory(seedImagesDir, helpers.ReadWriteExecuteUser); err != nil {
@@ -233,9 +226,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, spinner *message.
 	cmNames := []string{}
 	for i, data := range chunks {
 		fileName := fmt.Sprintf("zarf-payload-%03d", i)
-
-		spinner.Updatef("Adding archive binary configmap %d of %d to the cluster", i+1, len(chunks))
-
 		cm := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ZarfNamespaceName,

@@ -226,21 +226,16 @@ func (pp *PackagePaths) GenerateChecksums() (string, error) {
 
 // ArchivePackage creates an archive for a Zarf package.
 func (pp *PackagePaths) ArchivePackage(destinationTarball string, maxPackageSizeMB int) error {
-	spinner := message.NewProgressSpinner("Writing %s to %s", pp.Base, destinationTarball)
-	defer spinner.Stop()
-
 	// Make the archive
 	archiveSrc := []string{pp.Base + string(os.PathSeparator)}
 	if err := archiver.Archive(archiveSrc, destinationTarball); err != nil {
 		return fmt.Errorf("unable to create package: %w", err)
 	}
-	spinner.Updatef("Wrote %s to %s", pp.Base, destinationTarball)
 
 	fi, err := os.Stat(destinationTarball)
 	if err != nil {
 		return fmt.Errorf("unable to read the package archive: %w", err)
 	}
-	spinner.Successf("Package saved to %q", destinationTarball)
 
 	// Convert Megabytes to bytes.
 	chunkSize := maxPackageSizeMB * 1000 * 1000

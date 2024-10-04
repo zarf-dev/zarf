@@ -230,12 +230,7 @@ func (sc *SkeletonCreator) addComponent(component v1alpha1.ZarfComponent, dst *l
 	}
 
 	if len(component.DataInjections) > 0 {
-		spinner := message.NewProgressSpinner("Loading data injections")
-		defer spinner.Stop()
-
 		for dataIdx, data := range component.DataInjections {
-			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
-
 			rel := filepath.Join(layout.DataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 			dst := filepath.Join(componentPaths.Base, rel)
 
@@ -245,8 +240,6 @@ func (sc *SkeletonCreator) addComponent(component v1alpha1.ZarfComponent, dst *l
 
 			updatedComponent.DataInjections[dataIdx].Source = rel
 		}
-
-		spinner.Success()
 	}
 
 	if len(component.Manifests) > 0 {
@@ -257,10 +250,6 @@ func (sc *SkeletonCreator) addComponent(component v1alpha1.ZarfComponent, dst *l
 			manifestCount += len(manifest.Files)
 			manifestCount += len(manifest.Kustomizations)
 		}
-
-		spinner := message.NewProgressSpinner("Loading %d K8s manifests", manifestCount)
-		defer spinner.Stop()
-
 		// Iterate over all manifests.
 		for manifestIdx, manifest := range component.Manifests {
 			for fileIdx, path := range manifest.Files {
@@ -268,8 +257,6 @@ func (sc *SkeletonCreator) addComponent(component v1alpha1.ZarfComponent, dst *l
 				dst := filepath.Join(componentPaths.Base, rel)
 
 				// Copy manifests without any processing.
-				spinner.Updatef("Copying manifest %s", path)
-
 				if err := helpers.CreatePathAndCopy(path, dst); err != nil {
 					return nil, fmt.Errorf("unable to copy manifest %s: %w", path, err)
 				}
@@ -279,8 +266,6 @@ func (sc *SkeletonCreator) addComponent(component v1alpha1.ZarfComponent, dst *l
 
 			for kustomizeIdx, path := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package.
-				spinner.Updatef("Building kustomization for %s", path)
-
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
 				rel := filepath.Join(layout.ManifestsDir, kname)
 				dst := filepath.Join(componentPaths.Base, rel)
@@ -293,8 +278,6 @@ func (sc *SkeletonCreator) addComponent(component v1alpha1.ZarfComponent, dst *l
 			// remove kustomizations
 			updatedComponent.Manifests[manifestIdx].Kustomizations = nil
 		}
-
-		spinner.Success()
 	}
 
 	return updatedComponent, nil

@@ -35,9 +35,6 @@ func (p *Packager) Remove(ctx context.Context) error {
 	if isClusterSource {
 		p.cluster = p.source.(*sources.ClusterSource).Cluster
 	}
-	spinner := message.NewProgressSpinner("Removing Zarf package %s", p.cfg.PkgOpts.PackageSource)
-	defer spinner.Stop()
-
 	// we do not want to allow removal of signed packages without a signature if there are remove actions
 	// as this is arbitrary code execution from an untrusted source
 	pkg, _, err := p.source.LoadPackageMetadata(ctx, p.layout, false, false)
@@ -98,7 +95,7 @@ func (p *Packager) Remove(ctx context.Context) error {
 			continue
 		}
 
-		if deployedPackage, err = p.removeComponent(ctx, deployedPackage, dc, spinner); err != nil {
+		if deployedPackage, err = p.removeComponent(ctx, deployedPackage, dc); err != nil {
 			return fmt.Errorf("unable to remove the component '%s': %w", dc.Name, err)
 		}
 	}
@@ -162,7 +159,7 @@ func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage type
 	return nil
 }
 
-func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.DeployedPackage, deployedComponent types.DeployedComponent, spinner *message.Spinner) (*types.DeployedPackage, error) {
+func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.DeployedPackage, deployedComponent types.DeployedComponent) (*types.DeployedPackage, error) {
 	components := deployedPackage.Data.Components
 
 	c := helpers.Find(components, func(t v1alpha1.ZarfComponent) bool {
@@ -182,10 +179,8 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 	}
 
 	for _, chart := range helpers.Reverse(deployedComponent.InstalledCharts) {
-		spinner.Updatef("Uninstalling chart '%s' from the '%s' component", chart.ChartName, deployedComponent.Name)
-
 		helmCfg := helm.NewClusterOnly(p.cfg, p.variableConfig, p.state, p.cluster)
-		if err := helmCfg.RemoveChart(chart.Namespace, chart.ChartName, spinner); err != nil {
+		if err := helmCfg.RemoveChart(chart.Namespace, chart.ChartName); err != nil {
 			if !errors.Is(err, driver.ErrReleaseNotFound) {
 				onFailure()
 				return deployedPackage, fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w",

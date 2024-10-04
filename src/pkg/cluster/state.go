@@ -36,12 +36,9 @@ const (
 
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
 func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitOptions) error {
-	spinner := message.NewProgressSpinner("Gathering cluster state information")
-	defer spinner.Stop()
 
 	// Attempt to load an existing state prior to init.
 	// NOTE: We are ignoring the error here because we don't really expect a state to exist yet.
-	spinner.Updatef("Checking cluster for existing Zarf deployment")
 	state, err := c.LoadZarfState(ctx)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return fmt.Errorf("failed to check for existing state: %w", err)
@@ -50,8 +47,6 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 	// If state is nil, this is a new cluster.
 	if state == nil {
 		state = &types.ZarfState{}
-		spinner.Updatef("New cluster, no prior Zarf deployments found")
-
 		if initOptions.ApplianceMode {
 			// If the K3s component is being deployed, skip distro detection.
 			state.Distro = DistroIsK3s
@@ -72,10 +67,6 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 			state.Distro = detectDistro(nodeList.Items[0], namespaceList.Items)
 		}
 
-		if state.Distro != DistroIsUnknown {
-			spinner.Updatef("Detected K8s distro %s", state.Distro)
-		}
-
 		// Setup zarf agent PKI
 		agentTLS, err := pki.GeneratePKI(config.ZarfAgentHost)
 		if err != nil {
@@ -89,7 +80,6 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		}
 		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
 		for _, namespace := range namespaceList.Items {
-			spinner.Updatef("Marking existing namespace %s as ignored by Zarf Agent", namespace.Name)
 			if namespace.Labels == nil {
 				// Ensure label map exists to avoid nil panic
 				namespace.Labels = make(map[string]string)
@@ -104,7 +94,6 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		}
 
 		// Try to create the zarf namespace.
-		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := NewZarfManagedNamespace(ZarfNamespaceName)
 		err = func() error {
 			_, err := c.Clientset.CoreV1().Namespaces().Create(ctx, zarfNamespace, metav1.CreateOptions{})
@@ -181,9 +170,6 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 	if initOptions.StorageClass != "" {
 		state.StorageClass = initOptions.StorageClass
 	}
-
-	spinner.Success()
-
 	// Save the state back to K8s
 	if err := c.SaveZarfState(ctx, state); err != nil {
 		return fmt.Errorf("unable to save the Zarf state: %w", err)

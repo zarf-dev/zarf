@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -60,7 +59,7 @@ func (h *Helm) parseChartValues() (chartutil.Values, error) {
 	return helpers.MergeMapRecursive(chartValues, h.valuesOverrides), nil
 }
 
-func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) error {
+func (h *Helm) createActionConfig(namespace string) error {
 	// Initialize helm SDK
 	actionConfig := new(action.Configuration)
 	// Set the settings for the helm SDK
@@ -70,7 +69,7 @@ func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) er
 	h.settings.SetNamespace(namespace)
 
 	// Setup K8s connection
-	err := actionConfig.Init(h.settings.RESTClientGetter(), namespace, "", spinner.Updatef)
+	err := actionConfig.Init(h.settings.RESTClientGetter(), namespace, "", func(string, ...interface{}) {})
 
 	// Set the actionConfig is the received Helm pointer
 	h.actionConfig = actionConfig

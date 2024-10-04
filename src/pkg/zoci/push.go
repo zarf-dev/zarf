@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -31,14 +30,10 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *v1alpha1.ZarfPackage, 
 	}(src)
 
 	r.Log().Info(fmt.Sprintf("Publishing package to %s", r.Repo().Reference))
-	spinner := message.NewProgressSpinner("")
-	defer spinner.Stop()
 
 	// Get all of the layers in the package
 	var descs []ocispec.Descriptor
 	for name, path := range paths.Files() {
-		spinner.Updatef("Preparing layer %s", helpers.First30Last30(name))
-
 		mediaType := ZarfLayerMediaTypeBlob
 
 		desc, err := src.Add(ctx, name, mediaType, path)
@@ -47,8 +42,6 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *v1alpha1.ZarfPackage, 
 		}
 		descs = append(descs, desc)
 	}
-	spinner.Successf("Prepared all layers")
-
 	copyOpts := r.GetDefaultCopyOpts()
 	copyOpts.Concurrency = concurrency
 	total := oci.SumDescsSize(descs)

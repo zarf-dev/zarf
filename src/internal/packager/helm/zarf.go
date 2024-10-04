@@ -20,7 +20,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -70,9 +69,6 @@ func (h *Helm) UpdateZarfRegistryValues(ctx context.Context) error {
 
 // UpdateZarfAgentValues updates the Zarf agent deployment with the new state values
 func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
-	spinner := message.NewProgressSpinner("Gathering information to update Zarf Agent TLS")
-	defer spinner.Stop()
-
 	deployment, err := h.cluster.Clientset.AppsV1().Deployments(cluster.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -82,7 +78,7 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 		return err
 	}
 
-	err = h.createActionConfig(cluster.ZarfNamespaceName, spinner)
+	err = h.createActionConfig(cluster.ZarfNamespaceName)
 	if err != nil {
 		return err
 	}
@@ -93,8 +89,6 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("unable to list helm releases: %w", err)
 	}
-	spinner.Success()
-
 	for _, release := range releases {
 		// Update the Zarf Agent release with the new values
 		if release.Chart.Name() == "raw-init-zarf-agent-zarf-agent" {
@@ -127,8 +121,6 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 
 	// Trigger a rolling update for the TLS secret update to take effect.
 	// https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment
-	spinner = message.NewProgressSpinner("Performing a rolling update for the Zarf Agent deployment")
-	defer spinner.Stop()
 
 	// Re-fetch the agent deployment before we update since the resourceVersion has changed after updating the Helm release values.
 	// Avoids this error: https://github.com/kubernetes/kubernetes/issues/28149
@@ -161,7 +153,5 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	spinner.Success()
 	return nil
 }

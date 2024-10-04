@@ -35,9 +35,6 @@ type TarballSource struct {
 
 // LoadPackage loads a package from a tarball.
 func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
-	spinner := message.NewProgressSpinner("Loading package from %q", s.PackageSource)
-	defer spinner.Stop()
-
 	if s.Shasum != "" {
 		if err := helpers.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
 			return pkg, nil, err
@@ -98,15 +95,9 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 	}
 
 	if !dst.IsLegacyLayout() {
-		spinner := message.NewProgressSpinner("Validating full package checksums")
-		defer spinner.Stop()
-
 		if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, false); err != nil {
 			return pkg, nil, err
 		}
-
-		spinner.Success()
-
 		if !s.SkipSignatureValidation {
 			if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
 				return pkg, nil, err
@@ -134,9 +125,6 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 			}
 		}
 	}
-
-	spinner.Success()
-
 	return pkg, warnings, nil
 }
 
@@ -177,14 +165,9 @@ func (s *TarballSource) LoadPackageMetadata(ctx context.Context, dst *layout.Pac
 
 	if !dst.IsLegacyLayout() {
 		if wantSBOM {
-			spinner := message.NewProgressSpinner("Validating SBOM checksums")
-			defer spinner.Stop()
-
 			if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, true); err != nil {
 				return pkg, nil, err
 			}
-
-			spinner.Success()
 		}
 
 		if !s.SkipSignatureValidation {

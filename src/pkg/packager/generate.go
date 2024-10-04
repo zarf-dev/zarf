@@ -23,8 +23,6 @@ import (
 // Generate generates a Zarf package definition.
 func (p *Packager) Generate(ctx context.Context) error {
 	generatedZarfYAMLPath := filepath.Join(p.cfg.GenerateOpts.Output, layout.ZarfYAML)
-	spinner := message.NewProgressSpinner("Generating package for %q at %s", p.cfg.GenerateOpts.Name, generatedZarfYAMLPath)
-
 	if !helpers.InvalidPath(generatedZarfYAMLPath) {
 		prefixed := filepath.Join(p.cfg.GenerateOpts.Output, fmt.Sprintf("%s-%s", p.cfg.GenerateOpts.Name, layout.ZarfYAML))
 
@@ -94,8 +92,5 @@ func (p *Packager) Generate(ctx context.Context) error {
 	content = strings.Replace(content, "kind:\n", "\nkind:\n", 1)
 	content = strings.Replace(content, "metadata:\n", "\nmetadata:\n", 1)
 	content = strings.Replace(content, "components:\n", "\ncomponents:\n", 1)
-
-	spinner.Successf("Generated package for %q at %s", p.cfg.GenerateOpts.Name, generatedZarfYAMLPath)
-
 	return os.WriteFile(generatedZarfYAMLPath, []byte(content), helpers.ReadAllWriteUser)
 }

@@ -151,9 +151,6 @@ func (p *Packager) isConnectedToCluster() bool {
 // attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
 // NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
 func (p *Packager) attemptClusterChecks(ctx context.Context) error {
-	spinner := message.NewProgressSpinner("Gathering additional cluster information (if available)")
-	defer spinner.Stop()
-
 	// Check the clusters architecture matches the package spec
 	if err := p.validatePackageArchitecture(ctx); err != nil {
 		if errors.Is(err, lang.ErrUnableToCheckArch) {
@@ -171,9 +168,6 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) error {
 			return err
 		}
 	}
-
-	spinner.Success()
-
 	return nil
 }
 

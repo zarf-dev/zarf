@@ -134,10 +134,7 @@ func (c *Cluster) DeleteDeployedPackage(ctx context.Context, packageName string)
 }
 
 // StripZarfLabelsAndSecretsFromNamespaces removes metadata and secrets from existing namespaces no longer manged by Zarf.
-func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
-	spinner := message.NewProgressSpinner("Removing zarf metadata & secrets from existing namespaces not managed by Zarf")
-	defer spinner.Stop()
-
+func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) error {
 	deleteOptions := metav1.DeleteOptions{}
 	listOptions := metav1.ListOptions{
 		LabelSelector: ZarfManagedByLabel + "=zarf",
@@ -145,31 +142,27 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		spinner.Errorf(err, "Unable to get k8s namespaces")
+		fmt.Errorf("unable to get k8s namespaces: %w", err)
 	} else {
 		for _, namespace := range namespaceList.Items {
 			if _, ok := namespace.Labels[AgentLabel]; ok {
-				spinner.Updatef("Removing Zarf Agent label for namespace %s", namespace.Name)
 				delete(namespace.Labels, AgentLabel)
 				namespaceCopy := namespace
 				_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
 				if err != nil {
 					// This is not a hard failure, but we should log it
-					spinner.Errorf(err, "Unable to update the namespace labels for %s", namespace.Name)
+					message.Debugf("unable to update the namespace labels for %s", namespace.Name)
 				}
 			}
-
-			spinner.Updatef("Removing Zarf secrets for namespace %s", namespace.Name)
 			err := c.Clientset.CoreV1().
 				Secrets(namespace.Name).
 				DeleteCollection(ctx, deleteOptions, listOptions)
 			if err != nil {
-				spinner.Errorf(err, "Unable to delete secrets from namespace %s", namespace.Name)
+				return fmt.Errorf("unable to delete secrets from namespace %s", namespace.Name)
 			}
 		}
 	}
-
-	spinner.Success()
+	return nil
 }
 
 // PackageSecretNeedsWait checks if a package component has a running webhook that needs to be waited on.
@@ -203,14 +196,11 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alph
 		return nil, err
 	}
 
-	packageNeedsWait, waitSeconds, hookName := c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
+	packageNeedsWait, waitSeconds, _ := c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
 	// If no webhooks need to complete, we can return immediately.
 	if !packageNeedsWait {
 		return deployedPackage, nil
 	}
-
-	spinner := message.NewProgressSpinner("Waiting for webhook %q to complete for component %q", hookName, component.Name)
-	defer spinner.Stop()
 
 	waitDuration := types.DefaultWebhookWaitDuration
 	if waitSeconds > 0 {
@@ -232,7 +222,6 @@ func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alph
 	if err != nil {
 		return nil, err
 	}
-	spinner.Success()
 	return deployedPackage, nil
 }
 

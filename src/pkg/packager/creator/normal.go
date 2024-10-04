@@ -417,11 +417,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 	}
 
 	if len(component.DataInjections) > 0 {
-		spinner := message.NewProgressSpinner("Loading data injections")
-		defer spinner.Stop()
-
 		for dataIdx, data := range component.DataInjections {
-			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
 
 			rel := filepath.Join(layout.DataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 			dst := filepath.Join(componentPaths.Base, rel)
@@ -436,7 +432,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 				}
 			}
 		}
-		spinner.Success()
 	}
 
 	if len(component.Manifests) > 0 {
@@ -447,10 +442,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 			manifestCount += len(manifest.Files)
 			manifestCount += len(manifest.Kustomizations)
 		}
-
-		spinner := message.NewProgressSpinner("Loading %d K8s manifests", manifestCount)
-		defer spinner.Stop()
-
 		// Iterate over all manifests.
 		for _, manifest := range component.Manifests {
 			for fileIdx, path := range manifest.Files {
@@ -458,7 +449,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 				dst := filepath.Join(componentPaths.Base, rel)
 
 				// Copy manifests without any processing.
-				spinner.Updatef("Copying manifest %s", path)
 				if helpers.IsURL(path) {
 					if err := utils.DownloadToFile(ctx, path, dst, component.DeprecatedCosignKeyPath); err != nil {
 						return fmt.Errorf(lang.ErrDownloading, path, err.Error())
@@ -472,8 +462,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 
 			for kustomizeIdx, path := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package.
-				spinner.Updatef("Building kustomization for %s", path)
-
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
 				rel := filepath.Join(layout.ManifestsDir, kname)
 				dst := filepath.Join(componentPaths.Base, rel)
@@ -483,14 +471,10 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 				}
 			}
 		}
-		spinner.Success()
 	}
 
 	// Load all specified git repos.
 	if len(component.Repos) > 0 {
-		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
-		defer spinner.Stop()
-
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
 			_, err := git.Clone(ctx, componentPaths.Repos, url, false)
@@ -498,7 +482,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
-		spinner.Success()
 	}
 
 	if err := actions.Run(ctx, onCreate.Defaults, onCreate.After, nil); err != nil {
