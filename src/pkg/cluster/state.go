@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ktypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -106,22 +107,13 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		// Try to create the zarf namespace.
 		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := NewZarfManagedNamespace(ZarfNamespaceName)
-		err = func() error {
-			_, err := c.Clientset.CoreV1().Namespaces().Create(ctx, zarfNamespace, metav1.CreateOptions{})
-			if err != nil && !kerrors.IsAlreadyExists(err) {
-				return fmt.Errorf("unable to create the Zarf namespace: %w", err)
-			}
-			if err == nil {
-				return nil
-			}
-			_, err = c.Clientset.CoreV1().Namespaces().Update(ctx, zarfNamespace, metav1.UpdateOptions{})
-			if err != nil {
-				return fmt.Errorf("unable to update the Zarf namespace: %w", err)
-			}
-			return nil
-		}()
+		b, err := json.Marshal(zarfNamespace)
 		if err != nil {
 			return err
+		}
+		_, err = c.Clientset.CoreV1().Namespaces().Patch(ctx, ZarfNamespaceName, ktypes.ApplyPatchType, b, metav1.PatchOptions{})
+		if err != nil {
+			return fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
 
 		// Wait up to 2 minutes for the default service account to be created.
@@ -271,16 +263,13 @@ func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) err
 	}
 
 	// Attempt to create or update the secret and return.
-	_, err = c.Clientset.CoreV1().Secrets(secret.Namespace).Create(ctx, secret, metav1.CreateOptions{})
-	if err != nil && !kerrors.IsAlreadyExists(err) {
-		return fmt.Errorf("unable to create the zarf state secret: %w", err)
-	}
-	if err == nil {
-		return nil
-	}
-	_, err = c.Clientset.CoreV1().Secrets(secret.Namespace).Update(ctx, secret, metav1.UpdateOptions{})
+	b, err := json.Marshal(secret)
 	if err != nil {
-		return fmt.Errorf("unable to update the zarf state secret: %w", err)
+		return err
+	}
+	_, err = c.Clientset.CoreV1().Secrets(secret.Namespace).Patch(ctx, secret.Name, ktypes.ApplyPatchType, b, metav1.PatchOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to apply the zarf state secret: %w", err)
 	}
 	return nil
 }

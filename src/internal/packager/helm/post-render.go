@@ -7,8 +7,8 @@ package helm
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
+	ktypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/yaml"
@@ -161,47 +162,23 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		// TODO: Refactor as error is not checked instead of checking for not found error.
-		currentRegistrySecret, _ := c.Clientset.CoreV1().Secrets(name).Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
-		sameSecretData := maps.EqualFunc(currentRegistrySecret.Data, validRegistrySecret.Data, func(v1, v2 []byte) bool { return bytes.Equal(v1, v2) })
-		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !sameSecretData {
-			err := func() error {
-				_, err := c.Clientset.CoreV1().Secrets(validRegistrySecret.Namespace).Create(ctx, validRegistrySecret, metav1.CreateOptions{})
-				if err != nil && !kerrors.IsAlreadyExists(err) {
-					return err
-				}
-				if err == nil {
-					return nil
-				}
-				_, err = c.Clientset.CoreV1().Secrets(validRegistrySecret.Namespace).Update(ctx, validRegistrySecret, metav1.UpdateOptions{})
-				if err != nil {
-					return err
-				}
-				return nil
-			}()
-			if err != nil {
-				message.WarnErrf(err, "Problem creating registry secret for the %s namespace", name)
-			}
+		registrySecretB, err := json.Marshal(validRegistrySecret)
+		if err != nil {
+			return err
+		}
+		_, err = c.Clientset.CoreV1().Secrets(validRegistrySecret.Namespace).Patch(ctx, validRegistrySecret.Name, ktypes.ApplyPatchType, registrySecretB, metav1.PatchOptions{})
+		if err != nil {
+			message.WarnErrf(err, "Problem applying registry secret for the %s namespace", name)
+		}
 
-			// Create or update the zarf git server secret
-			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
-			err = func() error {
-				_, err := c.Clientset.CoreV1().Secrets(gitServerSecret.Namespace).Create(ctx, gitServerSecret, metav1.CreateOptions{})
-				if err != nil && !kerrors.IsAlreadyExists(err) {
-					return err
-				}
-				if err == nil {
-					return nil
-				}
-				_, err = c.Clientset.CoreV1().Secrets(gitServerSecret.Namespace).Update(ctx, gitServerSecret, metav1.UpdateOptions{})
-				if err != nil {
-					return err
-				}
-				return nil
-			}()
-			if err != nil {
-				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
-			}
+		gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
+		gitSecretB, err := json.Marshal(gitServerSecret)
+		if err != nil {
+			return err
+		}
+		_, err = c.Clientset.CoreV1().Secrets(gitServerSecret.Namespace).Patch(ctx, gitServerSecret.Name, ktypes.ApplyPatchType, gitSecretB, metav1.PatchOptions{})
+		if err != nil {
+			message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
 		}
 	}
 	return nil

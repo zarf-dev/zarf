@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ktypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -99,26 +100,13 @@ func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg types.Deploy
 			"data": packageSecretData,
 		},
 	}
-	err = func() error {
-		_, err := c.Clientset.CoreV1().Secrets(packageSecret.Namespace).Get(ctx, packageSecret.Name, metav1.GetOptions{})
-		if err != nil && !kerrors.IsNotFound(err) {
-			return err
-		}
-		if kerrors.IsNotFound(err) {
-			_, err = c.Clientset.CoreV1().Secrets(packageSecret.Namespace).Create(ctx, packageSecret, metav1.CreateOptions{})
-			if err != nil {
-				return fmt.Errorf("unable to create the deployed package secret: %w", err)
-			}
-			return nil
-		}
-		_, err = c.Clientset.CoreV1().Secrets(packageSecret.Namespace).Update(ctx, packageSecret, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("unable to update the deployed package secret: %w", err)
-		}
-		return nil
-	}()
+	b, err := json.Marshal(packageSecret)
 	if err != nil {
 		return err
+	}
+	_, err = c.Clientset.CoreV1().Secrets(packageSecret.Namespace).Patch(ctx, packageSecret.Name, ktypes.ApplyPatchType, b, metav1.PatchOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to apply the deployed package secret: %w", err)
 	}
 	return nil
 }
@@ -294,22 +282,13 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 			"data": packageData,
 		},
 	}
-	updatedSecret, err := func() (*corev1.Secret, error) {
-		secret, err := c.Clientset.CoreV1().Secrets(deployedPackageSecret.Namespace).Create(ctx, deployedPackageSecret, metav1.CreateOptions{})
-		if err != nil && !kerrors.IsAlreadyExists(err) {
-			return nil, err
-		}
-		if err == nil {
-			return secret, nil
-		}
-		secret, err = c.Clientset.CoreV1().Secrets(deployedPackageSecret.Namespace).Update(ctx, deployedPackageSecret, metav1.UpdateOptions{})
-		if err != nil {
-			return nil, err
-		}
-		return secret, nil
-	}()
+	b, err := json.Marshal(deployedPackageSecret)
 	if err != nil {
-		return nil, fmt.Errorf("failed to record package deployment in secret '%s'", deployedPackageSecret.Name)
+		return nil, err
+	}
+	updatedSecret, err := c.Clientset.CoreV1().Secrets(deployedPackageSecret.Namespace).Patch(ctx, deployedPackageSecret.Name, ktypes.ApplyPatchType, b, metav1.PatchOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to record package deployment in secret '%s': %w", deployedPackageSecret.Name, err)
 	}
 	if err := json.Unmarshal(updatedSecret.Data["data"], &deployedPackage); err != nil {
 		return nil, err
