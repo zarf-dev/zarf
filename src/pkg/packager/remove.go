@@ -15,8 +15,8 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ktypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -135,28 +135,14 @@ func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage type
 				"data": newPackageSecretData,
 			},
 		}
-
-		err = func() error {
-			_, err := p.cluster.Clientset.CoreV1().Secrets(newPackageSecret.Namespace).Get(ctx, newPackageSecret.Name, metav1.GetOptions{})
-			if err != nil && !kerrors.IsNotFound(err) {
-				return err
-			}
-			if kerrors.IsNotFound(err) {
-				_, err = p.cluster.Clientset.CoreV1().Secrets(newPackageSecret.Namespace).Create(ctx, newPackageSecret, metav1.CreateOptions{})
-				if err != nil {
-					return fmt.Errorf("unable to create the zarf state secret: %w", err)
-				}
-				return nil
-			}
-			_, err = p.cluster.Clientset.CoreV1().Secrets(newPackageSecret.Namespace).Update(ctx, newPackageSecret, metav1.UpdateOptions{})
-			if err != nil {
-				return fmt.Errorf("unable to update the zarf state secret: %w", err)
-			}
-			return nil
-		}()
+		b, err := json.Marshal(newPackageSecret)
+		if err != nil {
+			return err
+		}
+		_, err = p.cluster.Clientset.CoreV1().Secrets(newPackageSecret.Namespace).Patch(ctx, newPackageSecret.Name, ktypes.ApplyPatchType, b, metav1.PatchOptions{})
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
-			message.Warnf("Unable to update the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
+			message.Warnf("Unable to apply the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
 		}
 	}
 	return nil

@@ -6,6 +6,7 @@ package packager
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -24,6 +25,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	ktypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
 	"sigs.k8s.io/cli-utils/pkg/object"
 
@@ -521,20 +523,11 @@ func (p *Packager) setupState(ctx context.Context) error {
 		// Try to create the zarf namespace
 		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := cluster.NewZarfManagedNamespace(cluster.ZarfNamespaceName)
-		err := func() error {
-			_, err := p.cluster.Clientset.CoreV1().Namespaces().Create(ctx, zarfNamespace, metav1.CreateOptions{})
-			if err != nil && !kerrors.IsAlreadyExists(err) {
-				return err
-			}
-			if err == nil {
-				return nil
-			}
-			_, err = p.cluster.Clientset.CoreV1().Namespaces().Update(ctx, zarfNamespace, metav1.UpdateOptions{})
-			if err != nil {
-				return err
-			}
-			return nil
-		}()
+		b, err := json.Marshal(zarfNamespace)
+		if err != nil {
+			return err
+		}
+		_, err = p.cluster.Clientset.CoreV1().Namespaces().Patch(ctx, cluster.ZarfNamespaceName, ktypes.ApplyPatchType, b, metav1.PatchOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to create the Zarf namespace: %w", err)
 		}
