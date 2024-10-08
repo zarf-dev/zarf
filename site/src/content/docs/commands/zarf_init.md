@@ -77,7 +77,6 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --retries int                     Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
       --set stringToString              Specify deployment variables to set on the command line (KEY=value) (default [])
       --skip-signature-validation       Skip validating the signature of the Zarf package
-      --skip-webhooks                   [alpha] Skip waiting for external webhooks to execute as each package component is deployed
       --storage-class string            Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
       --timeout duration                Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
 ```

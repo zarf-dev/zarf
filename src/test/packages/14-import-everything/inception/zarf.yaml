@@ -5,16 +5,6 @@ metadata:
   version: 0.0.1
 
 components:
-  - name: import-component-local
-    required: true
-    import:
-      url: oci://localhost:31888/import-everything:0.0.1
-
-  - name: import-component-oci
-    required: true
-    import:
-      url: oci://localhost:31888/import-everything:0.0.1
-
   - name: file-imports
     required: true
     import:

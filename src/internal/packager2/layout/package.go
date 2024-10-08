@@ -15,7 +15,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	goyaml "github.com/goccy/go-yaml"
 	registryv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/mholt/archiver/v3"
@@ -25,7 +24,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -92,17 +90,10 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
-	var pkg v1alpha1.ZarfPackage
-	err = goyaml.Unmarshal(b, &pkg)
+	pkg, err := ParseZarfPackage(b)
 	if err != nil {
 		return nil, err
 	}
-	if len(pkg.Build.Migrations) > 0 {
-		for idx, component := range pkg.Components {
-			pkg.Components[idx], _ = deprecated.MigrateComponent(pkg.Build, component)
-		}
-	}
-
 	pkgLayout := &PackageLayout{
 		dirPath: dirPath,
 		Pkg:     pkg,

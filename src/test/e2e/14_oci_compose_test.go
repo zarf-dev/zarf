@@ -104,8 +104,6 @@ func (suite *PublishCopySkeletonSuite) Test_1_Compose_Everything_Inception() {
 	suite.NoError(err)
 
 	targets := []string{
-		"import-component-local == import-component-local",
-		"import-component-oci == import-component-oci",
 		"file-imports == file-imports",
 		"local-chart-import == local-chart-import",
 	}

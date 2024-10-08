@@ -10,14 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	autoscalingV2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
@@ -172,83 +170,9 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 	spinner.Success()
 }
 
-// PackageSecretNeedsWait checks if a package component has a running webhook that needs to be waited on.
-func (c *Cluster) PackageSecretNeedsWait(deployedPackage *types.DeployedPackage, component v1alpha1.ZarfComponent, skipWebhooks bool) (needsWait bool, waitSeconds int, hookName string) {
-	// Skip checking webhook status when '--skip-webhooks' flag is provided and for YOLO packages
-	if skipWebhooks || deployedPackage == nil || deployedPackage.Data.Metadata.YOLO {
-		return false, 0, ""
-	}
-
-	// Look for the specified component
-	hookMap, componentExists := deployedPackage.ComponentWebhooks[component.Name]
-	if !componentExists {
-		return false, 0, "" // Component not found, no need to wait
-	}
-
-	// Check if there are any "Running" webhooks for the component that we need to wait for
-	for hookName, webhook := range hookMap {
-		if webhook.Status == types.WebhookStatusRunning {
-			return true, webhook.WaitDurationSeconds, hookName
-		}
-	}
-
-	// If we get here, the component doesn't need to wait for a webhook to run
-	return false, 0, ""
-}
-
-// RecordPackageDeploymentAndWait records the deployment of a package to the cluster and waits for any webhooks to complete.
-func (c *Cluster) RecordPackageDeploymentAndWait(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, generation int, component v1alpha1.ZarfComponent, skipWebhooks bool) (*types.DeployedPackage, error) {
-	deployedPackage, err := c.RecordPackageDeployment(ctx, pkg, components, generation)
-	if err != nil {
-		return nil, err
-	}
-
-	packageNeedsWait, waitSeconds, hookName := c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
-	// If no webhooks need to complete, we can return immediately.
-	if !packageNeedsWait {
-		return deployedPackage, nil
-	}
-
-	spinner := message.NewProgressSpinner("Waiting for webhook %q to complete for component %q", hookName, component.Name)
-	defer spinner.Stop()
-
-	waitDuration := types.DefaultWebhookWaitDuration
-	if waitSeconds > 0 {
-		waitDuration = time.Duration(waitSeconds) * time.Second
-	}
-	waitCtx, cancel := context.WithTimeout(ctx, waitDuration)
-	defer cancel()
-	deployedPackage, err = retry.DoWithData(func() (*types.DeployedPackage, error) {
-		deployedPackage, err = c.GetDeployedPackage(waitCtx, deployedPackage.Name)
-		if err != nil {
-			return nil, err
-		}
-		packageNeedsWait, _, _ = c.PackageSecretNeedsWait(deployedPackage, component, skipWebhooks)
-		if packageNeedsWait {
-			return nil, errors.New("wait on running webhook")
-		}
-		return deployedPackage, nil
-	}, retry.Context(waitCtx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
-	if err != nil {
-		return nil, err
-	}
-	spinner.Success()
-	return deployedPackage, nil
-}
-
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, generation int) (*types.DeployedPackage, error) {
+func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent) (*types.DeployedPackage, error) {
 	packageName := pkg.Metadata.Name
-
-	// Attempt to load information about webhooks for the package
-	var componentWebhooks map[string]map[string]types.Webhook
-	existingPackageSecret, err := c.GetDeployedPackage(ctx, packageName)
-	if err != nil {
-		message.Debugf("Unable to fetch existing secret for package '%s': %s", packageName, err.Error())
-	}
-	if existingPackageSecret != nil {
-		componentWebhooks = existingPackageSecret.ComponentWebhooks
-	}
 
 	// TODO: This is done for backwards compatibility and could be removed in the future.
 	connectStrings := types.ConnectStrings{}
@@ -266,8 +190,6 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		Data:               pkg,
 		DeployedComponents: components,
 		ConnectStrings:     connectStrings,
-		Generation:         generation,
-		ComponentWebhooks:  componentWebhooks,
 	}
 
 	packageData, err := json.Marshal(deployedPackage)
@@ -309,7 +231,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		return secret, nil
 	}()
 	if err != nil {
-		return nil, fmt.Errorf("failed to record package deployment in secret '%s'", deployedPackageSecret.Name)
+		return nil, fmt.Errorf("failed to record package deployment in secret '%s': %w", deployedPackageSecret.Name, err)
 	}
 	if err := json.Unmarshal(updatedSecret.Data["data"], &deployedPackage); err != nil {
 		return nil, err
