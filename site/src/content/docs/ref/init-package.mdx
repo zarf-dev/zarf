@@ -157,12 +157,6 @@ The `zarf-agent` modifies the following [flux](https://fluxcd.io/flux/) resource
 
 > Support for mutating OCIRepository and HelmRepository objects is in [`alpha`](/roadmap#alpha) and should be tested on non-production clusters before being deployed to production clusters.
 
-:::caution
-
-Due to a bug in helm, HelmRepositories with an insecure registry must use IP address instead of a hostname. This is not an issue with the internal Zarf registry, which is always an IP address, but will cause Flux HelmRepositories to break if Zarf is using an external http registry with a hostname.
-
-:::
-
 The `zarf-agent` modifies [ArgoCD applications](https://argo-cd.readthedocs.io/en/stable/user-guide/application-specification/) & [ArgoCD Repositories](https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/)  objects to point to the local Git Server.
 
 > Support for mutating `Application` and `Repository` objects in ArgoCD is in [`beta`](/roadmap#beta) and should be tested on non-production clusters before being deployed to production clusters.

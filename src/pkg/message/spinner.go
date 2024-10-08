@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/pterm/pterm"
@@ -34,15 +35,19 @@ func NewProgressSpinner(format string, a ...any) *Spinner {
 	}
 
 	var spinner *pterm.SpinnerPrinter
+	var err error
 	text := pterm.Sprintf(format, a...)
 	if NoProgress {
 		Info(text)
 	} else {
-		spinner, _ = pterm.DefaultSpinner.
+		spinner, err = pterm.DefaultSpinner.
 			WithRemoveWhenDone(false).
 			// Src: https://github.com/gernest/wow/blob/master/spin/spinners.go#L335
 			WithSequence(sequence...).
 			Start(text)
+		if err != nil {
+			slog.Debug("unable to create default spinner", "error", err)
+		}
 	}
 
 	activeSpinner = &Spinner{
@@ -108,7 +113,10 @@ func (p *Spinner) Updatef(format string, a ...any) {
 // Stop the spinner.
 func (p *Spinner) Stop() {
 	if p.spinner != nil && p.spinner.IsActive {
-		_ = p.spinner.Stop()
+		err := p.spinner.Stop()
+		if err != nil {
+			slog.Debug("unable to stop spinner", "error", err)
+		}
 	}
 	activeSpinner = nil
 }

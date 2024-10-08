@@ -171,8 +171,6 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH) --confirm
 
-	@test -s ./build/zarf-package-component-webhooks-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/component-webhooks -o build -a $(ARCH) --confirm
-
 build-injector-linux: ## Build the Zarf injector for AMD64 and ARM64
 	docker run --rm --user "$(id -u)":"$(id -g)" -v $$PWD/src/injector:/usr/src/zarf-injector -w /usr/src/zarf-injector rust:1.71.0-bookworm make build-injector-linux list-sizes
 
@@ -210,7 +208,7 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 
 .PHONY: test-unit
 test-unit: ## Run unit tests
-	go test -failfast -v -coverprofile=coverage.out -covermode=atomic $$(go list ./... | grep -v '^github.com/zarf-dev/zarf/src/test' | grep -v 'github.com/zarf-dev/zarf/src/extensions/bigbang/test')
+	go test -failfast -v -coverprofile=coverage.out -covermode=atomic $$(go list ./... | grep -v '^github.com/zarf-dev/zarf/src/test')
 
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR
 test-docs-and-schema:

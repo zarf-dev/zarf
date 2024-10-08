@@ -5,6 +5,7 @@
 package layout
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -77,11 +78,12 @@ func (pp *PackagePaths) ReadZarfYAML() (v1alpha1.ZarfPackage, []string, error) {
 }
 
 // MigrateLegacy migrates a legacy package layout to the new layout.
-func (pp *PackagePaths) MigrateLegacy() error {
+func (pp *PackagePaths) MigrateLegacy() (err error) {
 	var pkg v1alpha1.ZarfPackage
 	base := pp.Base
 
 	// legacy layout does not contain a checksums file, nor a signature
+	// TODO(mkcp): This can be un-nested as an early return
 	if helpers.InvalidPath(pp.Checksums) && pp.Signature == "" {
 		if err := utils.ReadYaml(pp.ZarfYAML, &pkg); err != nil {
 			return err
@@ -113,7 +115,10 @@ func (pp *PackagePaths) MigrateLegacy() error {
 	if !helpers.InvalidPath(legacyImagesTar) {
 		pp = pp.AddImages()
 		message.Debugf("Migrating %q to %q", legacyImagesTar, pp.Images.Base)
-		defer os.Remove(legacyImagesTar)
+		defer func(name string) {
+			err2 := os.Remove(name)
+			err = errors.Join(err, err2)
+		}(legacyImagesTar)
 		imgTags := []string{}
 		for _, component := range pkg.Components {
 			imgTags = append(imgTags, component.Images...)
@@ -323,7 +328,10 @@ func (pp *PackagePaths) Files() map[string]string {
 	pathMap := make(map[string]string)
 
 	stripBase := func(path string) string {
-		rel, _ := filepath.Rel(pp.Base, path)
+		rel, err := filepath.Rel(pp.Base, path)
+		if err != nil {
+			message.Debug("unable to strip base from path", "error", err)
+		}
 		// Convert from the OS path separator to the standard '/' for Windows support
 		return filepath.ToSlash(rel)
 	}

@@ -5,29 +5,13 @@ metadata:
   version: 0.0.1
 
 components:
-  # Test every simple primitive that Zarf has through a local import
-  - name: import-component-local
-    description: "import-component-local == ###ZARF_COMPONENT_NAME###"
-    required: false
-    import:
-      path: ../09-composable-packages
-      name: test-compose-package
-
-  # Test nested local to oci imports
+  # Test OCI import
   - name: import-component-oci
     description: "import-component-oci == ###ZARF_COMPONENT_NAME###"
     required: false
     import:
-      name: import-component-oci
-      path: oci-import
-
-  # Test big bang extension files
-  - name: import-big-bang
-    description: "import-big-bang == ###ZARF_COMPONENT_NAME###"
-    required: false
-    import:
-      name: bigbang
-      url: oci://localhost:31888/big-bang-min:2.10.0
+      name: demo-helm-charts
+      url: oci://localhost:31888/helm-charts:0.0.1
 
   # Test file imports including cosignKeyPath
   - name: file-imports
