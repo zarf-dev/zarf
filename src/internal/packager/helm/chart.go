@@ -96,7 +96,6 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		spinner.Success()
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(h.retries)), retry.Delay(500*time.Millisecond))
-	defer helmCtxCancel()
 	if err != nil {
 		removeMsg := "if you need to remove the failed chart, use `zarf package remove`"
 		installErr := fmt.Errorf("unable to install chart after %d attempts: %w: %s", h.retries, err, removeMsg)
