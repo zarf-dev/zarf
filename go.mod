@@ -34,7 +34,7 @@ require (
 	github.com/gosuri/uitable v0.0.4
 	github.com/invopop/jsonschema v0.12.0
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/moby/moby v27.2.1+incompatible
+	github.com/moby/moby v27.3.1+incompatible
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.20.4
