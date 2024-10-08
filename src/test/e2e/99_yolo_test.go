@@ -53,7 +53,7 @@ func TestDevDeploy(t *testing.T) {
 		return
 	}
 
-	stdOut, stdErr, err := e2e.Zarf(t, "dev", "deploy", "examples/dos-games")
+	stdOut, stdErr, err := e2e.Zarf(t, "dev", "deploy", "examples/dos-games", "--registry-url", "ghcr.io")
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")
