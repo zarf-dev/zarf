@@ -63,8 +63,8 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	histClient := action.NewHistory(h.actionConfig)
 	var release *release.Release
 
-	var helmCtx context.Context
-	var helmCtxCancel context.CancelFunc
+	helmCtx, helmCtxCancel := context.WithTimeout(ctx, h.timeout)
+	defer helmCtxCancel()
 
 	err = retry.Do(func() error {
 		var err error
@@ -72,11 +72,7 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		releases, histErr := histClient.Run(h.chart.ReleaseName)
 
 		spinner.Updatef("Checking for existing helm deployment")
-		// cancel context from previous retry if it exists
-		if helmCtxCancel != nil {
-			helmCtxCancel()
-		}
-		helmCtx, helmCtxCancel = context.WithTimeout(ctx, h.timeout)
+
 		if errors.Is(histErr, driver.ErrReleaseNotFound) {
 			// No prior release, try to install it.
 			spinner.Updatef("Attempting chart installation")
