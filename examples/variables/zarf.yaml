@@ -81,15 +81,6 @@ components:
           - nginx-configmap.yaml
           - nginx-deployment.yaml
           - nginx-service.yaml
-    actions:
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: pod
-                namespace: nginx
-                name: app=nginx
-                condition: Ready
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples

@@ -12,3 +12,4 @@ spec:
     kind: OCIRepository
     name: podinfo
   targetNamespace: podinfo-oci
+  wait: true
