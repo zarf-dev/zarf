@@ -99,24 +99,18 @@ func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState
 		HorizontalRule()
 
 		switch service {
-		// case RegistryKey:
-		// oR := oldState.RegistryInfo
-		// nR := newState.RegistryInfo
-		// Title("Registry", "the information used to interact with Zarf's container image registry")
-		// pterm.Println()
-		// logger.Info("Registry information", compareStrings(oR.Address, nR.Address),
-		// 	compareStrings(oR.PushUsername, nR.PushUsername),  comparePasswords(oR.PushPassword, nR.PushPassword),
-		// 	compareStrings(oR.PullUsername, nR.PullUsername),  comparePasswords(oR.PullPassword, nR.PullPassword))
-		// case GitKey:
-		// 	oG := oldState.GitServer
-		// 	nG := newState.GitServer
-		// 	Title("Git Server", "the information used to interact with Zarf's GitOps Git Server")
-		// 	pterm.Println()
-		// 	pterm.Printfln("    %s: %s", pterm.Bold.Sprint("URL Address"), compareStrings(oG.Address, nG.Address, false))
-		// 	pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Username"), compareStrings(oG.PushUsername, nG.PushUsername, false))
-		// 	pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Password"), compareStrings(oG.PushPassword, nG.PushPassword, true))
-		// 	pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Pull Username"), compareStrings(oG.PullUsername, nG.PullUsername, false))
-		// 	pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Pull Password"), compareStrings(oG.PullPassword, nG.PullPassword, true))
+		case RegistryKey:
+			oR := oldState.RegistryInfo
+			nR := newState.RegistryInfo
+			logger.Info("Registry information", compareStrings("URL Address", oR.Address, nR.Address),
+				compareStrings("Push Username", oR.PushUsername, nR.PushUsername), comparePasswords("Push Password", oR.PushPassword, nR.PushPassword),
+				compareStrings("Pull Username", oR.PullUsername, nR.PullUsername), comparePasswords("Push Password", oR.PullPassword, nR.PullPassword))
+		case GitKey:
+			oG := oldState.GitServer
+			nG := newState.GitServer
+			logger.Info("Git Server info", compareStrings("URL Address", oG.Address, nG.Address),
+				compareStrings("Push Username", oG.PushUsername, nG.PushUsername), comparePasswords("Push Password", oG.PushPassword, nG.PushPassword),
+				compareStrings("Pull Username", oG.PullUsername, nG.PullUsername), comparePasswords("Push Password", oG.PullPassword, nG.PullPassword))
 		case ArtifactKey:
 			oA := oldState.ArtifactServer
 			nA := newState.ArtifactServer
