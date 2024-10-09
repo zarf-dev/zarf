@@ -6,6 +6,8 @@ package message
 
 import (
 	"fmt"
+	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/pterm/pterm"
@@ -37,8 +39,8 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 	loginData := [][]string{}
 	if state.RegistryInfo.IsInternal() {
 		loginData = append(loginData,
-			[]string{"Registry", state.RegistryInfo.PushUsername, state.RegistryInfo.PushPassword, "zarf connect registry", RegistryKey},
-			[]string{"Registry (read-only)", state.RegistryInfo.PullUsername, state.RegistryInfo.PullPassword, "zarf connect registry", RegistryReadKey},
+			[]string{"Registry", state.RegistryInfo.PushUsername, string(state.RegistryInfo.PushPassword), "zarf connect registry", RegistryKey},
+			[]string{"Registry (read-only)", state.RegistryInfo.PullUsername, string(state.RegistryInfo.PullPassword), "zarf connect registry", RegistryReadKey},
 		)
 	}
 
@@ -46,9 +48,9 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 		// Show message if including git-server
 		if component.Name == "git-server" {
 			loginData = append(loginData,
-				[]string{"Git", state.GitServer.PushUsername, state.GitServer.PushPassword, "zarf connect git", GitKey},
-				[]string{"Git (read-only)", state.GitServer.PullUsername, state.GitServer.PullPassword, "zarf connect git", GitReadKey},
-				[]string{"Artifact Token", state.ArtifactServer.PushUsername, state.ArtifactServer.PushToken, "zarf connect git", ArtifactKey},
+				[]string{"Git", state.GitServer.PushUsername, string(state.GitServer.PushPassword), "zarf connect git", GitKey},
+				[]string{"Git (read-only)", state.GitServer.PullUsername, string(state.GitServer.PullPassword), "zarf connect git", GitReadKey},
+				[]string{"Artifact Token", state.ArtifactServer.PushUsername, string(state.ArtifactServer.PushToken), "zarf connect git", ArtifactKey},
 			)
 		}
 	}
@@ -90,62 +92,64 @@ func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState
 		defer logFile.Resume()
 	}
 
+	// IRL this would be made somewhere else
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+
 	for _, service := range services {
 		HorizontalRule()
 
 		switch service {
-		case RegistryKey:
-			oR := oldState.RegistryInfo
-			nR := newState.RegistryInfo
-			Title("Registry", "the information used to interact with Zarf's container image registry")
-			pterm.Println()
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("URL Address"), compareStrings(oR.Address, nR.Address, false))
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Username"), compareStrings(oR.PushUsername, nR.PushUsername, false))
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Password"), compareStrings(oR.PushPassword, nR.PushPassword, true))
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Pull Username"), compareStrings(oR.PullUsername, nR.PullUsername, false))
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Pull Password"), compareStrings(oR.PullPassword, nR.PullPassword, true))
-		case GitKey:
-			oG := oldState.GitServer
-			nG := newState.GitServer
-			Title("Git Server", "the information used to interact with Zarf's GitOps Git Server")
-			pterm.Println()
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("URL Address"), compareStrings(oG.Address, nG.Address, false))
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Username"), compareStrings(oG.PushUsername, nG.PushUsername, false))
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Password"), compareStrings(oG.PushPassword, nG.PushPassword, true))
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Pull Username"), compareStrings(oG.PullUsername, nG.PullUsername, false))
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Pull Password"), compareStrings(oG.PullPassword, nG.PullPassword, true))
+		// case RegistryKey:
+		// oR := oldState.RegistryInfo
+		// nR := newState.RegistryInfo
+		// Title("Registry", "the information used to interact with Zarf's container image registry")
+		// pterm.Println()
+		// logger.Info("Registry information", compareStrings(oR.Address, nR.Address),
+		// 	compareStrings(oR.PushUsername, nR.PushUsername),  comparePasswords(oR.PushPassword, nR.PushPassword),
+		// 	compareStrings(oR.PullUsername, nR.PullUsername),  comparePasswords(oR.PullPassword, nR.PullPassword))
+		// case GitKey:
+		// 	oG := oldState.GitServer
+		// 	nG := newState.GitServer
+		// 	Title("Git Server", "the information used to interact with Zarf's GitOps Git Server")
+		// 	pterm.Println()
+		// 	pterm.Printfln("    %s: %s", pterm.Bold.Sprint("URL Address"), compareStrings(oG.Address, nG.Address, false))
+		// 	pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Username"), compareStrings(oG.PushUsername, nG.PushUsername, false))
+		// 	pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Password"), compareStrings(oG.PushPassword, nG.PushPassword, true))
+		// 	pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Pull Username"), compareStrings(oG.PullUsername, nG.PullUsername, false))
+		// 	pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Pull Password"), compareStrings(oG.PullPassword, nG.PullPassword, true))
 		case ArtifactKey:
 			oA := oldState.ArtifactServer
 			nA := newState.ArtifactServer
 			Title("Artifact Server", "the information used to interact with Zarf's Artifact Server")
 			pterm.Println()
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("URL Address"), compareStrings(oA.Address, nA.Address, false))
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Username"), compareStrings(oA.PushUsername, nA.PushUsername, false))
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Token"), compareStrings(oA.PushToken, nA.PushToken, true))
-		case AgentKey:
-			oT := oldState.AgentTLS
-			nT := newState.AgentTLS
-			Title("Agent TLS", "the certificates used to connect to Zarf's Agent")
-			pterm.Println()
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Certificate Authority"), compareStrings(string(oT.CA), string(nT.CA), true))
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Public Certificate"), compareStrings(string(oT.Cert), string(nT.Cert), true))
-			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Private Key"), compareStrings(string(oT.Key), string(nT.Key), true))
+			logger.Info("Artifact info",
+				compareStrings("URL Address", oA.Address, nA.Address),
+				compareStrings("Push Username", oA.PushUsername, nA.PushUsername),
+				comparePasswords("Push Token", oA.PushToken, nA.PushToken))
+			// case AgentKey:
+			// 	oT := oldState.AgentTLS
+			// 	nT := newState.AgentTLS
+			// 	Title("Agent TLS", "the certificates used to connect to Zarf's Agent")
+			// 	pterm.Println()
+			// 	pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Certificate Authority"), compareStrings(string(oT.CA), string(nT.CA), true))
+			// 	pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Public Certificate"), compareStrings(string(oT.Cert), string(nT.Cert), true))
+			// 	pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Private Key"), compareStrings(string(oT.Key), string(nT.Key), true))
 		}
 	}
 
 	pterm.Println()
 }
 
-func compareStrings(old string, new string, secret bool) string {
-	// This should be able to be redacted, we'll have to switch things up a bit first
+func compareStrings(attribute string, old string, new string) slog.Attr {
 	if new == old {
-		if secret {
-			return "**sanitized** (unchanged)"
-		}
-		return fmt.Sprintf("%s (unchanged)", old)
+		return slog.String(attribute, "(unchanged) "+old)
 	}
-	if secret {
-		return fmt.Sprintf("%s -> %s", pterm.FgRed.Sprint("**existing (sanitized)**"), pterm.FgGreen.Sprint("**replacement (sanitized)**"))
+	return slog.Group(attribute, "old", old, "new", new)
+}
+
+func comparePasswords(attribute string, old types.Password, new types.Password) slog.Attr {
+	if new == old {
+		return slog.Any(attribute, old)
 	}
-	return fmt.Sprintf("%s -> %s", pterm.FgRed.Sprint(old), pterm.FgGreen.Sprint(new))
+	return slog.Group(attribute, "old", old, "new", new)
 }

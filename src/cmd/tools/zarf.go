@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"slices"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -21,8 +20,6 @@ import (
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
@@ -90,112 +87,24 @@ var updateCredsCmd = &cobra.Command{
 	Aliases: []string{"uc"},
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		validKeys := []string{message.RegistryKey, message.GitKey, message.ArtifactKey, message.AgentKey}
-		if len(args) == 0 {
-			args = validKeys
-		} else {
-			if !slices.Contains(validKeys, args[0]) {
-				cmd.Help()
-				return fmt.Errorf("invalid service key specified, valid key choices are: %v", validKeys)
-			}
-		}
+		// Creating my own example here
 
-		ctx := cmd.Context()
-
-		timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
-		defer cancel()
-		c, err := cluster.NewClusterWithWait(timeoutCtx)
-		if err != nil {
-			return err
+		args = []string{"artifact"}
+		oldState := &types.ZarfState{
+			ArtifactServer: types.ArtifactServerInfo{
+				Address:      "whatever",
+				PushToken:    "artifact-token",
+				PushUsername: "cool-guy",
+			},
 		}
-
-		oldState, err := c.LoadZarfState(ctx)
-		if err != nil {
-			return err
+		newState := &types.ZarfState{
+			ArtifactServer: types.ArtifactServerInfo{
+				Address:      "cooler-address",
+				PushToken:    "artifact-token-new",
+				PushUsername: "cool-guy",
+			},
 		}
-		// TODO: Determine if this is actually needed.
-		if oldState.Distro == "" {
-			return errors.New("zarf state secret did not load properly")
-		}
-		newState, err := cluster.MergeZarfState(oldState, updateCredsInitOpts, args)
-		if err != nil {
-			return fmt.Errorf("unable to update Zarf credentials: %w", err)
-		}
-
 		message.PrintCredentialUpdates(oldState, newState, args)
-
-		confirm := config.CommonOptions.Confirm
-
-		if confirm {
-			message.Note(lang.CmdToolsUpdateCredsConfirmProvided)
-		} else {
-			prompt := &survey.Confirm{
-				Message: lang.CmdToolsUpdateCredsConfirmContinue,
-			}
-			if err := survey.AskOne(prompt, &confirm); err != nil {
-				return fmt.Errorf("confirm selection canceled: %w", err)
-			}
-		}
-
-		if confirm {
-			// Update registry and git pull secrets
-			if slices.Contains(args, message.RegistryKey) {
-				err := c.UpdateZarfManagedImageSecrets(ctx, newState)
-				if err != nil {
-					return err
-				}
-			}
-			if slices.Contains(args, message.GitKey) {
-				err := c.UpdateZarfManagedGitSecrets(ctx, newState)
-				if err != nil {
-					return err
-				}
-			}
-			// TODO once Zarf is changed so the default state is empty for a service when it is not deployed
-			// and sufficient time has passed for users state to get updated we can remove this check
-			internalGitServerExists, err := c.InternalGitServerExists(cmd.Context())
-			if err != nil {
-				return err
-			}
-
-			// Update artifact token (if internal)
-			if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() && internalGitServerExists {
-				newState.ArtifactServer.PushToken, err = c.UpdateInternalArtifactServerToken(ctx, oldState.GitServer)
-				if err != nil {
-					return fmt.Errorf("unable to create the new Gitea artifact token: %w", err)
-				}
-			}
-
-			// Save the final Zarf State
-			err = c.SaveZarfState(ctx, newState)
-			if err != nil {
-				return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
-			}
-
-			// Update Zarf 'init' component Helm releases if present
-			h := helm.NewClusterOnly(&types.PackagerConfig{}, template.GetZarfVariableConfig(), newState, c)
-
-			if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.IsInternal() {
-				err = h.UpdateZarfRegistryValues(ctx)
-				if err != nil {
-					// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
-					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
-				}
-			}
-			if slices.Contains(args, message.GitKey) && newState.GitServer.IsInternal() && internalGitServerExists {
-				err := c.UpdateInternalGitServerSecret(cmd.Context(), oldState.GitServer, newState.GitServer)
-				if err != nil {
-					return fmt.Errorf("unable to update Zarf Git Server values: %w", err)
-				}
-			}
-			if slices.Contains(args, message.AgentKey) {
-				err = h.UpdateZarfAgentValues(ctx)
-				if err != nil {
-					// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
-					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateAgent, err.Error())
-				}
-			}
-		}
 		return nil
 	},
 }
@@ -346,21 +255,21 @@ func init() {
 	// Flags for using an external Git server
 	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.Address, "git-url", v.GetString(common.VInitGitURL), lang.CmdInitFlagGitURL)
 	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PushUsername, "git-push-username", v.GetString(common.VInitGitPushUser), lang.CmdInitFlagGitPushUser)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PushPassword, "git-push-password", v.GetString(common.VInitGitPushPass), lang.CmdInitFlagGitPushPass)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PullUsername, "git-pull-username", v.GetString(common.VInitGitPullUser), lang.CmdInitFlagGitPullUser)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PullPassword, "git-pull-password", v.GetString(common.VInitGitPullPass), lang.CmdInitFlagGitPullPass)
+	// updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PushPassword, "git-push-password", v.GetString(common.VInitGitPushPass), lang.CmdInitFlagGitPushPass)
+	// updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PullUsername, "git-pull-username", v.GetString(common.VInitGitPullUser), lang.CmdInitFlagGitPullUser)
+	// updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PullPassword, "git-pull-password", v.GetString(common.VInitGitPullPass), lang.CmdInitFlagGitPullPass)
 
 	// Flags for using an external registry
 	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.Address, "registry-url", v.GetString(common.VInitRegistryURL), lang.CmdInitFlagRegURL)
 	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(common.VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(common.VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(common.VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(common.VInitRegistryPullPass), lang.CmdInitFlagRegPullPass)
+	// updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(common.VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
+	// updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(common.VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
+	// updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(common.VInitRegistryPullPass), lang.CmdInitFlagRegPullPass)
 
 	// Flags for using an external artifact server
 	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.Address, "artifact-url", v.GetString(common.VInitArtifactURL), lang.CmdInitFlagArtifactURL)
 	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.PushUsername, "artifact-push-username", v.GetString(common.VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
-	updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(common.VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
+	// updateCredsCmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(common.VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
 
 	updateCredsCmd.Flags().SortFlags = true
 

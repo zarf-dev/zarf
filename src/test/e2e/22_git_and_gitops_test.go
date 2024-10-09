@@ -73,7 +73,7 @@ func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 	// Init the state variable
 	state, err := c.LoadZarfState(ctx)
 	require.NoError(t, err)
-	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, state.GitServer.PullPassword)
+	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, string(state.GitServer.PullPassword))
 	require.NoError(t, err)
 	repoName := "zarf-public-test-2363058019"
 
@@ -102,7 +102,7 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 	// Init the state variable
 	state, err := c.LoadZarfState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
-	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, state.GitServer.PullPassword)
+	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, string(state.GitServer.PullPassword))
 	require.NoError(t, err)
 	repoName := "zarf-public-test-2363058019"
 

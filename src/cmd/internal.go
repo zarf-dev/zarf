@@ -251,12 +251,12 @@ var createReadOnlyGiteaUser = &cobra.Command{
 		}
 		defer tunnel.Close()
 		tunnelURL := tunnel.HTTPEndpoint()
-		giteaClient, err := gitea.NewClient(tunnelURL, state.GitServer.PushUsername, state.GitServer.PushPassword)
+		giteaClient, err := gitea.NewClient(tunnelURL, state.GitServer.PushUsername, string(state.GitServer.PushPassword))
 		if err != nil {
 			return err
 		}
 		err = tunnel.Wrap(func() error {
-			err = giteaClient.CreateReadOnlyUser(cmd.Context(), state.GitServer.PullUsername, state.GitServer.PullPassword)
+			err = giteaClient.CreateReadOnlyUser(cmd.Context(), state.GitServer.PullUsername, string(state.GitServer.PullPassword))
 			if err != nil {
 				return err
 			}
@@ -298,7 +298,7 @@ var createPackageRegistryToken = &cobra.Command{
 			}
 			defer tunnel.Close()
 			tunnelURL := tunnel.HTTPEndpoint()
-			giteaClient, err := gitea.NewClient(tunnelURL, state.GitServer.PushUsername, state.GitServer.PushPassword)
+			giteaClient, err := gitea.NewClient(tunnelURL, state.GitServer.PushUsername, string(state.GitServer.PushPassword))
 			if err != nil {
 				return err
 			}
@@ -307,7 +307,7 @@ var createPackageRegistryToken = &cobra.Command{
 				if err != nil {
 					return fmt.Errorf("unable to create an artifact registry token for Gitea: %w", err)
 				}
-				state.ArtifactServer.PushToken = tokenSha1
+				state.ArtifactServer.PushToken = types.Password(tokenSha1)
 				return nil
 			})
 			if err != nil {

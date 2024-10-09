@@ -53,11 +53,11 @@ func proxyRequestTransform(r *http.Request, state *types.ZarfState) error {
 	// Setup authentication for each type of service based on User Agent
 	switch {
 	case isGitUserAgent(r.UserAgent()):
-		r.SetBasicAuth(state.GitServer.PushUsername, state.GitServer.PushPassword)
+		r.SetBasicAuth(state.GitServer.PushUsername, string(state.GitServer.PushPassword))
 	case isNpmUserAgent(r.UserAgent()):
-		r.Header.Set("Authorization", "Bearer "+state.ArtifactServer.PushToken)
+		r.Header.Set("Authorization", "Bearer "+string(state.ArtifactServer.PushToken))
 	default:
-		r.SetBasicAuth(state.ArtifactServer.PushUsername, state.ArtifactServer.PushToken)
+		r.SetBasicAuth(state.ArtifactServer.PushUsername, string(state.ArtifactServer.PushToken))
 	}
 
 	// Transform the URL; if we see the NoTransform prefix, strip it; otherwise, transform the URL based on User Agent

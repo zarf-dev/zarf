@@ -576,12 +576,12 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 					return err
 				}
 				defer tunnel.Close()
-				giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+				giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, string(p.state.GitServer.PushPassword))
 				if err != nil {
 					return err
 				}
 				return tunnel.Wrap(func() error {
-					err = repository.Push(ctx, tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+					err = repository.Push(ctx, tunnel.HTTPEndpoint(), p.state.GitServer.PushUsername, string(p.state.GitServer.PushPassword))
 					if err != nil {
 						return err
 					}
@@ -598,7 +598,7 @@ func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, 
 				})
 			}
 
-			err = repository.Push(ctx, p.state.GitServer.Address, p.state.GitServer.PushUsername, p.state.GitServer.PushPassword)
+			err = repository.Push(ctx, p.state.GitServer.Address, p.state.GitServer.PushUsername, string(p.state.GitServer.PushPassword))
 			if err != nil {
 				return err
 			}

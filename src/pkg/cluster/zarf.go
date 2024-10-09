@@ -298,7 +298,7 @@ func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitS
 	}
 	defer tunnel.Close()
 	tunnelURL := tunnel.HTTPEndpoint()
-	giteaClient, err := gitea.NewClient(tunnelURL, oldGitServer.PushUsername, oldGitServer.PushPassword)
+	giteaClient, err := gitea.NewClient(tunnelURL, oldGitServer.PushUsername, string(oldGitServer.PushPassword))
 	if err != nil {
 		return "", err
 	}
@@ -328,16 +328,16 @@ func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServe
 	}
 	defer tunnel.Close()
 	tunnelURL := tunnel.HTTPEndpoint()
-	giteaClient, err := gitea.NewClient(tunnelURL, oldGitServer.PushUsername, oldGitServer.PushPassword)
+	giteaClient, err := gitea.NewClient(tunnelURL, oldGitServer.PushUsername, string(oldGitServer.PushPassword))
 	if err != nil {
 		return err
 	}
 	err = tunnel.Wrap(func() error {
-		err := giteaClient.UpdateGitUser(ctx, newGitServer.PullUsername, newGitServer.PullPassword)
+		err := giteaClient.UpdateGitUser(ctx, newGitServer.PullUsername, string(newGitServer.PullPassword))
 		if err != nil {
 			return err
 		}
-		err = giteaClient.UpdateGitUser(ctx, newGitServer.PushUsername, newGitServer.PushPassword)
+		err = giteaClient.UpdateGitUser(ctx, newGitServer.PushUsername, string(newGitServer.PushPassword))
 		if err != nil {
 			return err
 		}

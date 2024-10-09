@@ -195,7 +195,7 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 				Data: map[string][]byte{},
 				StringData: map[string]string{
 					"username": state.GitServer.PullUsername,
-					"password": state.GitServer.PullPassword,
+					"password": string(state.GitServer.PullPassword),
 				},
 			}
 			if !tt.updatedGitSecret {

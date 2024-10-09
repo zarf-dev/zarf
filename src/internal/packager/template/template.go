@@ -54,14 +54,14 @@ func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap
 			// Registry info
 			"REGISTRY":           regInfo.Address,
 			"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
-			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
-			"REGISTRY_AUTH_PULL": regInfo.PullPassword,
+			"REGISTRY_AUTH_PUSH": string(regInfo.PushPassword),
+			"REGISTRY_AUTH_PULL": string(regInfo.PullPassword),
 
 			// Git server info
 			"GIT_PUSH":      gitInfo.PushUsername,
-			"GIT_AUTH_PUSH": gitInfo.PushPassword,
+			"GIT_AUTH_PUSH": string(gitInfo.PushPassword),
 			"GIT_PULL":      gitInfo.PullUsername,
-			"GIT_AUTH_PULL": gitInfo.PullPassword,
+			"GIT_AUTH_PULL": string(gitInfo.PullPassword),
 		}
 
 		builtinMap[depMarker] = config.GetDataInjectionMarker()
@@ -81,7 +81,7 @@ func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap
 				return templateMap, err
 			}
 			builtinMap["HTPASSWD"] = htpasswd
-			builtinMap["REGISTRY_SECRET"] = regInfo.Secret
+			builtinMap["REGISTRY_SECRET"] = string(regInfo.Secret)
 		}
 
 		// Iterate over any custom variables and add them to the mappings for templating
@@ -109,12 +109,12 @@ func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap
 func generateHtpasswd(regInfo *types.RegistryInfo) (string, error) {
 	// Only calculate this for internal registries to allow longer external passwords
 	if regInfo.IsInternal() {
-		pushUser, err := utils.GetHtpasswdString(regInfo.PushUsername, regInfo.PushPassword)
+		pushUser, err := utils.GetHtpasswdString(regInfo.PushUsername, string(regInfo.PushPassword))
 		if err != nil {
 			return "", fmt.Errorf("error generating htpasswd string: %w", err)
 		}
 
-		pullUser, err := utils.GetHtpasswdString(regInfo.PullUsername, regInfo.PullPassword)
+		pullUser, err := utils.GetHtpasswdString(regInfo.PullUsername, string(regInfo.PullPassword))
 		if err != nil {
 			return "", fmt.Errorf("error generating htpasswd string: %w", err)
 		}

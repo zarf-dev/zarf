@@ -37,7 +37,7 @@ type DockerConfigEntryWithAuth struct {
 // GenerateRegistryPullCreds generates a secret containing the registry credentials.
 func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name string, registryInfo types.RegistryInfo) (*corev1.Secret, error) {
 	// Auth field must be username:password and base64 encoded
-	fieldValue := registryInfo.PullUsername + ":" + registryInfo.PullPassword
+	fieldValue := string(registryInfo.PullUsername) + ":" + string(registryInfo.PullPassword)
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
 
 	dockerConfigJSON := DockerConfig{
@@ -106,7 +106,7 @@ func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo typ
 		Data: map[string][]byte{},
 		StringData: map[string]string{
 			"username": gitServerInfo.PullUsername,
-			"password": gitServerInfo.PullPassword,
+			"password": string(gitServerInfo.PullPassword),
 		},
 	}
 	return gitServerSecret
