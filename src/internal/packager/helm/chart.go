@@ -5,6 +5,7 @@
 package helm
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -24,7 +25,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -58,6 +61,10 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	}
 
 	histClient := action.NewHistory(h.actionConfig)
+	var release *release.Release
+
+	helmCtx, helmCtxCancel := context.WithTimeout(ctx, h.timeout)
+	defer helmCtxCancel()
 
 	err = retry.Do(func() error {
 		var err error
@@ -70,16 +77,15 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 			// No prior release, try to install it.
 			spinner.Updatef("Attempting chart installation")
 
-			_, err = h.installChart(ctx, postRender)
+			release, err = h.installChart(helmCtx, postRender)
 		} else if histErr == nil && len(releases) > 0 {
 			// Otherwise, there is a prior release so upgrade it.
 			spinner.Updatef("Attempting chart upgrade")
 
 			lastRelease := releases[len(releases)-1]
 
-			_, err = h.upgradeChart(ctx, lastRelease, postRender)
+			release, err = h.upgradeChart(helmCtx, lastRelease, postRender)
 		} else {
-			// 😭 things aren't working
 			return fmt.Errorf("unable to verify the chart installation status: %w", histErr)
 		}
 
@@ -117,6 +123,30 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		}
 		return nil, "", installErr
 	}
+
+	resourceList, err := h.actionConfig.KubeClient.Build(bytes.NewBufferString(release.Manifest), true)
+	if err != nil {
+		return nil, "", fmt.Errorf("unable to build the resource list: %w", err)
+	}
+
+	healthChecks := []v1alpha1.NamespacedObjectKindReference{}
+	for _, resource := range resourceList {
+		apiVersion, kind := resource.Object.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
+		healthChecks = append(healthChecks, v1alpha1.NamespacedObjectKindReference{
+			APIVersion: apiVersion,
+			Kind:       kind,
+			Name:       resource.Name,
+			Namespace:  resource.Namespace,
+		})
+	}
+	if !h.chart.NoWait {
+		// Ensure we don't go past the timeout by using a context initialized with the helm timeout
+		spinner.Updatef("Running health checks")
+		if err := healthchecks.Run(helmCtx, h.cluster.Watcher, healthChecks); err != nil {
+			return nil, "", err
+		}
+	}
+	spinner.Success()
 
 	// return any collected connect strings for zarf connect.
 	return postRender.connectStrings, h.chart.ReleaseName, nil

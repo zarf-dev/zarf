@@ -19,19 +19,16 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/avast/retry-go/v4"
-	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
-	"sigs.k8s.io/cli-utils/pkg/object"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
@@ -220,30 +217,6 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 	return deployedComponents, nil
 }
 
-func runHealthChecks(ctx context.Context, watcher watcher.StatusWatcher, healthChecks []v1alpha1.NamespacedObjectKindReference) error {
-	objs := []object.ObjMetadata{}
-	for _, hc := range healthChecks {
-		gv, err := schema.ParseGroupVersion(hc.APIVersion)
-		if err != nil {
-			return err
-		}
-		obj := object.ObjMetadata{
-			GroupKind: schema.GroupKind{
-				Group: gv.Group,
-				Kind:  hc.Kind,
-			},
-			Namespace: hc.Namespace,
-			Name:      hc.Name,
-		}
-		objs = append(objs, obj)
-	}
-	err := pkgkubernetes.WaitForReady(ctx, watcher, objs)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.ZarfComponent) ([]types.InstalledChart, error) {
 	hasExternalRegistry := p.cfg.InitOpts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "zarf-seed-registry"
@@ -385,7 +358,7 @@ func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfC
 		defer cancel()
 		spinner := message.NewProgressSpinner("Running health checks")
 		defer spinner.Stop()
-		if err = runHealthChecks(healthCheckContext, p.cluster.Watcher, component.HealthChecks); err != nil {
+		if err = healthchecks.Run(healthCheckContext, p.cluster.Watcher, component.HealthChecks); err != nil {
 			return nil, fmt.Errorf("health checks failed: %w", err)
 		}
 		spinner.Success()
