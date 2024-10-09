@@ -39,7 +39,7 @@ components:
         kustomizations:
           # kustomizations can be specified relative to the `zarf.yaml` or as remoteBuild resources with the
           # following syntax: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md:
-          - github.com/stefanprodan/podinfo//kustomize?ref=6.4.0
+          - https://github.com/stefanprodan/podinfo//kustomize?ref=6.4.0
           # while ?ref= is not a requirement, it is recommended to use a specific commit hash / git tag to
           # ensure that the kustomization is not changed in a way that breaks your deployment.
     # image discovery is supported in all manifests and charts using:

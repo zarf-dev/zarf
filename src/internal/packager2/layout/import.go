@@ -29,7 +29,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	components := []v1alpha1.ZarfComponent{}
 
 	for _, component := range pkg.Components {
-		if !compatibleComponent(component, pkg.Metadata.Architecture, flavor) {
+		if !compatibleComponent(component, arch, flavor) {
 			continue
 		}
 
@@ -46,10 +46,11 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		var importedPkg v1alpha1.ZarfPackage
 		if component.Import.Path != "" {
 			importPath := filepath.Join(packagePath, component.Import.Path)
-			if _, ok := seenImports[importPath]; ok {
+			importKey := fmt.Sprintf("%s-%s", component.Name, importPath)
+			if _, ok := seenImports[importKey]; ok {
 				return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s", filepath.ToSlash(importPath), filepath.ToSlash(packagePath))
 			}
-			seenImports[importPath] = nil
+			seenImports[importKey] = nil
 			b, err := os.ReadFile(filepath.Join(importPath, layout.ZarfYAML))
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err

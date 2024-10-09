@@ -56,7 +56,9 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 }
 
 // Push pushes the given package layout to the remote registry.
-func (r *Remote) Push(ctx context.Context, pkgLayout PackageLayout, concurrency int) (err error) {
+func (r *Remote) Push(ctx context.Context, pkgLayout *PackageLayout, concurrency int) (err error) {
+	logger.From(ctx).Info("pushing package to registry", "destination", r.orasRemote.Repo().Reference.String())
+
 	src, err := file.New("")
 	if err != nil {
 		return err
@@ -104,8 +106,8 @@ func (r *Remote) Push(ctx context.Context, pkgLayout PackageLayout, concurrency 
 	return nil
 }
 
-func ReferenceFromMetadata(registryLocation string, metadata *v1alpha1.ZarfMetadata, build *v1alpha1.ZarfBuildData) (string, error) {
-	if len(metadata.Version) == 0 {
+func ReferenceFromMetadata(registryLocation string, pkg v1alpha1.ZarfPackage) (string, error) {
+	if len(pkg.Metadata.Version) == 0 {
 		return "", errors.New("version is required for publishing")
 	}
 	if !strings.HasSuffix(registryLocation, "/") {
@@ -113,9 +115,9 @@ func ReferenceFromMetadata(registryLocation string, metadata *v1alpha1.ZarfMetad
 	}
 	registryLocation = strings.TrimPrefix(registryLocation, helpers.OCIURLPrefix)
 
-	raw := fmt.Sprintf("%s%s:%s", registryLocation, metadata.Name, metadata.Version)
-	if build != nil && build.Flavor != "" {
-		raw = fmt.Sprintf("%s-%s", raw, build.Flavor)
+	raw := fmt.Sprintf("%s%s:%s", registryLocation, pkg.Metadata.Name, pkg.Metadata.Version)
+	if pkg.Build.Flavor != "" {
+		raw = fmt.Sprintf("%s-%s", raw, pkg.Build.Flavor)
 	}
 
 	ref, err := registry.ParseReference(raw)
