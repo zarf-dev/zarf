@@ -215,7 +215,7 @@ func (c *Cluster) debugPrintZarfState(state *types.ZarfState) {
 	if state == nil {
 		return
 	}
-	// OFC IRL we woul
+	// IRL we would make this elsewhere
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	logger.Debug("testing slog", "zarfState", state)
 }
