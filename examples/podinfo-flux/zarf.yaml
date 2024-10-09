@@ -11,14 +11,14 @@ components:
       - name: flux-install
         namespace: flux
         files:
-          - https://github.com/fluxcd/flux2/releases/download/v2.3.0/install.yaml
+          - https://github.com/fluxcd/flux2/releases/download/v2.4.0/install.yaml
     images:
-      - ghcr.io/fluxcd/helm-controller:v1.0.1
-      - ghcr.io/fluxcd/image-automation-controller:v0.38.0
-      - ghcr.io/fluxcd/image-reflector-controller:v0.32.0
-      - ghcr.io/fluxcd/kustomize-controller:v1.3.0
-      - ghcr.io/fluxcd/notification-controller:v1.3.0
-      - ghcr.io/fluxcd/source-controller:v1.3.0
+      - ghcr.io/fluxcd/helm-controller:v1.1.0
+      - ghcr.io/fluxcd/image-automation-controller:v0.39.0
+      - ghcr.io/fluxcd/image-reflector-controller:v0.33.0
+      - ghcr.io/fluxcd/kustomize-controller:v1.4.0
+      - ghcr.io/fluxcd/notification-controller:v1.4.0
+      - ghcr.io/fluxcd/source-controller:v1.4.1
 
   - name: podinfo-via-flux-git
     description: Example deployment via flux (git) using the famous podinfo example
@@ -76,7 +76,5 @@ x-mdx: |
   Only `type: oci` HelmRepositories are supported by the Zarf Agent. The `type` key requires a HelmRepository CRD version greater than v1beta1.
 
   The Zarf agent will only automatically add the `insecure` key if the internal registry is used. If you are using a http registry outside of the cluster you will need to manually add this key.
-
-  Due to an upstream bug, HelmRepositories with an insecure registry must use IP address instead of a hostname. This is not an issue with the internal Zarf registry, which is always an IP address, but will cause Flux HelmRepositories to break if Zarf is using an external http registry with a hostname.
 
   :::

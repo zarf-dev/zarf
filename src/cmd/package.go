@@ -128,7 +128,7 @@ var packageMirrorCmd = &cobra.Command{
 			pkgConfig.PkgOpts.SkipSignatureValidation = true
 		}
 	},
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		var c *cluster.Cluster
 		if dns.IsServiceURL(pkgConfig.InitOpts.RegistryInfo.Address) || dns.IsServiceURL(pkgConfig.InitOpts.GitServer.Address) {
 			var err error
@@ -157,8 +157,11 @@ var packageMirrorCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		//nolint: errcheck // ignore
-		defer pkgLayout.Cleanup()
+		defer func() {
+			// Cleanup package files
+			err = errors.Join(err, pkgLayout.Cleanup())
+		}()
+
 		mirrorOpt := packager2.MirrorOptions{
 			Cluster:         c,
 			PkgLayout:       pkgLayout,
@@ -194,7 +197,7 @@ var packageInspectCmd = &cobra.Command{
 			return err
 		}
 
-		cluster, _ := cluster.NewCluster()
+		cluster, _ := cluster.NewCluster() //nolint:errcheck
 		inspectOpt := packager2.ZarfInspectOptions{
 			Source:                  src,
 			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
@@ -211,7 +214,10 @@ var packageInspectCmd = &cobra.Command{
 				return fmt.Errorf("failed to inspect package: %w", err)
 			}
 			for _, image := range output {
-				fmt.Fprintln(os.Stdout, "-", image)
+				_, err := fmt.Fprintln(os.Stdout, "-", image)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -219,7 +225,10 @@ var packageInspectCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to inspect package: %w", err)
 		}
-		utils.ColorPrintYAML(output, nil, false)
+		err = utils.ColorPrintYAML(output, nil, false)
+		if err != nil {
+			return err
+		}
 		return nil
 	},
 }
@@ -288,7 +297,7 @@ var packageRemoveCmd = &cobra.Command{
 			filters.ByLocalOS(runtime.GOOS),
 			filters.BySelectState(pkgConfig.PkgOpts.OptionalComponents),
 		)
-		cluster, _ := cluster.NewCluster()
+		cluster, _ := cluster.NewCluster() //nolint:errcheck
 		removeOpt := packager2.RemoveOptions{
 			Source:                  packageSource,
 			Cluster:                 cluster,
@@ -382,9 +391,23 @@ func choosePackage(args []string) (string, error) {
 	prompt := &survey.Input{
 		Message: lang.CmdPackageChoose,
 		Suggest: func(toComplete string) []string {
-			files, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.tar")
-			zstFiles, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.tar.zst")
-			splitFiles, _ := filepath.Glob(config.ZarfPackagePrefix + toComplete + "*.part000")
+			tarPath := config.ZarfPackagePrefix + toComplete + "*.tar"
+			files, err := filepath.Glob(tarPath)
+			if err != nil {
+				message.Debug("Unable to glob", "tarPath", tarPath, "error", err)
+			}
+
+			zstPath := config.ZarfPackagePrefix + toComplete + "*.tar.zst"
+			zstFiles, err := filepath.Glob(zstPath)
+			if err != nil {
+				message.Debug("Unable to glob", "zstPath", zstPath, "error", err)
+			}
+
+			splitPath := config.ZarfPackagePrefix + toComplete + "*.part000"
+			splitFiles, err := filepath.Glob(splitPath)
+			if err != nil {
+				message.Debug("Unable to glob", "splitPath", splitPath, "error", err)
+			}
 
 			files = append(files, zstFiles...)
 			files = append(files, splitFiles...)
@@ -409,7 +432,10 @@ func getPackageCompletionArgs(cmd *cobra.Command, _ []string, _ string) ([]strin
 
 	ctx := cmd.Context()
 
-	deployedZarfPackages, _ := c.GetDeployedZarfPackages(ctx)
+	deployedZarfPackages, err := c.GetDeployedZarfPackages(ctx)
+	if err != nil {
+		message.Debug("Unable to get deployed zarf packages for package completion args", "error", err)
+	}
 	// Populate list of package names
 	for _, pkg := range deployedZarfPackages {
 		pkgCandidates = append(pkgCandidates, pkg.Name)
@@ -478,9 +504,18 @@ func bindCreateFlags(v *viper.Viper) {
 
 	createFlags.IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)
 
-	createFlags.MarkHidden("output-directory")
-	createFlags.MarkHidden("key")
-	createFlags.MarkHidden("key-pass")
+	errOD := createFlags.MarkHidden("output-directory")
+	if errOD != nil {
+		message.Debug("Unable to mark flag output-directory", "error", errOD)
+	}
+	errKey := createFlags.MarkHidden("key")
+	if errKey != nil {
+		message.Debug("Unable to mark flag key", "error", errKey)
+	}
+	errKP := createFlags.MarkHidden("key-pass")
+	if errKP != nil {
+		message.Debug("Unable to mark flag key-pass", "error", errKP)
+	}
 }
 
 func bindDeployFlags(v *viper.Viper) {
@@ -491,7 +526,6 @@ func bindDeployFlags(v *viper.Viper) {
 
 	// Always require adopt-existing-resources flag (no viper)
 	deployFlags.BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	deployFlags.BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
 	deployFlags.DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	deployFlags.IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)
@@ -501,7 +535,10 @@ func bindDeployFlags(v *viper.Viper) {
 	deployFlags.StringVar(&pkgConfig.PkgOpts.SGetKeyPath, "sget", v.GetString(common.VPkgDeploySget), lang.CmdPackageDeployFlagSget)
 	deployFlags.BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
-	deployFlags.MarkHidden("sget")
+	err := deployFlags.MarkHidden("sget")
+	if err != nil {
+		message.Debug("Unable to mark flag sget", "error", err)
+	}
 }
 
 func bindMirrorFlags(v *viper.Viper) {

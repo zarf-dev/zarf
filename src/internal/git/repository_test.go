@@ -56,7 +56,8 @@ func TestRepository(t *testing.T) {
 	require.NoError(t, err)
 	_, err = newFile.Write([]byte("Hello World"))
 	require.NoError(t, err)
-	newFile.Close()
+	err = newFile.Close()
+	require.NoError(t, err)
 	_, err = w.Add(filePath)
 	require.NoError(t, err)
 	_, err = w.Commit("Initial commit", &git.CommitOptions{

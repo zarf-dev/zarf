@@ -14,7 +14,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
 )
 
 func TestNewImportChain(t *testing.T) {
@@ -277,21 +276,6 @@ func TestCompose(t *testing.T) {
 							{Cmd: "today-fr"},
 							{Cmd: "world-fr"},
 							{Cmd: "hello-fr"},
-						},
-					},
-				},
-				// Extensions should be appended with corrected directories
-				Extensions: extensions.ZarfComponentExtensions{
-					BigBang: &extensions.BigBang{
-						ValuesFiles: []string{
-							fmt.Sprintf("%s%svalues.yaml", finalDirectory, string(os.PathSeparator)),
-							fmt.Sprintf("%s%svalues.yaml", firstDirectory, string(os.PathSeparator)),
-							"values.yaml",
-						},
-						FluxPatchFiles: []string{
-							fmt.Sprintf("%s%spatch.yaml", finalDirectory, string(os.PathSeparator)),
-							fmt.Sprintf("%s%spatch.yaml", firstDirectory, string(os.PathSeparator)),
-							"patch.yaml",
 						},
 					},
 				},
@@ -596,16 +580,6 @@ func createDummyComponent(t *testing.T, name, importDir, subName string) v1alpha
 				},
 				OnFailure: []v1alpha1.ZarfComponentAction{
 					{Cmd: name + "-fr"},
-				},
-			},
-		},
-		Extensions: extensions.ZarfComponentExtensions{
-			BigBang: &extensions.BigBang{
-				ValuesFiles: []string{
-					"values.yaml",
-				},
-				FluxPatchFiles: []string{
-					"patch.yaml",
 				},
 			},
 		},

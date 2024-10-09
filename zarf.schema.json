@@ -2,45 +2,6 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/zarf-dev/zarf/src/api/v1alpha1/zarf-package",
   "$defs": {
-    "BigBang": {
-      "properties": {
-        "version": {
-          "type": "string",
-          "description": "The version of Big Bang to use."
-        },
-        "repo": {
-          "type": "string",
-          "description": "Override repo to pull Big Bang from instead of Repo One."
-        },
-        "valuesFiles": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "The list of values files to pass to Big Bang; these will be merged together."
-        },
-        "skipFlux": {
-          "type": "boolean",
-          "description": "Whether to skip deploying flux; Defaults to false."
-        },
-        "fluxPatchFiles": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Optional paths to Flux kustomize strategic merge patch files."
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "version"
-      ],
-      "description": "BigBang holds the configuration for the Big Bang extension.",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
     "Constant": {
       "properties": {
         "name": {
@@ -533,10 +494,6 @@
           "type": "array",
           "description": "List of git repos to include in the package."
         },
-        "extensions": {
-          "$ref": "#/$defs/ZarfComponentExtensions",
-          "description": "Extend component functionality with additional features."
-        },
         "scripts": {
           "$ref": "#/$defs/DeprecatedZarfComponentScripts",
           "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0."
@@ -820,20 +777,6 @@
       "additionalProperties": false,
       "type": "object",
       "description": "ZarfComponentActions are ActionSets that map to different zarf package operations.",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
-    "ZarfComponentExtensions": {
-      "properties": {
-        "bigbang": {
-          "$ref": "#/$defs/BigBang",
-          "description": "Configurations for installing Big Bang and Flux in the cluster."
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "description": "ZarfComponentExtensions is a struct that contains all the official extensions.",
       "patternProperties": {
         "^x-": {}
       }
