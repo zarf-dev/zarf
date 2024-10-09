@@ -137,6 +137,7 @@ func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState
 }
 
 func compareStrings(old string, new string, secret bool) string {
+	// If we wanted to continue to print out what changed, we would still need to sanitize here. I don't think this could be done with redactions
 	if new == old {
 		if secret {
 			return "**sanitized** (unchanged)"
