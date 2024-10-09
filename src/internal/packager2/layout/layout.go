@@ -47,10 +47,9 @@ func ParseZarfPackage(b []byte) (v1alpha1.ZarfPackage, error) {
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	if len(pkg.Build.Migrations) > 0 {
-		for idx, component := range pkg.Components {
-			pkg.Components[idx], _ = deprecated.MigrateComponent(pkg.Build, component)
-		}
+	// TODO (phillebaba): Figure out when migrations should actually be run.
+	for idx, component := range pkg.Components {
+		pkg.Components[idx], _ = deprecated.MigrateComponent(pkg.Build, component)
 	}
 	return pkg, nil
 }

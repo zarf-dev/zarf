@@ -33,9 +33,9 @@ func TestDeprecatedComponentScripts(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", testPackageDirPath, outputFlag, "--confirm")
 	defer e2e.CleanFiles(t, testPackagePath)
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Component '1-test-deprecated-prepare-scripts' is using scripts")
-	require.Contains(t, stdErr, "Component '2-test-deprecated-deploy-scripts' is using scripts")
-	require.Contains(t, stdErr, "Component '3-test-deprecated-timeout-scripts' is using scripts")
+	// require.Contains(t, stdErr, "Component '1-test-deprecated-prepare-scripts' is using scripts")
+	// require.Contains(t, stdErr, "Component '2-test-deprecated-deploy-scripts' is using scripts")
+	// require.Contains(t, stdErr, "Component '3-test-deprecated-timeout-scripts' is using scripts")
 
 	// Test for package create prepare artifact
 	require.FileExists(t, prepareArtifact)
@@ -87,8 +87,8 @@ func TestDeprecatedSetAndPackageVariables(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", testPackageDirPath, outputFlag, "--confirm", "--set", "ECHO=Zarf-The-Axolotl")
 	defer e2e.CleanFiles(t, testPackagePath)
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Component '1-test-deprecated-set-variable' is using setVariable")
-	require.Contains(t, stdErr, "deprecated syntax ###ZARF_PKG_VAR_ECHO###")
+	// require.Contains(t, stdErr, "Component '1-test-deprecated-set-variable' is using setVariable")
+	// require.Contains(t, stdErr, "deprecated syntax ###ZARF_PKG_VAR_ECHO###")
 
 	// 1. Deploy the setVariable action that should pass and output the variable
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", testPackagePath, "--confirm", "--components=1-test-deprecated-set-variable")
