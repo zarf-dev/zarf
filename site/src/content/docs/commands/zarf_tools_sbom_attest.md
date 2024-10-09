@@ -22,6 +22,7 @@ zarf tools sbom attest --output [FORMAT] <IMAGE> [flags]
 
 ```
       --base-path string                          base directory for scanning, no links will be followed above this directory, and all paths will be reported relative to this directory
+      --enrich stringArray                        enable package data enrichment from local and online sources (options: all, golang, java, javascript)
       --exclude stringArray                       exclude paths from being scanned using a glob expression
       --from stringArray                          specify the source behavior to use (e.g. docker, registry, oci-dir, ...)
   -h, --help                                      help for attest
