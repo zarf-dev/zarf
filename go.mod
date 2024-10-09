@@ -41,7 +41,7 @@ require (
 	github.com/pterm/pterm v0.12.79
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3
 	github.com/sigstore/cosign/v2 v2.4.1
-	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.8
+	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.8.9
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.8.9
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.9
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.9
