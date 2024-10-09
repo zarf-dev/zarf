@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -48,8 +49,9 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			importPath := filepath.Join(packagePath, component.Import.Path)
 			importKey := fmt.Sprintf("%s-%s", component.Name, importPath)
 			if _, ok := seenImports[importKey]; ok {
-				return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s", filepath.ToSlash(importPath), filepath.ToSlash(packagePath))
+				return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(packagePath), component.Name)
 			}
+			seenImports = maps.Clone(seenImports)
 			seenImports[importKey] = nil
 			b, err := os.ReadFile(filepath.Join(importPath, layout.ZarfYAML))
 			if err != nil {
