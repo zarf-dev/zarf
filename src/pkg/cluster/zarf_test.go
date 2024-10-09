@@ -206,7 +206,7 @@ func TestGetDeployedPackage(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	c := &Cluster{
-		Clientset: fake.NewSimpleClientset(),
+		Clientset: fake.NewClientset(),
 	}
 
 	packages := []types.DeployedPackage{
@@ -255,7 +255,7 @@ func TestGetDeployedPackage(t *testing.T) {
 
 func TestRegistryHPA(t *testing.T) {
 	ctx := context.Background()
-	cs := fake.NewSimpleClientset()
+	cs := fake.NewClientset()
 	hpa := autoscalingv2.HorizontalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "zarf-docker-registry",
@@ -309,15 +309,15 @@ func TestInternalGitServerExists(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cs := fake.NewSimpleClientset()
-			cluster := &Cluster{Clientset: cs}
+			cs := fake.NewClientset()
+			c := &Cluster{Clientset: cs}
 			ctx := context.Background()
 			if tt.svc != nil {
 				_, err := cs.CoreV1().Services(tt.svc.Namespace).Create(ctx, tt.svc, metav1.CreateOptions{})
 				require.NoError(t, err)
 			}
 
-			exists, err := cluster.InternalGitServerExists(ctx)
+			exists, err := c.InternalGitServerExists(ctx)
 			require.Equal(t, tt.expectedExist, exists)
 			require.Equal(t, tt.expectedErr, err)
 		})

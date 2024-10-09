@@ -77,7 +77,7 @@ func TestValidatePackageArchitecture(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			cs := fake.NewSimpleClientset()
+			cs := fake.NewClientset()
 
 			p := &Packager{
 				cluster: &cluster.Cluster{

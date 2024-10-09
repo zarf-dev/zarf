@@ -148,7 +148,7 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	require.Equal(t, "test", pkg.Metadata.Name)
 
 	c := &cluster.Cluster{
-		Clientset: fake.NewSimpleClientset(),
+		Clientset: fake.NewClientset(),
 	}
 	_, err = c.RecordPackageDeployment(ctx, pkg, nil, 1)
 	require.NoError(t, err)

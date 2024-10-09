@@ -15,7 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ktypes "k8s.io/apimachinery/pkg/types"
+	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -90,6 +90,9 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		}
 		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
 		for _, namespace := range namespaceList.Items {
+			if namespace.Name == "zarf" {
+				continue
+			}
 			spinner.Updatef("Marking existing namespace %s as ignored by Zarf Agent", namespace.Name)
 			if namespace.Labels == nil {
 				// Ensure label map exists to avoid nil panic
@@ -105,13 +108,10 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		}
 
 		// Try to create the zarf namespace.
+		// TODO is the test failing here
 		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := NewZarfManagedNamespace(ZarfNamespaceName)
-		b, err := json.Marshal(zarfNamespace)
-		if err != nil {
-			return err
-		}
-		_, err = c.Clientset.CoreV1().Namespaces().Patch(ctx, ZarfNamespaceName, ktypes.ApplyPatchType, b, metav1.PatchOptions{})
+		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: "zarf", Force: true})
 		if err != nil {
 			return fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
@@ -244,30 +244,17 @@ func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) err
 	if err != nil {
 		return err
 	}
-	secret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ZarfStateSecretName,
-			Namespace: ZarfNamespaceName,
-			Labels: map[string]string{
-				ZarfManagedByLabel: "zarf",
-			},
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
+	zarfStateLabels := map[string]string{
+		ZarfManagedByLabel: "zarf",
+	}
+	secret := v1ac.Secret(ZarfStateSecretName, ZarfNamespaceName).
+		WithLabels(zarfStateLabels).
+		WithType(corev1.SecretTypeOpaque).
+		WithData(map[string][]byte{
 			ZarfStateDataKey: data,
-		},
-	}
+		})
 
-	// Attempt to create or update the secret and return.
-	b, err := json.Marshal(secret)
-	if err != nil {
-		return err
-	}
-	_, err = c.Clientset.CoreV1().Secrets(secret.Namespace).Patch(ctx, secret.Name, ktypes.ApplyPatchType, b, metav1.PatchOptions{})
+	_, err = c.Clientset.CoreV1().Secrets(*secret.Namespace).Apply(ctx, secret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
 	if err != nil {
 		return fmt.Errorf("unable to apply the zarf state secret: %w", err)
 	}

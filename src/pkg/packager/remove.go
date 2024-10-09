@@ -139,7 +139,7 @@ func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage type
 		if err != nil {
 			return err
 		}
-		_, err = p.cluster.Clientset.CoreV1().Secrets(newPackageSecret.Namespace).Patch(ctx, newPackageSecret.Name, ktypes.ApplyPatchType, b, metav1.PatchOptions{})
+		_, err = p.cluster.Clientset.CoreV1().Secrets(newPackageSecret.Namespace).Patch(ctx, newPackageSecret.Name, ktypes.ApplyPatchType, b, metav1.PatchOptions{Force: helpers.BoolPtr(true)})
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
 			message.Warnf("Unable to apply the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())

@@ -527,7 +527,7 @@ func (p *Packager) setupState(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		_, err = p.cluster.Clientset.CoreV1().Namespaces().Patch(ctx, cluster.ZarfNamespaceName, ktypes.ApplyPatchType, b, metav1.PatchOptions{})
+		_, err = p.cluster.Clientset.CoreV1().Namespaces().Patch(ctx, cluster.ZarfNamespaceName, ktypes.ApplyPatchType, b, metav1.PatchOptions{Force: helpers.BoolPtr(true)})
 		if err != nil {
 			return fmt.Errorf("unable to create the Zarf namespace: %w", err)
 		}

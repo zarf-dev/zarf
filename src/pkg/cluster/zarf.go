@@ -17,8 +17,10 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ktypes "k8s.io/apimachinery/pkg/types"
+	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
@@ -82,29 +84,14 @@ func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg types.Deploy
 	if err != nil {
 		return err
 	}
-	packageSecret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: ZarfNamespaceName,
-			Labels: map[string]string{
-				ZarfManagedByLabel:   "zarf",
-				ZarfPackageInfoLabel: depPkg.Name,
-			},
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
-			"data": packageSecretData,
-		},
-	}
-	b, err := json.Marshal(packageSecret)
-	if err != nil {
-		return err
-	}
-	_, err = c.Clientset.CoreV1().Secrets(packageSecret.Namespace).Patch(ctx, packageSecret.Name, ktypes.ApplyPatchType, b, metav1.PatchOptions{})
+	packageSecret := v1ac.Secret(secretName, ZarfNamespaceName).
+		WithLabels(map[string]string{
+			ZarfManagedByLabel:   "zarf",
+			ZarfPackageInfoLabel: depPkg.Name,
+		}).WithData(map[string][]byte{
+		"data": packageSecretData,
+	}).WithType(corev1.SecretTypeOpaque)
+	_, err = c.Clientset.CoreV1().Secrets(*packageSecret.Namespace).Apply(ctx, packageSecret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
 	if err != nil {
 		return fmt.Errorf("unable to apply the deployed package secret: %w", err)
 	}
@@ -286,7 +273,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 	if err != nil {
 		return nil, err
 	}
-	updatedSecret, err := c.Clientset.CoreV1().Secrets(deployedPackageSecret.Namespace).Patch(ctx, deployedPackageSecret.Name, ktypes.ApplyPatchType, b, metav1.PatchOptions{})
+	updatedSecret, err := c.Clientset.CoreV1().Secrets(deployedPackageSecret.Namespace).Patch(ctx, deployedPackageSecret.Name, ktypes.ApplyPatchType, b, metav1.PatchOptions{Force: helpers.BoolPtr(true)})
 	if err != nil {
 		return nil, fmt.Errorf("failed to record package deployment in secret '%s': %w", deployedPackageSecret.Name, err)
 	}

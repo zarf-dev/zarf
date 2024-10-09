@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -35,7 +36,7 @@ type DockerConfigEntryWithAuth struct {
 }
 
 // GenerateRegistryPullCreds generates a secret containing the registry credentials.
-func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name string, registryInfo types.RegistryInfo) (*corev1.Secret, error) {
+func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name string, registryInfo types.RegistryInfo) (*v1ac.SecretApplyConfiguration, error) {
 	// Auth field must be username:password and base64 encoded
 	fieldValue := registryInfo.PullUsername + ":" + registryInfo.PullPassword
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
@@ -68,23 +69,15 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 		return nil, fmt.Errorf("unable to marshal the .dockerconfigjson secret data for the image pull secret: %w", err)
 	}
 
-	secretDockerConfig := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				ZarfManagedByLabel: "zarf",
-			},
-		},
-		Type: corev1.SecretTypeDockerConfigJson,
-		Data: map[string][]byte{
+	secretDockerConfig := v1ac.Secret(name, namespace).
+		WithLabels(map[string]string{
+			ZarfManagedByLabel: "zarf",
+		}).
+		WithType(corev1.SecretTypeDockerConfigJson).
+		WithData(map[string][]byte{
 			".dockerconfigjson": dockerConfigData,
-		},
-	}
+		})
+
 	return secretDockerConfig, nil
 }
 
@@ -142,7 +135,7 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 			continue
 		}
 		spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
-		_, err = c.Clientset.CoreV1().Secrets(newRegistrySecret.Namespace).Update(ctx, newRegistrySecret, metav1.UpdateOptions{})
+		_, err = c.Clientset.CoreV1().Secrets(*newRegistrySecret.Namespace).Apply(ctx, newRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
 		if err != nil {
 			return err
 		}

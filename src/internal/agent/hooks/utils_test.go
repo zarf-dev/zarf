@@ -32,7 +32,7 @@ type admissionTest struct {
 
 func createTestClientWithZarfState(ctx context.Context, t *testing.T, state *types.ZarfState) *cluster.Cluster {
 	t.Helper()
-	c := &cluster.Cluster{Clientset: fake.NewSimpleClientset()}
+	c := &cluster.Cluster{Clientset: fake.NewClientset()}
 	stateData, err := json.Marshal(state)
 	require.NoError(t, err)
 

@@ -171,7 +171,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	cs := fake.NewSimpleClientset()
+	cs := fake.NewClientset()
 
 	c := &Cluster{
 		Clientset: cs,
