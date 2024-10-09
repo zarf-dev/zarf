@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"os"
 	"slices"
 	"time"
 
@@ -209,39 +211,13 @@ func (c *Cluster) LoadZarfState(ctx context.Context) (*types.ZarfState, error) {
 	return state, nil
 }
 
-func (c *Cluster) sanitizeZarfState(state *types.ZarfState) *types.ZarfState {
-	// Overwrite the AgentTLS information
-	state.AgentTLS.CA = []byte("**sanitized**")
-	state.AgentTLS.Cert = []byte("**sanitized**")
-	state.AgentTLS.Key = []byte("**sanitized**")
-
-	// Overwrite the GitServer passwords
-	state.GitServer.PushPassword = "**sanitized**"
-	state.GitServer.PullPassword = "**sanitized**"
-
-	// Overwrite the RegistryInfo passwords
-	state.RegistryInfo.PushPassword = "**sanitized**"
-	state.RegistryInfo.PullPassword = "**sanitized**"
-	state.RegistryInfo.Secret = "**sanitized**"
-
-	// Overwrite the ArtifactServer secret
-	state.ArtifactServer.PushToken = "**sanitized**"
-
-	return state
-}
-
 func (c *Cluster) debugPrintZarfState(state *types.ZarfState) {
 	if state == nil {
 		return
 	}
-	// this is a shallow copy, nested pointers WILL NOT be copied
-	oldState := *state
-	sanitized := c.sanitizeZarfState(&oldState)
-	b, err := json.MarshalIndent(sanitized, "", "  ")
-	if err != nil {
-		return
-	}
-	message.Debugf("ZarfState - %s", string(b))
+	// OFC IRL we woul
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	logger.Debug("testing slog", "zarfState", state)
 }
 
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.

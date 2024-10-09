@@ -6,6 +6,7 @@ package types
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -45,6 +46,14 @@ type GeneratedPKI struct {
 	Key  []byte `json:"key"`
 }
 
+func (p GeneratedPKI) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("ca", "**sanitized**"),
+		slog.String("cert", "**sanitized**"),
+		slog.String("key", "**sanitized**"),
+	)
+}
+
 // ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data.
 type ZarfState struct {
 	// Indicates if Zarf was initialized while deploying its own k8s cluster
@@ -64,6 +73,19 @@ type ZarfState struct {
 	RegistryInfo RegistryInfo `json:"registryInfo"`
 	// Information about the artifact registry Zarf is configured to use
 	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
+}
+
+func (zs ZarfState) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Bool("ZarfAppliance", zs.ZarfAppliance),
+		slog.String("distro", zs.Distro),
+		slog.String("architecture", zs.Architecture),
+		slog.String("storageClass", zs.StorageClass),
+		slog.Any("agentTLS", zs.AgentTLS),
+		slog.Any("gitServer", zs.GitServer),
+		slog.Any("registryInfo", zs.RegistryInfo),
+		slog.Any("artifactServer", zs.ArtifactServer),
+	)
 }
 
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
@@ -112,6 +134,16 @@ type GitServerInfo struct {
 	PullPassword string `json:"pullPassword"`
 	// URL address of the git server
 	Address string `json:"address"`
+}
+
+func (gs GitServerInfo) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("pushUsername", gs.PushUsername),
+		slog.String("pushPassword", "**sanitized**"),
+		slog.String("pullUsername", gs.PullUsername),
+		slog.String("pullPassword", "**sanitized**"),
+		slog.String("address", gs.Address),
+	)
 }
 
 // IsInternal returns true if the git server URL is equivalent to a git server deployed through the default init package
@@ -165,6 +197,14 @@ type ArtifactServerInfo struct {
 	Address string `json:"address"`
 }
 
+func (as ArtifactServerInfo) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("pushUsername", as.PushUsername),
+		slog.String("pushToken", "**sanitized**"),
+		slog.String("address", as.Address),
+	)
+}
+
 // IsInternal returns true if the artifact server URL is equivalent to the artifact server deployed through the default init package
 func (as ArtifactServerInfo) IsInternal() bool {
 	return as.Address == ZarfInClusterArtifactServiceURL
@@ -199,6 +239,18 @@ type RegistryInfo struct {
 	NodePort int `json:"nodePort"`
 	// Secret value that the registry was seeded with
 	Secret string `json:"secret"`
+}
+
+func (ri RegistryInfo) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("pushUsername", ri.PushUsername),
+		slog.String("pushPassword", "**sanitized**"),
+		slog.String("pullUsername", ri.PullUsername),
+		slog.String("pullPassword", "**sanitized**"),
+		slog.String("address", ri.Address),
+		slog.Int("nodePort", ri.NodePort),
+		slog.String("secret", "**sanitized**"),
+	)
 }
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package

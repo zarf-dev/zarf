@@ -100,6 +100,8 @@ func (p *Packager) getPackageYAMLHints(stage string) map[string]string {
 			} else {
 				value = fmt.Sprintf("'%s'", helpers.Truncate(value, 20, false))
 			}
+			// This is harder to sanitize with slog because it gets passed as a string before
+			// it's printed. Therefore a func (InteractiveVariable) Variable logValue() wouldn't do anything
 			if variable.Sensitive {
 				value = "'**sanitized**'"
 			}

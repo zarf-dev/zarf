@@ -126,6 +126,7 @@ func generateHtpasswd(regInfo *types.RegistryInfo) (string, error) {
 }
 
 func debugPrintTemplateMap(templateMap map[string]*variables.TextTemplate) {
+	// This would be super easy to redact with slog attribute redactions
 	debugText := "templateMap = { "
 
 	for key, template := range templateMap {
