@@ -99,6 +99,9 @@ func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Reposi
 		err := r.gitCloneFallback(ctx, gitURLNoRef, ref, shallow)
 		if err != nil {
 			return nil, err
+		} 
+		return r, nil
+			return r, nil
 		}
 	}
 
