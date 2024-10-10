@@ -27,11 +27,11 @@ import (
 
 // UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
 func (h *Helm) UpdateZarfRegistryValues(ctx context.Context) error {
-	pushUser, err := utils.GetHtpasswdString(h.state.RegistryInfo.PushUsername, h.state.RegistryInfo.PushPassword)
+	pushUser, err := utils.GetHtpasswdString(h.state.RegistryInfo.PushUsername, string(h.state.RegistryInfo.PushPassword))
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
 	}
-	pullUser, err := utils.GetHtpasswdString(h.state.RegistryInfo.PullUsername, h.state.RegistryInfo.PullPassword)
+	pullUser, err := utils.GetHtpasswdString(h.state.RegistryInfo.PullUsername, string(h.state.RegistryInfo.PullPassword))
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
 	}

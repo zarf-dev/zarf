@@ -90,12 +90,12 @@ func WithBasicAuth(username, password string) crane.Option {
 
 // WithPullAuth returns an option for crane that sets pull auth from a given registry info.
 func WithPullAuth(ri types.RegistryInfo) crane.Option {
-	return WithBasicAuth(ri.PullUsername, ri.PullPassword)
+	return WithBasicAuth(ri.PullUsername, string(ri.PullPassword))
 }
 
 // WithPushAuth returns an option for crane that sets push auth from a given registry info.
 func WithPushAuth(ri types.RegistryInfo) crane.Option {
-	return WithBasicAuth(ri.PushUsername, ri.PushPassword)
+	return WithBasicAuth(ri.PushUsername, string(ri.PushPassword))
 }
 
 func createPushOpts(cfg PushConfig, pb *message.ProgressBar) []crane.Option {

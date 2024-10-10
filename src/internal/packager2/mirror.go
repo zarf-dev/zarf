@@ -96,7 +96,7 @@ func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgLayout *la
 		crane.WithTransport(transportWithProgressBar),
 		crane.WithAuth(authn.FromConfig(authn.AuthConfig{
 			Username: regInfo.PushUsername,
-			Password: regInfo.PushPassword,
+			Password: string(regInfo.PushPassword),
 		})),
 		crane.WithUserAgent("zarf"),
 		crane.WithNoClobber(true),
@@ -190,7 +190,7 @@ func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *l
 			err = retry.Do(func() error {
 				if !dns.IsServiceURL(gitInfo.Address) {
 					message.Infof("Pushing repository %s to server %s", repoURL, gitInfo.Address)
-					err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword)
+					err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, string(gitInfo.PushPassword))
 					if err != nil {
 						return err
 					}
@@ -213,13 +213,13 @@ func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *l
 					return err
 				}
 				defer tunnel.Close()
-				giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), gitInfo.PushUsername, gitInfo.PushPassword)
+				giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), gitInfo.PushUsername, string(gitInfo.PushPassword))
 				if err != nil {
 					return err
 				}
 				return tunnel.Wrap(func() error {
 					message.Infof("Pushing repository %s to server %s", repoURL, tunnel.HTTPEndpoint())
-					err = repository.Push(ctx, tunnel.HTTPEndpoint(), gitInfo.PushUsername, gitInfo.PushPassword)
+					err = repository.Push(ctx, tunnel.HTTPEndpoint(), gitInfo.PushUsername, string(gitInfo.PushPassword))
 					if err != nil {
 						return err
 					}
