@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -101,4 +103,26 @@ func OnlyHasImageLayers(img v1.Image) (bool, error) {
 		}
 	}
 	return true, nil
+}
+
+// SortImagesIndex sorts the index.json by digest.
+func SortImagesIndex(ociPath string) error {
+	indexPath := filepath.Join(ociPath, "index.json")
+	b, err := os.ReadFile(indexPath)
+	if err != nil {
+		return err
+	}
+	var index ocispec.Index
+	err = json.Unmarshal(b, &index)
+	if err != nil {
+		return err
+	}
+	slices.SortFunc(index.Manifests, func(a, b ocispec.Descriptor) int {
+		return strings.Compare(string(a.Digest), string(b.Digest))
+	})
+	b, err = json.Marshal(index)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(indexPath, b, helpers.ReadWriteUser)
 }
