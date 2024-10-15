@@ -22,7 +22,9 @@ jobs:
           fetch-depth: 0
 
       - name: Setup golang
-        uses: ./.github/actions/golang
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version-file: go.mod
 
       - name: Install tools
         uses: ./.github/actions/install-tools
@@ -107,7 +109,9 @@ jobs:
           path: build/
 
       - name: Setup golang
-        uses: ./.github/actions/golang
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version-file: go.mod
 
       - name: Make Zarf executable
         run: |
@@ -140,7 +144,9 @@ jobs:
           fetch-depth: 0
 
       - name: Setup golang
-        uses: ./.github/actions/golang
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version-file: go.mod
 
       - name: Install tools
         uses: ./.github/actions/install-tools
