@@ -11,6 +11,7 @@
 [![Zarf Documentation](https://img.shields.io/badge/docs-docs.zarf.dev-775ba1)](https://docs.zarf.dev/)
 [![Zarf Slack Channel](https://img.shields.io/badge/k8s%20slack-zarf-40a3dd)](https://kubernetes.slack.com/archives/C03B6BJAUJ3)
 [![Community Meetups](https://img.shields.io/badge/community-meetups-22aebb)](https://github.com/zarf-dev/zarf/issues/2202)
+[![](https://img.shields.io/badge/Gurubase-Ask%20Zarf%20Guru-006BFF)](https://gurubase.io/g/zarf)
 
 Zarf eliminates the [complexity of air gap software delivery](https://www.itopstimes.com/contain/air-gap-kubernetes-considerations-for-running-cloud-native-applications-without-the-cloud/) for Kubernetes clusters and cloud-native workloads using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments.
 
