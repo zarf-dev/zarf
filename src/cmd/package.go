@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -27,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -47,17 +49,22 @@ var packageCreateCmd = &cobra.Command{
 	Short:   lang.CmdPackageCreateShort,
 	Long:    lang.CmdPackageCreateLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
+		l := cmd.Context().Value("logger").(*slog.Logger)
+		l.Info("testing that we're at the start of `zarf package create`", "test", "foobar")
+
+		pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 
 		var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 		if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
-			message.Warnf(lang.CmdPackageCreateCleanPathErr, config.ZarfDefaultCachePath)
+			logger.Default().Warn(lang.CmdPackageCreateCleanPathErr, "cachePath", config.ZarfDefaultCachePath)
 			config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 		}
 
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
-			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
+			v.GetStringMapString(common.VPkgCreateSet),
+			pkgConfig.CreateOpts.SetVariables,
+			strings.ToUpper)
 
 		pkgClient, err := packager.New(&pkgConfig)
 		if err != nil {
@@ -65,7 +72,11 @@ var packageCreateCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		err = pkgClient.Create(cmd.Context())
+		// Add logger to context
+		ctx := context.WithValue(cmd.Context(), "logger", logger.Default())
+		err = pkgClient.Create(ctx)
+
+		// FIXME(mkcp): Actionable prettyprinted logs, not structured log.
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
 			common.PrintFindings(lintErr)

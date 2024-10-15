@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -37,8 +36,9 @@ var initCmd = &cobra.Command{
 	Long:    lang.CmdInitLong,
 	Example: lang.CmdInitExample,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		zarfLogo := message.GetLogo()
-		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
+		// TODO(mkcp): Migrated to `zarf say` (actually need to add docs for it)
+		// zarfLogo := message.GetLogo()
+		// _, _ = fmt.Fprintln(os.Stderr, zarfLogo)
 
 		if err := validateInitFlags(); err != nil {
 			return fmt.Errorf("invalid command flags were provided: %w", err)
