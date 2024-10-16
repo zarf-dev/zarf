@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
-// Run waits for a list of objects to be reconciled.
+// Run waits for a list of Zarf healthchecks to reach a ready state.
 func Run(ctx context.Context, watcher watcher.StatusWatcher, healthChecks []v1alpha1.NamespacedObjectKindReference) error {
 	objs := []object.ObjMetadata{}
 	for _, hc := range healthChecks {
