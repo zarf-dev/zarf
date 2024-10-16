@@ -68,19 +68,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 		}()
 		for refInfo, img := range toPush {
-			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, refInfo.Reference)
-			if err != nil {
-				return err
-			}
-
 			spinner.Updatef("Pushing %s", refInfo.Reference)
-
-			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
-			// (this may result in collisions but this is acceptable for this use case)
-			if err = pushImage(img, offlineName); err != nil {
-				return err
-			}
-
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
 				offlineNameCRC, err := transform.ImageTransformHost(registryURL, refInfo.Reference)
@@ -91,6 +79,17 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				if err = pushImage(img, offlineNameCRC); err != nil {
 					return err
 				}
+			}
+
+			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
+			// (this may result in collisions but this is acceptable for this use case)
+			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, refInfo.Reference)
+			if err != nil {
+				return err
+			}
+
+			if err = pushImage(img, offlineName); err != nil {
+				return err
 			}
 
 			pushed = append(pushed, refInfo)
