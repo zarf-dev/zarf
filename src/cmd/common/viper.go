@@ -20,16 +20,20 @@ const (
 
 	// Root config keys
 
-	VLogLevel              = "log_level"
 	VArchitecture          = "architecture"
-	VNoLogFile             = "no_log_file"
-	VNoProgress            = "no_progress"
-	VNoColor               = "no_color"
 	VZarfCache             = "zarf_cache"
 	VTmpDir                = "tmp_dir"
 	VInsecure              = "insecure"
 	VPlainHTTP             = "plain_http"
 	VInsecureSkipTLSVerify = "insecure_skip_tls_verify"
+
+	// Root config, Logging
+
+	VLogLevel   = "log_level"
+	VLogFormat  = "log_format"
+	VNoLogFile  = "no_log_file"
+	VNoProgress = "no_progress"
+	VNoColor    = "no_color"
 
 	// Init config keys
 
@@ -162,7 +166,7 @@ func isVersionCmd() bool {
 	return len(args) > 1 && (args[1] == "version" || args[1] == "v")
 }
 
-func printViperConfigUsed() {
+func PrintViperConfigUsed() {
 	// Only print config info if viper is initialized.
 	vInitialized := v != nil
 	if !vInitialized {

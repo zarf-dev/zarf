@@ -45,7 +45,8 @@ const (
 	RootCmdLong  = "Zarf eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud native workloads\n" +
 		"using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments."
 
-	RootCmdFlagLogLevel              = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
+	RootCmdFlagLogLevel              = "Log level when running Zarf. Defaults to info. Valid options are: debug, info, warn, error"
+	RootCmdFlagLogFormat             = "Select a logging format. Defaults to 'text'. Valid options are: 'text', 'json'"
 	RootCmdFlagArch                  = "Architecture for OCI images and Zarf packages"
 	RootCmdFlagSkipLogFile           = "Disable log file creation"
 	RootCmdFlagNoProgress            = "Disable fancy UI progress bars, spinners, logos, etc"
