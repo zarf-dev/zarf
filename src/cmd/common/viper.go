@@ -5,14 +5,14 @@
 package common
 
 import (
+	"context"
 	"errors"
+	"log/slog"
 	"os"
 	"strings"
 
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // Constants for use when loading configurations from viper config files
@@ -166,7 +166,9 @@ func isVersionCmd() bool {
 	return len(args) > 1 && (args[1] == "version" || args[1] == "v")
 }
 
-func PrintViperConfigUsed() {
+func PrintViperConfigUsed(ctx context.Context) {
+	log := ctx.Value("logger").(*slog.Logger)
+
 	// Only print config info if viper is initialized.
 	vInitialized := v != nil
 	if !vInitialized {
@@ -177,11 +179,11 @@ func PrintViperConfigUsed() {
 		return
 	}
 	if vConfigError != nil {
-		message.WarnErrf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
+		log.Error("unable to load config file", "error", vConfigError)
 		return
 	}
 	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
-		message.Notef(lang.CmdViperInfoUsingConfigFile, cfgFile)
+		log.Info("Using config file", "location", cfgFile)
 	}
 }
 
