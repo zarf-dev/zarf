@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/cmd/say"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"io"
 	"log/slog"
@@ -23,7 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/cmd/tools"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -53,7 +53,7 @@ var rootCmd = &cobra.Command{
 	Run:               run,
 }
 
-func preRun(cmd *cobra.Command, args []string) error {
+func preRun(cmd *cobra.Command, _ []string) error {
 	// If --insecure was provided, set --insecure-skip-tls-verify and --plain-http to match
 	if config.CommonOptions.Insecure {
 		config.CommonOptions.InsecureSkipTLSVerify = true
@@ -65,7 +65,7 @@ func preRun(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// TODO(mkcp): Skipping log writes here. We'll want to remove these when we remove the flag.
+	// Setup message
 	skipLogFile := SkipLogFile
 
 	// Don't write tool commands to file.
@@ -81,10 +81,12 @@ func preRun(cmd *cobra.Command, args []string) error {
 	if cmd.Parent() == nil {
 		skipLogFile = true
 	}
-	// TODO End skip log writes.
+	err := setupMessage(LogLevelCLI, skipLogFile, NoColor)
+	if err != nil {
+		return err
+	}
 
 	// Configure logger and add it to cmd context.
-	// FIXME(mkcp): Where is the best place to read these flags?
 	l, err := setupLogger(LogLevelCLI, LogFormat)
 	if err != nil {
 		return err
@@ -92,34 +94,23 @@ func preRun(cmd *cobra.Command, args []string) error {
 	ctx := context.WithValue(cmd.Context(), "logger", l)
 	cmd.SetContext(ctx)
 
-	err = setupMessage(LogLevelCLI, skipLogFile, NoColor)
-	if err != nil {
-		return err
-	}
+	// Print out config location
+	common.PrintViperConfigUsed(cmd.Context())
 	return nil
 }
 
-func run(cmd *cobra.Command, args []string) {
-	zarfLogo := message.GetLogo()
-	_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
+func run(cmd *cobra.Command, _ []string) {
 	err := cmd.Help()
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err) //nolint:errcheck
-	}
-
-	// FIXME(mkcp): These we can probably complete deprecation on?
-	if len(args) > 0 {
-		if strings.Contains(args[0], config.ZarfPackagePrefix) || strings.Contains(args[0], "zarf-init") {
-			message.Warnf(lang.RootCmdDeprecatedDeploy, args[0])
-		}
-		if args[0] == layout.ZarfYAML {
-			message.Warn(lang.RootCmdDeprecatedCreate)
-		}
 	}
 }
 
 // Execute is the entrypoint for the CLI.
 func Execute(ctx context.Context) {
+	// Add `zarf say`
+	rootCmd.AddCommand(say.Command())
+
 	cmd, err := rootCmd.ExecuteContextC(ctx)
 	if err == nil {
 		return
@@ -189,8 +180,6 @@ func setupMessage(logLevel string, skipLogFile, noColor bool) error {
 	if noColor {
 		message.DisableColor()
 	}
-
-	common.PrintViperConfigUsed()
 
 	if logLevel != "" {
 		match := map[string]message.LogLevel{
