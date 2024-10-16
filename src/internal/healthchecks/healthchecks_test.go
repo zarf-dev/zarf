@@ -6,6 +6,7 @@ package healthchecks
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -45,19 +46,19 @@ metadata:
 func TestRunHealthChecks(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name      string
-		podYaml   string
-		expectErr error
+		name       string
+		podYaml    string
+		expectErrs []error
 	}{
 		{
-			name:      "Pod is running",
-			podYaml:   podCurrentYaml,
-			expectErr: nil,
+			name:       "Pod is running",
+			podYaml:    podCurrentYaml,
+			expectErrs: nil,
 		},
 		{
-			name:      "Pod is never ready",
-			podYaml:   podYaml,
-			expectErr: context.DeadlineExceeded,
+			name:       "Pod is never ready",
+			podYaml:    podYaml,
+			expectErrs: []error{errors.New("in-progress-pod: Pod not ready"), context.DeadlineExceeded},
 		},
 	}
 
@@ -86,8 +87,8 @@ func TestRunHealthChecks(t *testing.T) {
 				},
 			}
 			err = Run(ctx, statusWatcher, objs)
-			if tt.expectErr != nil {
-				require.ErrorIs(t, err, tt.expectErr)
+			if tt.expectErrs != nil {
+				require.EqualError(t, err, errors.Join(tt.expectErrs...).Error())
 				return
 			}
 			require.NoError(t, err)

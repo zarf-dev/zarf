@@ -6,7 +6,8 @@ package healthchecks
 
 import (
 	"context"
-	"strings"
+	"errors"
+	"fmt"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -83,25 +84,28 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 	)
 	<-done
 
-	for _, id := range objs {
-		rs := statusCollector.ResourceStatuses[id]
-		switch rs.Status {
-		case status.CurrentStatus:
-			message.Debugf("%s: %s ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
-		case status.NotFoundStatus:
-			message.Warnf("%s: %s not found", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
-		default:
-			message.Warnf("%s: %s not ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
-		}
-	}
-
 	if statusCollector.Error != nil {
 		return statusCollector.Error
 	}
+
 	// Only check parent context error, otherwise we would error when desired status is achieved.
 	if ctx.Err() != nil {
-		return ctx.Err()
+		errs := []error{}
+		for _, id := range objs {
+			rs := statusCollector.ResourceStatuses[id]
+			switch rs.Status {
+			case status.CurrentStatus:
+				message.Debugf("%s: %s ready", rs.Identifier.Name, rs.Identifier.GroupKind.Kind)
+			case status.NotFoundStatus:
+				errs = append(errs, fmt.Errorf("%s: %s not found", rs.Identifier.Name, rs.Identifier.GroupKind.Kind))
+			default:
+				errs = append(errs, fmt.Errorf("%s: %s not ready", rs.Identifier.Name, rs.Identifier.GroupKind.Kind))
+			}
+		}
+		errs = append(errs, ctx.Err())
+		return errors.Join(errs...)
 	}
+
 	return nil
 }
 
