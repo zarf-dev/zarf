@@ -6,7 +6,6 @@ package healthchecks
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -90,9 +89,9 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 		case status.CurrentStatus:
 			message.Debugf("%s: %s ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
 		case status.NotFoundStatus:
-			message.Warnf(fmt.Sprintf("%s: %s not found", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind)))
+			message.Warnf("%s: %s not found", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
 		default:
-			message.Warnf(fmt.Sprintf("%s: %s not ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind)))
+			message.Warnf("%s: %s not ready", rs.Identifier.Name, strings.ToLower(rs.Identifier.GroupKind.Kind))
 		}
 	}
 
