@@ -39,8 +39,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		tunnel      *cluster.Tunnel
 		registryURL = cfg.RegInfo.Address
 	)
-	spinner := message.NewProgressSpinner("Pushing images to Zarf registry")
-	defer spinner.Stop()
 	err = retry.Do(func() error {
 		c, _ := cluster.NewCluster()
 		if c != nil {
@@ -68,7 +66,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 		}()
 		for refInfo, img := range toPush {
-			spinner.Updatef("Pushing %s", refInfo.Reference)
+			message.Infof("Pushing %s", refInfo.Reference)
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
 				offlineNameCRC, err := transform.ImageTransformHost(registryURL, refInfo.Reference)
@@ -99,7 +97,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	if err != nil {
 		return err
 	}
-	spinner.Success()
 
 	return nil
 }
