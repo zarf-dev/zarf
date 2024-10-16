@@ -40,6 +40,7 @@ type MirrorOptions struct {
 	GitInfo         types.GitServerInfo
 	NoImageChecksum bool
 	Retries         int
+	ForcePushRepos  bool
 }
 
 // Mirror mirrors the package contents to the given registry and git server.
@@ -48,7 +49,8 @@ func Mirror(ctx context.Context, opt MirrorOptions) error {
 	if err != nil {
 		return err
 	}
-	err = pushReposToRepository(ctx, opt.Cluster, opt.PkgLayout, opt.Filter, opt.GitInfo, opt.Retries)
+
+	err = pushReposToRepository(ctx, opt.Cluster, opt.PkgLayout, opt.Filter, opt.GitInfo, opt.Retries, opt.ForcePushRepos)
 	if err != nil {
 		return err
 	}
@@ -167,7 +169,7 @@ func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgLayout *la
 	return nil
 }
 
-func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, gitInfo types.GitServerInfo, retries int) error {
+func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, gitInfo types.GitServerInfo, retries int, forcePushRepos bool) error {
 	components, err := filter.Apply(pkgLayout.Pkg)
 	if err != nil {
 		return err
@@ -190,7 +192,7 @@ func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *l
 			err = retry.Do(func() error {
 				if !dns.IsServiceURL(gitInfo.Address) {
 					message.Infof("Pushing repository %s to server %s", repoURL, gitInfo.Address)
-					err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword)
+					err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword, forcePushRepos)
 					if err != nil {
 						return err
 					}
@@ -219,7 +221,7 @@ func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *l
 				}
 				return tunnel.Wrap(func() error {
 					message.Infof("Pushing repository %s to server %s", repoURL, tunnel.HTTPEndpoint())
-					err = repository.Push(ctx, tunnel.HTTPEndpoint(), gitInfo.PushUsername, gitInfo.PushPassword)
+					err = repository.Push(ctx, tunnel.HTTPEndpoint(), gitInfo.PushUsername, gitInfo.PushPassword, forcePushRepos)
 					if err != nil {
 						return err
 					}
