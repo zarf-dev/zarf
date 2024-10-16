@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/aggregator"
@@ -95,7 +94,6 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 			rs := statusCollector.ResourceStatuses[id]
 			switch rs.Status {
 			case status.CurrentStatus:
-				message.Debugf("%s: %s ready", rs.Identifier.Name, rs.Identifier.GroupKind.Kind)
 			case status.NotFoundStatus:
 				errs = append(errs, fmt.Errorf("%s: %s not found", rs.Identifier.Name, rs.Identifier.GroupKind.Kind))
 			default:
