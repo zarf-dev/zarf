@@ -15,11 +15,12 @@ import (
 // Level declares each supported log level. These are 1:1 what log/slog supports by default. Info is the default level.
 type Level int
 
+// Store names for Levels
 var (
-	Debug = Level(slog.LevelDebug) //nolint:revive // -4
-	Info  = Level(slog.LevelInfo)  //nolint:revive // 0
-	Warn  = Level(slog.LevelWarn)  //nolint:revive // 4
-	Error = Level(slog.LevelError) //nolint:revive // 8
+	Debug = Level(slog.LevelDebug) // -4
+	Info  = Level(slog.LevelInfo)  // 0
+	Warn  = Level(slog.LevelWarn)  // 4
+	Error = Level(slog.LevelError) // 8
 )
 
 // validLevels is a set that provides an ergonomic way to check if a level is a member of the set.
@@ -48,7 +49,7 @@ func ParseLevel(s string) (Level, error) {
 	return l, nil
 }
 
-// Format declares the kind of logging handler to use.
+// Format declares the kind of logging handler to use. An empty Format defaults to text.
 type Format string
 
 // ToLower takes a Format string and converts it to lowercase for case-agnostic validation. Users shouldn't have to care
@@ -59,8 +60,6 @@ func (f Format) ToLower() Format {
 
 // TODO(mkcp): Add dev format
 var (
-	// FormatEmpty means no format was supplied. This is equivalent to a default, or "Text".
-	FormatEmpty Format = "" //nolint:revive
 	// FormatText uses the standard slog TextHandler
 	FormatText Format = "text"
 	// FormatJSON uses the standard slog JSONHandler
@@ -104,6 +103,7 @@ func New(cfg Config) (*slog.Logger, error) {
 	var handler slog.Handler
 	opts := slog.HandlerOptions{}
 
+	// Use default destination if none
 	if cfg.Destination == nil {
 		cfg.Destination = DestinationDefault
 	}
@@ -115,8 +115,8 @@ func New(cfg Config) (*slog.Logger, error) {
 	opts.Level = slog.Level(cfg.Level)
 
 	switch cfg.Format.ToLower() {
-	// Use Text handler if no format provided, e.g. "" for Empty
-	case FormatEmpty, FormatText:
+	// Use Text handler if no format provided
+	case "", FormatText:
 		handler = slog.NewTextHandler(cfg.Destination, &opts)
 	case FormatJSON:
 		handler = slog.NewJSONHandler(cfg.Destination, &opts)
