@@ -1,9 +1,14 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package logger implements a log/slog based logger in Zarf.
 package logger
 
 import (
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func Test_New(t *testing.T) {
@@ -79,8 +84,8 @@ func Test_New(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			res, err := New(tc.cfg)
-			assert.NoError(t, err)
-			assert.NotNil(t, res)
+			require.NoError(t, err)
+			require.NotNil(t, res)
 		})
 	}
 }
@@ -120,8 +125,8 @@ func Test_NewErrors(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			res, err := New(tc.cfg)
-			assert.Error(t, err)
-			assert.Nil(t, res)
+			require.Error(t, err)
+			require.Nil(t, res)
 		})
 	}
 }
@@ -168,8 +173,8 @@ func Test_ParseLevel(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			res, err := ParseLevel(tc.s)
-			assert.NoError(t, err)
-			assert.Equal(t, tc.expect, res)
+			require.NoError(t, err)
+			require.Equal(t, tc.expect, res)
 		})
 	}
 }
@@ -205,7 +210,7 @@ func Test_ParseLevelErrors(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := ParseLevel(tc.s)
-			assert.Error(t, err)
+			require.Error(t, err)
 		})
 	}
 }

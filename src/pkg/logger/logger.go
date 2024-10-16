@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package logger implements a log/slog based logger in Zarf.
 package logger
 
 import (
@@ -8,15 +12,14 @@ import (
 	"strings"
 )
 
-// Level declares each supported log level. These are 1:1 what log/slog supports by default.
+// Level declares each supported log level. These are 1:1 what log/slog supports by default. Info is the default level.
 type Level int
 
 var (
-	Debug = Level(slog.LevelDebug) // -4
-	// Info is the default log level.
-	Info  = Level(slog.LevelInfo)  // 0
-	Warn  = Level(slog.LevelWarn)  // 4
-	Error = Level(slog.LevelError) // 8
+	Debug = Level(slog.LevelDebug) //nolint:revive // -4
+	Info  = Level(slog.LevelInfo)  //nolint:revive // 0
+	Warn  = Level(slog.LevelWarn)  //nolint:revive // 4
+	Error = Level(slog.LevelError) //nolint:revive // 8
 )
 
 // validLevels is a set that provides an ergonomic way to check if a level is a member of the set.
@@ -57,7 +60,7 @@ func (f Format) ToLower() Format {
 // TODO(mkcp): Add dev format
 var (
 	// FormatEmpty means no format was supplied. This is equivalent to a default, or "Text".
-	FormatEmpty Format = ""
+	FormatEmpty Format = "" //nolint:revive
 	// FormatText uses the standard slog TextHandler
 	FormatText Format = "text"
 	// FormatJSON uses the standard slog JSONHandler
@@ -69,6 +72,7 @@ var (
 // More printers would be great, like dev format https://github.com/golang-cz/devslog
 // and a pretty console slog https://github.com/phsym/console-slog
 
+// Destination declares an io.Writer to send logs to.
 type Destination io.Writer
 
 var (
