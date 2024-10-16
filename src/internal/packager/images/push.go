@@ -39,7 +39,8 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		tunnel      *cluster.Tunnel
 		registryURL = cfg.RegInfo.Address
 	)
-
+	spinner := message.NewProgressSpinner("Pushing images to Zarf registry")
+	defer spinner.Stop()
 	err = retry.Do(func() error {
 		c, _ := cluster.NewCluster()
 		if c != nil {
@@ -54,7 +55,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		pushOptions := createPushOpts(cfg)
 
 		pushImage := func(img v1.Image, name string) error {
-			message.Infof("Pushing image %s", name)
 			if tunnel != nil {
 				return tunnel.Wrap(func() error { return crane.Push(img, name, pushOptions...) })
 			}
@@ -68,6 +68,18 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 		}()
 		for refInfo, img := range toPush {
+			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, refInfo.Reference)
+			if err != nil {
+				return err
+			}
+
+			spinner.Updatef("Pushing %s", refInfo.Reference)
+
+			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
+			// (this may result in collisions but this is acceptable for this use case)
+			if err = pushImage(img, offlineName); err != nil {
+				return err
+			}
 
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
@@ -79,20 +91,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				if err = pushImage(img, offlineNameCRC); err != nil {
 					return err
 				}
-
-			}
-
-			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
-			// (this may result in collisions but this is acceptable for this use case)
-			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, refInfo.Reference)
-			if err != nil {
-				return err
-			}
-
-			message.Debugf("push %s -> %s)", refInfo.Reference, offlineName)
-
-			if err = pushImage(img, offlineName); err != nil {
-				return err
 			}
 
 			pushed = append(pushed, refInfo)
@@ -102,6 +100,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	if err != nil {
 		return err
 	}
+	spinner.Success()
 
 	return nil
 }
