@@ -6,11 +6,9 @@ package images
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -27,7 +25,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	logs.Progress.SetOutput(&message.DebugWriter{})
 
 	toPush := map[transform.Image]v1.Image{}
-	var totalSize int64
 	// Build an image list from the references
 	for _, refInfo := range cfg.ImageList {
 		img, err := utils.LoadOCIImage(cfg.SourceDirectory, refInfo)
@@ -35,16 +32,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			return err
 		}
 		toPush[refInfo] = img
-		imgSize, err := calcImgSize(img)
-		if err != nil {
-			return err
-		}
-		totalSize += imgSize
-	}
-
-	// If this is not a no checksum image push we will be pushing two images (the second will go faster as it checks the same layers)
-	if !cfg.NoChecksum {
-		totalSize = totalSize * 2
 	}
 
 	var (
@@ -64,16 +51,13 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				defer tunnel.Close()
 			}
 		}
-
-		progress := message.NewProgressBar(totalSize, fmt.Sprintf("Pushing %d images", len(toPush)))
-		defer progress.Close()
-		pushOptions := createPushOpts(cfg, progress)
+		pushOptions := createPushOpts(cfg)
 
 		pushImage := func(img v1.Image, name string) error {
+			message.Infof("Pushing image %s", name)
 			if tunnel != nil {
 				return tunnel.Wrap(func() error { return crane.Push(img, name, pushOptions...) })
 			}
-
 			return crane.Push(img, name, pushOptions...)
 		}
 
@@ -84,13 +68,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 		}()
 		for refInfo, img := range toPush {
-			refTruncated := helpers.Truncate(refInfo.Reference, 55, true)
-			progress.Updatef(fmt.Sprintf("Pushing %s", refTruncated))
-
-			size, err := calcImgSize(img)
-			if err != nil {
-				return err
-			}
 
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
@@ -103,7 +80,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 					return err
 				}
 
-				totalSize -= size
 			}
 
 			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
@@ -120,9 +96,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 
 			pushed = append(pushed, refInfo)
-			totalSize -= size
 		}
-		progress.Successf("Pushed %d images", len(cfg.ImageList))
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
 	if err != nil {
@@ -130,26 +104,4 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	}
 
 	return nil
-}
-
-func calcImgSize(img v1.Image) (int64, error) {
-	size, err := img.Size()
-	if err != nil {
-		return size, err
-	}
-
-	layers, err := img.Layers()
-	if err != nil {
-		return size, err
-	}
-
-	for _, layer := range layers {
-		ls, err := layer.Size()
-		if err != nil {
-			return size, err
-		}
-		size += ls
-	}
-
-	return size, nil
 }
