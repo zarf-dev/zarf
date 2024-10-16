@@ -206,6 +206,12 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 				sbomImageList = append(sbomImageList, info)
 			}
 		}
+
+		// Sort images index to make build reproducible.
+		err = utils.SortImagesIndex(dst.Images.Base)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Ignore SBOM creation if the flag is set.

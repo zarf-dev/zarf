@@ -1,0 +1,48 @@
+name: Test Package Create Checksums
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-create-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-checksums:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+
+      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Build Zarf
+        run: make build
+
+      - name: Build examples
+        run: make build-examples ARCH=amd64
+
+      - name: Compare checksums
+        run: |
+          set -e
+
+          for f in hack/examples-checksums/*.txt
+          do 
+            NAME=$(basename $f .txt)
+            CHECKSUM=$(tar Oxf build/$NAME.tar.zst checksums.txt | grep -v sboms.tar)
+            EXPECTED_CHECKSUM=$(cat $f | grep -v sboms.tar)
+            if [[ "$CHECKSUM" != "$EXPECTED_CHECKSUM" ]]
+            then
+              echo "Package $f does not have expected checksum."
+              echo "$CHECKSUM"
+              echo "-----"
+              echo "$EXPECTED_CHECKSUM"
+              exit 1
+            fi
+          done
