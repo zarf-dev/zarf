@@ -148,7 +148,7 @@ func init() {
 
 	// Logs
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(common.VLogLevel), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVarP(&LogFormat, "log-format", "f", v.GetString(common.VLogFormat), lang.RootCmdFlagLogFormat)
+	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(common.VLogFormat), lang.RootCmdFlagLogFormat)
 	rootCmd.PersistentFlags().BoolVar(&SkipLogFile, "no-log-file", v.GetBool(common.VNoLogFile), lang.RootCmdFlagSkipLogFile)
 	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(common.VNoProgress), lang.RootCmdFlagNoProgress)
 	rootCmd.PersistentFlags().BoolVar(&NoColor, "no-color", v.GetBool(common.VNoColor), lang.RootCmdFlagNoColor)
