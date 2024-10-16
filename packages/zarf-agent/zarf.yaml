@@ -40,11 +40,3 @@ components:
               windows: pwsh
             dir: ../..
             description: Build the local agent image (if 'AGENT_IMAGE_TAG' was specified as 'local')
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: pod
-                namespace: zarf
-                name: app=agent-hook
-                condition: Ready
