@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -20,7 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/releaseutil"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/yaml"
@@ -29,19 +27,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 )
 
 type renderer struct {
 	*Helm
 	connectStrings types.ConnectStrings
-	namespaces     map[string]*corev1.Namespace
+	namespaces     map[string]*v1ac.NamespaceApplyConfiguration
 }
 
 func (h *Helm) newRenderer(ctx context.Context) (*renderer, error) {
 	rend := &renderer{
 		Helm:           h,
 		connectStrings: types.ConnectStrings{},
-		namespaces:     map[string]*corev1.Namespace{},
+		namespaces:     map[string]*v1ac.NamespaceApplyConfiguration{},
 	}
 	if h.cluster == nil {
 		return rend, nil
@@ -54,8 +53,7 @@ func (h *Helm) newRenderer(ctx context.Context) (*renderer, error) {
 	if kerrors.IsNotFound(err) {
 		rend.namespaces[h.chart.Namespace] = cluster.NewZarfManagedNamespace(h.chart.Namespace)
 	} else if h.cfg.DeployOpts.AdoptExistingResources {
-		namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
-		rend.namespaces[h.chart.Namespace] = namespace
+		namespace.Labels[cluster.ZarfManagedByLabel] = "zarf"
 	}
 
 	return rend, nil
@@ -131,24 +129,17 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			}
 		}
 
-		if !existingNamespace {
-			// This is a new namespace, add it
-			_, err := c.Clientset.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
-			if err != nil {
-				return fmt.Errorf("unable to create the missing namespace %s", name)
-			}
-		} else if r.cfg.DeployOpts.AdoptExistingResources {
-			// Refuse to adopt namespace if it is one of four initial Kubernetes namespaces.
-			// https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
+		if !existingNamespace || r.cfg.DeployOpts.AdoptExistingResources {
 			if slices.Contains([]string{"default", "kube-node-lease", "kube-public", "kube-system"}, name) {
 				message.Warnf("Refusing to adopt the initial namespace: %s", name)
 			} else {
-				// This is an existing namespace to adopt
-				_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, namespace, metav1.UpdateOptions{})
+				// This is a new namespace, add it
+				_, err := c.Clientset.CoreV1().Namespaces().Apply(ctx, namespace, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
 				if err != nil {
-					return fmt.Errorf("unable to adopt the existing namespace %s", name)
+					return fmt.Errorf("unable to apply namespace %s", name)
 				}
 			}
+
 		}
 
 		// If the package is marked as YOLO and the state is empty, skip the secret creation for this namespace
@@ -161,47 +152,15 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		// TODO: Refactor as error is not checked instead of checking for not found error.
-		currentRegistrySecret, _ := c.Clientset.CoreV1().Secrets(name).Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
-		sameSecretData := maps.EqualFunc(currentRegistrySecret.Data, validRegistrySecret.Data, func(v1, v2 []byte) bool { return bytes.Equal(v1, v2) })
-		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !sameSecretData {
-			err := func() error {
-				_, err := c.Clientset.CoreV1().Secrets(validRegistrySecret.Namespace).Create(ctx, validRegistrySecret, metav1.CreateOptions{})
-				if err != nil && !kerrors.IsAlreadyExists(err) {
-					return err
-				}
-				if err == nil {
-					return nil
-				}
-				_, err = c.Clientset.CoreV1().Secrets(validRegistrySecret.Namespace).Update(ctx, validRegistrySecret, metav1.UpdateOptions{})
-				if err != nil {
-					return err
-				}
-				return nil
-			}()
-			if err != nil {
-				message.WarnErrf(err, "Problem creating registry secret for the %s namespace", name)
-			}
+		_, err = c.Clientset.CoreV1().Secrets(*validRegistrySecret.Namespace).Apply(ctx, validRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+		if err != nil {
+			message.WarnErrf(err, "Problem applying registry secret for the %s namespace", name)
+		}
 
-			// Create or update the zarf git server secret
-			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
-			err = func() error {
-				_, err := c.Clientset.CoreV1().Secrets(gitServerSecret.Namespace).Create(ctx, gitServerSecret, metav1.CreateOptions{})
-				if err != nil && !kerrors.IsAlreadyExists(err) {
-					return err
-				}
-				if err == nil {
-					return nil
-				}
-				_, err = c.Clientset.CoreV1().Secrets(gitServerSecret.Namespace).Update(ctx, gitServerSecret, metav1.UpdateOptions{})
-				if err != nil {
-					return err
-				}
-				return nil
-			}()
-			if err != nil {
-				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
-			}
+		gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
+		_, err = c.Clientset.CoreV1().Secrets(*gitServerSecret.Namespace).Apply(ctx, gitServerSecret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+		if err != nil {
+			message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
 		}
 	}
 	return nil
@@ -227,15 +186,16 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 
 		switch rawData.GetKind() {
 		case "Namespace":
-			namespace := &corev1.Namespace{}
+			// TODO does unstructuredConverter work with apply types
+			namespace := &v1ac.NamespaceApplyConfiguration{}
 			// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shenanigans
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), namespace); err != nil {
 				message.WarnErrf(err, "could not parse namespace %s", rawData.GetName())
 			} else {
-				message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
+				message.Debugf("Matched helm namespace %s for zarf annotation", *namespace.Name)
 				namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
 				// Add it to the stack
-				r.namespaces[namespace.Name] = namespace
+				r.namespaces[*namespace.Name] = namespace
 			}
 			// skip so we can strip namespaces from helm's brain
 			continue

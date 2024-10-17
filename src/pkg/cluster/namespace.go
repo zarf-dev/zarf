@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
@@ -46,18 +46,8 @@ func (c *Cluster) DeleteZarfNamespace(ctx context.Context) error {
 }
 
 // NewZarfManagedNamespace returns a corev1.Namespace with Zarf-managed labels
-func NewZarfManagedNamespace(name string) *corev1.Namespace {
-	namespace := &corev1.Namespace{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Namespace",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	}
-	namespace.Labels = AdoptZarfManagedLabels(namespace.Labels)
-	return namespace
+func NewZarfManagedNamespace(name string) *v1ac.NamespaceApplyConfiguration {
+	return v1ac.Namespace(name).WithLabels(AdoptZarfManagedLabels(nil))
 }
 
 // AdoptZarfManagedLabels adds & deletes the necessary labels that signal to Zarf it should manage a namespace

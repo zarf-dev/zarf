@@ -476,20 +476,7 @@ func (p *Packager) setupState(ctx context.Context) error {
 		// Try to create the zarf namespace
 		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := cluster.NewZarfManagedNamespace(cluster.ZarfNamespaceName)
-		err := func() error {
-			_, err := p.cluster.Clientset.CoreV1().Namespaces().Create(ctx, zarfNamespace, metav1.CreateOptions{})
-			if err != nil && !kerrors.IsAlreadyExists(err) {
-				return err
-			}
-			if err == nil {
-				return nil
-			}
-			_, err = p.cluster.Clientset.CoreV1().Namespaces().Update(ctx, zarfNamespace, metav1.UpdateOptions{})
-			if err != nil {
-				return err
-			}
-			return nil
-		}()
+		_, err = p.cluster.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
 		if err != nil {
 			return fmt.Errorf("unable to create the Zarf namespace: %w", err)
 		}
