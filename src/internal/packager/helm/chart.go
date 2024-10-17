@@ -23,9 +23,9 @@ import (
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -129,20 +129,14 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		return nil, "", fmt.Errorf("unable to build the resource list: %w", err)
 	}
 
-	healthChecks := []v1alpha1.NamespacedObjectKindReference{}
+	runtimeObjs := []runtime.Object{}
 	for _, resource := range resourceList {
-		apiVersion, kind := resource.Object.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
-		healthChecks = append(healthChecks, v1alpha1.NamespacedObjectKindReference{
-			APIVersion: apiVersion,
-			Kind:       kind,
-			Name:       resource.Name,
-			Namespace:  resource.Namespace,
-		})
+		runtimeObjs = append(runtimeObjs, resource.Object)
 	}
 	if !h.chart.NoWait {
 		// Ensure we don't go past the timeout by using a context initialized with the helm timeout
 		spinner.Updatef("Running health checks")
-		if err := healthchecks.Run(helmCtx, h.cluster.Watcher, healthChecks); err != nil {
+		if err := healthchecks.WaitForReadyRuntime(helmCtx, h.cluster.Watcher, runtimeObjs); err != nil {
 			return nil, "", err
 		}
 	}

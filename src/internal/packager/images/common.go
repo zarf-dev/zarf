@@ -13,7 +13,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -98,18 +97,18 @@ func WithPushAuth(ri types.RegistryInfo) crane.Option {
 	return WithBasicAuth(ri.PushUsername, ri.PushPassword)
 }
 
-func createPushOpts(cfg PushConfig, pb *message.ProgressBar) []crane.Option {
+func createPushOpts(cfg PushConfig) []crane.Option {
 	opts := CommonOpts(cfg.Arch)
 	opts = append(opts, WithPushAuth(cfg.RegInfo))
 
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig.InsecureSkipVerify = config.CommonOptions.InsecureSkipTLSVerify
+	defaultTransport := http.DefaultTransport.(*http.Transport).Clone()
+	defaultTransport.TLSClientConfig.InsecureSkipVerify = config.CommonOptions.InsecureSkipTLSVerify
 	// TODO (@WSTARR) This is set to match the TLSHandshakeTimeout to potentially mitigate effects of https://github.com/zarf-dev/zarf/issues/1444
-	transport.ResponseHeaderTimeout = 10 * time.Second
+	defaultTransport.ResponseHeaderTimeout = 10 * time.Second
 
-	transportWithProgressBar := helpers.NewTransport(transport, pb)
+	transport := helpers.NewTransport(defaultTransport, nil)
 
-	opts = append(opts, crane.WithTransport(transportWithProgressBar))
+	opts = append(opts, crane.WithTransport(transport))
 
 	return opts
 }

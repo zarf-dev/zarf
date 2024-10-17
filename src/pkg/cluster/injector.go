@@ -24,9 +24,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -117,7 +117,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 
 	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
 	defer waitCancel()
-	err = pkgkubernetes.WaitForReadyRuntime(waitCtx, c.Watcher, []runtime.Object{pod})
+	err = healthchecks.WaitForReadyRuntime(waitCtx, c.Watcher, []runtime.Object{pod})
 	if err != nil {
 		return err
 	}
@@ -319,6 +319,9 @@ func hasBlockingTaints(taints []corev1.Taint) bool {
 
 func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq corev1.ResourceRequirements) *corev1.Pod {
 	executeMode := int32(0777)
+	userID := int64(1000)
+	groupID := int64(2000)
+	fsGroupID := int64(2000)
 
 	pod := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
@@ -337,6 +340,12 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 			NodeName: nodeName,
 			// Do not try to restart the pod as it will be deleted/re-created instead.
 			RestartPolicy: corev1.RestartPolicyNever,
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsUser:      &userID,
+				RunAsGroup:     &groupID,
+				FSGroup:        &fsGroupID,
+				SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
+			},
 			Containers: []corev1.Container{
 				{
 					Name:            "injector",
@@ -364,6 +373,14 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 								Path: "/v2/",
 								Port: intstr.FromInt(5000),
 							},
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						ReadOnlyRootFilesystem:   helpers.BoolPtr(true),
+						AllowPrivilegeEscalation: helpers.BoolPtr(false),
+						RunAsNonRoot:             helpers.BoolPtr(true),
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{"ALL"},
 						},
 					},
 					Resources: resReq,

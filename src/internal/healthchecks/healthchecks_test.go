@@ -6,6 +6,7 @@ package healthchecks
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -45,19 +46,19 @@ metadata:
 func TestRunHealthChecks(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name      string
-		podYaml   string
-		expectErr error
+		name       string
+		podYamls   []string
+		expectErrs []error
 	}{
 		{
-			name:      "Pod is running",
-			podYaml:   podCurrentYaml,
-			expectErr: nil,
+			name:       "Pod is ready",
+			podYamls:   []string{podCurrentYaml},
+			expectErrs: nil,
 		},
 		{
-			name:      "Pod is never ready",
-			podYaml:   podYaml,
-			expectErr: context.DeadlineExceeded,
+			name:       "One pod is never ready",
+			podYamls:   []string{podYaml, podCurrentYaml},
+			expectErrs: []error{errors.New("in-progress-pod: Pod not ready"), context.DeadlineExceeded},
 		},
 	}
 
@@ -70,24 +71,27 @@ func TestRunHealthChecks(t *testing.T) {
 			)
 			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 			defer cancel()
-			m := make(map[string]interface{})
-			err := yaml.Unmarshal([]byte(tt.podYaml), &m)
-			require.NoError(t, err)
-			pod := &unstructured.Unstructured{Object: m}
 			statusWatcher := watcher.NewDefaultStatusWatcher(fakeClient, fakeMapper)
-			podGVR := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
-			require.NoError(t, fakeClient.Tracker().Create(podGVR, pod, pod.GetNamespace()))
-			objs := []v1alpha1.NamespacedObjectKindReference{
-				{
+			objs := []v1alpha1.NamespacedObjectKindReference{}
+			for _, podYaml := range tt.podYamls {
+				m := make(map[string]interface{})
+				err := yaml.Unmarshal([]byte(podYaml), &m)
+				require.NoError(t, err)
+				pod := &unstructured.Unstructured{Object: m}
+				podGVR := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
+				err = fakeClient.Tracker().Create(podGVR, pod, pod.GetNamespace())
+				require.NoError(t, err)
+				objs = append(objs, v1alpha1.NamespacedObjectKindReference{
 					APIVersion: pod.GetAPIVersion(),
 					Kind:       pod.GetKind(),
 					Namespace:  pod.GetNamespace(),
 					Name:       pod.GetName(),
-				},
+				})
 			}
-			err = Run(ctx, statusWatcher, objs)
-			if tt.expectErr != nil {
-				require.ErrorIs(t, err, tt.expectErr)
+
+			err := Run(ctx, statusWatcher, objs)
+			if tt.expectErrs != nil {
+				require.EqualError(t, err, errors.Join(tt.expectErrs...).Error())
 				return
 			}
 			require.NoError(t, err)
