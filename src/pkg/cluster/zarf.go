@@ -15,10 +15,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ktypes "k8s.io/apimachinery/pkg/types"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
@@ -172,32 +170,18 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		return nil, err
 	}
 
-	// Update the package secret
-	deployedPackageSecret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      config.ZarfPackagePrefix + packageName,
-			Namespace: ZarfNamespaceName,
-			Labels: map[string]string{
-				ZarfManagedByLabel:   "zarf",
-				ZarfPackageInfoLabel: packageName,
-			},
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
+	packageSecretName := fmt.Sprintf("%s%s", config.ZarfPackagePrefix, packageName)
+	deployedPackageSecret := v1ac.Secret(packageSecretName, ZarfNamespaceName).
+		WithLabels(map[string]string{
+			ZarfManagedByLabel:   "zarf",
+			ZarfPackageInfoLabel: packageName,
+		}).WithType(corev1.SecretTypeOpaque).
+		WithData(map[string][]byte{
 			"data": packageData,
-		},
-	}
-	b, err := json.Marshal(deployedPackageSecret)
+		})
+	updatedSecret, err := c.Clientset.CoreV1().Secrets(*deployedPackageSecret.Namespace).Apply(ctx, deployedPackageSecret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
 	if err != nil {
-		return nil, err
-	}
-	updatedSecret, err := c.Clientset.CoreV1().Secrets(deployedPackageSecret.Namespace).Patch(ctx, deployedPackageSecret.Name, ktypes.ApplyPatchType, b, metav1.PatchOptions{Force: helpers.BoolPtr(true)})
-	if err != nil {
-		return nil, fmt.Errorf("failed to record package deployment in secret '%s': %w", deployedPackageSecret.Name, err)
+		return nil, fmt.Errorf("failed to record package deployment in secret '%s': %w", *deployedPackageSecret.Name, err)
 	}
 	if err := json.Unmarshal(updatedSecret.Data["data"], &deployedPackage); err != nil {
 		return nil, err
