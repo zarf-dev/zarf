@@ -17,9 +17,11 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
 
 	"github.com/avast/retry-go/v4"
-	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 
 	"github.com/zarf-dev/zarf/src/pkg/message"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 const (
@@ -76,11 +78,11 @@ func NewClusterWithWait(ctx context.Context) (*Cluster, error) {
 // NewCluster creates a new Cluster instance and validates connection to the cluster by fetching the Kubernetes version.
 func NewCluster() (*Cluster, error) {
 	clusterErr := errors.New("unable to connect to the cluster")
-	clientset, config, err := pkgkubernetes.ClientAndConfig()
+	clientset, config, err := ClientAndConfig()
 	if err != nil {
 		return nil, errors.Join(clusterErr, err)
 	}
-	watcher, err := pkgkubernetes.WatcherForConfig(config)
+	watcher, err := WatcherForConfig(config)
 	if err != nil {
 		return nil, errors.Join(clusterErr, err)
 	}
@@ -95,4 +97,37 @@ func NewCluster() (*Cluster, error) {
 		return nil, errors.Join(clusterErr, err)
 	}
 	return c, nil
+}
+
+// ClientAndConfig returns a Kubernetes client and the rest config used to configure the client.
+func ClientAndConfig() (kubernetes.Interface, *rest.Config, error) {
+	loader := clientcmd.NewDefaultClientConfigLoadingRules()
+	clientCfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, nil)
+	cfg, err := clientCfg.ClientConfig()
+	if err != nil {
+		return nil, nil, err
+	}
+	clientset, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	return clientset, cfg, nil
+}
+
+// WatcherForConfig returns a status watcher for the give Kubernetes configuration.
+func WatcherForConfig(cfg *rest.Config) (watcher.StatusWatcher, error) {
+	dynamicClient, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	httpClient, err := rest.HTTPClientFor(cfg)
+	if err != nil {
+		return nil, err
+	}
+	restMapper, err := apiutil.NewDynamicRESTMapper(cfg, httpClient)
+	if err != nil {
+		return nil, err
+	}
+	sw := watcher.NewDefaultStatusWatcher(dynamicClient, restMapper)
+	return sw, nil
 }
