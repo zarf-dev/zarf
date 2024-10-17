@@ -8,6 +8,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -28,12 +30,21 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/pkg/interactive"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // CreateOptions are the options for creating a skeleton package.
@@ -43,40 +54,167 @@ type CreateOptions struct {
 	SigningKeyPath     string
 	SigningKeyPassword string
 	SetVariables       map[string]string
+	MaxPackageSizeMB   int
+	Output             string
 }
 
-// CreateSkeleton creates a skeleton package and returns the path to the created package.
-func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) (string, error) {
-	b, err := os.ReadFile(filepath.Join(packagePath, ZarfYAML))
+func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (string, error) {
+	pkg, err := loadPackage(ctx, packagePath, opt.Flavor, opt.SetVariables)
 	if err != nil {
 		return "", err
 	}
-	var pkg v1alpha1.ZarfPackage
-	err = goyaml.Unmarshal(b, &pkg)
-	if err != nil {
-		return "", err
-	}
+
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return "", err
 	}
 
-	pkg.Metadata.Architecture = config.GetArch()
+	for _, component := range pkg.Components {
+		err := assemblePackageComponent(ctx, component, packagePath, buildPath)
+		if err != nil {
+			return "", err
+		}
+	}
 
-	pkg, err = resolveImports(ctx, pkg, packagePath, pkg.Metadata.Architecture, opt.Flavor)
+	componentImages := []transform.Image{}
+	for _, component := range pkg.Components {
+		for _, src := range component.Images {
+			refInfo, err := transform.ParseImageRef(src)
+			if err != nil {
+				return "", fmt.Errorf("failed to create ref for image %s: %w", src, err)
+			}
+			if slices.Contains(componentImages, refInfo) {
+				continue
+			}
+			componentImages = append(componentImages, refInfo)
+		}
+	}
+	sbomImageList := []transform.Image{}
+	if len(componentImages) > 0 {
+		cachePath, err := config.GetAbsCachePath()
+		if err != nil {
+			return "", err
+		}
+		pullCfg := images.PullConfig{
+			DestinationDirectory: filepath.Join(buildPath, ImagesDir),
+			ImageList:            componentImages,
+			Arch:                 pkg.Metadata.Architecture,
+			RegistryOverrides:    opt.RegistryOverrides,
+			CacheDirectory:       filepath.Join(cachePath, layout.ImagesDir),
+		}
+		pulled, err := images.Pull(ctx, pullCfg)
+		if err != nil {
+			return "", err
+		}
+		for info, img := range pulled {
+			ok, err := utils.OnlyHasImageLayers(img)
+			if err != nil {
+				return "", fmt.Errorf("failed to validate %s is an image and not an artifact: %w", info, err)
+			}
+			if ok {
+				sbomImageList = append(sbomImageList, info)
+			}
+		}
+
+		// Sort images index to make build reproducible.
+		err = utils.SortImagesIndex(filepath.Join(buildPath, ImagesDir))
+		if err != nil {
+			return "", err
+		}
+	}
+
+	// componentSBOMs := map[string]*layout.ComponentSBOM{}
+	// if err := sbom.Catalog(ctx, componentSBOMs, sbomImageList, dst); err != nil {
+	// 	return "", fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
+	// }
+
+	checksumContent, checksumSha, err := getChecksum(buildPath)
+	if err != nil {
+		return "", err
+	}
+	checksumPath := filepath.Join(buildPath, Checksums)
+	err = os.WriteFile(checksumPath, []byte(checksumContent), helpers.ReadWriteUser)
+	if err != nil {
+		return "", err
+	}
+	pkg.Metadata.AggregateChecksum = checksumSha
+
+	pkg = recordPackageMetadata(pkg, opt.Flavor, opt.RegistryOverrides)
+
+	b, err := goyaml.Marshal(pkg)
+	if err != nil {
+		return "", err
+	}
+	err = os.WriteFile(filepath.Join(buildPath, ZarfYAML), b, helpers.ReadWriteUser)
 	if err != nil {
 		return "", err
 	}
 
+	err = signPackage(buildPath, opt.SigningKeyPath, opt.SigningKeyPassword)
+	if err != nil {
+		return "", err
+	}
+
+	// Create a remote ref + client for the package (if output is OCI) then publish the package to the remote.
+	if helpers.IsOCIURL(opt.Output) {
+		// ref, err := zoci.ReferenceFromMetadata(opt.Output, &pkg.Metadata, &pkg.Build)
+		// if err != nil {
+		// 	return "", err
+		// }
+		// remote, err := zoci.NewRemote(ref, oci.PlatformForArch(config.GetArch()))
+		// if err != nil {
+		// 	return "", err
+		// }
+		// err = remote.PublishPackage(ctx, &pkg, dst, config.CommonOptions.OCIConcurrency)
+		// if err != nil {
+		// 	return "", fmt.Errorf("unable to publish package: %w", err)
+		// }
+	} else {
+		packageName := fmt.Sprintf("%s%s", sources.NameFromMetadata(&pkg, false), sources.PkgSuffix(pkg.Metadata.Uncompressed))
+		tarballPath := filepath.Join(opt.Output, packageName)
+		archiveSrc := []string{buildPath + string(os.PathSeparator)}
+		err := archiver.Archive(archiveSrc, tarballPath)
+		if err != nil {
+			return "", fmt.Errorf("unable to create package: %w", err)
+		}
+
+		// Convert Megabytes to bytes.
+		fi, err := os.Stat(tarballPath)
+		if err != nil {
+			return "", fmt.Errorf("unable to read the package archive: %w", err)
+		}
+		maxPackageSizeMB := 0
+		chunkSize := maxPackageSizeMB * 1000 * 1000
+		// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
+		if maxPackageSizeMB > 0 && fi.Size() > int64(chunkSize) {
+			if fi.Size()/int64(chunkSize) > 999 {
+				return "", fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
+			}
+			err := splitFile(tarballPath, chunkSize)
+			if err != nil {
+				return "", fmt.Errorf("unable to split the package archive into multiple files: %w", err)
+			}
+		}
+	}
+
+	return buildPath, nil
+}
+
+// CreateSkeleton creates a skeleton package and returns the path to the created package.
+func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) (string, error) {
+	pkg, err := loadPackage(ctx, packagePath, opt.Flavor, nil)
+	if err != nil {
+		return "", err
+	}
 	pkg.Metadata.Architecture = zoci.SkeletonArch
 
-	err = validate(pkg, packagePath, opt.SetVariables)
+	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return "", err
 	}
 
 	for _, component := range pkg.Components {
-		err := assembleComponent(component, packagePath, buildPath)
+		err := assembleSkeletonComponent(component, packagePath, buildPath)
 		if err != nil {
 			return "", err
 		}
@@ -95,7 +233,7 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) 
 
 	pkg = recordPackageMetadata(pkg, opt.Flavor, opt.RegistryOverrides)
 
-	b, err = goyaml.Marshal(pkg)
+	b, err := goyaml.Marshal(pkg)
 	if err != nil {
 		return "", err
 	}
@@ -110,6 +248,34 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) 
 	}
 
 	return buildPath, nil
+}
+
+func loadPackage(ctx context.Context, packagePath, flavor string, setVariables map[string]string) (v1alpha1.ZarfPackage, error) {
+	b, err := os.ReadFile(filepath.Join(packagePath, ZarfYAML))
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	var pkg v1alpha1.ZarfPackage
+	err = goyaml.Unmarshal(b, &pkg)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+	pkg, err = resolveImports(ctx, pkg, packagePath, pkg.Metadata.Architecture, flavor)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	if setVariables != nil {
+		pkg, _, err = fillActiveTemplate(pkg, setVariables)
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, err
+		}
+	}
+	err = validate(pkg, packagePath, setVariables)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	return pkg, nil
 }
 
 func validate(pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string) error {
@@ -131,7 +297,207 @@ func validate(pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[str
 	}
 }
 
-func assembleComponent(component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
+func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
+	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmpBuildPath)
+	compBuildPath := filepath.Join(tmpBuildPath, component.Name)
+	err = os.MkdirAll(compBuildPath, 0o700)
+	if err != nil {
+		return err
+	}
+
+	onCreate := component.Actions.OnCreate
+	if onCreate.Defaults.Dir == "" {
+		onCreate.Defaults.Dir = packagePath
+	}
+	if err := actions.Run(ctx, onCreate.Defaults, onCreate.Before, nil); err != nil {
+		return fmt.Errorf("unable to run component before action: %w", err)
+	}
+
+	// If any helm charts are defined, process them.
+	for _, chart := range component.Charts {
+		// TODO: Refactor helm builder
+		if chart.LocalPath != "" {
+			chart.LocalPath = filepath.Join(packagePath, chart.LocalPath)
+		}
+		oldValuesFiles := chart.ValuesFiles
+		valuesFiles := []string{}
+		for _, v := range chart.ValuesFiles {
+			valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
+		}
+		chart.ValuesFiles = valuesFiles
+		helmCfg := helm.New(chart, filepath.Join(compBuildPath, string(ChartsComponentDir)), filepath.Join(compBuildPath, string(ValuesComponentDir)))
+		if err := helmCfg.PackageChart(ctx, filepath.Join(compBuildPath, string(ChartsComponentDir))); err != nil {
+			return err
+		}
+		chart.ValuesFiles = oldValuesFiles
+	}
+
+	for filesIdx, file := range component.Files {
+		rel := filepath.Join(string(FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		dst := filepath.Join(compBuildPath, rel)
+		destinationDir := filepath.Dir(dst)
+
+		if helpers.IsURL(file.Source) {
+			if file.ExtractPath != "" {
+				// get the compressedFileName from the source
+				compressedFileName, err := helpers.ExtractBasePathFromURL(file.Source)
+				if err != nil {
+					return fmt.Errorf(lang.ErrFileNameExtract, file.Source, err.Error())
+				}
+				tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+				if err != nil {
+					return err
+				}
+				defer os.RemoveAll(tmpBuildPath)
+				compressedFile := filepath.Join(tmpDir, compressedFileName)
+
+				// If the file is an archive, download it to the componentPath.Temp
+				if err := utils.DownloadToFile(ctx, file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
+					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+				}
+				err = archiver.Extract(compressedFile, file.ExtractPath, destinationDir)
+				if err != nil {
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
+				}
+			} else {
+				if err := utils.DownloadToFile(ctx, file.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+				}
+			}
+		} else {
+			if file.ExtractPath != "" {
+				if err := archiver.Extract(file.Source, file.ExtractPath, destinationDir); err != nil {
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
+				}
+			} else {
+				if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, file.Source), dst); err != nil {
+					return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
+				}
+			}
+		}
+
+		if file.ExtractPath != "" {
+			// Make sure dst reflects the actual file or directory.
+			updatedExtractedFileOrDir := filepath.Join(destinationDir, file.ExtractPath)
+			if updatedExtractedFileOrDir != dst {
+				if err := os.Rename(updatedExtractedFileOrDir, dst); err != nil {
+					return fmt.Errorf(lang.ErrWritingFile, dst, err)
+				}
+			}
+		}
+
+		// Abort packaging on invalid shasum (if one is specified).
+		if file.Shasum != "" {
+			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
+				return err
+			}
+		}
+
+		if file.Executable || helpers.IsDir(dst) {
+			err := os.Chmod(dst, helpers.ReadWriteExecuteUser)
+			if err != nil {
+				return err
+			}
+		} else {
+			err := os.Chmod(dst, helpers.ReadWriteUser)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	for dataIdx, data := range component.DataInjections {
+		rel := filepath.Join(string(DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+		dst := filepath.Join(compBuildPath, rel)
+
+		if helpers.IsURL(data.Source) {
+			if err := utils.DownloadToFile(ctx, data.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+				return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
+			}
+		} else {
+			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, data.Source), dst); err != nil {
+				return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
+			}
+		}
+	}
+
+	// Iterate over all manifests.
+	if len(component.Manifests) > 0 {
+		err := os.MkdirAll(filepath.Join(compBuildPath, string(ManifestsComponentDir)), 0o700)
+		if err != nil {
+			return err
+		}
+	}
+	for _, manifest := range component.Manifests {
+		for fileIdx, path := range manifest.Files {
+			rel := filepath.Join(layout.ManifestsDir, fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+			dst := filepath.Join(compBuildPath, rel)
+
+			// Copy manifests without any processing.
+			if helpers.IsURL(path) {
+				if err := utils.DownloadToFile(ctx, path, dst, component.DeprecatedCosignKeyPath); err != nil {
+					return fmt.Errorf(lang.ErrDownloading, path, err.Error())
+				}
+			} else {
+				if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, path), dst); err != nil {
+					return fmt.Errorf("unable to copy manifest %s: %w", path, err)
+				}
+			}
+		}
+
+		for kustomizeIdx, path := range manifest.Kustomizations {
+			// Generate manifests from kustomizations and place in the package.
+			kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
+			rel := filepath.Join(layout.ManifestsDir, kname)
+			dst := filepath.Join(compBuildPath, rel)
+
+			if !helpers.IsURL(path) {
+				path = filepath.Join(packagePath, path)
+			}
+			if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+				return fmt.Errorf("unable to build kustomization %s: %w", path, err)
+			}
+		}
+	}
+
+	// Load all specified git repos.
+	for _, url := range component.Repos {
+		// Pull all the references if there is no `@` in the string.
+		_, err := git.Clone(ctx, filepath.Join(compBuildPath, string(RepoComponentDir)), url, false)
+		if err != nil {
+			return fmt.Errorf("unable to pull git repo %s: %w", url, err)
+		}
+	}
+
+	if err := actions.Run(ctx, onCreate.Defaults, onCreate.After, nil); err != nil {
+		return fmt.Errorf("unable to run component after action: %w", err)
+	}
+
+	// Write the tar component.
+	entries, err := os.ReadDir(compBuildPath)
+	if err != nil {
+		return err
+	}
+	if len(entries) == 0 {
+		return nil
+	}
+	tarPath := filepath.Join(buildPath, "components", fmt.Sprintf("%s.tar", component.Name))
+	err = os.MkdirAll(filepath.Join(buildPath, "components"), 0o700)
+	if err != nil {
+		return err
+	}
+	err = createReproducibleTarballFromDir(compBuildPath, component.Name, tarPath, false)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func assembleSkeletonComponent(component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -280,7 +646,7 @@ func assembleComponent(component v1alpha1.ZarfComponent, packagePath, buildPath 
 	if err != nil {
 		return err
 	}
-	err = createReproducibleTarballFromDir(compBuildPath, component.Name, tarPath)
+	err = createReproducibleTarballFromDir(compBuildPath, component.Name, tarPath, true)
 	if err != nil {
 		return err
 	}
@@ -394,7 +760,7 @@ func signPackage(dirPath, signingKeyPath, signingKeyPassword string) error {
 	return nil
 }
 
-func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string) error {
+func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, overrideMode bool) error {
 	tb, err := os.Create(tarballPath)
 	if err != nil {
 		return fmt.Errorf("error creating tarball: %w", err)
@@ -441,7 +807,9 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string) er
 		// that when unpackaged files from packages created on Windows and Linux will have the same permissions.
 		// The &^ operator called AND NOT sets the bits to 0 in the left hand if the right hand bits are 1.
 		// https://medium.com/learning-the-go-programming-language/bit-hacking-with-go-e0acee258827
-		header.Mode = header.Mode &^ 0o077
+		if overrideMode {
+			header.Mode = header.Mode &^ 0o077
+		}
 
 		// Ensure the header's name is correctly set relative to the base directory
 		name, err := filepath.Rel(dirPath, filePath)
@@ -472,4 +840,197 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string) er
 
 		return nil
 	})
+}
+
+func fillActiveTemplate(pkg v1alpha1.ZarfPackage, setVariables map[string]string) (v1alpha1.ZarfPackage, []string, error) {
+	templateMap := map[string]string{}
+	warnings := []string{}
+
+	promptAndSetTemplate := func(templatePrefix string, deprecated bool) error {
+		yamlTemplates, err := utils.FindYamlTemplates(&pkg, templatePrefix, "###")
+		if err != nil {
+			return err
+		}
+
+		for key := range yamlTemplates {
+			if deprecated {
+				warnings = append(warnings, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
+			}
+
+			_, present := setVariables[key]
+			if !present && !config.CommonOptions.Confirm {
+				setVal, err := interactive.PromptVariable(v1alpha1.InteractiveVariable{
+					Variable: v1alpha1.Variable{Name: key},
+				})
+				if err != nil {
+					return err
+				}
+				setVariables[key] = setVal
+			} else if !present {
+				return fmt.Errorf("template %q must be '--set' when using the '--confirm' flag", key)
+			}
+		}
+
+		for key, value := range setVariables {
+			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
+		}
+
+		return nil
+	}
+
+	// update the component templates on the package
+	if err := reloadComponentTemplatesInPackage(&pkg); err != nil {
+		return v1alpha1.ZarfPackage{}, nil, err
+	}
+
+	if err := promptAndSetTemplate(v1alpha1.ZarfPackageTemplatePrefix, false); err != nil {
+		return v1alpha1.ZarfPackage{}, nil, err
+	}
+	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
+	if err := promptAndSetTemplate(v1alpha1.ZarfPackageVariablePrefix, true); err != nil {
+		return v1alpha1.ZarfPackage{}, nil, err
+	}
+
+	// Add special variable for the current package architecture
+	templateMap[v1alpha1.ZarfPackageArch] = pkg.Metadata.Architecture
+
+	if err := utils.ReloadYamlTemplate(&pkg, templateMap); err != nil {
+		return v1alpha1.ZarfPackage{}, nil, err
+	}
+
+	return pkg, warnings, nil
+}
+
+// reloadComponentTemplate appends ###ZARF_COMPONENT_NAME### for the component, assigns value, and reloads
+// Any instance of ###ZARF_COMPONENT_NAME### within a component will be replaced with that components name
+func reloadComponentTemplate(component *v1alpha1.ZarfComponent) error {
+	mappings := map[string]string{}
+	mappings[v1alpha1.ZarfComponentName] = component.Name
+	err := utils.ReloadYamlTemplate(component, mappings)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// reloadComponentTemplatesInPackage appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
+func reloadComponentTemplatesInPackage(zarfPackage *v1alpha1.ZarfPackage) error {
+	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
+	for i := range zarfPackage.Components {
+		if err := reloadComponentTemplate(&zarfPackage.Components[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func splitFile(srcPath string, chunkSize int) (err error) {
+	srcFile, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	// Ensure we close our sourcefile, even if we error out.
+	defer func() {
+		err2 := srcFile.Close()
+		// Ignore if file is already closed
+		if !errors.Is(err2, os.ErrClosed) {
+			err = errors.Join(err, err2)
+		}
+	}()
+
+	fi, err := srcFile.Stat()
+	if err != nil {
+		return err
+	}
+
+	title := fmt.Sprintf("[0/%d] MB bytes written", fi.Size()/1000/1000)
+	progressBar := message.NewProgressBar(fi.Size(), title)
+	defer func(progressBar *message.ProgressBar) {
+		err2 := progressBar.Close()
+		err = errors.Join(err, err2)
+	}(progressBar)
+
+	hash := sha256.New()
+	fileCount := 0
+	// TODO(mkcp): The inside of this loop should be wrapped in a closure so we can close the destination file each
+	//   iteration as soon as we're done writing.
+	for {
+		path := fmt.Sprintf("%s.part%03d", srcPath, fileCount+1)
+		dstFile, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, helpers.ReadAllWriteUser)
+		if err != nil {
+			return err
+		}
+		defer func(dstFile *os.File) {
+			err2 := dstFile.Close()
+			// Ignore if file is already closed
+			if !errors.Is(err2, os.ErrClosed) {
+				err = errors.Join(err, err2)
+			}
+		}(dstFile)
+
+		written, copyErr := io.CopyN(dstFile, srcFile, int64(chunkSize))
+		if copyErr != nil && !errors.Is(copyErr, io.EOF) {
+			return err
+		}
+		progressBar.Add(int(written))
+		title := fmt.Sprintf("[%d/%d] MB bytes written", progressBar.GetCurrent()/1000/1000, fi.Size()/1000/1000)
+		progressBar.Updatef(title)
+
+		_, err = dstFile.Seek(0, io.SeekStart)
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(hash, dstFile)
+		if err != nil {
+			return err
+		}
+
+		// EOF error could be returned on 0 bytes written.
+		if written == 0 {
+			// NOTE(mkcp): We have to close the file before removing it or windows will break with a file-in-use err.
+			err = dstFile.Close()
+			if err != nil {
+				return err
+			}
+			err = os.Remove(path)
+			if err != nil {
+				return err
+			}
+			break
+		}
+
+		fileCount++
+		if errors.Is(copyErr, io.EOF) {
+			break
+		}
+	}
+
+	// Remove original file
+	// NOTE(mkcp): We have to close the file before removing or windows can break with a file-in-use err.
+	err = srcFile.Close()
+	if err != nil {
+		return err
+	}
+	err = os.Remove(srcPath)
+	if err != nil {
+		return err
+	}
+
+	// Write header file
+	data := types.ZarfSplitPackageData{
+		Count:     fileCount,
+		Bytes:     fi.Size(),
+		Sha256Sum: fmt.Sprintf("%x", hash.Sum(nil)),
+	}
+	b, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("unable to marshal the split package data: %w", err)
+	}
+	path := fmt.Sprintf("%s.part000", srcPath)
+	if err := os.WriteFile(path, b, helpers.ReadAllWriteUser); err != nil {
+		return fmt.Errorf("unable to write the file %s: %w", path, err)
+	}
+	progressBar.Successf("Package split across %d files", fileCount+1)
+
+	return nil
 }
