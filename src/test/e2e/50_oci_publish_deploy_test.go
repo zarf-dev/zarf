@@ -37,7 +37,7 @@ func (suite *PublishDeploySuiteTestSuite) SetupSuite() {
 
 func (suite *PublishDeploySuiteTestSuite) TearDownSuite() {
 	local := fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch)
-	e2e.CleanFiles(local)
+	e2e.CleanFiles(suite.Suite.T(), local)
 }
 
 func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
@@ -46,35 +46,35 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	// Publish package.
 	example := filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
 	ref := suite.Reference.String()
-	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "publish", example, "oci://"+ref, "--insecure")
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "publish", example, "oci://"+ref, "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 	suite.Contains(stdErr, "Published "+ref)
 
 	// Pull the package via OCI.
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "--insecure")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Publish w/ package missing `metadata.version` field.
 	example = filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-component-actions-%s.tar.zst", e2e.Arch))
-	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", example, "oci://"+ref, "--insecure")
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", example, "oci://"+ref, "--plain-http")
 	suite.Error(err, stdErr)
 
 	// Inline publish package.
 	dir := filepath.Join("examples", "helm-charts")
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "create", dir, "-o", "oci://"+ref, "--insecure", "--oci-concurrency=5", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "create", dir, "-o", "oci://"+ref, "--plain-http", "--oci-concurrency=5", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Inline publish flavor.
 	dir = filepath.Join("examples", "package-flavors")
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "create", dir, "-o", "oci://"+ref, "--flavor", "oracle-cookie-crunch", "--insecure", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "create", dir, "-o", "oci://"+ref, "--flavor", "oracle-cookie-crunch", "--plain-http", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Inspect published flavor.
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "oci://"+ref+"/package-flavors:1.0.0-oracle-cookie-crunch", "--insecure")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "oci://"+ref+"/package-flavors:1.0.0-oracle-cookie-crunch", "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Inspect the published package.
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "oci://"+ref+"/helm-charts:0.0.1", "--insecure")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "oci://"+ref+"/helm-charts:0.0.1", "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 }
 
@@ -87,15 +87,15 @@ func (suite *PublishDeploySuiteTestSuite) Test_1_Deploy() {
 	ref := suite.Reference.String()
 
 	// Deploy the package via OCI.
-	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "deploy", "oci://"+ref, "--insecure", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "deploy", "oci://"+ref, "--plain-http", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Remove the package via OCI.
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "remove", "oci://"+ref, "--insecure", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "remove", "oci://"+ref, "--plain-http", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Test deploy w/ bad ref.
-	_, stdErr, err = e2e.Zarf(suite.T(), "package", "deploy", "oci://"+badDeployRef.String(), "--insecure", "--confirm")
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "deploy", "oci://"+badDeployRef.String(), "--plain-http", "--confirm")
 	suite.Error(err, stdErr)
 }
 
@@ -103,7 +103,7 @@ func (suite *PublishDeploySuiteTestSuite) Test_2_Pull_And_Deploy() {
 	suite.T().Log("E2E: Package Pull oci:// && Package Deploy tarball")
 
 	local := fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch)
-	defer e2e.CleanFiles(local)
+	defer e2e.CleanFiles(suite.T(), local)
 	// Verify the package was pulled.
 	suite.FileExists(local)
 

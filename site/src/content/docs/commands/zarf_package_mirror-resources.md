@@ -25,7 +25,7 @@ zarf package mirror-resources [ PACKAGE_SOURCE ] [flags]
 
 # Mirror resources to internal Zarf resources
 $ zarf package mirror-resources <your-package.tar.zst> \
-	--registry-url 127.0.0.1:31999 \
+	--registry-url http://zarf-docker-registry.zarf.svc.cluster.local:5000 \
 	--registry-push-username zarf-push \
 	--registry-push-password <generated-registry-push-password> \
 	--git-url http://zarf-gitea-http.zarf.svc.cluster.local:3000 \
@@ -57,21 +57,24 @@ $ zarf package mirror-resources <your-package.tar.zst> \
       --registry-push-username string   Username to access to the registry Zarf is configured to use (default "zarf-push")
       --registry-url string             External registry url address to use for this Zarf cluster
       --retries int                     Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
+      --shasum string                   Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'
+      --skip-signature-validation       Skip validating the signature of the Zarf package
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -a, --architecture string   Architecture for OCI images and Zarf packages
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
-  -k, --key string            Path to public key file for validating signed packages
-  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-      --no-color              Disable colors in output
-      --no-log-file           Disable log file creation
-      --no-progress           Disable fancy UI progress bars, spinners, logos, etc
-      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
-      --tmpdir string         Specify the temporary directory to use for intermediate files
-      --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+  -k, --key string                 Path to public key file for validating signed packages
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable colors in output
+      --no-log-file                Disable log file creation
+      --no-progress                Disable fancy UI progress bars, spinners, logos, etc
+      --oci-concurrency int        Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
 ### SEE ALSO

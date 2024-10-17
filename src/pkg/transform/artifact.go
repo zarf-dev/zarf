@@ -87,16 +87,16 @@ func GenTransformURL(targetBaseURL string, sourceURL string) (*url.URL, error) {
 	// Rebuild the generic URL
 	transformedURL := fmt.Sprintf("%s/generic/%s/%s/%s", targetBaseURL, packageNameGlobal, version, fileName)
 
-	url, err := url.Parse(transformedURL)
+	parsedURL, err := url.Parse(transformedURL)
 	if err != nil {
-		return url, err
+		return &url.URL{}, err
 	}
 
 	// Drop the RawQuery and Fragment to avoid them being interpreted for generic packages
-	url.RawQuery = ""
-	url.Fragment = ""
+	parsedURL.RawQuery = ""
+	parsedURL.Fragment = ""
 
-	return url, err
+	return parsedURL, nil
 }
 
 // transformRegistryPath transforms a given request path using a new base URL and regex.

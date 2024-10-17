@@ -32,8 +32,15 @@ Subset of the Helm CLI that includes the repo and dependency commands for managi
   -n, --namespace string                namespace scope for this request
       --qps float32                     queries per second used when communicating with the Kubernetes API, not including bursting
       --registry-config string          path to the registry config file
-      --repository-cache string         path to the file containing cached repository indexes
+      --repository-cache string         path to the directory containing cached repository indexes
       --repository-config string        path to the file containing repository names and URLs
+```
+
+### Options inherited from parent commands
+
+```
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
 ```
 
 ### SEE ALSO

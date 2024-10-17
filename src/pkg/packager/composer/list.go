@@ -13,7 +13,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/extensions/bigbang"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -337,8 +336,7 @@ func (ic *ImportChain) Compose(ctx context.Context) (composed *v1alpha1.ZarfComp
 		overrideDeprecated(composed, node.ZarfComponent)
 		overrideResources(composed, node.ZarfComponent)
 		overrideActions(composed, node.ZarfComponent)
-
-		bigbang.Compose(composed, node.ZarfComponent, node.relativeToHead)
+		composed.HealthChecks = append(composed.HealthChecks, node.ZarfComponent.HealthChecks...)
 
 		node = node.prev
 	}

@@ -94,19 +94,27 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 	}
 
 	// Create the cache directory if it doesn't exist
-	if helpers.InvalidPath(config.GetAbsCachePath()) {
-		if err := helpers.CreateDirectory(config.GetAbsCachePath(), helpers.ReadExecuteAllWriteUser); err != nil {
-			return "", fmt.Errorf("unable to create the cache directory %s: %w", config.GetAbsCachePath(), err)
+	absCachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return "", err
+	}
+	// Verify that we can write to the path
+	if helpers.InvalidPath(absCachePath) {
+		// Create the directory if the path is invalid
+		err = helpers.CreateDirectory(absCachePath, helpers.ReadExecuteAllWriteUser)
+		if err != nil {
+			return "", fmt.Errorf("unable to create the cache directory %s: %w", absCachePath, err)
 		}
 	}
 
 	// Next, look in the cache directory
-	if !helpers.InvalidPath(filepath.Join(config.GetAbsCachePath(), initPackageName)) {
-		return filepath.Join(config.GetAbsCachePath(), initPackageName), nil
+	if !helpers.InvalidPath(filepath.Join(absCachePath, initPackageName)) {
+		// join and return
+		return filepath.Join(absCachePath, initPackageName), nil
 	}
 
 	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
-	downloadCacheTarget, err := downloadInitPackage(ctx, config.GetAbsCachePath())
+	downloadCacheTarget, err := downloadInitPackage(ctx, absCachePath)
 	if err != nil {
 		if errors.Is(err, lang.ErrInitNotFound) {
 			return "", err
@@ -121,7 +129,6 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, er
 		return "", lang.ErrInitNotFound
 	}
 
-	var confirmDownload bool
 	url := zoci.GetInitPackageURL(config.CLIVersion)
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
@@ -129,14 +136,12 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, er
 
 	message.Note(lang.CmdInitPullNote)
 
-	// Prompt the user if --confirm not specified
-	if !confirmDownload {
-		prompt := &survey.Confirm{
-			Message: lang.CmdInitPullConfirm,
-		}
-		if err := survey.AskOne(prompt, &confirmDownload); err != nil {
-			return "", fmt.Errorf("confirm download canceled: %w", err)
-		}
+	var confirmDownload bool
+	prompt := &survey.Confirm{
+		Message: lang.CmdInitPullConfirm,
+	}
+	if err := survey.AskOne(prompt, &confirmDownload); err != nil {
+		return "", fmt.Errorf("confirm download canceled: %w", err)
 	}
 
 	// If the user wants to download the init-package, download it
@@ -218,11 +223,11 @@ func init() {
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
 	initCmd.Flags().BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	initCmd.Flags().BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
 	initCmd.Flags().DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	initCmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)
 	initCmd.Flags().StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
+	initCmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	initCmd.Flags().SortFlags = true
 }

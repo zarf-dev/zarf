@@ -95,6 +95,7 @@ func overrideResources(c *v1alpha1.ZarfComponent, override v1alpha1.ZarfComponen
 					c.Charts[idx].ReleaseName = overrideChart.ReleaseName
 				}
 				c.Charts[idx].ValuesFiles = append(c.Charts[idx].ValuesFiles, overrideChart.ValuesFiles...)
+				c.Charts[idx].Variables = append(c.Charts[idx].Variables, overrideChart.Variables...)
 				existing = true
 			}
 		}

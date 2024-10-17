@@ -20,14 +20,16 @@ const (
 
 	// Root config keys
 
-	VLogLevel     = "log_level"
-	VArchitecture = "architecture"
-	VNoLogFile    = "no_log_file"
-	VNoProgress   = "no_progress"
-	VNoColor      = "no_color"
-	VZarfCache    = "zarf_cache"
-	VTmpDir       = "tmp_dir"
-	VInsecure     = "insecure"
+	VLogLevel              = "log_level"
+	VArchitecture          = "architecture"
+	VNoLogFile             = "no_log_file"
+	VNoProgress            = "no_progress"
+	VNoColor               = "no_color"
+	VZarfCache             = "zarf_cache"
+	VTmpDir                = "tmp_dir"
+	VInsecure              = "insecure"
+	VPlainHTTP             = "plain_http"
+	VInsecureSkipTLSVerify = "insecure_skip_tls_verify"
 
 	// Init config keys
 
@@ -79,13 +81,12 @@ const (
 
 	// Package deploy config keys
 
-	VPkgDeploySet          = "package.deploy.set"
-	VPkgDeployComponents   = "package.deploy.components"
-	VPkgDeployShasum       = "package.deploy.shasum"
-	VPkgDeploySget         = "package.deploy.sget"
-	VPkgDeploySkipWebhooks = "package.deploy.skip_webhooks"
-	VPkgDeployTimeout      = "package.deploy.timeout"
-	VPkgRetries            = "package.deploy.retries"
+	VPkgDeploySet        = "package.deploy.set"
+	VPkgDeployComponents = "package.deploy.components"
+	VPkgDeployShasum     = "package.deploy.shasum"
+	VPkgDeploySget       = "package.deploy.sget"
+	VPkgDeployTimeout    = "package.deploy.timeout"
+	VPkgRetries          = "package.deploy.retries"
 
 	// Package publish config keys
 
@@ -175,7 +176,9 @@ func printViperConfigUsed() {
 		message.WarnErrf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
 		return
 	}
-	message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
+	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
+		message.Notef(lang.CmdViperInfoUsingConfigFile, cfgFile)
+	}
 }
 
 func setDefaults() {

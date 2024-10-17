@@ -261,11 +261,23 @@ When merging components together Zarf will adopt the following strategies depend
 | Un'name'd Primitive Arrays | `actions`, `dataInjections`, `files`, `images`, `repos` | These keys will append the overriding component's version of the array to the end of the base component's array |
 | 'name'd Primitive Arrays   | `charts`, `manifests` | For any given element in the overriding component, if the element matches based on `name` then its values will be merged with the base element of the same `name`. If not then the element will be appended to the end of the array |
 
-### Extensions
+### Health Checks
 
-<Properties item="ZarfComponent" include={["extensions"]} />
+<Properties item="ZarfComponent" include={["healthChecks"]} />
 
-<ExampleYAML src={import("../../../../../examples/big-bang/zarf.yaml?raw")} component="bigbang" />
+Health checks wait until the specified resources are fully reconciled, meaning that their desired and current states match. Internally, [kstatus](https://github.com/kubernetes-sigs/cli-utils/blob/master/pkg/kstatus/README.md#kstatus) is used to assess when reconciliation is complete. Health checks supports all Kubernetes resources that implement the [status](https://kubernetes.io/docs/concepts/overview/working-with-objects/#object-spec-and-status) field, including custom resource definitions. If the status field is not implemented on a resource, it will automatically pass the health check.
+
+```yaml
+    healthChecks:
+      - name: my-pod
+        namespace: my-namespace
+        apiVersion: v1
+        kind: Pod
+      - name: my-stateful-set
+        namespace: my-namespace
+        apiVersion: apps/v1
+        kind: StatefulSet
+```
 
 ## Deploying Components
 
@@ -303,3 +315,7 @@ $ zarf package deploy ./path/to/package.tar.zst --components=optional-component-
 ```
 
 :::
+
+## Extensions (Removed)
+
+Extensions were removed from Zarf in v0.41.0. To create packages similar to those previously built with extensions, check out https://github.com/defenseunicorns-partnerships/generate-big-bang-zarf-package

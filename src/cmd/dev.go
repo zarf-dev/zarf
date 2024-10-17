@@ -59,7 +59,12 @@ var devDeployCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		if err := pkgClient.DevDeploy(cmd.Context()); err != nil {
+		err = pkgClient.DevDeploy(cmd.Context())
+		var lintErr *lint.LintError
+		if errors.As(err, &lintErr) {
+			common.PrintFindings(lintErr)
+		}
+		if err != nil {
 			return fmt.Errorf("failed to dev deploy: %w", err)
 		}
 		return nil
@@ -143,14 +148,13 @@ var devSha256SumCmd = &cobra.Command{
 	Aliases: []string{"s"},
 	Short:   lang.CmdDevSha256sumShort,
 	Args:    cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		hashErr := errors.New("unable to compute the SHA256SUM hash")
 
 		fileName := args[0]
 
 		var tmp string
 		var data io.ReadCloser
-		var err error
 
 		if helpers.IsURL(fileName) {
 			message.Warn(lang.CmdDevSha256sumRemoteWarning)
@@ -177,7 +181,10 @@ var devSha256SumCmd = &cobra.Command{
 
 			fileName = downloadPath
 
-			defer os.RemoveAll(tmp)
+			defer func(path string) {
+				errRemove := os.RemoveAll(path)
+				err = errors.Join(err, errRemove)
+			}(tmp)
 		}
 
 		if extractPath != "" {
@@ -186,7 +193,10 @@ var devSha256SumCmd = &cobra.Command{
 				if err != nil {
 					return errors.Join(hashErr, err)
 				}
-				defer os.RemoveAll(tmp)
+				defer func(path string) {
+					errRemove := os.RemoveAll(path)
+					err = errors.Join(err, errRemove)
+				}(tmp)
 			}
 
 			extractedFile := filepath.Join(tmp, extractPath)
@@ -203,7 +213,10 @@ var devSha256SumCmd = &cobra.Command{
 		if err != nil {
 			return errors.Join(hashErr, err)
 		}
-		defer data.Close()
+		defer func(data io.ReadCloser) {
+			errClose := data.Close()
+			err = errors.Join(err, errClose)
+		}(data)
 
 		hash, err := helpers.GetSHA256Hash(data)
 		if err != nil {
@@ -235,7 +248,12 @@ var devFindImagesCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		if _, err := pkgClient.FindImages(cmd.Context()); err != nil {
+		_, err = pkgClient.FindImages(cmd.Context())
+		var lintErr *lint.LintError
+		if errors.As(err, &lintErr) {
+			common.PrintFindings(lintErr)
+		}
+		if err != nil {
 			return fmt.Errorf("unable to find images: %w", err)
 		}
 		return nil
@@ -276,13 +294,19 @@ var devLintCmd = &cobra.Command{
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-		pkgClient, err := packager.New(&pkgConfig)
+		err := lint.Validate(cmd.Context(), pkgConfig.CreateOpts.BaseDir, pkgConfig.CreateOpts.Flavor, pkgConfig.CreateOpts.SetVariables)
+		var lintErr *lint.LintError
+		if errors.As(err, &lintErr) {
+			common.PrintFindings(lintErr)
+			// Do not return an error if the findings are all warnings.
+			if lintErr.OnlyWarnings() {
+				return nil
+			}
+		}
 		if err != nil {
 			return err
 		}
-		defer pkgClient.ClearTempPaths()
-
-		return lint.Validate(cmd.Context(), pkgConfig.CreateOpts)
+		return nil
 	},
 }
 
@@ -307,8 +331,14 @@ func init() {
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
 
-	devFindImagesCmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
-	devFindImagesCmd.Flags().MarkHidden("set")
+	err := devFindImagesCmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
+	if err != nil {
+		message.Debug("Unable to mark dev-find-images flag as set", "error", err)
+	}
+	err = devFindImagesCmd.Flags().MarkHidden("set")
+	if err != nil {
+		message.Debug("Unable to mark dev-find-images flag as hidden", "error", err)
+	}
 	devFindImagesCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
@@ -338,7 +368,6 @@ func bindDevDeployFlags(v *viper.Viper) {
 
 	// Always require adopt-existing-resources flag (no viper)
 	devDeployFlags.BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	devDeployFlags.BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
 	devDeployFlags.DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	devDeployFlags.IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)

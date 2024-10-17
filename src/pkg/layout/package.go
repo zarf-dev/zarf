@@ -5,6 +5,7 @@
 package layout
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -52,11 +53,14 @@ func New(baseDir string) *PackagePaths {
 
 // ReadZarfYAML reads a zarf.yaml file into memory,
 // checks if it's using the legacy layout, and migrates deprecated component configs.
-func (pp *PackagePaths) ReadZarfYAML() (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
+func (pp *PackagePaths) ReadZarfYAML() (v1alpha1.ZarfPackage, []string, error) {
+	var pkg v1alpha1.ZarfPackage
+
 	if err := utils.ReadYaml(pp.ZarfYAML, &pkg); err != nil {
 		return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("unable to read zarf.yaml: %w", err)
 	}
 
+	warnings := make([]string, 0)
 	if pp.IsLegacyLayout() {
 		warnings = append(warnings, "Detected deprecated package layout, migrating to new layout - support for this package will be dropped in v1.0.0")
 	}
@@ -79,6 +83,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 	base := pp.Base
 
 	// legacy layout does not contain a checksums file, nor a signature
+	// TODO(mkcp): This can be un-nested as an early return
 	if helpers.InvalidPath(pp.Checksums) && pp.Signature == "" {
 		if err := utils.ReadYaml(pp.ZarfYAML, &pkg); err != nil {
 			return err
@@ -110,7 +115,10 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 	if !helpers.InvalidPath(legacyImagesTar) {
 		pp = pp.AddImages()
 		message.Debugf("Migrating %q to %q", legacyImagesTar, pp.Images.Base)
-		defer os.Remove(legacyImagesTar)
+		defer func(name string) {
+			err2 := os.Remove(name)
+			err = errors.Join(err, err2)
+		}(legacyImagesTar)
 		imgTags := []string{}
 		for _, component := range pkg.Components {
 			imgTags = append(imgTags, component.Images...)
@@ -320,7 +328,10 @@ func (pp *PackagePaths) Files() map[string]string {
 	pathMap := make(map[string]string)
 
 	stripBase := func(path string) string {
-		rel, _ := filepath.Rel(pp.Base, path)
+		rel, err := filepath.Rel(pp.Base, path)
+		if err != nil {
+			message.Debug("unable to strip base from path", "error", err)
+		}
 		// Convert from the OS path separator to the standard '/' for Windows support
 		return filepath.ToSlash(rel)
 	}

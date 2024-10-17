@@ -15,12 +15,15 @@ import (
 )
 
 // SelectOptionalComponent prompts to confirm optional components
-func SelectOptionalComponent(component v1alpha1.ZarfComponent) (confirm bool, err error) {
+func SelectOptionalComponent(component v1alpha1.ZarfComponent) (bool, error) {
 	message.HorizontalRule()
 
 	displayComponent := component
 	displayComponent.Description = ""
-	utils.ColorPrintYAML(displayComponent, nil, false)
+	err := utils.ColorPrintYAML(displayComponent, nil, false)
+	if err != nil {
+		return false, err
+	}
 	if component.Description != "" {
 		message.Question(component.Description)
 	}
@@ -30,7 +33,12 @@ func SelectOptionalComponent(component v1alpha1.ZarfComponent) (confirm bool, er
 		Default: component.Default,
 	}
 
-	return confirm, survey.AskOne(prompt, &confirm)
+	var confirm bool
+	err = survey.AskOne(prompt, &confirm)
+	if err != nil {
+		return false, err
+	}
+	return confirm, nil
 }
 
 // SelectChoiceGroup prompts to select component groups

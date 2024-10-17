@@ -27,9 +27,9 @@ func TestUseCLI(t *testing.T) {
 		expectedShasum := "61b50898f982d015ed87093ba822de0fe011cec6dd67db39f99d8c56391a6109\n"
 		shasumTestFilePath := "shasum-test-file"
 
-		e2e.CleanFiles(shasumTestFilePath)
+		e2e.CleanFiles(t, shasumTestFilePath)
 		t.Cleanup(func() {
-			e2e.CleanFiles(shasumTestFilePath)
+			e2e.CleanFiles(t, shasumTestFilePath)
 		})
 
 		err := os.WriteFile(shasumTestFilePath, []byte("random test data 🦄\n"), helpers.ReadWriteUser)
@@ -48,6 +48,17 @@ func TestUseCLI(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "prepare", "sha256sum", "https://zarf-init.s3.us-east-2.amazonaws.com/injector/2024-07-22/zarf-injector-arm64")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, expectedShasum, "The expected SHASUM should equal the actual SHASUM")
+	})
+
+	t.Run("zarf package pull https", func(t *testing.T) {
+		t.Parallel()
+		packageShasum := "690799dbe8414238e11d4488754eee52ec264c1584cd0265e3b91e3e251e8b1a"
+		packageName := "zarf-init-amd64-v0.39.0.tar.zst"
+		_, _, err := e2e.Zarf(t, "package", "pull", fmt.Sprintf("https://github.com/zarf-dev/zarf/releases/download/v0.39.0/%s", packageName), "--shasum", packageShasum)
+		require.NoError(t, err)
+		require.FileExists(t, packageName)
+		err = os.Remove(packageName)
+		require.NoError(t, err)
 	})
 
 	t.Run("zarf version", func(t *testing.T) {
@@ -99,7 +110,8 @@ func TestUseCLI(t *testing.T) {
 	t.Run("changing log level", func(t *testing.T) {
 		t.Parallel()
 		// Test that changing the log level actually applies the requested level
-		_, stdErr, _ := e2e.Zarf(t, "internal", "crc32", "zarf", "--log-level=debug")
+		_, stdErr, err := e2e.Zarf(t, "internal", "crc32", "zarf", "--log-level=debug")
+		require.NoError(t, err)
 		expectedOutString := "Log level set to debug"
 		require.Contains(t, stdErr, expectedOutString, "The log level should be changed to 'debug'")
 	})
@@ -127,7 +139,7 @@ func TestUseCLI(t *testing.T) {
 		require.FileExists(t, "binaries/eksctl_Darwin_arm64")
 		require.FileExists(t, "binaries/eksctl_Linux_x86_64")
 
-		e2e.CleanFiles("binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", path, "eks.yaml")
+		e2e.CleanFiles(t, "binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", path, "eks.yaml")
 	})
 
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {
@@ -144,16 +156,6 @@ func TestUseCLI(t *testing.T) {
 	})
 
 	// TODO: Refactor test as it depends on debug log output for validation.
-	t.Run("zarf package inspect with tmpdir", func(t *testing.T) {
-		t.Parallel()
-		path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.Arch)
-		tmpdir := t.TempDir()
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "inspect", path, "--tmpdir", tmpdir, "--log-level=debug")
-		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
-		require.NoError(t, err, stdOut, stdErr)
-	})
-
-	// TODO: Refactor test as it depends on debug log output for validation.
 	t.Run("zarf package deploy with tmpdir", func(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()
@@ -163,7 +165,7 @@ func TestUseCLI(t *testing.T) {
 			secondFile = "second-choice-file.txt"
 		)
 		t.Cleanup(func() {
-			e2e.CleanFiles(firstFile, secondFile)
+			e2e.CleanFiles(t, firstFile, secondFile)
 		})
 		path := fmt.Sprintf("build/zarf-package-component-choice-%s.tar.zst", e2e.Arch)
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
@@ -196,7 +198,7 @@ func TestUseCLI(t *testing.T) {
 		tlsCert := "tls.crt"
 		tlsKey := "tls.key"
 		t.Cleanup(func() {
-			e2e.CleanFiles(tlsCA, tlsCert, tlsKey)
+			e2e.CleanFiles(t, tlsCA, tlsCert, tlsKey)
 		})
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "gen-pki", "github.com", "--sub-alt-name", "google.com")
 		require.NoError(t, err, stdOut, stdErr)

@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const envKey = "ZARF_CONFIG"
+
 func TestConfigFile(t *testing.T) {
 	t.Log("E2E: Config file")
 
@@ -22,11 +24,13 @@ func TestConfigFile(t *testing.T) {
 		config = "zarf-config.toml"
 	)
 
-	e2e.CleanFiles(path)
+	e2e.CleanFiles(t, path)
 
 	// Test the config file environment variable
-	t.Setenv("ZARF_CONFIG", filepath.Join(dir, config))
-	defer os.Unsetenv("ZARF_CONFIG")
+	t.Setenv(envKey, filepath.Join(dir, config))
+	defer func() {
+		require.NoError(t, os.Unsetenv(envKey))
+	}()
 	configFileTests(t, dir, path)
 
 	configFileDefaultTests(t)
@@ -34,7 +38,8 @@ func TestConfigFile(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	e2e.CleanFiles(path)
+	// Cleanup
+	e2e.CleanFiles(t, path)
 }
 
 func configFileTests(t *testing.T, dir, path string) {
@@ -103,7 +108,8 @@ func configFileDefaultTests(t *testing.T) {
 		"Disable log file creation (default true)",
 		"Disable fancy UI progress bars, spinners, logos, etc (default true)",
 		"zarf_cache: 978499a5",
-		"Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.",
+		"Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.",
+		"Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.",
 		"tmp_dir: c457359e",
 	}
 
@@ -138,30 +144,36 @@ func configFileDefaultTests(t *testing.T) {
 	}
 
 	// Test remaining default initializers
-	t.Setenv("ZARF_CONFIG", filepath.Join("src", "test", "zarf-config-test.toml"))
-	defer os.Unsetenv("ZARF_CONFIG")
+	t.Setenv(envKey, filepath.Join("src", "test", "zarf-config-test.toml"))
+	defer func() {
+		require.NoError(t, os.Unsetenv(envKey))
+	}()
 
 	// Test global flags
-	stdOut, _, _ := e2e.Zarf(t, "--help")
+	stdOut, _, err := e2e.Zarf(t, "--help")
+	require.NoError(t, err)
 	for _, test := range globalFlags {
-		require.Contains(t, string(stdOut), test)
+		require.Contains(t, stdOut, test)
 	}
 
 	// Test init flags
-	stdOut, _, _ = e2e.Zarf(t, "init", "--help")
+	stdOut, _, err = e2e.Zarf(t, "init", "--help")
+	require.NoError(t, err)
 	for _, test := range initFlags {
-		require.Contains(t, string(stdOut), test)
+		require.Contains(t, stdOut, test)
 	}
 
 	// Test package create flags
-	stdOut, _, _ = e2e.Zarf(t, "package", "create", "--help")
+	stdOut, _, err = e2e.Zarf(t, "package", "create", "--help")
+	require.NoError(t, err)
 	for _, test := range packageCreateFlags {
-		require.Contains(t, string(stdOut), test)
+		require.Contains(t, stdOut, test)
 	}
 
 	// Test package deploy flags
-	stdOut, _, _ = e2e.Zarf(t, "package", "deploy", "--help")
+	stdOut, _, err = e2e.Zarf(t, "package", "deploy", "--help")
+	require.NoError(t, err)
 	for _, test := range packageDeployFlags {
-		require.Contains(t, string(stdOut), test)
+		require.Contains(t, stdOut, test)
 	}
 }

@@ -23,7 +23,10 @@ type Credential struct {
 
 // FindAuthForHost finds the authentication scheme for a given host using .git-credentials then .netrc.
 func FindAuthForHost(baseURL string) (*Credential, error) {
-	homePath, _ := os.UserHomeDir()
+	homePath, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
 
 	// Read the ~/.git-credentials file
 	credentialsPath := filepath.Join(homePath, ".git-credentials")
@@ -52,7 +55,7 @@ func FindAuthForHost(baseURL string) (*Credential, error) {
 }
 
 // credentialParser parses a user's .git-credentials file to find git creds for hosts.
-func credentialParser(path string) ([]Credential, error) {
+func credentialParser(path string) (_ []Credential, err error) {
 	file, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
@@ -60,7 +63,10 @@ func credentialParser(path string) ([]Credential, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		err2 := file.Close()
+		err = errors.Join(err, err2)
+	}()
 
 	var credentials []Credential
 	scanner := bufio.NewScanner(file)
@@ -83,7 +89,7 @@ func credentialParser(path string) ([]Credential, error) {
 }
 
 // netrcParser parses a user's .netrc file using the method curl did pre 7.84.0: https://daniel.haxx.se/blog/2022/05/31/netrc-pains/.
-func netrcParser(path string) ([]Credential, error) {
+func netrcParser(path string) (_ []Credential, _ error) {
 	file, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
@@ -91,7 +97,10 @@ func netrcParser(path string) ([]Credential, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		err2 := file.Close()
+		err = errors.Join(err, err2)
+	}()
 
 	var credentials []Credential
 	scanner := bufio.NewScanner(file)
@@ -151,6 +160,7 @@ func netrcParser(path string) ([]Credential, error) {
 			}
 		}
 	}
+
 	// Append the last machine (if exists) at the end of the file
 	if activeMachine != nil {
 		credentials = appendNetrcMachine(activeMachine, credentials)

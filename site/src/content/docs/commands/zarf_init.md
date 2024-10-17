@@ -76,22 +76,23 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --registry-url string             External registry url address to use for this Zarf cluster
       --retries int                     Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
       --set stringToString              Specify deployment variables to set on the command line (KEY=value) (default [])
-      --skip-webhooks                   [alpha] Skip waiting for external webhooks to execute as each package component is deployed
+      --skip-signature-validation       Skip validating the signature of the Zarf package
       --storage-class string            Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
-      --timeout duration                Timeout for Helm operations such as installs and rollbacks (default 15m0s)
+      --timeout duration                Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -a, --architecture string   Architecture for OCI images and Zarf packages
-      --insecure              Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture.
-  -l, --log-level string      Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-      --no-color              Disable colors in output
-      --no-log-file           Disable log file creation
-      --no-progress           Disable fancy UI progress bars, spinners, logos, etc
-      --tmpdir string         Specify the temporary directory to use for intermediate files
-      --zarf-cache string     Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable colors in output
+      --no-log-file                Disable log file creation
+      --no-progress                Disable fancy UI progress bars, spinners, logos, etc
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
 ```
 
 ### SEE ALSO

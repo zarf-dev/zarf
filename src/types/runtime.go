@@ -14,6 +14,10 @@ type ZarfCommonOptions struct {
 	Confirm bool
 	// Allow insecure connections for remote packages
 	Insecure bool
+	// Disable checking the server TLS certificate for validity
+	InsecureSkipTLSVerify bool
+	// Force connections to be over http instead of https
+	PlainHTTP bool
 	// Path to use to cache images and git repos on package create
 	CachePath string
 	// Location Zarf should use as a staging ground when managing files and images for package creation and deployment
@@ -38,6 +42,8 @@ type ZarfPackageOptions struct {
 	PublicKeyPath string
 	// The number of retries to perform for Zarf deploy operations like image pushes or Helm installs
 	Retries int
+	// Skip validating the signature of the Zarf package
+	SkipSignatureValidation bool
 }
 
 // ZarfInspectOptions tracks the user-defined preferences during a package inspection.
@@ -68,8 +74,6 @@ type ZarfFindImagesOptions struct {
 type ZarfDeployOptions struct {
 	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
 	AdoptExistingResources bool
-	// Skip waiting for external webhooks to execute as each package component is deployed
-	SkipWebhooks bool
 	// Timeout for performing Helm operations
 	Timeout time.Duration
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy

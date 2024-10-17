@@ -6,6 +6,7 @@ package zoci
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -32,7 +33,7 @@ var (
 //   - zarf.yaml
 //   - checksums.txt
 //   - zarf.yaml.sig
-func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (_ []ocispec.Descriptor, err error) {
 	isPartialPull := len(layersToPull) > 0
 	r.Log().Debug(fmt.Sprintf("Pulling %s", r.Repo().Reference))
 
@@ -62,7 +63,10 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	if err != nil {
 		return nil, err
 	}
-	defer dst.Close()
+	defer func(dst *file.Store) {
+		err2 := dst.Close()
+		err = errors.Join(err, err2)
+	}(dst)
 
 	copyOpts := r.GetDefaultCopyOpts()
 	copyOpts.Concurrency = concurrency
@@ -70,13 +74,18 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	err = r.CopyToTarget(ctx, layersToPull, dst, copyOpts)
 	doneSaving <- err
 	<-doneSaving
-	return layersToPull, err
+	if err != nil {
+		return nil, err
+	}
+	return layersToPull, nil
 }
 
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.
 //
 // It also retrieves the descriptors for all image layers that are required by the components.
-func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent) (layers []ocispec.Descriptor, err error) {
+func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent) ([]ocispec.Descriptor, error) {
+	layers := make([]ocispec.Descriptor, 0)
+
 	root, err := r.FetchRoot(ctx)
 	if err != nil {
 		return nil, err
@@ -98,7 +107,8 @@ func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 		for _, image := range component.Images {
 			images[image] = true
 		}
-		layers = append(layers, root.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf(tarballFormat, component.Name))))
+		desc := root.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf(tarballFormat, component.Name)))
+		layers = append(layers, desc)
 	}
 	// Append the sboms.tar layer if it exists
 	//

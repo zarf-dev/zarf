@@ -6,72 +6,94 @@ package lint
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
+
+	goyaml "github.com/goccy/go-yaml"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/composer"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
+// LintError represents an error containing lint findings.
+//
+//nolint:revive // ignore name
+type LintError struct {
+	BaseDir     string
+	PackageName string
+	Findings    []PackageFinding
+}
+
+func (e *LintError) Error() string {
+	return fmt.Sprintf("linting error found %d instance(s)", len(e.Findings))
+}
+
+// OnlyWarnings returns true if all findings have severity warning.
+func (e *LintError) OnlyWarnings() bool {
+	for _, f := range e.Findings {
+		if f.Severity == SevErr {
+			return false
+		}
+	}
+	return true
+}
+
 // Validate lints the given Zarf package
-func Validate(ctx context.Context, createOpts types.ZarfCreateOptions) error {
-	var findings []PackageFinding
-	if err := os.Chdir(createOpts.BaseDir); err != nil {
-		return fmt.Errorf("unable to access directory %q: %w", createOpts.BaseDir, err)
+func Validate(ctx context.Context, baseDir, flavor string, setVariables map[string]string) error {
+	err := os.Chdir(baseDir)
+	if err != nil {
+		return fmt.Errorf("unable to access directory %q: %w", baseDir, err)
+	}
+	b, err := os.ReadFile(layout.ZarfYAML)
+	if err != nil {
+		return err
 	}
 	var pkg v1alpha1.ZarfPackage
-	if err := utils.ReadYaml(layout.ZarfYAML, &pkg); err != nil {
+	err = goyaml.Unmarshal(b, &pkg)
+	if err != nil {
 		return err
 	}
 
-	compFindings, err := lintComponents(ctx, pkg, createOpts)
+	findings := []PackageFinding{}
+	compFindings, err := lintComponents(ctx, pkg, flavor, setVariables)
 	if err != nil {
 		return err
 	}
 	findings = append(findings, compFindings...)
-	schemaFindings, err := ValidatePackageSchema(createOpts.SetVariables)
+	schemaFindings, err := ValidatePackageSchema(setVariables)
 	if err != nil {
 		return err
 	}
 	findings = append(findings, schemaFindings...)
-
 	if len(findings) == 0 {
-		message.Successf("0 findings for %q", pkg.Metadata.Name)
 		return nil
 	}
-	PrintFindings(findings, SevWarn, createOpts.BaseDir, pkg.Metadata.Name)
-	if HasSevOrHigher(findings, SevErr) {
-		return errors.New("errors during lint")
+	return &LintError{
+		BaseDir:     baseDir,
+		PackageName: pkg.Metadata.Name,
+		Findings:    findings,
 	}
-	return nil
 }
 
-func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, createOpts types.ZarfCreateOptions) ([]PackageFinding, error) {
-	var findings []PackageFinding
-
+func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, flavor string, setVariables map[string]string) ([]PackageFinding, error) {
+	findings := []PackageFinding{}
 	for i, component := range pkg.Components {
 		arch := config.GetArch(pkg.Metadata.Architecture)
-		if !composer.CompatibleComponent(component, arch, createOpts.Flavor) {
+		if !composer.CompatibleComponent(component, arch, flavor) {
 			continue
 		}
-
-		chain, err := composer.NewImportChain(ctx, component, i, pkg.Metadata.Name, arch, createOpts.Flavor)
-
+		chain, err := composer.NewImportChain(ctx, component, i, pkg.Metadata.Name, arch, flavor)
 		if err != nil {
 			return nil, err
 		}
-
 		node := chain.Head()
 		for node != nil {
 			component := node.ZarfComponent
-			compFindings, err := templateZarfObj(&component, createOpts.SetVariables)
+			compFindings, err := templateZarfObj(&component, setVariables)
 			if err != nil {
 				return nil, err
 			}

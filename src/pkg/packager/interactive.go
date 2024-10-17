@@ -21,7 +21,10 @@ import (
 func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles []string) bool {
 	pterm.Println()
 	message.HeaderInfof("📦 PACKAGE DEFINITION")
-	utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(stage), true)
+	err := utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(stage), true)
+	if err != nil {
+		message.WarnErr(err, "unable to print yaml")
+	}
 
 	// Print any potential breaking changes (if this is a Deploy confirm) between this CLI version and the deployed init package
 	if stage == config.ZarfDeployStage {

@@ -117,7 +117,7 @@ $ zarf connect [service name]
 
 :::note
 
-You can also specify a package locally, or via oci such as `zarf package deploy oci://defenseunicorns/dos-games:1.0.0 --key=https://zarf.dev/cosign.pub`
+You can also specify a package locally, or via oci such as `zarf package deploy oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0 --key=https://zarf.dev/cosign.pub`
 
 :::
 
@@ -145,6 +145,8 @@ You can override this behavior during install and upgrade by setting the `noWait
 Deployments will wait for helm [post-install hooks](https://helm.sh/docs/topics/charts_hooks/#the-available-hooks) to complete even with `noWait` set to `true` as Zarf follows the [Helm release lifecycle](https://helm.sh/docs/topics/charts_hooks/#hooks-and-the-release-lifecycle)
 
 :::
+
+After the Helm wait completes successfully, Zarf waits for all resources in the applied chart to fully reconcile. To identify when reconciliation is achieved, Zarf uses [kstatus](https://github.com/kubernetes-sigs/cli-utils/blob/master/pkg/kstatus/README.md#kstatus). Kstatus assesses whether a resource is reconciled by checking the [status](https://kubernetes.io/docs/concepts/overview/working-with-objects/#object-spec-and-status) field. If a resource does not have a status field, kstatus considers it reconciled once it's found.
 
 ### Timeout Settings
 

@@ -17,7 +17,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/extensions/bigbang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
@@ -61,11 +60,6 @@ func (sc *SkeletonCreator) LoadPackageDefinition(ctx context.Context, src *layou
 	pkg.Metadata.Architecture = zoci.SkeletonArch
 
 	warnings = append(warnings, composeWarnings...)
-
-	pkg.Components, err = sc.processExtensions(pkg.Components, src)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, nil, err
-	}
 
 	for _, warning := range warnings {
 		message.Warn(warning)
@@ -124,27 +118,6 @@ func (sc *SkeletonCreator) Output(_ context.Context, dst *layout.PackagePaths, p
 	}
 
 	return dst.SignPackage(sc.publishOpts.SigningKeyPath, sc.publishOpts.SigningKeyPassword, !config.CommonOptions.Confirm)
-}
-
-func (sc *SkeletonCreator) processExtensions(components []v1alpha1.ZarfComponent, layout *layout.PackagePaths) (processedComponents []v1alpha1.ZarfComponent, err error) {
-	// Create component paths and process extensions for each component.
-	for _, c := range components {
-		componentPaths, err := layout.Components.Create(c)
-		if err != nil {
-			return nil, err
-		}
-
-		// Big Bang
-		if c.Extensions.BigBang != nil {
-			if c, err = bigbang.Skeletonize(componentPaths, c); err != nil {
-				return nil, fmt.Errorf("unable to process bigbang extension: %w", err)
-			}
-		}
-
-		processedComponents = append(processedComponents, c)
-	}
-
-	return processedComponents, nil
 }
 
 func (sc *SkeletonCreator) addComponent(component v1alpha1.ZarfComponent, dst *layout.PackagePaths) (updatedComponent *v1alpha1.ZarfComponent, err error) {

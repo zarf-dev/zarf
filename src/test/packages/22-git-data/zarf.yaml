@@ -26,7 +26,7 @@ components:
       onDeploy:
         before:
           # Check to verify the package secret has been saved for the already deployed component
-          - cmd: test $(./zarf tools kubectl get secret -n zarf zarf-package-git-data-test -o jsonpath='{.data.*}' | base64 --decode | jq -r .deployedComponents | jq '. | length') -eq 2
+          - cmd: test $(./zarf tools kubectl get secret -n zarf zarf-package-git-data-test -o jsonpath='{.data.*}' | base64 --decode | jq -r .deployedComponents | jq '. | length') -eq 1
             description: Check that the package secret has been updated with the deployed component
             maxRetries: 3
 
@@ -41,7 +41,7 @@ components:
       onDeploy:
         before:
           # Check to verify the package secret has been saved for the already deployed component
-          - cmd: test $(./zarf tools kubectl get secret -n zarf zarf-package-git-data-test -o jsonpath='{.data.*}' | base64 --decode | jq -r .deployedComponents | jq '. | length') -eq 3
+          - cmd: test $(./zarf tools kubectl get secret -n zarf zarf-package-git-data-test -o jsonpath='{.data.*}' | base64 --decode | jq -r .deployedComponents | jq '. | length') -eq 2
             description: Check that the package secret has been updated with the deployed component
             maxRetries: 3
 
@@ -56,7 +56,7 @@ components:
       onDeploy:
         before:
           # Check to verify the package secret has been saved for the already deployed component
-          - cmd: test $(./zarf tools kubectl get secret -n zarf zarf-package-git-data-test -o jsonpath='{.data.*}' | base64 --decode | jq -r .deployedComponents | jq '. | length') -eq 4
+          - cmd: test $(./zarf tools kubectl get secret -n zarf zarf-package-git-data-test -o jsonpath='{.data.*}' | base64 --decode | jq -r .deployedComponents | jq '. | length') -eq 3
             description: Check that the package secret has been updated with the deployed component
             maxRetries: 3
         onSuccess:

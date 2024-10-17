@@ -19,15 +19,16 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
@@ -113,7 +114,6 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	}
 
 	p.hpaModified = false
-	p.connectStrings = make(types.ConnectStrings)
 	// Reset registry HPA scale down whether an error occurs or not
 	defer p.resetRegistryHPA(ctx)
 
@@ -144,7 +144,6 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 	// Process all the components we are deploying
 	for _, component := range p.cfg.Pkg.Components {
 		// Connect to cluster if a component requires it.
-		packageGeneration := 1
 		if component.RequiresCluster() {
 			timeout := cluster.DefaultTimeout
 			if p.cfg.Pkg.IsInitConfig() {
@@ -155,17 +154,10 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 			if err := p.connectToCluster(connectCtx); err != nil {
 				return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}
-
-			// If this package has been deployed before, increment the package generation within the secret
-			if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(ctx, p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
-				packageGeneration = existingDeployedPackage.Generation + 1
-			}
 		}
 
 		deployedComponent := types.DeployedComponent{
-			Name:               component.Name,
-			Status:             types.ComponentStatusDeploying,
-			ObservedGeneration: packageGeneration,
+			Name: component.Name,
 		}
 
 		// Ensure we don't overwrite any installedCharts data when updating the package secret
@@ -180,20 +172,13 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 		deployedComponents = append(deployedComponents, deployedComponent)
 		idx := len(deployedComponents) - 1
 
-		// Update the package secret to indicate that we are attempting to deploy this component
-		if p.isConnectedToCluster() {
-			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, packageGeneration, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
-				message.Debugf("Unable to record package deployment for component %s: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
-			}
-		}
-
 		// Deploy the component
 		var charts []types.InstalledChart
 		var deployErr error
 		if p.cfg.Pkg.IsInitConfig() {
 			charts, deployErr = p.deployInitComponent(ctx, component)
 		} else {
-			charts, deployErr = p.deployComponent(ctx, component, false /* keep img checksum */, false /* always push images */)
+			charts, deployErr = p.deployComponent(ctx, component, false, false)
 		}
 
 		onDeploy := component.Actions.OnDeploy
@@ -207,10 +192,8 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 		if deployErr != nil {
 			onFailure()
 
-			// Update the package secret to indicate that we failed to deploy this component
-			deployedComponents[idx].Status = types.ComponentStatusFailed
 			if p.isConnectedToCluster() {
-				if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, packageGeneration, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
+				if _, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents); err != nil {
 					message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 				}
 			}
@@ -219,9 +202,8 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 
 		// Update the package secret to indicate that we successfully deployed this component
 		deployedComponents[idx].InstalledCharts = charts
-		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 		if p.isConnectedToCluster() {
-			if _, err := p.cluster.RecordPackageDeploymentAndWait(ctx, p.cfg.Pkg, deployedComponents, p.connectStrings, packageGeneration, component, p.cfg.DeployOpts.SkipWebhooks); err != nil {
+			if _, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents); err != nil {
 				message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 			}
 		}
@@ -361,13 +343,25 @@ func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfC
 
 	charts := []types.InstalledChart{}
 	if hasCharts || hasManifests {
-		if charts, err = p.installChartAndManifests(ctx, componentPath, component); err != nil {
+		charts, err = p.installChartAndManifests(ctx, componentPath, component)
+		if err != nil {
 			return nil, err
 		}
 	}
 
 	if err = actions.Run(ctx, onDeploy.Defaults, onDeploy.After, p.variableConfig); err != nil {
 		return nil, fmt.Errorf("unable to run component after action: %w", err)
+	}
+
+	if len(component.HealthChecks) > 0 {
+		healthCheckContext, cancel := context.WithTimeout(ctx, p.cfg.DeployOpts.Timeout)
+		defer cancel()
+		spinner := message.NewProgressSpinner("Running health checks")
+		defer spinner.Stop()
+		if err = healthchecks.Run(healthCheckContext, p.cluster.Watcher, component.HealthChecks); err != nil {
+			return nil, fmt.Errorf("health checks failed: %w", err)
+		}
+		spinner.Success()
 	}
 
 	err = g.Wait()
@@ -399,8 +393,11 @@ func (p *Packager) processComponentFiles(component v1alpha1.ZarfComponent, pkgLo
 		}
 
 		// Replace temp target directory and home directory
-		file.Target = strings.Replace(file.Target, "###ZARF_TEMP###", p.layout.Base, 1)
-		file.Target = config.GetAbsHomePath(file.Target)
+		target, err := config.GetAbsHomePath(strings.Replace(file.Target, "###ZARF_TEMP###", p.layout.Base, 1))
+		if err != nil {
+			return err
+		}
+		file.Target = target
 
 		fileList := []string{}
 		if helpers.IsDir(fileLocation) {
@@ -428,7 +425,7 @@ func (p *Packager) processComponentFiles(component v1alpha1.ZarfComponent, pkgLo
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
-		err := helpers.CreatePathAndCopy(fileLocation, file.Target)
+		err = helpers.CreatePathAndCopy(fileLocation, file.Target)
 		if err != nil {
 			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
 		}
@@ -680,16 +677,11 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 				p.cfg.PkgOpts.Retries),
 		)
 
-		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart(ctx)
+		connectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart(ctx)
 		if err != nil {
 			return nil, err
 		}
-		installedCharts = append(installedCharts, types.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName})
-
-		// Iterate over any connectStrings and add to the main map
-		for name, description := range addedConnectStrings {
-			p.connectStrings[name] = description
-		}
+		installedCharts = append(installedCharts, types.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
 	}
 
 	for _, manifest := range component.Manifests {
@@ -733,17 +725,11 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 		}
 
 		// Install the chart.
-		addedConnectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart(ctx)
+		connectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart(ctx)
 		if err != nil {
 			return nil, err
 		}
-
-		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName})
-
-		// Iterate over any connectStrings and add to the main map
-		for name, description := range addedConnectStrings {
-			p.connectStrings[name] = description
-		}
+		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
 	}
 
 	return installedCharts, nil
@@ -752,7 +738,15 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 func (p *Packager) printTablesForDeployment(ctx context.Context, componentsToDeploy []types.DeployedComponent) error {
 	// If not init config, print the application connection table
 	if !p.cfg.Pkg.IsInitConfig() {
-		message.PrintConnectStringTable(p.connectStrings)
+		connectStrings := types.ConnectStrings{}
+		for _, comp := range componentsToDeploy {
+			for _, chart := range comp.InstalledCharts {
+				for k, v := range chart.ConnectStrings {
+					connectStrings[k] = v
+				}
+			}
+		}
+		message.PrintConnectStringTable(connectStrings)
 		return nil
 	}
 	// Don't print if cluster is not configured

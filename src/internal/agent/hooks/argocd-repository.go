@@ -47,7 +47,7 @@ func NewRepositorySecretMutationHook(ctx context.Context, cluster *cluster.Clust
 }
 
 // mutateRepositorySecret mutates the git URL in the ArgoCD repository secret to point to the repository URL defined in the ZarfState.
-func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (result *operations.Result, err error) {
+func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
 	isCreate := r.Operation == v1.Create
 	isUpdate := r.Operation == v1.Update
 	var isPatched bool

@@ -30,7 +30,6 @@ const (
 	subnet         = "172.31.0.0/16"
 	gateway        = "172.31.0.1"
 	giteaIP        = "172.31.0.99"
-	registryIP     = "172.31.0.10"
 	giteaHost      = "gitea.localhost"
 	registryHost   = "registry.localhost"
 	clusterName    = "zarf-external-test"
@@ -45,9 +44,7 @@ var outClusterCredentialArgs = []string{
 	"--git-url=http://" + giteaHost + ":3000",
 	"--registry-push-username=" + registryUser,
 	"--registry-push-password=" + commonPassword,
-	// TODO @AustinAbro321 once flux updates to a version of helm using ORAS v1.2.5 or greater we can switch back
-	// to using the registry host rather than creating an IP https://github.com/helm/helm/pull/12998
-	"--registry-url=" + registryIP + ":5000"}
+	"--registry-url=k3d-" + registryHost + ":5000"}
 
 type ExtOutClusterTestSuite struct {
 	suite.Suite
@@ -58,22 +55,24 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 
 	// Teardown any leftovers from previous tests
-	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)
-	_ = exec.CmdWithPrint("docker", "rm", "-f", "k3d-"+registryHost)
-	_ = exec.CmdWithPrint("docker", "compose", "down")
-	_ = exec.CmdWithPrint("docker", "network", "remove", network)
+	// NOTE(mkcp): We dogsled these errors because some of these commands will error if they don't cleanup a resource,
+	//   which is ok. A better solution would be checking for none or unexpected kinds of errors.
+	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)   //nolint:errcheck
+	_ = exec.CmdWithPrint("k3d", "registry", "delete", registryHost) //nolint:errcheck
+	_ = exec.CmdWithPrint("docker", "compose", "down")               //nolint:errcheck
+	_ = exec.CmdWithPrint("docker", "network", "remove", network)    //nolint:errcheck
 
 	// Setup a network for everything to live inside
 	err := exec.CmdWithPrint("docker", "network", "create", "--driver=bridge", "--subnet="+subnet, "--gateway="+gateway, network)
 	suite.NoError(err, "unable to create the k3d registry")
 
 	// Install a k3d-managed registry server to act as the 'remote' container registry
-	err = exec.CmdWithPrint("docker", "run", "-d", "--restart=always", "-p", "5000:5000", "--name", "k3d-"+registryHost, "registry:2.8.3")
+	err = exec.CmdWithPrint("k3d", "registry", "create", registryHost, "--port", "5000")
 	suite.NoError(err, "unable to create the k3d registry")
 
 	// Create a k3d cluster with the proper networking and aliases
-	err = exec.CmdWithPrint("k3d", "cluster", "create", clusterName, "--registry-config", "registries.yaml",
-		"--host-alias", registryIP+":"+registryHost, "--host-alias", giteaIP+":"+giteaHost, "--network", network)
+	err = exec.CmdWithPrint("k3d", "cluster", "create", clusterName, "--registry-use",
+		"k3d-"+registryHost+":5000", "--host-alias", giteaIP+":"+giteaHost, "--network", network)
 	suite.NoError(err, "unable to create the k3d cluster")
 
 	// Install a gitea server via docker compose to act as the 'remote' git server
@@ -81,16 +80,13 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	suite.NoError(err, "unable to install the gitea-server")
 
 	// Wait for gitea to deploy properly
-	giteaArgs := []string{"inspect", "-f", "{{.State.Status}}", "gitea.init"}
-	giteaErrStr := "unable to verify the gitea container installed successfully"
-	success := verifyWaitSuccess(suite.T(), 2, "docker", giteaArgs, "exited", giteaErrStr)
-	suite.True(success, giteaErrStr)
+	giteaArgs := []string{"inspect", "-f", "{{.State.Health.Status}}", "gitea.localhost"}
+	err = waitForCondition(suite.T(), 2, "docker", giteaArgs, "healthy")
+	suite.NoError(err)
 
 	// Connect gitea to the k3d network
 	err = exec.CmdWithPrint("docker", "network", "connect", "--ip", giteaIP, network, giteaHost)
 	suite.NoError(err, "unable to connect the gitea-server to k3d")
-	err = exec.CmdWithPrint("docker", "network", "connect", "--ip", registryIP, network, "k3d-"+registryHost)
-	suite.NoError(err, "unable to connect the registry-server to k3d")
 }
 
 func (suite *ExtOutClusterTestSuite) TearDownSuite() {
@@ -101,7 +97,7 @@ func (suite *ExtOutClusterTestSuite) TearDownSuite() {
 	err = exec.CmdWithPrint("docker", "compose", "down")
 	suite.NoError(err, "unable to teardown the gitea-server")
 
-	err = exec.CmdWithPrint("docker", "rm", "-f", "k3d-"+registryHost)
+	err = exec.CmdWithPrint("k3d", "registry", "delete", registryHost)
 	suite.NoError(err, "unable to teardown the k3d registry")
 
 	err = exec.CmdWithPrint("docker", "network", "remove", network)
@@ -147,7 +143,9 @@ func (suite *ExtOutClusterTestSuite) Test_1_Deploy() {
 func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	// Deploy the flux example package
 	temp := suite.T().TempDir()
-	defer os.Remove(temp)
+	defer func() {
+		suite.NoError(os.RemoveAll(temp), "unable to remove temporary directory")
+	}()
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
 
 	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--confirm"}
@@ -162,18 +160,22 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 
 func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
 	baseURL := fmt.Sprintf("http://%s:3000", giteaHost)
+	envKey := "HELM_REPOSITORY_CONFIG"
 
 	suite.createHelmChartInGitea(baseURL, giteaUser, commonPassword)
 	suite.makeGiteaUserPrivate(baseURL, giteaUser, commonPassword)
 
 	tempDir := suite.T().TempDir()
 	repoPath := filepath.Join(tempDir, "repositories.yaml")
-	os.Setenv("HELM_REPOSITORY_CONFIG", repoPath)
-	defer os.Unsetenv("HELM_REPOSITORY_CONFIG")
+	err := os.Setenv(envKey, repoPath)
+	suite.NoError(err)
+	defer func() {
+		suite.NoError(os.Unsetenv(envKey))
+	}()
 
 	packagePath := filepath.Join("..", "packages", "external-helm-auth")
 	findImageArgs := []string{"dev", "find-images", packagePath}
-	err := exec.CmdWithPrint(zarfBinPath, findImageArgs...)
+	err = exec.CmdWithPrint(zarfBinPath, findImageArgs...)
 	suite.Error(err, "Since auth has not been setup, this should fail")
 
 	repoFile := repo.NewFile()
@@ -213,7 +215,9 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 
 	file, err := os.Open(podinfoTarballPath)
 	suite.NoError(err)
-	defer file.Close()
+	defer func() {
+		suite.NoError(file.Close(), "unable to close file")
+	}()
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -221,7 +225,8 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 	suite.NoError(err)
 	_, err = io.Copy(part, file)
 	suite.NoError(err)
-	writer.Close()
+	err = writer.Close()
+	suite.NoError(err, "unable to close writer")
 
 	req, err := http.NewRequest("POST", url, body)
 	suite.NoError(err)
@@ -230,10 +235,10 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 	req.SetBasicAuth(username, password)
 
 	client := &http.Client{}
-
 	resp, err := client.Do(req)
 	suite.NoError(err)
-	resp.Body.Close()
+	err = resp.Body.Close()
+	suite.NoError(err, "unable to close response body")
 }
 
 func (suite *ExtOutClusterTestSuite) makeGiteaUserPrivate(baseURL string, username string, password string) {
@@ -258,8 +263,9 @@ func (suite *ExtOutClusterTestSuite) makeGiteaUserPrivate(baseURL string, userna
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	suite.NoError(err)
-	defer resp.Body.Close()
-
+	defer func() {
+		suite.NoError(resp.Body.Close())
+	}()
 	_, err = io.ReadAll(resp.Body)
 	suite.NoError(err)
 }

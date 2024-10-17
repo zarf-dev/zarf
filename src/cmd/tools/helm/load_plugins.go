@@ -318,11 +318,14 @@ func loadFile(path string) (*pluginCommand, error) {
 	cmds := new(pluginCommand)
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return cmds, fmt.Errorf("file (%s) not provided by plugin. No plugin auto-completion possible", path)
+		return nil, fmt.Errorf("file (%s) not provided by plugin. No plugin auto-completion possible", path)
 	}
 
 	err = yaml.Unmarshal(b, cmds)
-	return cmds, err
+	if err != nil {
+		return nil, err
+	}
+	return cmds, nil
 }
 
 // pluginDynamicComp call the plugin.complete script of the plugin (if available)

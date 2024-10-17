@@ -6,7 +6,6 @@ package v1alpha1
 
 import (
 	"github.com/invopop/jsonschema"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
 )
 
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
@@ -53,14 +52,26 @@ type ZarfComponent struct {
 	// List of git repos to include in the package.
 	Repos []string `json:"repos,omitempty"`
 
-	// Extend component functionality with additional features.
-	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty"`
-
 	// [Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0.
 	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"deprecated=true"`
 
 	// Custom commands to run at various stages of a package lifecycle.
 	Actions ZarfComponentActions `json:"actions,omitempty"`
+
+	// List of resources to health check after deployment
+	HealthChecks []NamespacedObjectKindReference `json:"healthChecks,omitempty"`
+}
+
+// NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version.
+type NamespacedObjectKindReference struct {
+	// API Version of the resource
+	APIVersion string `json:"apiVersion"`
+	// Kind of the resource
+	Kind string `json:"kind"`
+	// Namespace of the resource
+	Namespace string `json:"namespace"`
+	// Name of the resource
+	Name string `json:"name"`
 }
 
 // RequiresCluster returns if the component requires a cluster connection to deploy.
@@ -70,8 +81,9 @@ func (c ZarfComponent) RequiresCluster() bool {
 	hasManifests := len(c.Manifests) > 0
 	hasRepos := len(c.Repos) > 0
 	hasDataInjections := len(c.DataInjections) > 0
+	hasHealthChecks := len(c.HealthChecks) > 0
 
-	if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections {
+	if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections || hasHealthChecks {
 		return true
 	}
 

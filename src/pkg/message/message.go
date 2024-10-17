@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/fatih/color"
 	"github.com/pterm/pterm"
 )
 
@@ -274,16 +273,6 @@ func Table(header []string, data [][]string) {
 
 	//nolint:errcheck // never returns an error
 	pterm.DefaultTable.WithHasHeader().WithData(table).Render()
-}
-
-// ColorWrap changes a string to an ansi color code and appends the default color to the end
-// preventing future characters from taking on the given color
-// returns string as normal if color is disabled
-func ColorWrap(str string, attr color.Attribute) string {
-	if !ColorEnabled() || str == "" {
-		return str
-	}
-	return fmt.Sprintf("\x1b[%dm%s\x1b[0m", attr, str)
 }
 
 func debugPrinter(offset int, a ...any) {

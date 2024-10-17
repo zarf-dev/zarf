@@ -14,7 +14,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
 )
 
 func TestNewImportChain(t *testing.T) {
@@ -83,6 +82,50 @@ func TestCompose(t *testing.T) {
 			},
 		},
 		{
+			name: "Health Checks",
+			ic: createChainFromSlice(t, []v1alpha1.ZarfComponent{
+				{
+					Name: "base",
+					HealthChecks: []v1alpha1.NamespacedObjectKindReference{
+						{
+							APIVersion: "v1",
+							Kind:       "Pods",
+							Namespace:  "base-ns",
+							Name:       "base-pod",
+						},
+					},
+				},
+				{
+					Name: "import-one",
+					HealthChecks: []v1alpha1.NamespacedObjectKindReference{
+						{
+							APIVersion: "v1",
+							Kind:       "Pods",
+							Namespace:  "import-ns",
+							Name:       "import-pod",
+						},
+					},
+				},
+			}),
+			expectedComposed: v1alpha1.ZarfComponent{
+				Name: "base",
+				HealthChecks: []v1alpha1.NamespacedObjectKindReference{
+					{
+						APIVersion: "v1",
+						Kind:       "Pods",
+						Namespace:  "import-ns",
+						Name:       "import-pod",
+					},
+					{
+						APIVersion: "v1",
+						Kind:       "Pods",
+						Namespace:  "base-ns",
+						Name:       "base-pod",
+					},
+				},
+			},
+		},
+		{
 			name: "Multiple Components",
 			ic: createChainFromSlice(t, []v1alpha1.ZarfComponent{
 				createDummyComponent(t, "hello", firstDirectory, "hello"),
@@ -106,12 +149,31 @@ func TestCompose(t *testing.T) {
 							fmt.Sprintf("%s%svalues.yaml", finalDirectory, string(os.PathSeparator)),
 							"values.yaml",
 						},
+						Variables: []v1alpha1.ZarfChartVariable{
+							{
+								Name:        "var-today",
+								Description: "var description",
+								Path:        "path",
+							},
+							{
+								Name:        "var-hello",
+								Description: "var description",
+								Path:        "path",
+							},
+						},
 					},
 					{
 						Name:      "world",
 						LocalPath: fmt.Sprintf("%s%schart", firstDirectory, string(os.PathSeparator)),
 						ValuesFiles: []string{
 							fmt.Sprintf("%s%svalues.yaml", firstDirectory, string(os.PathSeparator)),
+						},
+						Variables: []v1alpha1.ZarfChartVariable{
+							{
+								Name:        "var-world",
+								Description: "var description",
+								Path:        "path",
+							},
 						},
 					},
 				},
@@ -214,21 +276,6 @@ func TestCompose(t *testing.T) {
 							{Cmd: "today-fr"},
 							{Cmd: "world-fr"},
 							{Cmd: "hello-fr"},
-						},
-					},
-				},
-				// Extensions should be appended with corrected directories
-				Extensions: extensions.ZarfComponentExtensions{
-					BigBang: &extensions.BigBang{
-						ValuesFiles: []string{
-							fmt.Sprintf("%s%svalues.yaml", finalDirectory, string(os.PathSeparator)),
-							fmt.Sprintf("%s%svalues.yaml", firstDirectory, string(os.PathSeparator)),
-							"values.yaml",
-						},
-						FluxPatchFiles: []string{
-							fmt.Sprintf("%s%spatch.yaml", finalDirectory, string(os.PathSeparator)),
-							fmt.Sprintf("%s%spatch.yaml", firstDirectory, string(os.PathSeparator)),
-							"patch.yaml",
 						},
 					},
 				},
@@ -461,6 +508,13 @@ func createDummyComponent(t *testing.T, name, importDir, subName string) v1alpha
 				ValuesFiles: []string{
 					"values.yaml",
 				},
+				Variables: []v1alpha1.ZarfChartVariable{
+					{
+						Name:        fmt.Sprintf("var-%s", name),
+						Description: "var description",
+						Path:        "path",
+					},
+				},
 			},
 		},
 		Manifests: []v1alpha1.ZarfManifest{
@@ -526,16 +580,6 @@ func createDummyComponent(t *testing.T, name, importDir, subName string) v1alpha
 				},
 				OnFailure: []v1alpha1.ZarfComponentAction{
 					{Cmd: name + "-fr"},
-				},
-			},
-		},
-		Extensions: extensions.ZarfComponentExtensions{
-			BigBang: &extensions.BigBang{
-				ValuesFiles: []string{
-					"values.yaml",
-				},
-				FluxPatchFiles: []string{
-					"patch.yaml",
 				},
 			},
 		},
