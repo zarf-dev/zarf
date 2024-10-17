@@ -82,27 +82,15 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 }
 
 // GenerateGitPullCreds generates a secret containing the git credentials.
-func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo types.GitServerInfo) *corev1.Secret {
-	gitServerSecret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				ZarfManagedByLabel: "zarf",
-			},
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{},
-		StringData: map[string]string{
+func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo types.GitServerInfo) *v1ac.SecretApplyConfiguration {
+	return v1ac.Secret(name, namespace).
+		WithLabels(map[string]string{
+			ZarfManagedByLabel: "zarf",
+		}).WithType(corev1.SecretTypeOpaque).
+		WithStringData(map[string]string{
 			"username": gitServerInfo.PullUsername,
 			"password": gitServerInfo.PullPassword,
-		},
-	}
-	return gitServerSecret
+		})
 }
 
 // UpdateZarfManagedImageSecrets updates all Zarf-managed image secrets in all namespaces based on state
@@ -171,7 +159,7 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 			continue
 		}
 		spinner.Updatef("Updating existing Zarf-managed git secret for namespace: %s", namespace.Name)
-		_, err = c.Clientset.CoreV1().Secrets(newGitSecret.Namespace).Update(ctx, newGitSecret, metav1.UpdateOptions{})
+		_, err = c.Clientset.CoreV1().Secrets(*newGitSecret.Namespace).Apply(ctx, newGitSecret, metav1.ApplyOptions{Force: true})
 		if err != nil {
 			return err
 		}

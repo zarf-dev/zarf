@@ -7,7 +7,6 @@ package helm
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,7 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/releaseutil"
-	ktypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/yaml"
@@ -160,11 +158,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		}
 
 		gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
-		gitSecretB, err := json.Marshal(gitServerSecret)
-		if err != nil {
-			return err
-		}
-		_, err = c.Clientset.CoreV1().Secrets(gitServerSecret.Namespace).Patch(ctx, gitServerSecret.Name, ktypes.ApplyPatchType, gitSecretB, metav1.PatchOptions{Force: helpers.BoolPtr(true)})
+		_, err = c.Clientset.CoreV1().Secrets(*gitServerSecret.Namespace).Apply(ctx, gitServerSecret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
 		if err != nil {
 			message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
 		}
