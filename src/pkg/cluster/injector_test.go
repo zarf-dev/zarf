@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
@@ -27,7 +28,7 @@ import (
 
 func TestInjector(t *testing.T) {
 	ctx := context.Background()
-	cs := fake.NewSimpleClientset()
+	cs := fake.NewClientset()
 	c := &Cluster{
 		Clientset: cs,
 		Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
@@ -117,6 +118,8 @@ func TestInjector(t *testing.T) {
 		expected, err := os.ReadFile("./testdata/expected-injection-service.json")
 		require.NoError(t, err)
 		svc, err := cs.CoreV1().Services(ZarfNamespaceName).Get(ctx, "zarf-injector", metav1.GetOptions{})
+		// Managed fields are auto-set and contain timestamps
+		svc.ManagedFields = nil
 		require.NoError(t, err)
 		b, err := json.Marshal(svc)
 		require.NoError(t, err)
@@ -147,20 +150,21 @@ func TestInjector(t *testing.T) {
 func TestBuildInjectionPod(t *testing.T) {
 	t.Parallel()
 
-	resReq := corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
+	resReq := v1ac.ResourceRequirements().
+		WithRequests(corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse(".5"),
 			corev1.ResourceMemory: resource.MustParse("64Mi"),
-		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("1"),
-			corev1.ResourceMemory: resource.MustParse("256Mi"),
-		},
-	}
+		}).
+		WithLimits(
+			corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("1"),
+				corev1.ResourceMemory: resource.MustParse("256Mi"),
+			})
 	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq)
-	require.Equal(t, "injector", pod.Name)
+	require.Equal(t, "injector", *pod.Name)
 	b, err := json.Marshal(pod)
 	require.NoError(t, err)
+
 	expected, err := os.ReadFile("./testdata/expected-injection-pod.json")
 	require.NoError(t, err)
 	require.Equal(t, strings.TrimSpace(string(expected)), string(b))
@@ -270,16 +274,16 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	resReq := corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
+	resReq := v1ac.ResourceRequirements().
+		WithRequests(corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse(".5"),
 			corev1.ResourceMemory: resource.MustParse("64Mi"),
-		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("1"),
-			corev1.ResourceMemory: resource.MustParse("256Mi"),
-		},
-	}
+		}).
+		WithLimits(
+			corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("1"),
+				corev1.ResourceMemory: resource.MustParse("256Mi"),
+			})
 	image, node, err := c.getInjectorImageAndNode(ctx, resReq)
 	require.NoError(t, err)
 	require.Equal(t, "pod-2-container", image)
