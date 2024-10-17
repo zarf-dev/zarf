@@ -297,6 +297,9 @@ func hasBlockingTaints(taints []corev1.Taint) bool {
 func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1ac.PodApplyConfiguration {
 	// Initialize base volumes
 	executeMode := int32(0777)
+	userID := int64(1000)
+	groupID := int64(2000)
+	fsGroupID := int64(2000)
 	volumes := []*v1ac.VolumeApplyConfiguration{
 		v1ac.Volume().
 			WithName("init").
@@ -307,8 +310,7 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 			),
 		v1ac.Volume().
 			WithName("seed").
-			WithEmptyDir(&v1ac.EmptyDirVolumeSourceApplyConfiguration{}),
-	}
+			WithEmptyDir(&v1ac.EmptyDirVolumeSourceApplyConfiguration{})}
 
 	// Initialize base volume mounts
 	volumeMounts := []*v1ac.VolumeMountApplyConfiguration{
@@ -345,6 +347,16 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 			v1ac.PodSpec().
 				WithNodeName(nodeName).
 				WithRestartPolicy(corev1.RestartPolicyNever).
+				WithSecurityContext(
+					v1ac.PodSecurityContext().
+						WithRunAsUser(userID).
+						WithRunAsGroup(groupID).
+						WithFSGroup(fsGroupID).
+						WithSeccompProfile(
+							v1ac.SeccompProfile().
+								WithType(corev1.SeccompProfileTypeRuntimeDefault),
+						),
+				).
 				WithContainers(
 					v1ac.Container().
 						WithName("injector").
@@ -353,6 +365,13 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 						WithWorkingDir("/zarf-init").
 						WithCommand("/zarf-init/zarf-injector", shasum).
 						WithVolumeMounts(volumeMounts...).
+						WithSecurityContext(
+							v1ac.SecurityContext().
+								WithReadOnlyRootFilesystem(true).
+								WithAllowPrivilegeEscalation(false).
+								WithRunAsNonRoot(true).
+								WithCapabilities(v1ac.Capabilities().WithDrop(corev1.Capability("ALL"))),
+						).
 						WithReadinessProbe(
 							v1ac.Probe().
 								WithPeriodSeconds(2).
