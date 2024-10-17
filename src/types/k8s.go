@@ -6,6 +6,7 @@ package types
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -38,11 +39,27 @@ const (
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 )
 
+// Could also do password bytes here
+
 // GeneratedPKI is a struct for storing generated PKI data.
 type GeneratedPKI struct {
 	CA   []byte `json:"ca"`
 	Cert []byte `json:"cert"`
 	Key  []byte `json:"key"`
+}
+
+func (p GeneratedPKI) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("ca", "**sanitized**"),
+		slog.String("cert", "**sanitized**"),
+		slog.String("key", "**sanitized**"),
+	)
+}
+
+type Password string
+
+func (p Password) LogValue() slog.Value {
+	return slog.StringValue("REDACTED")
 }
 
 // ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data.
@@ -64,6 +81,19 @@ type ZarfState struct {
 	RegistryInfo RegistryInfo `json:"registryInfo"`
 	// Information about the artifact registry Zarf is configured to use
 	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
+}
+
+func (zs ZarfState) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.Bool("ZarfAppliance", zs.ZarfAppliance),
+		slog.String("distro", zs.Distro),
+		slog.String("architecture", zs.Architecture),
+		slog.String("storageClass", zs.StorageClass),
+		slog.Any("agentTLS", zs.AgentTLS),
+		slog.Any("gitServer", zs.GitServer),
+		slog.Any("registryInfo", zs.RegistryInfo),
+		slog.Any("artifactServer", zs.ArtifactServer),
+	)
 }
 
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
@@ -105,18 +135,37 @@ type GitServerInfo struct {
 	// Username of a user with push access to the git repository
 	PushUsername string `json:"pushUsername"`
 	// Password of a user with push access to the git repository
-	PushPassword string `json:"pushPassword"`
+	PushPassword Password `json:"pushPassword"`
 	// Username of a user with pull-only access to the git repository. If not provided for an external repository then the push-user is used
 	PullUsername string `json:"pullUsername"`
 	// Password of a user with pull-only access to the git repository. If not provided for an external repository then the push-user is used
-	PullPassword string `json:"pullPassword"`
+	PullPassword Password `json:"pullPassword"`
 	// URL address of the git server
 	Address string `json:"address"`
+}
+
+func (gs GitServerInfo) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("pushUsername", gs.PushUsername),
+		slog.Any("pushPassword", gs.PushPassword),
+		slog.String("pullUsername", gs.PullUsername),
+		slog.Any("pullPassword", gs.PullPassword),
+		slog.String("address", gs.Address),
+	)
 }
 
 // IsInternal returns true if the git server URL is equivalent to a git server deployed through the default init package
 func (gs GitServerInfo) IsInternal() bool {
 	return gs.Address == ZarfInClusterGitServiceURL
+}
+
+// Just for POC quickness
+func RandomString() (Password, error) {
+	rand, err := helpers.RandomString(ZarfGeneratedPasswordLen)
+	if err != nil {
+		return "", err
+	}
+	return Password(rand), nil
 }
 
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
@@ -129,7 +178,7 @@ func (gs *GitServerInfo) FillInEmptyValues() error {
 
 	// Generate a push-user password if not provided by init flag
 	if gs.PushPassword == "" {
-		if gs.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
+		if gs.PushPassword, err = RandomString(); err != nil {
 			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 		}
 	}
@@ -144,7 +193,7 @@ func (gs *GitServerInfo) FillInEmptyValues() error {
 	}
 	if gs.PullPassword == "" {
 		if gs.IsInternal() {
-			if gs.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
+			if gs.PullPassword, err = RandomString(); err != nil {
 				return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
 		} else {
@@ -160,9 +209,17 @@ type ArtifactServerInfo struct {
 	// Username of a user with push access to the artifact registry
 	PushUsername string `json:"pushUsername"`
 	// Password of a user with push access to the artifact registry
-	PushToken string `json:"pushPassword"`
+	PushToken Password `json:"pushPassword"`
 	// URL address of the artifact registry
 	Address string `json:"address"`
+}
+
+func (as ArtifactServerInfo) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("pushUsername", as.PushUsername),
+		slog.Any("pushToken", as.PushToken),
+		slog.String("address", as.Address),
+	)
 }
 
 // IsInternal returns true if the artifact server URL is equivalent to the artifact server deployed through the default init package
@@ -188,17 +245,29 @@ type RegistryInfo struct {
 	// Username of a user with push access to the registry
 	PushUsername string `json:"pushUsername"`
 	// Password of a user with push access to the registry
-	PushPassword string `json:"pushPassword"`
+	PushPassword Password `json:"pushPassword"`
 	// Username of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used
 	PullUsername string `json:"pullUsername"`
 	// Password of a user with pull-only access to the registry. If not provided for an external registry than the push-user is used
-	PullPassword string `json:"pullPassword"`
+	PullPassword Password `json:"pullPassword"`
 	// URL address of the registry
 	Address string `json:"address"`
 	// Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster
 	NodePort int `json:"nodePort"`
 	// Secret value that the registry was seeded with
-	Secret string `json:"secret"`
+	Secret Password `json:"secret"`
+}
+
+func (ri RegistryInfo) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("pushUsername", ri.PushUsername),
+		slog.Any("pushPassword", ri.PushPassword),
+		slog.String("pullUsername", ri.PullUsername),
+		slog.Any("pullPassword", ri.PullPassword),
+		slog.String("address", ri.Address),
+		slog.Int("nodePort", ri.NodePort),
+		slog.Any("secret", ri.Secret),
+	)
 }
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
@@ -221,7 +290,7 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 
 	// Generate a push-user password if not provided by init flag
 	if ri.PushPassword == "" {
-		if ri.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
+		if ri.PushPassword, err = RandomString(); err != nil {
 			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 		}
 	}
@@ -237,7 +306,7 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 	}
 	if ri.PullPassword == "" {
 		if ri.IsInternal() {
-			if ri.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
+			if ri.PullPassword, err = RandomString(); err != nil {
 				return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
 		} else {
@@ -247,7 +316,7 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 	}
 
 	if ri.Secret == "" {
-		if ri.Secret, err = helpers.RandomString(ZarfGeneratedSecretLen); err != nil {
+		if ri.Secret, err = RandomString(); err != nil {
 			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 		}
 	}
