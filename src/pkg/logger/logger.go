@@ -10,7 +10,16 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync/atomic"
 )
+
+var defaultLogger atomic.Pointer[slog.Logger]
+
+// init sets a logger with default config when the package is initialized.
+func init() {
+	l, _ := New(ConfigDefault()) //nolint:errcheck
+	SetDefault(l)
+}
 
 // Level declares each supported log level. These are 1:1 what log/slog supports by default. Info is the default level.
 type Level int
@@ -136,12 +145,15 @@ func New(cfg Config) (*slog.Logger, error) {
 	return log, nil
 }
 
-// Default gets a logger from the atomic slog default.
+// Default retrieves a logger from the package default. This is intended as a fallback when a logger cannot easily be
+// passed in as a dependency, like when developing a new function. Use it like you would use context.TODO().
 func Default() *slog.Logger {
-	return slog.Default()
+	return defaultLogger.Load()
 }
 
-// SetDefault takes a logger and sets it as the atomic slog default.
+// SetDefault takes a logger and atomically stores it as the package default. This is intended to be called when the
+// application starts to override the default config with application-specific config. See Default() for more usage
+// details.
 func SetDefault(l *slog.Logger) {
-	slog.SetDefault(l)
+	defaultLogger.Store(l)
 }
