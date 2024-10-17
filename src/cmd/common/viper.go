@@ -5,14 +5,14 @@
 package common
 
 import (
+	"context"
 	"errors"
+	"log/slog"
 	"os"
 	"strings"
 
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // Constants for use when loading configurations from viper config files
@@ -20,16 +20,20 @@ const (
 
 	// Root config keys
 
-	VLogLevel              = "log_level"
 	VArchitecture          = "architecture"
-	VNoLogFile             = "no_log_file"
-	VNoProgress            = "no_progress"
-	VNoColor               = "no_color"
 	VZarfCache             = "zarf_cache"
 	VTmpDir                = "tmp_dir"
 	VInsecure              = "insecure"
 	VPlainHTTP             = "plain_http"
 	VInsecureSkipTLSVerify = "insecure_skip_tls_verify"
+
+	// Root config, Logging
+
+	VLogLevel   = "log_level"
+	VLogFormat  = "log_format"
+	VNoLogFile  = "no_log_file"
+	VNoProgress = "no_progress"
+	VNoColor    = "no_color"
 
 	// Init config keys
 
@@ -162,7 +166,9 @@ func isVersionCmd() bool {
 	return len(args) > 1 && (args[1] == "version" || args[1] == "v")
 }
 
-func printViperConfigUsed() {
+func PrintViperConfigUsed(ctx context.Context) {
+	log := ctx.Value("logger").(*slog.Logger)
+
 	// Only print config info if viper is initialized.
 	vInitialized := v != nil
 	if !vInitialized {
@@ -173,11 +179,11 @@ func printViperConfigUsed() {
 		return
 	}
 	if vConfigError != nil {
-		message.WarnErrf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
+		log.Error("unable to load config file", "error", vConfigError)
 		return
 	}
 	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
-		message.Notef(lang.CmdViperInfoUsingConfigFile, cfgFile)
+		log.Info("Using config file", "location", cfgFile)
 	}
 }
 
