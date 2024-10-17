@@ -15,6 +15,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,8 +23,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
-
-	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 )
 
 func TestInjector(t *testing.T) {
@@ -31,7 +30,7 @@ func TestInjector(t *testing.T) {
 	cs := fake.NewSimpleClientset()
 	c := &Cluster{
 		Clientset: cs,
-		Watcher:   pkgkubernetes.NewImmediateWatcher(status.CurrentStatus),
+		Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
 	}
 	cs.PrependReactor("delete-collection", "configmaps", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		delAction, ok := action.(k8stesting.DeleteCollectionActionImpl)

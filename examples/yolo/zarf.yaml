@@ -13,15 +13,6 @@ components:
         files:
           - ../dos-games/manifests/deployment.yaml
           - ../dos-games/manifests/service.yaml
-    actions:
-      onDeploy:
-        after:
-          - wait:
-              cluster:
-                kind: deployment
-                name: game
-                namespace: zarf-yolo-example
-                condition: available
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples

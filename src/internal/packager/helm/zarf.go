@@ -13,11 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
 
-	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -61,7 +60,7 @@ func (h *Helm) UpdateZarfRegistryValues(ctx context.Context) error {
 	}
 	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
 	defer waitCancel()
-	err = pkgkubernetes.WaitForReady(waitCtx, h.cluster.Watcher, objs)
+	err = healthchecks.WaitForReady(waitCtx, h.cluster.Watcher, objs)
 	if err != nil {
 		return err
 	}
@@ -157,7 +156,7 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 	}
 	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
 	defer waitCancel()
-	err = pkgkubernetes.WaitForReady(waitCtx, h.cluster.Watcher, objs)
+	err = healthchecks.WaitForReady(waitCtx, h.cluster.Watcher, objs)
 	if err != nil {
 		return err
 	}
