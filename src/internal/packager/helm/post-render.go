@@ -192,7 +192,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), namespace); err != nil {
 				message.WarnErrf(err, "could not parse namespace %s", rawData.GetName())
 			} else {
-				message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
+				message.Debugf("Matched helm namespace %s for zarf annotation", *namespace.Name)
 				namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
 				// Add it to the stack
 				r.namespaces[*namespace.Name] = namespace
