@@ -50,7 +50,7 @@ func TestFindImages(t *testing.T) {
 		registry := "zarf.dev"
 		agentTag := "test"
 
-		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", ".", "--registry-url", registry, "--create-set", fmt.Sprintf("agent_image_tag=%s", agentTag), "--skip-cosign")
+		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", "packages/init", "--registry-url", registry, "--create-set", fmt.Sprintf("agent_image_tag=%s", agentTag), "--skip-cosign")
 
 		require.NoError(t, err)
 		internalRegistryImage := fmt.Sprintf("%s/%s:%s", registry, "zarf-dev/zarf/agent", agentTag)

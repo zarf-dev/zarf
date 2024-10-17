@@ -20,7 +20,7 @@ func TestLint(t *testing.T) {
 		t.Log("E2E: Test lint on schema success")
 
 		// This runs lint on the zarf.yaml in the base directory of the repo
-		_, _, err := e2e.Zarf(t, "dev", "lint")
+		_, _, err := e2e.Zarf(t, "dev", "lint", "packages/init")
 		require.NoError(t, err, "Expect no error here because the yaml file is following schema")
 	})
 
