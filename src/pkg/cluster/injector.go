@@ -19,12 +19,12 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -91,15 +91,21 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	// TODO: Remove use of passing data through global variables.
 	config.ZarfSeedPort = fmt.Sprintf("%d", svc.Spec.Ports[0].NodePort)
 
-	podAc := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq)
-	pod, err := c.Clientset.CoreV1().Pods(*podAc.Namespace).Apply(ctx, podAc, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq)
+	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
 	if err != nil {
 		return fmt.Errorf("error creating pod in cluster: %w", err)
 	}
 
 	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
 	defer waitCancel()
-	err = healthchecks.WaitForReadyRuntime(waitCtx, c.Watcher, []runtime.Object{pod})
+	podRef := v1alpha1.NamespacedObjectKindReference{
+		APIVersion: *pod.APIVersion,
+		Kind:       *pod.Kind,
+		Namespace:  *pod.Namespace,
+		Name:       *pod.Name,
+	}
+	err = healthchecks.Run(waitCtx, c.Watcher, []v1alpha1.NamespacedObjectKindReference{podRef})
 	if err != nil {
 		return err
 	}
