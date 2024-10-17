@@ -108,7 +108,6 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		}
 
 		// Try to create the zarf namespace.
-		// TODO is the test failing here
 		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := NewZarfManagedNamespace(ZarfNamespaceName)
 		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: "zarf", Force: true})
