@@ -76,7 +76,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return err
 	}
 
-	svc := v1ac.Service("zarf-injector", ZarfNamespaceName).
+	svcAc := v1ac.Service("zarf-injector", ZarfNamespaceName).
 		WithSpec(v1ac.ServiceSpec().
 			WithType(corev1.ServiceTypeNodePort).
 			WithPorts(
@@ -84,12 +84,12 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			).WithSelector(map[string]string{
 			"app": "zarf-injector",
 		}))
-	_, err = c.Clientset.CoreV1().Services(*svc.Namespace).Apply(ctx, svc, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+	svc, err := c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
 	if err != nil {
 		return err
 	}
-	// TODO: Remove use of passing data through global variables.
-	config.ZarfSeedPort = fmt.Sprintf("%d", *svc.Spec.Ports[0].NodePort)
+
+	config.ZarfSeedPort = fmt.Sprintf("%d", svc.Spec.Ports[0].NodePort)
 
 	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq)
 	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
