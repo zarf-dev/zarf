@@ -8,14 +8,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/cmd/say"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"io"
 	"log/slog"
 	"os"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/zarf-dev/zarf/src/cmd/say"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -91,7 +92,7 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.WithValue(cmd.Context(), "logger", l)
+	ctx := context.WithValue(cmd.Context(), logger.DefaultCtxKey, l)
 	cmd.SetContext(ctx)
 
 	// Print out config location
@@ -102,7 +103,7 @@ func preRun(cmd *cobra.Command, _ []string) error {
 func run(cmd *cobra.Command, _ []string) {
 	err := cmd.Help()
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err) //nolint:errcheck
+		_, _ = fmt.Fprintln(os.Stderr, err)
 	}
 }
 

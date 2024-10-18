@@ -7,9 +7,10 @@ package common
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/config"
@@ -166,8 +167,9 @@ func isVersionCmd() bool {
 	return len(args) > 1 && (args[1] == "version" || args[1] == "v")
 }
 
+// PrintViperConfigUsed informs users when Zarf has detected a config file.
 func PrintViperConfigUsed(ctx context.Context) {
-	log := ctx.Value("logger").(*slog.Logger)
+	l := logger.From(ctx)
 
 	// Only print config info if viper is initialized.
 	vInitialized := v != nil
@@ -179,11 +181,11 @@ func PrintViperConfigUsed(ctx context.Context) {
 		return
 	}
 	if vConfigError != nil {
-		log.Error("unable to load config file", "error", vConfigError)
+		l.Error("unable to load config file", "error", vConfigError)
 		return
 	}
 	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
-		log.Info("Using config file", "location", cfgFile)
+		l.Info("Using config file", "location", cfgFile)
 	}
 }
 

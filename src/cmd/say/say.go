@@ -1,17 +1,23 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package say prints out the adorable creature we all know and love.
 package say
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
+
+	"github.com/spf13/cobra"
 )
 
+// Command prints out the Zarf logo.
 func Command() *cobra.Command {
 	return &cobra.Command{
 		Use:   "say",
 		Short: "Print Zarf logo",
 		Long:  "Print out the adorable Zarf logo",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			_, err := fmt.Fprintln(os.Stderr, logo())
 			return err
 		},
