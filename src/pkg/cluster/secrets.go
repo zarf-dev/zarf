@@ -159,7 +159,7 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 			continue
 		}
 		spinner.Updatef("Updating existing Zarf-managed git secret for namespace: %s", namespace.Name)
-		_, err = c.Clientset.CoreV1().Secrets(*newGitSecret.Namespace).Apply(ctx, newGitSecret, metav1.ApplyOptions{Force: true})
+		_, err = c.Clientset.CoreV1().Secrets(*newGitSecret.Namespace).Apply(ctx, newGitSecret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
 		if err != nil {
 			return err
 		}
