@@ -54,7 +54,6 @@ func (h *Helm) newRenderer(ctx context.Context) (*renderer, error) {
 	if kerrors.IsNotFound(err) {
 		rend.namespaces[h.chart.Namespace] = cluster.NewZarfManagedNamespace(h.chart.Namespace)
 	} else if h.cfg.DeployOpts.AdoptExistingResources {
-		// Need to make sure this path is tested
 		b, err := json.Marshal(namespace)
 		if err != nil {
 			return nil, err
