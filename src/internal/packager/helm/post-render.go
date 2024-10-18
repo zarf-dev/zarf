@@ -7,6 +7,7 @@ package helm
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -53,7 +54,18 @@ func (h *Helm) newRenderer(ctx context.Context) (*renderer, error) {
 	if kerrors.IsNotFound(err) {
 		rend.namespaces[h.chart.Namespace] = cluster.NewZarfManagedNamespace(h.chart.Namespace)
 	} else if h.cfg.DeployOpts.AdoptExistingResources {
-		namespace.Labels[cluster.ZarfManagedByLabel] = "zarf"
+		// Need to make sure this path is tested
+		b, err := json.Marshal(namespace)
+		if err != nil {
+			return nil, err
+		}
+		nsAc := &v1ac.NamespaceApplyConfiguration{}
+		err = json.Unmarshal(b, nsAc)
+		if err != nil {
+			return nil, err
+		}
+		nsAc.WithLabels(cluster.AdoptZarfManagedLabels(nsAc.Labels))
+		rend.namespaces[h.chart.Namespace] = nsAc
 	}
 
 	return rend, nil

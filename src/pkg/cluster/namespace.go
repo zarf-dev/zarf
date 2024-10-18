@@ -12,9 +12,9 @@ import (
 	"github.com/avast/retry-go/v4"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
 	"github.com/zarf-dev/zarf/src/pkg/message"
+	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 )
 
 // DeleteZarfNamespace deletes the Zarf namespace from the connected cluster.
