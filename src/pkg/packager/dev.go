@@ -16,6 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // DevDeploy creates + deploys a package in one shot
@@ -76,6 +77,24 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 
 	if !p.cfg.CreateOpts.NoYOLO {
 		p.cfg.Pkg.Metadata.YOLO = true
+
+		// Set default builtin values so they exist in case any helm charts rely on them
+		registryInfo := types.RegistryInfo{Address: p.cfg.DeployOpts.RegistryURL}
+		if err := registryInfo.FillInEmptyValues(); err != nil {
+			return err
+		}
+		gitServer := types.GitServerInfo{}
+		if err = gitServer.FillInEmptyValues(); err != nil {
+			return err
+		}
+		artifactServer := types.ArtifactServerInfo{}
+		artifactServer.FillInEmptyValues()
+
+		p.state = &types.ZarfState{
+			RegistryInfo:   registryInfo,
+			GitServer:      gitServer,
+			ArtifactServer: artifactServer,
+		}
 	} else {
 		p.hpaModified = false
 		// Reset registry HPA scale down whether an error occurs or not
