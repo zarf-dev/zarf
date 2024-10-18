@@ -121,7 +121,7 @@ func TestInjector(t *testing.T) {
 		// Managed fields are auto-set and contain timestamps
 		svc.ManagedFields = nil
 		require.NoError(t, err)
-		b, err := json.Marshal(svc)
+		b, err := json.MarshalIndent(svc, "", "  ")
 		require.NoError(t, err)
 		require.Equal(t, strings.TrimSpace(string(expected)), string(b))
 
@@ -162,7 +162,7 @@ func TestBuildInjectionPod(t *testing.T) {
 			})
 	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq)
 	require.Equal(t, "injector", *pod.Name)
-	b, err := json.Marshal(pod)
+	b, err := json.MarshalIndent(pod, "", "  ")
 	require.NoError(t, err)
 
 	expected, err := os.ReadFile("./testdata/expected-injection-pod.json")
