@@ -15,7 +15,6 @@ runs:
 
         echo "removing zarf sboms, packages, cache"
         sudo rm -rf zarf-sbom /tmp/zarf-*
-        sudo env "PATH=$PATH" CI=true make delete-packages
         sudo build/zarf tools clear-cache
 
         lsblk -f
