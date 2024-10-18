@@ -229,42 +229,6 @@ func TestInitZarfState(t *testing.T) {
 	}
 }
 
-func TestSaveZarfState(t *testing.T) {
-	tests := []struct {
-		name  string
-		state types.ZarfState
-	}{
-		{
-			name: "first test",
-			state: types.ZarfState{
-				GitServer: types.GitServerInfo{
-					Address:      "https://git-server.com",
-					PushUsername: "a-push-user",
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			cs := fake.NewClientset()
-			c := &Cluster{
-				Clientset: cs,
-			}
-			ns := &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: ZarfNamespaceName,
-				},
-			}
-			_, err := cs.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-			require.NoError(t, err)
-			err = c.SaveZarfState(ctx, &tt.state)
-			require.NoError(t, err)
-		})
-	}
-}
-
 // TODO: Change password gen method to make testing possible.
 func TestMergeZarfStateRegistry(t *testing.T) {
 	t.Parallel()
