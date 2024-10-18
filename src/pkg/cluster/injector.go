@@ -302,7 +302,6 @@ func hasBlockingTaints(taints []corev1.Taint) bool {
 }
 
 func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1ac.PodApplyConfiguration {
-	// Initialize base volumes
 	executeMode := int32(0777)
 	userID := int64(1000)
 	groupID := int64(2000)
@@ -319,7 +318,6 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 			WithName("seed").
 			WithEmptyDir(&v1ac.EmptyDirVolumeSourceApplyConfiguration{})}
 
-	// Initialize base volume mounts
 	volumeMounts := []*v1ac.VolumeMountApplyConfiguration{
 		v1ac.VolumeMount().
 			WithName("init").
@@ -330,7 +328,6 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 			WithMountPath("/zarf-seed"),
 	}
 
-	// Add additional volumes and volume mounts from payloadCmNames
 	for _, filename := range payloadCmNames {
 		volumes = append(volumes, v1ac.Volume().
 			WithName(filename).
@@ -344,7 +341,6 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 			WithSubPath(filename))
 	}
 
-	// Construct the PodApplyConfiguration
 	pod := v1ac.Pod("injector", ZarfNamespaceName).
 		WithLabels(map[string]string{
 			"app":      "zarf-injector",
