@@ -29,7 +29,6 @@ const (
 	DefaultTimeout = 30 * time.Second
 	// AgentLabel is used to give instructions to the Zarf agent
 	AgentLabel = "zarf.dev/agent"
-	// FieldManager is the field manager used for all Zarf apply operations
 )
 
 // Cluster Zarf specific cluster management functions.
