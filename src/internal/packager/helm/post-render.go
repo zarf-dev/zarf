@@ -140,15 +140,20 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			}
 		}
 
-		if existingNamespace && r.cfg.DeployOpts.AdoptExistingResources {
-			if slices.Contains([]string{"default", "kube-node-lease", "kube-public", "kube-system"}, name) {
-				message.Warnf("Refusing to adopt the initial namespace: %s", name)
-			}
-		}
-		if !existingNamespace || r.cfg.DeployOpts.AdoptExistingResources {
+		if !existingNamespace {
 			_, err := c.Clientset.CoreV1().Namespaces().Apply(ctx, namespace, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
 			if err != nil {
-				return fmt.Errorf("unable to apply namespace %s", name)
+				return fmt.Errorf("unable to apply the namespace %s", name)
+			}
+		} else if r.cfg.DeployOpts.AdoptExistingResources {
+			// Refuse to adopt namespace if it is one of four initial Kubernetes namespaces.
+			if slices.Contains([]string{"default", "kube-node-lease", "kube-public", "kube-system"}, name) {
+				message.Warnf("Refusing to adopt the initial namespace: %s", name)
+			} else {
+				_, err := c.Clientset.CoreV1().Namespaces().Apply(ctx, namespace, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+				if err != nil {
+					return fmt.Errorf("unable to apply the existing namespace %s", name)
+				}
 			}
 		}
 
