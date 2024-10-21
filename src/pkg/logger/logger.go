@@ -49,7 +49,7 @@ var validLevels = map[Level]bool{
 
 // strLevels maps a string to its Level.
 var strLevels = map[string]Level{
-	// NOTE(mkcp): We're mapping trace to debug for backwards compatibility.
+	// NOTE(mkcp): Map trace to debug for backwards compatibility.
 	"trace": Debug,
 	"debug": Debug,
 	"info":  Info,

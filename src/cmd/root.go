@@ -162,6 +162,10 @@ func init() {
 
 // setup Logger handles creating a logger and setting it as the global default.
 func setupLogger(level, format string) (*slog.Logger, error) {
+	// If we didn't get a level from config, fallback to "info"
+	if level == "" {
+		level = "info"
+	}
 	sLevel, err := logger.ParseLevel(level)
 	if err != nil {
 		return nil, err
