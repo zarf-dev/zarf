@@ -154,6 +154,10 @@ func init() {
 	rootCmd.PersistentFlags().MarkDeprecated("insecure", "please use --plain-http, --insecure-skip-tls-verify, or --skip-signature-validation instead.")
 	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.PlainHTTP, "plain-http", v.GetBool(common.VPlainHTTP), lang.RootCmdFlagPlainHTTP)
 	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", v.GetBool(common.VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
+
+	// HACK(mkcp): This is a workaround for us testing that help output matches to the byte. Undo this and update tests
+	// before release.
+	rootCmd.PersistentFlags().MarkHidden("log-format")
 }
 
 // setup Logger handles creating a logger and setting it as the global default.
@@ -162,16 +166,17 @@ func setupLogger(level, format string) (*slog.Logger, error) {
 	if err != nil {
 		return nil, err
 	}
-	l, err := logger.New(logger.Config{
+	cfg := logger.Config{
 		Level:       sLevel,
 		Format:      logger.Format(format),
 		Destination: logger.DestinationDefault,
-	})
+	}
+	l, err := logger.New(cfg)
 	if err != nil {
 		return nil, err
 	}
 	logger.SetDefault(l)
-	l.Debug("Logger successfully initialized", "logger", l)
+	l.Debug("Logger successfully initialized", "cfg", cfg)
 	return l, nil
 }
 
