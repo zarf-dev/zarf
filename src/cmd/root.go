@@ -184,6 +184,8 @@ func setupMessage(logLevel string, skipLogFile, noColor bool) error {
 
 	if logLevel != "" {
 		match := map[string]message.LogLevel{
+			// NOTE(mkcp): Add error for forwards compatibility with logger
+			"error": message.WarnLevel,
 			"warn":  message.WarnLevel,
 			"info":  message.InfoLevel,
 			"debug": message.DebugLevel,
@@ -191,7 +193,7 @@ func setupMessage(logLevel string, skipLogFile, noColor bool) error {
 		}
 		lvl, ok := match[logLevel]
 		if !ok {
-			return errors.New("invalid log level, valid options are warn, info, debug, and trace")
+			return errors.New("invalid log level, valid options are warn, info, debug, error, and trace")
 		}
 		message.SetLogLevel(lvl)
 		message.Debug("Log level set to " + logLevel)
