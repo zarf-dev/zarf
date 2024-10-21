@@ -53,9 +53,17 @@ func TestDevDeploy(t *testing.T) {
 		return
 	}
 
+	// Generic test of dev deploy
 	stdOut, stdErr, err := e2e.Zarf(t, "dev", "deploy", "examples/dos-games")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "kubectl", "delete", "namespace", "dos-games")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Special test of hidden registry-url flag
+	stdOut, stdErr, err = e2e.Zarf(t, "dev", "deploy", "src/test/packages/99-registry-url", "--registry-url", "ghcr.io")
+	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "kubectl", "delete", "namespace", "registry-url")
 	require.NoError(t, err, stdOut, stdErr)
 }

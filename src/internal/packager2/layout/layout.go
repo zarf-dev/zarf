@@ -4,6 +4,13 @@
 // Package layout contains functions for inteacting the Zarf packages.
 package layout
 
+import (
+	goyaml "github.com/goccy/go-yaml"
+
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
+)
+
 // Constants used in the default package layout.
 const (
 	ZarfYAML  = "zarf.yaml"
@@ -32,3 +39,18 @@ const (
 	DataComponentDir      ComponentDir = "data"
 	ValuesComponentDir    ComponentDir = "values"
 )
+
+// ParseZarfPackage parses the yaml passed as a byte slice and applies potential schema migrations.
+func ParseZarfPackage(b []byte) (v1alpha1.ZarfPackage, error) {
+	var pkg v1alpha1.ZarfPackage
+	err := goyaml.Unmarshal(b, &pkg)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	if len(pkg.Build.Migrations) > 0 {
+		for idx, component := range pkg.Components {
+			pkg.Components[idx], _ = deprecated.MigrateComponent(pkg.Build, component)
+		}
+	}
+	return pkg, nil
+}

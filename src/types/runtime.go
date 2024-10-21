@@ -74,12 +74,12 @@ type ZarfFindImagesOptions struct {
 type ZarfDeployOptions struct {
 	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
 	AdoptExistingResources bool
-	// Skip waiting for external webhooks to execute as each package component is deployed
-	SkipWebhooks bool
 	// Timeout for performing Helm operations
 	Timeout time.Duration
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap map[string]map[string]map[string]interface{}
+	// [Dev Deploy Only] Manual override for ###ZARF_REGISTRY###
+	RegistryURL string
 }
 
 // ZarfMirrorOptions tracks the user-defined preferences during a package mirror.

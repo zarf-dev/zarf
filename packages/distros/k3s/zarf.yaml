@@ -3,16 +3,33 @@ metadata:
   name: distro-k3s
   description: Used to establish a new Zarf cluster
 
+variables:
+  - name: K3S_ARGS
+    description: Arguments to pass to K3s
+    default: --disable traefik
+
 components:
   # AMD-64 version of the K3s stack
   - name: k3s
-    import:
-      path: common
-      name: k3s
     only:
+      localOS: linux
       cluster:
         architecture: amd64
+    description: >
+      *** REQUIRES ROOT (not sudo) ***
+      Install K3s, a certified Kubernetes distribution built for IoT & Edge computing.
+      K3s provides the cluster need for Zarf running in Appliance Mode as well as can
+      host a low-resource Gitops Service if not using an existing Kubernetes platform.
     files:
+      # K3s removal script
+      - source: zarf-clean-k3s.sh
+        target: /opt/zarf/zarf-clean-k3s.sh
+        executable: true
+      # The K3s systemd service definition
+      - source: k3s.service
+        target: /etc/systemd/system/k3s.service
+        symlinks:
+          - /etc/systemd/system/multi-user.target.wants/k3s.service
       # Include the actual K3s binary
       - source: https://github.com/k3s-io/k3s/releases/download/v1.28.4+k3s2/k3s
         shasum: 9014535a4cd20c788282d60398a06279983562093455b53ab76701539ce67acf
@@ -29,20 +46,56 @@ components:
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
     actions:
       onDeploy:
+        defaults:
+          maxRetries: 5
         before:
           - cmd: if [ "$(uname -m)" != "x86_64" ]; then echo "this package architecture is amd64, but the target system has a different architecture. These architectures must be the same" && exit 1; fi
             description: Check that the host architecture matches the package architecture
             maxRetries: 0
+          - cmd: ./zarf internal is-valid-hostname
+            maxRetries: 0
+            description: Check if the current system has a, RFC1123 compliant hostname
+          # If running RHEL variant, disable firewalld
+          # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
+          # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error
+          - cmd: "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
+            description: If running a RHEL variant, disable 'firewalld' per k3s docs
+        after:
+          # Configure K3s systemd service
+          - cmd: systemctl daemon-reload
+            description: Reload the system services
+          - cmd: systemctl enable k3s
+            description: Enable 'k3s' to run at system boot
+          - cmd: systemctl restart k3s
+            description: Start the 'k3s' system service
+      onRemove:
+        before:
+          - cmd: /opt/zarf/zarf-clean-k3s.sh
+            description: Remove 'k3s' from the system
+          - cmd: rm /opt/zarf/zarf-clean-k3s.sh
+            description: Remove the cleanup script
 
   # ARM-64 version of the K3s stack
   - name: k3s
-    import:
-      path: common
-      name: k3s
     only:
+      localOS: linux
       cluster:
         architecture: arm64
+    description: >
+      *** REQUIRES ROOT (not sudo) ***
+      Install K3s, a certified Kubernetes distribution built for IoT & Edge computing.
+      K3s provides the cluster need for Zarf running in Appliance Mode as well as can
+      host a low-resource Gitops Service if not using an existing Kubernetes platform.
     files:
+      # K3s removal script
+      - source: zarf-clean-k3s.sh
+        target: /opt/zarf/zarf-clean-k3s.sh
+        executable: true
+      # The K3s systemd service definition
+      - source: k3s.service
+        target: /etc/systemd/system/k3s.service
+        symlinks:
+          - /etc/systemd/system/multi-user.target.wants/k3s.service
       # Include the actual K3s binary
       - source: https://github.com/k3s-io/k3s/releases/download/v1.28.4+k3s2/k3s-arm64
         shasum: 1ae72ca06d3302f3e86ef92e6e8f84e14a084da69564e87d6e2e75f62e72388d
@@ -59,7 +112,31 @@ components:
         target: /var/lib/rancher/k3s/agent/images/k3s.tar.zst
     actions:
       onDeploy:
+        defaults:
+          maxRetries: 5
         before:
           - cmd: if [ "$(uname -m)" != "aarch64" ] && [ "$(uname -m)" != "arm64" ]; then echo "this package architecture is arm64, but the target system has a different architecture. These architectures must be the same" && exit 1; fi
             description: Check that the host architecture matches the package architecture
             maxRetries: 0
+          - cmd: ./zarf internal is-valid-hostname
+            maxRetries: 0
+            description: Check if the current system has a, RFC1123 compliant hostname
+          # If running RHEL variant, disable firewalld
+          # https://rancher.com/docs/k3s/latest/en/advanced/#additional-preparation-for-red-hat-centos-enterprise-linux
+          # NOTE: The empty echo prevents infinite retry loops on non-RHEL systems where the exit code would be an error
+          - cmd: "[ -e /etc/redhat-release ] && systemctl disable firewalld --now || echo ''"
+            description: If running a RHEL variant, disable 'firewalld' per k3s docs
+        after:
+          # Configure K3s systemd service
+          - cmd: systemctl daemon-reload
+            description: Reload the system services
+          - cmd: systemctl enable k3s
+            description: Enable 'k3s' to run at system boot
+          - cmd: systemctl restart k3s
+            description: Start the 'k3s' system service
+      onRemove:
+        before:
+          - cmd: /opt/zarf/zarf-clean-k3s.sh
+            description: Remove 'k3s' from the system
+          - cmd: rm /opt/zarf/zarf-clean-k3s.sh
+            description: Remove the cleanup script

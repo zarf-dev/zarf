@@ -72,9 +72,6 @@ destroy: ## Run `zarf destroy` on the current cluster
 	$(ZARF_BIN) destroy --confirm --remove-components
 	rm -fr build
 
-delete-packages: ## Delete all Zarf package tarballs in the project recursively
-	find . -type f -name 'zarf-package-*' -not -path '*/testdata/*' -print -delete
-
 # Note: the path to the main.go file is not used due to https://github.com/golang/go/issues/51831#issuecomment-1074188363
 .PHONY: build
 build: ## Build the Zarf CLI for the machines OS and architecture
@@ -170,8 +167,6 @@ build-examples: ## Build all of the example packages
 	@test -s ./build/zarf-package-argocd-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/argocd -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH) --confirm
-
-	@test -s ./build/zarf-package-component-webhooks-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/component-webhooks -o build -a $(ARCH) --confirm
 
 build-injector-linux: ## Build the Zarf injector for AMD64 and ARM64
 	docker run --rm --user "$(id -u)":"$(id -g)" -v $$PWD/src/injector:/usr/src/zarf-injector -w /usr/src/zarf-injector rust:1.71.0-bookworm make build-injector-linux list-sizes
