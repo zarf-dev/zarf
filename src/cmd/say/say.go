@@ -17,6 +17,8 @@ func Command() *cobra.Command {
 		Use:   "say",
 		Short: "Print Zarf logo",
 		Long:  "Print out the adorable Zarf logo",
+		// HACK(mkcp): Hidden is a workaround until we update `test-docs-and-schema` for the new command and flags.
+		Hidden: true,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			_, err := fmt.Fprintln(os.Stderr, logo())
 			return err
