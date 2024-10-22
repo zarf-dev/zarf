@@ -80,6 +80,8 @@ type ZarfDeployOptions struct {
 	ValuesOverridesMap map[string]map[string]map[string]interface{}
 	// Force push all repositories to gitea during deployment
 	ForcePushRepos bool
+	// [Dev Deploy Only] Manual override for ###ZARF_REGISTRY###
+	RegistryURL string
 }
 
 // ZarfMirrorOptions tracks the user-defined preferences during a package mirror.
