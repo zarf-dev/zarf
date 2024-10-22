@@ -1,0 +1,16 @@
+kind: ZarfPackageConfig
+metadata:
+  name: registry-url
+  description: Deploys a simple pod with the special ZARF_REGISTRY value
+
+components:
+  - name: registry-url
+    required: true
+    manifests:
+      - name: registry-url
+        namespace: registry-url
+        noWait: true
+        files:
+          - registry-url.yaml
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
