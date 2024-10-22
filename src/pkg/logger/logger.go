@@ -5,6 +5,7 @@
 package logger
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -42,6 +43,8 @@ var validLevels = map[Level]bool{
 
 // strLevels maps a string to its Level.
 var strLevels = map[string]Level{
+	// NOTE(mkcp): Map trace to debug for backwards compatibility.
+	"trace": Debug,
 	"debug": Debug,
 	"info":  Info,
 	"warn":  Warn,
@@ -143,6 +146,34 @@ func New(cfg Config) (*slog.Logger, error) {
 
 	log := slog.New(handler)
 	return log, nil
+}
+
+// ctxKey provides a location to store a logger in a context.
+type ctxKey struct{}
+
+// defaultCtxKey provides a default key if one is not passed into From.
+var defaultCtxKey = ctxKey{}
+
+// WithContext takes a context.Context and a *slog.Logger, storing it on the key
+func WithContext(ctx context.Context, logger *slog.Logger) context.Context {
+	return context.WithValue(ctx, defaultCtxKey, logger)
+}
+
+// From takes a context and reads out a *slog.Logger. If From does not find a value it will return a discarding logger
+// similar to log-format "none".
+func From(ctx context.Context) *slog.Logger {
+	// Grab value from key
+	log := ctx.Value(defaultCtxKey)
+
+	// Ensure our value is a *slog.Logger before we cast.
+	switch l := log.(type) {
+	case *slog.Logger:
+		return l
+	default:
+		// Value is empty or not a *slog.Logger, pass back a Discard logger.
+		h := slog.NewTextHandler(DestinationNone, &slog.HandlerOptions{})
+		return slog.New(h)
+	}
 }
 
 // Default retrieves a logger from the package default. This is intended as a fallback when a logger cannot easily be
