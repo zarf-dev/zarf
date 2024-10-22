@@ -46,7 +46,7 @@ var devDeployCmd = &cobra.Command{
 	Short: lang.CmdDevDeployShort,
 	Long:  lang.CmdDevDeployLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
+		pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
@@ -236,7 +236,7 @@ var devFindImagesCmd = &cobra.Command{
 	Short:   lang.CmdDevFindImagesShort,
 	Long:    lang.CmdDevFindImagesLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
+		pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 
 		v := common.GetViper()
 
@@ -291,7 +291,7 @@ var devLintCmd = &cobra.Command{
 	Long:    lang.CmdDevLintLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		config.CommonOptions.Confirm = true
-		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
+		pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
