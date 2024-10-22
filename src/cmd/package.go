@@ -26,7 +26,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -59,19 +58,18 @@ var packageCreateCmd = &cobra.Command{
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-		pkgClient, err := packager.New(&pkgConfig)
+		opt := packager2.CreateOptions{
+			Flavor:             pkgConfig.CreateOpts.Flavor,
+			RegistryOverrides:  pkgConfig.CreateOpts.RegistryOverrides,
+			SigningKeyPath:     pkgConfig.CreateOpts.SigningKeyPath,
+			SigningKeyPassword: pkgConfig.CreateOpts.SigningKeyPassword,
+			SetVariables:       pkgConfig.CreateOpts.SetVariables,
+			MaxPackageSizeMB:   pkgConfig.CreateOpts.MaxPackageSizeMB,
+			Output:             pkgConfig.CreateOpts.Output,
+		}
+		err := packager2.Create(cmd.Context(), pkgConfig.CreateOpts.BaseDir, opt)
 		if err != nil {
 			return err
-		}
-		defer pkgClient.ClearTempPaths()
-
-		err = pkgClient.Create(cmd.Context())
-		var lintErr *lint.LintError
-		if errors.As(err, &lintErr) {
-			common.PrintFindings(lintErr)
-		}
-		if err != nil {
-			return fmt.Errorf("failed to create package: %w", err)
 		}
 		return nil
 	},
@@ -489,8 +487,6 @@ func bindCreateFlags(v *viper.Viper) {
 
 	createFlags.StringVar(&pkgConfig.CreateOpts.DifferentialPackagePath, "differential", v.GetString(common.VPkgCreateDifferential), lang.CmdPackageCreateFlagDifferential)
 	createFlags.StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
-	createFlags.BoolVarP(&pkgConfig.CreateOpts.ViewSBOM, "sbom", "s", v.GetBool(common.VPkgCreateSbom), lang.CmdPackageCreateFlagSbom)
-	createFlags.StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(common.VPkgCreateSbomOutput), lang.CmdPackageCreateFlagSbomOut)
 	createFlags.BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(common.VPkgCreateSkipSbom), lang.CmdPackageCreateFlagSkipSbom)
 	createFlags.IntVarP(&pkgConfig.CreateOpts.MaxPackageSizeMB, "max-package-size", "m", v.GetInt(common.VPkgCreateMaxPackageSize), lang.CmdPackageCreateFlagMaxPackageSize)
 	createFlags.StringToStringVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringMapString(common.VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
