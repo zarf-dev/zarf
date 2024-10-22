@@ -216,28 +216,12 @@ func Test_ParseLevelErrors(t *testing.T) {
 	}
 }
 
-func Test_From(t *testing.T) {
+func TestContext(t *testing.T) {
 	t.Parallel()
 
 	t.Run("can load a logger from the default key", func(t *testing.T) {
-		key := CtxKey("logger")
-		ctx := context.WithValue(context.Background(), key, Default())
+		ctx := WithContext(context.Background(), Default())
 		res := From(ctx)
-		require.NotNil(t, res)
-	})
-
-	t.Run("can load a logger from a specific key", func(t *testing.T) {
-		key := CtxKey("logger-2-the-sequel-to-logger")
-		ctx := context.WithValue(context.Background(), key, Default())
-		res := From(ctx, key)
-		require.NotNil(t, res)
-	})
-
-	t.Run("can load a logger from a specific key and ignores extra keys", func(t *testing.T) {
-		key := CtxKey("logger-2-the-sequel-to-logger")
-		extraKey := CtxKey("oaphijdsf")
-		ctx := context.WithValue(context.Background(), key, Default())
-		res := From(ctx, key, extraKey)
 		require.NotNil(t, res)
 	})
 }

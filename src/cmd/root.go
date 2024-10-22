@@ -92,7 +92,7 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.WithValue(cmd.Context(), logger.DefaultCtxKey, l)
+	ctx := logger.WithContext(cmd.Context(), l)
 	cmd.SetContext(ctx)
 
 	// Print out config location
@@ -140,7 +140,7 @@ func init() {
 
 	// Logs
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(common.VLogLevel), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(common.VLogFormat), lang.RootCmdFlagLogFormat)
+	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(common.VLogFormat), "Select a logging format. Defaults to 'text'. Valid options are: 'text', 'json'")
 	rootCmd.PersistentFlags().BoolVar(&SkipLogFile, "no-log-file", v.GetBool(common.VNoLogFile), lang.RootCmdFlagSkipLogFile)
 	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(common.VNoProgress), lang.RootCmdFlagNoProgress)
 	rootCmd.PersistentFlags().BoolVar(&NoColor, "no-color", v.GetBool(common.VNoColor), lang.RootCmdFlagNoColor)
@@ -180,7 +180,7 @@ func setupLogger(level, format string) (*slog.Logger, error) {
 		return nil, err
 	}
 	logger.SetDefault(l)
-	l.Debug("Logger successfully initialized", "cfg", cfg)
+	l.Debug("logger successfully initialized", "cfg", cfg)
 	return l, nil
 }
 

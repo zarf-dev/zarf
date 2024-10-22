@@ -185,7 +185,7 @@ func PrintViperConfigUsed(ctx context.Context) {
 		return
 	}
 	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
-		l.Info("Using config file", "location", cfgFile)
+		l.Info("using config file", "location", cfgFile)
 	}
 }
 

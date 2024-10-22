@@ -22,12 +22,6 @@ func init() {
 	SetDefault(l)
 }
 
-// CtxKey limits access to context values by type. This encourages consumers to not store loggers in random strings.
-type CtxKey string
-
-// DefaultCtxKey declares the standard location to store a *slog.Logger on context.
-var DefaultCtxKey = CtxKey("logger")
-
 // Level declares each supported log level. These are 1:1 what log/slog supports by default. Info is the default level.
 type Level int
 
@@ -154,33 +148,31 @@ func New(cfg Config) (*slog.Logger, error) {
 	return log, nil
 }
 
-// defaultCtxKey provides a default key if one is not passed into From.
-var defaultCtxKey = CtxKey("logger")
+// ctxKey provides a location to store a logger in a context.
+type ctxKey struct{}
 
-// From takes a context and reads out a "logger" value, optionally taking a key string. If multiple keys are provided,
-// any after the first will be ignored. Note that if From does not find a value, or that value is not a *slog.Logger,
-// it will return return nil.
-//
-// Usage:
-//
-//	l := From(ctx)
-//	l := From(ctx, "logger2")
-func From(ctx context.Context, key ...CtxKey) *slog.Logger {
-	k := defaultCtxKey
-	// Grab optional key.
-	if len(key) > 0 {
-		k = key[0]
-	}
+// defaultCtxKey provides a default key if one is not passed into From.
+var defaultCtxKey = ctxKey{}
+
+// WithContext takes a context.Context and a *slog.Logger, storing it on the key
+func WithContext(ctx context.Context, logger *slog.Logger) context.Context {
+	return context.WithValue(ctx, defaultCtxKey, logger)
+}
+
+// From takes a context and reads out a *slog.Logger. If From does not find a value it will return a discarding logger
+// similar to log-format "none".
+func From(ctx context.Context) *slog.Logger {
 	// Grab value from key
-	log := ctx.Value(k)
+	log := ctx.Value(defaultCtxKey)
 
 	// Ensure our value is a *slog.Logger before we cast.
 	switch l := log.(type) {
 	case *slog.Logger:
 		return l
 	default:
-		// Not a *slog.Logger, pass back nil.
-		return nil
+		// Value is empty or not a *slog.Logger, pass back a Discard logger.
+		h := slog.NewTextHandler(DestinationNone, &slog.HandlerOptions{})
+		return slog.New(h)
 	}
 }
 
