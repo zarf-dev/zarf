@@ -5,6 +5,7 @@
 package logger
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -213,4 +214,14 @@ func Test_ParseLevelErrors(t *testing.T) {
 			require.Error(t, err)
 		})
 	}
+}
+
+func TestContext(t *testing.T) {
+	t.Parallel()
+
+	t.Run("can load a logger from the default key", func(t *testing.T) {
+		ctx := WithContext(context.Background(), Default())
+		res := From(ctx)
+		require.NotNil(t, res)
+	})
 }

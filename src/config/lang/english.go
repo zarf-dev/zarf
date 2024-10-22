@@ -590,10 +590,6 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 
 	// tools version
 	CmdToolsVersionShort = "Print the version"
-
-	// cmd viper setup
-	CmdViperErrLoadingConfigFile = "failed to load config file: %s"
-	CmdViperInfoUsingConfigFile  = "Using config file %s"
 )
 
 // Zarf Agent messages
