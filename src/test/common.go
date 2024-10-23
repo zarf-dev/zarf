@@ -55,6 +55,11 @@ func GetCLIName() string {
 
 // Zarf executes a Zarf command.
 func (e2e *ZarfE2ETest) Zarf(t *testing.T, args ...string) (_ string, _ string, err error) {
+	return e2e.ZarfInDir(t, "", args...)
+}
+
+// ZarfInDir executes a Zarf command in specific directory.
+func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ string, _ string, err error) {
 	if !slices.Contains(args, "--tmpdir") && !slices.Contains(args, "tools") {
 		tmpdir, err := os.MkdirTemp("", "zarf-")
 		if err != nil {
@@ -83,7 +88,9 @@ func (e2e *ZarfE2ETest) Zarf(t *testing.T, args ...string) (_ string, _ string, 
 			err = errors.Join(err, errRemove)
 		}(cacheDir)
 	}
-	return exec.CmdWithTesting(t, exec.PrintCfg(), e2e.ZarfBinPath, args...)
+	cfg := exec.PrintCfg()
+	cfg.Dir = dir
+	return exec.CmdWithTesting(t, cfg, e2e.ZarfBinPath, args...)
 }
 
 // Kubectl executes `zarf tools kubectl ...`
