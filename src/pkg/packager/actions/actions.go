@@ -7,6 +7,7 @@ package actions
 import (
 	"context"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"regexp"
 	"runtime"
 	"strings"
@@ -24,7 +25,7 @@ import (
 // Run runs all provided actions.
 func Run(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
 	if variableConfig == nil {
-		variableConfig = template.GetZarfVariableConfig()
+		variableConfig = template.GetZarfVariableConfig(ctx)
 	}
 
 	for _, a := range actions {
@@ -37,13 +38,13 @@ func Run(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefaults, a
 
 // Run commands that a component has provided.
 func runAction(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
-	var (
-		cmdEscaped string
-		out        string
-		err        error
+	var cmdEscaped string
+	var out string
+	var err error
+	l := logger.From(ctx)
+	cmd := action.Cmd
 
-		cmd = action.Cmd
-	)
+	l.Error("TODO: Refactor runAction")
 
 	// If the action is a wait, convert it to a command.
 	if action.Wait != nil {

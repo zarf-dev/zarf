@@ -8,6 +8,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -27,7 +29,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
@@ -119,9 +120,10 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 	return pkg, warnings, nil
 }
 
-// Assemble assembles all of the package assets into Zarf's tmp directory layout.
+// Assemble copies all package assets into Zarf's tmp directory layout.
 func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths, components []v1alpha1.ZarfComponent, arch string) error {
 	var imageList []transform.Image
+	l := logger.From(ctx)
 
 	skipSBOMFlagUsed := pc.createOpts.SkipSBOM
 	componentSBOMs := map[string]*layout.ComponentSBOM{}
@@ -131,21 +133,24 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 
 		onFailure := func() {
 			if err := actions.Run(ctx, onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
-				message.Debugf("unable to run component failure action: %s", err.Error())
+				l.Debug("unable to run component failure action", "error", err.Error())
 			}
 		}
 
+		// TODO(mkcp): Migrate to logger
 		if err := pc.addComponent(ctx, component, dst); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
 		}
 
+		// TODO(mkcp): Migrate to logger
 		if err := actions.Run(ctx, onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to run component success action: %w", err)
 		}
 
 		if !skipSBOMFlagUsed {
+			// TODO(mkcp): Migrate to logger
 			componentSBOM, err := pc.getFilesToSBOM(component, dst)
 			if err != nil {
 				return fmt.Errorf("unable to create component SBOM: %w", err)
@@ -156,6 +161,7 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 		}
 
 		// Combine all component images into a single entry for efficient layer reuse.
+		// TODO(mkcp): Migrate to logger
 		for _, src := range component.Images {
 			refInfo, err := transform.ParseImageRef(src)
 			if err != nil {
@@ -173,8 +179,6 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 
 	// Images are handled separately from other component assets.
 	if len(imageList) > 0 {
-		message.HeaderInfof("📦 PACKAGE IMAGES")
-
 		dst.AddImages()
 
 		cachePath, err := config.GetAbsCachePath()
@@ -189,6 +193,7 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 			CacheDirectory:       filepath.Join(cachePath, layout.ImagesDir),
 		}
 
+		// TODO(mkcp): Migrate to logger
 		pulled, err := images.Pull(ctx, pullCfg)
 		if err != nil {
 			return err
@@ -216,12 +221,13 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 
 	// Ignore SBOM creation if the flag is set.
 	if skipSBOMFlagUsed {
-		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
-	} else {
-		dst.AddSBOMs()
-		if err := sbom.Catalog(ctx, componentSBOMs, sbomImageList, dst); err != nil {
-			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
-		}
+		l.Debug("skipping image SBOM processing per --skip-sbom flag")
+		return nil
+	}
+
+	dst.AddSBOMs()
+	if err := sbom.Catalog(ctx, componentSBOMs, sbomImageList, dst); err != nil {
+		return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 	}
 
 	return nil
