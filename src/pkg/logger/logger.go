@@ -7,12 +7,13 @@ package logger
 import (
 	"context"
 	"fmt"
-	"github.com/golang-cz/devslog"
 	"io"
 	"log/slog"
 	"os"
 	"strings"
 	"sync/atomic"
+
+	"github.com/golang-cz/devslog"
 )
 
 var defaultLogger atomic.Pointer[slog.Logger]
@@ -137,7 +138,10 @@ func New(cfg Config) (*slog.Logger, error) {
 		handler = slog.NewJSONHandler(cfg.Destination, &opts)
 	case FormatDev:
 		opts.AddSource = true
-		handler = devslog.NewHandler(DestinationDefault, &devslog.Options{HandlerOptions: &opts})
+		handler = devslog.NewHandler(DestinationDefault, &devslog.Options{
+			HandlerOptions:  &opts,
+			NewLineAfterLog: true,
+		})
 	case FormatNone:
 		handler = slog.NewTextHandler(DestinationNone, &slog.HandlerOptions{})
 	// Format not found, let's error out
