@@ -7,6 +7,7 @@ package logger
 import (
 	"context"
 	"fmt"
+	"github.com/golang-cz/devslog"
 	"io"
 	"log/slog"
 	"os"
@@ -76,6 +77,8 @@ var (
 	FormatText Format = "text"
 	// FormatJSON uses the standard slog JSONHandler
 	FormatJSON Format = "json"
+	// FormatDev uses a verbose and prettyprinting devslog handler
+	FormatDev Format = "dev"
 	// FormatNone sends log writes to DestinationNone / io.Discard
 	FormatNone Format = "none"
 )
@@ -132,11 +135,9 @@ func New(cfg Config) (*slog.Logger, error) {
 		handler = slog.NewTextHandler(cfg.Destination, &opts)
 	case FormatJSON:
 		handler = slog.NewJSONHandler(cfg.Destination, &opts)
-	// TODO(mkcp): Add dev format
-	// case FormatDev:
-	// 	handler = slog.NewTextHandler(DestinationNone, &slog.HandlerOptions{
-	//		AddSource: true,
-	//	})
+	case FormatDev:
+		opts.AddSource = true
+		handler = devslog.NewHandler(DestinationDefault, &devslog.Options{HandlerOptions: &opts})
 	case FormatNone:
 		handler = slog.NewTextHandler(DestinationNone, &slog.HandlerOptions{})
 	// Format not found, let's error out
