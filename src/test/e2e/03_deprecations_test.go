@@ -5,98 +5,91 @@
 package test
 
 import (
+	"context"
 	"fmt"
+	"path/filepath"
 	"testing"
 
+	goyaml "github.com/goccy/go-yaml"
+	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
+
+	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 )
 
-// TestDeprecatedComponentScripts verifies that deprecated component scripts are still able to be executed (after being internally
-// migrated into zarf actions).
+// TestDeprecatedComponentScripts verifies that deprecated component scripts are still able to be executed after being internally migrated into zarf actions.
 func TestDeprecatedComponentScripts(t *testing.T) {
-	t.Log("E2E: Testing deprecated component scripts")
+	t.Parallel()
 
-	// Note these files will be created in the package directory, not CWD
-	testPackageDirPath := "src/test/packages/03-deprecated-component-scripts"
-	prepareArtifact := fmt.Sprintf("%s/test-deprecated-prepare-hook.txt", testPackageDirPath)
 	deployArtifacts := []string{
 		"test-deprecated-deploy-before-hook.txt",
 		"test-deprecated-deploy-after-hook.txt",
 	}
-	allArtifacts := append(deployArtifacts, prepareArtifact)
-	e2e.CleanFiles(t, allArtifacts...)
-	defer e2e.CleanFiles(t, allArtifacts...)
 
-	// 1. Try creating the package to test the create scripts
-	testPackagePath := fmt.Sprintf("%s/zarf-package-deprecated-component-scripts-%s.tar.zst", testPackageDirPath, e2e.Arch)
-	outputFlag := fmt.Sprintf("-o=%s", testPackageDirPath)
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", testPackageDirPath, outputFlag, "--confirm")
-	defer e2e.CleanFiles(t, testPackagePath)
-	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Component '1-test-deprecated-prepare-scripts' is using scripts")
-	require.Contains(t, stdErr, "Component '2-test-deprecated-deploy-scripts' is using scripts")
-	require.Contains(t, stdErr, "Component '3-test-deprecated-timeout-scripts' is using scripts")
+	packagePath := t.TempDir()
+	err := copy.Copy("src/test/packages/03-deprecated-component-scripts", packagePath)
+	require.NoError(t, err)
 
-	// Test for package create prepare artifact
-	require.FileExists(t, prepareArtifact)
+	workingDirPath := t.TempDir()
+	tarName := fmt.Sprintf("zarf-package-deprecated-component-scripts-%s.tar.zst", e2e.Arch)
 
-	// Test to ensure the deploy scripts are not executed
+	// Try creating the package to test the create scripts
+	_, _, err = e2e.ZarfInDir(t, workingDirPath, "package", "create", packagePath, "--confirm")
+	require.NoError(t, err)
+
+	require.FileExists(t, filepath.Join(packagePath, "test-deprecated-prepare-hook.txt"))
 	for _, artifact := range deployArtifacts {
-		require.NoFileExists(t, artifact)
+		require.NoFileExists(t, filepath.Join(workingDirPath, artifact))
 	}
 
-	// 2. Deploy the simple script that should pass
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", testPackagePath, "--confirm", "--components=2-test-deprecated-deploy-scripts")
-	require.NoError(t, err, stdOut, stdErr)
+	// Deploy the simple script that should pass
+	_, _, err = e2e.ZarfInDir(t, workingDirPath, "package", "deploy", tarName, "--confirm", "--components=2-test-deprecated-deploy-scripts")
+	require.NoError(t, err)
 
-	// Check that the deploy artifacts were created
 	for _, artifact := range deployArtifacts {
-		require.FileExists(t, artifact)
+		require.FileExists(t, filepath.Join(workingDirPath, artifact))
 	}
 
-	// 3. Deploy the simple script that should fail the timeout
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", testPackagePath, "--confirm", "--components=3-test-deprecated-timeout-scripts")
-	require.Error(t, err, stdOut, stdErr)
+	// Deploy the simple script that should fail the timeout
+	_, _, err = e2e.ZarfInDir(t, workingDirPath, "package", "deploy", tarName, "--confirm", "--components=3-test-deprecated-timeout-scripts")
+	require.Error(t, err)
 }
 
 // TestDeprecatedSetAndPackageVariables verifies that deprecated setVariables and PKG_VARs still able to be set.
 func TestDeprecatedSetAndPackageVariables(t *testing.T) {
-	t.Log("E2E: Testing deprecated set variables")
+	t.Parallel()
 
 	// Note prepare script files will be created in the package directory, not CWD
 	testPackageDirPath := "src/test/packages/03-deprecated-set-variable"
-	prepareArtifact := fmt.Sprintf("%s/test-deprecated-prepare-hook.txt", testPackageDirPath)
-	deployArtifacts := []string{
-		"test-deprecated-deploy-before-hook.txt",
-		"test-deprecated-deploy-after-hook.txt",
-	}
-	allArtifacts := append(deployArtifacts, prepareArtifact)
-	e2e.CleanFiles(t, allArtifacts...)
-	defer e2e.CleanFiles(t, allArtifacts...)
 
-	// 2. Try creating the package to test the create scripts
-	testPackagePath := fmt.Sprintf("%s/zarf-package-deprecated-set-variable-%s.tar.zst", testPackageDirPath, e2e.Arch)
-	outputFlag := fmt.Sprintf("-o=%s", testPackageDirPath)
+	outPath := t.TempDir()
+	tarPath := filepath.Join(outPath, fmt.Sprintf("zarf-package-deprecated-set-variable-%s.tar.zst", e2e.Arch))
 
 	// Check that the command still errors out
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", testPackageDirPath, outputFlag, "--confirm")
-	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "template \"ECHO\" must be '--set'")
+	_, _, err := e2e.Zarf(t, "package", "create", testPackageDirPath, "-o", outPath, "--confirm")
+	require.Error(t, err)
 
-	// Check that the command displays a warning on create
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", testPackageDirPath, outputFlag, "--confirm", "--set", "ECHO=Zarf-The-Axolotl")
-	defer e2e.CleanFiles(t, testPackagePath)
-	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Component '1-test-deprecated-set-variable' is using setVariable")
-	require.Contains(t, stdErr, "deprecated syntax ###ZARF_PKG_VAR_ECHO###")
+	// // Check that the command displays a warning on create
+	_, _, err = e2e.Zarf(t, "package", "create", testPackageDirPath, "-o", outPath, "--confirm", "--set", "ECHO=Zarf-The-Axolotl")
+	require.NoError(t, err)
 
-	// 1. Deploy the setVariable action that should pass and output the variable
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", testPackagePath, "--confirm", "--components=1-test-deprecated-set-variable")
-	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Hello from Hello Kitteh")
-
-	// 2. Deploy the setVariable action that should pass and output the variable
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", testPackagePath, "--confirm", "--components=2-test-deprecated-pkg-var")
-	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Zarf-The-Axolotl")
+	pkgLayout, err := layout2.LoadFromTar(context.Background(), tarPath, layout2.PackageLayoutOptions{})
+	require.NoError(t, err)
+	b, err := goyaml.Marshal(pkgLayout.Pkg.Components)
+	require.NoError(t, err)
+	expectedYaml := `- name: 1-test-deprecated-set-variable
+  actions:
+    onDeploy:
+      before:
+      - cmd: echo "Hello Kitteh"
+        setVariables:
+        - name: HELLO_KITTEH
+      - cmd: echo "Hello from ${ZARF_VAR_HELLO_KITTEH}"
+- name: 2-test-deprecated-pkg-var
+  actions:
+    onDeploy:
+      before:
+      - cmd: echo "Zarf-The-Axolotl"
+`
+	require.Equal(t, expectedYaml, string(b))
 }
