@@ -63,6 +63,8 @@ func (h *Helm) newRenderer(ctx context.Context) (*renderer, error) {
 		if err != nil {
 			return nil, err
 		}
+		// The get objects don't have kind and api version set
+		nsAc.WithKind("Namespace").WithAPIVersion("v1")
 		nsAc.WithLabels(cluster.AdoptZarfManagedLabels(nsAc.Labels))
 		rend.namespaces[h.chart.Namespace] = nsAc
 	}
