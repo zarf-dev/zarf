@@ -5,9 +5,12 @@
 package packager
 
 import (
+	"context"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"os"
+
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
@@ -15,8 +18,8 @@ import (
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
-func (p *Packager) Create() error {
-	l := logger.From(p.ctx)
+func (p *Packager) Create(ctx context.Context) error {
+	l := logger.From(ctx)
 	l.Info("starting package create")
 	// Begin setup
 	cwd, err := os.Getwd()
@@ -57,10 +60,10 @@ func (p *Packager) Create() error {
 		"description", pkg.Metadata.Description,
 	)
 
-	// TODO(mkcp): Interactive
-	// if !p.confirmAction(config.ZarfCreateStage, warnings, nil) {
-	// 	return fmt.Errorf("package creation canceled")
-	// }
+	// TODO(mkcp): Remove interactive when
+	if !p.confirmAction(config.ZarfCreateStage, warnings, nil) {
+		return fmt.Errorf("package creation canceled")
+	}
 
 	l.Debug("starting package assembly", "kind", pkg.Kind)
 	// TODO(mkcp): Migrate to logger

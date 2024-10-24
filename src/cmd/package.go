@@ -54,6 +54,8 @@ var packageCreateCmd = &cobra.Command{
 
 		var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 		if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
+			// TODO(mkcp): Remove message on logger release
+			message.Warnf(lang.CmdPackageCreateCleanPathErr, config.ZarfDefaultCachePath)
 			l.Warn("invalid characters in Zarf cache path, using default", "cfg", config.ZarfDefaultCachePath, "default", config.ZarfDefaultCachePath)
 			config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 		}
@@ -70,8 +72,7 @@ var packageCreateCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		// TODO(mkcp): Finish migrating packager.Create
-		err = pkgClient.Create()
+		err = pkgClient.Create(cmd.Context())
 
 		// NOTE(mkcp): LintErrors are rendered with a table
 		var lintErr *lint.LintError
