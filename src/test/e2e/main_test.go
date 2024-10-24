@@ -35,7 +35,11 @@ func TestMain(m *testing.M) {
 	}
 
 	e2e.Arch = config.GetArch()
-	e2e.ZarfBinPath = filepath.Join("build", test.GetCLIName())
+	zarfBinPath, err := filepath.Abs(filepath.Join("build", test.GetCLIName()))
+	if err != nil {
+		log.Fatal(err)
+	}
+	e2e.ZarfBinPath = zarfBinPath
 	e2e.ApplianceMode = os.Getenv(applianceModeEnvVar) == "true"
 	e2e.ApplianceModeKeep = os.Getenv(applianceModeKeepEnvVar) == "true"
 
