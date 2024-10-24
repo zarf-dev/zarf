@@ -19,7 +19,7 @@ func TestUpdateGiteaPVC(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 	c := &Cluster{
-		Clientset: fake.NewSimpleClientset(),
+		Clientset: fake.NewClientset(),
 	}
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{

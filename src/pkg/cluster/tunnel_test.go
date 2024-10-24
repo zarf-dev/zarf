@@ -19,7 +19,7 @@ func TestListConnections(t *testing.T) {
 	t.Parallel()
 
 	c := &Cluster{
-		Clientset: fake.NewSimpleClientset(),
+		Clientset: fake.NewClientset(),
 	}
 	svc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

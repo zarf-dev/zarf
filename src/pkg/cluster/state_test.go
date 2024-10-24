@@ -165,7 +165,7 @@ func TestInitZarfState(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			cs := fake.NewSimpleClientset()
+			cs := fake.NewClientset()
 			for _, node := range tt.nodes {
 				_, err := cs.CoreV1().Nodes().Create(ctx, &node, metav1.CreateOptions{})
 				require.NoError(t, err)
