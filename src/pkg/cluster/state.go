@@ -243,11 +243,10 @@ func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) err
 	if err != nil {
 		return err
 	}
-	zarfStateLabels := map[string]string{
-		ZarfManagedByLabel: "zarf",
-	}
 	secret := v1ac.Secret(ZarfStateSecretName, ZarfNamespaceName).
-		WithLabels(zarfStateLabels).
+		WithLabels(map[string]string{
+			ZarfManagedByLabel: "zarf",
+		}).
 		WithType(corev1.SecretTypeOpaque).
 		WithData(map[string][]byte{
 			ZarfStateDataKey: data,
