@@ -36,6 +36,7 @@ require (
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/moby/moby v27.3.1+incompatible
 	github.com/opencontainers/image-spec v1.1.0
+	github.com/phsym/console-slog v0.3.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.20.4
 	github.com/pterm/pterm v0.12.79
@@ -96,7 +97,6 @@ require (
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/onsi/gomega v1.34.1 // indirect
-	github.com/phsym/console-slog v0.3.1 // indirect
 	github.com/redis/go-redis/extra/rediscmd/v9 v9.0.5 // indirect
 	github.com/redis/go-redis/extra/redisotel/v9 v9.0.5 // indirect
 	github.com/redis/go-redis/v9 v9.6.1 // indirect
