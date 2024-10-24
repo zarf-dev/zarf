@@ -56,7 +56,7 @@ require (
 	k8s.io/api v0.31.2
 	k8s.io/apimachinery v0.31.2
 	k8s.io/client-go v0.31.2
-	k8s.io/component-base v0.31.1
+	k8s.io/component-base v0.31.2
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubectl v0.31.1
 	oras.land/oras-go/v2 v2.5.0
