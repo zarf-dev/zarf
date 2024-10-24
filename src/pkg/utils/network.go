@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"io"
 	"net/http"
 	"net/url"
@@ -75,7 +76,7 @@ func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) (err er
 			return fmt.Errorf("unable to download file with sget: %s: %w", src, err)
 		}
 	} else {
-		err = httpGetFile(src, file)
+		err = httpGetFile(ctx, src, file)
 		if err != nil {
 			return err
 		}
@@ -95,7 +96,7 @@ func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) (err er
 	return nil
 }
 
-func httpGetFile(url string, destinationFile *os.File) (err error) {
+func httpGetFileProgress(url string, destinationFile *os.File) (err error) {
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
@@ -122,5 +123,33 @@ func httpGetFile(url string, destinationFile *os.File) (err error) {
 
 	title = fmt.Sprintf("Downloaded %s", url)
 	progressBar.Successf("%s", title)
+	return nil
+}
+
+func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err error) {
+	l := logger.From(ctx)
+	l.Info("download start", "url", url)
+
+	// Get the data
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("unable to download the file %s", url)
+	}
+	defer func() {
+		err2 := resp.Body.Close()
+		err = errors.Join(err, err2)
+	}()
+
+	// Check server response
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("bad HTTP status: %s", resp.Status)
+	}
+
+	// Write contents to file
+	if _, err = io.Copy(destinationFile, resp.Body); err != nil {
+		l.Error("unable to save the file %s: %s", destinationFile.Name(), err.Error())
+		return err
+	}
+	l.Debug("download successful", "url", url)
 	return nil
 }

@@ -7,7 +7,6 @@ package actions
 import (
 	"context"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"regexp"
 	"runtime"
 	"strings"
@@ -24,6 +23,7 @@ import (
 
 // Run runs all provided actions.
 func Run(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+	// FIXME(mkcp): Interactive
 	if variableConfig == nil {
 		variableConfig = template.GetZarfVariableConfig(ctx)
 	}
@@ -37,14 +37,12 @@ func Run(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefaults, a
 }
 
 // Run commands that a component has provided.
+// TODO(mkcp): Migrate actions to logger
 func runAction(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
 	var cmdEscaped string
 	var out string
 	var err error
-	l := logger.From(ctx)
 	cmd := action.Cmd
-
-	l.Error("TODO: Refactor runAction")
 
 	// If the action is a wait, convert it to a command.
 	if action.Wait != nil {

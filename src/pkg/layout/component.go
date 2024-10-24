@@ -5,7 +5,9 @@
 package layout
 
 import (
+	"context"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -39,7 +41,8 @@ type Components struct {
 var ErrNotLoaded = fmt.Errorf("not loaded")
 
 // Archive archives a component.
-func (c *Components) Archive(component v1alpha1.ZarfComponent, cleanupTemp bool) error {
+func (c *Components) Archive(ctx context.Context, component v1alpha1.ZarfComponent, cleanupTemp bool) error {
+	l := logger.From(ctx)
 	name := component.Name
 	if _, ok := c.Dirs[name]; !ok {
 		return &fs.PathError{
@@ -61,7 +64,7 @@ func (c *Components) Archive(component v1alpha1.ZarfComponent, cleanupTemp bool)
 	}
 	if size > 0 {
 		tb := fmt.Sprintf("%s.tar", base)
-		message.Debugf("Archiving %q", name)
+		l.Debug("archiving component", "name", name)
 		if err := helpers.CreateReproducibleTarballFromDir(base, name, tb); err != nil {
 			return err
 		}
@@ -70,7 +73,7 @@ func (c *Components) Archive(component v1alpha1.ZarfComponent, cleanupTemp bool)
 		}
 		c.Tarballs[name] = tb
 	} else {
-		message.Debugf("Component %q is empty, skipping archiving", name)
+		l.Debug("component is empty, skipping archiving", "name", name)
 	}
 
 	delete(c.Dirs, name)

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"io/fs"
 	"maps"
 	"os"
@@ -60,16 +61,9 @@ func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
 	return nil
 }
 
-// Pull pulls all of the images from the given config.
+// Pull pulls all images from the given config.
 func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, error) {
-	var longer string
-	imageCount := len(cfg.ImageList)
-	// Give some additional user feedback on larger image sets
-	if imageCount > 15 {
-		longer = "This step may take a couple of minutes to complete."
-	} else if imageCount > 5 {
-		longer = "This step may take several seconds to complete."
-	}
+	l := logger.From(ctx)
 
 	if err := helpers.CreateDirectory(cfg.DestinationDirectory, helpers.ReadExecuteAllWriteUser); err != nil {
 		return nil, fmt.Errorf("failed to create image path %s: %w", cfg.DestinationDirectory, err)
@@ -80,8 +74,17 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		return nil, err
 	}
 
-	spinner := message.NewProgressSpinner("Fetching info for %d images. %s", imageCount, longer)
-	defer spinner.Stop()
+	// Give some additional user feedback on larger image sets
+	switch c := len(cfg.ImageList); {
+	case c > 15:
+		l.Info("fetching info for images. This step may take a couple of minutes to complete", "count", c)
+		break
+	case c > 5:
+		l.Info("fetching info for images. This step may take several seconds to complete", "count", c)
+		break
+	default:
+		l.Info("fetching info for images", "count", c)
+	}
 
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
@@ -95,13 +98,12 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 	fetched := map[transform.Image]v1.Image{}
 
-	var counter, totalBytes atomic.Int64
+	var totalBytes atomic.Int64
 
 	for _, refInfo := range cfg.ImageList {
 		refInfo := refInfo
 		eg.Go(func() error {
-			idx := counter.Add(1)
-			spinner.Updatef("Fetching image info (%d of %d)", idx, imageCount)
+			l.Info("fetching image info", "name", refInfo.Name)
 
 			ref := refInfo.Reference
 			for k, v := range cfg.RegistryOverrides {
@@ -221,11 +223,9 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		return nil, err
 	}
 
-	spinner.Successf("Fetched info for %d images", imageCount)
+	l.Debug("done fetching info for images", "count", len(cfg.ImageList))
 
-	doneSaving := make(chan error)
-	updateText := fmt.Sprintf("Pulling %d images", imageCount)
-	go utils.RenderProgressBarForLocalDirWrite(cfg.DestinationDirectory, totalBytes.Load(), doneSaving, updateText, updateText)
+	l.Info("pulling images", "count", len(cfg.ImageList))
 
 	toPull := maps.Clone(fetched)
 
@@ -237,7 +237,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		return err
 	}, retry.Context(ctx), retry.Attempts(2))
 	if err != nil {
-		message.Warnf("Failed to save images in parallel, falling back to sequential save: %s", err.Error())
+		l.Warn("failed to save images in parallel, falling back to sequential save", "error", err.Error())
 		err = retry.Do(func() error {
 			saved, err := SaveSequential(ctx, cranePath, toPull)
 			for k := range saved {
@@ -249,10 +249,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 			return nil, err
 		}
 	}
-
-	// Send a signal to the progress bar that we're done and wait for the thread to finish
-	doneSaving <- nil
-	<-doneSaving
 
 	// Needed because when pulling from the local docker daemon, while using the docker containerd runtime
 	// Crane incorrectly names the blob of the docker image config to a sha that does not match the contents

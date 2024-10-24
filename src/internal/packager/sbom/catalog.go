@@ -8,6 +8,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -30,14 +31,12 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // Builder is the main struct used to build SBOM artifacts.
 type Builder struct {
-	spinner    *message.Spinner
 	cachePath  string
 	imagesPath string
 	outputDir  string
@@ -52,6 +51,7 @@ var componentPrefix = "zarf-component-"
 
 // Catalog catalogs the given components and images to create an SBOM.
 func Catalog(ctx context.Context, componentSBOMs map[string]*layout.ComponentSBOM, imageList []transform.Image, paths *layout.PackagePaths) error {
+	l := logger.From(ctx)
 	imageCount := len(imageList)
 	componentCount := len(componentSBOMs)
 	cachePath, err := config.GetAbsCachePath()
@@ -59,12 +59,11 @@ func Catalog(ctx context.Context, componentSBOMs map[string]*layout.ComponentSBO
 		return err
 	}
 	builder := Builder{
-		spinner:    message.NewProgressSpinner("Creating SBOMs for %d images and %d components with files.", imageCount, componentCount),
 		cachePath:  cachePath,
 		imagesPath: paths.Images.Base,
 		outputDir:  paths.SBOMs.Path,
 	}
-	defer builder.spinner.Stop()
+	l.Info("creating SBOMs for images and components with files", "images", imageCount, "components", componentCount)
 
 	// Ensure the sbom directory exists
 	_ = helpers.CreateDirectory(builder.outputDir, helpers.ReadWriteExecuteUser)
@@ -72,77 +71,76 @@ func Catalog(ctx context.Context, componentSBOMs map[string]*layout.ComponentSBO
 	// Generate a list of images and files for the sbom viewer
 	json, err := builder.generateJSONList(componentSBOMs, imageList)
 	if err != nil {
-		builder.spinner.Errorf(err, "Unable to generate the SBOM image list")
+		l.Error("unable to generate the SBOM image list", "error", err.Error())
 		return err
 	}
 	builder.jsonList = json
 
 	// Generate SBOM for each image
-	currImage := 1
+	l.Info("creating SBOMs for images", "images", imageCount)
 	for _, refInfo := range imageList {
-		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, refInfo.Reference)
+		l.Info("creating image SBOMs", "reference", refInfo.Reference)
 
 		// Get the image that we are creating an SBOM for
 		img, err := utils.LoadOCIImage(paths.Images.Base, refInfo)
 		if err != nil {
-			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
+			l.Error("unable to load the image to generate an SBOM", "error", err.Error())
 			return err
 		}
 
 		jsonData, err := builder.createImageSBOM(ctx, img, refInfo.Reference)
 		if err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", refInfo.Reference)
+			l.Error("unable to create SBOM for image",
+				"reference", refInfo.Reference,
+				"error", err.Error(),
+			)
 			return err
 		}
 
 		if err = builder.createSBOMViewerAsset(refInfo.Reference, jsonData); err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM viewer for image %s", refInfo.Reference)
+			l.Error("unable to create SBOM viewer for image",
+				"reference", refInfo.Reference,
+			)
 			return err
 		}
-
-		currImage++
 	}
 
-	currComponent := 1
-
 	// Generate SBOM for each component
+	l.Info("creating SBOMs for components", "components", componentCount)
 	for component := range componentSBOMs {
-		builder.spinner.Updatef("Creating component file SBOMs (%d of %d): %s", currComponent, componentCount, component)
+		l.Info("creating component file SBOMs", "component", component)
 
 		if componentSBOMs[component] == nil {
-			message.Debugf("Component %s has invalid SBOM, skipping", component)
+			l.Debug("component has invalid SBOM, skipping", "component", component)
 			continue
 		}
 
 		jsonData, err := builder.createFileSBOM(ctx, *componentSBOMs[component], component)
 		if err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM for component %s", component)
+			l.Error("unable to create SBOM for component", "component", component, "error", err.Error())
 			return err
 		}
 
 		if err = builder.createSBOMViewerAsset(fmt.Sprintf("%s%s", componentPrefix, component), jsonData); err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM viewer for component %s", component)
+			l.Error("unable to create SBOM for component", "component", component, "error", err.Error())
 			return err
 		}
-
-		currComponent++
 	}
 
 	// Include the compare tool if there are any image SBOMs OR component SBOMs
 	if len(componentSBOMs) > 0 || len(imageList) > 0 {
 		if err := builder.createSBOMCompareAsset(); err != nil {
-			builder.spinner.Errorf(err, "Unable to create SBOM compare tool")
+			l.Error("unable to create SBOM compare tool", "error", err.Error())
 			return err
 		}
 	}
 
 	if err := paths.SBOMs.Archive(); err != nil {
-		builder.spinner.Errorf(err, "Unable to archive SBOMs")
+		l.Error("unable to archive SBOMs", "error", err.Error())
 		return err
 	}
 
-	builder.spinner.Success()
-
+	l.Debug("done building catalog")
 	return nil
 }
 

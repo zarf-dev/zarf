@@ -73,7 +73,7 @@ var packageCreateCmd = &cobra.Command{
 		// TODO(mkcp): Finish migrating packager.Create
 		err = pkgClient.Create()
 
-		// TODO(mkcp): Migrate linterrs to logger
+		// NOTE(mkcp): LintErrors are rendered with a table
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
 			common.PrintFindings(lintErr)

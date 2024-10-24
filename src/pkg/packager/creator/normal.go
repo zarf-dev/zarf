@@ -8,14 +8,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -250,7 +251,7 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range pkg.Components {
 		// Make the component a tar archive
-		if err := dst.Components.Archive(component, true); err != nil {
+		if err := dst.Components.Archive(ctx, component, true); err != nil {
 			return fmt.Errorf("unable to archive component: %s", err.Error())
 		}
 	}
@@ -310,7 +311,7 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		_ = os.Remove(tarballPath)
 
 		// Create the package tarball.
-		if err := dst.ArchivePackage(tarballPath, pc.createOpts.MaxPackageSizeMB); err != nil {
+		if err := dst.ArchivePackage(ctx, tarballPath, pc.createOpts.MaxPackageSizeMB); err != nil {
 			return fmt.Errorf("unable to archive package: %w", err)
 		}
 	}
@@ -342,8 +343,11 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 	return nil
 }
 
+// TODO(mkcp): Refactor addComponent to better segment component handling logic by its type. There's also elaborate
+// if/elses that can be de-nested.
 func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.ZarfComponent, dst *layout.PackagePaths) error {
-	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
+	l := logger.From(ctx)
+	l.Info("adding component", "component", component.Name)
 
 	componentPaths, err := dst.Components.Create(component)
 	if err != nil {
@@ -428,18 +432,21 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 		}
 	}
 
-	if len(component.DataInjections) > 0 {
-		spinner := message.NewProgressSpinner("Loading data injections")
-		defer spinner.Stop()
+	// Run data injections
+	injectionsCount := len(component.DataInjections)
+	if injectionsCount > 0 {
+		l.Info("data injections found, running", "injections", injectionsCount)
 
 		for dataIdx, data := range component.DataInjections {
-			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
+			target := data.Target
+			l.Info("copying data injection", "path", target.Path, "selector", target.Selector)
 
-			rel := filepath.Join(layout.DataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+			rel := filepath.Join(layout.DataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(target.Path))
 			dst := filepath.Join(componentPaths.Base, rel)
 
 			if helpers.IsURL(data.Source) {
-				if err := utils.DownloadToFile(ctx, data.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+				err := utils.DownloadToFile(ctx, data.Source, dst, component.DeprecatedCosignKeyPath)
+				if err != nil {
 					return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 				}
 			} else {
@@ -448,9 +455,10 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 				}
 			}
 		}
-		spinner.Success()
+		l.Debug("done loading data injections")
 	}
 
+	// Process k8s manifests
 	if len(component.Manifests) > 0 {
 		// Get the proper count of total manifests to add.
 		manifestCount := 0
@@ -460,8 +468,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 			manifestCount += len(manifest.Kustomizations)
 		}
 
-		spinner := message.NewProgressSpinner("Loading %d K8s manifests", manifestCount)
-		defer spinner.Stop()
+		l.Info("processing k8s manifests", "component", component.Name, "manifests", manifestCount)
 
 		// Iterate over all manifests.
 		for _, manifest := range component.Manifests {
@@ -470,7 +477,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 				dst := filepath.Join(componentPaths.Base, rel)
 
 				// Copy manifests without any processing.
-				spinner.Updatef("Copying manifest %s", path)
+				l.Info("copying manifest", "path", path)
 				if helpers.IsURL(path) {
 					if err := utils.DownloadToFile(ctx, path, dst, component.DeprecatedCosignKeyPath); err != nil {
 						return fmt.Errorf(lang.ErrDownloading, path, err.Error())
@@ -484,7 +491,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 
 			for kustomizeIdx, path := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package.
-				spinner.Updatef("Building kustomization for %s", path)
+				l.Info("building kustomization", "path", path)
 
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
 				rel := filepath.Join(layout.ManifestsDir, kname)
@@ -495,13 +502,13 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 				}
 			}
 		}
-		spinner.Success()
+		l.Debug("done building k8s manifests", "component", component.Name)
 	}
 
 	// Load all specified git repos.
-	if len(component.Repos) > 0 {
-		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
-		defer spinner.Stop()
+	reposCount := len(component.Repos)
+	if reposCount > 0 {
+		l.Info("loading git repos", "component", component.Name, "repos", reposCount)
 
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
@@ -510,13 +517,14 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
-		spinner.Success()
+		l.Debug("done loading git repos", "component", component.Name)
 	}
 
 	if err := actions.Run(ctx, onCreate.Defaults, onCreate.After, nil); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 
+	l.Debug("done adding component", "component", component.Name)
 	return nil
 }
 

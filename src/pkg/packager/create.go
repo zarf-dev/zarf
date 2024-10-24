@@ -10,48 +10,61 @@ import (
 	"os"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Create() error {
+	l := logger.From(p.ctx)
+	l.Info("starting package create")
+	// Begin setup
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	l := logger.From(p.ctx)
+	cfg := p.cfg
 
 	// Set basedir
-	baseDir := p.cfg.CreateOpts.BaseDir
+	createOpts := cfg.CreateOpts
+	baseDir := createOpts.BaseDir
 	if err := os.Chdir(baseDir); err != nil {
 		return fmt.Errorf("unable to access directory %q: %w", baseDir, err)
 	}
 	l.Info("using build directory", "baseDir", baseDir)
 
 	// Setup package creator
-	pc := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
-	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
+	lo := p.layout
+	pc := creator.NewPackageCreator(createOpts, cwd)
+	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, lo.ZarfYAML); err != nil {
 		return err
 	}
 
-	// Load package def and store on packager config
-	// TODO(mkcp): Migrate to logger
-	pkg, warnings, err := pc.LoadPackageDefinition(p.ctx, p.layout)
+	// Load package def
+	l.Debug("loading package definition", "layout", lo)
+	pkg, warnings, err := pc.LoadPackageDefinition(p.ctx, lo)
 	if err != nil {
 		return err
 	}
+	//  Store on packager config
 	p.cfg.Pkg = pkg
-
-	// TODO(mkcp): Interactive isolate with slog
-	//			   Maybe just comment this out point at
-	if !p.confirmAction(config.ZarfCreateStage, warnings, nil) {
-		return fmt.Errorf("package creation canceled")
+	if len(warnings) > 0 {
+		l.Warn("warnings found when loading package definition", "warnings", warnings)
 	}
+	l.Info("package loaded",
+		"kind", pkg.Kind,
+		"name", pkg.Metadata.Name,
+		"description", pkg.Metadata.Description,
+	)
 
+	// TODO(mkcp): Interactive
+	// if !p.confirmAction(config.ZarfCreateStage, warnings, nil) {
+	// 	return fmt.Errorf("package creation canceled")
+	// }
+
+	l.Debug("starting package assembly", "kind", pkg.Kind)
 	// TODO(mkcp): Migrate to logger
-	if err := pc.Assemble(p.ctx, p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
+	if err := pc.Assemble(p.ctx, p.layout, pkg.Components, pkg.Metadata.Architecture); err != nil {
 		return err
 	}
 
