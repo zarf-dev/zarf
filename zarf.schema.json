@@ -377,6 +377,10 @@
           },
           "type": "array",
           "description": "[alpha] List of variables to set in the Helm chart."
+        },
+        "skipSchemaValidation": {
+          "type": "boolean",
+          "description": "Prevents Helm from validating the values file against it's JSON schema. Useful in the airgap when the JSON Schema references the internet."
         }
       },
       "additionalProperties": false,
