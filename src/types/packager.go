@@ -13,6 +13,7 @@ import (
 // PackagerConfig is the main struct that the packager uses to hold high-level options.
 type PackagerConfig struct {
 	// Context provides deadlines, cancellations, and values throughout the API.
+	// NOTE(mkcp): Storing ctx on structs is not recommended, but this is intended as a temporary workaround.
 	Context context.Context
 
 	// CreateOpts tracks the user-defined options used to create the package

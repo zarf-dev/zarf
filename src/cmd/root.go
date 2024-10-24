@@ -82,6 +82,8 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	if cmd.Parent() == nil {
 		skipLogFile = true
 	}
+
+	// Configure the global message instance.
 	err := setupMessage(LogLevelCLI, skipLogFile, NoColor)
 	if err != nil {
 		return err
