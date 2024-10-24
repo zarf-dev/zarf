@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"io"
 	"net/http"
 	"net/url"
@@ -16,9 +15,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 func parseChecksum(src string) (string, string, error) {
@@ -93,36 +93,6 @@ func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) (err er
 		}
 	}
 
-	return nil
-}
-
-func httpGetFileProgress(url string, destinationFile *os.File) (err error) {
-	// Get the data
-	resp, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("unable to download the file %s", url)
-	}
-	defer func() {
-		err2 := resp.Body.Close()
-		err = errors.Join(err, err2)
-	}()
-
-	// Check server response
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad HTTP status: %s", resp.Status)
-	}
-
-	// Writer the body to file
-	title := fmt.Sprintf("Downloading %s", filepath.Base(url))
-	progressBar := message.NewProgressBar(resp.ContentLength, title)
-
-	if _, err = io.Copy(destinationFile, io.TeeReader(resp.Body, progressBar)); err != nil {
-		progressBar.Failf("Unable to save the file %s: %s", destinationFile.Name(), err.Error())
-		return err
-	}
-
-	title = fmt.Sprintf("Downloaded %s", url)
-	progressBar.Successf("%s", title)
 	return nil
 }
 
