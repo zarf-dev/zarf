@@ -17,6 +17,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -65,6 +66,8 @@ func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
 func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, error) {
 	l := logger.From(ctx)
 	var longer string
+	pullStart := time.Now()
+
 	imageCount := len(cfg.ImageList)
 	// Give some additional user feedback on larger image sets
 	if imageCount > 15 {
@@ -83,18 +86,19 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	}
 
 	// Give some additional user feedback on larger image sets
+	imageFetchStart := time.Now()
 	// TODO(mkcp): Remove message on logger release
 	spinner := message.NewProgressSpinner("Fetching info for %d images. %s", imageCount, longer)
 	defer spinner.Stop()
 	switch c := len(cfg.ImageList); {
 	case c > 15:
-		l.Info("fetching info for images. This step may take a couple of minutes to complete", "count", c)
+		l.Info("fetching info for images. This step may take a couple of minutes to complete", "count", c, "destination", cfg.DestinationDirectory)
 		break
 	case c > 5:
-		l.Info("fetching info for images. This step may take several seconds to complete", "count", c)
+		l.Info("fetching info for images. This step may take several seconds to complete", "count", c, "destination", cfg.DestinationDirectory)
 		break
 	default:
-		l.Info("fetching info for images", "count", c)
+		l.Info("fetching info for images", "count", c, "destination", cfg.DestinationDirectory)
 	}
 
 	logs.Warn.SetOutput(&message.DebugWriter{})
@@ -240,7 +244,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 	// TODO(mkcp): Remove message on logger release
 	spinner.Successf("Fetched info for %d images", imageCount)
-	l.Debug("done fetching info for images", "count", len(cfg.ImageList))
+	l.Debug("done fetching info for images", "count", len(cfg.ImageList), "duration", time.Since(imageFetchStart))
 
 	doneSaving := make(chan error)
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
@@ -302,6 +306,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	if err != nil {
 		return nil, err
 	}
+
+	l.Debug("done pulling images", "count", len(cfg.ImageList), "duration", time.Since(pullStart))
 
 	return fetched, nil
 }

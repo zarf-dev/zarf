@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"helm.sh/helm/v3/pkg/action"
@@ -164,6 +165,7 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 		"version", h.chart.Version,
 		"repo", h.chart.URL,
 	)
+	start := time.Now()
 	// TODO(mkcp): Remove message on logger release
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.chart.Name, h.chart.Version, h.chart.URL)
 	defer spinner.Stop()
@@ -267,7 +269,12 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 	}
 
 	spinner.Success()
-	l.Debug("done downloading helm chart")
+	l.Debug("done downloading helm chart",
+		"name", h.chart.Name,
+		"version", h.chart.Version,
+		"repo", h.chart.URL,
+		"duration", time.Since(start),
+	)
 	return nil
 }
 

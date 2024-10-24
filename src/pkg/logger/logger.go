@@ -67,8 +67,7 @@ func ParseLevel(s string) (Level, error) {
 
 // Format declares the kind of logging handler to use.
 // NOTE(mkcp): An empty Format defaults to "none" while logger is being worked on, but this is intended to use "text"
-//
-//	on release.
+// on release.
 type Format string
 
 // ToLower takes a Format string and converts it to lowercase for case-agnostic validation. Users shouldn't have to care

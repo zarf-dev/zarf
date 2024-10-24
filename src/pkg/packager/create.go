@@ -8,19 +8,23 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 )
 
 // Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
 func (p *Packager) Create(ctx context.Context) error {
 	l := logger.From(ctx)
 	l.Info("starting package create")
+	cStart := time.Now()
+
 	// Begin setup
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -34,6 +38,8 @@ func (p *Packager) Create(ctx context.Context) error {
 	if err := os.Chdir(baseDir); err != nil {
 		return fmt.Errorf("unable to access directory %q: %w", baseDir, err)
 	}
+	// TODO(mkcp): Remove message on logger release
+	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 	l.Info("using build directory", "baseDir", baseDir)
 
 	// Setup package creator
@@ -44,7 +50,6 @@ func (p *Packager) Create(ctx context.Context) error {
 	}
 
 	// Load package def
-	l.Debug("loading package definition", "layout", lo)
 	pkg, warnings, err := pc.LoadPackageDefinition(p.ctx, lo)
 	if err != nil {
 		return err
@@ -60,25 +65,27 @@ func (p *Packager) Create(ctx context.Context) error {
 		"description", pkg.Metadata.Description,
 	)
 
-	// TODO(mkcp): Remove interactive when
+	// TODO(mkcp): Remove interactive on logger release
 	if !p.confirmAction(config.ZarfCreateStage, warnings, nil) {
 		return fmt.Errorf("package creation canceled")
 	}
 
+	aStart := time.Now()
 	l.Debug("starting package assembly", "kind", pkg.Kind)
-	// TODO(mkcp): Migrate to logger
-	if err := pc.Assemble(p.ctx, p.layout, pkg.Components, pkg.Metadata.Architecture); err != nil {
+	if err := pc.Assemble(ctx, p.layout, pkg.Components, pkg.Metadata.Architecture); err != nil {
 		return err
 	}
+	l.Debug("done package assembly", "kind", pkg.Kind, "duration", time.Since(aStart))
 
 	// cd back for output
 	if err := os.Chdir(cwd); err != nil {
 		return err
 	}
 
-	// TODO(mkcp): migrate pc.Output to logger
-	if err = pc.Output(p.ctx, p.layout, &p.cfg.Pkg); err != nil {
+	if err = pc.Output(ctx, p.layout, &pkg); err != nil {
 		return err
 	}
+
+	l.Debug("done creating package", "kind", pkg.Kind, "duration", time.Since(cStart))
 	return nil
 }

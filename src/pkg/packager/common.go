@@ -98,6 +98,8 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 	if config.CommonOptions.TempDirectory != "" {
 		// If the cache directory is within the temp directory, warn the user
 		if strings.HasPrefix(cacheDir, tmpDir) {
+			// TODO(mkcp): Remove message on logger release
+			message.Warnf("The cache directory (%q) is within the temp directory (%q) and will be removed when the temp directory is cleaned up", config.CommonOptions.CachePath, config.CommonOptions.TempDirectory)
 			l.Warn("the cache directory is within the temp directory and will be removed when the temp directory is cleaned up", "cacheDir", cacheDir, "tmpDir", tmpDir)
 		}
 	}
@@ -116,6 +118,8 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 		if err != nil {
 			return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 		}
+		// TODO(mkcp): Remove message on logger release
+		message.Debug("Using temporary directory:", dir)
 		l.Debug("using temporary directory", "tmpDir", dir)
 		pkgr.layout = layout.New(dir)
 	}

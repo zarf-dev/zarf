@@ -13,8 +13,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/zarf-dev/zarf/src/pkg/logger"
-
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -22,6 +20,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -230,6 +229,9 @@ func (pp *PackagePaths) GenerateChecksums() (string, error) {
 // ArchivePackage creates an archive for a Zarf package.
 func (pp *PackagePaths) ArchivePackage(ctx context.Context, destinationTarball string, maxPackageSizeMB int) error {
 	l := logger.From(ctx)
+	// TODO(mkcp): Remove message on logger release
+	spinner := message.NewProgressSpinner("Writing %s to %s", pp.Base, destinationTarball)
+	defer spinner.Stop()
 	l.Info("archiving zarf package", "base", pp.Base, "destination", destinationTarball)
 
 	// Make the archive
@@ -237,13 +239,16 @@ func (pp *PackagePaths) ArchivePackage(ctx context.Context, destinationTarball s
 	if err := archiver.Archive(archiveSrc, destinationTarball); err != nil {
 		return fmt.Errorf("unable to create package: %w", err)
 	}
+	// TODO(mkcp): Remove message on logger release
+	spinner.Updatef("Wrote %s to %s", pp.Base, destinationTarball)
 	l.Debug("ArchivePackage wrote", "base", pp.Base, "destination", destinationTarball)
 
 	fi, err := os.Stat(destinationTarball)
 	if err != nil {
 		return fmt.Errorf("unable to read the package archive: %w", err)
 	}
-
+	// TODO(mkcp): Remove message on logger release
+	spinner.Successf("Package saved to %q", destinationTarball)
 	l.Debug("package saved", "destination", destinationTarball)
 
 	// Convert Megabytes to bytes.
@@ -254,42 +259,8 @@ func (pp *PackagePaths) ArchivePackage(ctx context.Context, destinationTarball s
 		if fi.Size()/int64(chunkSize) > 999 {
 			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
 		}
-		l.Info("package is larger than max, splitting into multiple files", "maxPackageSize", maxPackageSizeMB)
-		err := splitFile(destinationTarball, chunkSize)
-		if err != nil {
-			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
-		}
-	}
-	return nil
-}
-
-// ArchivePackageSpinner creates an archive for a Zarf package and handles displaying a spinner
-func (pp *PackagePaths) ArchivePackageSpinner(destinationTarball string, maxPackageSizeMB int) error {
-	spinner := message.NewProgressSpinner("Writing %s to %s", pp.Base, destinationTarball)
-	defer spinner.Stop()
-
-	// Make the archive
-	archiveSrc := []string{pp.Base + string(os.PathSeparator)}
-	if err := archiver.Archive(archiveSrc, destinationTarball); err != nil {
-		return fmt.Errorf("unable to create package: %w", err)
-	}
-	spinner.Updatef("Wrote %s to %s", pp.Base, destinationTarball)
-
-	fi, err := os.Stat(destinationTarball)
-	if err != nil {
-		return fmt.Errorf("unable to read the package archive: %w", err)
-	}
-	spinner.Successf("Package saved to %q", destinationTarball)
-
-	// Convert Megabytes to bytes.
-	chunkSize := maxPackageSizeMB * 1000 * 1000
-
-	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
-	if maxPackageSizeMB > 0 && fi.Size() > int64(chunkSize) {
-		if fi.Size()/int64(chunkSize) > 999 {
-			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
-		}
 		message.Notef("Package is larger than %dMB, splitting into multiple files", maxPackageSizeMB)
+		l.Info("package is larger than max, splitting into multiple files", "maxPackageSize", maxPackageSizeMB)
 		err := splitFile(destinationTarball, chunkSize)
 		if err != nil {
 			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)

@@ -208,7 +208,12 @@ func setupMessage(cfg messageCfg) error {
 	// HACK(mkcp): Discard message logs if feature is disabled. message calls InitializePTerm once in its init() fn so
 	//             this ends up being a messy solution.
 	if cfg.featureDisabled {
+		// Discard all* PTerm messages. *see below
 		message.InitializePTerm(io.Discard)
+		// Disable all progress bars and spinners
+		message.NoProgress = true
+		// Ensures no user input is needed while we maintain backwards compatibility with message
+		config.CommonOptions.Confirm = true
 		return nil
 	}
 

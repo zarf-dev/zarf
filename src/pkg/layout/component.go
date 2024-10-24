@@ -11,11 +11,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/zarf-dev/zarf/src/pkg/logger"
-
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/mholt/archiver/v3"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
@@ -65,6 +64,8 @@ func (c *Components) Archive(ctx context.Context, component v1alpha1.ZarfCompone
 	}
 	if size > 0 {
 		tb := fmt.Sprintf("%s.tar", base)
+		// TODO(mkcp): Remove message on logger release
+		message.Debugf("Archiving %q", name)
 		l.Debug("archiving component", "name", name)
 		if err := helpers.CreateReproducibleTarballFromDir(base, name, tb); err != nil {
 			return err
@@ -74,6 +75,8 @@ func (c *Components) Archive(ctx context.Context, component v1alpha1.ZarfCompone
 		}
 		c.Tarballs[name] = tb
 	} else {
+		// TODO(mkcp): Remove message on logger release
+		message.Debugf("Component %q is empty, skipping archiving", name)
 		l.Debug("component is empty, skipping archiving", "name", name)
 	}
 
