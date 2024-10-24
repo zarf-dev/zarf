@@ -473,12 +473,11 @@ func (p *Packager) setupState(ctx context.Context) error {
 		// YOLO mode, so minimal state needed
 		state.Distro = "YOLO"
 
-		// Try to create the zarf namespace
 		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := cluster.NewZarfManagedApplyNamespace(cluster.ZarfNamespaceName)
 		_, err = p.cluster.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
 		if err != nil {
-			return fmt.Errorf("unable to create the Zarf namespace: %w", err)
+			return fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
 	}
 
