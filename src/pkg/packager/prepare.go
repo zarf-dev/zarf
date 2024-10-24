@@ -317,7 +317,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 					spinner.Updatef("Looking up cosign artifacts for discovered images (%d/%d)", idx+1, len(imagesMap[component.Name]))
 					cosignArtifacts, err := utils.GetCosignArtifacts(image)
 					if err != nil {
-						return nil, fmt.Errorf("could not lookup the cosing artifacts for image %s: %w", image, err)
+						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}
 					cosignArtifactList = append(cosignArtifactList, cosignArtifacts...)
 				}
