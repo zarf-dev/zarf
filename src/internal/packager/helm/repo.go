@@ -8,9 +8,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"helm.sh/helm/v3/pkg/action"
@@ -38,7 +41,9 @@ func (h *Helm) PackageChart(ctx context.Context, cosignKeyPath string) error {
 		// check if the chart is a git url with a ref (if an error is returned url will be empty)
 		isGitURL := strings.HasSuffix(url, ".git")
 		if err != nil {
+			// TODO(mkcp): Remove message on logger release
 			message.Debugf("unable to parse the url, continuing with %s", h.chart.URL)
+			logger.From(ctx).Debug("unable to parse the url, continuing", "url", h.chart.URL)
 		}
 
 		if isGitURL {
@@ -68,6 +73,13 @@ func (h *Helm) PackageChart(ctx context.Context, cosignKeyPath string) error {
 
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
 func (h *Helm) PackageChartFromLocalFiles(ctx context.Context, cosignKeyPath string) error {
+	l := logger.From(ctx)
+	l.Info("processing local helm chart",
+		"name", h.chart.Name,
+		"version", h.chart.Version,
+		"path", h.chart.LocalPath,
+	)
+	// TODO(mkcp): Remove message on logger release
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.chart.Name, h.chart.Version, h.chart.LocalPath)
 	defer spinner.Stop()
 
@@ -94,7 +106,12 @@ func (h *Helm) PackageChartFromLocalFiles(ctx context.Context, cosignKeyPath str
 		saved = filepath.Join(temp, filepath.Base(h.chart.LocalPath))
 		err = helpers.CreatePathAndCopy(h.chart.LocalPath, saved)
 	}
-	defer os.RemoveAll(temp)
+	defer func(l *slog.Logger) {
+		err := os.RemoveAll(temp)
+		if err != nil {
+			l.Error(err.Error())
+		}
+	}(l)
 
 	if err != nil {
 		return fmt.Errorf("unable to save the archive and create the package %s: %w", saved, err)
@@ -108,11 +125,19 @@ func (h *Helm) PackageChartFromLocalFiles(ctx context.Context, cosignKeyPath str
 
 	spinner.Success()
 
+	l.Debug("done processing local helm chart",
+		"name", h.chart.Name,
+		"version", h.chart.Version,
+		"path", h.chart.LocalPath,
+	)
 	return nil
 }
 
 // PackageChartFromGit is a special implementation of chart archiving that supports the https://p1.dso.mil/#/products/big-bang/ model.
 func (h *Helm) PackageChartFromGit(ctx context.Context, cosignKeyPath string) error {
+	l := logger.From(ctx)
+	l.Info("processing helm chart", "name", h.chart.Name)
+	// TODO(mkcp): Remove message on logger release
 	spinner := message.NewProgressSpinner("Processing helm chart %s", h.chart.Name)
 	defer spinner.Stop()
 
@@ -121,7 +146,11 @@ func (h *Helm) PackageChartFromGit(ctx context.Context, cosignKeyPath string) er
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(gitPath)
+	defer func(l *slog.Logger) {
+		if err := os.RemoveAll(gitPath); err != nil {
+			l.Error(err.Error())
+		}
+	}(l)
 
 	// Set the directory for the chart and package it
 	h.chart.LocalPath = filepath.Join(gitPath, h.chart.GitPath)
@@ -130,6 +159,14 @@ func (h *Helm) PackageChartFromGit(ctx context.Context, cosignKeyPath string) er
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
 func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string) error {
+	l := logger.From(ctx)
+	l.Info("processing helm chart",
+		"name", h.chart.Name,
+		"version", h.chart.Version,
+		"repo", h.chart.URL,
+	)
+	start := time.Now()
+	// TODO(mkcp): Remove message on logger release
 	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from repo %s", h.chart.Name, h.chart.Version, h.chart.URL)
 	defer spinner.Stop()
 
@@ -146,7 +183,12 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 
 	// Not returning the error here since the repo file is only needed if we are pulling from a repo that requires authentication
 	if err != nil {
+		// TODO(mkcp): Remove message on logger release
 		message.Debugf("Unable to load the repo file at %q: %s", pull.Settings.RepositoryConfig, err.Error())
+		l.Debug("unable to load the repo file",
+			"path", pull.Settings.RepositoryConfig,
+			"error", err.Error(),
+		)
 	}
 
 	var username string
@@ -202,7 +244,12 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 	if err = helpers.CreateDirectory(temp, helpers.ReadWriteExecuteUser); err != nil {
 		return fmt.Errorf("unable to create helm chart temp directory: %w", err)
 	}
-	defer os.RemoveAll(temp)
+	defer func(l *slog.Logger) {
+		err := os.RemoveAll(temp)
+		if err != nil {
+			l.Error(err.Error())
+		}
+	}(l)
 
 	saved, _, err := chartDownloader.DownloadTo(chartURL, pull.Version, temp)
 	if err != nil {
@@ -222,7 +269,12 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 	}
 
 	spinner.Success()
-
+	l.Debug("done downloading helm chart",
+		"name", h.chart.Name,
+		"version", h.chart.Version,
+		"repo", h.chart.URL,
+		"duration", time.Since(start),
+	)
 	return nil
 }
 
@@ -304,13 +356,16 @@ func (h *Helm) buildChartDependencies() error {
 	var notFoundErr *downloader.ErrRepoNotFound
 	if errors.As(err, &notFoundErr) {
 		// If we encounter a repo not found error point the user to `zarf tools helm repo add`
+		// TODO(mkcp): Remove message on logger release
 		message.Warnf("%s. Please add the missing repo(s) via the following:", notFoundErr.Error())
 		for _, repository := range notFoundErr.Repos {
+			// TODO(mkcp): Remove message on logger release
 			message.ZarfCommand(fmt.Sprintf("tools helm repo add <your-repo-name> %s", repository))
 		}
 		return err
 	}
 	if err != nil {
+		// TODO(mkcp): Remove message on logger release
 		message.ZarfCommand("tools helm dependency build --verify")
 		message.Warnf("Unable to perform a rebuild of Helm dependencies: %s", err.Error())
 		return err

@@ -96,9 +96,9 @@ func (sc *SkeletonCreator) Assemble(_ context.Context, dst *layout.PackagePaths,
 // - writes the loaded zarf.yaml to disk
 //
 // - signs the package
-func (sc *SkeletonCreator) Output(_ context.Context, dst *layout.PackagePaths, pkg *v1alpha1.ZarfPackage) (err error) {
+func (sc *SkeletonCreator) Output(ctx context.Context, dst *layout.PackagePaths, pkg *v1alpha1.ZarfPackage) (err error) {
 	for _, component := range pkg.Components {
-		if err := dst.Components.Archive(component, false); err != nil {
+		if err := dst.Components.Archive(ctx, component, false); err != nil {
 			return err
 		}
 	}

@@ -14,6 +14,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/spf13/cobra"
@@ -47,11 +49,14 @@ var packageCreateCmd = &cobra.Command{
 	Short:   lang.CmdPackageCreateShort,
 	Long:    lang.CmdPackageCreateLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		l := logger.From(cmd.Context())
 		pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 
 		var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 		if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
+			// TODO(mkcp): Remove message on logger release
 			message.Warnf(lang.CmdPackageCreateCleanPathErr, config.ZarfDefaultCachePath)
+			l.Warn("invalid characters in Zarf cache path, using default", "cfg", config.ZarfDefaultCachePath, "default", config.ZarfDefaultCachePath)
 			config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 		}
 
@@ -59,13 +64,17 @@ var packageCreateCmd = &cobra.Command{
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(&pkgConfig,
+			packager.WithContext(cmd.Context()),
+		)
 		if err != nil {
 			return err
 		}
 		defer pkgClient.ClearTempPaths()
 
 		err = pkgClient.Create(cmd.Context())
+
+		// NOTE(mkcp): LintErrors are rendered with a table
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
 			common.PrintFindings(lintErr)
