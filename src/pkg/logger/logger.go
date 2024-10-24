@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/phsym/console-slog"
+
 	"github.com/golang-cz/devslog"
 )
 
@@ -63,7 +65,10 @@ func ParseLevel(s string) (Level, error) {
 	return l, nil
 }
 
-// Format declares the kind of logging handler to use. An empty Format defaults to text.
+// Format declares the kind of logging handler to use.
+// NOTE(mkcp): An empty Format defaults to "none" while logger is being worked on, but this is intended to use "text"
+//
+//	on release.
 type Format string
 
 // ToLower takes a Format string and converts it to lowercase for case-agnostic validation. Users shouldn't have to care
@@ -72,12 +77,13 @@ func (f Format) ToLower() Format {
 	return Format(strings.ToLower(string(f)))
 }
 
-// TODO(mkcp): Add dev format
 var (
 	// FormatText uses the standard slog TextHandler
 	FormatText Format = "text"
 	// FormatJSON uses the standard slog JSONHandler
 	FormatJSON Format = "json"
+	// FormatConsole uses console-slog to provide prettier colorful messages
+	FormatConsole Format = "console"
 	// FormatDev uses a verbose and prettyprinting devslog handler
 	FormatDev Format = "dev"
 	// FormatNone sends log writes to DestinationNone / io.Discard
@@ -131,18 +137,22 @@ func New(cfg Config) (*slog.Logger, error) {
 	opts.Level = slog.Level(cfg.Level)
 
 	switch cfg.Format.ToLower() {
-	// Use Text handler if no format provided
-	case "", FormatText:
+	case FormatText:
 		handler = slog.NewTextHandler(cfg.Destination, &opts)
 	case FormatJSON:
 		handler = slog.NewJSONHandler(cfg.Destination, &opts)
+	case FormatConsole:
+		handler = console.NewHandler(cfg.Destination, &console.HandlerOptions{
+			Level: slog.Level(cfg.Level),
+		})
 	case FormatDev:
 		opts.AddSource = true
 		handler = devslog.NewHandler(DestinationDefault, &devslog.Options{
 			HandlerOptions:  &opts,
 			NewLineAfterLog: true,
 		})
-	case FormatNone:
+	// Use discard handler if no format provided
+	case "", FormatNone:
 		handler = slog.NewTextHandler(DestinationNone, &slog.HandlerOptions{})
 	// Format not found, let's error out
 	default:
@@ -169,15 +179,18 @@ func WithContext(ctx context.Context, logger *slog.Logger) context.Context {
 func From(ctx context.Context) *slog.Logger {
 	// Grab value from key
 	log := ctx.Value(defaultCtxKey)
+	if log == nil {
+		h := slog.NewTextHandler(DestinationNone, &slog.HandlerOptions{})
+		return slog.New(h)
+	}
 
 	// Ensure our value is a *slog.Logger before we cast.
 	switch l := log.(type) {
 	case *slog.Logger:
 		return l
 	default:
-		// Value is empty or not a *slog.Logger, pass back a Discard logger.
-		h := slog.NewTextHandler(DestinationNone, &slog.HandlerOptions{})
-		return slog.New(h)
+		// Not reached
+		panic(fmt.Sprintf("unexpected value type on context key: %T", log))
 	}
 }
 

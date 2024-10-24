@@ -29,6 +29,7 @@ require (
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/goccy/go-yaml v1.12.0
 	github.com/gofrs/flock v0.12.1
+	github.com/golang-cz/devslog v0.0.11
 	github.com/google/go-containerregistry v0.20.2
 	github.com/gosuri/uitable v0.0.4
 	github.com/invopop/jsonschema v0.12.0
@@ -85,7 +86,6 @@ require (
 	github.com/go-jose/go-jose/v4 v4.0.4 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/gofrs/uuid v4.2.0+incompatible // indirect
-	github.com/golang-cz/devslog v0.0.11 // indirect
 	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 // indirect
 	github.com/hashicorp/golang-lru/arc/v2 v2.0.5 // indirect
@@ -96,6 +96,7 @@ require (
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/onsi/gomega v1.34.1 // indirect
+	github.com/phsym/console-slog v0.3.1 // indirect
 	github.com/redis/go-redis/extra/rediscmd/v9 v9.0.5 // indirect
 	github.com/redis/go-redis/extra/redisotel/v9 v9.0.5 // indirect
 	github.com/redis/go-redis/v9 v9.6.1 // indirect
