@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"io/fs"
 	"maps"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -60,9 +62,12 @@ func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
 	return nil
 }
 
-// Pull pulls all of the images from the given config.
+// Pull pulls all images from the given config.
 func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, error) {
+	l := logger.From(ctx)
 	var longer string
+	pullStart := time.Now()
+
 	imageCount := len(cfg.ImageList)
 	// Give some additional user feedback on larger image sets
 	if imageCount > 15 {
@@ -80,8 +85,19 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		return nil, err
 	}
 
+	// Give some additional user feedback on larger image sets
+	imageFetchStart := time.Now()
+	// TODO(mkcp): Remove message on logger release
 	spinner := message.NewProgressSpinner("Fetching info for %d images. %s", imageCount, longer)
 	defer spinner.Stop()
+	switch c := len(cfg.ImageList); {
+	case c > 15:
+		l.Info("fetching info for images. This step may take a couple of minutes to complete", "count", c, "destination", cfg.DestinationDirectory)
+	case c > 5:
+		l.Info("fetching info for images. This step may take several seconds to complete", "count", c, "destination", cfg.DestinationDirectory)
+	default:
+		l.Info("fetching info for images", "count", c, "destination", cfg.DestinationDirectory)
+	}
 
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
@@ -101,7 +117,9 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		refInfo := refInfo
 		eg.Go(func() error {
 			idx := counter.Add(1)
+			// TODO(mkcp): Remove message on logger release
 			spinner.Updatef("Fetching image info (%d of %d)", idx, imageCount)
+			l.Info("fetching image info", "name", refInfo.Name)
 
 			ref := refInfo.Reference
 			for k, v := range cfg.RegistryOverrides {
@@ -130,6 +148,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 						return fmt.Errorf("rate limited by registry: %w", err)
 					}
 
+					// TODO(mkcp): Remove message on logger release
 					message.Warnf("Falling back to local 'docker', failed to find the manifest on a remote: %s", err.Error())
 
 					// Attempt to connect to the local docker daemon.
@@ -221,11 +240,15 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		return nil, err
 	}
 
+	// TODO(mkcp): Remove message on logger release
 	spinner.Successf("Fetched info for %d images", imageCount)
+	l.Debug("done fetching info for images", "count", len(cfg.ImageList), "duration", time.Since(imageFetchStart))
 
 	doneSaving := make(chan error)
 	updateText := fmt.Sprintf("Pulling %d images", imageCount)
+	// TODO(mkcp): Remove progress bar on logger release
 	go utils.RenderProgressBarForLocalDirWrite(cfg.DestinationDirectory, totalBytes.Load(), doneSaving, updateText, updateText)
+	l.Info("pulling images", "count", len(cfg.ImageList))
 
 	toPull := maps.Clone(fetched)
 
@@ -237,7 +260,9 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		return err
 	}, retry.Context(ctx), retry.Attempts(2))
 	if err != nil {
+		// TODO(mkcp): Remove message on logger release
 		message.Warnf("Failed to save images in parallel, falling back to sequential save: %s", err.Error())
+		l.Warn("failed to save images in parallel, falling back to sequential save", "error", err.Error())
 		err = retry.Do(func() error {
 			saved, err := SaveSequential(ctx, cranePath, toPull)
 			for k := range saved {
@@ -251,6 +276,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	}
 
 	// Send a signal to the progress bar that we're done and wait for the thread to finish
+	// TODO(mkcp): Remove progress bar on logger release
 	doneSaving <- nil
 	<-doneSaving
 
@@ -278,6 +304,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	if err != nil {
 		return nil, err
 	}
+
+	l.Debug("done pulling images", "count", len(cfg.ImageList), "duration", time.Since(pullStart))
 
 	return fetched, nil
 }
