@@ -18,7 +18,6 @@ components:
         after:
           - cmd: cat temp/include-files/simple.txt
           - cmd: cat temp/include-files/something.yaml
-          - cmd: rm -r temp
   - name: files
     required: true
     files:
@@ -28,4 +27,3 @@ components:
       onDeploy:
         after:
           - cmd: cat temp/requirements.txt
-          - cmd: rm -r temp
