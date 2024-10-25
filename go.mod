@@ -36,7 +36,7 @@ require (
 	github.com/moby/moby v27.3.1+incompatible
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.20.4
+	github.com/prometheus/client_golang v1.20.5
 	github.com/pterm/pterm v0.12.79
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3
 	github.com/sigstore/cosign/v2 v2.4.1
@@ -56,9 +56,9 @@ require (
 	k8s.io/api v0.31.2
 	k8s.io/apimachinery v0.31.2
 	k8s.io/client-go v0.31.2
-	k8s.io/component-base v0.31.1
+	k8s.io/component-base v0.31.2
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kubectl v0.31.1
+	k8s.io/kubectl v0.31.2
 	oras.land/oras-go/v2 v2.5.0
 	sigs.k8s.io/cli-utils v0.37.2
 	sigs.k8s.io/kustomize/api v0.18.0
@@ -543,17 +543,17 @@ require (
 	gorm.io/gorm v1.25.9 // indirect
 	k8s.io/apiextensions-apiserver v0.31.1 // indirect
 	k8s.io/apiserver v0.31.1 // indirect
-	k8s.io/cli-runtime v0.31.1 // indirect
-	k8s.io/component-helpers v0.31.1 // indirect
+	k8s.io/cli-runtime v0.31.2 // indirect
+	k8s.io/component-helpers v0.31.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20240816214639-573285566f34 // indirect
-	k8s.io/metrics v0.31.1 // indirect
+	k8s.io/metrics v0.31.2 // indirect
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
 	modernc.org/libc v1.55.3 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
 	modernc.org/sqlite v1.33.1 // indirect
 	oras.land/oras-go v1.2.5 // indirect
-	sigs.k8s.io/controller-runtime v0.19.0
+	sigs.k8s.io/controller-runtime v0.19.1
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kustomize/kustomize/v5 v5.5.0 // indirect
 	sigs.k8s.io/release-utils v0.8.4 // indirect
