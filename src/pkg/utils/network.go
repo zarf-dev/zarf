@@ -125,8 +125,7 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 	// Copy response body to file
 	if _, err = io.Copy(destinationFile, reader); err != nil {
 		progressBar.Failf("Unable to save the file %s: %s", destinationFile.Name(), err.Error())
-		l.Error("unable to save the file %s: %s", destinationFile.Name(), err.Error())
-		return err
+		return fmt.Errorf("unable to save the file %s: %w", destinationFile.Name(), err)
 	}
 	progressBar.Successf("Downloaded %s", url)
 	l.Debug("download successful", "url", url, "size", resp.ContentLength, "duration", time.Since(start))

@@ -75,7 +75,7 @@ func (p *Packager) Create(ctx context.Context) error {
 	if err := pc.Assemble(ctx, p.layout, pkg.Components, pkg.Metadata.Architecture); err != nil {
 		return err
 	}
-	l.Debug("done package assembly", "kind", pkg.Kind, "duration", time.Since(aStart))
+	l.Debug("done assembling package", "kind", pkg.Kind, "duration", time.Since(aStart))
 
 	// cd back for output
 	if err := os.Chdir(cwd); err != nil {

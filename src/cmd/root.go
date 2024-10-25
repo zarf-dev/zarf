@@ -127,14 +127,22 @@ func Execute(ctx context.Context) {
 	if err == nil {
 		return
 	}
+
+	// Check if we need to use the default err printer
 	defaultPrintCmds := []string{"helm", "yq", "kubectl"}
 	comps := strings.Split(cmd.CommandPath(), " ")
 	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
 		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
-	} else {
-		errParagraph := message.Paragraph(err.Error())
-		pterm.Error.Println(errParagraph)
+		os.Exit(1)
 	}
+
+	// TODO(mkcp): Remove message on logger release
+	errParagraph := message.Paragraph(err.Error())
+	pterm.Error.Println(errParagraph)
+
+	// NOTE(mkcp): The default logger is set with user flags downstream in rootCmd's preRun func, so we don't have
+	// access to it on Execute's ctx.
+	logger.Default().Error(err.Error())
 	os.Exit(1)
 }
 

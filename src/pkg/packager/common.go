@@ -131,7 +131,10 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 func (p *Packager) ClearTempPaths() {
 	// Remove the temp directory
 	l := logger.From(p.ctx)
-	l.Debug("clearing temp paths")
+	l.Debug("clearing temp paths",
+		"basePath", p.layout.Base,
+		"SBOMDir", layout.SBOMDir,
+	)
 	err := os.RemoveAll(p.layout.Base)
 	if err != nil {
 		l.Error(err.Error(), "basePath", p.layout.Base)

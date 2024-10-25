@@ -480,7 +480,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 			}
 		}
 		spinner.Success()
-		l.Debug("done loading data injections", "duration", injectStart)
+		l.Debug("done loading data injections", "duration", time.Since(injectStart))
 	}
 
 	// Process k8s manifests
@@ -536,7 +536,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 			}
 		}
 		spinner.Success()
-		l.Debug("done building k8s manifests",
+		l.Debug("done processing k8s manifests",
 			"component", component.Name,
 			"duration", time.Since(manifestStart))
 	}

@@ -69,7 +69,6 @@ func Catalog(ctx context.Context, componentSBOMs map[string]*layout.ComponentSBO
 		outputDir:  paths.SBOMs.Path,
 	}
 	defer builder.spinner.Stop()
-	l.Info("creating SBOMs for images and components with files", "images", imageCount, "components", componentCount)
 
 	// Ensure the sbom directory exists
 	_ = helpers.CreateDirectory(builder.outputDir, helpers.ReadWriteExecuteUser)
@@ -86,7 +85,7 @@ func Catalog(ctx context.Context, componentSBOMs map[string]*layout.ComponentSBO
 
 	// Generate SBOM for each image
 	currImage := 1
-	l.Info("creating SBOMs for images", "images", imageCount)
+	l.Info("creating SBOMs for images", "count", imageCount)
 	for _, refInfo := range imageList {
 		// TODO(mkcp): Remove message on logger release
 		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, refInfo.Reference)
@@ -127,7 +126,7 @@ func Catalog(ctx context.Context, componentSBOMs map[string]*layout.ComponentSBO
 	currComponent := 1
 
 	// Generate SBOM for each component
-	l.Info("creating SBOMs for components", "components", componentCount)
+	l.Info("creating SBOMs for components", "count", componentCount)
 	for component := range componentSBOMs {
 		// TODO(mkcp): Remove message on logger release
 		builder.spinner.Updatef("Creating component file SBOMs (%d of %d): %s", currComponent, componentCount, component)

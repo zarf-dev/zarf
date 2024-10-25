@@ -89,9 +89,6 @@ var (
 	FormatNone Format = "none"
 )
 
-// More printers would be great, like dev format https://github.com/golang-cz/devslog
-// and a pretty console slog https://github.com/phsym/console-slog
-
 // Destination declares an io.Writer to send logs to.
 type Destination io.Writer
 

@@ -93,10 +93,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	switch c := len(cfg.ImageList); {
 	case c > 15:
 		l.Info("fetching info for images. This step may take a couple of minutes to complete", "count", c, "destination", cfg.DestinationDirectory)
-		break
 	case c > 5:
 		l.Info("fetching info for images. This step may take several seconds to complete", "count", c, "destination", cfg.DestinationDirectory)
-		break
 	default:
 		l.Info("fetching info for images", "count", c, "destination", cfg.DestinationDirectory)
 	}
