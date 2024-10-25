@@ -78,8 +78,7 @@ func Catalog(ctx context.Context, componentSBOMs map[string]*layout.ComponentSBO
 	if err != nil {
 		// TODO(mkcp): Remove message on logger release
 		builder.spinner.Errorf(err, "Unable to generate the SBOM image list")
-		l.Error("unable to generate the SBOM image list", "error", err.Error())
-		return err
+		return fmt.Errorf("unable to generate the SBOM image list: %w", err)
 	}
 	builder.jsonList = json
 
@@ -96,28 +95,20 @@ func Catalog(ctx context.Context, componentSBOMs map[string]*layout.ComponentSBO
 		if err != nil {
 			// TODO(mkcp): Remove message on logger release
 			builder.spinner.Errorf(err, "Unable to load the image to generate an SBOM")
-			l.Error("unable to load the image to generate an SBOM", "error", err.Error())
-			return err
+			return fmt.Errorf("unable to load the image to generate an SBOM: %w", err)
 		}
 
 		jsonData, err := builder.createImageSBOM(ctx, img, refInfo.Reference)
 		if err != nil {
 			// TODO(mkcp): Remove message on logger release
 			builder.spinner.Errorf(err, "Unable to create SBOM for image %s", refInfo.Reference)
-			l.Error("unable to create SBOM for image",
-				"reference", refInfo.Reference,
-				"error", err.Error(),
-			)
-			return err
+			return fmt.Errorf("unable to create SBOM for image=%s: %w", refInfo.Reference, err)
 		}
 
 		if err = builder.createSBOMViewerAsset(refInfo.Reference, jsonData); err != nil {
 			// TODO(mkcp): Remove message on logger release
 			builder.spinner.Errorf(err, "Unable to create SBOM viewer for image %s", refInfo.Reference)
-			l.Error("unable to create SBOM viewer for image",
-				"reference", refInfo.Reference,
-			)
-			return err
+			return fmt.Errorf("unable to create SBOM viewer for image=%s: %w", refInfo.Reference, err)
 		}
 
 		currImage++
@@ -143,15 +134,13 @@ func Catalog(ctx context.Context, componentSBOMs map[string]*layout.ComponentSBO
 		if err != nil {
 			// TODO(mkcp): Remove message on logger release
 			builder.spinner.Errorf(err, "Unable to create SBOM for component %s", component)
-			l.Error("unable to create SBOM for component", "component", component, "error", err.Error())
-			return err
+			return fmt.Errorf("unable to create SBOM for component=%s: %w", component, err)
 		}
 
 		if err = builder.createSBOMViewerAsset(fmt.Sprintf("%s%s", componentPrefix, component), jsonData); err != nil {
 			// TODO(mkcp): Remove message on logger release
 			builder.spinner.Errorf(err, "Unable to create SBOM viewer for component %s", component)
-			l.Error("unable to create SBOM for component", "component", component, "error", err.Error())
-			return err
+			return fmt.Errorf("unable to create SBOM for component=%s: %w", component, err)
 		}
 
 		currComponent++
@@ -162,16 +151,14 @@ func Catalog(ctx context.Context, componentSBOMs map[string]*layout.ComponentSBO
 		if err := builder.createSBOMCompareAsset(); err != nil {
 			// TODO(mkcp): Remove message on logger release
 			builder.spinner.Errorf(err, "Unable to create SBOM compare tool")
-			l.Error("unable to create SBOM compare tool", "error", err.Error())
-			return err
+			return fmt.Errorf("unable to create SBOM compare tool: %w", err)
 		}
 	}
 
 	if err := paths.SBOMs.Archive(); err != nil {
 		// TODO(mkcp): Remove message on logger release
 		builder.spinner.Errorf(err, "Unable to archive SBOMs")
-		l.Error("unable to archive SBOMs", "error", err.Error())
-		return err
+		return fmt.Errorf("unable to archive SBOMs: %w", err)
 	}
 
 	// TODO(mkcp): Remove message on logger release
