@@ -28,12 +28,12 @@ func TestLoadPackage(t *testing.T) {
 		{
 			name:   "tarball",
 			source: "./testdata/zarf-package-test-amd64-0.0.1.tar.zst",
-			shasum: "307294e3a066cebea6f04772c2ba31210b2753b40b0d5da86a1983c29c5545dd",
+			shasum: "bef73d652f004d214d5cf9e00195293f7ae8390b8ff6ed45e39c2c9eb622b873",
 		},
 		{
 			name:   "split",
 			source: "./testdata/zarf-package-test-amd64-0.0.1.tar.zst.part000",
-			shasum: "6c0de217e3eeff224679ec0a26751655759a30f4aae7fbe793ca1617ddfc4228",
+			shasum: "9c021ef9f62f58cca6dc01641521f372f387cc54c0d959a4f3861c6c636d98f1",
 		},
 	}
 	for _, tt := range tests {
@@ -48,14 +48,12 @@ func TestLoadPackage(t *testing.T) {
 					SkipSignatureValidation: false,
 					Filter:                  filters.Empty(),
 				}
-				pkgPaths, err := LoadPackage(ctx, opt)
+				pkgLayout, err := LoadPackage(ctx, opt)
 				require.NoError(t, err)
 
-				pkg, _, err := pkgPaths.ReadZarfYAML()
-				require.NoError(t, err)
-				require.Equal(t, "test", pkg.Metadata.Name)
-				require.Equal(t, "0.0.1", pkg.Metadata.Version)
-				require.Len(t, pkg.Components, 1)
+				require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
+				require.Equal(t, "0.0.1", pkgLayout.Pkg.Metadata.Version)
+				require.Len(t, pkgLayout.Pkg.Components, 1)
 			}
 
 			opt := LoadOptions{
@@ -152,7 +150,7 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	c := &cluster.Cluster{
 		Clientset: fake.NewSimpleClientset(),
 	}
-	_, err = c.RecordPackageDeployment(ctx, pkg, nil, 1)
+	_, err = c.RecordPackageDeployment(ctx, pkg, nil)
 	require.NoError(t, err)
 	pkg, err = packageFromSourceOrCluster(ctx, c, "test", false, "")
 	require.NoError(t, err)

@@ -32,6 +32,8 @@ import (
 
 var extractPath string
 
+var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, types.ZarfInClusterContainerRegistryNodePort)
+
 var devCmd = &cobra.Command{
 	Use:     "dev",
 	Aliases: []string{"prepare", "prep"},
@@ -44,7 +46,7 @@ var devDeployCmd = &cobra.Command{
 	Short: lang.CmdDevDeployShort,
 	Long:  lang.CmdDevDeployLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
+		pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
@@ -148,14 +150,13 @@ var devSha256SumCmd = &cobra.Command{
 	Aliases: []string{"s"},
 	Short:   lang.CmdDevSha256sumShort,
 	Args:    cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		hashErr := errors.New("unable to compute the SHA256SUM hash")
 
 		fileName := args[0]
 
 		var tmp string
 		var data io.ReadCloser
-		var err error
 
 		if helpers.IsURL(fileName) {
 			message.Warn(lang.CmdDevSha256sumRemoteWarning)
@@ -182,7 +183,10 @@ var devSha256SumCmd = &cobra.Command{
 
 			fileName = downloadPath
 
-			defer os.RemoveAll(tmp)
+			defer func(path string) {
+				errRemove := os.RemoveAll(path)
+				err = errors.Join(err, errRemove)
+			}(tmp)
 		}
 
 		if extractPath != "" {
@@ -191,7 +195,10 @@ var devSha256SumCmd = &cobra.Command{
 				if err != nil {
 					return errors.Join(hashErr, err)
 				}
-				defer os.RemoveAll(tmp)
+				defer func(path string) {
+					errRemove := os.RemoveAll(path)
+					err = errors.Join(err, errRemove)
+				}(tmp)
 			}
 
 			extractedFile := filepath.Join(tmp, extractPath)
@@ -208,7 +215,10 @@ var devSha256SumCmd = &cobra.Command{
 		if err != nil {
 			return errors.Join(hashErr, err)
 		}
-		defer data.Close()
+		defer func(data io.ReadCloser) {
+			errClose := data.Close()
+			err = errors.Join(err, errClose)
+		}(data)
 
 		hash, err := helpers.GetSHA256Hash(data)
 		if err != nil {
@@ -226,7 +236,7 @@ var devFindImagesCmd = &cobra.Command{
 	Short:   lang.CmdDevFindImagesShort,
 	Long:    lang.CmdDevFindImagesLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
+		pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 
 		v := common.GetViper()
 
@@ -281,7 +291,7 @@ var devLintCmd = &cobra.Command{
 	Long:    lang.CmdDevLintLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		config.CommonOptions.Confirm = true
-		pkgConfig.CreateOpts.BaseDir = common.SetBaseDirectory(args)
+		pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
@@ -323,8 +333,14 @@ func init() {
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
 
-	devFindImagesCmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
-	devFindImagesCmd.Flags().MarkHidden("set")
+	err := devFindImagesCmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
+	if err != nil {
+		message.Debug("Unable to mark dev-find-images flag as set", "error", err)
+	}
+	err = devFindImagesCmd.Flags().MarkHidden("set")
+	if err != nil {
+		message.Debug("Unable to mark dev-find-images flag as hidden", "error", err)
+	}
 	devFindImagesCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
@@ -335,8 +351,7 @@ func init() {
 	// skip searching cosign artifacts in find images
 	devFindImagesCmd.Flags().BoolVar(&pkgConfig.FindImagesOpts.SkipCosign, "skip-cosign", false, lang.CmdDevFlagFindImagesSkipCosign)
 
-	defaultRegistry := fmt.Sprintf("%s:%d", helpers.IPV4Localhost, types.ZarfInClusterContainerRegistryNodePort)
-	devFindImagesCmd.Flags().StringVar(&pkgConfig.FindImagesOpts.RegistryURL, "registry-url", defaultRegistry, lang.CmdDevFlagFindImagesRegistry)
+	devFindImagesCmd.Flags().StringVar(&pkgConfig.FindImagesOpts.RegistryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
 
 	devLintCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
 	devLintCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
@@ -350,11 +365,16 @@ func bindDevDeployFlags(v *viper.Viper) {
 	devDeployFlags.StringToStringVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringMapString(common.VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
 	devDeployFlags.StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
+	devDeployFlags.StringVar(&pkgConfig.DeployOpts.RegistryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
+	err := devDeployFlags.MarkHidden("registry-url")
+	if err != nil {
+		message.Debug("Unable to mark dev-deploy flag as hidden", "error", err)
+	}
+
 	devDeployFlags.StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 
 	// Always require adopt-existing-resources flag (no viper)
 	devDeployFlags.BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	devDeployFlags.BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
 	devDeployFlags.DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	devDeployFlags.IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)

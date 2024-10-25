@@ -33,7 +33,7 @@ func (suite *PullInspectTestSuite) SetupSuite() {
 
 func (suite *PullInspectTestSuite) TearDownSuite() {
 	local := fmt.Sprintf("zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
-	e2e.CleanFiles(local)
+	e2e.CleanFiles(suite.T(), local)
 }
 
 func (suite *PullInspectTestSuite) Test_0_Pull() {

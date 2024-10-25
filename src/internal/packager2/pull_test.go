@@ -38,7 +38,7 @@ func TestPull(t *testing.T) {
 	})
 
 	dir := t.TempDir()
-	shasum := "307294e3a066cebea6f04772c2ba31210b2753b40b0d5da86a1983c29c5545dd"
+	shasum := "bef73d652f004d214d5cf9e00195293f7ae8390b8ff6ed45e39c2c9eb622b873"
 	err := Pull(ctx, srv.URL, dir, shasum, filters.Empty())
 	require.NoError(t, err)
 

@@ -29,18 +29,24 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	t.Log("Upgrade: Previously Built Zarf Package")
 
 	// For the upgrade test, podinfo-upgrade should already be in the cluster (version 6.3.3) (see .github/workflows/test-upgrade.yml)
-	kubectlOut, _, _ := kubectl(t, "-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade")
+	kubectlOut, _, err := kubectl(t, "-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade")
+	require.NoError(t, err)
 	require.Contains(t, kubectlOut, "successfully rolled out")
-	kubectlOut, _, _ = kubectl(t, "-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}")
+	kubectlOut, _, err = kubectl(t, "-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}")
+	require.NoError(t, err)
 	require.Contains(t, kubectlOut, "6.3.3")
 
 	// Verify that the private-registry secret and private-git-server secret in the podinfo-upgrade namespace are the same after re-init
 	// This tests that `zarf tools update-creds` successfully updated the other namespace
-	zarfRegistrySecret, _, _ := kubectl(t, "-n=zarf", "get", "secret", "private-registry", "-o", "jsonpath={.data}")
-	podinfoRegistrySecret, _, _ := kubectl(t, "-n=podinfo-upgrade", "get", "secret", "private-registry", "-o", "jsonpath={.data}")
+	zarfRegistrySecret, _, err := kubectl(t, "-n=zarf", "get", "secret", "private-registry", "-o", "jsonpath={.data}")
+	require.NoError(t, err)
+	podinfoRegistrySecret, _, err := kubectl(t, "-n=podinfo-upgrade", "get", "secret", "private-registry", "-o", "jsonpath={.data}")
+	require.NoError(t, err)
 	require.Equal(t, zarfRegistrySecret, podinfoRegistrySecret, "the zarf registry secret and podinfo-upgrade registry secret did not match")
-	zarfGitServerSecret, _, _ := kubectl(t, "-n=zarf", "get", "secret", "private-git-server", "-o", "jsonpath={.data}")
-	podinfoGitServerSecret, _, _ := kubectl(t, "-n=podinfo-upgrade", "get", "secret", "private-git-server", "-o", "jsonpath={.data}")
+	zarfGitServerSecret, _, err := kubectl(t, "-n=zarf", "get", "secret", "private-git-server", "-o", "jsonpath={.data}")
+	require.NoError(t, err)
+	podinfoGitServerSecret, _, err := kubectl(t, "-n=podinfo-upgrade", "get", "secret", "private-git-server", "-o", "jsonpath={.data}")
+	require.NoError(t, err)
 	require.Equal(t, zarfGitServerSecret, podinfoGitServerSecret, "the zarf git server secret and podinfo-upgrade git server secret did not match")
 
 	// We also expect a 6.3.4 package to have been previously built
@@ -56,9 +62,11 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	require.Contains(t, stdErr, "-----BEGIN PUBLIC KEY-----")
 
 	// Verify that podinfo-upgrade successfully deploys in the cluster (version 6.3.4)
-	kubectlOut, _, _ = kubectl(t, "-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade")
+	kubectlOut, _, err = kubectl(t, "-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade")
+	require.NoError(t, err)
 	require.Contains(t, kubectlOut, "successfully rolled out")
-	kubectlOut, _, _ = kubectl(t, "-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}")
+	kubectlOut, _, err = kubectl(t, "-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}")
+	require.NoError(t, err)
 	require.Contains(t, kubectlOut, "6.3.4")
 
 	// We also want to build a new package.
@@ -75,9 +83,11 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 	require.Contains(t, stdErr, "-----BEGIN PUBLIC KEY-----")
 
 	// Verify that podinfo-upgrade successfully deploys in the cluster (version 6.3.5)
-	kubectlOut, _, _ = kubectl(t, "-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade")
+	kubectlOut, _, err = kubectl(t, "-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade")
+	require.NoError(t, err)
 	require.Contains(t, kubectlOut, "successfully rolled out")
-	kubectlOut, _, _ = kubectl(t, "-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}")
+	kubectlOut, _, err = kubectl(t, "-n=podinfo-upgrade", "get", "deployment", "podinfo-upgrade", "-o=jsonpath={.metadata.labels}}")
+	require.NoError(t, err)
 	require.Contains(t, kubectlOut, "6.3.5")
 
 	// Remove the package.

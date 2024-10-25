@@ -32,8 +32,8 @@ View all init options w/ [`zarf init --help`](/commands/zarf_init/).
 
 An 'init' package requires a series of specially named, and configured components to ensure the cluster is correctly initialized. These components are:
 
-- [`zarf-injector`](#zarf-injector)
-- [`zarf-seed-registry`](#zarf-seed-registry)
+- [`zarf-injector`](#zarf-injector-and-zarf-seed-registry)
+- [`zarf-seed-registry`](#zarf-injector-and-zarf-seed-registry)
 - [`zarf-registry`](#zarf-registry)
 - [`zarf-agent`](#zarf-agent)
 
@@ -156,12 +156,6 @@ The `zarf-agent` is responsible for modifying [Kubernetes PodSpec](https://kuber
 The `zarf-agent` modifies the following [flux](https://fluxcd.io/flux/) resources: [GitRepository](https://fluxcd.io/docs/components/source/gitrepositories/), [OCIRepository](https://fluxcd.io/flux/components/source/ocirepositories/), & [HelmRepository](https://fluxcd.io/flux/components/source/helmrepositories/) to point to the local Git Server or Zarf Registry. HelmRepositories are only modified if the `type` key is set to `oci`.
 
 > Support for mutating OCIRepository and HelmRepository objects is in [`alpha`](/roadmap#alpha) and should be tested on non-production clusters before being deployed to production clusters.
-
-:::caution
-
-Due to a bug in helm, HelmRepositories with an insecure registry must use IP address instead of a hostname. This is not an issue with the internal Zarf registry, which is always an IP address, but will cause Flux HelmRepositories to break if Zarf is using an external http registry with a hostname.
-
-:::
 
 The `zarf-agent` modifies [ArgoCD applications](https://argo-cd.readthedocs.io/en/stable/user-guide/application-specification/) & [ArgoCD Repositories](https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/)  objects to point to the local Git Server.
 

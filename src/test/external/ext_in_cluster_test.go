@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -88,7 +88,7 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 	}
 	waitCtx, waitCancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer waitCancel()
-	err = pkgkubernetes.WaitForReady(waitCtx, c.Watcher, objs)
+	err = healthchecks.WaitForReady(waitCtx, c.Watcher, objs)
 	suite.NoError(err)
 }
 
@@ -154,10 +154,14 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	// Use Zarf to initialize the cluster
 	initArgs := []string{"init", "--confirm"}
 	initArgs = append(initArgs, inClusterInitCredentialArgs...)
+
 	err := exec.CmdWithPrint(zarfBinPath, initArgs...)
 	suite.NoError(err, "unable to initialize the k8s server with zarf")
+
 	temp := suite.T().TempDir()
-	defer os.Remove(temp)
+	defer func() {
+		suite.NoError(os.RemoveAll(temp), "failed to clean up tempdir")
+	}()
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
 
 	// Deploy the flux example package
@@ -195,7 +199,7 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	}
 	waitCtx, waitCancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer waitCancel()
-	err = pkgkubernetes.WaitForReady(waitCtx, c.Watcher, objs)
+	err = healthchecks.WaitForReady(waitCtx, c.Watcher, objs)
 	suite.NoError(err)
 
 	_, _, err = exec.CmdWithTesting(suite.T(), exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")

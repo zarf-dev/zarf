@@ -7,12 +7,15 @@ package packager2
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // ZarfInspectOptions tracks the user-defined preferences during a package inspection.
@@ -35,7 +38,7 @@ func Inspect(ctx context.Context, opt ZarfInspectOptions) (v1alpha1.ZarfPackage,
 	}
 
 	if getSBOM(opt.ViewSBOM, opt.SBOMOutputDir) {
-		err = handleSBOMOptions(ctx, pkg, opt)
+		err = handleSBOMOptions(ctx, opt)
 		if err != nil {
 			return pkg, err
 		}
@@ -75,7 +78,7 @@ func getPackageMetadata(ctx context.Context, opt ZarfInspectOptions) (v1alpha1.Z
 	return pkg, nil
 }
 
-func handleSBOMOptions(ctx context.Context, pkg v1alpha1.ZarfPackage, opt ZarfInspectOptions) error {
+func handleSBOMOptions(ctx context.Context, opt ZarfInspectOptions) error {
 	loadOpt := LoadOptions{
 		Source:                  opt.Source,
 		SkipSignatureValidation: opt.SkipSignatureValidation,
@@ -86,23 +89,25 @@ func handleSBOMOptions(ctx context.Context, pkg v1alpha1.ZarfPackage, opt ZarfIn
 	if err != nil {
 		return err
 	}
-	if opt.SBOMOutputDir != "" {
-		out, err := layout.SBOMs.OutputSBOMFiles(opt.SBOMOutputDir, pkg.Metadata.Name)
+
+	sbomDirPath := opt.SBOMOutputDir
+	if sbomDirPath == "" {
+		tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 		if err != nil {
 			return err
 		}
-		if opt.ViewSBOM {
-			err := sbom.ViewSBOMFiles(out)
-			if err != nil {
-				return err
-			}
-		}
-	} else if opt.ViewSBOM {
-		err := sbom.ViewSBOMFiles(layout.SBOMs.Path)
-		if err != nil {
-			return err
-		}
+		defer os.RemoveAll(tmpDir)
+		sbomDirPath = tmpDir
+	}
+	sbomPath, err := layout.GetSBOM(sbomDirPath)
+	if err != nil {
 		return err
+	}
+	if opt.ViewSBOM {
+		err := sbom.ViewSBOMFiles(sbomPath)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

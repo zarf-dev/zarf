@@ -278,7 +278,6 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	CmdPackageDeployFlagComponents                     = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported."
 	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote https package."
 	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v1.0.0 please use the --key flag instead."
-	CmdPackageDeployFlagSkipWebhooks                   = "[alpha] Skip waiting for external webhooks to execute as each package component is deployed"
 	CmdPackageDeployFlagTimeout                        = "Timeout for health checks and Helm operations such as installs and rollbacks"
 	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster only has the %s architecture(s). These architectures must be compatible when \"images\" are present"
 	CmdPackageDeployValidateLastNonBreakingVersionWarn = "The version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
@@ -355,7 +354,7 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdDevFlagRepoChartPath        = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdDevFlagGitAccount           = "User or organization name for the git account that the repos are created under."
 	CmdDevFlagKubeVersion          = "Override the default helm template KubeVersion when performing a package chart template"
-	CmdDevFlagFindImagesRegistry   = "Override the ###ZARF_REGISTRY### value"
+	CmdDevFlagRegistry             = "Override the ###ZARF_REGISTRY### value"
 	CmdDevFlagFindImagesWhy        = "Prints the source manifest for the specified image"
 	CmdDevFlagFindImagesSkipCosign = "Skip searching for cosign artifacts related to discovered images"
 
@@ -590,10 +589,6 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 
 	// tools version
 	CmdToolsVersionShort = "Print the version"
-
-	// cmd viper setup
-	CmdViperErrLoadingConfigFile = "failed to load config file: %s"
-	CmdViperInfoUsingConfigFile  = "Using config file %s"
 )
 
 // Zarf Agent messages

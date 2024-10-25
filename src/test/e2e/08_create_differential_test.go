@@ -30,7 +30,7 @@ func TestCreateDifferential(t *testing.T) {
 	// Build the package a first time
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", packagePath, "--set=PACKAGE_VERSION=v0.25.0", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	defer e2e.CleanFiles(packageName)
+	defer e2e.CleanFiles(t, packageName)
 
 	// Build the differential package without changing the version
 	_, stdErr, err = e2e.Zarf(t, "package", "create", packagePath, "--set=PACKAGE_VERSION=v0.25.0", differentialFlag, "--confirm")
@@ -40,7 +40,7 @@ func TestCreateDifferential(t *testing.T) {
 	// Build the differential package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", packagePath, "--set=PACKAGE_VERSION=v0.26.0", differentialFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	defer e2e.CleanFiles(differentialPackageName)
+	defer e2e.CleanFiles(t, differentialPackageName)
 
 	// Extract the yaml of the differential package
 	err = archiver.Extract(differentialPackageName, layout.ZarfYAML, tmpdir)

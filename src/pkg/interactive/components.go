@@ -20,7 +20,10 @@ func SelectOptionalComponent(component v1alpha1.ZarfComponent) (bool, error) {
 
 	displayComponent := component
 	displayComponent.Description = ""
-	utils.ColorPrintYAML(displayComponent, nil, false)
+	err := utils.ColorPrintYAML(displayComponent, nil, false)
+	if err != nil {
+		return false, err
+	}
 	if component.Description != "" {
 		message.Question(component.Description)
 	}
@@ -31,7 +34,7 @@ func SelectOptionalComponent(component v1alpha1.ZarfComponent) (bool, error) {
 	}
 
 	var confirm bool
-	err := survey.AskOne(prompt, &confirm)
+	err = survey.AskOne(prompt, &confirm)
 	if err != nil {
 		return false, err
 	}

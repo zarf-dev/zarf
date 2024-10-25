@@ -38,7 +38,7 @@ func testHelmChartsExample(t *testing.T) {
 	localTgzChartPath := filepath.Join("src", "test", "packages", "25-local-tgz-chart")
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", localTgzChartPath, "--tmpdir", tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	defer e2e.CleanFiles(fmt.Sprintf("zarf-package-helm-charts-local-tgz-%s-0.0.1.tar.zst", e2e.Arch))
+	defer e2e.CleanFiles(t, fmt.Sprintf("zarf-package-helm-charts-local-tgz-%s-0.0.1.tar.zst", e2e.Arch))
 
 	// Create a package that needs dependencies
 	evilChartDepsPath := filepath.Join("src", "test", "packages", "25-evil-chart-deps")
@@ -99,7 +99,8 @@ func testHelmEscaping(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the configmap was deployed, escaped, and contains all of its data
-	kubectlOut, _ := exec.Command("kubectl", "-n", "default", "describe", "cm", "dont-template-me").Output()
+	kubectlOut, err := exec.Command("kubectl", "-n", "default", "describe", "cm", "dont-template-me").Output()
+	require.NoError(t, err, "unable to describe configmap")
 	require.Contains(t, string(kubectlOut), `alert: OOMKilled {{ "{{ \"random.Values\" }}" }}`)
 	require.Contains(t, string(kubectlOut), "backtick1: \"content with backticks `some random things`\"")
 	require.Contains(t, string(kubectlOut), "backtick2: \"nested templating with backticks {{` random.Values `}}\"")
@@ -175,8 +176,9 @@ func testHelmAdoption(t *testing.T) {
 	deploymentManifest := "src/test/packages/25-manifest-adoption/deployment.yaml"
 
 	// Deploy dos-games manually into the cluster without Zarf
-	kubectlOut, _, _ := e2e.Kubectl(t, "apply", "-f", deploymentManifest)
-	require.Contains(t, string(kubectlOut), "deployment.apps/game created")
+	kubectlOut, _, err := e2e.Kubectl(t, "apply", "-f", deploymentManifest)
+	require.NoError(t, err, "unable to apply", "deploymentManifest", deploymentManifest)
+	require.Contains(t, kubectlOut, "deployment.apps/game created")
 
 	// Deploy dos-games into the cluster with Zarf
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", packagePath, "--confirm", "--adopt-existing-resources")

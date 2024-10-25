@@ -22,8 +22,9 @@ zarf tools sbom scan [SOURCE] [flags]
 
 ```
       --base-path string                          base directory for scanning, no links will be followed above this directory, and all paths will be reported relative to this directory
+      --enrich stringArray                        enable package data enrichment from local and online sources (options: all, golang, java, javascript)
       --exclude stringArray                       exclude paths from being scanned using a glob expression
-      --file string                               file to write the default report output to (default is STDOUT) (DEPRECATED: use: output)
+      --file string                               file to write the default report output to (default is STDOUT) (DEPRECATED: use: --output FORMAT=PATH)
       --from stringArray                          specify the source behavior to use (e.g. docker, registry, oci-dir, ...)
   -h, --help                                      help for scan
   -o, --output stringArray                        report output format (<format>=<file> to output to a file), formats=[cyclonedx-json cyclonedx-xml github-json spdx-json spdx-tag-value syft-json syft-table syft-text template] (default [syft-table])

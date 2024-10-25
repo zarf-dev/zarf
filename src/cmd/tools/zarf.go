@@ -205,11 +205,15 @@ var clearCacheCmd = &cobra.Command{
 	Aliases: []string{"c"},
 	Short:   lang.CmdToolsClearCacheShort,
 	RunE: func(_ *cobra.Command, _ []string) error {
-		message.Notef(lang.CmdToolsClearCacheDir, config.GetAbsCachePath())
-		if err := os.RemoveAll(config.GetAbsCachePath()); err != nil {
-			return fmt.Errorf("unable to clear the cache directory %s: %w", config.GetAbsCachePath(), err)
+		cachePath, err := config.GetAbsCachePath()
+		if err != nil {
+			return err
 		}
-		message.Successf(lang.CmdToolsClearCacheSuccess, config.GetAbsCachePath())
+		message.Notef(lang.CmdToolsClearCacheDir, cachePath)
+		if err := os.RemoveAll(cachePath); err != nil {
+			return fmt.Errorf("unable to clear the cache directory %s: %w", cachePath, err)
+		}
+		message.Successf(lang.CmdToolsClearCacheSuccess, cachePath)
 		return nil
 	},
 }

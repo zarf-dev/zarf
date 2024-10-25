@@ -69,11 +69,6 @@ func (suite *PublishCopySkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.NoError(err)
 	suite.Contains(stdErr, "Published "+ref)
 
-	bigBang := filepath.Join("src", "test", "packages", "14-import-everything", "big-bang-min")
-	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", bigBang, "oci://"+ref, "--plain-http")
-	suite.NoError(err)
-	suite.Contains(stdErr, "Published "+ref)
-
 	composable := filepath.Join("src", "test", "packages", "09-composable-packages")
 	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", composable, "oci://"+ref, "--plain-http")
 	suite.NoError(err)
@@ -90,9 +85,6 @@ func (suite *PublishCopySkeletonSuite) Test_0_Publish_Skeletons() {
 	suite.NoError(err)
 
 	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "-o", "build", "--plain-http", "-a", "skeleton")
-	suite.NoError(err)
-
-	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/big-bang-min:2.10.0", "-o", "build", "--plain-http", "-a", "skeleton")
 	suite.NoError(err)
 
 	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/test-compose-package:0.0.1", "-o", "build", "--plain-http", "-a", "skeleton")
@@ -112,9 +104,6 @@ func (suite *PublishCopySkeletonSuite) Test_1_Compose_Everything_Inception() {
 	suite.NoError(err)
 
 	targets := []string{
-		"import-component-local == import-component-local",
-		"import-component-oci == import-component-oci",
-		"import-big-bang == import-big-bang",
 		"file-imports == file-imports",
 		"local-chart-import == local-chart-import",
 	}
@@ -132,50 +121,58 @@ func (suite *PublishCopySkeletonSuite) Test_2_FilePaths() {
 		filepath.Join("build", "zarf-package-import-everything-skeleton-0.0.1.tar.zst"),
 		filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch)),
 		filepath.Join("build", "zarf-package-helm-charts-skeleton-0.0.1.tar.zst"),
-		filepath.Join("build", "zarf-package-big-bang-min-skeleton-2.10.0.tar.zst"),
 		filepath.Join("build", "zarf-package-test-compose-package-skeleton-0.0.1.tar.zst"),
 	}
 
 	for _, pkgTar := range pkgTars {
-		var pkg v1alpha1.ZarfPackage
+		// Wrap in a fn to ensure our defers cleanup resources on each iteration
+		func() {
+			var pkg v1alpha1.ZarfPackage
 
-		unpacked := strings.TrimSuffix(pkgTar, ".tar.zst")
-		defer os.RemoveAll(unpacked)
-		defer os.RemoveAll(pkgTar)
-		_, _, err := e2e.Zarf(suite.T(), "tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
-		suite.NoError(err)
-		suite.DirExists(unpacked)
+			unpacked := strings.TrimSuffix(pkgTar, ".tar.zst")
+			_, _, err := e2e.Zarf(suite.T(), "tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
+			suite.NoError(err)
+			suite.DirExists(unpacked)
 
-		// Verify skeleton contains kustomize-generated manifests.
-		if strings.HasSuffix(pkgTar, "zarf-package-test-compose-package-skeleton-0.0.1.tar.zst") {
-			kustomizeGeneratedManifests := []string{
-				"kustomization-connect-service-0.yaml",
-				"kustomization-connect-service-1.yaml",
-				"kustomization-connect-service-two-0.yaml",
+			// Cleanup resources
+			defer func() {
+				suite.NoError(os.RemoveAll(unpacked))
+			}()
+			defer func() {
+				suite.NoError(os.RemoveAll(pkgTar))
+			}()
+
+			// Verify skeleton contains kustomize-generated manifests.
+			if strings.HasSuffix(pkgTar, "zarf-package-test-compose-package-skeleton-0.0.1.tar.zst") {
+				kustomizeGeneratedManifests := []string{
+					"kustomization-connect-service-0.yaml",
+					"kustomization-connect-service-1.yaml",
+					"kustomization-connect-service-two-0.yaml",
+				}
+				manifestDir := filepath.Join(unpacked, "components", "test-compose-package", "manifests")
+				for _, manifest := range kustomizeGeneratedManifests {
+					manifestPath := filepath.Join(manifestDir, manifest)
+					suite.FileExists(manifestPath, "expected to find kustomize-generated manifest: %q", manifestPath)
+					var configMap corev1.ConfigMap
+					err := utils.ReadYaml(manifestPath, &configMap)
+					suite.NoError(err)
+					suite.Equal("ConfigMap", configMap.Kind, "expected manifest %q to be of kind ConfigMap", manifestPath)
+				}
 			}
-			manifestDir := filepath.Join(unpacked, "components", "test-compose-package", "manifests")
-			for _, manifest := range kustomizeGeneratedManifests {
-				manifestPath := filepath.Join(manifestDir, manifest)
-				suite.FileExists(manifestPath, "expected to find kustomize-generated manifest: %q", manifestPath)
-				var configMap corev1.ConfigMap
-				err := utils.ReadYaml(manifestPath, &configMap)
-				suite.NoError(err)
-				suite.Equal("ConfigMap", configMap.Kind, "expected manifest %q to be of kind ConfigMap", manifestPath)
+
+			err = utils.ReadYaml(filepath.Join(unpacked, layout.ZarfYAML), &pkg)
+			suite.NoError(err)
+			suite.NotNil(pkg)
+
+			components := pkg.Components
+			suite.NotNil(components)
+
+			isSkeleton := false
+			if strings.Contains(pkgTar, "-skeleton-") {
+				isSkeleton = true
 			}
-		}
-
-		err = utils.ReadYaml(filepath.Join(unpacked, layout.ZarfYAML), &pkg)
-		suite.NoError(err)
-		suite.NotNil(pkg)
-
-		components := pkg.Components
-		suite.NotNil(components)
-
-		isSkeleton := false
-		if strings.Contains(pkgTar, "-skeleton-") {
-			isSkeleton = true
-		}
-		suite.verifyComponentPaths(unpacked, components, isSkeleton)
+			suite.verifyComponentPaths(unpacked, components, isSkeleton)
+		}()
 	}
 }
 
@@ -257,12 +254,6 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 
 		if isSkeleton && component.DeprecatedCosignKeyPath != "" {
 			suite.FileExists(filepath.Join(base, component.DeprecatedCosignKeyPath))
-		}
-
-		if isSkeleton && component.Extensions.BigBang != nil {
-			for _, valuesFile := range component.Extensions.BigBang.ValuesFiles {
-				suite.FileExists(filepath.Join(base, valuesFile))
-			}
 		}
 
 		for chartIdx, chart := range component.Charts {

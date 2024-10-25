@@ -6,6 +6,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -39,7 +40,7 @@ func parseChecksum(src string) (string, string, error) {
 }
 
 // DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary).
-func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) error {
+func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) (err error) {
 	// check if the parsed URL has a checksum
 	// if so, remove it and use the checksum to validate the file
 	src, checksum, err := parseChecksum(src)
@@ -57,7 +58,11 @@ func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) error {
 	if err != nil {
 		return fmt.Errorf(lang.ErrWritingFile, dst, err.Error())
 	}
-	defer file.Close()
+	// Ensure our file closes and any error propagate out on error branches
+	defer func(file *os.File) {
+		err2 := file.Close()
+		err = errors.Join(err, err2)
+	}(file)
 
 	parsed, err := url.Parse(src)
 	if err != nil {
@@ -90,13 +95,16 @@ func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) error {
 	return nil
 }
 
-func httpGetFile(url string, destinationFile *os.File) error {
+func httpGetFile(url string, destinationFile *os.File) (err error) {
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("unable to download the file %s", url)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err2 := resp.Body.Close()
+		err = errors.Join(err, err2)
+	}()
 
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
