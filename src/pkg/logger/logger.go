@@ -12,6 +12,10 @@ import (
 	"os"
 	"strings"
 	"sync/atomic"
+
+	"github.com/phsym/console-slog"
+
+	"github.com/golang-cz/devslog"
 )
 
 var defaultLogger atomic.Pointer[slog.Logger]
@@ -61,7 +65,9 @@ func ParseLevel(s string) (Level, error) {
 	return l, nil
 }
 
-// Format declares the kind of logging handler to use. An empty Format defaults to text.
+// Format declares the kind of logging handler to use.
+// NOTE(mkcp): An empty Format defaults to "none" while logger is being worked on, but this is intended to use "text"
+// on release.
 type Format string
 
 // ToLower takes a Format string and converts it to lowercase for case-agnostic validation. Users shouldn't have to care
@@ -70,18 +76,18 @@ func (f Format) ToLower() Format {
 	return Format(strings.ToLower(string(f)))
 }
 
-// TODO(mkcp): Add dev format
 var (
 	// FormatText uses the standard slog TextHandler
 	FormatText Format = "text"
 	// FormatJSON uses the standard slog JSONHandler
 	FormatJSON Format = "json"
+	// FormatConsole uses console-slog to provide prettier colorful messages
+	FormatConsole Format = "console"
+	// FormatDev uses a verbose and prettyprinting devslog handler
+	FormatDev Format = "dev"
 	// FormatNone sends log writes to DestinationNone / io.Discard
 	FormatNone Format = "none"
 )
-
-// More printers would be great, like dev format https://github.com/golang-cz/devslog
-// and a pretty console slog https://github.com/phsym/console-slog
 
 // Destination declares an io.Writer to send logs to.
 type Destination io.Writer
@@ -127,17 +133,22 @@ func New(cfg Config) (*slog.Logger, error) {
 	opts.Level = slog.Level(cfg.Level)
 
 	switch cfg.Format.ToLower() {
-	// Use Text handler if no format provided
-	case "", FormatText:
+	case FormatText:
 		handler = slog.NewTextHandler(cfg.Destination, &opts)
 	case FormatJSON:
 		handler = slog.NewJSONHandler(cfg.Destination, &opts)
-	// TODO(mkcp): Add dev format
-	// case FormatDev:
-	// 	handler = slog.NewTextHandler(DestinationNone, &slog.HandlerOptions{
-	//		AddSource: true,
-	//	})
-	case FormatNone:
+	case FormatConsole:
+		handler = console.NewHandler(cfg.Destination, &console.HandlerOptions{
+			Level: slog.Level(cfg.Level),
+		})
+	case FormatDev:
+		opts.AddSource = true
+		handler = devslog.NewHandler(DestinationDefault, &devslog.Options{
+			HandlerOptions:  &opts,
+			NewLineAfterLog: true,
+		})
+	// Use discard handler if no format provided
+	case "", FormatNone:
 		handler = slog.NewTextHandler(DestinationNone, &slog.HandlerOptions{})
 	// Format not found, let's error out
 	default:
@@ -162,18 +173,30 @@ func WithContext(ctx context.Context, logger *slog.Logger) context.Context {
 // From takes a context and reads out a *slog.Logger. If From does not find a value it will return a discarding logger
 // similar to log-format "none".
 func From(ctx context.Context) *slog.Logger {
+	// Check that we have a ctx
+	if ctx == nil {
+		return newEmpty()
+	}
 	// Grab value from key
 	log := ctx.Value(defaultCtxKey)
+	if log == nil {
+		return newEmpty()
+	}
 
 	// Ensure our value is a *slog.Logger before we cast.
 	switch l := log.(type) {
 	case *slog.Logger:
 		return l
 	default:
-		// Value is empty or not a *slog.Logger, pass back a Discard logger.
-		h := slog.NewTextHandler(DestinationNone, &slog.HandlerOptions{})
-		return slog.New(h)
+		// Not reached
+		panic(fmt.Sprintf("unexpected value type on context key: %T", log))
 	}
+}
+
+// newDiscard returns a logger without any settings that goes to io.Discard
+func newEmpty() *slog.Logger {
+	h := slog.NewTextHandler(DestinationNone, &slog.HandlerOptions{})
+	return slog.New(h)
 }
 
 // Default retrieves a logger from the package default. This is intended as a fallback when a logger cannot easily be

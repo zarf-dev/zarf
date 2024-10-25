@@ -82,10 +82,6 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	if cmd.Parent() == nil {
 		skipLogFile = true
 	}
-	err := setupMessage(LogLevelCLI, skipLogFile, NoColor)
-	if err != nil {
-		return err
-	}
 
 	// Configure logger and add it to cmd context.
 	l, err := setupLogger(LogLevelCLI, LogFormat)
@@ -94,6 +90,21 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	}
 	ctx := logger.WithContext(cmd.Context(), l)
 	cmd.SetContext(ctx)
+
+	// Configure the global message instance.
+	var disableMessage bool
+	if LogFormat != "" {
+		disableMessage = true
+	}
+	err = setupMessage(messageCfg{
+		level:           LogLevelCLI,
+		skipLogFile:     skipLogFile,
+		noColor:         NoColor,
+		featureDisabled: disableMessage,
+	})
+	if err != nil {
+		return err
+	}
 
 	// Print out config location
 	common.PrintViperConfigUsed(cmd.Context())
@@ -116,14 +127,22 @@ func Execute(ctx context.Context) {
 	if err == nil {
 		return
 	}
+
+	// Check if we need to use the default err printer
 	defaultPrintCmds := []string{"helm", "yq", "kubectl"}
 	comps := strings.Split(cmd.CommandPath(), " ")
 	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
 		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
-	} else {
-		errParagraph := message.Paragraph(err.Error())
-		pterm.Error.Println(errParagraph)
+		os.Exit(1)
 	}
+
+	// TODO(mkcp): Remove message on logger release
+	errParagraph := message.Paragraph(err.Error())
+	pterm.Error.Println(errParagraph)
+
+	// NOTE(mkcp): The default logger is set with user flags downstream in rootCmd's preRun func, so we don't have
+	// access to it on Execute's ctx.
+	logger.Default().Error(err.Error())
 	os.Exit(1)
 }
 
@@ -184,14 +203,34 @@ func setupLogger(level, format string) (*slog.Logger, error) {
 	return l, nil
 }
 
+type messageCfg struct {
+	level       string
+	skipLogFile bool
+	noColor     bool
+	// featureDisabled is a feature flag that disables it
+	featureDisabled bool
+}
+
 // setupMessage configures message while we migrate over to logger.
-func setupMessage(logLevel string, skipLogFile, noColor bool) error {
-	// TODO(mkcp): Delete no-color
-	if noColor {
+func setupMessage(cfg messageCfg) error {
+	// HACK(mkcp): Discard message logs if feature is disabled. message calls InitializePTerm once in its init() fn so
+	//             this ends up being a messy solution.
+	if cfg.featureDisabled {
+		// Discard all* PTerm messages. *see below
+		message.InitializePTerm(io.Discard)
+		// Disable all progress bars and spinners
+		message.NoProgress = true
+		// Ensures no user input is needed while we maintain backwards compatibility with message
+		config.CommonOptions.Confirm = true
+		return nil
+	}
+
+	if cfg.noColor {
 		message.DisableColor()
 	}
 
-	if logLevel != "" {
+	level := cfg.level
+	if cfg.level != "" {
 		match := map[string]message.LogLevel{
 			// NOTE(mkcp): Add error for forwards compatibility with logger
 			"error": message.WarnLevel,
@@ -200,12 +239,12 @@ func setupMessage(logLevel string, skipLogFile, noColor bool) error {
 			"debug": message.DebugLevel,
 			"trace": message.TraceLevel,
 		}
-		lvl, ok := match[logLevel]
+		lvl, ok := match[level]
 		if !ok {
 			return errors.New("invalid log level, valid options are warn, info, debug, error, and trace")
 		}
 		message.SetLogLevel(lvl)
-		message.Debug("Log level set to " + logLevel)
+		message.Debug("Log level set to " + level)
 	}
 
 	// Disable progress bars for CI envs
@@ -214,7 +253,7 @@ func setupMessage(logLevel string, skipLogFile, noColor bool) error {
 		message.NoProgress = true
 	}
 
-	if !skipLogFile {
+	if !cfg.skipLogFile {
 		ts := time.Now().Format("2006-01-02-15-04-05")
 		f, err := os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts))
 		if err != nil {
