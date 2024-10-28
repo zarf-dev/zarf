@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -58,6 +59,7 @@ func Mirror(ctx context.Context, opt MirrorOptions) error {
 func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, regInfo types.RegistryInfo, noImgChecksum bool, retries int) error {
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
+	l := logger.From(ctx)
 
 	components, err := filter.Apply(pkgLayout.Pkg)
 	if err != nil {
@@ -124,6 +126,7 @@ func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgLayout *la
 				names = append(names, offlineName)
 				for _, name := range names {
 					message.Infof("Pushing image %s", name)
+					l.Info("pushing image", "name", name)
 					err = crane.Push(img, name, pushOptions...)
 					if err != nil {
 						return err
@@ -168,6 +171,7 @@ func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgLayout *la
 }
 
 func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, gitInfo types.GitServerInfo, retries int) error {
+	l := logger.From(ctx)
 	components, err := filter.Apply(pkgLayout.Pkg)
 	if err != nil {
 		return err
@@ -190,6 +194,7 @@ func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *l
 			err = retry.Do(func() error {
 				if !dns.IsServiceURL(gitInfo.Address) {
 					message.Infof("Pushing repository %s to server %s", repoURL, gitInfo.Address)
+					l.Info("pushing repository to server", "repo", repoURL, "server", gitInfo.Address)
 					err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword)
 					if err != nil {
 						return err
@@ -219,6 +224,7 @@ func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *l
 				}
 				return tunnel.Wrap(func() error {
 					message.Infof("Pushing repository %s to server %s", repoURL, tunnel.HTTPEndpoint())
+					l.Info("pushing repository to server", "repo", repoURL, "server", tunnel.HTTPEndpoint())
 					err = repository.Push(ctx, tunnel.HTTPEndpoint(), gitInfo.PushUsername, gitInfo.PushPassword)
 					if err != nil {
 						return err
