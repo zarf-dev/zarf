@@ -362,9 +362,11 @@ func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]
 		annotations := map[string]string{
 			ocispec.AnnotationBaseImageName: info.Reference,
 		}
-		// NOTE(mkcp): It's ok if the metadata is empty / err, they're just for debug logs.
 		wStart := time.Now()
-		size, _ := img.Size() //nolint:errcheck
+		size, err := img.Size()
+		if err != nil {
+			return saved, err
+		}
 		l.Info("saving image", "ref", info.Reference, "size", size, "method", "sequential")
 		if err := cl.AppendImage(img, clayout.WithAnnotations(annotations)); err != nil {
 			if err := CleanupInProgressLayers(ctx, img); err != nil {
@@ -406,8 +408,10 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 					return err
 				}
 
-				// NOTE(mkcp): It's ok if the metadata is empty / err, they're just for debug logs.
-				size, _ := img.Size() //nolint:errcheck
+				size, err := img.Size()
+				if err != nil {
+					return err
+				}
 				wStart := time.Now()
 				l.Info("saving image", "ref", info.Reference, "size", size, "method", "concurrent")
 				if err := cl.WriteImage(img); err != nil {
