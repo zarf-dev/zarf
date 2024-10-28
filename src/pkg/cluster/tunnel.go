@@ -7,7 +7,6 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"io"
 	"net/http"
 	"net/url"
@@ -24,6 +23,7 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -222,6 +222,10 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 		zt.urlSuffix = svc.Annotations[ZarfConnectAnnotationURL]
 
 		message.Debugf("tunnel connection match: %s/%s on port %d", svc.Namespace, svc.Name, zt.RemotePort)
+		logger.From(ctx).Debug("tunnel connection match",
+			"namespace", svc.Namespace,
+			"name", svc.Name,
+			"remotePort", zt.RemotePort)
 	} else {
 		return zt, fmt.Errorf("no matching services found for %s", name)
 	}
