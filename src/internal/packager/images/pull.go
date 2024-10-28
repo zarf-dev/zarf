@@ -90,14 +90,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	// TODO(mkcp): Remove message on logger release
 	spinner := message.NewProgressSpinner("Fetching info for %d images. %s", imageCount, longer)
 	defer spinner.Stop()
-	switch c := len(cfg.ImageList); {
-	case c > 15:
-		l.Info("fetching info for images. This step may take a couple of minutes to complete", "count", c, "destination", cfg.DestinationDirectory)
-	case c > 5:
-		l.Info("fetching info for images. This step may take several seconds to complete", "count", c, "destination", cfg.DestinationDirectory)
-	default:
-		l.Info("fetching info for images", "count", c, "destination", cfg.DestinationDirectory)
-	}
+	l.Info("fetching info for images", "count", imageCount, "destination", cfg.DestinationDirectory)
 
 	logs.Warn.SetOutput(&message.DebugWriter{})
 	logs.Progress.SetOutput(&message.DebugWriter{})
@@ -113,13 +106,14 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 	var counter, totalBytes atomic.Int64
 
+	// Spawn a goroutine for each
 	for _, refInfo := range cfg.ImageList {
 		refInfo := refInfo
 		eg.Go(func() error {
 			idx := counter.Add(1)
 			// TODO(mkcp): Remove message on logger release
 			spinner.Updatef("Fetching image info (%d of %d)", idx, imageCount)
-			l.Info("fetching image info", "name", refInfo.Name)
+			l.Debug("fetching image info", "name", refInfo.Name)
 
 			ref := refInfo.Reference
 			for k, v := range cfg.RegistryOverrides {
@@ -236,6 +230,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		})
 	}
 
+	// Wait until we're done fetching images
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
@@ -254,11 +249,15 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 	err = retry.Do(func() error {
 		saved, err := SaveConcurrent(ctx, cranePath, toPull)
+		// Done save, remove from download list.
 		for k := range saved {
 			delete(toPull, k)
 		}
 		return err
-	}, retry.Context(ctx), retry.Attempts(2))
+	},
+		retry.Context(ctx),
+		retry.Attempts(2),
+	)
 	if err != nil {
 		// TODO(mkcp): Remove message on logger release
 		message.Warnf("Failed to save images in parallel, falling back to sequential save: %s", err.Error())
@@ -269,7 +268,10 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 				delete(toPull, k)
 			}
 			return err
-		}, retry.Context(ctx), retry.Attempts(2))
+		},
+			retry.Context(ctx),
+			retry.Attempts(2),
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -354,24 +356,39 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
 
 // SaveSequential saves images sequentially.
 func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]v1.Image) (map[transform.Image]v1.Image, error) {
+	l := logger.From(ctx)
 	saved := map[transform.Image]v1.Image{}
 	for info, img := range m {
 		annotations := map[string]string{
 			ocispec.AnnotationBaseImageName: info.Reference,
 		}
+		wStart := time.Now()
+		size, err := img.Size()
+		if err != nil {
+			return saved, err
+		}
+		l.Info("saving image", "ref", info.Reference, "size", size, "method", "sequential")
 		if err := cl.AppendImage(img, clayout.WithAnnotations(annotations)); err != nil {
 			if err := CleanupInProgressLayers(ctx, img); err != nil {
 				message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
+				l.Error("failed to clean up in-progress layers. please run `zarf tools clear-cache`")
 			}
 			return saved, err
 		}
 		saved[info] = img
+		l.Debug("done saving image",
+			"ref", info.Reference,
+			"size", size,
+			"method", "sequential",
+			"duration", time.Since(wStart),
+		)
 	}
 	return saved, nil
 }
 
 // SaveConcurrent saves images in a concurrent, bounded manner.
 func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]v1.Image) (map[transform.Image]v1.Image, error) {
+	l := logger.From(ctx)
 	saved := map[transform.Image]v1.Image{}
 
 	var mu sync.Mutex
@@ -391,12 +408,25 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 					return err
 				}
 
+				size, err := img.Size()
+				if err != nil {
+					return err
+				}
+				wStart := time.Now()
+				l.Info("saving image", "ref", info.Reference, "size", size, "method", "concurrent")
 				if err := cl.WriteImage(img); err != nil {
 					if err := CleanupInProgressLayers(ectx, img); err != nil {
 						message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
+						l.Error("failed to clean up in-progress layers. please run `zarf tools clear-cache`")
 					}
 					return err
 				}
+				l.Debug("done saving image",
+					"ref", info.Reference,
+					"size", size,
+					"method", "concurrent",
+					"duration", time.Since(wStart),
+				)
 
 				mu.Lock()
 				defer mu.Unlock()
