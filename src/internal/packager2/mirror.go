@@ -15,7 +15,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/zarf-dev/zarf/src/config"
@@ -57,8 +56,6 @@ func Mirror(ctx context.Context, opt MirrorOptions) error {
 }
 
 func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, regInfo types.RegistryInfo, noImgChecksum bool, retries int) error {
-	logs.Warn.SetOutput(&message.DebugWriter{})
-	logs.Progress.SetOutput(&message.DebugWriter{})
 	l := logger.From(ctx)
 
 	components, err := filter.Apply(pkgLayout.Pkg)
