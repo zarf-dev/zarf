@@ -249,14 +249,12 @@ var packageListCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
 		defer cancel()
-		// FIXME(mkcp): Add logger
 		c, err := cluster.NewClusterWithWait(timeoutCtx)
 		if err != nil {
 			return err
 		}
 
 		ctx := cmd.Context()
-		// FIXME(mkcp): Add logger
 		deployedZarfPackages, err := c.GetDeployedZarfPackages(ctx)
 		if err != nil && len(deployedZarfPackages) == 0 {
 			return fmt.Errorf("unable to get the packages deployed to the cluster: %w", err)
@@ -279,8 +277,10 @@ var packageListCmd = &cobra.Command{
 
 		// NOTE(mkcp): Renders table with message.
 		header := []string{"Package", "Version", "Components"}
+		// HACK(mkcp): Similar to `package inspect`, we do want to use message here but we have to make sure our feature
+		// flagging doesn't disable this. Nothing happens after this so it's safe, but still very hacky.
+		message.InitializePTerm(logger.DestinationDefault)
 		message.Table(header, packageData)
-		logger.From(ctx).Info("package info retrieved", "packageData", packageData)
 
 		// Print out any unmarshalling errors
 		if err != nil {
