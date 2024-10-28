@@ -54,7 +54,7 @@ func InspectList(ctx context.Context, opt ZarfInspectOptions) ([]string, error) 
 	if err != nil {
 		return nil, err
 	}
-	// Only list images if we have have components
+	// Only list images if we have components
 	if len(pkg.Components) > 0 {
 		for _, component := range pkg.Components {
 			imageList = append(imageList, component.Images...)
@@ -104,7 +104,7 @@ func handleSBOMOptions(ctx context.Context, opt ZarfInspectOptions) error {
 		return err
 	}
 	if opt.ViewSBOM {
-		err := sbom.ViewSBOMFiles(sbomPath)
+		err := sbom.ViewSBOMFiles(ctx, sbomPath)
 		if err != nil {
 			return err
 		}

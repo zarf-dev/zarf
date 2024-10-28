@@ -201,6 +201,7 @@ var packageInspectCmd = &cobra.Command{
 		}
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// NOTE(mkcp): Gets user input with message
 		src, err := choosePackage(args)
 		if err != nil {
 			return err
