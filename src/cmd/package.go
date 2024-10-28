@@ -235,6 +235,9 @@ var packageInspectCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to inspect package: %w", err)
 		}
+		// HACK(mkcp): This init call ensures we still can still print Yaml when message is disabled. Remove when we
+		// release structured logged and don't have to disable message globally in pre-run.
+		message.InitializePTerm(logger.DestinationDefault)
 		err = utils.ColorPrintYAML(output, nil, false)
 		if err != nil {
 			return err
