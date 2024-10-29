@@ -41,7 +41,6 @@ var devCmd = &cobra.Command{
 	Short:   lang.CmdDevShort,
 }
 
-// FIXME(mkcp): Lots of message
 var devDeployCmd = &cobra.Command{
 	Use:   "deploy",
 	Args:  cobra.MaximumNArgs(1),
@@ -75,7 +74,6 @@ var devDeployCmd = &cobra.Command{
 	},
 }
 
-// FIXME(mkcp): Lots of message
 var devGenerateCmd = &cobra.Command{
 	Use:     "generate NAME",
 	Aliases: []string{"g"},
@@ -173,6 +171,7 @@ var devSha256SumCmd = &cobra.Command{
 
 		if helpers.IsURL(fileName) {
 			message.Warn(lang.CmdDevSha256sumRemoteWarning)
+			logger.From(cmd.Context()).Warn("this is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link")
 
 			fileBase, err := helpers.ExtractBasePathFromURL(fileName)
 			if err != nil {
