@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/mholt/archiver/v3"
@@ -36,9 +37,10 @@ type TarballSource struct {
 
 // LoadPackage loads a package from a tarball.
 func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
+	l := logger.From(ctx)
 	spinner := message.NewProgressSpinner("Loading package from %q", s.PackageSource)
 	defer spinner.Stop()
-	l := logger.From(ctx)
+	start := time.Now()
 	l.Info("loading package", "source", s.PackageSource)
 
 	if s.Shasum != "" {
@@ -141,6 +143,7 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 	}
 
 	spinner.Success()
+	l.Debug("done loading package", "source", s.PackageSource, "duration", time.Since(start))
 
 	return pkg, warnings, nil
 }

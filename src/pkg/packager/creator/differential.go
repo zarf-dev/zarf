@@ -25,7 +25,7 @@ func loadDifferentialData(ctx context.Context, diffPkgPath string) (diffData *ty
 	diffLayout := layout.New(tmpdir)
 	defer os.RemoveAll(diffLayout.Base)
 
-	src, err := sources.New(&types.ZarfPackageOptions{
+	src, err := sources.New(ctx, &types.ZarfPackageOptions{
 		PackageSource: diffPkgPath,
 	})
 	if err != nil {

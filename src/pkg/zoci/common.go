@@ -5,11 +5,13 @@
 package zoci
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
@@ -29,12 +31,17 @@ type Remote struct {
 
 // NewRemote returns an oras remote repository client and context for the given url
 // with zarf opination embedded
-func NewRemote(url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {
-	logger := slog.New(message.ZarfHandler{})
+func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {
+	var l *slog.Logger
+	if logger.Enabled(ctx) {
+		l = logger.From(ctx)
+	} else {
+		l = slog.New(message.ZarfHandler{})
+	}
 	modifiers := append([]oci.Modifier{
 		oci.WithPlainHTTP(config.CommonOptions.PlainHTTP),
 		oci.WithInsecureSkipVerify(config.CommonOptions.InsecureSkipTLSVerify),
-		oci.WithLogger(logger),
+		oci.WithLogger(l),
 		oci.WithUserAgent("zarf/" + config.CLIVersion),
 	}, mods...)
 	remote, err := oci.NewOrasRemote(url, platform, modifiers...)
