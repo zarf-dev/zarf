@@ -41,6 +41,7 @@ var devCmd = &cobra.Command{
 	Short:   lang.CmdDevShort,
 }
 
+// FIXME(mkcp): Lots of message
 var devDeployCmd = &cobra.Command{
 	Use:   "deploy",
 	Args:  cobra.MaximumNArgs(1),
@@ -74,6 +75,7 @@ var devDeployCmd = &cobra.Command{
 	},
 }
 
+// FIXME(mkcp): Lots of message
 var devGenerateCmd = &cobra.Command{
 	Use:     "generate NAME",
 	Aliases: []string{"g"},
@@ -105,8 +107,9 @@ var devTransformGitLinksCmd = &cobra.Command{
 	Aliases: []string{"p"},
 	Short:   lang.CmdDevPatchGitShort,
 	Args:    cobra.ExactArgs(2),
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		host, fileName := args[0], args[1]
+		ctx := cmd.Context()
 
 		// Read the contents of the given file
 		content, err := os.ReadFile(fileName)
@@ -114,11 +117,20 @@ var devTransformGitLinksCmd = &cobra.Command{
 			return fmt.Errorf("unable to read the file %s: %w", fileName, err)
 		}
 
-		pkgConfig.InitOpts.GitServer.Address = host
+		gitServer := pkgConfig.InitOpts.GitServer
+		gitServer.Address = host
 
 		// Perform git url transformation via regex
 		text := string(content)
-		processedText := transform.MutateGitURLsInText(message.Warnf, pkgConfig.InitOpts.GitServer.Address, text, pkgConfig.InitOpts.GitServer.PushUsername)
+
+		// Set log func for transform
+		var logFn func(string, ...any)
+		logFn = message.Warnf
+		// Use logger if we can
+		if logger.Enabled(ctx) {
+			logFn = logger.From(ctx).Warn
+		}
+		processedText := transform.MutateGitURLsInText(logFn, gitServer.Address, text, gitServer.PushUsername)
 
 		// Print the differences
 		dmp := diffmatchpatch.New()
@@ -252,8 +264,14 @@ var devFindImagesCmd = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		_, err = pkgClient.FindImages(cmd.Context())
+
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
+			// HACK(mkcp): Re-initializing PTerm with a stderr writer isn't great, but it lets us render these lint
+			// tables below for backwards compatibility
+			if logger.Enabled(cmd.Context()) {
+				message.InitializePTerm(logger.DestinationDefault)
+			}
 			common.PrintFindings(lintErr)
 		}
 		if err != nil {
