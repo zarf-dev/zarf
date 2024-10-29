@@ -27,6 +27,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -62,6 +63,10 @@ func NewPackageCreator(createOpts types.ZarfCreateOptions, cwd string) *PackageC
 
 // LoadPackageDefinition loads and configures a zarf.yaml file during package create.
 func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout.PackagePaths) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
+	l := logger.From(ctx)
+	start := time.Now()
+	l.Debug("start loading package definiton", "src", src.ZarfYAML)
+
 	pkg, warnings, err = src.ReadZarfYAML()
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, nil, err
@@ -116,12 +121,14 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
+	l.Debug("done loading package definition", "src", src.ZarfYAML, "duration", time.Since(start))
 	return pkg, warnings, nil
 }
 
-// Assemble assembles all of the package assets into Zarf's tmp directory layout.
+// Assemble copies all package assets into Zarf's tmp directory layout.
 func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths, components []v1alpha1.ZarfComponent, arch string) error {
 	var imageList []transform.Image
+	l := logger.From(ctx)
 
 	skipSBOMFlagUsed := pc.createOpts.SkipSBOM
 	componentSBOMs := map[string]*layout.ComponentSBOM{}
@@ -131,7 +138,9 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 
 		onFailure := func() {
 			if err := actions.Run(ctx, onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
+				// TODO(mkcp): Remove message on logger release
 				message.Debugf("unable to run component failure action: %s", err.Error())
+				l.Debug("unable to run component failure action", "error", err.Error())
 			}
 		}
 
@@ -140,6 +149,7 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 			return fmt.Errorf("unable to add component %q: %w", component.Name, err)
 		}
 
+		// TODO(mkcp): Migrate to logger
 		if err := actions.Run(ctx, onCreate.Defaults, onCreate.OnSuccess, nil); err != nil {
 			onFailure()
 			return fmt.Errorf("unable to run component success action: %w", err)
@@ -173,8 +183,8 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 
 	// Images are handled separately from other component assets.
 	if len(imageList) > 0 {
+		// TODO(mkcp): Remove message on logger release
 		message.HeaderInfof("📦 PACKAGE IMAGES")
-
 		dst.AddImages()
 
 		cachePath, err := config.GetAbsCachePath()
@@ -216,12 +226,15 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 
 	// Ignore SBOM creation if the flag is set.
 	if skipSBOMFlagUsed {
+		// TODO(mkcp): Remove message on logger release
 		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
-	} else {
-		dst.AddSBOMs()
-		if err := sbom.Catalog(ctx, componentSBOMs, sbomImageList, dst); err != nil {
-			return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
-		}
+		l.Debug("skipping image SBOM processing per --skip-sbom flag")
+		return nil
+	}
+
+	dst.AddSBOMs()
+	if err := sbom.Catalog(ctx, componentSBOMs, sbomImageList, dst); err != nil {
+		return fmt.Errorf("unable to create an SBOM catalog for the package: %w", err)
 	}
 
 	return nil
@@ -240,11 +253,15 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 // - writes the Zarf package as a tarball to a local directory,
 // or an OCI registry based on the --output flag
 func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, pkg *v1alpha1.ZarfPackage) (err error) {
+	l := logger.From(ctx)
+	start := time.Now()
+	l.Debug("starting package output", "kind", pkg.Kind)
+
 	// Process the component directories into compressed tarballs
 	// NOTE: This is purposefully being done after the SBOM cataloging
 	for _, component := range pkg.Components {
 		// Make the component a tar archive
-		if err := dst.Components.Archive(component, true); err != nil {
+		if err := dst.Components.Archive(ctx, component, true); err != nil {
 			return fmt.Errorf("unable to archive component: %s", err.Error())
 		}
 	}
@@ -275,6 +292,7 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		if err != nil {
 			return err
 		}
+		// TODO(mkcp): Port zoci.NewRemote to new logger
 		remote, err := zoci.NewRemote(ref, oci.PlatformForArch(config.GetArch()))
 		if err != nil {
 			return err
@@ -291,6 +309,7 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		if config.CommonOptions.InsecureSkipTLSVerify {
 			flags = append(flags, "--insecure-skip-tls-verify")
 		}
+		// TODO(mkcp): Remove message on logger release
 		message.Title("To inspect/deploy/pull:", "")
 		message.ZarfCommand("package inspect %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), strings.Join(flags, " "))
 		message.ZarfCommand("package deploy %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), strings.Join(flags, " "))
@@ -301,10 +320,13 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		tarballPath := filepath.Join(pc.createOpts.Output, packageName)
 
 		// Try to remove the package if it already exists.
-		_ = os.Remove(tarballPath)
+		err = os.Remove(tarballPath)
+		if err != nil {
+			logger.From(ctx).Error(err.Error())
+		}
 
 		// Create the package tarball.
-		if err := dst.ArchivePackage(tarballPath, pc.createOpts.MaxPackageSizeMB); err != nil {
+		if err := dst.ArchivePackage(ctx, tarballPath, pc.createOpts.MaxPackageSizeMB); err != nil {
 			return fmt.Errorf("unable to archive package: %w", err)
 		}
 	}
@@ -327,17 +349,24 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		}
 
 		if pc.createOpts.ViewSBOM {
-			err := sbom.ViewSBOMFiles(sbomDir)
+			err := sbom.ViewSBOMFiles(ctx, sbomDir)
 			if err != nil {
 				return err
 			}
 		}
 	}
+	l.Debug("done package output", "kind", pkg.Kind, "duration", time.Since(start))
 	return nil
 }
 
+// TODO(mkcp): Refactor addComponent to better segment component handling logic by its type. There's also elaborate
+// if/elses that can be de-nested.
 func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.ZarfComponent, dst *layout.PackagePaths) error {
+	l := logger.From(ctx)
+	// TODO(mkcp): Remove message on logger release
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
+	l.Info("adding component", "name", component.Name)
+	start := time.Now()
 
 	componentPaths, err := dst.Components.Create(component)
 	if err != nil {
@@ -422,18 +451,26 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 		}
 	}
 
-	if len(component.DataInjections) > 0 {
+	// Run data injections
+	injectionsCount := len(component.DataInjections)
+	if injectionsCount > 0 {
+		injectStart := time.Now()
+		// TODO(mkcp): Remove message on logger release
 		spinner := message.NewProgressSpinner("Loading data injections")
 		defer spinner.Stop()
+		l.Info("data injections found, running", "injections", injectionsCount)
 
 		for dataIdx, data := range component.DataInjections {
-			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
+			target := data.Target
+			spinner.Updatef("Copying data injection %s for %s", target.Path, target.Selector)
+			l.Info("copying data injection", "path", target.Path, "selector", target.Selector)
 
-			rel := filepath.Join(layout.DataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+			rel := filepath.Join(layout.DataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(target.Path))
 			dst := filepath.Join(componentPaths.Base, rel)
 
 			if helpers.IsURL(data.Source) {
-				if err := utils.DownloadToFile(ctx, data.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+				err := utils.DownloadToFile(ctx, data.Source, dst, component.DeprecatedCosignKeyPath)
+				if err != nil {
 					return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 				}
 			} else {
@@ -443,9 +480,12 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 			}
 		}
 		spinner.Success()
+		l.Debug("done loading data injections", "duration", time.Since(injectStart))
 	}
 
+	// Process k8s manifests
 	if len(component.Manifests) > 0 {
+		manifestStart := time.Now()
 		// Get the proper count of total manifests to add.
 		manifestCount := 0
 
@@ -454,8 +494,10 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 			manifestCount += len(manifest.Kustomizations)
 		}
 
+		// TODO(mkcp): Remove message on logger release
 		spinner := message.NewProgressSpinner("Loading %d K8s manifests", manifestCount)
 		defer spinner.Stop()
+		l.Info("processing k8s manifests", "component", component.Name, "manifests", manifestCount)
 
 		// Iterate over all manifests.
 		for _, manifest := range component.Manifests {
@@ -464,7 +506,9 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 				dst := filepath.Join(componentPaths.Base, rel)
 
 				// Copy manifests without any processing.
+				// TODO(mkcp): Remove message on logger release
 				spinner.Updatef("Copying manifest %s", path)
+				l.Info("copying manifest", "path", path)
 				if helpers.IsURL(path) {
 					if err := utils.DownloadToFile(ctx, path, dst, component.DeprecatedCosignKeyPath); err != nil {
 						return fmt.Errorf(lang.ErrDownloading, path, err.Error())
@@ -478,7 +522,9 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 
 			for kustomizeIdx, path := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package.
+				// TODO(mkcp): Remove message on logger release
 				spinner.Updatef("Building kustomization for %s", path)
+				l.Info("building kustomization", "path", path)
 
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
 				rel := filepath.Join(layout.ManifestsDir, kname)
@@ -490,12 +536,19 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 			}
 		}
 		spinner.Success()
+		l.Debug("done processing k8s manifests",
+			"component", component.Name,
+			"duration", time.Since(manifestStart))
 	}
 
 	// Load all specified git repos.
-	if len(component.Repos) > 0 {
+	reposCount := len(component.Repos)
+	if reposCount > 0 {
+		reposStart := time.Now()
+		// TODO(mkcp): Remove message on logger release
 		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
 		defer spinner.Stop()
+		l.Info("loading git repos", "component", component.Name, "repos", reposCount)
 
 		for _, url := range component.Repos {
 			// Pull all the references if there is no `@` in the string.
@@ -505,12 +558,14 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 			}
 		}
 		spinner.Success()
+		l.Debug("done loading git repos", "component", component.Name, "duration", time.Since(reposStart))
 	}
 
 	if err := actions.Run(ctx, onCreate.Defaults, onCreate.After, nil); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 
+	l.Debug("done adding component", "name", component.Name, "duration", time.Since(start))
 	return nil
 }
 
