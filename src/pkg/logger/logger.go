@@ -211,17 +211,3 @@ func Default() *slog.Logger {
 func SetDefault(l *slog.Logger) {
 	defaultLogger.Store(l)
 }
-
-func DebugLogFunc(logger *slog.Logger) func(format string, v ...interface{}) {
-	return func(format string, v ...interface{}) {
-		message := fmt.Sprintf(format, v...)
-		logger.Debug(message)
-	}
-}
-
-func InfoLogFunc(logger *slog.Logger) func(format string, v ...interface{}) {
-	return func(format string, v ...interface{}) {
-		message := fmt.Sprintf(format, v...)
-		logger.Info(message)
-	}
-}
