@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"slices"
 
 	"helm.sh/helm/v3/pkg/action"
@@ -33,6 +34,7 @@ type RemoveOptions struct {
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
 func Remove(ctx context.Context, opt RemoveOptions) error {
+	l := logger.From(ctx)
 	pkg, err := packageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath)
 	if err != nil {
 		return err
@@ -109,6 +111,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 					}
 					if errors.Is(err, driver.ErrReleaseNotFound) {
 						message.Warnf("Helm release for helm chart '%s' in the namespace '%s' was not found.  Was it already removed?", chart.ChartName, chart.Namespace)
+						l.Warn("helm release was not found. was it already removed?", "name", chart.ChartName, "namespace", chart.Namespace)
 					}
 
 					// Pop the removed helm chart from the installed charts slice.
@@ -119,6 +122,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 					if err != nil {
 						// We warn and ignore errors because we may have removed the cluster that this package was inside of
 						message.Warnf("Unable to update the secret for package %s, this may be normal if the cluster was removed: %s", depPkg.Name, err.Error())
+						l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
 					}
 				}
 			}
@@ -139,6 +143,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 				if err != nil {
 					// We warn and ignore errors because we may have removed the cluster that this package was inside of
 					message.Warnf("Unable to update the secret for package %s, this may be normal if the cluster was removed: %s", depPkg.Name, err.Error())
+					l.Warn("unable to update secret package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
 				}
 			}
 			return nil
@@ -157,6 +162,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 		err := opt.Cluster.DeleteDeployedPackage(ctx, depPkg.Name)
 		if err != nil {
 			message.Warnf("Unable to delete the secret for package %s, this may be normal if the cluster was removed: %s", depPkg.Name, err.Error())
+			l.Warn("unable to delete secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
 		}
 	}
 
