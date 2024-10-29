@@ -396,11 +396,12 @@ func (p *Packager) processComponentFiles(ctx context.Context, component v1alpha1
 	l := logger.From(ctx)
 	l.Handler()
 	spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
-	l.Info("Copying files", "count", len(component.Files))
+	l.Info("copying files", "count", len(component.Files))
 	defer spinner.Stop()
 
 	for fileIdx, file := range component.Files {
 		spinner.Updatef("Loading %s", file.Target)
+		l.Info("loading file", "name", file.Target)
 
 		fileLocation := filepath.Join(pkgLocation, strconv.Itoa(fileIdx), filepath.Base(file.Target))
 		if helpers.InvalidPath(fileLocation) {
@@ -410,7 +411,7 @@ func (p *Packager) processComponentFiles(ctx context.Context, component v1alpha1
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
 			spinner.Updatef("Validating SHASUM for %s", file.Target)
-			l.Info("Validating SHASUM", "file", file.Target)
+			l.Debug("Validating SHASUM", "file", file.Target)
 			if err := helpers.SHAsMatch(fileLocation, file.Shasum); err != nil {
 				return err
 			}
@@ -441,6 +442,7 @@ func (p *Packager) processComponentFiles(ctx context.Context, component v1alpha1
 			// If the file is a text file, template it
 			if isText {
 				spinner.Updatef("Templating %s", file.Target)
+				l.Debug("template file", "name", file.Target)
 				if err := p.variableConfig.ReplaceTextTemplate(subFile); err != nil {
 					return fmt.Errorf("unable to template file %s: %w", subFile, err)
 				}
@@ -449,6 +451,7 @@ func (p *Packager) processComponentFiles(ctx context.Context, component v1alpha1
 
 		// Copy the file to the destination
 		spinner.Updatef("Saving %s", file.Target)
+		l.Debug("saving file", "name", file.Target)
 		err = helpers.CreatePathAndCopy(fileLocation, file.Target)
 		if err != nil {
 			return fmt.Errorf("unable to copy file %s to %s: %w", fileLocation, file.Target, err)
@@ -473,6 +476,7 @@ func (p *Packager) processComponentFiles(ctx context.Context, component v1alpha1
 	}
 
 	spinner.Success()
+	l.Debug("done copying files")
 
 	return nil
 }
@@ -483,7 +487,7 @@ func (p *Packager) setupState(ctx context.Context) error {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	spinner := message.NewProgressSpinner("Loading the Zarf State from the Kubernetes cluster")
 	defer spinner.Stop()
-	l.Info("loading the Zarf State from the Kubernetes cluster")
+	l.Debug("loading the Zarf State from the Kubernetes cluster")
 
 	state, err := p.cluster.LoadZarfState(ctx)
 	// We ignore the error if in YOLO mode because Zarf should not be initiated.

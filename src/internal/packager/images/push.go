@@ -10,7 +10,6 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -23,8 +22,6 @@ import (
 // Push pushes images to a registry.
 func Push(ctx context.Context, cfg PushConfig) error {
 	l := logger.From(ctx)
-	logs.Warn.SetOutput(&message.DebugWriter{})
-	logs.Progress.SetOutput(&message.DebugWriter{})
 
 	toPush := map[transform.Image]v1.Image{}
 	// Build an image list from the references
