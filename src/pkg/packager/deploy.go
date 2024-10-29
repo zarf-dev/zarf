@@ -137,7 +137,7 @@ func (p *Packager) Deploy(ctx context.Context) error {
 
 	// Notify all the things about the successful deployment
 	message.Successf("Zarf deployment complete")
-	l.Info("Zarf deployed successfully")
+	l.Debug("Zarf deployment complete")
 
 	err = p.printTablesForDeployment(ctx, deployedComponents)
 	if err != nil {
@@ -769,6 +769,8 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 	return installedCharts, nil
 }
 
+// TODO once packager is refactored to load the Zarf package and cluster objects in the cmd package
+// printing should be moved to cmd
 func (p *Packager) printTablesForDeployment(ctx context.Context, componentsToDeploy []types.DeployedComponent) error {
 	// If not init config, print the application connection table
 	if !p.cfg.Pkg.IsInitConfig() {
