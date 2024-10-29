@@ -95,7 +95,8 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	var disableMessage bool
 	if LogFormat != "" {
 		disableMessage = true
-		config.CommonOptions.UseSlog = true
+		ctx := logger.WithLoggingEnabled(ctx, true)
+		cmd.SetContext(ctx)
 	}
 	err = setupMessage(messageCfg{
 		level:           LogLevelCLI,

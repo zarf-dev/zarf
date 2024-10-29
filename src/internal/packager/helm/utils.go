@@ -10,7 +10,6 @@ import (
 	"log/slog"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
@@ -75,7 +74,7 @@ func (h *Helm) createActionConfig(ctx context.Context, namespace string, spinner
 
 	// Setup K8s connection
 	var helmLogger action.DebugLog
-	if config.CommonOptions.UseSlog {
+	if logger.Enabled(ctx) {
 		l := logger.From(ctx)
 		helmLogger = slog.NewLogLogger(l.Handler(), slog.LevelDebug).Printf
 	} else {
