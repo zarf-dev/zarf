@@ -349,7 +349,7 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		}
 
 		if pc.createOpts.ViewSBOM {
-			err := sbom.ViewSBOMFiles(sbomDir)
+			err := sbom.ViewSBOMFiles(ctx, sbomDir)
 			if err != nil {
 				return err
 			}
