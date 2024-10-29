@@ -170,6 +170,29 @@ func WithContext(ctx context.Context, logger *slog.Logger) context.Context {
 	return context.WithValue(ctx, defaultCtxKey, logger)
 }
 
+type ctxKeyEnabled struct{}
+
+var defaultCtxKeyEnabled = ctxKeyEnabled{}
+
+// WithLoggingEnabled allows stores a value to determine whether or not slog logging is enabled
+func WithLoggingEnabled(ctx context.Context, enabled bool) context.Context {
+	return context.WithValue(ctx, defaultCtxKeyEnabled, enabled)
+}
+
+// Enabled returns true if slog logging is enabled
+func Enabled(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	enabled := ctx.Value(defaultCtxKeyEnabled)
+	switch v := enabled.(type) {
+	case bool:
+		return v
+	default:
+		return false
+	}
+}
+
 // From takes a context and reads out a *slog.Logger. If From does not find a value it will return a discarding logger
 // similar to log-format "none".
 func From(ctx context.Context) *slog.Logger {
