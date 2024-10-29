@@ -140,7 +140,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 		if err != nil {
 			return nil, err
 		}
-		err = p.populateComponentAndStateTemplates(component.Name)
+		err = p.populateComponentAndStateTemplates(ctx, component.Name)
 		if err != nil {
 			return nil, err
 		}

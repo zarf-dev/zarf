@@ -28,21 +28,24 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
 func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings, string, error) {
-	fromMessage := h.chart.URL
-	if fromMessage == "" {
-		fromMessage = "Zarf-generated helm chart"
+	l := logger.From(ctx)
+	source := h.chart.URL
+	if source == "" {
+		source = "Zarf-generated"
 	}
-	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s",
+	spinner := message.NewProgressSpinner("Processing helm chart %s:%s source: %s",
 		h.chart.Name,
 		h.chart.Version,
-		fromMessage)
+		source)
 	defer spinner.Stop()
+	l.Info("processing helm chart", "name", h.chart.Name, "version", h.chart.Version, "source", source)
 
 	// If no release name is specified, use the chart name.
 	if h.chart.ReleaseName == "" {
@@ -50,7 +53,7 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	}
 
 	// Setup K8s connection.
-	err := h.createActionConfig(h.chart.Namespace, spinner)
+	err := h.createActionConfig(ctx, h.chart.Namespace, spinner)
 	if err != nil {
 		return nil, "", fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
@@ -72,15 +75,18 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		releases, histErr := histClient.Run(h.chart.ReleaseName)
 
 		spinner.Updatef("Checking for existing helm deployment")
+		l.Debug("checking for existing helm deployment")
 
 		if errors.Is(histErr, driver.ErrReleaseNotFound) {
 			// No prior release, try to install it.
 			spinner.Updatef("Attempting chart installation")
+			l.Info("preforming chart install")
 
 			release, err = h.installChart(helmCtx, postRender)
 		} else if histErr == nil && len(releases) > 0 {
 			// Otherwise, there is a prior release so upgrade it.
 			spinner.Updatef("Attempting chart upgrade")
+			l.Info("preforming chart upgrade")
 
 			lastRelease := releases[len(releases)-1]
 
@@ -117,6 +123,7 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 
 		// Attempt to rollback on a failed upgrade.
 		spinner.Updatef("Performing chart rollback")
+		l.Info("preforming chart rollback")
 		err = h.rollbackChart(h.chart.ReleaseName, previouslyDeployedVersion)
 		if err != nil {
 			return nil, "", fmt.Errorf("%w: unable to rollback: %w", installErr, err)
@@ -136,6 +143,7 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	if !h.chart.NoWait {
 		// Ensure we don't go past the timeout by using a context initialized with the helm timeout
 		spinner.Updatef("Running health checks")
+		l.Info("running health checks")
 		if err := healthchecks.WaitForReadyRuntime(helmCtx, h.cluster.Watcher, runtimeObjs); err != nil {
 			return nil, "", err
 		}
@@ -151,7 +159,7 @@ func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues 
 	spinner := message.NewProgressSpinner("Templating helm chart %s", h.chart.Name)
 	defer spinner.Stop()
 
-	err = h.createActionConfig(h.chart.Namespace, spinner)
+	err = h.createActionConfig(ctx, h.chart.Namespace, spinner)
 
 	// Setup K8s connection.
 	if err != nil {
@@ -215,7 +223,7 @@ func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues 
 // RemoveChart removes a chart from the cluster.
 func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinner) error {
 	// Establish a new actionConfig for the namespace.
-	_ = h.createActionConfig(namespace, spinner)
+	_ = h.createActionConfig(context.TODO(), namespace, spinner)
 	// Perform the uninstall.
 	response, err := h.uninstallChart(name)
 	message.Debug(response)
@@ -228,7 +236,7 @@ func (h *Helm) UpdateReleaseValues(ctx context.Context, updatedValues map[string
 	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.chart.ReleaseName)
 	defer spinner.Stop()
 
-	err := h.createActionConfig(h.chart.Namespace, spinner)
+	err := h.createActionConfig(ctx, h.chart.Namespace, spinner)
 	if err != nil {
 		return fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}

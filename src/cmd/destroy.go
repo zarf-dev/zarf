@@ -83,7 +83,7 @@ var destroyCmd = &cobra.Command{
 			}
 		} else {
 			// Perform chart uninstallation
-			helm.Destroy(removeComponents)
+			helm.Destroy(ctx, removeComponents)
 
 			// If Zarf didn't deploy the cluster, only delete the ZarfNamespace
 			if err := c.DeleteZarfNamespace(ctx); err != nil {

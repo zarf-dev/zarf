@@ -5,6 +5,7 @@
 package helm
 
 import (
+	"context"
 	"regexp"
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -13,14 +14,14 @@ import (
 )
 
 // Destroy removes ZarfInitPackage charts from the cluster and optionally all Zarf-installed charts.
-func Destroy(purgeAllZarfInstallations bool) {
+func Destroy(ctx context.Context, purgeAllZarfInstallations bool) {
 	spinner := message.NewProgressSpinner("Removing Zarf-installed charts")
 	defer spinner.Stop()
 
 	h := Helm{}
 
 	// Initially load the actionConfig without a namespace
-	err := h.createActionConfig("", spinner)
+	err := h.createActionConfig(ctx, "", spinner)
 	if err != nil {
 		// Don't fatal since this is a removal action
 		spinner.Errorf(err, "Unable to initialize the K8s client")

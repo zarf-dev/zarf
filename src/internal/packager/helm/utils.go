@@ -5,9 +5,12 @@
 package helm
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -60,7 +63,7 @@ func (h *Helm) parseChartValues() (chartutil.Values, error) {
 	return helpers.MergeMapRecursive(chartValues, h.valuesOverrides), nil
 }
 
-func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) error {
+func (h *Helm) createActionConfig(ctx context.Context, namespace string, spinner *message.Spinner) error {
 	// Initialize helm SDK
 	actionConfig := new(action.Configuration)
 	// Set the settings for the helm SDK
@@ -70,7 +73,10 @@ func (h *Helm) createActionConfig(namespace string, spinner *message.Spinner) er
 	h.settings.SetNamespace(namespace)
 
 	// Setup K8s connection
-	err := actionConfig.Init(h.settings.RESTClientGetter(), namespace, "", spinner.Updatef)
+	// TODO (austinabro321) this code cannot be merged as is
+	l := logger.From(ctx)
+	logLogger := slog.NewLogLogger(l.Handler(), slog.LevelInfo)
+	err := actionConfig.Init(h.settings.RESTClientGetter(), namespace, "", logLogger.Printf)
 
 	// Set the actionConfig is the received Helm pointer
 	h.actionConfig = actionConfig
