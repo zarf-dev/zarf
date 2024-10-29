@@ -25,6 +25,7 @@ type ZarfCommonOptions struct {
 	// Number of concurrent layer operations to perform when interacting with a remote package
 	OCIConcurrency int
 	// UseSlog tells Zarf whether or not to use the slogger over pterm when passing to external libraries
+	// TODO (@austinabro321) delete this when we officially switch over to slog
 	UseSlog bool
 }
 
