@@ -582,7 +582,9 @@ func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []s
 
 // Push all of the components git repos to the configured git server.
 func (p *Packager) pushReposToRepository(ctx context.Context, reposPath string, repos []string) error {
+	l := logger.From(ctx)
 	for _, repoURL := range repos {
+		l.Info("pushing repository", "name", repoURL, "server", p.state.GitServer.Address)
 		repository, err := git.Open(reposPath, repoURL)
 		if err != nil {
 			return err
