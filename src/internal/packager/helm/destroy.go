@@ -54,7 +54,7 @@ func Destroy(ctx context.Context, purgeAllZarfInstallations bool) {
 		// Filter on zarf releases
 		if zarfPrefix.MatchString(release.Name) {
 			spinner.Updatef("Uninstalling helm chart %s/%s", release.Namespace, release.Name)
-			if err = h.RemoveChart(release.Namespace, release.Name, spinner); err != nil {
+			if err = h.RemoveChart(ctx, release.Namespace, release.Name, spinner); err != nil {
 				// Don't fatal since this is a removal action
 				spinner.Errorf(err, "Unable to uninstall the chart")
 			}
