@@ -224,4 +224,8 @@ func TestContext(t *testing.T) {
 		res := From(ctx)
 		require.NotNil(t, res)
 	})
+	t.Run("can add a flag to the context to determine if enabled", func(t *testing.T) {
+		ctx := WithLoggingEnabled(context.Background(), true)
+		require.True(t, Enabled(ctx))
+	})
 }
