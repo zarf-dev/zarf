@@ -24,6 +24,8 @@ type ZarfCommonOptions struct {
 	TempDirectory string
 	// Number of concurrent layer operations to perform when interacting with a remote package
 	OCIConcurrency int
+	// UseSlog tells Zarf whether or not to use the slogger over pterm when passing to external libraries
+	UseSlog bool
 }
 
 // ZarfPackageOptions tracks the user-defined preferences during common package operations.

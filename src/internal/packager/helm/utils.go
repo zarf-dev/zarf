@@ -10,6 +10,7 @@ import (
 	"log/slog"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
@@ -73,10 +74,15 @@ func (h *Helm) createActionConfig(ctx context.Context, namespace string, spinner
 	h.settings.SetNamespace(namespace)
 
 	// Setup K8s connection
-	// TODO (austinabro321) this code cannot be merged as is
-	l := logger.From(ctx)
-	logLogger := slog.NewLogLogger(l.Handler(), slog.LevelInfo)
-	err := actionConfig.Init(h.settings.RESTClientGetter(), namespace, "", logLogger.Printf)
+	var helmLogger action.DebugLog
+	if config.CommonOptions.UseSlog {
+		l := logger.From(ctx)
+		helmLogger = slog.NewLogLogger(l.Handler(), slog.LevelDebug).Printf
+	} else {
+		helmLogger = spinner.Updatef
+	}
+
+	err := actionConfig.Init(h.settings.RESTClientGetter(), namespace, "", helmLogger)
 
 	// Set the actionConfig is the received Helm pointer
 	h.actionConfig = actionConfig
