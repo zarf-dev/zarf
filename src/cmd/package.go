@@ -275,7 +275,11 @@ var packageListCmd = &cobra.Command{
 			})
 		}
 
+		// NOTE(mkcp): Renders table with message.
 		header := []string{"Package", "Version", "Components"}
+		// HACK(mkcp): Similar to `package inspect`, we do want to use message here but we have to make sure our feature
+		// flagging doesn't disable this. Nothing happens after this so it's safe, but still very hacky.
+		message.InitializePTerm(logger.DestinationDefault)
 		message.Table(header, packageData)
 
 		// Print out any unmarshalling errors
