@@ -36,13 +36,10 @@ func GetZarfVariableConfig(ctx context.Context) *variables.VariableConfig {
 		return interactive.PromptVariable(variable)
 	}
 
-	var l *slog.Logger
 	if logger.Enabled(ctx) {
-		l = logger.From(ctx)
-	} else {
-		l = slog.New(message.ZarfHandler{})
+		return variables.New("zarf", prompt, logger.From(ctx))
 	}
-	return variables.New("zarf", prompt, l)
+	return variables.New("zarf", prompt, slog.New(message.ZarfHandler{}))
 }
 
 // GetZarfTemplates returns the template keys and values to be used for templating.
