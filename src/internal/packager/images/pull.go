@@ -144,6 +144,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 					// TODO(mkcp): Remove message on logger release
 					message.Warnf("Falling back to local 'docker', failed to find the manifest on a remote: %s", err.Error())
+					l.Warn("Falling back to local 'docker', failed to find the manifest on a remote", "error", err.Error())
 
 					// Attempt to connect to the local docker daemon.
 					cli, err := client.NewClientWithOpts(client.FromEnv)

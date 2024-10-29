@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -35,7 +36,13 @@ func GetZarfVariableConfig(ctx context.Context) *variables.VariableConfig {
 		return interactive.PromptVariable(variable)
 	}
 
-	return variables.New("zarf", prompt, logger.From(ctx))
+	var l *slog.Logger
+	if logger.Enabled(ctx) {
+		l = logger.From(ctx)
+	} else {
+		l = slog.New(message.ZarfHandler{})
+	}
+	return variables.New("zarf", prompt, l)
 }
 
 // GetZarfTemplates returns the template keys and values to be used for templating.
