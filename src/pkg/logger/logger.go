@@ -170,6 +170,7 @@ func WithContext(ctx context.Context, logger *slog.Logger) context.Context {
 	return context.WithValue(ctx, defaultCtxKey, logger)
 }
 
+// TODO (@austinabro321) once we switch over to the new logger completely the enabled key & logic should be deleted
 type ctxKeyEnabled struct{}
 
 var defaultCtxKeyEnabled = ctxKeyEnabled{}
