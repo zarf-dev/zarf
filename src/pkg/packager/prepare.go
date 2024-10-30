@@ -209,7 +209,8 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			for idx, k := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-				destination := filepath.Join(componentPaths.Manifests, kname)
+				// Use the temp folder because if "helpers.CreatePathAndCopy" is provider with the  same path it will result in the file being empty
+				destination := filepath.Join(componentPaths.Temp, kname)
 				if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return nil, fmt.Errorf("unable to build the kustomization for %s: %w", k, err)
 				}
