@@ -36,6 +36,7 @@ import (
 // InstallOrUpgradeChart performs a helm install of the given chart.
 func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings, string, error) {
 	l := logger.From(ctx)
+	start := time.Now()
 	source := h.chart.URL
 	if source == "" {
 		source = "Zarf-generated"
@@ -149,6 +150,7 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		}
 	}
 	spinner.Success()
+	l.Debug("done processing helm chart", "name", h.chart.Name, "duration", time.Since(start))
 
 	// return any collected connect strings for zarf connect.
 	return postRender.connectStrings, h.chart.ReleaseName, nil

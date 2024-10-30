@@ -63,6 +63,7 @@ func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDat
 	}
 
 	message.Debugf("Attempting to inject data into %s", data.Target)
+	l.Debug("preforming data injection", "target", data.Target)
 
 	source := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
 	if helpers.InvalidPath(source) {

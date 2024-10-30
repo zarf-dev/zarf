@@ -73,12 +73,10 @@ func (h *Helm) createActionConfig(ctx context.Context, namespace string, spinner
 	h.settings.SetNamespace(namespace)
 
 	// Setup K8s connection
-	var helmLogger action.DebugLog
+	helmLogger := spinner.Updatef
 	if logger.Enabled(ctx) {
 		l := logger.From(ctx)
 		helmLogger = slog.NewLogLogger(l.Handler(), slog.LevelDebug).Printf
-	} else {
-		helmLogger = spinner.Updatef
 	}
 
 	err := actionConfig.Init(h.settings.RESTClientGetter(), namespace, "", helmLogger)

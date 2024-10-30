@@ -128,6 +128,8 @@ func generateHtpasswd(regInfo *types.RegistryInfo) (string, error) {
 }
 
 func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) {
+	// TODO (@austinabro321) sanitize the template by making a copy and changing the actual keys
+	// then use json.MarshallIdent to create the json
 	debugText := "templateMap = { "
 
 	for key, template := range templateMap {

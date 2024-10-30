@@ -58,6 +58,7 @@ func (p *Packager) resetRegistryHPA(ctx context.Context) {
 // Deploy attempts to deploy the given PackageConfig.
 func (p *Packager) Deploy(ctx context.Context) error {
 	l := logger.From(ctx)
+	start := time.Now()
 	isInteractive := !config.CommonOptions.Confirm
 
 	deployFilter := filters.Combine(
@@ -137,7 +138,7 @@ func (p *Packager) Deploy(ctx context.Context) error {
 
 	// Notify all the things about the successful deployment
 	message.Successf("Zarf deployment complete")
-	l.Debug("Zarf deployment complete")
+	l.Debug("Zarf deployment complete", "duration", time.Since(start))
 
 	err = p.printTablesForDeployment(ctx, deployedComponents)
 	if err != nil {
@@ -292,11 +293,12 @@ func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.Z
 // Deploy a Zarf Component.
 func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool) ([]types.InstalledChart, error) {
 	l := logger.From(ctx)
+	start := time.Now()
 	// Toggles for general deploy operations
 	componentPath := p.layout.Components.Dirs[component.Name]
 
-	// All components now require a name
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
+	l.Info("deploying component", "name", component.Name)
 
 	hasImages := len(component.Images) > 0 && !noImgPush
 	hasCharts := len(component.Charts) > 0
@@ -388,6 +390,7 @@ func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfC
 	if err != nil {
 		return nil, err
 	}
+	l.Debug("done deploying component", "name", component.Name, "duration", time.Since(start))
 	return charts, nil
 }
 
@@ -396,6 +399,7 @@ func (p *Packager) processComponentFiles(ctx context.Context, component v1alpha1
 	l := logger.From(ctx)
 	l.Handler()
 	spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
+	start := time.Now()
 	l.Info("copying files", "count", len(component.Files))
 	defer spinner.Stop()
 
@@ -476,7 +480,7 @@ func (p *Packager) processComponentFiles(ctx context.Context, component v1alpha1
 	}
 
 	spinner.Success()
-	l.Debug("done copying files")
+	l.Debug("done copying files", "duration", time.Since(start))
 
 	return nil
 }
@@ -771,8 +775,8 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 	return installedCharts, nil
 }
 
-// TODO once packager is refactored to load the Zarf package and cluster objects in the cmd package
-// printing should be moved to cmd
+// TODO once deploy is refactored to load the Zarf package and cluster objects in the cmd package
+// table printing should be moved to cmd
 func (p *Packager) printTablesForDeployment(ctx context.Context, componentsToDeploy []types.DeployedComponent) error {
 	// If not init config, print the application connection table
 	if !p.cfg.Pkg.IsInitConfig() {
