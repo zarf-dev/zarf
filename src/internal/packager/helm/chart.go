@@ -82,13 +82,13 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		if errors.Is(histErr, driver.ErrReleaseNotFound) {
 			// No prior release, try to install it.
 			spinner.Updatef("Attempting chart installation")
-			l.Info("preforming chart install")
+			l.Info("preforming Helm install")
 
 			release, err = h.installChart(helmCtx, postRender)
 		} else if histErr == nil && len(releases) > 0 {
 			// Otherwise, there is a prior release so upgrade it.
 			spinner.Updatef("Attempting chart upgrade")
-			l.Info("preforming chart upgrade")
+			l.Info("preforming Helm upgrade")
 
 			lastRelease := releases[len(releases)-1]
 
