@@ -302,7 +302,6 @@ func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cm
 	if !cfg.Mute {
 		execCfg.Stdout = spinner
 		execCfg.Stderr = spinner
-
 		if logger.Enabled(ctx) {
 			execCfg.Print = true
 		}
