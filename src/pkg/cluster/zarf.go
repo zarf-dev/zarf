@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	autoscalingV2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -133,41 +135,51 @@ func (c *Cluster) DeleteDeployedPackage(ctx context.Context, packageName string)
 
 // StripZarfLabelsAndSecretsFromNamespaces removes metadata and secrets from existing namespaces no longer manged by Zarf.
 func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
+	start := time.Now()
+	l := logger.From(ctx)
 	spinner := message.NewProgressSpinner("Removing zarf metadata & secrets from existing namespaces not managed by Zarf")
 	defer spinner.Stop()
+	l.Info("removing zarf metadata & secrets from existing namespaces not managed by Zarf")
 
 	deleteOptions := metav1.DeleteOptions{}
 	listOptions := metav1.ListOptions{
 		LabelSelector: ZarfManagedByLabel + "=zarf",
 	}
 
+	// TODO(mkcp): Remove unnecessary nesting w/ else
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		spinner.Errorf(err, "Unable to get k8s namespaces")
+		l.Error("unable to get k8s namespaces", "error", err)
 	} else {
 		for _, namespace := range namespaceList.Items {
 			if _, ok := namespace.Labels[AgentLabel]; ok {
 				spinner.Updatef("Removing Zarf Agent label for namespace %s", namespace.Name)
+				l.Info("removing Zarf Agent label", "namespace", namespace.Name)
 				delete(namespace.Labels, AgentLabel)
 				namespaceCopy := namespace
 				_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
 				if err != nil {
 					// This is not a hard failure, but we should log it
 					spinner.Errorf(err, "Unable to update the namespace labels for %s", namespace.Name)
+					l.Warn("unable to update the namespace labels", "namespace", namespace.Name, "error", err)
 				}
 			}
 
 			spinner.Updatef("Removing Zarf secrets for namespace %s", namespace.Name)
+			l.Info("removing Zarf secrets", "namespace", namespace.Name)
 			err := c.Clientset.CoreV1().
 				Secrets(namespace.Name).
 				DeleteCollection(ctx, deleteOptions, listOptions)
 			if err != nil {
 				spinner.Errorf(err, "Unable to delete secrets from namespace %s", namespace.Name)
+				l.Error("unable to delete secrets", "namespace", namespace.Name, "error", err)
 			}
 		}
 	}
 
 	spinner.Success()
+	l.Debug("done stripping zarf labels and secrets from namespaces", "duration", time.Since(start))
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
