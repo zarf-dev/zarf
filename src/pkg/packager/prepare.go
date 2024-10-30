@@ -270,7 +270,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 		}
 
 		imgCompStart := time.Now()
-		l.Info("looking for image in component", "name", component.Name, "resourcesCount", len(resources))
+		l.Info("looking for images in component", "name", component.Name, "resourcesCount", len(resources))
 		spinner := message.NewProgressSpinner("Looking for images in component %q across %d resources", component.Name, len(resources))
 		defer spinner.Stop()
 
@@ -318,7 +318,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 		}
 
 		spinner.Success()
-		l.Debug("done looking for image in component",
+		l.Debug("done looking for images in component",
 			"name", component.Name,
 			"resourcesCount", len(resources),
 			"duration", time.Since(imgCompStart))
