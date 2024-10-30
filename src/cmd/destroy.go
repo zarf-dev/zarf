@@ -16,6 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 
@@ -33,7 +34,9 @@ var destroyCmd = &cobra.Command{
 	// TODO(mkcp): refactor and de-nest this function.
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx := cmd.Context()
-		timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
+		l := logger.From(ctx)
+
+		timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 		defer cancel()
 		c, err := cluster.NewClusterWithWait(timeoutCtx)
 		if err != nil {
@@ -46,6 +49,7 @@ var destroyCmd = &cobra.Command{
 		state, err := c.LoadZarfState(ctx)
 		if err != nil {
 			message.WarnErr(err, err.Error())
+			l.Warn(err.Error())
 		}
 
 		// If Zarf deployed the cluster, burn it all down
@@ -68,6 +72,7 @@ var destroyCmd = &cobra.Command{
 				err := exec.CmdWithPrint(script)
 				if errors.Is(err, os.ErrPermission) {
 					message.Warnf(lang.CmdDestroyErrScriptPermissionDenied, script)
+					l.Warn("received 'permission denied' when trying to execute script. Please double-check you have the correct kube-context.", "script", script)
 
 					// Don't remove scripts we can't execute so the user can try to manually run
 					continue
@@ -79,11 +84,12 @@ var destroyCmd = &cobra.Command{
 				err = os.Remove(script)
 				if err != nil {
 					message.WarnErr(err, fmt.Sprintf("Unable to remove script. script=%s", script))
+					l.Warn("unable to remove script", "script", script, "error", err.Error())
 				}
 			}
 		} else {
 			// Perform chart uninstallation
-			helm.Destroy(removeComponents)
+			helm.Destroy(ctx, removeComponents)
 
 			// If Zarf didn't deploy the cluster, only delete the ZarfNamespace
 			if err := c.DeleteZarfNamespace(ctx); err != nil {
