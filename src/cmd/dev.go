@@ -105,9 +105,8 @@ var devTransformGitLinksCmd = &cobra.Command{
 	Aliases: []string{"p"},
 	Short:   lang.CmdDevPatchGitShort,
 	Args:    cobra.ExactArgs(2),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, args []string) error {
 		host, fileName := args[0], args[1]
-		ctx := cmd.Context()
 
 		// Read the contents of the given file
 		content, err := os.ReadFile(fileName)
@@ -121,16 +120,11 @@ var devTransformGitLinksCmd = &cobra.Command{
 		// Perform git url transformation via regex
 		text := string(content)
 
-		// Set log func for transform
-		var logFn func(string, ...any)
-		logFn = message.Warnf
-		// Use logger if we can
-		if logger.Enabled(ctx) {
-			logFn = logger.From(ctx).Warn
-		}
-		processedText := transform.MutateGitURLsInText(logFn, gitServer.Address, text, gitServer.PushUsername)
+		// TODO(mkcp): Currently uses message for its log fn. Migrate to ctx and slog
+		processedText := transform.MutateGitURLsInText(message.Warnf, gitServer.Address, text, gitServer.PushUsername)
 
 		// Print the differences
+		// TODO(mkcp): Uses pterm to print text diffs. Decouple from pterm after we release logger.
 		dmp := diffmatchpatch.New()
 		diffs := dmp.DiffMain(text, processedText, true)
 		diffs = dmp.DiffCleanupSemantic(diffs)
