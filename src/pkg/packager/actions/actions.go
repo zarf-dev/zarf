@@ -7,11 +7,12 @@ package actions
 import (
 	"context"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"regexp"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -135,8 +136,7 @@ retryCmd:
 		if actionDefaults.MaxTotalSeconds < 1 {
 			spinner.Updatef("Waiting for \"%s\" (no timeout)", cmdEscaped)
 			l.Info("waiting for action (no timeout)", "cmd", cmdEscaped)
-			//TODO (schristoff): Make it so tryCmd can take a normal ctx
-			if err := tryCmd(context.Background()); err != nil {
+			if err := tryCmd(ctx); err != nil {
 				continue retryCmd
 			}
 
@@ -302,15 +302,18 @@ func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cm
 	if !cfg.Mute {
 		execCfg.Stdout = spinner
 		execCfg.Stderr = spinner
+		if logger.Enabled(ctx) {
+			execCfg.Print = true
+		}
 	}
 
-	out, errOut, err := exec.CmdWithContext(ctx, execCfg, shell, append(shellArgs, cmd)...)
+	stdout, stderr, err := exec.CmdWithContext(ctx, execCfg, shell, append(shellArgs, cmd)...)
 	// Dump final complete output (respect mute to prevent sensitive values from hitting the logs).
 	if !cfg.Mute {
 		// TODO(mkcp): Remove message on logger release
-		message.Debug(cmd, out, errOut)
-		l.Debug("action complete", "cmd", cmd, "out", out, "errOut", errOut)
+		message.Debug(cmd, stdout, stderr)
+		l.Debug("action complete", "cmd", cmd, "stdout", stdout, "stderr", stderr)
 	}
 
-	return out, err
+	return stdout, err
 }
