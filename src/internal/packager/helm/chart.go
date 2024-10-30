@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/avast/retry-go/v4"
 	plutoversionsfile "github.com/fairwindsops/pluto/v5"
@@ -28,7 +30,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -229,6 +230,7 @@ func (h *Helm) RemoveChart(ctx context.Context, namespace string, name string, s
 	// Perform the uninstall.
 	response, err := h.uninstallChart(name)
 	message.Debug(response)
+	logger.From(ctx).Debug("chart uninstalled", "response", response)
 	return err
 }
 

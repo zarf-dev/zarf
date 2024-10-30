@@ -14,13 +14,17 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // DeleteZarfNamespace deletes the Zarf namespace from the connected cluster.
 func (c *Cluster) DeleteZarfNamespace(ctx context.Context) error {
+	start := time.Now()
+	l := logger.From(ctx)
 	spinner := message.NewProgressSpinner("Deleting the zarf namespace from this cluster")
 	defer spinner.Stop()
+	l.Info("deleting the zarf namespace from this cluster")
 
 	err := c.Clientset.CoreV1().Namespaces().Delete(ctx, ZarfNamespaceName, metav1.DeleteOptions{})
 	if kerrors.IsNotFound(err) {
@@ -42,6 +46,8 @@ func (c *Cluster) DeleteZarfNamespace(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	l.Debug("done deleting the zarf namespace from this cluster", "duration", time.Since(start))
 	return nil
 }
 
