@@ -5,6 +5,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,61 +13,63 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 )
 
 func TestCreateSBOM(t *testing.T) {
-	tmpdir := t.TempDir()
-	sbomPath := filepath.Join(tmpdir, ".sbom-location")
+	t.Parallel()
 
-	pkgName := fmt.Sprintf("zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch)
+	outSbomPath := filepath.Join(t.TempDir(), ".sbom-location")
+	buildPath := t.TempDir()
+	tarPath := filepath.Join(buildPath, fmt.Sprintf("zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch))
 
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "--sbom-out", sbomPath, "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Creating SBOMs for 1 images and 0 components with files.")
-	// Test that the game package generates the SBOMs we expect (images only)
-	require.FileExists(t, filepath.Join(sbomPath, "dos-games", "sbom-viewer-ghcr.io_zarf-dev_doom-game_0.0.1.html"))
-	require.FileExists(t, filepath.Join(sbomPath, "dos-games", "compare.html"))
-	require.FileExists(t, filepath.Join(sbomPath, "dos-games", "ghcr.io_zarf-dev_doom-game_0.0.1.json"))
+	expectedFiles := []string{
+		"sbom-viewer-ghcr.io_zarf-dev_doom-game_0.0.1.html",
+		"compare.html",
+		"ghcr.io_zarf-dev_doom-game_0.0.1.json",
+	}
+
+	_, _, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "-o", buildPath, "--sbom-out", outSbomPath, "--confirm")
+	require.NoError(t, err)
+
+	pkgLayout, err := layout2.LoadFromTar(context.Background(), tarPath, layout2.PackageLayoutOptions{})
+	require.NoError(t, err)
+	getSbomPath, err := pkgLayout.GetSBOM(t.TempDir())
+	require.NoError(t, err)
+	for _, expectedFile := range expectedFiles {
+		require.FileExists(t, filepath.Join(getSbomPath, expectedFile))
+		require.FileExists(t, filepath.Join(outSbomPath, "dos-games", expectedFile))
+	}
 
 	// Clean the SBOM path so it is force to be recreated
-	e2e.CleanFiles(t, sbomPath)
-
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName, "--sbom-out", sbomPath)
-	require.NoError(t, err, stdOut, stdErr)
-	// Test that the game package generates the SBOMs we expect (images only)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-ghcr.io_zarf-dev_doom-game_0.0.1.html"))
-	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "compare.html"))
-	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "ghcr.io_zarf-dev_doom-game_0.0.1.json"))
+	err = os.RemoveAll(outSbomPath)
 	require.NoError(t, err)
 
-	stdOut, _, err = e2e.Zarf(t, "package", "inspect", pkgName, "--list-images")
+	_, _, err = e2e.Zarf(t, "package", "inspect", tarPath, "--sbom-out", outSbomPath)
+	require.NoError(t, err)
+
+	for _, expectedFile := range expectedFiles {
+		require.FileExists(t, filepath.Join(outSbomPath, "dos-games", expectedFile))
+	}
+
+	stdOut, _, err := e2e.Zarf(t, "package", "inspect", tarPath, "--list-images")
 	require.NoError(t, err)
 	require.Equal(t, "- ghcr.io/zarf-dev/doom-game:0.0.1\n", stdOut)
 
 	// Pull the current zarf binary version to find the corresponding init package
-	version, stdErr, err := e2e.Zarf(t, "version")
-	require.NoError(t, err, version, stdErr)
+	version, _, err := e2e.Zarf(t, "version")
+	require.NoError(t, err)
 
 	initName := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", e2e.Arch, strings.TrimSpace(version))
+	_, _, err = e2e.Zarf(t, "package", "inspect", initName, "--sbom-out", outSbomPath)
+	require.NoError(t, err)
 
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", initName, "--sbom-out", sbomPath)
-	require.NoError(t, err, stdOut, stdErr)
 	// Test that we preserve the filepath
-	_, err = os.ReadFile(filepath.Join(sbomPath, "dos-games", "sbom-viewer-ghcr.io_zarf-dev_doom-game_0.0.1.html"))
-	require.NoError(t, err)
-	// Test that the init package generates the SBOMs we expect (images + component files)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-docker.io_gitea_gitea_1.21.5-rootless.html"))
-	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "docker.io_gitea_gitea_1.21.5-rootless.json"))
-	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "sbom-viewer-zarf-component-k3s.html"))
-	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "zarf-component-k3s.json"))
-	require.NoError(t, err)
-	_, err = os.ReadFile(filepath.Join(sbomPath, "init", "compare.html"))
-	require.NoError(t, err)
-
-	e2e.CleanFiles(t, pkgName)
+	require.FileExists(t, filepath.Join(outSbomPath, "dos-games", "sbom-viewer-ghcr.io_zarf-dev_doom-game_0.0.1.html"))
+	require.FileExists(t, filepath.Join(outSbomPath, "init", "sbom-viewer-docker.io_gitea_gitea_1.21.5-rootless.html"))
+	require.FileExists(t, filepath.Join(outSbomPath, "init", "docker.io_gitea_gitea_1.21.5-rootless.json"))
+	require.FileExists(t, filepath.Join(outSbomPath, "init", "sbom-viewer-zarf-component-k3s.html"))
+	require.FileExists(t, filepath.Join(outSbomPath, "init", "zarf-component-k3s.json"))
+	require.FileExists(t, filepath.Join(outSbomPath, "init", "compare.html"))
 }

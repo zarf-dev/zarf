@@ -72,9 +72,6 @@ destroy: ## Run `zarf destroy` on the current cluster
 	$(ZARF_BIN) destroy --confirm --remove-components
 	rm -fr build
 
-delete-packages: ## Delete all Zarf package tarballs in the project recursively
-	find . -type f -name 'zarf-package-*' -not -path '*/testdata/*' -print -delete
-
 # Note: the path to the main.go file is not used due to https://github.com/golang/go/issues/51831#issuecomment-1074188363
 .PHONY: build
 build: ## Build the Zarf CLI for the machines OS and architecture

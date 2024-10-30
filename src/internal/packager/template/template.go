@@ -5,6 +5,7 @@
 package template
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"log/slog"
@@ -16,6 +17,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
@@ -26,7 +28,7 @@ const (
 )
 
 // GetZarfVariableConfig gets a variable configuration specific to Zarf
-func GetZarfVariableConfig() *variables.VariableConfig {
+func GetZarfVariableConfig(ctx context.Context) *variables.VariableConfig {
 	prompt := func(variable v1alpha1.InteractiveVariable) (value string, err error) {
 		if config.CommonOptions.Confirm {
 			return variable.Default, nil
@@ -34,10 +36,10 @@ func GetZarfVariableConfig() *variables.VariableConfig {
 		return interactive.PromptVariable(variable)
 	}
 
-	return variables.New(
-		"zarf",
-		prompt,
-		slog.New(message.ZarfHandler{}))
+	if logger.Enabled(ctx) {
+		return variables.New("zarf", prompt, logger.From(ctx))
+	}
+	return variables.New("zarf", prompt, slog.New(message.ZarfHandler{}))
 }
 
 // GetZarfTemplates returns the template keys and values to be used for templating.

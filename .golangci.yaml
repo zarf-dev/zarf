@@ -66,6 +66,9 @@ linters-settings:
       - (*github.com/spf13/cobra.Command).MarkFlagRequired
       - (*github.com/spf13/pflag.FlagSet).MarkHidden
       - (*github.com/spf13/pflag.FlagSet).MarkDeprecated
+  sloglint:
+    no-mixed-args: true
+    key-naming-case: camel
 issues:
   # Revive rules that are disabled by default.
   include:

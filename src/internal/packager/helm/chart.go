@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -23,9 +24,9 @@ import (
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -129,20 +130,14 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		return nil, "", fmt.Errorf("unable to build the resource list: %w", err)
 	}
 
-	healthChecks := []v1alpha1.NamespacedObjectKindReference{}
+	runtimeObjs := []runtime.Object{}
 	for _, resource := range resourceList {
-		apiVersion, kind := resource.Object.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
-		healthChecks = append(healthChecks, v1alpha1.NamespacedObjectKindReference{
-			APIVersion: apiVersion,
-			Kind:       kind,
-			Name:       resource.Name,
-			Namespace:  resource.Namespace,
-		})
+		runtimeObjs = append(runtimeObjs, resource.Object)
 	}
 	if !h.chart.NoWait {
 		// Ensure we don't go past the timeout by using a context initialized with the helm timeout
 		spinner.Updatef("Running health checks")
-		if err := healthchecks.Run(helmCtx, h.cluster.Watcher, healthChecks); err != nil {
+		if err := healthchecks.WaitForReadyRuntime(helmCtx, h.cluster.Watcher, runtimeObjs); err != nil {
 			return nil, "", err
 		}
 	}
@@ -219,12 +214,13 @@ func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues 
 }
 
 // RemoveChart removes a chart from the cluster.
-func (h *Helm) RemoveChart(namespace string, name string, spinner *message.Spinner) error {
+func (h *Helm) RemoveChart(ctx context.Context, namespace string, name string, spinner *message.Spinner) error {
 	// Establish a new actionConfig for the namespace.
 	_ = h.createActionConfig(namespace, spinner)
 	// Perform the uninstall.
 	response, err := h.uninstallChart(name)
 	message.Debug(response)
+	logger.From(ctx).Debug("chart uninstalled", "response", response)
 	return err
 }
 

@@ -14,9 +14,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
@@ -75,7 +77,7 @@ func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) (err er
 			return fmt.Errorf("unable to download file with sget: %s: %w", src, err)
 		}
 	} else {
-		err = httpGetFile(src, file)
+		err = httpGetFile(ctx, src, file)
 		if err != nil {
 			return err
 		}
@@ -95,7 +97,11 @@ func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) (err er
 	return nil
 }
 
-func httpGetFile(url string, destinationFile *os.File) (err error) {
+func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err error) {
+	l := logger.From(ctx)
+	l.Info("download start", "url", url)
+	start := time.Now()
+
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
@@ -111,16 +117,17 @@ func httpGetFile(url string, destinationFile *os.File) (err error) {
 		return fmt.Errorf("bad HTTP status: %s", resp.Status)
 	}
 
-	// Writer the body to file
+	// Setup progress bar
+	// TODO(mkcp): Remove message on logger release
 	title := fmt.Sprintf("Downloading %s", filepath.Base(url))
 	progressBar := message.NewProgressBar(resp.ContentLength, title)
-
-	if _, err = io.Copy(destinationFile, io.TeeReader(resp.Body, progressBar)); err != nil {
+	reader := io.TeeReader(resp.Body, progressBar)
+	// Copy response body to file
+	if _, err = io.Copy(destinationFile, reader); err != nil {
 		progressBar.Failf("Unable to save the file %s: %s", destinationFile.Name(), err.Error())
-		return err
+		return fmt.Errorf("unable to save the file %s: %w", destinationFile.Name(), err)
 	}
-
-	title = fmt.Sprintf("Downloaded %s", url)
-	progressBar.Successf("%s", title)
+	progressBar.Successf("Downloaded %s", url)
+	l.Debug("download successful", "url", url, "size", resp.ContentLength, "duration", time.Since(start))
 	return nil
 }
