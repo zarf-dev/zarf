@@ -380,7 +380,7 @@
         },
         "skipSchemaValidation": {
           "type": "boolean",
-          "description": "Prevents Helm from validating the values file against it's JSON schema. Useful in the airgap when the JSON Schema references the internet."
+          "description": "Prevents Helm from validating the values against the JSON schema. Useful in the airgap when the JSON Schema references the internet."
         }
       },
       "additionalProperties": false,
