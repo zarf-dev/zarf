@@ -78,7 +78,6 @@ func (h *Helm) createActionConfig(ctx context.Context, namespace string, spinner
 		l := logger.From(ctx)
 		helmLogger = slog.NewLogLogger(l.Handler(), slog.LevelDebug).Printf
 	}
-
 	err := actionConfig.Init(h.settings.RESTClientGetter(), namespace, "", helmLogger)
 
 	// Set the actionConfig is the received Helm pointer
