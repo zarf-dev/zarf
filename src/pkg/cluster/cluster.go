@@ -41,6 +41,7 @@ type Cluster struct {
 
 // NewClusterWithWait creates a new Cluster instance and waits for the given timeout for the cluster to be ready.
 func NewClusterWithWait(ctx context.Context) (*Cluster, error) {
+	start := time.Now()
 	l := logger.From(ctx)
 	spinner := message.NewProgressSpinner("Waiting for cluster connection")
 	defer spinner.Stop()
@@ -74,6 +75,7 @@ func NewClusterWithWait(ctx context.Context) (*Cluster, error) {
 	}
 
 	spinner.Success()
+	l.Debug("done waiting for cluster, connected", "duration", time.Since(start))
 
 	return c, nil
 }
