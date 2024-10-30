@@ -157,7 +157,7 @@ type ZarfChart struct {
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
 	// [alpha] List of variables to set in the Helm chart.
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
-	// Prevents Helm from validating the values against the JSON schema. Useful in the airgap when the JSON Schema references the internet.
+	// Prevents Helm from validating the values against the JSON schema. Necessary in the air-gap when the JSON Schema references the resources on the internet.
 	SkipSchemaValidation bool `json:"skipSchemaValidation,omitempty"`
 }
 
