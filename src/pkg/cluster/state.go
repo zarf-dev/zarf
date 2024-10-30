@@ -243,7 +243,7 @@ func (c *Cluster) debugPrintZarfState(ctx context.Context, state *types.ZarfStat
 		return
 	}
 	message.Debugf("ZarfState - %s", string(b))
-	logger.From(ctx).Debug("", "state", string(b))
+	logger.From(ctx).Debug("cluster.debugPrintZarfState", "state", sanitized)
 }
 
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.
