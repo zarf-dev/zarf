@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -113,13 +114,17 @@ var devTransformGitLinksCmd = &cobra.Command{
 			return fmt.Errorf("unable to read the file %s: %w", fileName, err)
 		}
 
-		pkgConfig.InitOpts.GitServer.Address = host
+		gitServer := pkgConfig.InitOpts.GitServer
+		gitServer.Address = host
 
 		// Perform git url transformation via regex
 		text := string(content)
-		processedText := transform.MutateGitURLsInText(message.Warnf, pkgConfig.InitOpts.GitServer.Address, text, pkgConfig.InitOpts.GitServer.PushUsername)
+
+		// TODO(mkcp): Currently uses message for its log fn. Migrate to ctx and slog
+		processedText := transform.MutateGitURLsInText(message.Warnf, gitServer.Address, text, gitServer.PushUsername)
 
 		// Print the differences
+		// TODO(mkcp): Uses pterm to print text diffs. Decouple from pterm after we release logger.
 		dmp := diffmatchpatch.New()
 		diffs := dmp.DiffMain(text, processedText, true)
 		diffs = dmp.DiffCleanupSemantic(diffs)
@@ -160,6 +165,7 @@ var devSha256SumCmd = &cobra.Command{
 
 		if helpers.IsURL(fileName) {
 			message.Warn(lang.CmdDevSha256sumRemoteWarning)
+			logger.From(cmd.Context()).Warn("this is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link")
 
 			fileBase, err := helpers.ExtractBasePathFromURL(fileName)
 			if err != nil {
@@ -251,8 +257,14 @@ var devFindImagesCmd = &cobra.Command{
 		defer pkgClient.ClearTempPaths()
 
 		_, err = pkgClient.FindImages(cmd.Context())
+
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
+			// HACK(mkcp): Re-initializing PTerm with a stderr writer isn't great, but it lets us render these lint
+			// tables below for backwards compatibility
+			if logger.Enabled(cmd.Context()) {
+				message.InitializePTerm(logger.DestinationDefault)
+			}
 			common.PrintFindings(lintErr)
 		}
 		if err != nil {
@@ -299,6 +311,11 @@ var devLintCmd = &cobra.Command{
 		err := lint.Validate(cmd.Context(), pkgConfig.CreateOpts.BaseDir, pkgConfig.CreateOpts.Flavor, pkgConfig.CreateOpts.SetVariables)
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
+			// HACK(mkcp): Re-initializing PTerm with a stderr writer isn't great, but it lets us render these lint
+			// tables below for backwards compatibility
+			if logger.Enabled(cmd.Context()) {
+				message.InitializePTerm(logger.DestinationDefault)
+			}
 			common.PrintFindings(lintErr)
 			// Do not return an error if the findings are all warnings.
 			if lintErr.OnlyWarnings() {
