@@ -133,7 +133,7 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	}
 	if len(deployedComponents) == 0 {
 		message.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
-		l.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
+		l.Warn("no components were selected for deployment. Inspect the package to view the available components and select components interactively or by name with \"--components\"")
 	}
 
 	// Notify all the things about the successful deployment
@@ -397,7 +397,6 @@ func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfC
 // Move files onto the host of the machine performing the deployment.
 func (p *Packager) processComponentFiles(ctx context.Context, component v1alpha1.ZarfComponent, pkgLocation string) error {
 	l := logger.From(ctx)
-	l.Handler()
 	spinner := message.NewProgressSpinner("Copying %d files", len(component.Files))
 	start := time.Now()
 	l.Info("copying files", "count", len(component.Files))
@@ -768,7 +767,7 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 		connectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart(ctx)
 		if err != nil {
 			return nil, err
-		}
+	}
 		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
 	}
 

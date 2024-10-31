@@ -197,13 +197,13 @@ func (r *Repository) Push(ctx context.Context, address, username, password strin
 	err = repo.FetchContext(ctx, fetchOptions)
 	if errors.Is(err, transport.ErrRepositoryNotFound) {
 		message.Debugf("Repo not yet available offline, skipping fetch...")
-		l.Debug("Repo not yet available offline, skipping fetch")
+		l.Debug("repo not yet available offline, skipping fetch")
 	} else if errors.Is(err, git.ErrForceNeeded) {
 		message.Debugf("Repo fetch requires force, skipping fetch...")
-		l.Debug("Repo fetch requires force, skipping fetch")
+		l.Debug("repo fetch requires force, skipping fetch")
 	} else if errors.Is(err, git.NoErrAlreadyUpToDate) {
 		message.Debugf("Repo already up-to-date, skipping fetch...")
-		l.Debug("Repo already up-to-date, skipping fetch")
+		l.Debug("repo already up-to-date, skipping fetch")
 	} else if err != nil {
 		return fmt.Errorf("unable to fetch the git repo prior to push: %w", err)
 	}

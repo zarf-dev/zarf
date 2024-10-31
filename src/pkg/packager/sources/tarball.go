@@ -105,14 +105,14 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 	if !dst.IsLegacyLayout() {
 		spinner := message.NewProgressSpinner("Validating full package checksums")
 		defer spinner.Stop()
-		l.Info("validating package checksums")
+		l.Info("validating package checksums", "source", s.PackageSource)
 
 		if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, false); err != nil {
 			return pkg, nil, err
 		}
 
 		spinner.Success()
-		l.Debug("done validating package checksums")
+		l.Debug("done validating package checksums", "source", s.PackageSource)
 
 		if !s.SkipSignatureValidation {
 			if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
