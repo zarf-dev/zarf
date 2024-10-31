@@ -50,13 +50,6 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		message.Warnf(lang.AgentWarnSemVerRef, src.Spec.Reference.SemVer)
 	}
 
-	if src.Labels != nil && src.Labels["zarf-agent"] == "patched" {
-		return &operations.Result{
-			Allowed:  true,
-			PatchOps: []operations.PatchOperation{},
-		}, nil
-	}
-
 	zarfState, err := cluster.LoadZarfState(ctx)
 	if err != nil {
 		return nil, err

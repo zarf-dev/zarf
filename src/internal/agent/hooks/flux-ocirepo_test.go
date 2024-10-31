@@ -39,7 +39,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 
 	tests := []admissionTest{
 		{
-			name: "should not mutate when agent patched",
+			name: "should mutate even if agent patched",
 			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Update, &flux.OCIRepository{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "already-patched",
@@ -54,7 +54,26 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 					},
 				},
 			}),
-			patch: nil,
+			patch:  []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://127.0.0.1:31999/stefanprodan/manifests/podinfo",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/spec/ref/tag",
+					"6.4.0-zarf-2823281104",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
 			code:  http.StatusOK,
 		},
 		{

@@ -47,13 +47,6 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 		return &operations.Result{Allowed: true}, nil
 	}
 
-	if src.Labels != nil && src.Labels["zarf-agent"] == "patched" {
-		return &operations.Result{
-			Allowed:  true,
-			PatchOps: nil,
-		}, nil
-	}
-
 	zarfState, err := cluster.LoadZarfState(ctx)
 	if err != nil {
 		return nil, err

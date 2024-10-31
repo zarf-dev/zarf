@@ -68,7 +68,7 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 			code:        http.StatusInternalServerError,
 		},
 		{
-			name: "should not mutate when agent patched",
+			name: "should mutate even if agent patched",
 			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Update, &flux.HelmRepository{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "already-patched",
@@ -77,9 +77,26 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 					},
 				},
 				Spec: flux.HelmRepositorySpec{
+					URL:  "oci://ghcr.io/stefanprodan/charts",
 					Type: "oci",
 				},
 			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://127.0.0.1:31999/stefanprodan/charts",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
 			code: http.StatusOK,
 		},
 		{
