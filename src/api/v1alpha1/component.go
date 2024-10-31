@@ -157,6 +157,16 @@ type ZarfChart struct {
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
 	// [alpha] List of variables to set in the Helm chart.
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
+	// Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet.
+	SchemaValidation *bool `json:"schemaValidation,omitempty"`
+}
+
+// ShouldRunSchemaValidation returns if Helm schema validation should be run or not
+func (zc ZarfChart) ShouldRunSchemaValidation() bool {
+	if zc.SchemaValidation != nil {
+		return *zc.SchemaValidation
+	}
+	return true
 }
 
 // ZarfChartVariable represents a variable that can be set for a Helm chart overrides.
