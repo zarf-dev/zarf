@@ -26,7 +26,7 @@ func Destroy(ctx context.Context, purgeAllZarfInstallations bool) {
 	h := Helm{}
 
 	// Initially load the actionConfig without a namespace
-	err := h.createActionConfig("", spinner)
+	err := h.createActionConfig(ctx, "", spinner)
 	if err != nil {
 		// Don't fatal since this is a removal action
 		spinner.Errorf(err, "Unable to initialize the K8s client")

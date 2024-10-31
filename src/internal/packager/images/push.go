@@ -10,10 +10,10 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -21,8 +21,7 @@ import (
 
 // Push pushes images to a registry.
 func Push(ctx context.Context, cfg PushConfig) error {
-	logs.Warn.SetOutput(&message.DebugWriter{})
-	logs.Progress.SetOutput(&message.DebugWriter{})
+	l := logger.From(ctx)
 
 	toPush := map[transform.Image]v1.Image{}
 	// Build an image list from the references
@@ -67,6 +66,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		}()
 		for refInfo, img := range toPush {
 			message.Infof("Pushing %s", refInfo.Reference)
+			l.Info("pushing image", "name", refInfo.Reference)
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
 				offlineNameCRC, err := transform.ImageTransformHost(registryURL, refInfo.Reference)

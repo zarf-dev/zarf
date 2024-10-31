@@ -235,7 +235,6 @@ func (c *Cluster) debugPrintZarfState(ctx context.Context, state *types.ZarfStat
 	if state == nil {
 		return
 	}
-
 	// this is a shallow copy, nested pointers WILL NOT be copied
 	oldState := *state
 	sanitized := c.sanitizeZarfState(&oldState)
@@ -244,7 +243,6 @@ func (c *Cluster) debugPrintZarfState(ctx context.Context, state *types.ZarfStat
 		return
 	}
 	message.Debugf("ZarfState - %s", string(b))
-
 	logger.From(ctx).Debug("cluster.debugPrintZarfState", "state", sanitized)
 }
 
