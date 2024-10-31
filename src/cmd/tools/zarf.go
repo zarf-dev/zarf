@@ -222,13 +222,14 @@ var downloadInitCmd = &cobra.Command{
 	Use:   "download-init",
 	Short: lang.CmdToolsDownloadInitShort,
 	RunE: func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 		url := zoci.GetInitPackageURL(config.CLIVersion)
-		remote, err := zoci.NewRemote(url, oci.PlatformForArch(config.GetArch()))
+		remote, err := zoci.NewRemote(ctx, url, oci.PlatformForArch(config.GetArch()))
 		if err != nil {
 			return fmt.Errorf("unable to download the init package: %w", err)
 		}
 		source := &sources.OCISource{Remote: remote}
-		_, err = source.Collect(cmd.Context(), outputDirectory)
+		_, err = source.Collect(ctx, outputDirectory)
 		if err != nil {
 			return fmt.Errorf("unable to download the init package: %w", err)
 		}

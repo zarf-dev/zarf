@@ -12,11 +12,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/mholt/archiver/v3"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -35,8 +37,11 @@ type TarballSource struct {
 
 // LoadPackage loads a package from a tarball.
 func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
+	l := logger.From(ctx)
 	spinner := message.NewProgressSpinner("Loading package from %q", s.PackageSource)
 	defer spinner.Stop()
+	start := time.Now()
+	l.Info("loading package", "source", s.PackageSource)
 
 	if s.Shasum != "" {
 		if err := helpers.SHAsMatch(s.PackageSource, s.Shasum); err != nil {
@@ -100,12 +105,14 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 	if !dst.IsLegacyLayout() {
 		spinner := message.NewProgressSpinner("Validating full package checksums")
 		defer spinner.Stop()
+		l.Info("validating package checksums", "source", s.PackageSource)
 
 		if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, false); err != nil {
 			return pkg, nil, err
 		}
 
 		spinner.Success()
+		l.Debug("done validating package checksums", "source", s.PackageSource)
 
 		if !s.SkipSignatureValidation {
 			if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
@@ -136,6 +143,7 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 	}
 
 	spinner.Success()
+	l.Debug("done loading package", "source", s.PackageSource, "duration", time.Since(start))
 
 	return pkg, warnings, nil
 }

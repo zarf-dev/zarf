@@ -292,8 +292,7 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		if err != nil {
 			return err
 		}
-		// TODO(mkcp): Port zoci.NewRemote to new logger
-		remote, err := zoci.NewRemote(ref, oci.PlatformForArch(config.GetArch()))
+		remote, err := zoci.NewRemote(ctx, ref, oci.PlatformForArch(config.GetArch()))
 		if err != nil {
 			return err
 		}

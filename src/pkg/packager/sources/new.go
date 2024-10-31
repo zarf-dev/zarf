@@ -59,7 +59,7 @@ func Identify(pkgSrc string) string {
 }
 
 // New returns a new PackageSource based on the provided package options.
-func New(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
+func New(ctx context.Context, pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 	var source PackageSource
 
 	pkgSrc := pkgOpts.PackageSource
@@ -70,7 +70,7 @@ func New(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) {
 			pkgSrc = fmt.Sprintf("%s@sha256:%s", pkgSrc, pkgOpts.Shasum)
 		}
 		arch := config.GetArch()
-		remote, err := zoci.NewRemote(pkgSrc, oci.PlatformForArch(arch))
+		remote, err := zoci.NewRemote(ctx, pkgSrc, oci.PlatformForArch(arch))
 		if err != nil {
 			return nil, err
 		}

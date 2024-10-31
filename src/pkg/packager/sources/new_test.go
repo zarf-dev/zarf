@@ -93,7 +93,7 @@ func TestNewPackageSource(t *testing.T) {
 			t.Parallel()
 
 			require.Equal(t, tt.expectedIdentify, Identify(tt.src))
-			ps, err := New(&types.ZarfPackageOptions{PackageSource: tt.src})
+			ps, err := New(context.Background(), &types.ZarfPackageOptions{PackageSource: tt.src})
 			require.NoError(t, err)
 			require.IsType(t, tt.expectedType, ps)
 		})
@@ -166,8 +166,9 @@ func TestPackageSource(t *testing.T) {
 				PackageSource: tt.src,
 				Shasum:        tt.shasum,
 			}
+			ctx := context.Background()
 
-			ps, err := New(opts)
+			ps, err := New(ctx, opts)
 			require.NoError(t, err)
 			packageDir := t.TempDir()
 			pkgLayout := layout.New(packageDir)
@@ -180,7 +181,7 @@ func TestPackageSource(t *testing.T) {
 			require.Empty(t, warnings)
 			require.Equal(t, expectedPkg, pkg)
 
-			ps, err = New(opts)
+			ps, err = New(ctx, opts)
 			require.NoError(t, err)
 			metadataDir := t.TempDir()
 			metadataLayout := layout.New(metadataDir)
@@ -189,7 +190,7 @@ func TestPackageSource(t *testing.T) {
 			require.Empty(t, warnings)
 			require.Equal(t, expectedPkg, metadata)
 
-			ps, err = New(opts)
+			ps, err = New(ctx, opts)
 			require.NoError(t, err)
 			collectDir := t.TempDir()
 			fp, err := ps.Collect(context.Background(), collectDir)
