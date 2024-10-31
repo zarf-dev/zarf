@@ -161,8 +161,8 @@ type ZarfChart struct {
 	SchemaValidation *bool `json:"schemaValidation,omitempty"`
 }
 
-// RunSchemaValidation returns if Helm schema validation should be run or not
-func (zc ZarfChart) RunSchemaValidation() bool {
+// ShouldRunSchemaValidation returns if Helm schema validation should be run or not
+func (zc ZarfChart) ShouldRunSchemaValidation() bool {
 	if zc.SchemaValidation != nil {
 		return *zc.SchemaValidation
 	}
