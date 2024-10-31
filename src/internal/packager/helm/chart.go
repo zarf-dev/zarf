@@ -296,6 +296,8 @@ func (h *Helm) installChart(ctx context.Context, postRender *renderer) (*release
 	// Must be unique per-namespace and < 53 characters. @todo: restrict helm loadedChart name to this.
 	client.ReleaseName = h.chart.ReleaseName
 
+	client.SkipSchemaValidation = !h.chart.ShouldRunSchemaValidation()
+
 	// Namespace must be specified.
 	client.Namespace = h.chart.Namespace
 
@@ -328,6 +330,8 @@ func (h *Helm) upgradeChart(ctx context.Context, lastRelease *release.Release, p
 	client.Wait = !h.chart.NoWait
 
 	client.SkipCRDs = true
+
+	client.SkipSchemaValidation = !h.chart.ShouldRunSchemaValidation()
 
 	// Namespace must be specified.
 	client.Namespace = h.chart.Namespace
