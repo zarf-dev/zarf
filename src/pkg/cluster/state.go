@@ -21,6 +21,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/types"
@@ -196,7 +197,7 @@ func (c *Cluster) LoadZarfState(ctx context.Context) (*types.ZarfState, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
-	c.debugPrintZarfState(state)
+	c.debugPrintZarfState(ctx, state)
 	return state, nil
 }
 
@@ -221,7 +222,7 @@ func (c *Cluster) sanitizeZarfState(state *types.ZarfState) *types.ZarfState {
 	return state
 }
 
-func (c *Cluster) debugPrintZarfState(state *types.ZarfState) {
+func (c *Cluster) debugPrintZarfState(ctx context.Context, state *types.ZarfState) {
 	if state == nil {
 		return
 	}
@@ -233,11 +234,12 @@ func (c *Cluster) debugPrintZarfState(state *types.ZarfState) {
 		return
 	}
 	message.Debugf("ZarfState - %s", string(b))
+	logger.From(ctx).Debug("cluster.debugPrintZarfState", "state", sanitized)
 }
 
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.
 func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) error {
-	c.debugPrintZarfState(state)
+	c.debugPrintZarfState(ctx, state)
 
 	data, err := json.Marshal(&state)
 	if err != nil {

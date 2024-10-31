@@ -8,10 +8,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"os"
 	"slices"
 	"strings"
+
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -106,7 +107,7 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 
 	// Fill the source if it wasn't provided - note source can be nil if the package is being created
 	if pkgr.source == nil && pkgr.cfg.CreateOpts.BaseDir == "" {
-		pkgr.source, err = sources.New(&pkgr.cfg.PkgOpts)
+		pkgr.source, err = sources.New(pkgr.ctx, &pkgr.cfg.PkgOpts)
 		if err != nil {
 			return nil, err
 		}

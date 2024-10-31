@@ -158,7 +158,7 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 		spinner.Updatef("Uninstalling chart '%s' from the '%s' component", chart.ChartName, deployedComponent.Name)
 
 		helmCfg := helm.NewClusterOnly(p.cfg, p.variableConfig, p.state, p.cluster)
-		if err := helmCfg.RemoveChart(chart.Namespace, chart.ChartName, spinner); err != nil {
+		if err := helmCfg.RemoveChart(ctx, chart.Namespace, chart.ChartName, spinner); err != nil {
 			if !errors.Is(err, driver.ErrReleaseNotFound) {
 				onFailure()
 				return deployedPackage, fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w",

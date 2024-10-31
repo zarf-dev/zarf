@@ -8,11 +8,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/goccy/go-yaml"
@@ -40,6 +42,7 @@ var imageFuzzyCheck = regexp.MustCompile(`(?mi)["|=]([a-z0-9\-.\/:]+:[\w.\-]*[a-
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
 func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) {
+	l := logger.From(ctx)
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -48,12 +51,14 @@ func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) 
 		// Return to the original working directory
 		if err := os.Chdir(cwd); err != nil {
 			message.Warnf("Unable to return to the original working directory: %s", err.Error())
+			l.Warn("unable to return to the original working directory", "error", err)
 		}
 	}()
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return nil, fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
 	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
+	l.Info("using build directory", "path", p.cfg.CreateOpts.BaseDir)
 
 	c := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
 
@@ -67,6 +72,7 @@ func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) 
 	}
 	for _, warning := range warnings {
 		message.Warn(warning)
+		l.Warn(warning)
 	}
 	p.cfg.Pkg = pkg
 
@@ -75,12 +81,15 @@ func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) 
 
 // TODO: Refactor to return output string instead of printing inside of function.
 func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) {
+	l := logger.From(ctx)
 	for _, component := range p.cfg.Pkg.Components {
 		if len(component.Repos) > 0 && p.cfg.FindImagesOpts.RepoHelmChartPath == "" {
-			message.Note("This Zarf package contains git repositories, " +
+			msg := "This Zarf package contains git repositories, " +
 				"if any repos contain helm charts you want to template and " +
 				"search for images, make sure to specify the helm chart path " +
-				"via the --repo-chart-path flag")
+				"via the --repo-chart-path flag"
+			message.Note(msg)
+			l.Info(msg)
 			break
 		}
 	}
@@ -140,7 +149,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 		if err != nil {
 			return nil, err
 		}
-		err = p.populateComponentAndStateTemplates(component.Name)
+		err = p.populateComponentAndStateTemplates(ctx, component.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -209,7 +218,8 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			for idx, k := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-				destination := filepath.Join(componentPaths.Manifests, kname)
+				// Use the temp folder because if "helpers.CreatePathAndCopy" is provider with the  same path it will result in the file being empty
+				destination := filepath.Join(componentPaths.Temp, kname)
 				if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return nil, fmt.Errorf("unable to build the kustomization for %s: %w", k, err)
 				}
@@ -260,6 +270,8 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			}
 		}
 
+		imgCompStart := time.Now()
+		l.Info("looking for images in component", "name", component.Name, "resourcesCount", len(resources))
 		spinner := message.NewProgressSpinner("Looking for images in component %q across %d resources", component.Name, len(resources))
 		defer spinner.Stop()
 
@@ -288,9 +300,11 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 				if descriptor, err := crane.Head(image, images.WithGlobalInsecureFlag()...); err != nil {
 					// Test if this is a real image, if not just quiet log to debug, this is normal
 					message.Debugf("Suspected image does not appear to be valid: %#v", err)
+					l.Debug("suspected image does not appear to be valid", "error", err)
 				} else {
 					// Otherwise, add to the list of images
 					message.Debugf("Imaged digest found: %s", descriptor.Digest)
+					l.Debug("imaged digest found", "digest", descriptor.Digest)
 					validImages = append(validImages, image)
 				}
 			}
@@ -305,16 +319,23 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 		}
 
 		spinner.Success()
+		l.Debug("done looking for images in component",
+			"name", component.Name,
+			"resourcesCount", len(resources),
+			"duration", time.Since(imgCompStart))
 
 		if !p.cfg.FindImagesOpts.SkipCosign {
 			// Handle cosign artifact lookups
 			if len(imagesMap[component.Name]) > 0 {
 				var cosignArtifactList []string
+				imgStart := time.Now()
 				spinner := message.NewProgressSpinner("Looking up cosign artifacts for discovered images (0/%d)", len(imagesMap[component.Name]))
 				defer spinner.Stop()
+				l.Info("looking up cosign artifacts for discovered images", "count", len(imagesMap[component.Name]))
 
 				for idx, image := range imagesMap[component.Name] {
 					spinner.Updatef("Looking up cosign artifacts for discovered images (%d/%d)", idx+1, len(imagesMap[component.Name]))
+					l.Debug("looking up cosign artifacts for image", "name", imagesMap[component.Name])
 					cosignArtifacts, err := utils.GetCosignArtifacts(image)
 					if err != nil {
 						return nil, fmt.Errorf("could not lookup the cosing artifacts for image %s: %w", image, err)
@@ -323,6 +344,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 				}
 
 				spinner.Success()
+				l.Debug("done looking up cosign artifacts for discovered images", "count", len(imagesMap[component.Name]), "duration", time.Since(imgStart))
 
 				if len(cosignArtifactList) > 0 {
 					imagesMap[component.Name] = append(imagesMap[component.Name], cosignArtifactList...)

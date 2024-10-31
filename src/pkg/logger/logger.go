@@ -134,7 +134,10 @@ func New(cfg Config) (*slog.Logger, error) {
 
 	switch cfg.Format.ToLower() {
 	case FormatText:
-		handler = slog.NewTextHandler(cfg.Destination, &opts)
+		handler = console.NewHandler(cfg.Destination, &console.HandlerOptions{
+			Level:   slog.Level(cfg.Level),
+			NoColor: true,
+		})
 	case FormatJSON:
 		handler = slog.NewJSONHandler(cfg.Destination, &opts)
 	case FormatConsole:
@@ -168,6 +171,30 @@ var defaultCtxKey = ctxKey{}
 // WithContext takes a context.Context and a *slog.Logger, storing it on the key
 func WithContext(ctx context.Context, logger *slog.Logger) context.Context {
 	return context.WithValue(ctx, defaultCtxKey, logger)
+}
+
+// TODO (@austinabro321) once we switch over to the new logger completely the enabled key & logic should be deleted
+type ctxKeyEnabled struct{}
+
+var defaultCtxKeyEnabled = ctxKeyEnabled{}
+
+// WithLoggingEnabled allows stores a value to determine whether or not slog logging is enabled
+func WithLoggingEnabled(ctx context.Context, enabled bool) context.Context {
+	return context.WithValue(ctx, defaultCtxKeyEnabled, enabled)
+}
+
+// Enabled returns true if slog logging is enabled
+func Enabled(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	enabled := ctx.Value(defaultCtxKeyEnabled)
+	switch v := enabled.(type) {
+	case bool:
+		return v
+	default:
+		return false
+	}
 }
 
 // From takes a context and reads out a *slog.Logger. If From does not find a value it will return a discarding logger

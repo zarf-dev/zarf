@@ -99,7 +99,7 @@ func pullOCI(ctx context.Context, src, tarPath, shasum string, filter filters.Co
 		src = fmt.Sprintf("%s@sha256:%s", src, shasum)
 	}
 	arch := config.GetArch()
-	remote, err := zoci.NewRemote(src, oci.PlatformForArch(arch))
+	remote, err := zoci.NewRemote(ctx, src, oci.PlatformForArch(arch))
 	if err != nil {
 		return false, err
 	}

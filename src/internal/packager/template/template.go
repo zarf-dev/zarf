@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -35,11 +36,14 @@ func GetZarfVariableConfig(ctx context.Context) *variables.VariableConfig {
 		return interactive.PromptVariable(variable)
 	}
 
-	return variables.New("zarf", prompt, logger.From(ctx))
+	if logger.Enabled(ctx) {
+		return variables.New("zarf", prompt, logger.From(ctx))
+	}
+	return variables.New("zarf", prompt, slog.New(message.ZarfHandler{}))
 }
 
 // GetZarfTemplates returns the template keys and values to be used for templating.
-func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap map[string]*variables.TextTemplate, err error) {
+func GetZarfTemplates(ctx context.Context, componentName string, state *types.ZarfState) (templateMap map[string]*variables.TextTemplate, err error) {
 	templateMap = make(map[string]*variables.TextTemplate)
 
 	if state != nil {
@@ -98,7 +102,7 @@ func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap
 		}
 	}
 
-	debugPrintTemplateMap(templateMap)
+	debugPrintTemplateMap(ctx, templateMap)
 
 	return templateMap, nil
 }
@@ -123,7 +127,9 @@ func generateHtpasswd(regInfo *types.RegistryInfo) (string, error) {
 	return "", nil
 }
 
-func debugPrintTemplateMap(templateMap map[string]*variables.TextTemplate) {
+func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) {
+	// TODO (@austinabro321) sanitize the template by making a copy and changing the actual keys
+	// then use json.MarshalIndent to create the json
 	debugText := "templateMap = { "
 
 	for key, template := range templateMap {
@@ -137,4 +143,5 @@ func debugPrintTemplateMap(templateMap map[string]*variables.TextTemplate) {
 	debugText += " }"
 
 	message.Debug(debugText)
+	logger.From(ctx).Debug(debugText)
 }
