@@ -88,6 +88,8 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 		&stderrBuf,
 	}
 
+	// TODO (@austinabro321) remove config options for stdout/stderr once logger is released
+	// as these options seem to have been added specifically for the spinner
 	// Add the writers if requested.
 	if config.Stdout != nil {
 		stdoutWriters = append(stdoutWriters, config.Stdout)

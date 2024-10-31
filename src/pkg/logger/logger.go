@@ -134,7 +134,10 @@ func New(cfg Config) (*slog.Logger, error) {
 
 	switch cfg.Format.ToLower() {
 	case FormatText:
-		handler = slog.NewTextHandler(cfg.Destination, &opts)
+		handler = console.NewHandler(cfg.Destination, &console.HandlerOptions{
+			Level:   slog.Level(cfg.Level),
+			NoColor: true,
+		})
 	case FormatJSON:
 		handler = slog.NewJSONHandler(cfg.Destination, &opts)
 	case FormatConsole:
