@@ -506,7 +506,6 @@ func (p *Packager) setupState(ctx context.Context) error {
 		// YOLO mode, so minimal state needed
 		state.Distro = "YOLO"
 
-		// Try to create the zarf namespace
 		spinner.Updatef("Creating the Zarf namespace")
 		l.Info("creating the Zarf namespace")
 		zarfNamespace := cluster.NewZarfManagedNamespace(cluster.ZarfNamespaceName)

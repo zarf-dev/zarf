@@ -82,13 +82,13 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		if errors.Is(histErr, driver.ErrReleaseNotFound) {
 			// No prior release, try to install it.
 			spinner.Updatef("Attempting chart installation")
-			l.Info("preforming Helm install", "chart", h.chart.Name)
+			l.Info("performing Helm install", "chart", h.chart.Name)
 
 			release, err = h.installChart(helmCtx, postRender)
 		} else if histErr == nil && len(releases) > 0 {
 			// Otherwise, there is a prior release so upgrade it.
 			spinner.Updatef("Attempting chart upgrade")
-			l.Info("preforming Helm upgrade", "chart", h.chart.Name)
+			l.Info("performing Helm upgrade", "chart", h.chart.Name)
 
 			lastRelease := releases[len(releases)-1]
 
@@ -125,7 +125,7 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 
 		// Attempt to rollback on a failed upgrade.
 		spinner.Updatef("Performing chart rollback")
-		l.Info("preforming Helm rollback", "chart", h.chart.Name)
+		l.Info("performing Helm rollback", "chart", h.chart.Name)
 		err = h.rollbackChart(h.chart.ReleaseName, previouslyDeployedVersion)
 		if err != nil {
 			return nil, "", fmt.Errorf("%w: unable to rollback: %w", installErr, err)
