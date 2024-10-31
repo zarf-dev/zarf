@@ -380,7 +380,7 @@
         },
         "schemaValidation": {
           "type": "boolean",
-          "description": "Whether or not to validate the schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet."
+          "description": "Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet."
         }
       },
       "additionalProperties": false,
