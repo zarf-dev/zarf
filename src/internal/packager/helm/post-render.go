@@ -16,6 +16,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
@@ -117,6 +118,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 }
 
 func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
+	l := logger.From(ctx)
 	c := r.cluster
 	namespaceList, err := r.cluster.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -142,6 +144,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			// https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
 			if slices.Contains([]string{"default", "kube-node-lease", "kube-public", "kube-system"}, name) {
 				message.Warnf("Refusing to adopt the initial namespace: %s", name)
+				l.Warn("refusing to adopt initial namespace", "name", name)
 			} else {
 				// This is an existing namespace to adopt
 				_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, namespace, metav1.UpdateOptions{})
@@ -181,6 +184,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			}()
 			if err != nil {
 				message.WarnErrf(err, "Problem creating registry secret for the %s namespace", name)
+				l.Warn("problem creating registry secret", "namespace", name, "error", err.Error())
 			}
 
 			// Create or update the zarf git server secret
@@ -201,6 +205,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			}()
 			if err != nil {
 				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
+				l.Warn("problem creating git server secret", "namespace", name, "error", err.Error())
 			}
 		}
 	}
@@ -208,6 +213,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 }
 
 func (r *renderer) editHelmResources(ctx context.Context, resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
+	l := logger.From(ctx)
 	dc, err := dynamic.NewForConfig(r.cluster.RestConfig)
 	if err != nil {
 		return err
@@ -231,8 +237,10 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shenanigans
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), namespace); err != nil {
 				message.WarnErrf(err, "could not parse namespace %s", rawData.GetName())
+				l.Warn("failed to parse namespace", "name", rawData.GetName(), "error", err)
 			} else {
 				message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
+				l.Debug("matched helm namespace for zarf annotation", "name", namespace.Name)
 				namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
 				// Add it to the stack
 				r.namespaces[namespace.Name] = namespace
@@ -253,6 +261,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			if key, keyExists := labels[cluster.ZarfConnectLabelName]; keyExists {
 				// If there is a zarf-connect label
 				message.Debugf("Match helm service %s for zarf connection %s", rawData.GetName(), key)
+				l.Debug("match helm service for zarf connection", "service", rawData.GetName(), "connection-key", key)
 
 				// Add the connectString for processing later in the deployment
 				r.connectStrings[key] = types.ConnectString{
