@@ -45,7 +45,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer spinner.Stop()
-	l.Info("starting Zarf injection")
+	l.Info("creating Zarf injector resources")
 
 	resReq := corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
