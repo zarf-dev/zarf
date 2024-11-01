@@ -5,12 +5,10 @@
 package cluster
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"maps"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -119,9 +117,6 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 		if err != nil {
 			return err
 		}
-		if maps.EqualFunc(currentRegistrySecret.Data, newRegistrySecret.Data, func(v1, v2 []byte) bool { return bytes.Equal(v1, v2) }) {
-			continue
-		}
 		spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
 		_, err = c.Clientset.CoreV1().Secrets(*newRegistrySecret.Namespace).Apply(ctx, newRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
@@ -155,9 +150,6 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 			continue
 		}
 		newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, state.GitServer)
-		if maps.Equal(currentGitSecret.StringData, newGitSecret.StringData) {
-			continue
-		}
 		spinner.Updatef("Updating existing Zarf-managed git secret for namespace: %s", namespace.Name)
 		_, err = c.Clientset.CoreV1().Secrets(*newGitSecret.Namespace).Apply(ctx, newGitSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
