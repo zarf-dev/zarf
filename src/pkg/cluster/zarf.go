@@ -89,7 +89,7 @@ func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg types.Deploy
 		}).WithData(map[string][]byte{
 		"data": packageSecretData,
 	}).WithType(corev1.SecretTypeOpaque)
-	_, err = c.Clientset.CoreV1().Secrets(*packageSecret.Namespace).Apply(ctx, packageSecret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+	_, err = c.Clientset.CoreV1().Secrets(*packageSecret.Namespace).Apply(ctx, packageSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return fmt.Errorf("unable to apply the deployed package secret: %w", err)
 	}
@@ -191,7 +191,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		WithData(map[string][]byte{
 			"data": packageData,
 		})
-	updatedSecret, err := c.Clientset.CoreV1().Secrets(*deployedPackageSecret.Namespace).Apply(ctx, deployedPackageSecret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+	updatedSecret, err := c.Clientset.CoreV1().Secrets(*deployedPackageSecret.Namespace).Apply(ctx, deployedPackageSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return nil, fmt.Errorf("failed to record package deployment in secret '%s': %w", *deployedPackageSecret.Name, err)
 	}

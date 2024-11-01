@@ -111,7 +111,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		// Try to create the zarf namespace.
 		spinner.Updatef("Creating the Zarf namespace")
 		zarfNamespace := NewZarfManagedApplyNamespace(ZarfNamespaceName)
-		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: "zarf", Force: true})
+		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
 		if err != nil {
 			return fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
@@ -254,7 +254,7 @@ func (c *Cluster) SaveZarfState(ctx context.Context, state *types.ZarfState) err
 			ZarfStateDataKey: data,
 		})
 
-	_, err = c.Clientset.CoreV1().Secrets(*secret.Namespace).Apply(ctx, secret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+	_, err = c.Clientset.CoreV1().Secrets(*secret.Namespace).Apply(ctx, secret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return fmt.Errorf("unable to apply the zarf state secret: %w", err)
 	}

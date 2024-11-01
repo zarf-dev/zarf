@@ -71,7 +71,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		WithBinaryData(map[string][]byte{
 			"zarf-injector": b,
 		})
-	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			).WithSelector(map[string]string{
 			"app": "zarf-injector",
 		}))
-	svc, err := c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+	svc, err := c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	config.ZarfSeedPort = fmt.Sprintf("%d", svc.Spec.Ports[0].NodePort)
 
 	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq)
-	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return fmt.Errorf("error creating pod in cluster: %w", err)
 	}
@@ -231,7 +231,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, spinner *message.
 			WithBinaryData(map[string][]byte{
 				fileName: data,
 			})
-		_, err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+		_, err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return nil, "", err
 		}

@@ -163,14 +163,14 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		_, err = c.Clientset.CoreV1().Secrets(*validRegistrySecret.Namespace).Apply(ctx, validRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+		_, err = c.Clientset.CoreV1().Secrets(*validRegistrySecret.Namespace).Apply(ctx, validRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 		if err != nil {
 			message.WarnErrf(err, "Problem creating registry secret for the %s namespace", name)
 			l.Warn("problem creating registry secret", "namespace", name, "error", err.Error())
 		}
 
 		gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
-		_, err = c.Clientset.CoreV1().Secrets(*gitServerSecret.Namespace).Apply(ctx, gitServerSecret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+		_, err = c.Clientset.CoreV1().Secrets(*gitServerSecret.Namespace).Apply(ctx, gitServerSecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 		if err != nil {
 			message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
 			l.Warn("problem creating git server secret", "namespace", name, "error", err.Error())

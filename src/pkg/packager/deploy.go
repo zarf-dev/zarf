@@ -509,7 +509,7 @@ func (p *Packager) setupState(ctx context.Context) error {
 		spinner.Updatef("Creating the Zarf namespace")
 		l.Info("creating the Zarf namespace")
 		zarfNamespace := cluster.NewZarfManagedApplyNamespace(cluster.ZarfNamespaceName)
-		_, err = p.cluster.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+		_, err = p.cluster.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 		if err != nil {
 			return fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
@@ -753,7 +753,7 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 		connectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart(ctx)
 		if err != nil {
 			return nil, err
-	}
+		}
 		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
 	}
 

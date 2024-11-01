@@ -123,7 +123,7 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 			continue
 		}
 		spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
-		_, err = c.Clientset.CoreV1().Secrets(*newRegistrySecret.Namespace).Apply(ctx, newRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+		_, err = c.Clientset.CoreV1().Secrets(*newRegistrySecret.Namespace).Apply(ctx, newRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return err
 		}
@@ -159,7 +159,7 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 			continue
 		}
 		spinner.Updatef("Updating existing Zarf-managed git secret for namespace: %s", namespace.Name)
-		_, err = c.Clientset.CoreV1().Secrets(*newGitSecret.Namespace).Apply(ctx, newGitSecret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+		_, err = c.Clientset.CoreV1().Secrets(*newGitSecret.Namespace).Apply(ctx, newGitSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return err
 		}

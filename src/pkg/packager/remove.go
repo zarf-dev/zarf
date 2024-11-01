@@ -126,7 +126,7 @@ func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage type
 				"data": newPackageSecretData,
 			})
 
-		_, err = p.cluster.Clientset.CoreV1().Secrets(*newPackageSecret.Namespace).Apply(ctx, newPackageSecret, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+		_, err = p.cluster.Clientset.CoreV1().Secrets(*newPackageSecret.Namespace).Apply(ctx, newPackageSecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
 			message.Warnf("Unable to apply the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
