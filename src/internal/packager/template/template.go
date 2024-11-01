@@ -7,6 +7,7 @@ package template
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -102,7 +103,10 @@ func GetZarfTemplates(ctx context.Context, componentName string, state *types.Za
 		}
 	}
 
-	debugPrintTemplateMap(ctx, templateMap)
+	err = debugPrintTemplateMap(ctx, templateMap)
+	if err != nil {
+		return nil, err
+	}
 
 	return templateMap, nil
 }
@@ -127,21 +131,27 @@ func generateHtpasswd(regInfo *types.RegistryInfo) (string, error) {
 	return "", nil
 }
 
-func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) {
-	// TODO (@austinabro321) sanitize the template by making a copy and changing the actual keys
-	// then use json.MarshalIndent to create the json
-	debugText := "templateMap = { "
+func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) error {
+	sanitizedMap := getSanitizedTemplateMap(templateMap)
 
-	for key, template := range templateMap {
-		if template.Sensitive {
-			debugText += fmt.Sprintf("\"%s\": \"**sanitized**\", ", key)
-		} else {
-			debugText += fmt.Sprintf("\"%s\": \"%s\", ", key, template.Value)
-		}
+	b, err := json.MarshalIndent(sanitizedMap, "", "  ")
+	if err != nil {
+		return err
 	}
 
-	debugText += " }"
+	message.Debug(fmt.Sprintf("templateMap = %s", string(b)))
+	logger.From(ctx).Debug("cluster.debugPrintTemplateMap", "templateMap", sanitizedMap)
+	return nil
+}
 
-	message.Debug(debugText)
-	logger.From(ctx).Debug(debugText)
+func getSanitizedTemplateMap(templateMap map[string]*variables.TextTemplate) map[string]string {
+	sanitizedMap := make(map[string]string, len(templateMap))
+	for key, template := range templateMap {
+		if template.Sensitive {
+			sanitizedMap[key] = "**sanitized**"
+		} else {
+			sanitizedMap[key] = template.Value
+		}
+	}
+	return sanitizedMap
 }
