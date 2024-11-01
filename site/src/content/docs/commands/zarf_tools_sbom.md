@@ -22,7 +22,7 @@ zarf tools sbom [flags]
 
 ```
       --base-path string                          base directory for scanning, no links will be followed above this directory, and all paths will be reported relative to this directory
-  -c, --config string                             syft configuration file
+  -c, --config stringArray                        syft configuration file(s) to use
       --enrich stringArray                        enable package data enrichment from local and online sources (options: all, golang, java, javascript)
       --exclude stringArray                       exclude paths from being scanned using a glob expression
       --file string                               file to write the default report output to (default is STDOUT) (DEPRECATED: use: --output FORMAT=PATH)
@@ -31,6 +31,7 @@ zarf tools sbom [flags]
   -o, --output stringArray                        report output format (<format>=<file> to output to a file), formats=[cyclonedx-json cyclonedx-xml github-json spdx-json spdx-tag-value syft-json syft-table syft-text template] (default [syft-table])
       --override-default-catalogers stringArray   set the base set of catalogers to use (defaults to 'image' or 'directory' depending on the scan source)
       --platform string                           an optional platform specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64', 'linux')
+      --profile stringArray                       configuration profiles to use
   -q, --quiet                                     suppress all logging output
   -s, --scope string                              selection of layers to catalog, options=[squashed all-layers]
       --select-catalogers stringArray             add, remove, and filter the catalogers to be used

@@ -30,9 +30,10 @@ zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
 ### Options inherited from parent commands
 
 ```
-  -c, --config string              syft configuration file
+  -c, --config stringArray         syft configuration file(s) to use
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --profile stringArray        configuration profiles to use
   -q, --quiet                      suppress all logging output
   -v, --verbose count              increase verbosity (-v = info, -vv = debug)
 ```
