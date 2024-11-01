@@ -93,7 +93,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		}
 		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
 		for _, namespace := range namespaceList.Items {
-			l.Debug("marking namespace %s as ignored by Zarf Agent", "name", namespace.Name)
+			l.Debug("marking namespace as ignored by Zarf Agent", "name", namespace.Name)
 
 			if namespace.Labels == nil {
 				// Ensure label map exists to avoid nil panic
