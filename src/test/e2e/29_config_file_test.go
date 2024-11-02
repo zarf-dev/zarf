@@ -5,59 +5,35 @@
 package test
 
 import (
+	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 )
 
-const envKey = "ZARF_CONFIG"
+func TestConfigFileCreate(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir := "examples/config-file"
 
-func TestConfigFile(t *testing.T) {
-	t.Log("E2E: Config file")
+	t.Setenv("ZARF_CONFIG", filepath.Join(dir, "zarf-config.toml"))
 
-	var (
-		path   = fmt.Sprintf("zarf-package-config-file-%s.tar.zst", e2e.Arch)
-		dir    = "examples/config-file"
-		config = "zarf-config.toml"
-	)
-
-	e2e.CleanFiles(t, path)
-
-	// Test the config file environment variable
-	t.Setenv(envKey, filepath.Join(dir, config))
-	defer func() {
-		require.NoError(t, os.Unsetenv(envKey))
-	}()
-	configFileTests(t, dir, path)
-
-	configFileDefaultTests(t)
-
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "remove", path, "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-
-	// Cleanup
-	e2e.CleanFiles(t, path)
-}
-
-func configFileTests(t *testing.T, dir, path string) {
-	t.Helper()
-
-	_, stdErr, err := e2e.Zarf(t, "package", "create", dir, "--confirm")
+	_, _, err := e2e.Zarf(t, "package", "create", dir, "--confirm", "-o", tmpDir)
 	require.NoError(t, err)
-	require.Contains(t, string(stdErr), "This is a zebra and they have stripes")
-	require.Contains(t, string(stdErr), "This is a leopard and they have spots")
 
-	_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
+	tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-config-file-%s.tar.zst", e2e.Arch))
+	pkgLayout, err := layout2.LoadFromTar(context.Background(), tarPath, layout2.PackageLayoutOptions{})
 	require.NoError(t, err)
-	require.Contains(t, string(stdErr), "📦 LION COMPONENT")
-	require.NotContains(t, string(stdErr), "📦 LEOPARD COMPONENT")
-	require.NotContains(t, string(stdErr), "📦 ZEBRA COMPONENT")
+	require.Equal(t, "This is a zebra and they have stripes", pkgLayout.Pkg.Components[1].Description)
+	require.Equal(t, "This is a leopard and they have spots", pkgLayout.Pkg.Components[2].Description)
+	_, err = pkgLayout.GetSBOM(t.TempDir())
+	require.NoError(t, err)
 
-	// This package does not contain anything SBOMable
-	require.NotContains(t, string(stdErr), "This package does NOT contain an SBOM.")
+	_, _, err = e2e.Zarf(t, "package", "deploy", tarPath, "--confirm")
+	require.NoError(t, err)
 
 	// Verify the configmap was properly templated
 	kubectlOut, _, err := e2e.Kubectl(t, "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath={.data.templateme\\.properties}")
@@ -99,9 +75,7 @@ H4RxbE+FpmsMAUCpdrzvFkc=
 	require.Equal(t, tlsKey, kubectlOut)
 }
 
-func configFileDefaultTests(t *testing.T) {
-	t.Helper()
-
+func TestConfigFileDefault(t *testing.T) {
 	globalFlags := []string{
 		"architecture: 509a38f0",
 		"log_level: 6a845a41",
@@ -144,10 +118,7 @@ func configFileDefaultTests(t *testing.T) {
 	}
 
 	// Test remaining default initializers
-	t.Setenv(envKey, filepath.Join("src", "test", "zarf-config-test.toml"))
-	defer func() {
-		require.NoError(t, os.Unsetenv(envKey))
-	}()
+	t.Setenv("ZARF_CONFIG", filepath.Join("src", "test", "zarf-config-test.toml"))
 
 	// Test global flags
 	stdOut, _, err := e2e.Zarf(t, "--help")
