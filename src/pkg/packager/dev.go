@@ -118,7 +118,7 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 
 	// Notify all the things about the successful deployment
 	message.Successf("Zarf dev deployment complete")
-	l.Info("dev deployment complete", "package", p.cfg.Pkg.Metadata.Name, "duration", time.Since(start))
+	l.Debug("dev deployment complete", "package", p.cfg.Pkg.Metadata.Name, "duration", time.Since(start))
 
 	message.HorizontalRule()
 	message.Title("Next steps:", "")
