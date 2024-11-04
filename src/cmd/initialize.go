@@ -73,7 +73,7 @@ var initCmd = &cobra.Command{
 		}
 		// Since the new logger ignores pterm output the credential table is no longer printed on init.
 		// This note is the intended replacement, rather than printing creds by default.
-		logger.From(ctx).Info("init complete. To get Zarf service credentials run `zarf tools get-creds`")
+		logger.From(ctx).Info("init complete. To get the credentials for Zarf deployed services run `zarf tools get-creds`")
 		return nil
 	},
 }
