@@ -9,10 +9,12 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -21,6 +23,8 @@ import (
 
 // DevDeploy creates + deploys a package in one shot
 func (p *Packager) DevDeploy(ctx context.Context) error {
+	l := logger.From(ctx)
+	start := time.Now()
 	config.CommonOptions.Confirm = true
 	p.cfg.CreateOpts.SkipSBOM = !p.cfg.CreateOpts.NoYOLO
 
@@ -74,6 +78,7 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 	}
 
 	message.HeaderInfof("📦 PACKAGE DEPLOY %s", p.cfg.Pkg.Metadata.Name)
+	l.Info("starting package deploy", "name", p.cfg.Pkg.Metadata.Name)
 
 	if !p.cfg.CreateOpts.NoYOLO {
 		p.cfg.Pkg.Metadata.YOLO = true
@@ -108,10 +113,12 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 	}
 	if len(deployedComponents) == 0 {
 		message.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
+		l.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
 	}
 
 	// Notify all the things about the successful deployment
 	message.Successf("Zarf dev deployment complete")
+	l.Info("dev deployment complete", "package", p.cfg.Pkg.Metadata.Name, "duration", time.Since(start))
 
 	message.HorizontalRule()
 	message.Title("Next steps:", "")
