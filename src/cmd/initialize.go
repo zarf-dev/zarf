@@ -6,11 +6,13 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/cmd/common"
@@ -112,6 +114,10 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 		return filepath.Join(absCachePath, initPackageName), nil
 	}
 
+	if config.CommonOptions.Confirm {
+		return "", lang.ErrInitNotFound
+	}
+
 	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
 	downloadCacheTarget, err := downloadInitPackage(ctx, absCachePath)
 	if err != nil {
@@ -123,14 +129,31 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, error) {
 	l := logger.From(ctx)
 	url := zoci.GetInitPackageURL(config.CLIVersion)
-	message.Infof("init package was not found locally. Downloading to cache %s", cacheDirectory)
-	l.Info("init package was not found locally. Downloading to cache", "cache", cacheDirectory)
-	remote, err := zoci.NewRemote(ctx, url, oci.PlatformForArch(config.GetArch()))
-	if err != nil {
-		return "", err
+
+	// Give the user the choice to download the init-package and note that this does require an internet connection
+	message.Question(fmt.Sprintf(lang.CmdInitPullAsk, url))
+	message.Note(lang.CmdInitPullNote)
+	l.Info("the init package was not found locally, but can be pulled from", "url", fmt.Sprintf("oci://%s", url))
+
+	var confirmDownload bool
+	prompt := &survey.Confirm{
+		Message: lang.CmdInitPullConfirm,
 	}
-	source := &sources.OCISource{Remote: remote}
-	return source.Collect(ctx, cacheDirectory)
+	if err := survey.AskOne(prompt, &confirmDownload); err != nil {
+		return "", fmt.Errorf("confirm download canceled: %w", err)
+	}
+
+	// If the user wants to download the init-package, download it
+	if confirmDownload {
+		remote, err := zoci.NewRemote(ctx, url, oci.PlatformForArch(config.GetArch()))
+		if err != nil {
+			return "", err
+		}
+		source := &sources.OCISource{Remote: remote}
+		return source.Collect(ctx, cacheDirectory)
+	}
+	// Otherwise, exit and tell the user to manually download the init-package
+	return "", errors.New(lang.CmdInitPullErrManual)
 }
 
 func validateInitFlags() error {

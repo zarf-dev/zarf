@@ -143,6 +143,11 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInitErrValidateRegistry = "the 'registry-push-username' and 'registry-push-password' flags must be provided if the 'registry-url' flag is provided"
 	CmdInitErrValidateArtifact = "the 'artifact-push-username' and 'artifact-push-token' flags must be provided if the 'artifact-url' flag is provided"
 
+	CmdInitPullAsk       = "It seems the init package could not be found locally, but can be pulled from oci://%s"
+	CmdInitPullNote      = "Note: This will require an internet connection."
+	CmdInitPullConfirm   = "Do you want to pull this init package?"
+	CmdInitPullErrManual = "pull the init package manually and place it in the current working directory"
+
 	CmdInitFlagSet = "Specify deployment variables to set on the command line (KEY=value)"
 
 	CmdInitFlagConfirm      = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
@@ -614,6 +619,7 @@ const (
 
 // Collection of reusable error messages.
 var (
+	ErrInitNotFound        = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
 	ErrUnableToCheckArch   = errors.New("unable to get the configured cluster's architecture")
 	ErrUnableToGetPackages = errors.New("unable to load the Zarf Package data from the cluster")
 )
