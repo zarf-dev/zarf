@@ -48,9 +48,11 @@ var (
 )
 
 func (p *Packager) resetRegistryHPA(ctx context.Context) {
+	l := logger.From(ctx)
 	if p.isConnectedToCluster() && p.hpaModified {
 		if err := p.cluster.EnableRegHPAScaleDown(ctx); err != nil {
 			message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
+			l.Debug("unable to reenable the registry HPA scale down", "error", err.Error())
 		}
 	}
 }
