@@ -123,8 +123,8 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, error) {
 	l := logger.From(ctx)
 	url := zoci.GetInitPackageURL(config.CLIVersion)
-	message.Infof("init package was not found locally. Pulling package %s", url)
-	l.Info("init package was not found locally. Pulling package", "url", url)
+	message.Infof("init package was not found locally. Downloading to cache %s", cacheDirectory)
+	l.Info("init package was not found locally. Downloading to cache", "cache", cacheDirectory)
 	remote, err := zoci.NewRemote(ctx, url, oci.PlatformForArch(config.GetArch()))
 	if err != nil {
 		return "", err
