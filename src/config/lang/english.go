@@ -56,9 +56,6 @@ const (
 	RootCmdFlagPlainHTTP             = "Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture."
 	RootCmdFlagInsecureSkipTLSVerify = "Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
-	RootCmdDeprecatedDeploy = "Deprecated: Please use \"zarf package deploy %s\" to deploy this package.  This warning will be removed in Zarf v1.0.0."
-	RootCmdDeprecatedCreate = "Deprecated: Please use \"zarf package create\" to create this package.  This warning will be removed in Zarf v1.0.0."
-
 	// zarf connect
 	CmdConnectShort = "Accesses services or pods deployed in the cluster"
 	CmdConnectLong  = "Uses a k8s port-forward to connect to resources within the cluster referenced by your kube-context.\n" +
@@ -195,7 +192,6 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInternalCreateReadOnlyGiteaUserShort = "Creates a read-only user in Gitea"
 	CmdInternalCreateReadOnlyGiteaUserLong  = "Creates a read-only user in Gitea by using the Gitea API. " +
 		"This is called internally by the supported Gitea package component."
-	CmdInternalCreateReadOnlyGiteaUserErr = "Unable to create a read-only user in the Gitea service."
 
 	CmdInternalArtifactRegistryGiteaTokenShort = "Creates an artifact registry token for Gitea"
 	CmdInternalArtifactRegistryGiteaTokenLong  = "Creates an artifact registry token in Gitea using the Gitea API. " +
@@ -253,13 +249,11 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	CmdPackageInspectShort = "Displays the definition of a Zarf package (runs offline)"
 	CmdPackageInspectLong  = "Displays the 'zarf.yaml' definition for the specified package and optionally allows SBOMs to be viewed"
 
-	CmdPackageListShort         = "Lists out all of the packages that have been deployed to the cluster (runs offline)"
-	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"
+	CmdPackageListShort = "Lists out all of the packages that have been deployed to the cluster (runs offline)"
 
 	CmdPackageCreateFlagConfirm               = "Confirm package creation without prompting"
 	CmdPackageCreateFlagSet                   = "Specify package variables to set on the command line (KEY=value)"
 	CmdPackageCreateFlagOutput                = "Specify the output (either a directory or an oci:// URL) for the created Zarf package"
-	CmdPackageCreateFlagSbom                  = "View SBOM contents after creating the package"
 	CmdPackageCreateFlagSbomOut               = "Specify an output directory for the SBOMs from the created Zarf package"
 	CmdPackageCreateFlagSkipSbom              = "Skip generating SBOM for this package"
 	CmdPackageCreateFlagMaxPackageSize        = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts to be loaded onto smaller media (i.e. DVDs). Use 0 to disable splitting."
@@ -318,9 +312,7 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
 	CmdPackagePullFlagShasum          = "Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'"
 
-	CmdPackageChoose                = "Choose or type the package file"
-	CmdPackageClusterSourceFallback = "%q does not satisfy any current sources, assuming it is a package deployed to a cluster"
-	CmdPackageInvalidSource         = "Unable to identify source from %q: %s"
+	CmdPackageChoose = "Choose or type the package file"
 
 	// zarf dev (prepare is an alias for dev)
 	CmdDevShort = "Commands useful for developing packages"
@@ -581,7 +573,6 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 	CmdToolsUpdateCredsConfirmContinue      = "Continue with these changes?"
 	CmdToolsUpdateCredsUnableUpdateRegistry = "Unable to update Zarf Registry values: %s"
 	CmdToolsUpdateCredsUnableUpdateAgent    = "Unable to update Zarf Agent TLS secrets: %s"
-	CmdToolsUpdateCredsUnableUpdateCreds    = "Unable to update Zarf credentials"
 
 	// zarf version
 	CmdVersionShort = "Shows the version of the running Zarf binary"

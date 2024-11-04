@@ -5,9 +5,7 @@
 package test
 
 import (
-	"bufio"
 	"errors"
-	"fmt"
 	"os"
 	"regexp"
 	"runtime"
@@ -145,28 +143,4 @@ func (e2e *ZarfE2ETest) StripMessageFormatting(input string) string {
 	// Regex to strip any more than two spaces or newline - https://regex101.com/r/wqQmys/1
 	multiSpaceRegex := regexp.MustCompile(`\s{2,}|\n`)
 	return multiSpaceRegex.ReplaceAllString(unAnsiInput, " ")
-}
-
-// NormalizeYAMLFilenames normalizes YAML filenames / paths across Operating Systems (i.e Windows vs Linux)
-func (e2e *ZarfE2ETest) NormalizeYAMLFilenames(input string) string {
-	if runtime.GOOS != "windows" {
-		return input
-	}
-
-	// Match YAML lines that have files in them https://regex101.com/r/C78kRD/1
-	fileMatcher := regexp.MustCompile(`^(?P<start>.* )(?P<file>[^:\n]+\/.*)$`)
-	scanner := bufio.NewScanner(strings.NewReader(input))
-
-	output := ""
-	for scanner.Scan() {
-		line := scanner.Text()
-		get, err := helpers.MatchRegex(fileMatcher, line)
-		if err != nil {
-			output += line + "\n"
-			continue
-		}
-		output += fmt.Sprintf("%s\"%s\"\n", get("start"), strings.ReplaceAll(get("file"), "/", "\\\\"))
-	}
-
-	return output
 }
