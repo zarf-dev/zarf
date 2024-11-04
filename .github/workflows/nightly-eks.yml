@@ -24,6 +24,7 @@ concurrency:
 
 jobs:
   eks-nightly-test:
+    if: ${{ github.repository == 'zarf-dev/zarf' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
