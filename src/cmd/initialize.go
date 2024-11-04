@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
@@ -70,6 +71,9 @@ var initCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		// Since the new logger ignores pterm output the credential table is no longer printed on init.
+		// This note is the intended replacement, rather than printing creds by default.
+		logger.From(ctx).Info("init complete. To get Zarf service credentials run `zarf tools get-creds`")
 		return nil
 	},
 }
