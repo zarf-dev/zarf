@@ -147,7 +147,9 @@ func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variable
 func getSanitizedTemplateMap(templateMap map[string]*variables.TextTemplate) map[string]string {
 	sanitizedMap := make(map[string]string, len(templateMap))
 	for key, template := range templateMap {
-		if template.Sensitive {
+		if template == nil {
+			sanitizedMap[key] = ""
+		} else if template.Sensitive {
 			sanitizedMap[key] = "**sanitized**"
 		} else {
 			sanitizedMap[key] = template.Value
