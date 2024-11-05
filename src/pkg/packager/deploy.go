@@ -48,9 +48,11 @@ var (
 )
 
 func (p *Packager) resetRegistryHPA(ctx context.Context) {
+	l := logger.From(ctx)
 	if p.isConnectedToCluster() && p.hpaModified {
 		if err := p.cluster.EnableRegHPAScaleDown(ctx); err != nil {
 			message.Debugf("unable to reenable the registry HPA scale down: %s", err.Error())
+			l.Debug("unable to reenable the registry HPA scale down", "error", err.Error())
 		}
 	}
 }
@@ -283,7 +285,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.Z
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
 		if err := p.cluster.StopInjection(ctx); err != nil {
-			return nil, fmt.Errorf("unable to seed the Zarf Registry: %w", err)
+			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
 		}
 	}
 

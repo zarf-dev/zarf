@@ -38,12 +38,14 @@ const (
 
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
 func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitOptions) error {
+	l := logger.From(ctx)
 	spinner := message.NewProgressSpinner("Gathering cluster state information")
 	defer spinner.Stop()
 
 	// Attempt to load an existing state prior to init.
 	// NOTE: We are ignoring the error here because we don't really expect a state to exist yet.
 	spinner.Updatef("Checking cluster for existing Zarf deployment")
+	l.Debug("checking cluster for existing Zarf deployment")
 	state, err := c.LoadZarfState(ctx)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return fmt.Errorf("failed to check for existing state: %w", err)
@@ -53,7 +55,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 	if state == nil {
 		state = &types.ZarfState{}
 		spinner.Updatef("New cluster, no prior Zarf deployments found")
-
+		l.Debug("new cluster, no prior Zarf deployments found")
 		if initOptions.ApplianceMode {
 			// If the K3s component is being deployed, skip distro detection.
 			state.Distro = DistroIsK3s
@@ -76,6 +78,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 
 		if state.Distro != DistroIsUnknown {
 			spinner.Updatef("Detected K8s distro %s", state.Distro)
+			l.Debug("Detected K8s distro", "name", state.Distro)
 		}
 
 		// Setup zarf agent PKI
@@ -95,6 +98,8 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 				continue
 			}
 			spinner.Updatef("Marking existing namespace %s as ignored by Zarf Agent", namespace.Name)
+			l.Debug("marking namespace as ignored by Zarf Agent", "name", namespace.Name)
+
 			if namespace.Labels == nil {
 				// Ensure label map exists to avoid nil panic
 				namespace.Labels = make(map[string]string)
@@ -110,6 +115,7 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 
 		// Try to create the zarf namespace.
 		spinner.Updatef("Creating the Zarf namespace")
+		l.Debug("creating the Zarf namespace")
 		zarfNamespace := NewZarfManagedApplyNamespace(ZarfNamespaceName)
 		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
 		if err != nil {
@@ -145,17 +151,21 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		initOptions.ArtifactServer.FillInEmptyValues()
 		state.ArtifactServer = initOptions.ArtifactServer
 	} else {
+		// TODO (@austinabro321) validate immediately in `zarf init` if these are set and not equal and error out if so
 		if helpers.IsNotZeroAndNotEqual(initOptions.GitServer, state.GitServer) {
 			message.Warn("Detected a change in Git Server init options on a re-init. Ignoring... To update run:")
 			message.ZarfCommand("tools update-creds git")
+			l.Warn("ignoring change in git sever init options on re-init, to update run `zarf tools update-creds git`")
 		}
 		if helpers.IsNotZeroAndNotEqual(initOptions.RegistryInfo, state.RegistryInfo) {
 			message.Warn("Detected a change in Image Registry init options on a re-init. Ignoring... To update run:")
 			message.ZarfCommand("tools update-creds registry")
+			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
 		}
 		if helpers.IsNotZeroAndNotEqual(initOptions.ArtifactServer, state.ArtifactServer) {
 			message.Warn("Detected a change in Artifact Server init options on a re-init. Ignoring... To update run:")
 			message.ZarfCommand("tools update-creds artifact")
+			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
 		}
 	}
 

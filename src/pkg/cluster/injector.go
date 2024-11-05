@@ -27,6 +27,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -35,6 +36,8 @@ import (
 
 // StartInjection initializes a Zarf injection into the cluster.
 func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string) error {
+	l := logger.From(ctx)
+	start := time.Now()
 	// Stop any previous running injection before starting.
 	err := c.StopInjection(ctx)
 	if err != nil {
@@ -43,6 +46,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 
 	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
 	defer spinner.Stop()
+	l.Info("creating Zarf injector resources")
 
 	resReq := v1ac.ResourceRequirements().
 		WithRequests(corev1.ResourceList{
@@ -111,11 +115,15 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	}
 
 	spinner.Success()
+	l.Debug("done with injection", "duration", time.Since(start))
 	return nil
 }
 
 // StopInjection handles cleanup once the seed registry is up.
 func (c *Cluster) StopInjection(ctx context.Context) error {
+	start := time.Now()
+	l := logger.From(ctx)
+	l.Debug("deleting injector resources")
 	err := c.Clientset.CoreV1().Pods(ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
@@ -171,6 +179,7 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	l.Debug("done deleting injector resources", "duration", time.Since(start))
 	return nil
 }
 
