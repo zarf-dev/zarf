@@ -29,8 +29,8 @@ import (
 //
 // For more information: https://argo-cd.readthedocs.io/en/stable/user-guide/import/
 type Application struct {
-	Spec ApplicationSpec `json:"spec"`
-	metav1.ObjectMeta
+	Spec              ApplicationSpec `json:"spec"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 }
 
 // ApplicationSpec represents desired application state. Contains link to repository with application definition.
