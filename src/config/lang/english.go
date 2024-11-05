@@ -591,7 +591,8 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 	CmdToolsVersionShort = "Print the version"
 )
 
-// Zarf Agent errors
+// Zarf Agent messages
+// These are only seen in the Kubernetes logs.
 const (
 	AgentErrBadRequest             = "could not read request body: %s"
 	AgentErrCouldNotDeserializeReq = "could not deserialize request: %s"
