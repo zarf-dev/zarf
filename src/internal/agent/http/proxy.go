@@ -5,6 +5,7 @@
 package http
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -14,17 +15,18 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ProxyHandler constructs a new httputil.ReverseProxy and returns an http handler.
-func ProxyHandler(cluster *cluster.Cluster) http.HandlerFunc {
+func ProxyHandler(ctx context.Context, cluster *cluster.Cluster) http.HandlerFunc {
+	l := logger.From(ctx)
 	return func(w http.ResponseWriter, r *http.Request) {
 		state, err := cluster.LoadZarfState(r.Context())
 		if err != nil {
-			message.Debugf("%#v", err)
+			l.Debug(err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			//nolint: errcheck // ignore
 			w.Write([]byte("unable to load Zarf state, see the Zarf HTTP proxy logs for more details"))
@@ -32,7 +34,7 @@ func ProxyHandler(cluster *cluster.Cluster) http.HandlerFunc {
 		}
 		err = proxyRequestTransform(r, state)
 		if err != nil {
-			message.Debugf("%#v", err)
+			l.Debug(err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			//nolint: errcheck // ignore
 			w.Write([]byte("unable to transform the provided request, see the Zarf HTTP proxy logs for more details"))

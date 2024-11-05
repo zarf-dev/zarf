@@ -13,7 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
@@ -60,21 +60,24 @@ func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster) o
 
 // mutateApplication mutates the git repository url to point to the repository URL defined in the ZarfState.
 func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+	l := logger.From(ctx)
 	state, err := cluster.LoadZarfState(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	message.Debugf("Using the url of (%s) to mutate the ArgoCD Application", state.GitServer.Address)
 
 	app := Application{}
 	if err = json.Unmarshal(r.Object.Raw, &app); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
+	l.Info("using the Zarf git server URL to mutate the ArgoCD Application repo URL(s)",
+		"resource", app.Name,
+		"git-server", state.GitServer.Address)
+
 	patches := make([]operations.PatchOperation, 0)
 	if app.Spec.Source != nil {
-		patchedURL, err := getPatchedRepoURL(app.Spec.Source.RepoURL, state.GitServer, r)
+		patchedURL, err := getPatchedRepoURL(ctx, app.Spec.Source.RepoURL, state.GitServer, r)
 		if err != nil {
 			return nil, err
 		}
@@ -83,7 +86,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 
 	if len(app.Spec.Sources) > 0 {
 		for idx, source := range app.Spec.Sources {
-			patchedURL, err := getPatchedRepoURL(source.RepoURL, state.GitServer, r)
+			patchedURL, err := getPatchedRepoURL(ctx, source.RepoURL, state.GitServer, r)
 			if err != nil {
 				return nil, err
 			}
@@ -99,7 +102,8 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	}, nil
 }
 
-func getPatchedRepoURL(repoURL string, gs types.GitServerInfo, r *v1.AdmissionRequest) (string, error) {
+func getPatchedRepoURL(ctx context.Context, repoURL string, gs types.GitServerInfo, r *v1.AdmissionRequest) (string, error) {
+	l := logger.From(ctx)
 	isCreate := r.Operation == v1.Create
 	isUpdate := r.Operation == v1.Update
 	patchedURL := repoURL
@@ -124,7 +128,7 @@ func getPatchedRepoURL(repoURL string, gs types.GitServerInfo, r *v1.AdmissionRe
 			return "", fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
 		}
 		patchedURL = transformedURL.String()
-		message.Debugf("original repoURL of (%s) got mutated to (%s)", repoURL, patchedURL)
+		l.Debug("mutated ArgoCD application repoURL to the Zarf URL", "original", repoURL, "mutated", patchedURL)
 	}
 
 	return patchedURL, nil

@@ -16,7 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 )
@@ -35,6 +35,7 @@ func NewOCIRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster)
 
 // mutateOCIRepo mutates the oci repository url to point to the repository URL defined in the ZarfState.
 func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+	l := logger.From(ctx)
 	src := &flux.OCIRepository{}
 	if err := json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
@@ -47,7 +48,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	// If we have a semver we want to continue since we wil still have the upstream tag
 	// but should warn that we can't guarantee there won't be collisions
 	if src.Spec.Reference.SemVer != "" {
-		message.Warnf(lang.AgentWarnSemVerRef, src.Spec.Reference.SemVer)
+		l.Warn("Detected a semver OCI ref, continuing but will be unable to guarantee against collisions if multiple OCI artifacts with the same name are brought in from different registries", "ref", src.Spec.Reference.SemVer)
 	}
 
 	if src.Labels != nil && src.Labels["zarf-agent"] == "patched" {
@@ -69,7 +70,9 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	}
 
 	// For the internal registry this will be the ip & port of the service, it may look like 10.43.36.151:5000
-	message.Debugf("Using the url of (%s) to mutate the flux OCIRepository", registryAddress)
+	l.Info("using the Zarf registry URL to mutate the Flux HelmRepository",
+		"resource", src.Name,
+		"registry", registryAddress)
 
 	ref := src.Spec.URL
 	if src.Spec.Reference.Digest != "" {
@@ -97,7 +100,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		patchedRef.Tag = patchedRefInfo.Tag
 	}
 
-	message.Debugf("original OCIRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
+	l.Debug("mutating the Flux OCIRepository URL to the Zarf URL", "original", src.Spec.URL, "mutated", patchedURL)
 
 	patches := populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.IsInternal(), patchedRef)
 

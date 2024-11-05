@@ -13,6 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 
@@ -46,6 +47,7 @@ func getImageAnnotationKey(containerName string) string {
 }
 
 func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+	l := logger.From(ctx)
 	pod, err := parsePod(r.Object.Raw)
 	if err != nil {
 		return nil, fmt.Errorf(lang.AgentErrParsePod, err)
@@ -64,6 +66,10 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		return nil, err
 	}
 	registryURL := state.RegistryInfo.Address
+
+	l.Info("using the Zarf registry URL to mutate the Pod",
+		"resource", pod.Name,
+		"registry", registryURL)
 
 	var patches []operations.PatchOperation
 

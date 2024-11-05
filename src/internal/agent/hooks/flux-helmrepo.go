@@ -17,7 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 )
@@ -36,6 +36,7 @@ func NewHelmRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster
 
 // mutateHelmRepo mutates the repository url to point to the repository URL defined in the ZarfState.
 func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+	l := logger.From(ctx)
 	src := &flux.HelmRepository{}
 	if err := json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
@@ -43,7 +44,7 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 
 	// If we see a type of helm repo other than OCI we should flag a warning and return
 	if strings.ToLower(src.Spec.Type) != "oci" {
-		message.Warnf(lang.AgentWarnNotOCIType, src.Spec.Type)
+		l.Warn("skipping HelmRepository mutation because the type is not OCI", "type", src.Spec.Type)
 		return &operations.Result{Allowed: true}, nil
 	}
 
@@ -65,7 +66,9 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 		return nil, err
 	}
 
-	message.Debugf("Using the url of (%s) to mutate the flux HelmRepository", registryAddress)
+	l.Info("using the Zarf registry URL to mutate the Flux HelmRepository",
+		"resource", src.Name,
+		"registry", registryAddress)
 
 	patchedSrc, err := transform.ImageTransformHost(registryAddress, src.Spec.URL)
 	if err != nil {
@@ -78,7 +81,7 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 	}
 	patchedURL := helpers.OCIURLPrefix + patchedRefInfo.Name
 
-	message.Debugf("original HelmRepo URL of (%s) got mutated to (%s)", src.Spec.URL, patchedURL)
+	l.Debug("mutating the Flux HelmRepository URL to the Zarf URL", "original", src.Spec.URL, "mutated", patchedURL)
 
 	patches := populateHelmRepoPatchOperations(patchedURL, zarfState.RegistryInfo.IsInternal())
 
