@@ -97,7 +97,6 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 			if namespace.Name == "zarf" {
 				continue
 			}
-			spinner.Updatef("Marking existing namespace %s as ignored by Zarf Agent", namespace.Name)
 			l.Debug("marking namespace as ignored by Zarf Agent", "name", namespace.Name)
 
 			if namespace.Labels == nil {
