@@ -58,7 +58,7 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	}
 
 	l.Info("using the Zarf git server URL to mutate the Flux GitRepository",
-		"resource", repo.Name,
+		"name", repo.Name,
 		"git-server", state.GitServer.Address)
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState

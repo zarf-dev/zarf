@@ -64,7 +64,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	}
 
 	l.Info("using the Zarf git server URL to mutate the ArgoCD Repository secret",
-		"resource", secret.Name,
+		"name", secret.Name,
 		"git-server", state.GitServer.Address)
 
 	url, exists := secret.Data["url"]

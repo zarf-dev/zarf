@@ -71,7 +71,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 
 	// For the internal registry this will be the ip & port of the service, it may look like 10.43.36.151:5000
 	l.Info("using the Zarf registry URL to mutate the Flux HelmRepository",
-		"resource", src.Name,
+		"name", src.Name,
 		"registry", registryAddress)
 
 	ref := src.Spec.URL

@@ -67,9 +67,8 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 	}
 	registryURL := state.RegistryInfo.Address
 
-	l.Info("using the Zarf registry URL to mutate the Pod",
-		"resource", pod.Name,
-		"registry", registryURL)
+	// Pods do not have a metadata.name at the time of admission, if from a deployment so we don't log the name
+	l.Info("using the Zarf registry URL to mutate the Pod", "registry", registryURL)
 
 	var patches []operations.PatchOperation
 

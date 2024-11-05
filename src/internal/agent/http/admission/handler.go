@@ -16,7 +16,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	corev1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -120,7 +119,6 @@ func (h *Handler) Serve(ctx context.Context, hook operations.Hook) http.HandlerF
 			return
 		}
 
-		message.Infof(lang.AgentInfoWebhookAllowed, r.URL.Path, review.Request.Operation, result.Allowed)
 		l.Info("webhook execution complete", "path", r.URL.Path, "operation", review.Request.Operation, "allowed", result.Allowed)
 		w.WriteHeader(http.StatusOK)
 		//nolint: errcheck // ignore

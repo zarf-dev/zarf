@@ -67,7 +67,7 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 	}
 
 	l.Info("using the Zarf registry URL to mutate the Flux HelmRepository",
-		"resource", src.Name,
+		"name", src.Name,
 		"registry", registryAddress)
 
 	patchedSrc, err := transform.ImageTransformHost(registryAddress, src.Spec.URL)
