@@ -222,8 +222,6 @@ func setupMessage(cfg messageCfg) error {
 		message.InitializePTerm(io.Discard)
 		// Disable all progress bars and spinners
 		message.NoProgress = true
-		// Ensures no user input is needed while we maintain backwards compatibility with message
-		config.CommonOptions.Confirm = true
 		return nil
 	}
 
