@@ -16,36 +16,36 @@ components:
     # zarf prepare find-images
     images:
       - httpd:alpine3.18
-  # - name: nginx-remote
-  #   required: true
-  #   manifests:
-  #     - name: simple-nginx-deployment
-  #       namespace: nginx
-  #       files:
-  #         # remote manifests are specified with a URL and you can verify integrity of a manifest
-  #         # by adding a sha256sum to the end of the URL, separated by an @:
-  #         - https://k8s.io/examples/application/deployment.yaml@c57f73449b26eae02ca2a549c388807d49ef6d3f2dc040a9bbb1290128d97157
-  #         # this sha256 can be discovered using:
-  #         # zarf prepare sha256sum https://k8s.io/examples/application/deployment.yaml
-  #   # image discovery is supported in all manifests and charts using:
-  #   # zarf prepare find-images
-  #   images:
-  #     - nginx:1.14.2
-  # - name: podinfo-kustomize
-  #   required: true
-  #   manifests:
-  #     - name: simple-podinfo-deployment
-  #       namespace: podinfo
-  #       kustomizations:
-  #         # kustomizations can be specified relative to the `zarf.yaml` or as remoteBuild resources with the
-  #         # following syntax: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md:
-  #         - github.com/stefanprodan/podinfo//kustomize?ref=6.4.0
-  #         # while ?ref= is not a requirement, it is recommended to use a specific commit hash / git tag to
-  #         # ensure that the kustomization is not changed in a way that breaks your deployment.
-  #   # image discovery is supported in all manifests and charts using:
-  #   # zarf prepare find-images
-  #   images:
-  #     - ghcr.io/stefanprodan/podinfo:6.4.0
+  - name: nginx-remote
+    required: true
+    manifests:
+      - name: simple-nginx-deployment
+        namespace: nginx
+        files:
+          # remote manifests are specified with a URL and you can verify integrity of a manifest
+          # by adding a sha256sum to the end of the URL, separated by an @:
+          - https://k8s.io/examples/application/deployment.yaml@c57f73449b26eae02ca2a549c388807d49ef6d3f2dc040a9bbb1290128d97157
+          # this sha256 can be discovered using:
+          # zarf prepare sha256sum https://k8s.io/examples/application/deployment.yaml
+    # image discovery is supported in all manifests and charts using:
+    # zarf prepare find-images
+    images:
+      - nginx:1.14.2
+  - name: podinfo-kustomize
+    required: true
+    manifests:
+      - name: simple-podinfo-deployment
+        namespace: podinfo
+        kustomizations:
+          # kustomizations can be specified relative to the `zarf.yaml` or as remoteBuild resources with the
+          # following syntax: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md:
+          - github.com/stefanprodan/podinfo//kustomize?ref=6.4.0
+          # while ?ref= is not a requirement, it is recommended to use a specific commit hash / git tag to
+          # ensure that the kustomization is not changed in a way that breaks your deployment.
+    # image discovery is supported in all manifests and charts using:
+    # zarf prepare find-images
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
