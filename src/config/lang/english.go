@@ -591,14 +591,9 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 	CmdToolsVersionShort = "Print the version"
 )
 
-// Zarf Agent messages
-// These are only seen in the Kubernetes logs.
+// Zarf Agent errors
 const (
-	AgentInfoWebhookAllowed        = "Webhook [%s - %s] - Allowed: %t"
-	AgentInfoPort                  = "Server running in port: %s"
-	AgentWarnSemVerRef             = "Detected a semver OCI ref (%s) - continuing but will be unable to guarantee against collisions if multiple OCI artifacts with the same name are brought in from different registries"
 	AgentErrBadRequest             = "could not read request body: %s"
-	AgentErrBindHandler            = "Unable to bind the webhook handler"
 	AgentErrCouldNotDeserializeReq = "could not deserialize request: %s"
 	AgentErrParsePod               = "failed to parse pod: %w"
 	AgentErrHostnameMatch          = "failed to complete hostname matching: %w"
