@@ -14,12 +14,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/hooks"
 	agentHttp "github.com/zarf-dev/zarf/src/internal/agent/http"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // Heavily influenced by https://github.com/douglasmakey/admissioncontroller and
@@ -45,12 +44,12 @@ func StartWebhook(ctx context.Context, cluster *cluster.Cluster) error {
 
 	// Routers
 	mux := http.NewServeMux()
-	mux.Handle("/mutate/pod", admissionHandler.Serve(podsMutation))
-	mux.Handle("/mutate/flux-gitrepository", admissionHandler.Serve(fluxGitRepositoryMutation))
-	mux.Handle("/mutate/flux-helmrepository", admissionHandler.Serve(fluxHelmRepositoryMutation))
-	mux.Handle("/mutate/flux-ocirepository", admissionHandler.Serve(fluxOCIRepositoryMutation))
-	mux.Handle("/mutate/argocd-application", admissionHandler.Serve(argocdApplicationMutation))
-	mux.Handle("/mutate/argocd-repository", admissionHandler.Serve(argocdRepositoryMutation))
+	mux.Handle("/mutate/pod", admissionHandler.Serve(ctx, podsMutation))
+	mux.Handle("/mutate/flux-gitrepository", admissionHandler.Serve(ctx, fluxGitRepositoryMutation))
+	mux.Handle("/mutate/flux-helmrepository", admissionHandler.Serve(ctx, fluxHelmRepositoryMutation))
+	mux.Handle("/mutate/flux-ocirepository", admissionHandler.Serve(ctx, fluxOCIRepositoryMutation))
+	mux.Handle("/mutate/argocd-application", admissionHandler.Serve(ctx, argocdApplicationMutation))
+	mux.Handle("/mutate/argocd-repository", admissionHandler.Serve(ctx, argocdRepositoryMutation))
 
 	return startServer(ctx, httpPort, mux)
 }
@@ -58,7 +57,7 @@ func StartWebhook(ctx context.Context, cluster *cluster.Cluster) error {
 // StartHTTPProxy launches the zarf agent proxy in the cluster.
 func StartHTTPProxy(ctx context.Context, cluster *cluster.Cluster) error {
 	mux := http.NewServeMux()
-	mux.Handle("/", agentHttp.ProxyHandler(cluster))
+	mux.Handle("/", agentHttp.ProxyHandler(ctx, cluster))
 	return startServer(ctx, httpPort, mux)
 }
 
@@ -93,7 +92,7 @@ func startServer(ctx context.Context, port string, mux *http.ServeMux) error {
 		}
 		return nil
 	})
-	message.Infof(lang.AgentInfoPort, httpPort)
+	logger.From(ctx).Info("server running", "port", port)
 	err := g.Wait()
 	if err != nil {
 		return err

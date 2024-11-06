@@ -16,7 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 )
@@ -38,6 +38,7 @@ func NewGitRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster)
 
 // mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
 func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+	l := logger.From(ctx)
 	var (
 		patches   []operations.PatchOperation
 		isPatched bool
@@ -51,12 +52,14 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		return nil, err
 	}
 
-	message.Debugf("Using the url of (%s) to mutate the flux repository", state.GitServer.Address)
-
 	repo := flux.GitRepository{}
 	if err = json.Unmarshal(r.Object.Raw, &repo); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
+
+	l.Info("using the Zarf git server URL to mutate the Flux GitRepository",
+		"name", repo.Name,
+		"git-server", state.GitServer.Address)
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
@@ -78,7 +81,7 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			return nil, fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
 		}
 		patchedURL = transformedURL.String()
-		message.Debugf("original git URL of (%s) got mutated to (%s)", repo.Spec.URL, patchedURL)
+		l.Debug("mutating the Flux GitRepository URL to the Zarf URL", "original", repo.Spec.URL, "mutated", patchedURL)
 	}
 
 	// Patch updates of the repo spec

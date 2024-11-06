@@ -35,7 +35,6 @@ var (
 //   - zarf.yaml.sig
 func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (_ []ocispec.Descriptor, err error) {
 	isPartialPull := len(layersToPull) > 0
-	r.Log().Debug(fmt.Sprintf("Pulling %s", r.Repo().Reference))
 
 	manifest, err := r.FetchRoot(ctx)
 	if err != nil {
@@ -52,11 +51,14 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	}
 	layersToPull = append(layersToPull, manifest.Config)
 
+	layerSize := oci.SumDescsSize(layersToPull)
+	// TODO (@austinabro321) change this and other r.Log() calls to the proper slog format
+	r.Log().Info(fmt.Sprintf("Pulling %s, size: %s", r.Repo().Reference, utils.ByteFormat(float64(layerSize), 2)))
+
 	// Create a thread to update a progress bar as we save the package to disk
 	doneSaving := make(chan error)
 	successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+r.Repo().Reference.String())
 
-	layerSize := oci.SumDescsSize(layersToPull)
 	go utils.RenderProgressBarForLocalDirWrite(destinationDir, layerSize, doneSaving, "Pulling", successText)
 
 	dst, err := file.New(destinationDir)

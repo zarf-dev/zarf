@@ -6,4 +6,4 @@ USER 65532:65532
 
 COPY --chown=65532:65532 "build/zarf-linux-$TARGETARCH" /zarf
 
-CMD ["/zarf", "internal", "agent", "-l=trace", "--no-log-file"]
+CMD ["/zarf", "internal", "agent", "--log-level=debug", "--log-format=text", "--no-log-file"]

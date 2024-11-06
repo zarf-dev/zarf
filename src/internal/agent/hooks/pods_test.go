@@ -39,7 +39,7 @@ func TestPodMutationWebhook(t *testing.T) {
 
 	state := &types.ZarfState{RegistryInfo: types.RegistryInfo{Address: "127.0.0.1:31999"}}
 	c := createTestClientWithZarfState(ctx, t, state)
-	handler := admission.NewHandler().Serve(NewPodMutationHook(ctx, c))
+	handler := admission.NewHandler().Serve(ctx, NewPodMutationHook(ctx, c))
 
 	tests := []admissionTest{
 		{

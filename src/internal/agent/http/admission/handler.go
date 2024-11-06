@@ -7,6 +7,7 @@
 package admission
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,7 +15,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	corev1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,7 +35,8 @@ func NewHandler() *Handler {
 }
 
 // Serve returns an http.HandlerFunc for an admission webhook.
-func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
+func (h *Handler) Serve(ctx context.Context, hook operations.Hook) http.HandlerFunc {
+	l := logger.From(ctx)
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != http.MethodPost {
@@ -70,7 +72,7 @@ func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 			Kind:       "AdmissionReview",
 		}
 		if err != nil {
-			message.Warnf("%s: %s", lang.AgentErrBindHandler, err.Error())
+			l.Error("unable to bind the webhook handler", "error", err.Error())
 			admissionResponse := corev1.AdmissionReview{
 				TypeMeta: admissionMeta,
 				Response: &corev1.AdmissionResponse{
@@ -79,7 +81,7 @@ func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 			}
 			jsonResponse, err := json.Marshal(admissionResponse)
 			if err != nil {
-				message.WarnErr(err, lang.AgentErrMarshalResponse)
+				l.Error("unable to marshal the response", "error", err.Error())
 				http.Error(w, lang.AgentErrMarshalResponse, http.StatusInternalServerError)
 				return
 			}
@@ -103,7 +105,7 @@ func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 			jsonPatchType := corev1.PatchTypeJSONPatch
 			patchBytes, err := json.Marshal(result.PatchOps)
 			if err != nil {
-				message.WarnErr(err, lang.AgentErrMarshallJSONPatch)
+				l.Error("unable to marshall the json patch", "error", err.Error())
 				http.Error(w, lang.AgentErrMarshallJSONPatch, http.StatusInternalServerError)
 			}
 			admissionResponse.Response.Patch = patchBytes
@@ -112,12 +114,12 @@ func (h *Handler) Serve(hook operations.Hook) http.HandlerFunc {
 
 		jsonResponse, err := json.Marshal(admissionResponse)
 		if err != nil {
-			message.WarnErr(err, lang.AgentErrMarshalResponse)
+			l.Error("unable to marshal the response", "error", err)
 			http.Error(w, lang.AgentErrMarshalResponse, http.StatusInternalServerError)
 			return
 		}
 
-		message.Infof(lang.AgentInfoWebhookAllowed, r.URL.Path, review.Request.Operation, result.Allowed)
+		l.Info("webhook execution complete", "path", r.URL.Path, "operation", review.Request.Operation, "allowed", result.Allowed)
 		w.WriteHeader(http.StatusOK)
 		//nolint: errcheck // ignore
 		w.Write(jsonResponse)
