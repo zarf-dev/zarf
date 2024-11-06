@@ -11,6 +11,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
@@ -25,6 +26,8 @@ var connectCmd = &cobra.Command{
 	Short:   lang.CmdConnectShort,
 	Long:    lang.CmdConnectLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+		l := logger.From(ctx)
 		target := ""
 		if len(args) > 0 {
 			target = args[0]
@@ -37,8 +40,6 @@ var connectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
-		ctx := cmd.Context()
 
 		var tunnel *cluster.Tunnel
 		if target == "" {
@@ -61,14 +62,12 @@ var connectCmd = &cobra.Command{
 
 		defer tunnel.Close()
 
-		// Dump the tunnel URL to the console for other tools to use.
-		fmt.Print(tunnel.FullURL())
-
 		if cliOnly {
 			spinner.Updatef(lang.CmdConnectEstablishedCLI, tunnel.FullURL())
+			l.Info(fmt.Sprintf("Tunnel established at %s, waiting for user to interrupt (ctrl-c to end)", tunnel.FullURL()))
 		} else {
 			spinner.Updatef(lang.CmdConnectEstablishedWeb, tunnel.FullURL())
-
+			l.Info(fmt.Sprintf("Tunnel established at %s, opening your default web browser (ctrl-c to end)", tunnel.FullURL()))
 			if err := exec.LaunchURL(tunnel.FullURL()); err != nil {
 				return err
 			}
@@ -97,6 +96,11 @@ var connectListCmd = &cobra.Command{
 		connections, err := c.ListConnections(cmd.Context())
 		if err != nil {
 			return err
+		}
+		// HACK: Re-initializing PTerm with a stderr writer isn't great, but it lets us render these
+		// tables for backwards compatibility
+		if logger.Enabled(cmd.Context()) {
+			message.InitializePTerm(logger.DestinationDefault)
 		}
 		message.PrintConnectStringTable(connections)
 		return nil
