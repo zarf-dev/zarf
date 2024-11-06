@@ -149,7 +149,6 @@ func InitViper() *viper.Viper {
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
-	// Optional, so ignore errors
 	vConfigError = v.ReadInConfig()
 
 	// Set default values for viper
