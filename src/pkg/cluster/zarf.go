@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -81,44 +82,16 @@ func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg types.Deploy
 	if err != nil {
 		return err
 	}
-	packageSecret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: ZarfNamespaceName,
-			Labels: map[string]string{
-				ZarfManagedByLabel:   "zarf",
-				ZarfPackageInfoLabel: depPkg.Name,
-			},
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
-			"data": packageSecretData,
-		},
-	}
-	err = func() error {
-		_, err := c.Clientset.CoreV1().Secrets(packageSecret.Namespace).Get(ctx, packageSecret.Name, metav1.GetOptions{})
-		if err != nil && !kerrors.IsNotFound(err) {
-			return err
-		}
-		if kerrors.IsNotFound(err) {
-			_, err = c.Clientset.CoreV1().Secrets(packageSecret.Namespace).Create(ctx, packageSecret, metav1.CreateOptions{})
-			if err != nil {
-				return fmt.Errorf("unable to create the deployed package secret: %w", err)
-			}
-			return nil
-		}
-		_, err = c.Clientset.CoreV1().Secrets(packageSecret.Namespace).Update(ctx, packageSecret, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("unable to update the deployed package secret: %w", err)
-		}
-		return nil
-	}()
+	packageSecret := v1ac.Secret(secretName, ZarfNamespaceName).
+		WithLabels(map[string]string{
+			ZarfManagedByLabel:   "zarf",
+			ZarfPackageInfoLabel: depPkg.Name,
+		}).WithData(map[string][]byte{
+		"data": packageSecretData,
+	}).WithType(corev1.SecretTypeOpaque)
+	_, err = c.Clientset.CoreV1().Secrets(*packageSecret.Namespace).Apply(ctx, packageSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to apply the deployed package secret: %w", err)
 	}
 	return nil
 }
@@ -209,41 +182,18 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		return nil, err
 	}
 
-	// Update the package secret
-	deployedPackageSecret := &corev1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Secret",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      config.ZarfPackagePrefix + packageName,
-			Namespace: ZarfNamespaceName,
-			Labels: map[string]string{
-				ZarfManagedByLabel:   "zarf",
-				ZarfPackageInfoLabel: packageName,
-			},
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
+	packageSecretName := fmt.Sprintf("%s%s", config.ZarfPackagePrefix, packageName)
+	deployedPackageSecret := v1ac.Secret(packageSecretName, ZarfNamespaceName).
+		WithLabels(map[string]string{
+			ZarfManagedByLabel:   "zarf",
+			ZarfPackageInfoLabel: packageName,
+		}).WithType(corev1.SecretTypeOpaque).
+		WithData(map[string][]byte{
 			"data": packageData,
-		},
-	}
-	updatedSecret, err := func() (*corev1.Secret, error) {
-		secret, err := c.Clientset.CoreV1().Secrets(deployedPackageSecret.Namespace).Create(ctx, deployedPackageSecret, metav1.CreateOptions{})
-		if err != nil && !kerrors.IsAlreadyExists(err) {
-			return nil, err
-		}
-		if err == nil {
-			return secret, nil
-		}
-		secret, err = c.Clientset.CoreV1().Secrets(deployedPackageSecret.Namespace).Update(ctx, deployedPackageSecret, metav1.UpdateOptions{})
-		if err != nil {
-			return nil, err
-		}
-		return secret, nil
-	}()
+		})
+	updatedSecret, err := c.Clientset.CoreV1().Secrets(*deployedPackageSecret.Namespace).Apply(ctx, deployedPackageSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
-		return nil, fmt.Errorf("failed to record package deployment in secret '%s': %w", deployedPackageSecret.Name, err)
+		return nil, fmt.Errorf("failed to record package deployment in secret '%s': %w", *deployedPackageSecret.Name, err)
 	}
 	if err := json.Unmarshal(updatedSecret.Data["data"], &deployedPackage); err != nil {
 		return nil, err

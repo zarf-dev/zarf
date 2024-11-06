@@ -10,12 +10,13 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
+	corev1 "k8s.io/api/core/v1"
+	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 )
 
 // DeleteZarfNamespace deletes the Zarf namespace from the connected cluster.
@@ -49,6 +50,11 @@ func (c *Cluster) DeleteZarfNamespace(ctx context.Context) error {
 
 	l.Debug("done deleting the zarf namespace from this cluster", "duration", time.Since(start))
 	return nil
+}
+
+// NewZarfManagedApplyNamespace returns a v1ac.NamespaceApplyConfiguration with Zarf-managed labels
+func NewZarfManagedApplyNamespace(name string) *v1ac.NamespaceApplyConfiguration {
+	return v1ac.Namespace(name).WithLabels(AdoptZarfManagedLabels(nil))
 }
 
 // NewZarfManagedNamespace returns a corev1.Namespace with Zarf-managed labels
