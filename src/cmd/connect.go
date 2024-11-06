@@ -64,10 +64,10 @@ var connectCmd = &cobra.Command{
 
 		if cliOnly {
 			spinner.Updatef(lang.CmdConnectEstablishedCLI, tunnel.FullURL())
-			l.Info(fmt.Sprintf("Tunnel established at %s, waiting for user to interrupt (ctrl-c to end)", tunnel.FullURL()))
+			l.Info("Tunnel established, waiting for user to interrupt (ctrl-c to end)", "url", tunnel.FullURL())
 		} else {
 			spinner.Updatef(lang.CmdConnectEstablishedWeb, tunnel.FullURL())
-			l.Info(fmt.Sprintf("Tunnel established at %s, opening your default web browser (ctrl-c to end)", tunnel.FullURL()))
+			l.Info("Tunnel established, opening your default web browser (ctrl-c to end)", "url", tunnel.FullURL())
 			if err := exec.LaunchURL(tunnel.FullURL()); err != nil {
 				return err
 			}
