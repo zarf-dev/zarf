@@ -7,6 +7,7 @@ package common
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -168,25 +169,24 @@ func isVersionCmd() bool {
 }
 
 // PrintViperConfigUsed informs users when Zarf has detected a config file.
-func PrintViperConfigUsed(ctx context.Context) {
+func PrintViperConfigUsed(ctx context.Context) error {
 	l := logger.From(ctx)
 
 	// Only print config info if viper is initialized.
 	vInitialized := v != nil
 	if !vInitialized {
-		return
+		return nil
 	}
 	var notFoundErr viper.ConfigFileNotFoundError
 	if errors.As(vConfigError, &notFoundErr) {
-		return
+		return nil
 	}
 	if vConfigError != nil {
-		l.Error("unable to load config file", "error", vConfigError)
-		return
+		return fmt.Errorf("unable to load config file: %w", vConfigError)
 	}
-	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
-		l.Info("using config file", "location", cfgFile)
-	}
+	cfgFile := v.ConfigFileUsed()
+	l.Info("using config file", "location", cfgFile)
+	return nil
 }
 
 func setDefaults() {
