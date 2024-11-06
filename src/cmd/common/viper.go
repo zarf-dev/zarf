@@ -183,8 +183,10 @@ func PrintViperConfigUsed(ctx context.Context) error {
 	if vConfigError != nil {
 		return fmt.Errorf("unable to load config file: %w", vConfigError)
 	}
-	cfgFile := v.ConfigFileUsed()
-	l.Info("using config file", "location", cfgFile)
+	// Zarf skips loading the config file for version and tool commands, this avoids output in those cases
+	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
+		l.Info("using config file", "location", cfgFile)
+	}
 	return nil
 }
 
