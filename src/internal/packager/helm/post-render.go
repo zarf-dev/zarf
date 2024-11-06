@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,11 +20,11 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/releaseutil"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/yaml"
 
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -164,49 +163,14 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		// TODO: Refactor as error is not checked instead of checking for not found error.
-		currentRegistrySecret, _ := c.Clientset.CoreV1().Secrets(name).Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
-		sameSecretData := maps.EqualFunc(currentRegistrySecret.Data, validRegistrySecret.Data, func(v1, v2 []byte) bool { return bytes.Equal(v1, v2) })
-		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !sameSecretData {
-			err := func() error {
-				_, err := c.Clientset.CoreV1().Secrets(validRegistrySecret.Namespace).Create(ctx, validRegistrySecret, metav1.CreateOptions{})
-				if err != nil && !kerrors.IsAlreadyExists(err) {
-					return err
-				}
-				if err == nil {
-					return nil
-				}
-				_, err = c.Clientset.CoreV1().Secrets(validRegistrySecret.Namespace).Update(ctx, validRegistrySecret, metav1.UpdateOptions{})
-				if err != nil {
-					return err
-				}
-				return nil
-			}()
-			if err != nil {
-				message.WarnErrf(err, "Problem creating registry secret for the %s namespace", name)
-				l.Warn("problem creating registry secret", "namespace", name, "error", err.Error())
-			}
-
-			// Create or update the zarf git server secret
-			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
-			err = func() error {
-				_, err := c.Clientset.CoreV1().Secrets(gitServerSecret.Namespace).Create(ctx, gitServerSecret, metav1.CreateOptions{})
-				if err != nil && !kerrors.IsAlreadyExists(err) {
-					return err
-				}
-				if err == nil {
-					return nil
-				}
-				_, err = c.Clientset.CoreV1().Secrets(gitServerSecret.Namespace).Update(ctx, gitServerSecret, metav1.UpdateOptions{})
-				if err != nil {
-					return err
-				}
-				return nil
-			}()
-			if err != nil {
-				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
-				l.Warn("problem creating git server secret", "namespace", name, "error", err.Error())
-			}
+		_, err = c.Clientset.CoreV1().Secrets(*validRegistrySecret.Namespace).Apply(ctx, validRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
+		if err != nil {
+			return fmt.Errorf("problem applying registry secret for the %s namespace: %w", name, err)
+		}
+		gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
+		_, err = c.Clientset.CoreV1().Secrets(*gitServerSecret.Namespace).Apply(ctx, gitServerSecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
+		if err != nil {
+			return fmt.Errorf("problem applying git server secret for the %s namespace: %w", name, err)
 		}
 	}
 	return nil
