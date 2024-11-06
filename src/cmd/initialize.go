@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
@@ -70,6 +71,9 @@ var initCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		// Since the new logger ignores pterm output the credential table is no longer printed on init.
+		// This note is the intended replacement, rather than printing creds by default.
+		logger.From(ctx).Info("init complete. To get credentials for Zarf deployed services run `zarf tools get-creds`")
 		return nil
 	},
 }
@@ -110,28 +114,26 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 		return filepath.Join(absCachePath, initPackageName), nil
 	}
 
+	if config.CommonOptions.Confirm {
+		return "", lang.ErrInitNotFound
+	}
+
 	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
 	downloadCacheTarget, err := downloadInitPackage(ctx, absCachePath)
 	if err != nil {
-		if errors.Is(err, lang.ErrInitNotFound) {
-			return "", err
-		}
 		return "", fmt.Errorf("failed to download the init package: %w", err)
 	}
 	return downloadCacheTarget, nil
 }
 
 func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, error) {
-	if config.CommonOptions.Confirm {
-		return "", lang.ErrInitNotFound
-	}
-
+	l := logger.From(ctx)
 	url := zoci.GetInitPackageURL(config.CLIVersion)
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
 	message.Question(fmt.Sprintf(lang.CmdInitPullAsk, url))
-
 	message.Note(lang.CmdInitPullNote)
+	l.Info("the init package was not found locally, but can be pulled in connected environments", "url", fmt.Sprintf("oci://%s", url))
 
 	var confirmDownload bool
 	prompt := &survey.Confirm{

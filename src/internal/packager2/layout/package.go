@@ -189,6 +189,27 @@ func (p *PackageLayout) GetImage(ref transform.Image) (registryv1.Image, error) 
 	return nil, fmt.Errorf("unable to find the image %s", ref.Reference)
 }
 
+// Files returns a map off all the files in the package.
+func (p *PackageLayout) Files() (map[string]string, error) {
+	files := map[string]string{}
+	err := filepath.Walk(p.dirPath, func(path string, info fs.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(p.dirPath, path)
+		if err != nil {
+			return err
+		}
+		name := filepath.ToSlash(rel)
+		files[path] = name
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return files, nil
+}
+
 func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 	_, err := os.Stat(filepath.Join(pkgLayout.dirPath, ZarfYAML))
 	if err != nil {
@@ -203,14 +224,7 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 		return err
 	}
 
-	packageFiles := map[string]interface{}{}
-	err = filepath.Walk(pkgLayout.dirPath, func(path string, info fs.FileInfo, err error) error {
-		if info.IsDir() {
-			return nil
-		}
-		packageFiles[path] = nil
-		return err
-	})
+	packageFiles, err := pkgLayout.Files()
 	if err != nil {
 		return err
 	}

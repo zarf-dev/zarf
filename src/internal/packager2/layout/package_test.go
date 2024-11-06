@@ -52,4 +52,24 @@ func TestPackageLayout(t *testing.T) {
 	dgst, err := img.Digest()
 	require.NoError(t, err)
 	require.Equal(t, "sha256:33735bd63cf84d7e388d9f6d297d348c523c044410f553bd878c6d7829612735", dgst.String())
+
+	files, err := pkgLayout.Files()
+	require.NoError(t, err)
+	expectedNames := []string{
+		"checksums.txt",
+		"components/test.tar",
+		"images/blobs/sha256/33735bd63cf84d7e388d9f6d297d348c523c044410f553bd878c6d7829612735",
+		"images/blobs/sha256/43c4264eed91be63b206e17d93e75256a6097070ce643c5e8f0379998b44f170",
+		"images/blobs/sha256/91ef0af61f39ece4d6710e465df5ed6ca12112358344fd51ae6a3b886634148b",
+		"images/index.json",
+		"images/oci-layout",
+		"sboms.tar",
+		"zarf.yaml",
+	}
+	require.Equal(t, len(expectedNames), len(files))
+	for _, expectedName := range expectedNames {
+		path := filepath.Join(pkgLayout.dirPath, filepath.FromSlash(expectedName))
+		name := files[path]
+		require.Equal(t, expectedName, name)
+	}
 }
