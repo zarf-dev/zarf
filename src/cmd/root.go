@@ -109,7 +109,10 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Print out config location
-	common.PrintViperConfigUsed(cmd.Context())
+	err = common.PrintViperConfigUsed(cmd.Context())
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
