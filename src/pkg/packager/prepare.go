@@ -338,7 +338,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 					l.Debug("looking up cosign artifacts for image", "name", imagesMap[component.Name])
 					cosignArtifacts, err := utils.GetCosignArtifacts(image)
 					if err != nil {
-						return nil, fmt.Errorf("could not lookup the cosing artifacts for image %s: %w", image, err)
+						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}
 					cosignArtifactList = append(cosignArtifactList, cosignArtifacts...)
 				}
