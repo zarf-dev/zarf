@@ -12,7 +12,7 @@ Convert between SBOM formats
 
 ### Synopsis
 
-[Experimental] Convert SBOM files to, and from, SPDX, CycloneDX and Syft's format. For more info about data loss between formats see https://github.com/anchore/syft#format-conversion-experimental
+[Experimental] Convert SBOM files to, and from, SPDX, CycloneDX and Syft's format. For more info about data loss between formats see https://github.com/anchore/syft/wiki/format-conversion
 
 ```
 zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
