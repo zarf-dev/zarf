@@ -7,6 +7,7 @@ package template
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -43,7 +44,7 @@ func GetZarfVariableConfig(ctx context.Context) *variables.VariableConfig {
 }
 
 // GetZarfTemplates returns the template keys and values to be used for templating.
-func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap map[string]*variables.TextTemplate, err error) {
+func GetZarfTemplates(ctx context.Context, componentName string, state *types.ZarfState) (templateMap map[string]*variables.TextTemplate, err error) {
 	templateMap = make(map[string]*variables.TextTemplate)
 
 	if state != nil {
@@ -102,7 +103,10 @@ func GetZarfTemplates(componentName string, state *types.ZarfState) (templateMap
 		}
 	}
 
-	debugPrintTemplateMap(templateMap)
+	err = debugPrintTemplateMap(ctx, templateMap)
+	if err != nil {
+		return nil, err
+	}
 
 	return templateMap, nil
 }
@@ -127,18 +131,29 @@ func generateHtpasswd(regInfo *types.RegistryInfo) (string, error) {
 	return "", nil
 }
 
-func debugPrintTemplateMap(templateMap map[string]*variables.TextTemplate) {
-	debugText := "templateMap = { "
+func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) error {
+	sanitizedMap := getSanitizedTemplateMap(templateMap)
 
-	for key, template := range templateMap {
-		if template.Sensitive {
-			debugText += fmt.Sprintf("\"%s\": \"**sanitized**\", ", key)
-		} else {
-			debugText += fmt.Sprintf("\"%s\": \"%s\", ", key, template.Value)
-		}
+	b, err := json.MarshalIndent(sanitizedMap, "", "  ")
+	if err != nil {
+		return err
 	}
 
-	debugText += " }"
+	message.Debug(fmt.Sprintf("templateMap = %s", string(b)))
+	logger.From(ctx).Debug("cluster.debugPrintTemplateMap", "templateMap", sanitizedMap)
+	return nil
+}
 
-	message.Debug(debugText)
+func getSanitizedTemplateMap(templateMap map[string]*variables.TextTemplate) map[string]string {
+	sanitizedMap := make(map[string]string, len(templateMap))
+	for key, template := range templateMap {
+		if template == nil {
+			sanitizedMap[key] = ""
+		} else if template.Sensitive {
+			sanitizedMap[key] = "**sanitized**"
+		} else {
+			sanitizedMap[key] = template.Value
+		}
+	}
+	return sanitizedMap
 }

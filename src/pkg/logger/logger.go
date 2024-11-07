@@ -37,6 +37,22 @@ var (
 	Error = Level(slog.LevelError) // 8
 )
 
+// String returns the string representation of the Level.
+func (l Level) String() string {
+	switch l {
+	case Debug:
+		return "debug"
+	case Info:
+		return "info"
+	case Warn:
+		return "warn"
+	case Error:
+		return "error"
+	default:
+		return "unknown"
+	}
+}
+
 // validLevels is a set that provides an ergonomic way to check if a level is a member of the set.
 var validLevels = map[Level]bool{
 	Debug: true,
@@ -99,12 +115,33 @@ var (
 	DestinationNone Destination = io.Discard
 )
 
+// can't define method on Destination type
+func destinationString(d Destination) string {
+	switch {
+	case d == DestinationDefault:
+		return "os.Stderr"
+	case d == DestinationNone:
+		return "io.Discard"
+	default:
+		return "unknown"
+	}
+}
+
 // Config is configuration for a logger.
 type Config struct {
 	// Level sets the log level. An empty value corresponds to Info aka 0.
 	Level
 	Format
 	Destination
+}
+
+// LogValue of config
+func (c Config) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("level", c.Level.String()),
+		slog.Any("format", c.Format),
+		slog.Any("Destination", destinationString(c.Destination)),
+	)
 }
 
 // ConfigDefault returns a Config with defaults like Text formatting at Info level writing to Stderr.
@@ -134,7 +171,10 @@ func New(cfg Config) (*slog.Logger, error) {
 
 	switch cfg.Format.ToLower() {
 	case FormatText:
-		handler = slog.NewTextHandler(cfg.Destination, &opts)
+		handler = console.NewHandler(cfg.Destination, &console.HandlerOptions{
+			Level:   slog.Level(cfg.Level),
+			NoColor: true,
+		})
 	case FormatJSON:
 		handler = slog.NewJSONHandler(cfg.Destination, &opts)
 	case FormatConsole:

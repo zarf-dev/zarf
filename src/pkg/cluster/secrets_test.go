@@ -192,7 +192,6 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 					},
 				},
 				Type: corev1.SecretTypeOpaque,
-				Data: map[string][]byte{},
 				StringData: map[string]string{
 					"username": state.GitServer.PullUsername,
 					"password": state.GitServer.PullPassword,

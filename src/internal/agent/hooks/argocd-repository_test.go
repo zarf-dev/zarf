@@ -43,7 +43,7 @@ func TestArgoRepoWebhook(t *testing.T) {
 		PullUsername: "a-pull-user",
 	}}
 	c := createTestClientWithZarfState(ctx, t, state)
-	handler := admission.NewHandler().Serve(NewRepositorySecretMutationHook(ctx, c))
+	handler := admission.NewHandler().Serve(ctx, NewRepositorySecretMutationHook(ctx, c))
 
 	tests := []admissionTest{
 		{

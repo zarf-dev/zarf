@@ -39,7 +39,7 @@ func TestArgoAppWebhook(t *testing.T) {
 		PushUsername: "a-push-user",
 	}}
 	c := createTestClientWithZarfState(ctx, t, state)
-	handler := admission.NewHandler().Serve(NewApplicationMutationHook(ctx, c))
+	handler := admission.NewHandler().Serve(ctx, NewApplicationMutationHook(ctx, c))
 
 	tests := []admissionTest{
 		{

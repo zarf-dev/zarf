@@ -109,7 +109,10 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Print out config location
-	common.PrintViperConfigUsed(cmd.Context())
+	err = common.PrintViperConfigUsed(cmd.Context())
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -222,8 +225,6 @@ func setupMessage(cfg messageCfg) error {
 		message.InitializePTerm(io.Discard)
 		// Disable all progress bars and spinners
 		message.NoProgress = true
-		// Ensures no user input is needed while we maintain backwards compatibility with message
-		config.CommonOptions.Confirm = true
 		return nil
 	}
 

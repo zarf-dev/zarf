@@ -19,15 +19,15 @@
     "@astrojs/check": "^0.5.10",
     "@astrojs/starlight": "^0.21.2",
     "@fontsource/source-code-pro": "^5.0.17",
-    "astro": "^4.5.12",
-    "mermaid": "^10.9.0",
+    "astro": "^4.16.10",
+    "mermaid": "^10.9.3",
     "rehype-autolink-headings": "^7.1.0",
     "sharp": "^0.33.3",
     "typescript": "^5.4.3"
   },
   "devDependencies": {
     "linkinator": "^6.0.5",
-    "markdownlint-cli2": "^0.12.1",
+    "markdownlint-cli2": "^0.14.0",
     "remark-gemoji": "^8.0.0",
     "yaml": "^2.4.1"
   },

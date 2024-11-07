@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
@@ -17,11 +18,14 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // Generate generates a Zarf package definition.
 func (p *Packager) Generate(ctx context.Context) error {
+	l := logger.From(ctx)
+	start := time.Now()
 	generatedZarfYAMLPath := filepath.Join(p.cfg.GenerateOpts.Output, layout.ZarfYAML)
 	spinner := message.NewProgressSpinner("Generating package for %q at %s", p.cfg.GenerateOpts.Name, generatedZarfYAMLPath)
 
@@ -29,6 +33,9 @@ func (p *Packager) Generate(ctx context.Context) error {
 		prefixed := filepath.Join(p.cfg.GenerateOpts.Output, fmt.Sprintf("%s-%s", p.cfg.GenerateOpts.Name, layout.ZarfYAML))
 
 		message.Warnf("%s already exists, writing to %s", generatedZarfYAMLPath, prefixed)
+		l.Warn("using a prefixed name since zarf.yaml already exists in the output directory",
+			"output-directory", p.cfg.GenerateOpts.Output,
+			"name", prefixed)
 
 		generatedZarfYAMLPath = prefixed
 
@@ -36,6 +43,7 @@ func (p *Packager) Generate(ctx context.Context) error {
 			return fmt.Errorf("unable to generate package, %s already exists", generatedZarfYAMLPath)
 		}
 	}
+	l.Info("generating package", "name", p.cfg.GenerateOpts.Name, "path", generatedZarfYAMLPath)
 
 	generatedComponent := v1alpha1.ZarfComponent{
 		Name:     p.cfg.GenerateOpts.Name,
@@ -67,6 +75,7 @@ func (p *Packager) Generate(ctx context.Context) error {
 	if err != nil {
 		// purposefully not returning error here, as we can still generate the package without images
 		message.Warnf("Unable to find images: %s", err.Error())
+		l.Error("failed to find images", "error", err.Error())
 	}
 
 	for i := range p.cfg.Pkg.Components {
@@ -96,6 +105,7 @@ func (p *Packager) Generate(ctx context.Context) error {
 	content = strings.Replace(content, "components:\n", "\ncomponents:\n", 1)
 
 	spinner.Successf("Generated package for %q at %s", p.cfg.GenerateOpts.Name, generatedZarfYAMLPath)
+	l.Debug("generated package", "name", p.cfg.GenerateOpts.Name, "path", generatedZarfYAMLPath, "duration", time.Since(start))
 
 	return os.WriteFile(generatedZarfYAMLPath, []byte(content), helpers.ReadAllWriteUser)
 }

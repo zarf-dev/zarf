@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -16,15 +15,16 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/releaseutil"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/yaml"
 
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -117,6 +117,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 }
 
 func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
+	l := logger.From(ctx)
 	c := r.cluster
 	namespaceList, err := r.cluster.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -142,6 +143,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			// https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
 			if slices.Contains([]string{"default", "kube-node-lease", "kube-public", "kube-system"}, name) {
 				message.Warnf("Refusing to adopt the initial namespace: %s", name)
+				l.Warn("refusing to adopt initial namespace", "name", name)
 			} else {
 				// This is an existing namespace to adopt
 				_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, namespace, metav1.UpdateOptions{})
@@ -161,53 +163,21 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		// TODO: Refactor as error is not checked instead of checking for not found error.
-		currentRegistrySecret, _ := c.Clientset.CoreV1().Secrets(name).Get(ctx, config.ZarfImagePullSecretName, metav1.GetOptions{})
-		sameSecretData := maps.EqualFunc(currentRegistrySecret.Data, validRegistrySecret.Data, func(v1, v2 []byte) bool { return bytes.Equal(v1, v2) })
-		if currentRegistrySecret.Name != config.ZarfImagePullSecretName || !sameSecretData {
-			err := func() error {
-				_, err := c.Clientset.CoreV1().Secrets(validRegistrySecret.Namespace).Create(ctx, validRegistrySecret, metav1.CreateOptions{})
-				if err != nil && !kerrors.IsAlreadyExists(err) {
-					return err
-				}
-				if err == nil {
-					return nil
-				}
-				_, err = c.Clientset.CoreV1().Secrets(validRegistrySecret.Namespace).Update(ctx, validRegistrySecret, metav1.UpdateOptions{})
-				if err != nil {
-					return err
-				}
-				return nil
-			}()
-			if err != nil {
-				message.WarnErrf(err, "Problem creating registry secret for the %s namespace", name)
-			}
-
-			// Create or update the zarf git server secret
-			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
-			err = func() error {
-				_, err := c.Clientset.CoreV1().Secrets(gitServerSecret.Namespace).Create(ctx, gitServerSecret, metav1.CreateOptions{})
-				if err != nil && !kerrors.IsAlreadyExists(err) {
-					return err
-				}
-				if err == nil {
-					return nil
-				}
-				_, err = c.Clientset.CoreV1().Secrets(gitServerSecret.Namespace).Update(ctx, gitServerSecret, metav1.UpdateOptions{})
-				if err != nil {
-					return err
-				}
-				return nil
-			}()
-			if err != nil {
-				message.WarnErrf(err, "Problem creating git server secret for the %s namespace", name)
-			}
+		_, err = c.Clientset.CoreV1().Secrets(*validRegistrySecret.Namespace).Apply(ctx, validRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
+		if err != nil {
+			return fmt.Errorf("problem applying registry secret for the %s namespace: %w", name, err)
+		}
+		gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
+		_, err = c.Clientset.CoreV1().Secrets(*gitServerSecret.Namespace).Apply(ctx, gitServerSecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
+		if err != nil {
+			return fmt.Errorf("problem applying git server secret for the %s namespace: %w", name, err)
 		}
 	}
 	return nil
 }
 
 func (r *renderer) editHelmResources(ctx context.Context, resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
+	l := logger.From(ctx)
 	dc, err := dynamic.NewForConfig(r.cluster.RestConfig)
 	if err != nil {
 		return err
@@ -231,8 +201,10 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shenanigans
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), namespace); err != nil {
 				message.WarnErrf(err, "could not parse namespace %s", rawData.GetName())
+				l.Warn("failed to parse namespace", "name", rawData.GetName(), "error", err)
 			} else {
 				message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
+				l.Debug("matched helm namespace for zarf annotation", "name", namespace.Name)
 				namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
 				// Add it to the stack
 				r.namespaces[namespace.Name] = namespace
@@ -253,6 +225,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			if key, keyExists := labels[cluster.ZarfConnectLabelName]; keyExists {
 				// If there is a zarf-connect label
 				message.Debugf("Match helm service %s for zarf connection %s", rawData.GetName(), key)
+				l.Debug("match helm service for zarf connection", "service", rawData.GetName(), "connection-key", key)
 
 				// Add the connectString for processing later in the deployment
 				r.connectStrings[key] = types.ConnectString{

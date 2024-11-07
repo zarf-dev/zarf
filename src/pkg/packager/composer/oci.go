@@ -28,7 +28,7 @@ func (ic *ImportChain) getRemote(ctx context.Context, url string) (*zoci.Remote,
 		return ic.remote, nil
 	}
 	var err error
-	ic.remote, err = zoci.NewRemote(url, zoci.PlatformForSkeleton())
+	ic.remote, err = zoci.NewRemote(ctx, url, zoci.PlatformForSkeleton())
 	if err != nil {
 		return nil, err
 	}

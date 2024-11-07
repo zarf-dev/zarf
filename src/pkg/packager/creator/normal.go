@@ -292,8 +292,7 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		if err != nil {
 			return err
 		}
-		// TODO(mkcp): Port zoci.NewRemote to new logger
-		remote, err := zoci.NewRemote(ref, oci.PlatformForArch(config.GetArch()))
+		remote, err := zoci.NewRemote(ctx, ref, oci.PlatformForArch(config.GetArch()))
 		if err != nil {
 			return err
 		}
@@ -319,9 +318,10 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		packageName := fmt.Sprintf("%s%s", sources.NameFromMetadata(pkg, pc.createOpts.IsSkeleton), sources.PkgSuffix(pkg.Metadata.Uncompressed))
 		tarballPath := filepath.Join(pc.createOpts.Output, packageName)
 
-		// Try to remove the package if it already exists.
+		// remove existing package with the same name
 		err = os.Remove(tarballPath)
-		if err != nil {
+		// user only cares about this error if file exists and the remove failed
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			logger.From(ctx).Error(err.Error())
 		}
 
