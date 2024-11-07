@@ -99,9 +99,7 @@ var connectListCmd = &cobra.Command{
 		}
 		// HACK: Re-initializing PTerm with a stderr writer isn't great, but it lets us render these
 		// tables for backwards compatibility
-		if logger.Enabled(cmd.Context()) {
-			message.InitializePTerm(logger.DestinationDefault)
-		}
+		message.InitializePTerm(logger.DestinationDefault)
 		message.PrintConnectStringTable(connections)
 		return nil
 	},
