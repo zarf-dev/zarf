@@ -239,6 +239,8 @@ func (h *Helm) RemoveChart(ctx context.Context, namespace string, name string, s
 func (h *Helm) UpdateReleaseValues(ctx context.Context, updatedValues map[string]interface{}) error {
 	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.chart.ReleaseName)
 	defer spinner.Stop()
+	l := logger.From(ctx)
+	l.Debug("updating values for helm release", "name", h.chart.ReleaseName)
 
 	err := h.createActionConfig(ctx, h.chart.Namespace, spinner)
 	if err != nil {

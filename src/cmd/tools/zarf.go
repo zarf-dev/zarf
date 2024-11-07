@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"slices"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
@@ -101,6 +103,7 @@ var updateCredsCmd = &cobra.Command{
 		}
 
 		ctx := cmd.Context()
+		l := logger.From(ctx)
 
 		timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 		defer cancel()
@@ -122,13 +125,13 @@ var updateCredsCmd = &cobra.Command{
 			return fmt.Errorf("unable to update Zarf credentials: %w", err)
 		}
 
+		message.InitializePTerm(os.Stderr)
 		message.PrintCredentialUpdates(oldState, newState, args)
+		message.InitializePTerm(io.Discard)
 
 		confirm := config.CommonOptions.Confirm
 
-		if confirm {
-			message.Note(lang.CmdToolsUpdateCredsConfirmProvided)
-		} else {
+		if !confirm {
 			prompt := &survey.Confirm{
 				Message: lang.CmdToolsUpdateCredsConfirmContinue,
 			}
@@ -180,6 +183,7 @@ var updateCredsCmd = &cobra.Command{
 				if err != nil {
 					// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
+					l.Warn("unable to update Zarf Registry values", "error", err.Error())
 				}
 			}
 			if slices.Contains(args, message.GitKey) && newState.GitServer.IsInternal() && internalGitServerExists {
@@ -193,6 +197,7 @@ var updateCredsCmd = &cobra.Command{
 				if err != nil {
 					// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateAgent, err.Error())
+					l.Warn("unable to update Zarf Agent TLS secrets", "error", err.Error())
 				}
 			}
 		}
@@ -204,12 +209,14 @@ var clearCacheCmd = &cobra.Command{
 	Use:     "clear-cache",
 	Aliases: []string{"c"},
 	Short:   lang.CmdToolsClearCacheShort,
-	RunE: func(_ *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		l := logger.From(cmd.Context())
 		cachePath, err := config.GetAbsCachePath()
 		if err != nil {
 			return err
 		}
 		message.Notef(lang.CmdToolsClearCacheDir, cachePath)
+		l.Info("clearing cache", "path", cachePath)
 		if err := os.RemoveAll(cachePath); err != nil {
 			return fmt.Errorf("unable to clear the cache directory %s: %w", cachePath, err)
 		}
@@ -242,7 +249,7 @@ var generatePKICmd = &cobra.Command{
 	Aliases: []string{"pki"},
 	Short:   lang.CmdToolsGenPkiShort,
 	Args:    cobra.ExactArgs(1),
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		pki, err := pki.GeneratePKI(args[0], subAltNames...)
 		if err != nil {
 			return err
@@ -257,6 +264,7 @@ var generatePKICmd = &cobra.Command{
 			return err
 		}
 		message.Successf(lang.CmdToolsGenPkiSuccess, args[0])
+		logger.From(cmd.Context()).Info("successfully created a chain of trust", "host", args[0])
 		return nil
 	},
 }
@@ -265,7 +273,7 @@ var generateKeyCmd = &cobra.Command{
 	Use:     "gen-key",
 	Aliases: []string{"key"},
 	Short:   lang.CmdToolsGenKeyShort,
-	RunE: func(_ *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		// Utility function to prompt the user for the password to the private key
 		passwordFunc := func(bool) ([]byte, error) {
 			// perform the first prompt
@@ -329,6 +337,9 @@ var generateKeyCmd = &cobra.Command{
 		}
 
 		message.Successf(lang.CmdToolsGenKeySuccess, prvKeyFileName, pubKeyFileName)
+		logger.From(cmd.Context()).Info("Successfully generated key pair",
+			"private-key-path", prvKeyExistsErr,
+			"public-key-path", pubKeyFileName)
 		return nil
 	},
 }

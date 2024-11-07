@@ -42,15 +42,7 @@ func init() {
 		Aliases: []string{"r", "crane"},
 		Short:   lang.CmdToolsRegistryShort,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			cfg := logger.Config{
-				Level:       logger.Info,
-				Format:      logger.FormatText,
-				Destination: logger.DestinationDefault,
-			}
-			l, err := logger.New(cfg)
-			if err != nil {
-				return err
-			}
+			l := logger.Default()
 			ctx := logger.WithContext(cmd.Context(), l)
 			cmd.SetContext(ctx)
 			message.InitializePTerm(io.Discard)
@@ -66,7 +58,7 @@ func init() {
 			if ndlayers {
 				craneOptions = append(craneOptions, crane.WithNondistributable())
 			}
-
+			var err error
 			var v1Platform *v1.Platform
 			if platform != "all" {
 				v1Platform, err = v1.ParsePlatform(platform)
@@ -330,7 +322,7 @@ func doPruneImagesForPackages(ctx context.Context, zarfState *types.ZarfState, z
 		}
 	}
 
-	if len(imageDigestsToPrune) > 0 {
+	if len(imageDigestsToPrune) == 0 {
 		l.Info("there are no images to prune")
 		return nil
 	}
