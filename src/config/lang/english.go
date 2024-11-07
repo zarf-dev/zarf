@@ -36,10 +36,6 @@ const (
 
 // Zarf CLI commands.
 const (
-	// common command language
-	CmdConfirmProvided = "Confirm flag specified, continuing without prompting."
-	CmdConfirmContinue = "Continue with these changes?"
-
 	// root zarf command
 	RootCmdShort = "DevSecOps for Airgap"
 	RootCmdLong  = "Zarf eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud native workloads\n" +
