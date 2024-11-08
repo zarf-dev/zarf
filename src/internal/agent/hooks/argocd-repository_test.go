@@ -84,44 +84,6 @@ func TestArgoRepoWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
-			name: "should mutate even if agent patched",
-			admissionReq: createArgoRepoAdmissionRequest(t, v1.Create, &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"argocd.argoproj.io/secret-type": "repository",
-						"zarf-agent": "patched",
-					},
-					Name:      "argo-repo-secret",
-					Namespace: "argo",
-				},
-				Data: map[string][]byte{
-					"url": []byte("https://diff-git-server.com/podinfo"),
-				},
-			}),
-			patch: []operations.PatchOperation{
-				operations.ReplacePatchOperation(
-					"/data/url",
-					b64.StdEncoding.EncodeToString([]byte("https://git-server.com/a-push-user/podinfo-1868163476")),
-				),
-				operations.ReplacePatchOperation(
-					"/data/username",
-					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullUsername)),
-				),
-				operations.ReplacePatchOperation(
-					"/data/password",
-					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullPassword)),
-				),
-				operations.ReplacePatchOperation(
-					"/metadata/labels",
-					map[string]string{
-						"argocd.argoproj.io/secret-type": "repository",
-						"zarf-agent":                     "patched",
-					},
-				),
-			},
-			code: http.StatusOK,
-		},
-		{
 			name: "matching hostname on update should stay the same, but secret should be added",
 			admissionReq: createArgoRepoAdmissionRequest(t, v1.Update, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{

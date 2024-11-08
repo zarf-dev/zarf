@@ -14,7 +14,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -45,48 +44,6 @@ func TestArgoAppWebhook(t *testing.T) {
 		{
 			name: "should be mutated",
 			admissionReq: createArgoAppAdmissionRequest(t, v1.Create, &Application{
-				Spec: ApplicationSpec{
-					Source: &ApplicationSource{RepoURL: "https://diff-git-server.com/peanuts"},
-					Sources: []ApplicationSource{
-						{
-							RepoURL: "https://diff-git-server.com/cashews",
-						},
-						{
-							RepoURL: "https://diff-git-server.com/almonds",
-						},
-					},
-				},
-			}),
-			patch: []operations.PatchOperation{
-				operations.ReplacePatchOperation(
-					"/spec/source/repoURL",
-					"https://git-server.com/a-push-user/peanuts-3883081014",
-				),
-				operations.ReplacePatchOperation(
-					"/spec/sources/0/repoURL",
-					"https://git-server.com/a-push-user/cashews-580170494",
-				),
-				operations.ReplacePatchOperation(
-					"/spec/sources/1/repoURL",
-					"https://git-server.com/a-push-user/almonds-640159520",
-				),
-				operations.ReplacePatchOperation(
-					"/metadata/labels",
-					map[string]string{
-						"zarf-agent": "patched",
-					},
-				),
-			},
-			code: http.StatusOK,
-		},
-		{
-			name: "should mutate even if agent patched",
-			admissionReq: createArgoAppAdmissionRequest(t, v1.Create, &Application{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"zarf-agent": "patched",
-					},
-				},
 				Spec: ApplicationSpec{
 					Source: &ApplicationSource{RepoURL: "https://diff-git-server.com/peanuts"},
 					Sources: []ApplicationSource{

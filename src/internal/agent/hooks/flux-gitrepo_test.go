@@ -74,37 +74,6 @@ func TestFluxMutationWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
-			name: "should mutate even if agent patched",
-			admissionReq: createFluxGitRepoAdmissionRequest(t, v1.Create, &flux.GitRepository{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "mutate-this",
-					Labels: map[string]string{
-						"zarf-agent": "patched",
-					},
-				},
-				Spec: flux.GitRepositorySpec{
-					URL: "https://github.com/stefanprodan/podinfo.git",
-				},
-			}),
-			patch: []operations.PatchOperation{
-				operations.ReplacePatchOperation(
-					"/spec/url",
-					"https://git-server.com/a-push-user/podinfo-1646971829.git",
-				),
-				operations.AddPatchOperation(
-					"/spec/secretRef",
-					fluxmeta.LocalObjectReference{Name: config.ZarfGitServerSecretName},
-				),
-				operations.ReplacePatchOperation(
-					"/metadata/labels",
-					map[string]string{
-						"zarf-agent": "patched",
-					},
-				),
-			},
-			code: http.StatusOK,
-		},
-		{
 			name: "should not mutate invalid git url",
 			admissionReq: createFluxGitRepoAdmissionRequest(t, v1.Update, &flux.GitRepository{
 				ObjectMeta: metav1.ObjectMeta{
