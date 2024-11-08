@@ -5,14 +5,18 @@ package common
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/fatih/color"
-
+	"github.com/pterm/pterm"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
+
+// OutputWriter provides a writer to stdout for user-focused output
+var OutputWriter = os.Stdout
 
 // PrintFindings prints the findings in the LintError as a table.
 func PrintFindings(lintErr *lint.LintError) {
@@ -40,8 +44,16 @@ func PrintFindings(lintErr *lint.LintError) {
 		} else {
 			packagePathFromUser = filepath.Join(lintErr.BaseDir, findings[0].PackagePathOverride)
 		}
+
+		// Print table to our OutputWriter
+		// HACK(mkcp): Setting a PTerm global isn't ideal or thread-safe. However, it lets us render even when message
+		// is disabled.
+		lastWriter := pterm.Info.Writer
+		message.InitializePTerm(OutputWriter)
 		message.Notef("Linting package %q at %s", findings[0].PackageNameOverride, packagePathFromUser)
 		message.Table([]string{"Type", "Path", "Message"}, lintData)
+		// Reset pterm output
+		message.InitializePTerm(lastWriter)
 	}
 }
 

@@ -69,9 +69,13 @@ func InitializePTerm(w io.Writer) {
 		Text:  "    ERROR:",
 		Style: pterm.NewStyle(pterm.BgLightRed, pterm.FgBlack),
 	}
-	pterm.Info.Prefix = pterm.Prefix{
+
+	// HACK(mkcp): Unforgivable hack to set a writer directly on Info's prefixprinter so we can retrieve it elsewhere.
+	info := pterm.Info
+	info.Prefix = pterm.Prefix{
 		Text: " •",
 	}
+	pterm.Info = *info.WithWriter(w)
 
 	pterm.SetDefaultOutput(w)
 }

@@ -65,9 +65,6 @@ var devDeployCmd = &cobra.Command{
 		err = pkgClient.DevDeploy(cmd.Context())
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
-			// TODO(mkcp): This is not thread safe at all. If we intend to keep using message we should have functions
-			// that can take a writer.
-			pterm.SetDefaultOutput(OutputWriter)
 			common.PrintFindings(lintErr)
 		}
 		if err != nil {

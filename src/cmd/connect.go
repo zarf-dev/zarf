@@ -7,7 +7,6 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -98,9 +97,6 @@ var connectListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		// HACK(mkcp): Setting a PTerm global isn't ideal or thread-safe. However, it lets us render even when message
-		// is disabled.
-		pterm.SetDefaultOutput(OutputWriter)
 		message.PrintConnectStringTable(connections)
 		return nil
 	},

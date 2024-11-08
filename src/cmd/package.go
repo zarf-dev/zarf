@@ -235,9 +235,6 @@ var packageInspectCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to inspect package: %w", err)
 		}
-		// HACK(mkcp): Setting a PTerm global isn't ideal or thread-safe. However, it lets us render even when message
-		// is disabled.
-		pterm.SetDefaultOutput(OutputWriter)
 		err = utils.ColorPrintYAML(output, nil, false)
 		if err != nil {
 			return err
