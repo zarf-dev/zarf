@@ -208,6 +208,7 @@ func setupLogger(level, format string) (*slog.Logger, error) {
 	return l, nil
 }
 
+// MessageCfg is used to configure the Message package output options.
 type MessageCfg struct {
 	Level       string
 	SkipLogFile bool
