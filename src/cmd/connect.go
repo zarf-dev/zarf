@@ -7,6 +7,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -97,9 +98,9 @@ var connectListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		// HACK: Re-initializing PTerm with a stderr writer isn't great, but it lets us render these
-		// tables for backwards compatibility
-		message.InitializePTerm(logger.DestinationDefault)
+		// HACK(mkcp): Setting a PTerm global isn't ideal or thread-safe. However, it lets us render even when message
+		// is disabled.
+		pterm.SetDefaultOutput(OutputWriter)
 		message.PrintConnectStringTable(connections)
 		return nil
 	},

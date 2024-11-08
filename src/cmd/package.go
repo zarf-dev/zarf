@@ -14,10 +14,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/zarf-dev/zarf/src/pkg/logger"
-
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"oras.land/oras-go/v2/registry"
@@ -29,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -235,9 +235,9 @@ var packageInspectCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("failed to inspect package: %w", err)
 		}
-		// HACK(mkcp): This init call ensures we still can still print Yaml when message is disabled. Remove when we
-		// release structured logged and don't have to disable message globally in pre-run.
-		message.InitializePTerm(logger.DestinationDefault)
+		// HACK(mkcp): Setting a PTerm global isn't ideal or thread-safe. However, it lets us render even when message
+		// is disabled.
+		pterm.SetDefaultOutput(OutputWriter)
 		err = utils.ColorPrintYAML(output, nil, false)
 		if err != nil {
 			return err
@@ -281,9 +281,9 @@ var packageListCmd = &cobra.Command{
 
 		// NOTE(mkcp): Renders table with message.
 		header := []string{"Package", "Version", "Components"}
-		// HACK(mkcp): Similar to `package inspect`, we do want to use message here but we have to make sure our feature
-		// flagging doesn't disable this. Nothing happens after this so it's safe, but still very hacky.
-		message.InitializePTerm(logger.DestinationDefault)
+		// HACK(mkcp): Setting a PTerm global isn't ideal or thread-safe. However, it lets us render even when message
+		// is disabled.
+		pterm.SetDefaultOutput(OutputWriter)
 		message.Table(header, packageData)
 
 		// Print out any unmarshalling errors

@@ -65,6 +65,9 @@ var devDeployCmd = &cobra.Command{
 		err = pkgClient.DevDeploy(cmd.Context())
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
+			// TODO(mkcp): This is not thread safe at all. If we intend to keep using message we should have functions
+			// that can take a writer.
+			pterm.SetDefaultOutput(OutputWriter)
 			common.PrintFindings(lintErr)
 		}
 		if err != nil {
@@ -260,11 +263,6 @@ var devFindImagesCmd = &cobra.Command{
 
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
-			// HACK(mkcp): Re-initializing PTerm with a stderr writer isn't great, but it lets us render these lint
-			// tables below for backwards compatibility
-			if logger.Enabled(cmd.Context()) {
-				message.InitializePTerm(logger.DestinationDefault)
-			}
 			common.PrintFindings(lintErr)
 		}
 		if err != nil {
@@ -311,11 +309,6 @@ var devLintCmd = &cobra.Command{
 		err := lint.Validate(cmd.Context(), pkgConfig.CreateOpts.BaseDir, pkgConfig.CreateOpts.Flavor, pkgConfig.CreateOpts.SetVariables)
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
-			// HACK(mkcp): Re-initializing PTerm with a stderr writer isn't great, but it lets us render these lint
-			// tables below for backwards compatibility
-			if logger.Enabled(cmd.Context()) {
-				message.InitializePTerm(logger.DestinationDefault)
-			}
 			common.PrintFindings(lintErr)
 			// Do not return an error if the findings are all warnings.
 			if lintErr.OnlyWarnings() {
