@@ -10,7 +10,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/fatih/color"
-	"github.com/pterm/pterm"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
@@ -48,7 +47,7 @@ func PrintFindings(lintErr *lint.LintError) {
 		// Print table to our OutputWriter
 		// HACK(mkcp): Setting a PTerm global isn't ideal or thread-safe. However, it lets us render even when message
 		// is disabled.
-		lastWriter := pterm.Info.Writer
+		lastWriter := *message.PTermWriter.Load()
 		message.InitializePTerm(OutputWriter)
 		message.Notef("Linting package %q at %s", findings[0].PackageNameOverride, packagePathFromUser)
 		message.Table([]string{"Type", "Path", "Message"}, lintData)

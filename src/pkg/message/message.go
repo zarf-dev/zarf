@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -45,6 +46,12 @@ var logLevel = InfoLevel
 // logFile acts as a buffer for logFile generation
 var logFile *PausableWriter
 
+// PTermWriter is an unholy hack that allows us to retrieve the writer passed into InitializePTerm. Under no
+// circumstances should this be considered stable or supported. It's only purpose is so we change the writer to
+// Stdout for specific logs, then back to its original intended value that we set at the start of the command.
+// It should be replaced by something threadsafe as soon as possible. Blame mkcp for this contraption.
+var PTermWriter atomic.Pointer[io.Writer]
+
 // DebugWriter represents a writer interface that writes to message.Debug
 type DebugWriter struct{}
 
@@ -69,13 +76,13 @@ func InitializePTerm(w io.Writer) {
 		Text:  "    ERROR:",
 		Style: pterm.NewStyle(pterm.BgLightRed, pterm.FgBlack),
 	}
-
-	// HACK(mkcp): Unforgivable hack to set a writer directly on Info's prefixprinter so we can retrieve it elsewhere.
-	info := pterm.Info
-	info.Prefix = pterm.Prefix{
+	pterm.Info.Prefix = pterm.Prefix{
 		Text: " •",
 	}
-	pterm.Info = *info.WithWriter(w)
+
+	// HACK(mkcp): See the comments on the var above but this should not be used for anything other than its intended
+	// use and should be removed as soon as possible.
+	PTermWriter.Store(&w)
 
 	pterm.SetDefaultOutput(w)
 }

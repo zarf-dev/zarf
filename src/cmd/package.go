@@ -16,7 +16,6 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"oras.land/oras-go/v2/registry"
@@ -278,10 +277,12 @@ var packageListCmd = &cobra.Command{
 
 		// NOTE(mkcp): Renders table with message.
 		header := []string{"Package", "Version", "Components"}
-		// HACK(mkcp): Setting a PTerm global isn't ideal or thread-safe. However, it lets us render even when message
-		// is disabled.
-		pterm.SetDefaultOutput(OutputWriter)
+		// HACK(mkcp): Re-initializing PTerm globally isn't ideal or thread-safe. However, it lets us render even when
+		// message is disabled.
+		lastWriter := *message.PTermWriter.Load()
+		message.InitializePTerm(OutputWriter)
 		message.Table(header, packageData)
+		message.InitializePTerm(lastWriter)
 
 		// Print out any unmarshalling errors
 		if err != nil {
