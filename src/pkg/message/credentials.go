@@ -99,7 +99,7 @@ func PrintCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newS
 		logFile.Pause()
 		defer logFile.Resume()
 	}
-	l.Info("--- printing credential updates sensitive values will be redacted ---")
+	l.Info("--- printing credential updates. Sensitive values will be redacted ---")
 	for _, service := range services {
 		HorizontalRule()
 
