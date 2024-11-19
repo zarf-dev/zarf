@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -23,7 +22,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -47,7 +45,6 @@ func init() {
 			l := logger.Default()
 			ctx := logger.WithContext(cmd.Context(), l)
 			cmd.SetContext(ctx)
-			message.InitializePTerm(io.Discard)
 			// The crane options loading here comes from the rootCmd of crane
 			craneOptions = append(craneOptions, crane.WithContext(cmd.Context()))
 			// TODO(jonjohnsonjr): crane.Verbose option?
@@ -125,7 +122,6 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 			return originalCatalogFn(cmd, args)
 		}
 
-		message.Note(lang.CmdToolsRegistryZarfState)
 		l.Info("retrieving registry information from Zarf state")
 
 		c, err := cluster.NewCluster()
@@ -148,8 +144,6 @@ func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
 		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
 
 		if tunnel != nil {
-			message.Notef("Opening a tunnel from %s locally to %s in the cluster", registryEndpoint, zarfState.RegistryInfo.Address)
-			l.Info("opening a tunnel to the Zarf registry", "local-endpoint", registryEndpoint, "cluster-address", zarfState.RegistryInfo.Address)
 			defer tunnel.Close()
 			return tunnel.Wrap(func() error { return originalCatalogFn(cmd, []string{registryEndpoint}) })
 		}
