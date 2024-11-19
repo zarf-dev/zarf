@@ -155,9 +155,6 @@ func ConfigDefault() Config {
 
 // New takes a Config and returns a validated logger.
 func New(cfg Config) (*slog.Logger, error) {
-	var handler slog.Handler
-	opts := slog.HandlerOptions{}
-
 	// Use default destination if none
 	if cfg.Destination == nil {
 		cfg.Destination = DestinationDefault
@@ -167,8 +164,12 @@ func New(cfg Config) (*slog.Logger, error) {
 	if !validLevels[cfg.Level] {
 		return nil, fmt.Errorf("unsupported log level: %d", cfg.Level)
 	}
-	opts.Level = slog.Level(cfg.Level)
 
+	opts := slog.HandlerOptions{
+		Level: slog.Level(cfg.Level),
+	}
+
+	var handler slog.Handler
 	switch cfg.Format.ToLower() {
 	case FormatText:
 		handler = console.NewHandler(cfg.Destination, &console.HandlerOptions{
@@ -195,14 +196,13 @@ func New(cfg Config) (*slog.Logger, error) {
 		return nil, fmt.Errorf("unsupported log format: %s", cfg.Format)
 	}
 
-	log := slog.New(handler)
-	return log, nil
+	return slog.New(handler), nil
 }
 
 // ctxKey provides a location to store a logger in a context.
 type ctxKey struct{}
 
-// defaultCtxKey provides a default key if one is not passed into From.
+// defaultCtxKey provides a key instance to get a logger from context
 var defaultCtxKey = ctxKey{}
 
 // WithContext takes a context.Context and a *slog.Logger, storing it on the key
@@ -239,12 +239,12 @@ func Enabled(ctx context.Context) bool {
 func From(ctx context.Context) *slog.Logger {
 	// Check that we have a ctx
 	if ctx == nil {
-		return newEmpty()
+		return newDiscard()
 	}
 	// Grab value from key
 	log := ctx.Value(defaultCtxKey)
 	if log == nil {
-		return newEmpty()
+		return newDiscard()
 	}
 
 	// Ensure our value is a *slog.Logger before we cast.
@@ -258,7 +258,7 @@ func From(ctx context.Context) *slog.Logger {
 }
 
 // newDiscard returns a logger without any settings that goes to io.Discard
-func newEmpty() *slog.Logger {
+func newDiscard() *slog.Logger {
 	h := slog.NewTextHandler(DestinationNone, &slog.HandlerOptions{})
 	return slog.New(h)
 }
