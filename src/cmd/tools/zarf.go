@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"slices"
 
@@ -76,7 +75,7 @@ var getCredsCmd = &cobra.Command{
 
 		if len(args) > 0 {
 			// If a component name is provided, only show that component's credentials
-			message.PrintComponentCredential(state, args[0])
+			message.PrintComponentCredential(ctx, state, args[0])
 		} else {
 			message.PrintCredentialTable(state, nil)
 		}
@@ -125,9 +124,7 @@ var updateCredsCmd = &cobra.Command{
 			return fmt.Errorf("unable to update Zarf credentials: %w", err)
 		}
 
-		message.InitializePTerm(os.Stderr)
-		message.PrintCredentialUpdates(oldState, newState, args)
-		message.InitializePTerm(io.Discard)
+		message.PrintCredentialUpdates(ctx, oldState, newState, args)
 
 		confirm := config.CommonOptions.Confirm
 
