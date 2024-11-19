@@ -350,6 +350,7 @@ func doPruneImagesForPackages(ctx context.Context, zarfState *types.ZarfState, z
 			if err != nil {
 				return err
 			}
+			l.Debug("image pruned", "name", digestRef)
 		}
 	}
 	return nil
