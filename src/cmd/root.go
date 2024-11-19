@@ -95,6 +95,7 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	var disableMessage bool
 	if LogFormat != "" {
 		disableMessage = true
+		skipLogFile = true
 		ctx := logger.WithLoggingEnabled(ctx, true)
 		cmd.SetContext(ctx)
 	}

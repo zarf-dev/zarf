@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -35,6 +36,15 @@ import (
 var subAltNames []string
 var outputDirectory string
 var updateCredsInitOpts types.ZarfInitOptions
+
+const (
+	registryKey     = "registry"
+	registryReadKey = "registry-readonly"
+	gitKey          = "git"
+	gitReadKey      = "git-readonly"
+	artifactKey     = "artifact"
+	agentKey        = "agent"
+)
 
 var deprecatedGetGitCredsCmd = &cobra.Command{
 	Use:    "get-git-password",
@@ -75,7 +85,9 @@ var getCredsCmd = &cobra.Command{
 
 		if len(args) > 0 {
 			// If a component name is provided, only show that component's credentials
-			message.PrintComponentCredential(ctx, state, args[0])
+			// Printing both the pterm output and slogger for now
+			message.PrintComponentCredential(state, args[0])
+			printComponentCredential(ctx, state, args[0])
 		} else {
 			message.PrintCredentialTable(state, nil)
 		}
@@ -124,7 +136,9 @@ var updateCredsCmd = &cobra.Command{
 			return fmt.Errorf("unable to update Zarf credentials: %w", err)
 		}
 
-		message.PrintCredentialUpdates(ctx, oldState, newState, args)
+		// Printing both the pterm output and slogger for now
+		message.PrintCredentialUpdates(oldState, newState, args)
+		printCredentialUpdates(ctx, oldState, newState, args)
 
 		confirm := config.CommonOptions.Confirm
 
@@ -200,6 +214,67 @@ var updateCredsCmd = &cobra.Command{
 		}
 		return nil
 	},
+}
+
+func printComponentCredential(ctx context.Context, state *types.ZarfState, componentName string) {
+	l := logger.From(ctx)
+	switch strings.ToLower(componentName) {
+	case gitKey:
+		l.Info("Git server push password", "username", state.GitServer.PushUsername)
+		fmt.Println(state.GitServer.PushPassword)
+	case gitReadKey:
+		l.Info("Git server (read-only) password", "username", state.GitServer.PullUsername)
+		fmt.Println(state.GitServer.PullPassword)
+	case artifactKey:
+		l.Info("artifact server token", "username", state.ArtifactServer.PushUsername)
+		fmt.Println(state.ArtifactServer.PushToken)
+	case registryKey:
+		l.Info("image registry password", "username", state.RegistryInfo.PushUsername)
+		fmt.Println(state.RegistryInfo.PushPassword)
+	case registryReadKey:
+		l.Info("image registry (read-only) password", "username", state.RegistryInfo.PullUsername)
+		fmt.Println(state.RegistryInfo.PullPassword)
+	default:
+		l.Warn("unknown component", "component", componentName)
+	}
+}
+
+func printCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newState *types.ZarfState, services []string) {
+	// Pause the logfile's output to avoid credentials being printed to the log file
+	l := logger.From(ctx)
+	l.Info("--- printing credential updates. Sensitive values will be redacted ---")
+	for _, service := range services {
+		switch service {
+		case registryKey:
+			oR := oldState.RegistryInfo
+			nR := newState.RegistryInfo
+			l.Info("registry URL address", "existing", oR.Address, "replacement", nR.Address)
+			l.Info("registry push username", "existing", oR.PushUsername, "replacement", nR.PushUsername)
+			l.Info("registry push password", "changed", !(oR.PushPassword == nR.PushPassword))
+			l.Info("registry pull username", "existing", oR.PullUsername, "replacement", nR.PullUsername)
+			l.Info("registry pull password", "changed", !(oR.PullPassword == nR.PullPassword))
+		case gitKey:
+			oG := oldState.GitServer
+			nG := newState.GitServer
+			l.Info("Git server URL address", "existing", oG.Address, "replacement", nG.Address)
+			l.Info("Git server push username", "existing", oG.PushUsername, "replacement", nG.PushUsername)
+			l.Info("Git server push password", "changed", !(oG.PushPassword == nG.PushPassword))
+			l.Info("Git server pull username", "existing", oG.PullUsername, "replacement", nG.PullUsername)
+			l.Info("Git server pull password", "changed", !(oG.PullPassword == nG.PullPassword))
+		case artifactKey:
+			oA := oldState.ArtifactServer
+			nA := newState.ArtifactServer
+			l.Info("artifact server URL address", "existing", oA.Address, "replacement", nA.Address)
+			l.Info("artifact server push username", "existing", oA.PushUsername, "replacement", nA.PushUsername)
+			l.Info("artifact server push token", "changed", !(oA.PushToken == nA.PushToken))
+		case agentKey:
+			oT := oldState.AgentTLS
+			nT := newState.AgentTLS
+			l.Info("agent certificate authority", "changed", !(string(oT.CA) == string(nT.CA)))
+			l.Info("agent public certificate", "changed", !(string(oT.Cert) == string(nT.Cert)))
+			l.Info("agent private key", "changed", !(string(oT.Key) == string(nT.Key)))
+		}
+	}
 }
 
 var clearCacheCmd = &cobra.Command{
