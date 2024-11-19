@@ -99,7 +99,7 @@ func PrintCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newS
 		logFile.Pause()
 		defer logFile.Resume()
 	}
-
+	l.Info("--- printing credential updates sensitive values will be redacted ---")
 	for _, service := range services {
 		HorizontalRule()
 
@@ -109,9 +109,9 @@ func PrintCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newS
 			nR := newState.RegistryInfo
 			l.Info("registry URL address", "existing", oR.Address, "replacement", nR.Address)
 			l.Info("registry push username", "existing", oR.PushUsername, "replacement", nR.PushUsername)
-			l.Info("registry push password (values redacted)", "changed", !(oR.PushPassword == nR.PushPassword))
+			l.Info("registry push password", "changed", !(oR.PushPassword == nR.PushPassword))
 			l.Info("registry pull username", "existing", oR.PullUsername, "replacement", nR.PullUsername)
-			l.Info("registry pull password (values redacted)", "changed", !(oR.PullPassword == nR.PullPassword))
+			l.Info("registry pull password", "changed", !(oR.PullPassword == nR.PullPassword))
 			Title("Registry", "the information used to interact with Zarf's container image registry")
 			pterm.Println()
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("URL Address"), compareStrings(oR.Address, nR.Address, false))
@@ -124,9 +124,9 @@ func PrintCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newS
 			nG := newState.GitServer
 			l.Info("Git server URL address", "existing", oG.Address, "replacement", nG.Address)
 			l.Info("Git server push username", "existing", oG.PushUsername, "replacement", nG.PushUsername)
-			l.Info("Git server push password (values redacted)", "changed", !(oG.PushPassword == nG.PushPassword))
+			l.Info("Git server push password", "changed", !(oG.PushPassword == nG.PushPassword))
 			l.Info("Git server pull username", "existing", oG.PullUsername, "replacement", nG.PullUsername)
-			l.Info("Git server pull password (values redacted)", "changed", !(oG.PullPassword == nG.PullPassword))
+			l.Info("Git server pull password", "changed", !(oG.PullPassword == nG.PullPassword))
 			Title("Git Server", "the information used to interact with Zarf's GitOps Git Server")
 			pterm.Println()
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("URL Address"), compareStrings(oG.Address, nG.Address, false))
@@ -139,7 +139,7 @@ func PrintCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newS
 			nA := newState.ArtifactServer
 			l.Info("artifact server URL address", "existing", oA.Address, "replacement", nA.Address)
 			l.Info("artifact server push username", "existing", oA.PushUsername, "replacement", nA.PushUsername)
-			l.Info("artifact server push token (values redacted)", "changed", !(oA.PushToken == nA.PushToken))
+			l.Info("artifact server push token", "changed", !(oA.PushToken == nA.PushToken))
 			Title("Artifact Server", "the information used to interact with Zarf's Artifact Server")
 			pterm.Println()
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("URL Address"), compareStrings(oA.Address, nA.Address, false))
@@ -148,9 +148,9 @@ func PrintCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newS
 		case AgentKey:
 			oT := oldState.AgentTLS
 			nT := newState.AgentTLS
-			l.Info("agent certificate authority (values redacted)", "changed", !(string(oT.CA) == string(nT.CA)))
-			l.Info("agent public certificate (values redacted)", "changed", !(string(oT.Cert) == string(nT.Cert)))
-			l.Info("agent private key (values redacted)", "changed", !(string(oT.Key) == string(nT.Key)))
+			l.Info("agent certificate authority", "changed", !(string(oT.CA) == string(nT.CA)))
+			l.Info("agent public certificate", "changed", !(string(oT.Cert) == string(nT.Cert)))
+			l.Info("agent private key", "changed", !(string(oT.Key) == string(nT.Key)))
 			Title("Agent TLS", "the certificates used to connect to Zarf's Agent")
 			pterm.Println()
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Certificate Authority"), compareStrings(string(oT.CA), string(nT.CA), true))
