@@ -86,8 +86,8 @@ var getCredsCmd = &cobra.Command{
 		if len(args) > 0 {
 			// If a component name is provided, only show that component's credentials
 			// Printing both the pterm output and slogger for now
-			message.PrintComponentCredential(state, args[0])
 			printComponentCredential(ctx, state, args[0])
+			message.PrintComponentCredential(state, args[0])
 		} else {
 			message.PrintCredentialTable(state, nil)
 		}
@@ -217,23 +217,20 @@ var updateCredsCmd = &cobra.Command{
 }
 
 func printComponentCredential(ctx context.Context, state *types.ZarfState, componentName string) {
+	// TODO (@austinabro321) when we move over to the new logger, we can should add fmt.Println calls
+	// to this function as they will be removed from message.PrintComponentCredential
 	l := logger.From(ctx)
 	switch strings.ToLower(componentName) {
 	case gitKey:
 		l.Info("Git server push password", "username", state.GitServer.PushUsername)
-		fmt.Println(state.GitServer.PushPassword)
 	case gitReadKey:
 		l.Info("Git server (read-only) password", "username", state.GitServer.PullUsername)
-		fmt.Println(state.GitServer.PullPassword)
 	case artifactKey:
 		l.Info("artifact server token", "username", state.ArtifactServer.PushUsername)
-		fmt.Println(state.ArtifactServer.PushToken)
 	case registryKey:
 		l.Info("image registry password", "username", state.RegistryInfo.PushUsername)
-		fmt.Println(state.RegistryInfo.PushPassword)
 	case registryReadKey:
 		l.Info("image registry (read-only) password", "username", state.RegistryInfo.PullUsername)
-		fmt.Println(state.RegistryInfo.PullPassword)
 	default:
 		l.Warn("unknown component", "component", componentName)
 	}
