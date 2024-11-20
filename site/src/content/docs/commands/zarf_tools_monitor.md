@@ -47,8 +47,7 @@ zarf tools monitor [flags]
 ### Options inherited from parent commands
 
 ```
-      --log-format string   [alpha] Select a logging format. Defaults to 'text'. Valid options are: 'text', 'json', 'console', 'dev'
-      --plain-http          Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http   Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
 ```
 
 ### SEE ALSO
