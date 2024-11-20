@@ -85,6 +85,7 @@ var genCLIDocs = &cobra.Command{
 					// If the command is a vendored command, add a dummy flag to hide root flags from the docs
 					if common.CheckVendorOnlyFromPath(toolCmd) {
 						addHiddenDummyFlag(toolCmd, "log-level")
+						addHiddenDummyFlag(toolCmd, "log-format")
 						addHiddenDummyFlag(toolCmd, "architecture")
 						addHiddenDummyFlag(toolCmd, "no-log-file")
 						addHiddenDummyFlag(toolCmd, "no-progress")
