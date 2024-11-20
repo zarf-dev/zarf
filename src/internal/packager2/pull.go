@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -32,6 +33,7 @@ import (
 // TODO: write unit tests
 func CheckIfPackageExists(ctx context.Context, src string, dir string) (bool, error) {
 	newRemote, err := zoci.NewRemote(ctx, src, oci.PlatformForArch(config.GetArch()))
+
 	if err != nil {
 		return false, err
 	}
@@ -76,6 +78,8 @@ func CheckIfPackageExists(ctx context.Context, src string, dir string) (bool, er
 // Pull fetches the Zarf package from the given sources.
 func Pull(ctx context.Context, src, dir, shasum string, filter filters.ComponentFilterStrategy) error {
 	u, err := url.Parse(src)
+	l := logger.From(ctx)
+
 	if err != nil {
 		return err
 	}
@@ -100,6 +104,7 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 			return err
 		}
 		if localPkgExists {
+			l.Info("package already exists locally in directory", "Directory", dir)
 			return nil
 		}
 		_, err = pullOCI(ctx, src, tmpPath, shasum, filter)
