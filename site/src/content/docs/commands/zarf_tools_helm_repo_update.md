@@ -47,6 +47,7 @@ zarf tools helm repo update [REPO1 [REPO2 ...]] [flags]
       --kube-tls-server-name string     server name to use for Kubernetes API server certificate validation. If it is not provided, the hostname used to contact the server is used
       --kube-token string               bearer token used for authentication
       --kubeconfig string               path to the kubeconfig file
+      --log-format string               [alpha] Select a logging format. Defaults to 'text'. Valid options are: 'text', 'json', 'console', 'dev'
   -n, --namespace string                namespace scope for this request
       --plain-http                      Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --qps float32                     queries per second used when communicating with the Kubernetes API, not including bursting

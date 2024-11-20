@@ -33,6 +33,7 @@ zarf tools registry version [flags]
       --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
       --insecure                           Allow image references to be fetched without TLS
       --insecure-skip-tls-verify           Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string                  [alpha] Select a logging format. Defaults to 'text'. Valid options are: 'text', 'json', 'console', 'dev'
       --plain-http                         Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --platform string                    Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64). (default "all")
   -v, --verbose                            Enable debug logs

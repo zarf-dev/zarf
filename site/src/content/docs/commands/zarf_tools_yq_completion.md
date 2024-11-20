@@ -69,6 +69,7 @@ zarf tools yq completion [bash|zsh|fish|powershell]
   -i, --inplace                       update the file in place of first file given.
   -p, --input-format string           [auto|a|yaml|y|json|j|props|p|csv|c|tsv|t|xml|x|base64|uri|toml|lua|l] parse format for input. (default "auto")
       --insecure-skip-tls-verify      Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string             [alpha] Select a logging format. Defaults to 'text'. Valid options are: 'text', 'json', 'console', 'dev'
       --lua-globals                   output keys as top-level global variables
       --lua-prefix string             prefix (default "return ")
       --lua-suffix string             suffix (default ";\n")

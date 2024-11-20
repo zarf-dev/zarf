@@ -58,6 +58,7 @@ $ zarf tools wait-for http google.com success                           #  wait 
 
 ```
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          [alpha] Select a logging format. Defaults to 'text'. Valid options are: 'text', 'json', 'console', 'dev'
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
 ```
 
