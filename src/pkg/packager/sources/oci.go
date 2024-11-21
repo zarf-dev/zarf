@@ -148,7 +148,7 @@ func (s *OCISource) LoadPackageMetadata(ctx context.Context, dst *layout.Package
 			if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
 				if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
 					message.Warn("The package was signed but no public key was provided, skipping signature validation")
-					logger.From(ctx).Warn("The package was signed but no public key was provided, skipping signature validation")
+					logger.From(ctx).Warn("the package was signed but no public key was provided, skipping signature validation")
 				} else {
 					return pkg, nil, err
 				}
