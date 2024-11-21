@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -341,7 +340,7 @@ func (h *Helm) buildChartDependencies() error {
 	}
 
 	man := &downloader.Manager{
-		Out:            io.Discard,
+		Out:            &message.DebugWriter{},
 		ChartPath:      h.chart.LocalPath,
 		Getters:        getter.All(h.settings),
 		RegistryClient: regClient,
