@@ -34,6 +34,9 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+// Use same default as Helm CLI does.
+const maxHelmHistory = 10
+
 // InstallOrUpgradeChart performs a helm install of the given chart.
 func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings, string, error) {
 	l := logger.From(ctx)
@@ -349,6 +352,8 @@ func (h *Helm) upgradeChart(ctx context.Context, lastRelease *release.Release, p
 	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 	client.PostRenderer = postRender
 
+	client.MaxHistory = maxHelmHistory
+
 	loadedChart, chartValues, err := h.loadChartData()
 	if err != nil {
 		return nil, fmt.Errorf("unable to load chart data: %w", err)
@@ -365,6 +370,7 @@ func (h *Helm) rollbackChart(name string, version int) error {
 	client.Wait = true
 	client.Timeout = h.timeout
 	client.Version = version
+	client.MaxHistory = maxHelmHistory
 	return client.Run(name)
 }
 
