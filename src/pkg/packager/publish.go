@@ -107,7 +107,6 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 	}
 
 	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref)
-	l.Info("publishing package", "name", p.cfg.Pkg.Metadata.Name, "ref", ref)
 
 	// Publish the package/skeleton to the registry
 	if err := remote.PublishPackage(ctx, &p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency); err != nil {
