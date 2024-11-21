@@ -8,17 +8,36 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-var helmChartsPkg string
+func TestHelmReleaseHistory(t *testing.T) {
+	outputPath := t.TempDir()
+	localTgzChartPath := filepath.Join("src", "test", "packages", "25-helm-release-history")
+	_, _, err := e2e.Zarf(t, "package", "create", localTgzChartPath, "-o", outputPath, "--confirm")
+	require.NoError(t, err)
+
+	packagePath := filepath.Join(outputPath, fmt.Sprintf("zarf-package-helm-release-history-%s-0.0.1.tar.zst", e2e.Arch))
+	for range 20 {
+		_, _, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm")
+		require.NoError(t, err)
+	}
+
+	stdout, err := exec.Command("helm", "history", "-n", "helm-release-history", "chart").Output()
+	require.NoError(t, err)
+	out := strings.TrimSpace(string(stdout))
+	count := len(strings.Split(string(out), "\n"))
+	require.Equal(t, 11, count)
+
+	_, _, err = e2e.Zarf(t, "package", "remove", packagePath, "--confirm")
+	require.NoError(t, err)
+}
 
 func TestHelm(t *testing.T) {
 	t.Log("E2E: Helm chart")
-
-	helmChartsPkg = filepath.Join("build", fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
 
 	testHelmUninstallRollback(t)
 
@@ -74,6 +93,7 @@ func testHelmChartsExample(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Deploy the example package.
+	helmChartsPkg := filepath.Join("build", fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", helmChartsPkg, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, string(stdErr), "registryOverrides", "registry overrides was not saved to build data")
