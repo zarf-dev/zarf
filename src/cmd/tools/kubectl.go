@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	kubeCLI "k8s.io/component-base/cli"
 	kubeCmd "k8s.io/kubectl/pkg/cmd"
@@ -33,6 +34,7 @@ func init() {
 		if err := kubeCLI.RunNoErrOutput(kubectlCmd); err != nil {
 			// @todo(jeff-mccoy) - Kubectl gets mad about being a subcommand.
 			message.Debug(err)
+			logger.Default().Debug(err.Error())
 		}
 	}
 
