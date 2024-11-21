@@ -20,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -75,9 +76,9 @@ func (sc *SkeletonCreator) LoadPackageDefinition(ctx context.Context, src *layou
 // Assemble updates all components of the loaded Zarf package with necessary modifications for package assembly.
 //
 // It processes each component to ensure correct structure and resource locations.
-func (sc *SkeletonCreator) Assemble(_ context.Context, dst *layout.PackagePaths, components []v1alpha1.ZarfComponent, _ string) error {
+func (sc *SkeletonCreator) Assemble(ctx context.Context, dst *layout.PackagePaths, components []v1alpha1.ZarfComponent, _ string) error {
 	for _, component := range components {
-		c, err := sc.addComponent(component, dst)
+		c, err := sc.addComponent(ctx, component, dst)
 		if err != nil {
 			return err
 		}
@@ -120,8 +121,10 @@ func (sc *SkeletonCreator) Output(ctx context.Context, dst *layout.PackagePaths,
 	return dst.SignPackage(sc.publishOpts.SigningKeyPath, sc.publishOpts.SigningKeyPassword, !config.CommonOptions.Confirm)
 }
 
-func (sc *SkeletonCreator) addComponent(component v1alpha1.ZarfComponent, dst *layout.PackagePaths) (updatedComponent *v1alpha1.ZarfComponent, err error) {
+func (sc *SkeletonCreator) addComponent(ctx context.Context, component v1alpha1.ZarfComponent, dst *layout.PackagePaths) (updatedComponent *v1alpha1.ZarfComponent, err error) {
+	l := logger.From(ctx)
 	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
+	logger.From(ctx).Info("processing component", "name", component.Name)
 
 	updatedComponent = &component
 
@@ -235,6 +238,7 @@ func (sc *SkeletonCreator) addComponent(component v1alpha1.ZarfComponent, dst *l
 
 		for dataIdx, data := range component.DataInjections {
 			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
+			l.Debug("copying data injection", "source", data.Source, "target", data.Target.Path)
 
 			rel := filepath.Join(layout.DataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 			dst := filepath.Join(componentPaths.Base, rel)
@@ -269,6 +273,8 @@ func (sc *SkeletonCreator) addComponent(component v1alpha1.ZarfComponent, dst *l
 
 				// Copy manifests without any processing.
 				spinner.Updatef("Copying manifest %s", path)
+				l.Debug("copying manifest", "path", path)
+
 
 				if err := helpers.CreatePathAndCopy(path, dst); err != nil {
 					return nil, fmt.Errorf("unable to copy manifest %s: %w", path, err)
@@ -280,6 +286,7 @@ func (sc *SkeletonCreator) addComponent(component v1alpha1.ZarfComponent, dst *l
 			for kustomizeIdx, path := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package.
 				spinner.Updatef("Building kustomization for %s", path)
+				l.Debug("building kustomization", "path", path)
 
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
 				rel := filepath.Join(layout.ManifestsDir, kname)

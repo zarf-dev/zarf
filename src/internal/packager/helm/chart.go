@@ -159,8 +159,10 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 
 // TemplateChart generates a helm template from a given chart.
 func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues chartutil.Values, err error) {
+	l := logger.From(ctx)
 	spinner := message.NewProgressSpinner("Templating helm chart %s", h.chart.Name)
 	defer spinner.Stop()
+	l.Debug("templating helm chart", "name", h.chart.Name)
 
 	err = h.createActionConfig(ctx, h.chart.Namespace, spinner)
 
@@ -237,8 +239,10 @@ func (h *Helm) RemoveChart(ctx context.Context, namespace string, name string, s
 // UpdateReleaseValues updates values for a given chart release
 // (note: this only works on single-deep charts, charts with dependencies (like loki-stack) will not work)
 func (h *Helm) UpdateReleaseValues(ctx context.Context, updatedValues map[string]interface{}) error {
+	l := logger.From(ctx)
 	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.chart.ReleaseName)
 	defer spinner.Stop()
+	l.Debug("updating values for helm release", "name", h.chart.ReleaseName)
 
 	err := h.createActionConfig(ctx, h.chart.Namespace, spinner)
 	if err != nil {
@@ -325,7 +329,7 @@ func (h *Helm) installChart(ctx context.Context, postRender *renderer) (*release
 
 func (h *Helm) upgradeChart(ctx context.Context, lastRelease *release.Release, postRender *renderer) (*release.Release, error) {
 	// Migrate any deprecated APIs (if applicable)
-	err := h.migrateDeprecatedAPIs(lastRelease)
+	err := h.migrateDeprecatedAPIs(ctx, lastRelease)
 	if err != nil {
 		return nil, fmt.Errorf("unable to check for API deprecations: %w", err)
 	}
@@ -403,7 +407,7 @@ func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
 	return loadedChart, chartValues, nil
 }
 
-func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
+func (h *Helm) migrateDeprecatedAPIs(ctx context.Context, latestRelease *release.Release) error {
 	// Get the Kubernetes version from the current cluster
 	kubeVersion, err := h.cluster.Clientset.Discovery().ServerVersion()
 	if err != nil {
@@ -450,6 +454,7 @@ func (h *Helm) migrateDeprecatedAPIs(latestRelease *release.Release) error {
 	// If the release was modified in the above loop, save it back to the cluster
 	if modified {
 		message.Warnf("Zarf detected deprecated APIs for the '%s' helm release.  Attempting automatic upgrade.", latestRelease.Name)
+		logger.From(ctx).Warn("detected deprecated APIs for the helm release", "name", latestRelease.Name)
 
 		// Update current release version to be superseded (same as the helm mapkubeapis plugin)
 		latestRelease.Info.Status = release.StatusSuperseded

@@ -181,6 +181,7 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) error {
 	if err := p.validatePackageArchitecture(ctx); err != nil {
 		if errors.Is(err, lang.ErrUnableToCheckArch) {
 			message.Warnf("Unable to validate package architecture: %s", err.Error())
+			logger.From(ctx).Warn("unable to validate package architecture", "error", err)
 		} else {
 			return err
 		}

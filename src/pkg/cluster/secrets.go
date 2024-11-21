@@ -16,6 +16,7 @@ import (
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -172,6 +173,7 @@ func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, stateRe
 	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, stateRegistryAddress)
 	if err != nil {
 		message.Debugf("registry appears to not be a nodeport service, using original address %q", stateRegistryAddress)
+		logger.From(ctx).Debug("registry appears to not be a nodeport service, using original address", "address", stateRegistryAddress)
 		return stateRegistryAddress, nil
 	}
 

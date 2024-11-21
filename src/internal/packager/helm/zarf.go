@@ -19,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -69,6 +70,7 @@ func (h *Helm) UpdateZarfRegistryValues(ctx context.Context) error {
 
 // UpdateZarfAgentValues updates the Zarf agent deployment with the new state values
 func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
+	l := logger.From(ctx)
 	spinner := message.NewProgressSpinner("Gathering information to update Zarf Agent TLS")
 	defer spinner.Stop()
 
@@ -128,6 +130,7 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 	// https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment
 	spinner = message.NewProgressSpinner("Performing a rolling update for the Zarf Agent deployment")
 	defer spinner.Stop()
+	l.Info("performing a rolling update for the Zarf Agent deployment")
 
 	// Re-fetch the agent deployment before we update since the resourceVersion has changed after updating the Helm release values.
 	// Avoids this error: https://github.com/kubernetes/kubernetes/issues/28149
