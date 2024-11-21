@@ -184,6 +184,7 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 }
 
 func (c *Cluster) createPayloadConfigMaps(ctx context.Context, spinner *message.Spinner, tmpDir, imagesDir string, injectorSeedSrcs []string) ([]string, string, error) {
+	l := logger.From(ctx)
 	tarPath := filepath.Join(tmpDir, "payload.tar.gz")
 	seedImagesDir := filepath.Join(tmpDir, "seed-images")
 	if err := helpers.CreateDirectory(seedImagesDir, helpers.ReadWriteExecuteUser); err != nil {
@@ -228,6 +229,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, spinner *message.
 	}
 
 	cmNames := []string{}
+	l.Info("adding archived binary configmaps of registry image to the cluster")
 	for i, data := range chunks {
 		fileName := fmt.Sprintf("zarf-payload-%03d", i)
 

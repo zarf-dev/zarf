@@ -20,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
@@ -154,11 +155,7 @@ tableOfContents: false
 			return "/commands/" + link[:len(link)-3] + "/"
 		}
 
-		if err := doc.GenMarkdownTreeCustom(rootCmd, "./site/src/content/docs/commands", prependTitle, linkHandler); err != nil {
-			return err
-		}
-		message.Success(lang.CmdInternalGenerateCliDocsSuccess)
-		return nil
+		return doc.GenMarkdownTreeCustom(rootCmd, "./site/src/content/docs/commands", prependTitle, linkHandler)
 	},
 }
 
@@ -273,6 +270,7 @@ var updateGiteaPVC = &cobra.Command{
 		helmShouldCreate, err := c.UpdateGiteaPVC(ctx, pvcName, rollback)
 		if err != nil {
 			message.WarnErr(err, lang.CmdInternalUpdateGiteaPVCErr)
+			logger.From(ctx).Warn("Unable to update the existing Gitea persistent volume claim", "error", err.Error())
 		}
 		fmt.Print(helmShouldCreate)
 		return nil
@@ -324,7 +322,7 @@ func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {
 		cmd.PersistentFlags().StringVar(&dummyStr, flagDummy, "", "")
 		err := cmd.PersistentFlags().MarkHidden(flagDummy)
 		if err != nil {
-			message.Debug("Unable to add hidden dummy flag", "error", err)
+			logger.From(cmd.Context()).Debug("Unable to add hidden dummy flag", "error", err)
 		}
 	}
 }
