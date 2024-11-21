@@ -1,0 +1,12 @@
+kind: ZarfPackageConfig
+metadata:
+  name: helm-release-history
+  version: 0.0.1
+components:
+  - name: helm-release-history
+    required: true
+    charts:
+      - name: chart
+        namespace: helm-release-history
+        version: v0.1.0
+        localPath: chart

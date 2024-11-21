@@ -94,6 +94,7 @@ func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo typ
 
 // UpdateZarfManagedImageSecrets updates all Zarf-managed image secrets in all namespaces based on state
 func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *types.ZarfState) error {
+	l := logger.From(ctx)
 	spinner := message.NewProgressSpinner("Updating existing Zarf-managed image secrets")
 	defer spinner.Stop()
 
@@ -118,6 +119,7 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 		if err != nil {
 			return err
 		}
+		l.Info("applying Zarf managed registry secret for namespace", "name", namespace.Name)
 		spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
 		_, err = c.Clientset.CoreV1().Secrets(*newRegistrySecret.Namespace).Apply(ctx, newRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
@@ -133,6 +135,7 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.ZarfState) error {
 	spinner := message.NewProgressSpinner("Updating existing Zarf-managed git secrets")
 	defer spinner.Stop()
+	l := logger.From(ctx)
 
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -152,6 +155,7 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 		}
 		newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, state.GitServer)
 		spinner.Updatef("Updating existing Zarf-managed git secret for namespace: %s", namespace.Name)
+		l.Info("applying Zarf managed git secret for namespace", "name", namespace.Name)
 		_, err = c.Clientset.CoreV1().Secrets(*newGitSecret.Namespace).Apply(ctx, newGitSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return err
