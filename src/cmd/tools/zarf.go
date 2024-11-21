@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -24,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
@@ -34,6 +36,15 @@ import (
 var subAltNames []string
 var outputDirectory string
 var updateCredsInitOpts types.ZarfInitOptions
+
+const (
+	registryKey     = "registry"
+	registryReadKey = "registry-readonly"
+	gitKey          = "git"
+	gitReadKey      = "git-readonly"
+	artifactKey     = "artifact"
+	agentKey        = "agent"
+)
 
 var deprecatedGetGitCredsCmd = &cobra.Command{
 	Use:    "get-git-password",
@@ -74,6 +85,8 @@ var getCredsCmd = &cobra.Command{
 
 		if len(args) > 0 {
 			// If a component name is provided, only show that component's credentials
+			// Printing both the pterm output and slogger for now
+			printComponentCredential(ctx, state, args[0])
 			message.PrintComponentCredential(state, args[0])
 		} else {
 			message.PrintCredentialTable(state, nil)
@@ -101,6 +114,7 @@ var updateCredsCmd = &cobra.Command{
 		}
 
 		ctx := cmd.Context()
+		l := logger.From(ctx)
 
 		timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 		defer cancel()
@@ -122,13 +136,13 @@ var updateCredsCmd = &cobra.Command{
 			return fmt.Errorf("unable to update Zarf credentials: %w", err)
 		}
 
+		// Printing both the pterm output and slogger for now
 		message.PrintCredentialUpdates(oldState, newState, args)
+		printCredentialUpdates(ctx, oldState, newState, args)
 
 		confirm := config.CommonOptions.Confirm
 
-		if confirm {
-			message.Note(lang.CmdToolsUpdateCredsConfirmProvided)
-		} else {
+		if !confirm {
 			prompt := &survey.Confirm{
 				Message: lang.CmdToolsUpdateCredsConfirmContinue,
 			}
@@ -180,6 +194,7 @@ var updateCredsCmd = &cobra.Command{
 				if err != nil {
 					// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
+					l.Warn("unable to update Zarf Registry values", "error", err.Error())
 				}
 			}
 			if slices.Contains(args, message.GitKey) && newState.GitServer.IsInternal() && internalGitServerExists {
@@ -193,6 +208,7 @@ var updateCredsCmd = &cobra.Command{
 				if err != nil {
 					// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
 					message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateAgent, err.Error())
+					l.Warn("unable to update Zarf Agent TLS secrets", "error", err.Error())
 				}
 			}
 		}
@@ -200,16 +216,76 @@ var updateCredsCmd = &cobra.Command{
 	},
 }
 
+func printComponentCredential(ctx context.Context, state *types.ZarfState, componentName string) {
+	// TODO (@austinabro321) when we move over to the new logger, we can should add fmt.Println calls
+	// to this function as they will be removed from message.PrintComponentCredential
+	l := logger.From(ctx)
+	switch strings.ToLower(componentName) {
+	case gitKey:
+		l.Info("Git server push password", "username", state.GitServer.PushUsername)
+	case gitReadKey:
+		l.Info("Git server (read-only) password", "username", state.GitServer.PullUsername)
+	case artifactKey:
+		l.Info("artifact server token", "username", state.ArtifactServer.PushUsername)
+	case registryKey:
+		l.Info("image registry password", "username", state.RegistryInfo.PushUsername)
+	case registryReadKey:
+		l.Info("image registry (read-only) password", "username", state.RegistryInfo.PullUsername)
+	default:
+		l.Warn("unknown component", "component", componentName)
+	}
+}
+
+func printCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newState *types.ZarfState, services []string) {
+	// Pause the logfile's output to avoid credentials being printed to the log file
+	l := logger.From(ctx)
+	l.Info("--- printing credential updates. Sensitive values will be redacted ---")
+	for _, service := range services {
+		switch service {
+		case registryKey:
+			oR := oldState.RegistryInfo
+			nR := newState.RegistryInfo
+			l.Info("registry URL address", "existing", oR.Address, "replacement", nR.Address)
+			l.Info("registry push username", "existing", oR.PushUsername, "replacement", nR.PushUsername)
+			l.Info("registry push password", "changed", !(oR.PushPassword == nR.PushPassword))
+			l.Info("registry pull username", "existing", oR.PullUsername, "replacement", nR.PullUsername)
+			l.Info("registry pull password", "changed", !(oR.PullPassword == nR.PullPassword))
+		case gitKey:
+			oG := oldState.GitServer
+			nG := newState.GitServer
+			l.Info("Git server URL address", "existing", oG.Address, "replacement", nG.Address)
+			l.Info("Git server push username", "existing", oG.PushUsername, "replacement", nG.PushUsername)
+			l.Info("Git server push password", "changed", !(oG.PushPassword == nG.PushPassword))
+			l.Info("Git server pull username", "existing", oG.PullUsername, "replacement", nG.PullUsername)
+			l.Info("Git server pull password", "changed", !(oG.PullPassword == nG.PullPassword))
+		case artifactKey:
+			oA := oldState.ArtifactServer
+			nA := newState.ArtifactServer
+			l.Info("artifact server URL address", "existing", oA.Address, "replacement", nA.Address)
+			l.Info("artifact server push username", "existing", oA.PushUsername, "replacement", nA.PushUsername)
+			l.Info("artifact server push token", "changed", !(oA.PushToken == nA.PushToken))
+		case agentKey:
+			oT := oldState.AgentTLS
+			nT := newState.AgentTLS
+			l.Info("agent certificate authority", "changed", !(string(oT.CA) == string(nT.CA)))
+			l.Info("agent public certificate", "changed", !(string(oT.Cert) == string(nT.Cert)))
+			l.Info("agent private key", "changed", !(string(oT.Key) == string(nT.Key)))
+		}
+	}
+}
+
 var clearCacheCmd = &cobra.Command{
 	Use:     "clear-cache",
 	Aliases: []string{"c"},
 	Short:   lang.CmdToolsClearCacheShort,
-	RunE: func(_ *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		l := logger.From(cmd.Context())
 		cachePath, err := config.GetAbsCachePath()
 		if err != nil {
 			return err
 		}
 		message.Notef(lang.CmdToolsClearCacheDir, cachePath)
+		l.Info("clearing cache", "path", cachePath)
 		if err := os.RemoveAll(cachePath); err != nil {
 			return fmt.Errorf("unable to clear the cache directory %s: %w", cachePath, err)
 		}
@@ -242,7 +318,7 @@ var generatePKICmd = &cobra.Command{
 	Aliases: []string{"pki"},
 	Short:   lang.CmdToolsGenPkiShort,
 	Args:    cobra.ExactArgs(1),
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		pki, err := pki.GeneratePKI(args[0], subAltNames...)
 		if err != nil {
 			return err
@@ -257,6 +333,7 @@ var generatePKICmd = &cobra.Command{
 			return err
 		}
 		message.Successf(lang.CmdToolsGenPkiSuccess, args[0])
+		logger.From(cmd.Context()).Info("successfully created a chain of trust", "host", args[0])
 		return nil
 	},
 }
@@ -265,7 +342,7 @@ var generateKeyCmd = &cobra.Command{
 	Use:     "gen-key",
 	Aliases: []string{"key"},
 	Short:   lang.CmdToolsGenKeyShort,
-	RunE: func(_ *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		// Utility function to prompt the user for the password to the private key
 		passwordFunc := func(bool) ([]byte, error) {
 			// perform the first prompt
@@ -329,6 +406,9 @@ var generateKeyCmd = &cobra.Command{
 		}
 
 		message.Successf(lang.CmdToolsGenKeySuccess, prvKeyFileName, pubKeyFileName)
+		logger.From(cmd.Context()).Info("Successfully generated key pair",
+			"private-key-path", prvKeyExistsErr,
+			"public-key-path", pubKeyFileName)
 		return nil
 	},
 }
