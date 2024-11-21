@@ -13,7 +13,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/agnivade/levenshtein v1.2.0
 	github.com/anchore/clio v0.0.0-20241015191535-f538a9016e10
-	github.com/anchore/stereoscope v0.0.6-0.20241101185849-cbd43fb4e5d3
+	github.com/anchore/stereoscope v0.0.8
 	github.com/anchore/syft v1.16.0
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.1
