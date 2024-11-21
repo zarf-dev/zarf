@@ -13,7 +13,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/agnivade/levenshtein v1.2.0
 	github.com/anchore/clio v0.0.0-20241015191535-f538a9016e10
-	github.com/anchore/stereoscope v0.0.6-0.20241101185849-cbd43fb4e5d3
+	github.com/anchore/stereoscope v0.0.9
 	github.com/anchore/syft v1.16.0
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.1
@@ -165,7 +165,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.11.7 // indirect
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
-	github.com/ProtonMail/go-crypto v1.0.0 // indirect
+	github.com/ProtonMail/go-crypto v1.1.2 // indirect
 	github.com/ThalesIgnite/crypto11 v1.2.5 // indirect
 	github.com/a8m/envsubst v1.4.2 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
@@ -481,7 +481,7 @@ require (
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.3.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/sylabs/sif/v2 v2.19.2 // indirect
+	github.com/sylabs/sif/v2 v2.20.0 // indirect
 	github.com/sylabs/squashfs v1.0.0 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
