@@ -47,6 +47,7 @@ var devDeployCmd = &cobra.Command{
 	Short: lang.CmdDevDeployShort,
 	Long:  lang.CmdDevDeployLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
 		pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 
 		v := common.GetViper()
@@ -62,10 +63,10 @@ var devDeployCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		err = pkgClient.DevDeploy(cmd.Context())
+		err = pkgClient.DevDeploy(ctx)
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
-			common.PrintFindings(lintErr)
+			common.PrintFindings(ctx, lintErr)
 		}
 		if err != nil {
 			return fmt.Errorf("failed to dev deploy: %w", err)
@@ -242,6 +243,7 @@ var devFindImagesCmd = &cobra.Command{
 	Short:   lang.CmdDevFindImagesShort,
 	Long:    lang.CmdDevFindImagesLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
 		pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 
 		v := common.GetViper()
@@ -256,11 +258,11 @@ var devFindImagesCmd = &cobra.Command{
 		}
 		defer pkgClient.ClearTempPaths()
 
-		_, err = pkgClient.FindImages(cmd.Context())
+		_, err = pkgClient.FindImages(ctx)
 
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
-			common.PrintFindings(lintErr)
+			common.PrintFindings(ctx, lintErr)
 		}
 		if err != nil {
 			return fmt.Errorf("unable to find images: %w", err)
@@ -297,16 +299,17 @@ var devLintCmd = &cobra.Command{
 	Short:   lang.CmdDevLintShort,
 	Long:    lang.CmdDevLintLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
 		config.CommonOptions.Confirm = true
 		pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 		v := common.GetViper()
 		pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-		err := lint.Validate(cmd.Context(), pkgConfig.CreateOpts.BaseDir, pkgConfig.CreateOpts.Flavor, pkgConfig.CreateOpts.SetVariables)
+		err := lint.Validate(ctx, pkgConfig.CreateOpts.BaseDir, pkgConfig.CreateOpts.Flavor, pkgConfig.CreateOpts.SetVariables)
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
-			common.PrintFindings(lintErr)
+			common.PrintFindings(ctx, lintErr)
 			// Do not return an error if the findings are all warnings.
 			if lintErr.OnlyWarnings() {
 				return nil
@@ -342,11 +345,11 @@ func init() {
 
 	err := devFindImagesCmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
 	if err != nil {
-		message.Debug("Unable to mark dev-find-images flag as set", "error", err)
+		logger.Default().Debug("unable to mark dev-find-images flag as set", "error", err)
 	}
 	err = devFindImagesCmd.Flags().MarkHidden("set")
 	if err != nil {
-		message.Debug("Unable to mark dev-find-images flag as hidden", "error", err)
+		logger.Default().Debug("unable to mark dev-find-images flag as hidden", "error", err)
 	}
 	devFindImagesCmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 	devFindImagesCmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
@@ -375,7 +378,7 @@ func bindDevDeployFlags(v *viper.Viper) {
 	devDeployFlags.StringVar(&pkgConfig.DeployOpts.RegistryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
 	err := devDeployFlags.MarkHidden("registry-url")
 	if err != nil {
-		message.Debug("Unable to mark dev-deploy flag as hidden", "error", err)
+		logger.Default().Debug("unable to mark dev-deploy flag as hidden", "error", err)
 	}
 
 	devDeployFlags.StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)

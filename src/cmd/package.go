@@ -48,7 +48,8 @@ var packageCreateCmd = &cobra.Command{
 	Short:   lang.CmdPackageCreateShort,
 	Long:    lang.CmdPackageCreateLong,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		l := logger.From(cmd.Context())
+		ctx := cmd.Context()
+		l := logger.From(ctx)
 		pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 
 		var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
@@ -64,19 +65,19 @@ var packageCreateCmd = &cobra.Command{
 			v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
 		pkgClient, err := packager.New(&pkgConfig,
-			packager.WithContext(cmd.Context()),
+			packager.WithContext(ctx),
 		)
 		if err != nil {
 			return err
 		}
 		defer pkgClient.ClearTempPaths()
 
-		err = pkgClient.Create(cmd.Context())
+		err = pkgClient.Create(ctx)
 
 		// NOTE(mkcp): LintErrors are rendered with a table
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
-			common.PrintFindings(lintErr)
+			common.PrintFindings(ctx, lintErr)
 		}
 		if err != nil {
 			return fmt.Errorf("failed to create package: %w", err)
@@ -98,7 +99,8 @@ var packageDeployCmd = &cobra.Command{
 		}
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		packageSource, err := choosePackage(args)
+		ctx := cmd.Context()
+		packageSource, err := choosePackage(ctx, args)
 		if err != nil {
 			return err
 		}
@@ -113,8 +115,6 @@ var packageDeployCmd = &cobra.Command{
 			return err
 		}
 		defer pkgClient.ClearTempPaths()
-
-		ctx := cmd.Context()
 
 		if err := pkgClient.Deploy(ctx); err != nil {
 			return fmt.Errorf("failed to deploy package: %w", err)
@@ -137,6 +137,7 @@ var packageMirrorCmd = &cobra.Command{
 		}
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		ctx := cmd.Context()
 		var c *cluster.Cluster
 		if dns.IsServiceURL(pkgConfig.InitOpts.RegistryInfo.Address) || dns.IsServiceURL(pkgConfig.InitOpts.GitServer.Address) {
 			var err error
@@ -145,7 +146,7 @@ var packageMirrorCmd = &cobra.Command{
 				return err
 			}
 		}
-		src, err := choosePackage(args)
+		src, err := choosePackage(ctx, args)
 		if err != nil {
 			return err
 		}
@@ -179,7 +180,7 @@ var packageMirrorCmd = &cobra.Command{
 			NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
 			Retries:         pkgConfig.PkgOpts.Retries,
 		}
-		err = packager2.Mirror(cmd.Context(), mirrorOpt)
+		err = packager2.Mirror(ctx, mirrorOpt)
 		if err != nil {
 			return err
 		}
@@ -200,8 +201,9 @@ var packageInspectCmd = &cobra.Command{
 		}
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
 		// NOTE(mkcp): Gets user input with message
-		src, err := choosePackage(args)
+		src, err := choosePackage(ctx, args)
 		if err != nil {
 			return err
 		}
@@ -218,7 +220,7 @@ var packageInspectCmd = &cobra.Command{
 		}
 
 		if pkgConfig.InspectOpts.ListImages {
-			output, err := packager2.InspectList(cmd.Context(), inspectOpt)
+			output, err := packager2.InspectList(ctx, inspectOpt)
 			if err != nil {
 				return fmt.Errorf("failed to inspect package: %w", err)
 			}
@@ -230,7 +232,7 @@ var packageInspectCmd = &cobra.Command{
 			}
 		}
 
-		output, err := packager2.Inspect(cmd.Context(), inspectOpt)
+		output, err := packager2.Inspect(ctx, inspectOpt)
 		if err != nil {
 			return fmt.Errorf("failed to inspect package: %w", err)
 		}
@@ -298,7 +300,8 @@ var packageRemoveCmd = &cobra.Command{
 		}
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		packageSource, err := choosePackage(args)
+		ctx := cmd.Context()
+		packageSource, err := choosePackage(ctx, args)
 		if err != nil {
 			return err
 		}
@@ -314,7 +317,7 @@ var packageRemoveCmd = &cobra.Command{
 			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 			PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		}
-		err = packager2.Remove(cmd.Context(), removeOpt)
+		err = packager2.Remove(ctx, removeOpt)
 		if err != nil {
 			return err
 		}
@@ -392,10 +395,11 @@ var packagePullCmd = &cobra.Command{
 	},
 }
 
-func choosePackage(args []string) (string, error) {
+func choosePackage(ctx context.Context, args []string) (string, error) {
 	if len(args) > 0 {
 		return args[0], nil
 	}
+	l := logger.From(ctx)
 	var path string
 	prompt := &survey.Input{
 		Message: lang.CmdPackageChoose,
@@ -403,19 +407,19 @@ func choosePackage(args []string) (string, error) {
 			tarPath := config.ZarfPackagePrefix + toComplete + "*.tar"
 			files, err := filepath.Glob(tarPath)
 			if err != nil {
-				message.Debug("Unable to glob", "tarPath", tarPath, "error", err)
+				l.Debug("unable to glob", "tarPath", tarPath, "error", err)
 			}
 
 			zstPath := config.ZarfPackagePrefix + toComplete + "*.tar.zst"
 			zstFiles, err := filepath.Glob(zstPath)
 			if err != nil {
-				message.Debug("Unable to glob", "zstPath", zstPath, "error", err)
+				l.Debug("unable to glob", "zstPath", zstPath, "error", err)
 			}
 
 			splitPath := config.ZarfPackagePrefix + toComplete + "*.part000"
 			splitFiles, err := filepath.Glob(splitPath)
 			if err != nil {
-				message.Debug("Unable to glob", "splitPath", splitPath, "error", err)
+				l.Debug("unable to glob", "splitPath", splitPath, "error", err)
 			}
 
 			files = append(files, zstFiles...)
@@ -444,6 +448,7 @@ func getPackageCompletionArgs(cmd *cobra.Command, _ []string, _ string) ([]strin
 	deployedZarfPackages, err := c.GetDeployedZarfPackages(ctx)
 	if err != nil {
 		message.Debug("Unable to get deployed zarf packages for package completion args", "error", err)
+		logger.From(cmd.Context()).Debug("unable to get deployed zarf packages for package completion args", "error", err)
 	}
 	// Populate list of package names
 	for _, pkg := range deployedZarfPackages {
@@ -515,15 +520,15 @@ func bindCreateFlags(v *viper.Viper) {
 
 	errOD := createFlags.MarkHidden("output-directory")
 	if errOD != nil {
-		message.Debug("Unable to mark flag output-directory", "error", errOD)
+		logger.Default().Debug("unable to mark flag output-directory", "error", errOD)
 	}
 	errKey := createFlags.MarkHidden("key")
 	if errKey != nil {
-		message.Debug("Unable to mark flag key", "error", errKey)
+		logger.Default().Debug("unable to mark flag key", "error", errKey)
 	}
 	errKP := createFlags.MarkHidden("key-pass")
 	if errKP != nil {
-		message.Debug("Unable to mark flag key-pass", "error", errKP)
+		logger.Default().Debug("unable to mark flag key-pass", "error", errKP)
 	}
 }
 
@@ -546,7 +551,7 @@ func bindDeployFlags(v *viper.Viper) {
 
 	err := deployFlags.MarkHidden("sget")
 	if err != nil {
-		message.Debug("Unable to mark flag sget", "error", err)
+		logger.Default().Debug("unable to mark flag sget", "error", err)
 	}
 }
 

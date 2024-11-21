@@ -4,6 +4,7 @@
 package common
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/fatih/color"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
@@ -18,7 +20,7 @@ import (
 var OutputWriter = os.Stdout
 
 // PrintFindings prints the findings in the LintError as a table.
-func PrintFindings(lintErr *lint.LintError) {
+func PrintFindings(ctx context.Context, lintErr *lint.LintError) {
 	mapOfFindingsByPath := lint.GroupFindingsByPath(lintErr.Findings, lintErr.PackageName)
 	for _, findings := range mapOfFindingsByPath {
 		lintData := [][]string{}
@@ -46,6 +48,7 @@ func PrintFindings(lintErr *lint.LintError) {
 
 		// Print table to our OutputWriter
 		message.Notef("Linting package %q at %s", findings[0].PackageNameOverride, packagePathFromUser)
+		logger.From(ctx).Info("linting package", "name", findings[0].PackageNameOverride, "path", packagePathFromUser)
 		message.TableWithWriter(OutputWriter, []string{"Type", "Path", "Message"}, lintData)
 	}
 }
