@@ -45,14 +45,8 @@ func PrintFindings(lintErr *lint.LintError) {
 		}
 
 		// Print table to our OutputWriter
-		// HACK(mkcp): Setting a PTerm global isn't ideal or thread-safe. However, it lets us render even when message
-		// is disabled.
-		lastWriter := *message.PTermWriter.Load()
-		message.InitializePTerm(OutputWriter)
 		message.Notef("Linting package %q at %s", findings[0].PackageNameOverride, packagePathFromUser)
-		message.Table([]string{"Type", "Path", "Message"}, lintData)
-		// Reset pterm output
-		message.InitializePTerm(lastWriter)
+		message.TableWithWriter(OutputWriter, []string{"Type", "Path", "Message"}, lintData)
 	}
 }
 

@@ -6,7 +6,6 @@ package message
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -21,13 +20,8 @@ func PrintConnectStringTable(connectStrings types.ConnectStrings) {
 			connectData = append(connectData, []string{name, connect.Description})
 		}
 
-		// HACK(mkcp): Setting a PTerm global during runtime isn't ideal or thread-safe. However, it lets us render
-		// even when message is disabled.
-		lastWriter := *PTermWriter.Load()
-		InitializePTerm(os.Stdout)
 		// Create the table output with the data
 		header := []string{"Connect Command", "Description"}
-		Table(header, connectData)
-		InitializePTerm(lastWriter)
+		TableWithWriter(OutputWriter, header, connectData)
 	}
 }

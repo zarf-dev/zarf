@@ -103,13 +103,8 @@ func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) erro
 		outputYAML = ansiRegex.ReplaceAllString(outputYAML, "")
 	}
 
-	// HACK(mkcp): Re-initializing a PTerm global isn't ideal or thread-safe. However, it lets us render even when
-	// message is disabled.
-	lastWriter := *message.PTermWriter.Load()
-	message.InitializePTerm(os.Stdout)
-	pterm.Println()
-	pterm.Println(outputYAML)
-	message.InitializePTerm(lastWriter)
+	content := strings.Join([]string{"\n", outputYAML}, "")
+	pterm.Fprintln(message.OutputWriter, content)
 	return nil
 }
 

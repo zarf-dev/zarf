@@ -275,14 +275,8 @@ var packageListCmd = &cobra.Command{
 			})
 		}
 
-		// NOTE(mkcp): Renders table with message.
 		header := []string{"Package", "Version", "Components"}
-		// HACK(mkcp): Re-initializing PTerm globally isn't ideal or thread-safe. However, it lets us render even when
-		// message is disabled.
-		lastWriter := *message.PTermWriter.Load()
-		message.InitializePTerm(OutputWriter)
-		message.Table(header, packageData)
-		message.InitializePTerm(lastWriter)
+		message.TableWithWriter(message.OutputWriter, header, packageData)
 
 		// Print out any unmarshalling errors
 		if err != nil {

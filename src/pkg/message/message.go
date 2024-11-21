@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -34,23 +33,18 @@ const (
 	TermWidth = 100
 )
 
-// NoProgress tracks whether spinner/progress bars show updates.
-var NoProgress bool
-
-// RuleLine creates a line of ━ as wide as the terminal
-var RuleLine = strings.Repeat("━", TermWidth)
-
-// logLevel holds the pterm compatible log level integer
-var logLevel = InfoLevel
-
-// logFile acts as a buffer for logFile generation
-var logFile *PausableWriter
-
-// PTermWriter is an unholy hack that allows us to retrieve the writer passed into InitializePTerm. Under no
-// circumstances should this be considered stable or supported. It's only purpose is so we change the writer to
-// Stdout for specific logs, then back to its original intended value that we set at the start of the command.
-// It should be replaced by something threadsafe as soon as possible. Blame mkcp for this contraption.
-var PTermWriter atomic.Pointer[io.Writer]
+var (
+	// NoProgress tracks whether spinner/progress bars show updates.
+	NoProgress bool
+	// RuleLine creates a line of ━ as wide as the terminal
+	RuleLine = strings.Repeat("━", TermWidth)
+	// OutputWriter provides a default writer to Stdout for user-focused output like tables and yaml
+	OutputWriter = os.Stdout
+	// logLevel holds the pterm compatible log level integer
+	logLevel = InfoLevel
+	// logFile acts as a buffer for logFile generation
+	logFile *PausableWriter
+)
 
 // DebugWriter represents a writer interface that writes to message.Debug
 type DebugWriter struct{}
@@ -79,10 +73,6 @@ func InitializePTerm(w io.Writer) {
 	pterm.Info.Prefix = pterm.Prefix{
 		Text: " •",
 	}
-
-	// HACK(mkcp): See the comments on the var above but this should not be used for anything other than its intended
-	// use and should be removed as soon as possible.
-	PTermWriter.Store(&w)
 
 	pterm.SetDefaultOutput(w)
 }
@@ -260,6 +250,11 @@ func Paragraphn(n int, format string, a ...any) string {
 
 // Table prints a padded table containing the specified header and data
 func Table(header []string, data [][]string) {
+	TableWithWriter(nil, header, data)
+}
+
+// TableWithWriter prints a padded table containing the specified header and data to the optional writer.
+func TableWithWriter(writer io.Writer, header []string, data [][]string) {
 	pterm.Println()
 
 	// To avoid side effects make copies of the header and data before adding padding
@@ -282,8 +277,12 @@ func Table(header []string, data [][]string) {
 		table = append(table, pterm.TableData{row}...)
 	}
 
-	//nolint:errcheck // never returns an error
-	pterm.DefaultTable.WithHasHeader().WithData(table).Render()
+	// Use DefaultTable writer if none is provided
+	tPrinter := pterm.DefaultTable
+	if writer != nil {
+		tPrinter.Writer = writer
+	}
+	_ = tPrinter.WithHasHeader().WithData(table).Render() //nolint:errcheck
 }
 
 func debugPrinter(offset int, a ...any) {
