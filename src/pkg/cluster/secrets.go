@@ -177,6 +177,7 @@ func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, stateRe
 	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, stateRegistryAddress)
 	if err != nil {
 		message.Debugf("registry appears to not be a nodeport service, using original address %q", stateRegistryAddress)
+		logger.From(ctx).Debug("registry appears to not be a nodeport service, using original address", "address", stateRegistryAddress)
 		return stateRegistryAddress, nil
 	}
 
