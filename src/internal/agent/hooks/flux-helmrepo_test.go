@@ -68,21 +68,6 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 			code:        http.StatusInternalServerError,
 		},
 		{
-			name: "should not mutate when agent patched",
-			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Update, &flux.HelmRepository{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "already-patched",
-					Labels: map[string]string{
-						"zarf-agent": "patched",
-					},
-				},
-				Spec: flux.HelmRepositorySpec{
-					Type: "oci",
-				},
-			}),
-			code: http.StatusOK,
-		},
-		{
 			name: "should be mutated with no internal service registry",
 			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Create, &flux.HelmRepository{
 				ObjectMeta: metav1.ObjectMeta{
@@ -119,6 +104,84 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 				},
 				Spec: flux.HelmRepositorySpec{
 					URL:  "oci://ghcr.io/stefanprodan/charts",
+					Type: "oci",
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://10.11.12.13:5000/stefanprodan/charts",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeNodePort,
+					Ports: []corev1.ServicePort{
+						{
+							NodePort: int32(31999),
+							Port:     5000,
+						},
+					},
+					ClusterIP: "10.11.12.13",
+				},
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should not mutate URL if it has the same hostname as Zarf state",
+			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Update, &flux.HelmRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "no-mutate-this",
+				},
+				Spec: flux.HelmRepositorySpec{
+					URL:  "oci://127.0.0.1:31999/stefanprodan/charts",
+					Type: "oci",
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://127.0.0.1:31999/stefanprodan/charts",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should not mutate URL if it has the same hostname as Zarf state internal repo",
+			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Update, &flux.HelmRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "no-mutate-this",
+				},
+				Spec: flux.HelmRepositorySpec{
+					URL:  "oci://10.11.12.13:5000/stefanprodan/charts",
 					Type: "oci",
 				},
 			}),
