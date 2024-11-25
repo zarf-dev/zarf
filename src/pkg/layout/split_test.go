@@ -4,6 +4,7 @@
 package layout
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -64,7 +65,7 @@ func TestSplitFile(t *testing.T) {
 			err = f.Close()
 			require.NoError(t, err)
 
-			err = splitFile(p, tt.chunkSize)
+			err = splitFile(context.Background(), p, tt.chunkSize)
 			require.NoError(t, err)
 
 			_, err = os.Stat(p)

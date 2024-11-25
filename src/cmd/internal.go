@@ -6,26 +6,22 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/invopop/jsonschema"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 	"github.com/spf13/pflag"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 var (
@@ -85,6 +81,7 @@ var genCLIDocs = &cobra.Command{
 					// If the command is a vendored command, add a dummy flag to hide root flags from the docs
 					if common.CheckVendorOnlyFromPath(toolCmd) {
 						addHiddenDummyFlag(toolCmd, "log-level")
+						addHiddenDummyFlag(toolCmd, "log-format")
 						addHiddenDummyFlag(toolCmd, "architecture")
 						addHiddenDummyFlag(toolCmd, "no-log-file")
 						addHiddenDummyFlag(toolCmd, "no-progress")
@@ -158,71 +155,7 @@ tableOfContents: false
 			return "/commands/" + link[:len(link)-3] + "/"
 		}
 
-		if err := doc.GenMarkdownTreeCustom(rootCmd, "./site/src/content/docs/commands", prependTitle, linkHandler); err != nil {
-			return err
-		}
-		message.Success(lang.CmdInternalGenerateCliDocsSuccess)
-		return nil
-	},
-}
-
-func addGoComments(reflector *jsonschema.Reflector) error {
-	addCommentErr := errors.New("this command must be called from the root of the Zarf repo")
-
-	typePackagePath := filepath.Join("src", "api", "v1alpha1")
-	if err := reflector.AddGoComments("github.com/zarf-dev/zarf", typePackagePath); err != nil {
-		return fmt.Errorf("%w: %w", addCommentErr, err)
-	}
-	varPackagePath := filepath.Join("src", "pkg", "variables")
-	if err := reflector.AddGoComments("github.com/zarf-dev/zarf", varPackagePath); err != nil {
-		return fmt.Errorf("%w: %w", addCommentErr, err)
-	}
-	return nil
-}
-
-var genConfigSchemaCmd = &cobra.Command{
-	Use:     "gen-config-schema",
-	Aliases: []string{"gc"},
-	Short:   lang.CmdInternalConfigSchemaShort,
-	RunE: func(_ *cobra.Command, _ []string) error {
-		reflector := jsonschema.Reflector(jsonschema.Reflector{ExpandedStruct: true})
-		if err := addGoComments(&reflector); err != nil {
-			return err
-		}
-
-		schema := reflector.Reflect(&v1alpha1.ZarfPackage{})
-		output, err := json.MarshalIndent(schema, "", "  ")
-		if err != nil {
-			return fmt.Errorf("unable to generate the Zarf config schema: %w", err)
-		}
-		fmt.Print(string(output) + "\n")
-		return nil
-	},
-}
-
-type zarfTypes struct {
-	DeployedPackage types.DeployedPackage
-	ZarfPackage     v1alpha1.ZarfPackage
-	ZarfState       types.ZarfState
-}
-
-var genTypesSchemaCmd = &cobra.Command{
-	Use:     "gen-types-schema",
-	Aliases: []string{"gt"},
-	Short:   lang.CmdInternalTypesSchemaShort,
-	RunE: func(_ *cobra.Command, _ []string) error {
-		reflector := jsonschema.Reflector(jsonschema.Reflector{ExpandedStruct: true})
-		if err := addGoComments(&reflector); err != nil {
-			return err
-		}
-
-		schema := reflector.Reflect(&zarfTypes{})
-		output, err := json.MarshalIndent(schema, "", "  ")
-		if err != nil {
-			return fmt.Errorf("unable to generate the JSON schema for the Zarf types DeployedPackage, ZarfPackage, and ZarfState: %w", err)
-		}
-		fmt.Print(string(output) + "\n")
-		return nil
+		return doc.GenMarkdownTreeCustom(rootCmd, "./site/src/content/docs/commands", prependTitle, linkHandler)
 	},
 }
 
@@ -337,6 +270,7 @@ var updateGiteaPVC = &cobra.Command{
 		helmShouldCreate, err := c.UpdateGiteaPVC(ctx, pvcName, rollback)
 		if err != nil {
 			message.WarnErr(err, lang.CmdInternalUpdateGiteaPVCErr)
+			logger.From(ctx).Warn("Unable to update the existing Gitea persistent volume claim", "error", err.Error())
 		}
 		fmt.Print(helmShouldCreate)
 		return nil
@@ -373,8 +307,6 @@ func init() {
 	internalCmd.AddCommand(agentCmd)
 	internalCmd.AddCommand(httpProxyCmd)
 	internalCmd.AddCommand(genCLIDocs)
-	internalCmd.AddCommand(genConfigSchemaCmd)
-	internalCmd.AddCommand(genTypesSchemaCmd)
 	internalCmd.AddCommand(createReadOnlyGiteaUser)
 	internalCmd.AddCommand(createPackageRegistryToken)
 	internalCmd.AddCommand(updateGiteaPVC)
@@ -390,7 +322,7 @@ func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {
 		cmd.PersistentFlags().StringVar(&dummyStr, flagDummy, "", "")
 		err := cmd.PersistentFlags().MarkHidden(flagDummy)
 		if err != nil {
-			message.Debug("Unable to add hidden dummy flag", "error", err)
+			logger.From(cmd.Context()).Debug("Unable to add hidden dummy flag", "error", err)
 		}
 	}
 }

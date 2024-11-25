@@ -82,7 +82,7 @@ func (pc *PackageCreator) LoadPackageDefinition(ctx context.Context, src *layout
 	warnings = append(warnings, composeWarnings...)
 
 	// After components are composed, template the active package.
-	pkg, templateWarnings, err := FillActiveTemplate(pkg, pc.createOpts.SetVariables)
+	pkg, templateWarnings, err := FillActiveTemplate(ctx, pkg, pc.createOpts.SetVariables)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("unable to fill values in template: %w", err)
 	}

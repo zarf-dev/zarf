@@ -7,6 +7,7 @@ package tools
 import (
 	"os"
 
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 
 	"github.com/zarf-dev/zarf/src/cmd/tools/helm"
@@ -29,6 +30,7 @@ func init() {
 	helmCmd, err := helm.NewRootCmd(actionConfig, os.Stdout, helmArgs)
 	if err != nil {
 		message.Debug("Failed to initialize helm command", "error", err)
+		logger.Default().Debug("failed to initialize helm command", "error", err)
 	}
 	helmCmd.Short = lang.CmdToolsHelmShort
 	helmCmd.Long = lang.CmdToolsHelmLong

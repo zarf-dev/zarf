@@ -36,6 +36,14 @@ func NewOCIRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster)
 // mutateOCIRepo mutates the oci repository url to point to the repository URL defined in the ZarfState.
 func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
 	l := logger.From(ctx)
+	var (
+		patches   []operations.PatchOperation
+		isPatched bool
+
+		isCreate = r.Operation == v1.Create
+		isUpdate = r.Operation == v1.Update
+	)
+
 	src := &flux.OCIRepository{}
 	if err := json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
@@ -45,17 +53,10 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		src.Spec.Reference = &flux.OCIRepositoryRef{}
 	}
 
-	// If we have a semver we want to continue since we wil still have the upstream tag
+	// If we have a semver we want to continue since we will still have the upstream tag
 	// but should warn that we can't guarantee there won't be collisions
 	if src.Spec.Reference.SemVer != "" {
 		l.Warn("Detected a semver OCI ref, continuing but will be unable to guarantee against collisions if multiple OCI artifacts with the same name are brought in from different registries", "ref", src.Spec.Reference.SemVer)
-	}
-
-	if src.Labels != nil && src.Labels["zarf-agent"] == "patched" {
-		return &operations.Result{
-			Allowed:  true,
-			PatchOps: []operations.PatchOperation{},
-		}, nil
 	}
 
 	zarfState, err := cluster.LoadZarfState(ctx)
@@ -74,37 +75,51 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		"name", src.Name,
 		"registry", registryAddress)
 
-	ref := src.Spec.URL
-	if src.Spec.Reference.Digest != "" {
-		ref = fmt.Sprintf("%s@%s", ref, src.Spec.Reference.Digest)
-	} else if src.Spec.Reference.Tag != "" {
-		ref = fmt.Sprintf("%s:%s", ref, src.Spec.Reference.Tag)
-	}
-
-	patchedSrc, err := transform.ImageTransformHost(registryAddress, ref)
-	if err != nil {
-		return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
-	}
-
-	patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse the transformed OCIRepo URL: %w", err)
-	}
+	patchedURL := src.Spec.URL
 	patchedRef := src.Spec.Reference
 
-	patchedURL := helpers.OCIURLPrefix + patchedRefInfo.Name
+	// Check if this is an update operation and the hostname is different from what we have in the zarfState
+	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
+	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
+	if isUpdate {
+		zarfStateAddress := helpers.OCIURLPrefix + registryAddress
+		isPatched, err = helpers.DoHostnamesMatch(zarfStateAddress, src.Spec.URL)
+		if err != nil {
+			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
+		}
+	}
 
-	if patchedRefInfo.Digest != "" {
-		patchedRef.Digest = patchedRefInfo.Digest
-	} else if patchedRefInfo.Tag != "" {
-		patchedRef.Tag = patchedRefInfo.Tag
+	// Mutate the oci repo URL if necessary
+	if isCreate || (isUpdate && !isPatched) {
+		if src.Spec.Reference.Digest != "" {
+			patchedURL = fmt.Sprintf("%s@%s", patchedURL, src.Spec.Reference.Digest)
+		} else if src.Spec.Reference.Tag != "" {
+			patchedURL = fmt.Sprintf("%s:%s", patchedURL, src.Spec.Reference.Tag)
+		}
+
+		patchedSrc, err := transform.ImageTransformHost(registryAddress, patchedURL)
+		if err != nil {
+			return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
+		}
+
+		patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse the transformed OCIRepo URL: %w", err)
+		}
+
+		patchedURL = helpers.OCIURLPrefix + patchedRefInfo.Name
+
+		if patchedRefInfo.Digest != "" {
+			patchedRef.Digest = patchedRefInfo.Digest
+		} else if patchedRefInfo.Tag != "" {
+			patchedRef.Tag = patchedRefInfo.Tag
+		}
 	}
 
 	l.Debug("mutating the Flux OCIRepository URL to the Zarf URL", "original", src.Spec.URL, "mutated", patchedURL)
-
-	patches := populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.IsInternal(), patchedRef)
-
+	patches = populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.IsInternal(), patchedRef)
 	patches = append(patches, getLabelPatch(src.Labels))
+
 	return &operations.Result{
 		Allowed:  true,
 		PatchOps: patches,

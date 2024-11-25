@@ -95,6 +95,7 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	var disableMessage bool
 	if LogFormat != "" {
 		disableMessage = true
+		skipLogFile = true
 		ctx := logger.WithLoggingEnabled(ctx, true)
 		cmd.SetContext(ctx)
 	}
@@ -164,7 +165,7 @@ func init() {
 
 	// Logs
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(common.VLogLevel), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(common.VLogFormat), "Select a logging format. Defaults to 'text'. Valid options are: 'text', 'json'")
+	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(common.VLogFormat), "[alpha] Select a logging format. Defaults to 'text'. Valid options are: 'text', 'json', 'console', 'dev'")
 	rootCmd.PersistentFlags().BoolVar(&SkipLogFile, "no-log-file", v.GetBool(common.VNoLogFile), lang.RootCmdFlagSkipLogFile)
 	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(common.VNoProgress), lang.RootCmdFlagNoProgress)
 	rootCmd.PersistentFlags().BoolVar(&NoColor, "no-color", v.GetBool(common.VNoColor), lang.RootCmdFlagNoColor)
@@ -178,10 +179,6 @@ func init() {
 	rootCmd.PersistentFlags().MarkDeprecated("insecure", "please use --plain-http, --insecure-skip-tls-verify, or --skip-signature-validation instead.")
 	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.PlainHTTP, "plain-http", v.GetBool(common.VPlainHTTP), lang.RootCmdFlagPlainHTTP)
 	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", v.GetBool(common.VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
-
-	// HACK(mkcp): This is a workaround for us testing that help output matches to the byte. Undo this and update tests
-	// before release.
-	rootCmd.PersistentFlags().MarkHidden("log-format")
 }
 
 // setup Logger handles creating a logger and setting it as the global default.

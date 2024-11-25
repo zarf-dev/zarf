@@ -52,6 +52,7 @@ func Open(rootPath, address string) (*Repository, error) {
 
 // Clone clones a git repository to the given local path.
 func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Repository, error) {
+	l := logger.From(ctx)
 	// Split the remote url and the zarf reference
 	gitURLNoRef, refPlain, err := transform.GitURLSplitRef(address)
 	if err != nil {
@@ -97,6 +98,7 @@ func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Reposi
 	repo, err := git.PlainCloneContext(ctx, r.path, false, cloneOpts)
 	if err != nil {
 		message.Notef("Falling back to host 'git', failed to clone the repo %q with Zarf: %s", gitURLNoRef, err.Error())
+		l.Info("falling back to host 'git', failed to clone the repo with Zarf", "url", gitURLNoRef, "error", err)
 		err := r.gitCloneFallback(ctx, gitURLNoRef, ref, shallow)
 		if err != nil {
 			return nil, err
