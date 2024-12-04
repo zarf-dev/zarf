@@ -78,6 +78,8 @@ type ZarfDeployOptions struct {
 	Timeout time.Duration
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap map[string]map[string]map[string]interface{}
+	// Force push all repositories to gitea during deployment
+	ForcePushRepos bool
 	// [Dev Deploy Only] Manual override for ###ZARF_REGISTRY###
 	RegistryURL string
 }

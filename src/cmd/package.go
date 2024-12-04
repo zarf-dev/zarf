@@ -180,6 +180,7 @@ var packageMirrorCmd = &cobra.Command{
 			GitInfo:         pkgConfig.InitOpts.GitServer,
 			NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
 			Retries:         pkgConfig.PkgOpts.Retries,
+			ForcePushRepos:  pkgConfig.DeployOpts.ForcePushRepos,
 		}
 		err = packager2.Mirror(ctx, mirrorOpt)
 		if err != nil {
@@ -556,6 +557,7 @@ func bindDeployFlags(v *viper.Viper) {
 	deployFlags.StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(common.VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	deployFlags.StringVar(&pkgConfig.PkgOpts.SGetKeyPath, "sget", v.GetString(common.VPkgDeploySget), lang.CmdPackageDeployFlagSget)
 	deployFlags.BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	deployFlags.BoolVar(&pkgConfig.DeployOpts.ForcePushRepos, "force-push-repos", false, lang.CmdPackageForcePushRepos)
 
 	err := deployFlags.MarkHidden("sget")
 	if err != nil {
