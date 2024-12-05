@@ -54,7 +54,7 @@ func Test_New(t *testing.T) {
 		{
 			name: "Text format is supported",
 			cfg: Config{
-				Format: FormatText,
+				Format: FormatConsoleNoColor,
 			},
 		},
 		{

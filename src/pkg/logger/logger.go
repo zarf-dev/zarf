@@ -93,13 +93,13 @@ func (f Format) ToLower() Format {
 }
 
 var (
-	// FormatText uses the standard slog TextHandler
-	FormatText Format = "text"
+	// FormatConsoleNoColor uses the standard slog TextHandler
+	FormatConsoleNoColor Format = "console-no-color"
 	// FormatJSON uses the standard slog JSONHandler
 	FormatJSON Format = "json"
 	// FormatConsole uses console-slog to provide prettier colorful messages
 	FormatConsole Format = "console"
-	// FormatDev uses a verbose and prettyprinting devslog handler
+	// FormatDev uses a verbose and pretty printing devslog handler
 	FormatDev Format = "dev"
 	// FormatNone sends log writes to DestinationNone / io.Discard
 	FormatNone Format = "none"
@@ -148,7 +148,7 @@ func (c Config) LogValue() slog.Value {
 func ConfigDefault() Config {
 	return Config{
 		Level:       Info,
-		Format:      FormatText,
+		Format:      FormatConsole,
 		Destination: DestinationDefault, // Stderr
 	}
 }
@@ -171,7 +171,7 @@ func New(cfg Config) (*slog.Logger, error) {
 
 	var handler slog.Handler
 	switch cfg.Format.ToLower() {
-	case FormatText:
+	case FormatConsoleNoColor:
 		handler = console.NewHandler(cfg.Destination, &console.HandlerOptions{
 			Level:   slog.Level(cfg.Level),
 			NoColor: true,
