@@ -55,7 +55,7 @@ func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.Dep
 
 	if len(loginData) > 0 {
 		header := []string{"Application", "Username", "Password", "Connect", "Get-Creds Key"}
-		Table(header, loginData)
+		TableWithWriter(OutputWriter, header, loginData)
 	}
 }
 

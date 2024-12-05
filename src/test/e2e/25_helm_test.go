@@ -96,8 +96,8 @@ func testHelmChartsExample(t *testing.T) {
 	helmChartsPkg := filepath.Join("build", fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", helmChartsPkg, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, string(stdErr), "registryOverrides", "registry overrides was not saved to build data")
-	require.Contains(t, string(stdErr), "docker.io", "docker.io not found in registry overrides")
+	require.Contains(t, stdOut, "registryOverrides", "registry overrides was not saved to build data")
+	require.Contains(t, stdOut, "docker.io", "docker.io not found in registry overrides")
 
 	// Remove the example package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "helm-charts", "--confirm")

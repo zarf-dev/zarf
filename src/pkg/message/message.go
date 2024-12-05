@@ -33,17 +33,18 @@ const (
 	TermWidth = 100
 )
 
-// NoProgress tracks whether spinner/progress bars show updates.
-var NoProgress bool
-
-// RuleLine creates a line of ━ as wide as the terminal
-var RuleLine = strings.Repeat("━", TermWidth)
-
-// logLevel holds the pterm compatible log level integer
-var logLevel = InfoLevel
-
-// logFile acts as a buffer for logFile generation
-var logFile *PausableWriter
+var (
+	// NoProgress tracks whether spinner/progress bars show updates.
+	NoProgress bool
+	// RuleLine creates a line of ━ as wide as the terminal
+	RuleLine = strings.Repeat("━", TermWidth)
+	// OutputWriter provides a default writer to Stdout for user-focused output like tables and yaml
+	OutputWriter = os.Stdout
+	// logLevel holds the pterm compatible log level integer
+	logLevel = InfoLevel
+	// logFile acts as a buffer for logFile generation
+	logFile *PausableWriter
+)
 
 // DebugWriter represents a writer interface that writes to message.Debug
 type DebugWriter struct{}
@@ -249,6 +250,11 @@ func Paragraphn(n int, format string, a ...any) string {
 
 // Table prints a padded table containing the specified header and data
 func Table(header []string, data [][]string) {
+	TableWithWriter(nil, header, data)
+}
+
+// TableWithWriter prints a padded table containing the specified header and data to the optional writer.
+func TableWithWriter(writer io.Writer, header []string, data [][]string) {
 	pterm.Println()
 
 	// To avoid side effects make copies of the header and data before adding padding
@@ -271,8 +277,12 @@ func Table(header []string, data [][]string) {
 		table = append(table, pterm.TableData{row}...)
 	}
 
-	//nolint:errcheck // never returns an error
-	pterm.DefaultTable.WithHasHeader().WithData(table).Render()
+	// Use DefaultTable writer if none is provided
+	tPrinter := pterm.DefaultTable
+	if writer != nil {
+		tPrinter.Writer = writer
+	}
+	_ = tPrinter.WithHasHeader().WithData(table).Render() //nolint:errcheck
 }
 
 func debugPrinter(offset int, a ...any) {

@@ -262,11 +262,6 @@ var devFindImagesCmd = &cobra.Command{
 
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
-			// HACK(mkcp): Re-initializing PTerm with a stderr writer isn't great, but it lets us render these lint
-			// tables below for backwards compatibility
-			if logger.Enabled(ctx) {
-				message.InitializePTerm(logger.DestinationDefault)
-			}
 			common.PrintFindings(ctx, lintErr)
 		}
 		if err != nil {
@@ -314,11 +309,6 @@ var devLintCmd = &cobra.Command{
 		err := lint.Validate(ctx, pkgConfig.CreateOpts.BaseDir, pkgConfig.CreateOpts.Flavor, pkgConfig.CreateOpts.SetVariables)
 		var lintErr *lint.LintError
 		if errors.As(err, &lintErr) {
-			// HACK(mkcp): Re-initializing PTerm with a stderr writer isn't great, but it lets us render these lint
-			// tables below for backwards compatibility
-			if logger.Enabled(ctx) {
-				message.InitializePTerm(logger.DestinationDefault)
-			}
 			common.PrintFindings(ctx, lintErr)
 			// Do not return an error if the findings are all warnings.
 			if lintErr.OnlyWarnings() {
