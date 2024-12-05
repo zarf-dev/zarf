@@ -46,17 +46,6 @@ const (
 	agentKey        = "agent"
 )
 
-var deprecatedGetGitCredsCmd = &cobra.Command{
-	Use:    "get-git-password",
-	Hidden: true,
-	Short:  lang.CmdToolsGetGitPasswdShort,
-	Long:   lang.CmdToolsGetGitPasswdLong,
-	Run: func(_ *cobra.Command, _ []string) {
-		message.Warn(lang.CmdToolsGetGitPasswdDeprecation)
-		getCredsCmd.Run(getCredsCmd, []string{"git"})
-	},
-}
-
 var getCredsCmd = &cobra.Command{
 	Use:     "get-creds",
 	Short:   lang.CmdToolsGetCredsShort,
@@ -416,7 +405,6 @@ var generateKeyCmd = &cobra.Command{
 func init() {
 	v := common.InitViper()
 
-	toolsCmd.AddCommand(deprecatedGetGitCredsCmd)
 	toolsCmd.AddCommand(getCredsCmd)
 
 	toolsCmd.AddCommand(updateCredsCmd)
