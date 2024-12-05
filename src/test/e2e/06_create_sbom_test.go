@@ -55,7 +55,7 @@ func TestCreateSBOM(t *testing.T) {
 
 	stdOut, _, err := e2e.Zarf(t, "package", "inspect", tarPath, "--list-images")
 	require.NoError(t, err)
-	require.Equal(t, "- ghcr.io/zarf-dev/doom-game:0.0.1\n", stdOut)
+	require.Contains(t, stdOut, "- ghcr.io/zarf-dev/doom-game:0.0.1\n")
 
 	// Pull the current zarf binary version to find the corresponding init package
 	version, _, err := e2e.Zarf(t, "version")

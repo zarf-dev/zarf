@@ -40,6 +40,8 @@ var (
 	SkipLogFile bool
 	// NoColor is a flag to disable colors in output
 	NoColor bool
+	// OutputWriter provides a default writer to Stdout for user-facing command output
+	OutputWriter = os.Stdout
 )
 
 var rootCmd = &cobra.Command{
