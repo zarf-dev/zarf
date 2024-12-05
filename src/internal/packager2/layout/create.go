@@ -302,7 +302,7 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	hostname, _ := os.Hostname()
 	pkg.Build.Terminal = hostname
 
-	if pkg.IsInitConfig() {
+	if pkg.IsInitConfig() && pkg.Metadata.Version == "" {
 		pkg.Metadata.Version = config.CLIVersion
 	}
 
