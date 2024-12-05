@@ -169,6 +169,14 @@ If you would like to adopt pre-existing resources into a Zarf deployment you can
 
 :::
 
+#### Image Mutation to Unique Hashed Tags
+
+When the agent mutates an image that is not pinned to a digest, it appends a [CRC32 hash](https://en.wikipedia.org/wiki/Cyclic_redundancy_check) to the tag. For example, if the original image is `ghcr.io/stefanprodan/podinfo:6.4.0` the mutated image tag will be `6.4.0-zarf-298505108`. The CRC32 hash `298505108` is generated using the original image name `ghcr.io/stefanprodan/podinfo`.
+
+Without this unique hash, images from different registries with the same path—such as `docker.io/stefanprodan/podinfo:6.4.0`-would overwrite each other when pushed to the Zarf registry. Zarf pushes both the regular tag and the unique tag for non pinned images. This ensures no images are lost during a push, and the agent can always mutate to the correct image. To see which image a pod used before mutation, check the `zarf.dev/original-image-<container-name>` annotation.
+
+Additionally, when Git repositories are pushed to the Zarf Git server their name is appended with a CRC32 hash to prevent similar collisions.
+
 #### Excluding Resources from `zarf-agent`
 
 Resources can be excluded at the namespace or resources level by adding the `zarf.dev/agent: ignore` label.
