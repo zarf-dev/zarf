@@ -45,7 +45,7 @@ func (suite *CompositionSuite) TearDownSuite() {
 func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 	suite.T().Log("E2E: Package Compose Example")
 
-	_, stdErr, err := e2e.Zarf(suite.T(), "package", "create", composeExample, "-o", "build", "--no-color", "--confirm")
+	stdOut, _, err := e2e.Zarf(suite.T(), "package", "create", composeExample, "-o", "build", "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that common names merge
@@ -57,10 +57,10 @@ func (suite *CompositionSuite) Test_0_ComposabilityExample() {
     - ../dos-games/manifests/deployment.yaml
     - ../dos-games/manifests/service.yaml
     - quake-service.yaml`)
-	suite.Contains(stdErr, manifests)
+	suite.Contains(stdOut, manifests)
 
 	// Ensure that the action was appended
-	suite.Contains(stdErr, `
+	suite.Contains(stdOut, `
   - ghcr.io/zarf-dev/doom-game:0.0.1
   actions:
     onDeploy:
@@ -71,13 +71,13 @@ func (suite *CompositionSuite) Test_0_ComposabilityExample() {
 func (suite *CompositionSuite) Test_1_FullComposability() {
 	suite.T().Log("E2E: Full Package Compose")
 
-	_, stdErr, err := e2e.Zarf(suite.T(), "package", "create", composeTest, "-o", "build", "--no-color", "--confirm")
+	stdOut, _, err := e2e.Zarf(suite.T(), "package", "create", composeTest, "-o", "build", "--no-color", "--confirm")
 	suite.NoError(err)
 
 	// Ensure that names merge and that composition is added appropriately
 
 	// Check metadata
-	suite.Contains(stdErr, `
+	suite.Contains(stdOut, `
 - name: test-compose-package
   description: A contrived example for podinfo using many Zarf primitives for compose testing
   required: true
@@ -86,7 +86,7 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 `)
 
 	// Check files
-	suite.Contains(stdErr, e2e.NormalizeYAMLFilenames(`
+	suite.Contains(stdOut, e2e.NormalizeYAMLFilenames(`
   files:
   - source: files/coffee-ipsum.txt
     target: coffee-ipsum.txt
@@ -95,7 +95,7 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 `))
 
 	// Check charts
-	suite.Contains(stdErr, e2e.NormalizeYAMLFilenames(`
+	suite.Contains(stdOut, e2e.NormalizeYAMLFilenames(`
   charts:
   - name: podinfo-compose
     version: 6.4.0
@@ -115,7 +115,7 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 `))
 
 	// Check manifests
-	suite.Contains(stdErr, e2e.NormalizeYAMLFilenames(`
+	suite.Contains(stdOut, e2e.NormalizeYAMLFilenames(`
   manifests:
   - name: connect-service
     namespace: podinfo-override
@@ -134,7 +134,7 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 `))
 
 	// Check images + repos
-	suite.Contains(stdErr, `
+	suite.Contains(stdOut, `
   images:
   - ghcr.io/stefanprodan/podinfo:6.4.0
   - ghcr.io/stefanprodan/podinfo:6.4.1
@@ -144,7 +144,7 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 `)
 
 	// Check dataInjections
-	suite.Contains(stdErr, `
+	suite.Contains(stdOut, `
   dataInjections:
   - source: files
     target:
@@ -161,7 +161,7 @@ func (suite *CompositionSuite) Test_1_FullComposability() {
 `)
 
 	// Check actions
-	suite.Contains(stdErr, `
+	suite.Contains(stdOut, `
   actions:
     onCreate:
       before:
