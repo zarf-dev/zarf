@@ -17,7 +17,7 @@ Evaluates components in a Zarf file to identify images specified in their helm c
 Components that have repos that host helm charts can be processed by providing the --repo-chart-path.
 
 ```
-zarf dev find-images [ PACKAGE ] [flags]
+zarf dev find-images [ DIRECTORY ] [flags]
 ```
 
 ### Options

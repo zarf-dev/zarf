@@ -237,7 +237,7 @@ var devSha256SumCmd = &cobra.Command{
 }
 
 var devFindImagesCmd = &cobra.Command{
-	Use:     "find-images [ PACKAGE ]",
+	Use:     "find-images [ DIRECTORY ]",
 	Aliases: []string{"f"},
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdDevFindImagesShort,

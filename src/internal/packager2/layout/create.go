@@ -31,7 +31,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
-	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
@@ -303,7 +302,7 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	hostname, _ := os.Hostname()
 	pkg.Build.Terminal = hostname
 
-	if pkg.IsInitConfig() {
+	if pkg.IsInitConfig() && pkg.Metadata.Version == "" {
 		pkg.Metadata.Version = config.CLIVersion
 	}
 
@@ -315,19 +314,10 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Record the time of package creation.
 	pkg.Build.Timestamp = now.Format(time.RFC1123Z)
 
-	// Record the migrations that will be ran on the package.
-	pkg.Build.Migrations = []string{
-		deprecated.ScriptsToActionsMigrated,
-		deprecated.PluralizeSetVariable,
-	}
-
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
 
 	pkg.Build.RegistryOverrides = registryOverrides
-
-	// Record the latest version of Zarf without breaking changes to the package structure.
-	pkg.Build.LastNonBreakingVersion = deprecated.LastNonBreakingVersion
 
 	return pkg
 }
