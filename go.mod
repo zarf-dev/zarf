@@ -52,7 +52,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/crypto v0.29.0
-	golang.org/x/sync v0.9.0
+	golang.org/x/sync v0.10.0
 	golang.org/x/term v0.27.0
 	helm.sh/helm/v3 v3.16.3
 	k8s.io/api v0.31.3
