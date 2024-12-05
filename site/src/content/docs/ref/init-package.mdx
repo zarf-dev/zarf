@@ -161,6 +161,12 @@ The `zarf-agent` modifies [ArgoCD applications](https://argo-cd.readthedocs.io/e
 
 > Support for mutating `Application` and `Repository` objects in ArgoCD is in [`beta`](/roadmap#beta) and should be tested on non-production clusters before being deployed to production clusters.
 
+When the agent mutates an image that is not pinned to a digest, it appends a [CRC32 hash](https://en.wikipedia.org/wiki/Cyclic_redundancy_check) to the tag. For example, if the original image is `ghcr.io/stefanprodan/podinfo:6.4.0` and the Zarf registry address is `127.0.0.1:31999`, the mutated image will be tagged as `127.0.0.1:31999/stefanprodan/podinfo:6.4.0-zarf-298505108`. The CRC32 hash, 298505108, is generated using the original image name, ghcr.io/stefanprodan/podinfo, to prevent collisions.
+
+Without this unique hash, images with the same path but from different registries—such as `docker.io/stefanprodan/podinfo:6.4.0`-would overwrite each other when pushed to the Zarf registry. Zarf pushes both the regular tag and unique tag so no images are lost during a push, and the agent can always mutate to the correct image. To which image a pod used before mutation, check the `zarf.dev/original-image-<container-name>` annotation.
+
+Similarly, when Git repositories are pushed to the Zarf Git server their name is appended with a CRC32 hash.
+
 :::note
 
 During the [`zarf init`](/commands/zarf_init) operation, the Zarf Agent will add the `zarf.dev/agent: ignore` label to prevent the Agent from modifying any resources in that namespace. This is done because there is no way to guarantee the images used by pods in existing namespaces are available in the Zarf Registry.
@@ -168,6 +174,8 @@ During the [`zarf init`](/commands/zarf_init) operation, the Zarf Agent will add
 If you would like to adopt pre-existing resources into a Zarf deployment you can use the `--adopt-existing-resources` flag on [`zarf package deploy`](/commands/zarf_package_deploy/) to adopt those resources into the Helm Releases that Zarf manages (including namespaces). This will add the requisite annotations and labels to those resources and drop the `zarf.dev/agent: ignore` label from any namespaces specified by those resources.
 
 :::
+
+### Mutating
 
 #### Excluding Resources from `zarf-agent`
 
