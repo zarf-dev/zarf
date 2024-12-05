@@ -100,7 +100,7 @@ func (suite *PublishCopySkeletonSuite) Test_1_Compose_Everything_Inception() {
 	_, _, err = e2e.Zarf(suite.T(), "package", "create", importception, "-o", "build", "--plain-http", "--confirm")
 	suite.NoError(err)
 
-	_, stdErr, err := e2e.Zarf(suite.T(), "package", "inspect", importEverythingPath)
+	stdOut, _, err := e2e.Zarf(suite.T(), "package", "inspect", importEverythingPath)
 	suite.NoError(err)
 
 	targets := []string{
@@ -109,7 +109,7 @@ func (suite *PublishCopySkeletonSuite) Test_1_Compose_Everything_Inception() {
 	}
 
 	for _, target := range targets {
-		suite.Contains(stdErr, target)
+		suite.Contains(stdOut, target)
 	}
 }
 
