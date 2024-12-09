@@ -32,6 +32,7 @@ import (
 
 // Packager is the main struct for managing packages.
 type Packager struct {
+	// NOTE(mkcp): Storing ctx on structs is not recommended, but this is intended as a temporary workaround.
 	ctx            context.Context
 	cfg            *types.PackagerConfig
 	variableConfig *variables.VariableConfig
