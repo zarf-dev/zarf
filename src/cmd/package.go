@@ -110,7 +110,7 @@ var packageDeployCmd = &cobra.Command{
 		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(&pkgConfig, packager.WithContext(cmd.Context()))
 		if err != nil {
 			return err
 		}
@@ -360,7 +360,7 @@ var packagePublishCmd = &cobra.Command{
 
 		pkgConfig.PublishOpts.PackageDestination = ref.String()
 
-		pkgClient, err := packager.New(&pkgConfig)
+		pkgClient, err := packager.New(&pkgConfig, packager.WithContext(cmd.Context()))
 		if err != nil {
 			return err
 		}
