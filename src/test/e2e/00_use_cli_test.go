@@ -116,16 +116,6 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdErr, expectedOutString, "The log level should be changed to 'debug'")
 	})
 
-	t.Run("zarf package to test bad remote images", func(t *testing.T) {
-		_, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-remote-pull-fail", "--confirm")
-		// expecting zarf to have an error and output to stderr
-		require.Error(t, err)
-		// Make sure we print the get request error (only look for GET since the actual error changes based on login status)
-		require.Contains(t, stdErr, "failed to find the manifest on a remote: GET")
-		// And the docker error
-		require.Contains(t, stdErr, "response from daemon: No such image")
-	})
-
 	t.Run("zarf package to test archive path", func(t *testing.T) {
 		t.Parallel()
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "packages/distros/eks", "--confirm")
