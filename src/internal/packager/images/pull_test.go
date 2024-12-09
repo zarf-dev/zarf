@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -84,6 +85,30 @@ func TestCheckForIndex(t *testing.T) {
 }
 
 func TestPull(t *testing.T) {
+	t.Run("basic pulling of an image", func(t *testing.T) {
+		ref, err := transform.ParseImageRef("ghcr.io/zarf-dev/zarf/agent:v0.32.6@sha256:b3fabdc7d4ecd0f396016ef78da19002c39e3ace352ea0ae4baa2ce9d5958376")
+		require.NoError(t, err)
+		destDir := t.TempDir()
+		pullConfig := PullConfig{
+			DestinationDirectory: destDir,
+			ImageList: []transform.Image{
+				ref,
+			},
+		}
+
+		pulled, err := Pull(context.Background(), pullConfig)
+		require.NoError(t, err)
+		layers, err := pulled[ref].Layers()
+		require.NoError(t, err)
+		// Make sure are all the layers of the image are pulled in
+		for _, layer := range layers {
+			digestHash, err := layer.Digest()
+			require.NoError(t, err)
+			digest, _ := strings.CutPrefix(digestHash.String(), "sha256:")
+			require.FileExists(t, filepath.Join(destDir, fmt.Sprintf("blobs/sha256/%s", digest)))
+		}
+	})
+
 	t.Run("pulling a cosign image is successful and doesn't add anything to the cache", func(t *testing.T) {
 		ref, err := transform.ParseImageRef("ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig")
 		require.NoError(t, err)
