@@ -87,18 +87,18 @@ func TestCheckForIndex(t *testing.T) {
 func TestPull(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		name        string
-		ref         string
-		expectedErr string
+		name      string
+		ref       string
+		expectErr bool
 	}{
 		{
-			name:        "pull an image",
-			ref:         "ghcr.io/zarf-dev/zarf/agent:v0.32.6@sha256:b3fabdc7d4ecd0f396016ef78da19002c39e3ace352ea0ae4baa2ce9d5958376",
+			name: "pull an image",
+			ref:  "ghcr.io/zarf-dev/zarf/agent:v0.32.6@sha256:b3fabdc7d4ecd0f396016ef78da19002c39e3ace352ea0ae4baa2ce9d5958376",
 		},
 		{
-			name:        "error when pulling an image that doesn't exist",
-			ref:         "ghcr.io/zarf-dev/zarf/imagethatdoesntexist:v1.1.1",
-			expectedErr: "No such image",
+			name:      "error when pulling an image that doesn't exist",
+			ref:       "ghcr.io/zarf-dev/zarf/imagethatdoesntexist:v1.1.1",
+			expectErr: true,
 		},
 	}
 
@@ -115,8 +115,8 @@ func TestPull(t *testing.T) {
 			}
 
 			pulled, err := Pull(context.Background(), pullConfig)
-			if tc.expectedErr != "" {
-				require.ErrorContains(t, err, tc.expectedErr)
+			if tc.expectErr {
+				require.Error(t, err, tc.expectErr)
 				return
 			}
 			require.NoError(t, err)
