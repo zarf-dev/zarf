@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -42,8 +43,20 @@ func parsePod(object []byte) (*corev1.Pod, error) {
 	return &pod, nil
 }
 
-func getImageAnnotationKey(containerName string) string {
-	return fmt.Sprintf("%s/original-image-%s", annotationPrefix, containerName)
+func getImageAnnotationKey(ctx context.Context, containerName string) string {
+	annotationName := fmt.Sprintf("original-image-%s", containerName)
+	// The name segment is required and must be 63 characters or less, beginning and ending with
+	// an alphanumeric character ([a-z0-9A-Z]) with dashes (-), underscores (_), dots (.), and alphanumerics between.
+	// https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/#syntax-and-character-set
+	if len(annotationName) > 63 {
+		logger.From(ctx).Debug("truncating container name to fit Kubernetes 63 character annotation name limit", "container", containerName)
+		annotationName = annotationName[:63]
+	}
+	// container names follow RFC 1123 which allows only lowercase alphanumeric characters and hyphens
+	// this ensures we don't end with a hyphen
+	annotationName = strings.TrimRight(annotationName, "-")
+	key := fmt.Sprintf("%s/%s", annotationPrefix, annotationName)
+	return key
 }
 
 func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
@@ -88,7 +101,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		if err != nil {
 			return nil, err
 		}
-		updatedAnnotations[getImageAnnotationKey(container.Name)] = container.Image
+		updatedAnnotations[getImageAnnotationKey(ctx, container.Name)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
@@ -99,7 +112,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		if err != nil {
 			return nil, err
 		}
-		updatedAnnotations[getImageAnnotationKey(container.Name)] = container.Image
+		updatedAnnotations[getImageAnnotationKey(ctx, container.Name)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
@@ -110,7 +123,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		if err != nil {
 			return nil, err
 		}
-		updatedAnnotations[getImageAnnotationKey(container.Name)] = container.Image
+		updatedAnnotations[getImageAnnotationKey(ctx, container.Name)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 

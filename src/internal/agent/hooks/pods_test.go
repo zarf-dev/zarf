@@ -154,3 +154,31 @@ func TestPodMutationWebhook(t *testing.T) {
 		})
 	}
 }
+func TestGetImageAnnotationKey(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		containerName string
+		expectedKey   string
+	}{
+		{
+			containerName: "nginx",
+			expectedKey:   "zarf.dev/original-image-nginx",
+		},
+		{
+			containerName: "a-very-long-container-name-that-exceeds-sixty-three-characters",
+			expectedKey:   "zarf.dev/original-image-a-very-long-container-name-that-exceeds-sixty-th",
+		},
+		{
+			containerName: "remove-trailing-hyphen----",
+			expectedKey:   "zarf.dev/original-image-remove-trailing-hyphen",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.containerName, func(t *testing.T) {
+			t.Parallel()
+			key := getImageAnnotationKey(context.Background(), tt.containerName)
+			require.Equal(t, tt.expectedKey, key)
+		})
+	}
+}
