@@ -197,7 +197,7 @@ func setupLogger(level, format string, color bool) (*slog.Logger, error) {
 		Level:       sLevel,
 		Format:      logger.Format(format),
 		Destination: logger.DestinationDefault,
-		Color:       color,
+		Color:       logger.Color(color),
 	}
 	l, err := logger.New(cfg)
 	if err != nil {

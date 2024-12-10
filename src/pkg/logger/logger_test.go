@@ -76,7 +76,7 @@ func Test_New(t *testing.T) {
 			},
 		},
 		{
-			name: "color can be true",
+			name: "color true is ok",
 			cfg: Config{
 				Color: true,
 			},

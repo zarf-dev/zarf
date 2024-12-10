@@ -131,8 +131,11 @@ type Config struct {
 	Level
 	Format
 	Destination
-	Color bool
+	Color
 }
+
+// Color is a type that represents whether or not to use color in the logger.
+type Color bool
 
 // LogValue of config
 func (c Config) LogValue() slog.Value {
@@ -140,7 +143,7 @@ func (c Config) LogValue() slog.Value {
 		slog.String("level", c.Level.String()),
 		slog.Any("format", c.Format),
 		slog.Any("destination", destinationString(c.Destination)),
-		slog.Bool("color", c.Color),
+		slog.Bool("color", bool(c.Color)),
 	)
 }
 
@@ -175,7 +178,7 @@ func New(cfg Config) (*slog.Logger, error) {
 	case FormatConsole:
 		handler = console.NewHandler(cfg.Destination, &console.HandlerOptions{
 			Level:   slog.Level(cfg.Level),
-			NoColor: !cfg.Color,
+			NoColor: !bool(cfg.Color),
 		})
 	case FormatJSON:
 		handler = slog.NewJSONHandler(cfg.Destination, &opts)
@@ -188,7 +191,7 @@ func New(cfg Config) (*slog.Logger, error) {
 		handler = devslog.NewHandler(DestinationDefault, &devslog.Options{
 			HandlerOptions:  &opts,
 			NewLineAfterLog: true,
-			NoColor:         !cfg.Color,
+			NoColor:         !bool(cfg.Color),
 		})
 	// Use discard handler if no format provided
 	case "", FormatNone:
