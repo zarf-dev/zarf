@@ -44,7 +44,7 @@ func parsePod(object []byte) (*corev1.Pod, error) {
 
 func getImageAnnotationKey(ctx context.Context, containerName string) string {
 	annotationName := fmt.Sprintf("original-image-%s", containerName)
-	// Kubernetes requires all annotation names to be to be less than 63 characters
+	// Kubernetes requires all annotation names to be to be no more than 63 characters
 	// https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/#syntax-and-character-set
 	if len(annotationName) > 63 {
 		logger.From(ctx).Debug("truncating container name to fit Kubernetes 63 character annotation name limit", "container", containerName)
