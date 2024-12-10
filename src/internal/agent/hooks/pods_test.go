@@ -172,6 +172,7 @@ func TestGetImageAnnotationKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.containerName, func(t *testing.T) {
+			t.Parallel()
 			key := getImageAnnotationKey(context.Background(), tt.containerName)
 			require.Equal(t, tt.expectedKey, key)
 		})
