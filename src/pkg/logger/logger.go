@@ -93,8 +93,6 @@ func (f Format) ToLower() Format {
 }
 
 var (
-	// FormatConsoleNoColor uses the standard slog TextHandler
-	FormatConsoleNoColor Format = "console-no-color"
 	// FormatJSON uses the standard slog JSONHandler
 	FormatJSON Format = "json"
 	// FormatConsole uses console-slog to provide prettier colorful messages
@@ -133,6 +131,7 @@ type Config struct {
 	Level
 	Format
 	Destination
+	Color bool
 }
 
 // LogValue of config
@@ -140,7 +139,8 @@ func (c Config) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("level", c.Level.String()),
 		slog.Any("format", c.Format),
-		slog.Any("Destination", destinationString(c.Destination)),
+		slog.Any("destination", destinationString(c.Destination)),
+		slog.Bool("color", c.Color),
 	)
 }
 
@@ -150,6 +150,7 @@ func ConfigDefault() Config {
 		Level:       Info,
 		Format:      FormatConsole,
 		Destination: DestinationDefault, // Stderr
+		Color:       true,
 	}
 }
 
@@ -171,10 +172,10 @@ func New(cfg Config) (*slog.Logger, error) {
 
 	var handler slog.Handler
 	switch cfg.Format.ToLower() {
-	case FormatConsoleNoColor:
+	case FormatConsole:
 		handler = console.NewHandler(cfg.Destination, &console.HandlerOptions{
 			Level:   slog.Level(cfg.Level),
-			NoColor: true,
+			NoColor: !cfg.Color,
 		})
 	case FormatJSON:
 		handler = slog.NewJSONHandler(cfg.Destination, &opts)
@@ -187,6 +188,7 @@ func New(cfg Config) (*slog.Logger, error) {
 		handler = devslog.NewHandler(DestinationDefault, &devslog.Options{
 			HandlerOptions:  &opts,
 			NewLineAfterLog: true,
+			NoColor:         !cfg.Color,
 		})
 	// Use discard handler if no format provided
 	case "", FormatNone:
