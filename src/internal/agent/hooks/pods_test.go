@@ -166,7 +166,7 @@ func TestGetImageAnnotationKey(t *testing.T) {
 		},
 		{
 			containerName: "a-very-long-container-name-that-exceeds-sixty-three-characters",
-			expectedKey:   "zarf.dev/original-image-a-very-long-container-name-that-exceeds",
+			expectedKey:   "zarf.dev/original-image-a-very-long-container-name-that-exceeds-sixty-th",
 		},
 	}
 

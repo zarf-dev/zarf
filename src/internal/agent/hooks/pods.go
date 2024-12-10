@@ -43,11 +43,13 @@ func parsePod(object []byte) (*corev1.Pod, error) {
 }
 
 func getImageAnnotationKey(containerName string) string {
-	key := fmt.Sprintf("%s/original-image-%s", annotationPrefix, containerName)
-	// Kubernetes requires all annotation keys to be less than 63 characters
-	if len(key) > 63 {
-		return key[:63]
+	annotationName := fmt.Sprintf("original-image-%s", containerName)
+	// Kubernetes requires all annotation names to be to be less than 63 characters
+	// https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/#syntax-and-character-set
+	if len(annotationName) > 63 {
+		annotationName = annotationName[:63]
 	}
+	key := fmt.Sprintf("%s/%s", annotationPrefix, annotationName)
 	return key
 }
 
