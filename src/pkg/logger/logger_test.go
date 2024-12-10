@@ -52,12 +52,6 @@ func Test_New(t *testing.T) {
 			},
 		},
 		{
-			name: "Text format is supported",
-			cfg: Config{
-				Format: FormatConsoleNoColor,
-			},
-		},
-		{
 			name: "JSON format is supported",
 			cfg: Config{
 				Format: FormatJSON,
@@ -79,6 +73,12 @@ func Test_New(t *testing.T) {
 			name: "users can send logs to any io.Writer",
 			cfg: Config{
 				Destination: os.Stdout,
+			},
+		},
+		{
+			name: "color true is ok",
+			cfg: Config{
+				Color: true,
 			},
 		},
 	}
