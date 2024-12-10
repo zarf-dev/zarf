@@ -86,7 +86,7 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Configure logger and add it to cmd context.
-	l, err := setupLogger(LogLevelCLI, LogFormat)
+	l, err := setupLogger(LogLevelCLI, LogFormat, !NoColor)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func init() {
 
 	// Logs
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(common.VLogLevel), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(common.VLogFormat), "[beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'console-no-color', 'dev'")
+	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(common.VLogFormat), "[beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'")
 	rootCmd.PersistentFlags().BoolVar(&SkipLogFile, "no-log-file", v.GetBool(common.VNoLogFile), lang.RootCmdFlagSkipLogFile)
 	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(common.VNoProgress), lang.RootCmdFlagNoProgress)
 	rootCmd.PersistentFlags().BoolVar(&NoColor, "no-color", v.GetBool(common.VNoColor), lang.RootCmdFlagNoColor)
@@ -184,7 +184,7 @@ func init() {
 }
 
 // setup Logger handles creating a logger and setting it as the global default.
-func setupLogger(level, format string) (*slog.Logger, error) {
+func setupLogger(level, format string, color bool) (*slog.Logger, error) {
 	// If we didn't get a level from config, fallback to "info"
 	if level == "" {
 		level = "info"
@@ -197,10 +197,14 @@ func setupLogger(level, format string) (*slog.Logger, error) {
 		Level:       sLevel,
 		Format:      logger.Format(format),
 		Destination: logger.DestinationDefault,
+		Color:       logger.Color(color),
 	}
 	l, err := logger.New(cfg)
 	if err != nil {
 		return nil, err
+	}
+	if !color {
+		pterm.DisableColor()
 	}
 	logger.SetDefault(l)
 	l.Debug("logger successfully initialized", "cfg", cfg)

@@ -34,7 +34,7 @@ zarf package inspect [ PACKAGE_SOURCE ] [flags]
   -a, --architecture string        Architecture for OCI images and Zarf packages
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -k, --key string                 Path to public key file for validating signed packages
-      --log-format string          [beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'console-no-color', 'dev'
+      --log-format string          [beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable colors in output
       --no-log-file                Disable log file creation
