@@ -7,7 +7,7 @@ components:
   - name: health-checks
     required: true
     manifests:
-      - name: ready-pod
+      - name: ready-pod-with-long-name-to-test-agent-truncate-annotation-name
         namespace: health-checks
         noWait: true
         files:
@@ -15,7 +15,7 @@ components:
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
     healthChecks:
-      - name: ready-pod
+      - name: ready-pod-with-long-name-to-test-agent-truncate-annotation-name
         namespace: health-checks
         apiVersion: v1
         kind: Pod

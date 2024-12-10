@@ -23,7 +23,7 @@ spec:
         app: game
     spec:
       containers:
-        - name: "multi-game-long-name-to-test-agent-truncate-annotation-name"
+        - name: "multi-game"
           image: "ghcr.io/zarf-dev/doom-game:0.0.1"
           ports:
             - name: http
