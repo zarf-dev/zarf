@@ -169,7 +169,7 @@ func TestGetImageAnnotationKey(t *testing.T) {
 			expectedKey:   "zarf.dev/original-image-a-very-long-container-name-that-exceeds-sixty-th",
 		},
 		{
-			containerName: "remove-trailing-hyphen-",
+			containerName: "remove-trailing-hyphen----",
 			expectedKey:   "zarf.dev/original-image-remove-trailing-hyphen",
 		},
 	}
