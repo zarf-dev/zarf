@@ -108,13 +108,13 @@ func TestFullComposability(t *testing.T) {
     - files/service.yaml
     kustomizations:
     - files
-    - files
+    - files/
   - name: connect-service-two
     namespace: podinfo-compose-two
     files:
     - files/service.yaml
     kustomizations:
-    - files
+    - files/
   charts:
   - name: podinfo-compose
     version: 6.4.0
@@ -160,8 +160,7 @@ func TestFullComposability(t *testing.T) {
       before:
       - dir: sub-package
         cmd: ls
-      - dir: .
-        cmd: ls
+      - cmd: ls
     onDeploy:
       after:
       - cmd: cat coffee-ipsum.txt
