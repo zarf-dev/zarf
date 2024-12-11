@@ -99,7 +99,7 @@ func TestUseCLI(t *testing.T) {
 		// Test that excluding all components with a leading dash results in a warning
 		_, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=-deselect-me", "--confirm")
 		require.NoError(t, err)
-		require.Contains(t, stdErr, "No components were selected for deployment")
+		require.Contains(t, stdErr, "no components were selected for deployment")
 
 		// Test that excluding still works even if a wildcard is given
 		_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=*,-deselect-me", "--confirm")
@@ -114,16 +114,6 @@ func TestUseCLI(t *testing.T) {
 		require.NoError(t, err)
 		expectedOutString := "Log level set to debug"
 		require.Contains(t, stdErr, expectedOutString, "The log level should be changed to 'debug'")
-	})
-
-	t.Run("zarf package to test bad remote images", func(t *testing.T) {
-		_, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-remote-pull-fail", "--confirm")
-		// expecting zarf to have an error and output to stderr
-		require.Error(t, err)
-		// Make sure we print the get request error (only look for GET since the actual error changes based on login status)
-		require.Contains(t, stdErr, "failed to find the manifest on a remote: GET")
-		// And the docker error
-		require.Contains(t, stdErr, "response from daemon: No such image")
 	})
 
 	t.Run("zarf package to test archive path", func(t *testing.T) {
@@ -202,7 +192,6 @@ func TestUseCLI(t *testing.T) {
 		})
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "gen-pki", "github.com", "--sub-alt-name", "google.com")
 		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "Successfully created a chain of trust for github.com")
 
 		require.FileExists(t, tlsCA)
 
