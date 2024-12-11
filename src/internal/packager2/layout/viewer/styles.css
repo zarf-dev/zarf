@@ -1,0 +1,242 @@
+body {
+    background: #10184c;
+    color: #fff;
+    padding: 20px;
+    padding-top: 70px;
+    font-family: Sans-Serif;
+  }
+
+  .dataTable-wrapper {
+    background: rgba(255, 255, 255, 0.045);
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+
+  th.desc,
+  th.asc {
+    color: #4adede;
+  }
+
+  .dataTable-sorter::before {
+    border-top-color: #fff;
+    /* opacity: .7; */
+  }
+
+  .dataTable-sorter::after {
+    border-bottom-color: #fff;
+    /* opacity: .7; */
+  }
+
+  .dataTable-input {
+    width: 20vw;
+  }
+
+  .dataTable-pagination-list li:not(.active) a {
+    color: rgba(255, 255, 255, 0.478);
+  }
+
+  .dataTable-selector {
+    background: none;
+    border-color: #4adede;
+    border-radius: 4px;
+    color: #fff;
+  }
+
+  .dataTable-table tr:hover td {
+    background: #ffffff14;
+  }
+
+  .dataTable-table td a {
+    text-decoration: none;
+    border-bottom: 0.5px dashed #4adedea4;
+    color: #4adede;
+  }
+
+  .top-bar {
+    z-index: 999;
+    position: fixed;
+    left: 0%;
+    right: 0%;
+    top: 0%;
+    height: 40px;
+    padding: 10px;
+
+    /* Dark/Background/Paper/Elevation 16 */
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.15) 100%), #10184c;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .top-bar .element {
+    display: flex;
+    align-items: center;
+  }
+
+  .top-bar .title {
+    font-size: 1.5rem;
+    padding-left: 1rem;
+  }
+
+  .top-bar svg {
+    height: 50px;
+    width: 50px;
+  }
+
+  .sbom-tools {
+    gap: 15px;
+  }
+
+  .sbom-button {
+    position: relative;
+    border: 1px solid #4adede;
+    border-radius: 6px;
+    background-color: #10184c;
+    z-index: 10;
+    padding: 12px 15px 15px 15px;
+    font-size: 14px;
+    color: #fff;
+  }
+
+  .sbom-button:disabled {
+    color: lightgray;
+    border: gray;
+  }
+
+  .sbom-selector-wrapper {
+    position: relative;
+    display: block;
+    max-width: 500px;
+    min-width: 350px;
+    border: 1px solid #4adede;
+    border-radius: 6px;
+    background-color: #10184c;
+    z-index: 10;
+  }
+
+  .sbom-selector-wrapper select {
+    border: none;
+    outline: none;
+    background: transparent;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    border-radius: 0;
+    margin: 0;
+    display: block;
+    width: 100%;
+    padding: 12px 55px 15px 15px;
+    font-size: 14px;
+    color: #fff;
+  }
+
+  .sbom-selector-wrapper:after {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 35px;
+    height: 100%;
+    line-height: 45px;
+    content: "▼";
+    text-align: center;
+    color: #4adede;
+    font-size: 12px;
+    z-index: -1;
+  }
+
+  .sbom-file::file-selector-button {
+    position: relative;
+    border: 1px solid #4adede;
+    border-radius: 6px;
+    background-color: #10184c;
+    z-index: 10;
+    padding: 12px 15px 15px 15px;
+    font-size: 14px;
+    color: #fff;
+    margin-right: 15px;
+  }
+
+  .sbom-spacer {
+    flex-grow: 1
+  }
+
+  #actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+
+  #modal-fader {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    z-index: 99998;
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  #modal-fader.active {
+    display: block;
+  }
+
+  #modal {
+    display: none;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 99999;
+    color: #10184c;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 20px;
+    border-radius: 5px;
+    font-family: sans-serif;
+    top: 50px;
+  }
+
+  #modal.active {
+    display: block;
+  }
+
+  #modal h1,
+  #modal h2,
+  #modal h3,
+  #modal h4,
+  #modal h5,
+  #modal h6 {
+    margin: 0;
+  }
+
+  .modal-btn {
+    background: #10184c;
+    border: none;
+    color: #fff;
+    padding: 10px 15px;
+    box-shadow: none;
+    border-radius: 3px;
+    text-decoration: none;
+    float: right;
+  }
+
+  #actions {
+    margin-bottom: 50px;
+  }
+
+  .file-selector {
+    display: inline-block;
+  }
+
+  .added {
+    background-color: #22541a;
+  }
+
+  .removed {
+    background-color: #541a22;
+  }
+
+  .changed {
+    background-color: #544c1a;
+  }
