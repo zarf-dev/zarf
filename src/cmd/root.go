@@ -44,17 +44,7 @@ var (
 	OutputWriter = os.Stdout
 )
 
-var rootCmd = &cobra.Command{
-	Use:          "zarf COMMAND",
-	Short:        lang.RootCmdShort,
-	Long:         lang.RootCmdLong,
-	Args:         cobra.MaximumNArgs(1),
-	SilenceUsage: true,
-	// TODO(mkcp): Do we actually want to silence errors here?
-	SilenceErrors:     true,
-	PersistentPreRunE: preRun,
-	Run:               run,
-}
+var rootCmd = NewZarfCommand()
 
 func preRun(cmd *cobra.Command, _ []string) error {
 	// If --insecure was provided, set --insecure-skip-tls-verify and --plain-http to match
@@ -124,6 +114,31 @@ func run(cmd *cobra.Command, _ []string) {
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 	}
+}
+
+// NewZarfCommand creates the `zarf` command and its nested children.
+func NewZarfCommand() *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:          "zarf COMMAND",
+		Short:        lang.RootCmdShort,
+		Long:         lang.RootCmdLong,
+		Args:         cobra.MaximumNArgs(1),
+		SilenceUsage: true,
+		// TODO(mkcp): Do we actually want to silence errors here?
+		SilenceErrors:     true,
+		PersistentPreRunE: preRun,
+		Run:               run,
+	}
+
+	// TODO(soltysh): consider adding command groups
+	rootCmd.AddCommand(NewConnectCommand())
+	rootCmd.AddCommand(NewDestroyCommand())
+	rootCmd.AddCommand(NewDevCommand())
+	rootCmd.AddCommand(NewInitCommand())
+	rootCmd.AddCommand(NewInternalCommand(rootCmd))
+	rootCmd.AddCommand(NewPackageCommand())
+
+	return rootCmd
 }
 
 // Execute is the entrypoint for the CLI.
