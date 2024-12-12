@@ -51,7 +51,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.10.0
 	github.com/xeipuuv/gojsonschema v1.2.0
-	golang.org/x/crypto v0.30.0
+	golang.org/x/crypto v0.31.0
 	golang.org/x/sync v0.10.0
 	golang.org/x/term v0.27.0
 	helm.sh/helm/v3 v3.16.3
