@@ -188,7 +188,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 			if err != nil {
 				return err
 			}
-			if cacheImg {
+			if cacheImg && cfg.CacheDirectory != "" {
 				img = cache.Image(img, cache.NewFilesystemCache(cfg.CacheDirectory))
 			}
 
