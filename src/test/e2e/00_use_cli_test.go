@@ -112,7 +112,7 @@ func TestUseCLI(t *testing.T) {
 		// Test that changing the log level actually applies the requested level
 		_, stdErr, err := e2e.Zarf(t, "internal", "crc32", "zarf", "--log-level=debug")
 		require.NoError(t, err)
-		expectedOutString := "Log level set to debug"
+		expectedOutString := "cfg.level=debug"
 		require.Contains(t, stdErr, expectedOutString, "The log level should be changed to 'debug'")
 	})
 

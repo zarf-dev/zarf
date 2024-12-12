@@ -60,7 +60,9 @@ func (e2e *ZarfE2ETest) Zarf(t *testing.T, args ...string) (_ string, _ string, 
 
 // ZarfInDir executes a Zarf command in specific directory.
 func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ string, _ string, err error) {
-	args = append(args, "--log-format=console")
+	if !slices.Contains(args, "tools") {
+		args = append(args, "--log-format=console", "--no-color")
+	}
 	if !slices.Contains(args, "--tmpdir") && !slices.Contains(args, "tools") {
 		tmpdir, err := os.MkdirTemp("", "zarf-")
 		if err != nil {
