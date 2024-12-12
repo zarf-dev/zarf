@@ -188,7 +188,7 @@ func New(cfg Config) (*slog.Logger, error) {
 		})
 	case FormatDev:
 		opts.AddSource = true
-		handler = devslog.NewHandler(DestinationDefault, &devslog.Options{
+		handler = devslog.NewHandler(cfg.Destination, &devslog.Options{
 			HandlerOptions:  &opts,
 			NewLineAfterLog: true,
 			NoColor:         !bool(cfg.Color),

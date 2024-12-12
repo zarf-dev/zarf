@@ -56,9 +56,6 @@ func (p *Packager) Create(ctx context.Context) error {
 	}
 	//  Store on packager config
 	p.cfg.Pkg = pkg
-	for _, warning := range warnings {
-		l.Warn(warning)
-	}
 	l.Info("package loaded",
 		"kind", pkg.Kind,
 		"name", pkg.Metadata.Name,
