@@ -94,18 +94,12 @@ func (p *Packager) Deploy(ctx context.Context) error {
 		return err
 	}
 	warnings = append(warnings, validateWarnings...)
-	for _, warning := range validateWarnings {
-		l.Warn(warning)
-	}
 
 	sbomViewFiles, sbomWarnings, err := p.layout.SBOMs.StageSBOMViewFiles()
 	if err != nil {
 		return err
 	}
 	warnings = append(warnings, sbomWarnings...)
-	for _, warning := range sbomWarnings {
-		l.Warn(warning)
-	}
 
 	// Confirm the overall package deployment
 	if !p.confirmAction(ctx, config.ZarfDeployStage, warnings, sbomViewFiles) {
