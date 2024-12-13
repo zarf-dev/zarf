@@ -24,8 +24,7 @@ type RegistryResponse struct {
 
 func TestConnectAndCreds(t *testing.T) {
 	t.Log("E2E: Connect")
-	ctx := context.Background()
-	ctx = logger.WithContext(ctx, e2e.GetLogger(t))
+	ctx := logger.WithContext(context.Background(), e2e.GetLogger(t))
 
 	prevAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)

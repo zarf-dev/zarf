@@ -126,7 +126,7 @@ func (e2e *ZarfE2ETest) GetMismatchedArch() string {
 func (e2e *ZarfE2ETest) GetLogger(t *testing.T) *slog.Logger {
 	t.Helper()
 	cfg := logger.Config{
-		Level:       logger.Debug,
+		Level:       logger.Info,
 		Format:      logger.FormatConsole,
 		Destination: logger.DestinationDefault, // Stderr
 		Color:       false,

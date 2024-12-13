@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -187,6 +188,7 @@ func (suite *PublishCopySkeletonSuite) Test_3_Copy() {
 	dstRegistry := testutil.SetupInMemoryRegistry(testutil.TestContext(t), t, 31890)
 	dstRef := strings.Replace(ref, suite.Reference.Registry, dstRegistry, 1)
 	ctx := testutil.TestContext(t)
+	ctx = logger.WithContext(ctx, e2e.GetLogger(t))
 
 	src, err := zoci.NewRemote(ctx, ref, oci.PlatformForArch(e2e.Arch), oci.WithPlainHTTP(true))
 	suite.NoError(err)
