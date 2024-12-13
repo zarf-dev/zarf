@@ -56,7 +56,7 @@ func TestLint(t *testing.T) {
 		require.Contains(t, strippedStdOut, "image-in-good-flavor-component:unpinned")
 
 		// Check reported filepaths
-		require.Contains(t, strippedStdErr, "Linting package \"dos-games\" at oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0")
-		require.Contains(t, strippedStdErr, fmt.Sprintf("Linting package \"lint\" at %s", testPackagePath))
+		require.Contains(t, strippedStdErr, "linting package name=dos-games path=oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0")
+		require.Contains(t, strippedStdErr, fmt.Sprintf("linting package name=lint path=%s", testPackagePath))
 	})
 }

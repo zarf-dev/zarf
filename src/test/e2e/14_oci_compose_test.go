@@ -65,18 +65,15 @@ func (suite *PublishCopySkeletonSuite) Test_0_Publish_Skeletons() {
 	ref := suite.Reference.String()
 
 	helmCharts := filepath.Join("examples", "helm-charts")
-	_, stdErr, err := e2e.Zarf(suite.T(), "package", "publish", helmCharts, "oci://"+ref, "--plain-http")
+	_, _, err := e2e.Zarf(suite.T(), "package", "publish", helmCharts, "oci://"+ref, "--plain-http")
 	suite.NoError(err)
-	suite.Contains(stdErr, "Published "+ref)
 
 	composable := filepath.Join("src", "test", "packages", "09-composable-packages")
-	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", composable, "oci://"+ref, "--plain-http")
+	_, _, err = e2e.Zarf(suite.T(), "package", "publish", composable, "oci://"+ref, "--plain-http")
 	suite.NoError(err)
-	suite.Contains(stdErr, "Published "+ref)
 
-	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", importEverything, "oci://"+ref, "--plain-http")
+	_, _, err = e2e.Zarf(suite.T(), "package", "publish", importEverything, "oci://"+ref, "--plain-http")
 	suite.NoError(err)
-	suite.Contains(stdErr, "Published "+ref)
 
 	_, _, err = e2e.Zarf(suite.T(), "package", "inspect", "oci://"+ref+"/import-everything:0.0.1", "--plain-http", "-a", "skeleton")
 	suite.NoError(err)
