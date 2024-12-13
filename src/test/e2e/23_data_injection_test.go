@@ -14,12 +14,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/test"
 )
 
 func TestDataInjection(t *testing.T) {
 	t.Log("E2E: Data injection")
 
-	ctx := logger.WithContext(context.Background(), e2e.GetLogger(t))
+	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
 	path := fmt.Sprintf("build/zarf-package-kiwix-%s-3.5.0.tar", e2e.Arch)
 
 	tmpdir := t.TempDir()

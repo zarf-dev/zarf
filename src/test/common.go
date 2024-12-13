@@ -32,6 +32,20 @@ type ZarfE2ETest struct {
 	ApplianceModeKeep bool
 }
 
+// GetLogger returns the default log configuration for the tests.
+func GetLogger(t *testing.T) *slog.Logger {
+	t.Helper()
+	cfg := logger.Config{
+		Level:       logger.Info,
+		Format:      logger.FormatConsole,
+		Destination: logger.DestinationDefault, // Stderr
+		Color:       false,
+	}
+	l, err := logger.New(cfg)
+	require.NoError(t, err)
+	return l
+}
+
 // GetCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run.
 func GetCLIName() string {
 	var binaryName string
@@ -120,20 +134,6 @@ func (e2e *ZarfE2ETest) GetMismatchedArch() string {
 	default:
 		return "arm64"
 	}
-}
-
-// GetLogger returns the default log configuration for the tests.
-func (e2e *ZarfE2ETest) GetLogger(t *testing.T) *slog.Logger {
-	t.Helper()
-	cfg := logger.Config{
-		Level:       logger.Info,
-		Format:      logger.FormatConsole,
-		Destination: logger.DestinationDefault, // Stderr
-		Color:       false,
-	}
-	l, err := logger.New(cfg)
-	require.NoError(t, err)
-	return l
 }
 
 // GetZarfVersion returns the current build/zarf version

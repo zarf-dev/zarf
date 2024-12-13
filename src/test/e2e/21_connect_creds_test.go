@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/test"
 )
 
 type RegistryResponse struct {
@@ -24,7 +25,7 @@ type RegistryResponse struct {
 
 func TestConnectAndCreds(t *testing.T) {
 	t.Log("E2E: Connect")
-	ctx := logger.WithContext(context.Background(), e2e.GetLogger(t))
+	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
 
 	prevAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
