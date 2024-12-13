@@ -38,20 +38,20 @@ func TestLint(t *testing.T) {
 		require.NoError(t, osUnsetErr, "Unable to cleanup ZARF_CONFIG")
 		require.Error(t, err, "Require an exit code since there was warnings / errors")
 		multiSpaceRegex := regexp.MustCompile(`\s{2,}|\n`)
-		strippedStdout := multiSpaceRegex.ReplaceAllString(stdout, " ")
+		strippedStdOut := multiSpaceRegex.ReplaceAllString(stdout, " ")
 
 		key := "WHATEVER_IMAGE"
-		require.Contains(t, strippedStdout, lang.UnsetVarLintWarning)
-		require.Contains(t, strippedStdout, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
-		require.Contains(t, strippedStdout, ".components.[2].repos.[0] | Unpinned repository")
-		require.Contains(t, strippedStdout, ".metadata | Additional property description1 is not allowed")
-		require.Contains(t, strippedStdout, ".components.[0].import | Additional property not-path is not allowed")
+		require.Contains(t, strippedStdOut, lang.UnsetVarLintWarning)
+		require.Contains(t, strippedStdOut, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
+		require.Contains(t, strippedStdOut, ".components.[2].repos.[0] | Unpinned repository")
+		require.Contains(t, strippedStdOut, ".metadata | Additional property description1 is not allowed")
+		require.Contains(t, strippedStdOut, ".components.[0].import | Additional property not-path is not allowed")
 		// Testing the import / compose on lint is working
-		require.Contains(t, strippedStdout, ".components.[1].images.[0] | Image not pinned with digest - registry.com:9001/whatever/image:latest")
+		require.Contains(t, strippedStdOut, ".components.[1].images.[0] | Image not pinned with digest - registry.com:9001/whatever/image:latest")
 		// Testing import / compose + variables are working
-		require.Contains(t, strippedStdout, ".components.[2].images.[3] | Image not pinned with digest - busybox:latest")
+		require.Contains(t, strippedStdOut, ".components.[2].images.[3] | Image not pinned with digest - busybox:latest")
 		// Testing OCI imports get linted
-		require.Contains(t, strippedStdout, ".components.[0].images.[0] | Image not pinned with digest - ghcr.io/zarf-dev/doom-game:0.0.1")
+		require.Contains(t, strippedStdOut, ".components.[0].images.[0] | Image not pinned with digest - ghcr.io/zarf-dev/doom-game:0.0.1")
 
 		// Check flavors
 		require.NotContains(t, stdout, "image-in-bad-flavor-component:unpinned")
