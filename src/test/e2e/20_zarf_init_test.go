@@ -64,7 +64,7 @@ func TestZarfInit(t *testing.T) {
 	}
 
 	// run `zarf init`
-	_, initStdErr, err := e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace", "--confirm")
+	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "--confirm")
 	require.NoError(t, err)
 
 	// Verify that any state secrets were not included in the log
@@ -75,9 +75,6 @@ func TestZarfInit(t *testing.T) {
 	require.NoError(t, err)
 	err = json.Unmarshal(stateJSON, &state)
 	require.NoError(t, err)
-
-	// replace this with a call to tee the log file
-	e2e.GetLogFileContents(t, e2e.StripMessageFormatting(initStdErr))
 
 	if e2e.ApplianceMode {
 		// make sure that we upgraded `k3s` correctly and are running the correct version - this should match that found in `packages/distros/k3s`
@@ -105,23 +102,6 @@ func TestZarfInit(t *testing.T) {
 	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1") //nolint:errcheck
 	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")     //nolint:errcheck
 }
-
-// func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.ZarfState) {
-// 	t.Helper()
-
-// 	require.NotContains(t, logText, zarfState.AgentTLS.CA)
-// 	require.NotContains(t, logText, string(zarfState.AgentTLS.CA))
-// 	require.NotContains(t, logText, zarfState.AgentTLS.Cert)
-// 	require.NotContains(t, logText, string(zarfState.AgentTLS.Cert))
-// 	require.NotContains(t, logText, zarfState.AgentTLS.Key)
-// 	require.NotContains(t, logText, string(zarfState.AgentTLS.Key))
-// 	require.NotContains(t, logText, zarfState.ArtifactServer.PushToken)
-// 	require.NotContains(t, logText, zarfState.GitServer.PullPassword)
-// 	require.NotContains(t, logText, zarfState.GitServer.PushPassword)
-// 	require.NotContains(t, logText, zarfState.RegistryInfo.PullPassword)
-// 	require.NotContains(t, logText, zarfState.RegistryInfo.PushPassword)
-// 	require.NotContains(t, logText, zarfState.RegistryInfo.Secret)
-// }
 
 func verifyZarfNamespaceLabels(t *testing.T) {
 	t.Helper()

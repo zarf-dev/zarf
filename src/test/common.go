@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"runtime"
@@ -30,8 +31,6 @@ type ZarfE2ETest struct {
 	ApplianceMode     bool
 	ApplianceModeKeep bool
 }
-
-var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
 
 // GetCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run.
 func GetCLIName() string {
@@ -123,24 +122,18 @@ func (e2e *ZarfE2ETest) GetMismatchedArch() string {
 	}
 }
 
-// GetLogFileContents gets the log file contents from a given run's std error.
-func (e2e *ZarfE2ETest) GetLogFileContents(t *testing.T, stdErr string) string {
-	get, err := helpers.MatchRegex(logRegex, stdErr)
-	require.NoError(t, err)
-	logFile := get("logFile")
-	logContents, err := os.ReadFile(logFile)
-	require.NoError(t, err)
-	return string(logContents)
-}
-
-// GetLogConfig returns the default log configuration for the tests.
-func (e2e *ZarfE2ETest) GetLogConfig() logger.Config {
-	return logger.Config{
+// GetLogger returns the default log configuration for the tests.
+func (e2e *ZarfE2ETest) GetLogger(t *testing.T) *slog.Logger {
+	t.Helper()
+	cfg := logger.Config{
 		Level:       logger.Debug,
 		Format:      logger.FormatConsole,
 		Destination: logger.DestinationDefault, // Stderr
 		Color:       false,
 	}
+	l, err := logger.New(cfg)
+	require.NoError(t, err)
+	return l
 }
 
 // GetZarfVersion returns the current build/zarf version
