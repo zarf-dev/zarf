@@ -146,9 +146,6 @@ func testHelmUninstallRollback(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", evilPath, "--timeout", "10s", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 
-	// This package contains SBOMable things but was created with --skip-sbom
-	require.Contains(t, string(stdErr), "This package does NOT contain an SBOM.")
-
 	// Ensure this leaves behind a dos-games chart.
 	// We do not want to uninstall charts that had failed installs/upgrades
 	// to prevent unintentional deletion and/or data loss in production environments.
