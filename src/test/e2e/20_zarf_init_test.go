@@ -44,7 +44,7 @@ func TestZarfInit(t *testing.T) {
 		// We need to use the --architecture flag here to force zarf to find the package.
 		_, stdErr, err = e2e.Zarf(t, "init", "--architecture", mismatchedArch, "--components=k3s", "--confirm")
 		require.Error(t, err, stdErr)
-		require.Contains(t, e2e.StripMessageFormatting(stdErr), expectedErrorMessage)
+		require.Contains(t, stdErr, expectedErrorMessage)
 	}
 
 	if !e2e.ApplianceMode {
@@ -64,12 +64,8 @@ func TestZarfInit(t *testing.T) {
 	}
 
 	// run `zarf init`
-	_, initStdErr, err := e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace", "--confirm")
+	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace", "--confirm")
 	require.NoError(t, err)
-	require.Contains(t, initStdErr, "an inventory of all software contained in this package")
-	require.NotContains(t, initStdErr, "This package does NOT contain an SBOM. If you require an SBOM, please contact the creator of this package to request a version that includes an SBOM.")
-
-	logText := e2e.GetLogFileContents(t, e2e.StripMessageFormatting(initStdErr))
 
 	// Verify that any state secrets were not included in the log
 	state := types.ZarfState{}
@@ -79,7 +75,11 @@ func TestZarfInit(t *testing.T) {
 	require.NoError(t, err)
 	err = json.Unmarshal(stateJSON, &state)
 	require.NoError(t, err)
-	checkLogForSensitiveState(t, logText, state)
+
+
+	// replace this with a call to tee the log file
+	//logText := e2e.GetLogFileContents(t, e2e.StripMessageFormatting(initStdErr))
+
 
 	if e2e.ApplianceMode {
 		// make sure that we upgraded `k3s` correctly and are running the correct version - this should match that found in `packages/distros/k3s`

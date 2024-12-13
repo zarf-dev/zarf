@@ -15,6 +15,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 type RegistryResponse struct {
@@ -24,6 +25,9 @@ type RegistryResponse struct {
 func TestConnectAndCreds(t *testing.T) {
 	t.Log("E2E: Connect")
 	ctx := context.Background()
+	l, err := logger.New(e2e.GetLogConfig())
+	require.NoError(t, err)
+	ctx = logger.WithContext(ctx, l)
 
 	prevAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
@@ -36,7 +40,7 @@ func TestConnectAndCreds(t *testing.T) {
 
 	connectToZarfServices(ctx, t)
 
-	stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "--confirm", "--log-format=console", "--no-color")
 	require.NoError(t, err, stdOut, stdErr)
 
 	newAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
@@ -104,13 +108,13 @@ func connectToZarfServices(ctx context.Context, t *testing.T) {
 	require.Contains(t, stdOut, "library/registry")
 
 	// Get the git credentials
-	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "git")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "git", "--log-format=console", "--no-color")
 	require.NoError(t, err, stdOut, stdErr)
 	gitPushPassword := strings.TrimSpace(stdOut)
-	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "git-readonly")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "git-readonly", "--log-format=console", "--no-color")
 	require.NoError(t, err, stdOut, stdErr)
 	gitPullPassword := strings.TrimSpace(stdOut)
-	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "artifact")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "artifact", "--log-format=console", "--no-color")
 	require.NoError(t, err, stdOut, stdErr)
 	gitArtifactToken := strings.TrimSpace(stdOut)
 

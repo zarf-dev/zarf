@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
 
@@ -130,6 +131,16 @@ func (e2e *ZarfE2ETest) GetLogFileContents(t *testing.T, stdErr string) string {
 	logContents, err := os.ReadFile(logFile)
 	require.NoError(t, err)
 	return string(logContents)
+}
+
+// GetLogConfig returns the default log configuration for the tests.
+func (e2e *ZarfE2ETest) GetLogConfig() logger.Config {
+	return logger.Config{
+		Level:       logger.Debug,
+		Format:      logger.FormatConsole,
+		Destination: logger.DestinationDefault, // Stderr
+		Color:       false,
+	}
 }
 
 // GetZarfVersion returns the current build/zarf version
