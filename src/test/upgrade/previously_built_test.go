@@ -20,6 +20,7 @@ func kubectl(t *testing.T, args ...string) (string, string, error) {
 }
 
 func zarf(t *testing.T, args ...string) (string, string, error) {
+	args = append(args, "--log-format=console", "--no-color")
 	zarfBinPath := path.Join("../../../build", test.GetCLIName())
 	return exec.CmdWithTesting(t, exec.PrintCfg(), zarfBinPath, args...)
 }
