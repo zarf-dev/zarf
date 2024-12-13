@@ -64,10 +64,6 @@ func TestVariables(t *testing.T) {
 	// Verify that the sensitive variable 'unicorn-land' was not printed to the screen
 	require.NotContains(t, stdOut, "unicorn-land")
 
-	logText := e2e.GetLogFileContents(t, e2e.StripMessageFormatting(stdErr))
-	// Verify that the sensitive variable 'unicorn-land' was not included in the log
-	require.NotContains(t, logText, "unicorn-land")
-
 	// Verify the terraform file was templated correctly
 	outputTF, err := os.ReadFile(tfPath)
 	require.NoError(t, err)

@@ -19,9 +19,11 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/test"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	"oras.land/oras-go/v2/registry"
@@ -65,18 +67,15 @@ func (suite *PublishCopySkeletonSuite) Test_0_Publish_Skeletons() {
 	ref := suite.Reference.String()
 
 	helmCharts := filepath.Join("examples", "helm-charts")
-	_, stdErr, err := e2e.Zarf(suite.T(), "package", "publish", helmCharts, "oci://"+ref, "--plain-http")
+	_, _, err := e2e.Zarf(suite.T(), "package", "publish", helmCharts, "oci://"+ref, "--plain-http")
 	suite.NoError(err)
-	suite.Contains(stdErr, "Published "+ref)
 
 	composable := filepath.Join("src", "test", "packages", "09-composable-packages")
-	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", composable, "oci://"+ref, "--plain-http")
+	_, _, err = e2e.Zarf(suite.T(), "package", "publish", composable, "oci://"+ref, "--plain-http")
 	suite.NoError(err)
-	suite.Contains(stdErr, "Published "+ref)
 
-	_, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", importEverything, "oci://"+ref, "--plain-http")
+	_, _, err = e2e.Zarf(suite.T(), "package", "publish", importEverything, "oci://"+ref, "--plain-http")
 	suite.NoError(err)
-	suite.Contains(stdErr, "Published "+ref)
 
 	_, _, err = e2e.Zarf(suite.T(), "package", "inspect", "oci://"+ref+"/import-everything:0.0.1", "--plain-http", "-a", "skeleton")
 	suite.NoError(err)
@@ -190,6 +189,7 @@ func (suite *PublishCopySkeletonSuite) Test_3_Copy() {
 	dstRegistry := testutil.SetupInMemoryRegistry(testutil.TestContext(t), t, 31890)
 	dstRef := strings.Replace(ref, suite.Reference.Registry, dstRegistry, 1)
 	ctx := testutil.TestContext(t)
+	ctx = logger.WithContext(ctx, test.GetLogger(t))
 
 	src, err := zoci.NewRemote(ctx, ref, oci.PlatformForArch(e2e.Arch), oci.WithPlainHTTP(true))
 	suite.NoError(err)

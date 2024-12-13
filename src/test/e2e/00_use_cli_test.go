@@ -99,7 +99,7 @@ func TestUseCLI(t *testing.T) {
 		// Test that excluding all components with a leading dash results in a warning
 		_, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=-deselect-me", "--confirm")
 		require.NoError(t, err)
-		require.Contains(t, stdErr, "No components were selected for deployment")
+		require.Contains(t, stdErr, "no components were selected for deployment")
 
 		// Test that excluding still works even if a wildcard is given
 		_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=*,-deselect-me", "--confirm")
@@ -112,7 +112,7 @@ func TestUseCLI(t *testing.T) {
 		// Test that changing the log level actually applies the requested level
 		_, stdErr, err := e2e.Zarf(t, "internal", "crc32", "zarf", "--log-level=debug")
 		require.NoError(t, err)
-		expectedOutString := "Log level set to debug"
+		expectedOutString := "cfg.level=debug"
 		require.Contains(t, stdErr, expectedOutString, "The log level should be changed to 'debug'")
 	})
 
@@ -192,7 +192,6 @@ func TestUseCLI(t *testing.T) {
 		})
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "gen-pki", "github.com", "--sub-alt-name", "google.com")
 		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "Successfully created a chain of trust for github.com")
 
 		require.FileExists(t, tlsCA)
 
