@@ -24,7 +24,6 @@ func (p *Packager) confirmAction(ctx context.Context, stage string, warnings []s
 	pterm.Println()
 	l := logger.From(ctx)
 	message.HeaderInfof("📦 PACKAGE DEFINITION")
-	l := logger.From(ctx)
 	err := utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(stage), true)
 	if err != nil {
 		message.WarnErr(err, "unable to print yaml")
