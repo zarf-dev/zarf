@@ -13,15 +13,16 @@ import (
 	test "github.com/zarf-dev/zarf/src/test"
 )
 
+var zarfBinPath = path.Join("../../../build", test.GetCLIName())
+
 func kubectl(t *testing.T, args ...string) (string, string, error) {
 	tk := []string{"tools", "kubectl"}
 	args = append(tk, args...)
-	return zarf(t, args...)
+	return exec.CmdWithTesting(t, exec.PrintCfg(), zarfBinPath, args...)
 }
 
 func zarf(t *testing.T, args ...string) (string, string, error) {
 	args = append(args, "--log-format=console", "--no-color")
-	zarfBinPath := path.Join("../../../build", test.GetCLIName())
 	return exec.CmdWithTesting(t, exec.PrintCfg(), zarfBinPath, args...)
 }
 
