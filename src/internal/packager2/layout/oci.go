@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -144,5 +145,7 @@ func annotationsFromMetadata(metadata v1alpha1.ZarfMetadata) map[string]string {
 	if vendor := metadata.Vendor; vendor != "" {
 		annotations[ocispec.AnnotationVendor] = vendor
 	}
+	// annotations explicitly defined in `metadata.annotations` take precedence over legacy fields
+	maps.Copy(annotations, metadata.Annotations)
 	return annotations
 }
