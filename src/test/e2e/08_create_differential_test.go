@@ -35,7 +35,7 @@ func TestCreateDifferential(t *testing.T) {
 	// Build the differential package without changing the version
 	_, stdErr, err = e2e.Zarf(t, "package", "create", packagePath, "--set=PACKAGE_VERSION=v0.25.0", differentialFlag, "--confirm")
 	require.Error(t, err, "zarf package create should have errored when a differential package was being created without updating the package version number")
-	require.Contains(t, e2e.StripMessageFormatting(stdErr), lang.PkgCreateErrDifferentialSameVersion)
+	require.Contains(t, stdErr, lang.PkgCreateErrDifferentialSameVersion)
 
 	// Build the differential package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", packagePath, "--set=PACKAGE_VERSION=v0.26.0", differentialFlag, "--confirm")
