@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
+// TODO (@AustinAbro321) - remove this test in favor of unit testing lint.Validate
 func TestLint(t *testing.T) {
 	t.Log("E2E: Lint")
 
@@ -31,32 +33,32 @@ func TestLint(t *testing.T) {
 		configPath := filepath.Join(testPackagePath, "zarf-config.toml")
 		osSetErr := os.Setenv("ZARF_CONFIG", configPath)
 		require.NoError(t, osSetErr, "Unable to set ZARF_CONFIG")
-		stdOut, stdErr, err := e2e.Zarf(t, "dev", "lint", testPackagePath, "-f", "good-flavor")
+		stdout, stderr, err := e2e.Zarf(t, "dev", "lint", testPackagePath, "-f", "good-flavor")
 		osUnsetErr := os.Unsetenv("ZARF_CONFIG")
 		require.NoError(t, osUnsetErr, "Unable to cleanup ZARF_CONFIG")
 		require.Error(t, err, "Require an exit code since there was warnings / errors")
-		strippedStdOut := e2e.StripMessageFormatting(stdOut)
-		strippedStdErr := e2e.StripMessageFormatting(stdErr)
+		multiSpaceRegex := regexp.MustCompile(`\s{2,}|\n`)
+		strippedStdout := multiSpaceRegex.ReplaceAllString(stdout, " ")
 
 		key := "WHATEVER_IMAGE"
-		require.Contains(t, strippedStdOut, lang.UnsetVarLintWarning)
-		require.Contains(t, strippedStdOut, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
-		require.Contains(t, strippedStdOut, ".components.[2].repos.[0] | Unpinned repository")
-		require.Contains(t, strippedStdOut, ".metadata | Additional property description1 is not allowed")
-		require.Contains(t, strippedStdOut, ".components.[0].import | Additional property not-path is not allowed")
+		require.Contains(t, strippedStdout, lang.UnsetVarLintWarning)
+		require.Contains(t, strippedStdout, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
+		require.Contains(t, strippedStdout, ".components.[2].repos.[0] | Unpinned repository")
+		require.Contains(t, strippedStdout, ".metadata | Additional property description1 is not allowed")
+		require.Contains(t, strippedStdout, ".components.[0].import | Additional property not-path is not allowed")
 		// Testing the import / compose on lint is working
-		require.Contains(t, strippedStdOut, ".components.[1].images.[0] | Image not pinned with digest - registry.com:9001/whatever/image:latest")
+		require.Contains(t, strippedStdout, ".components.[1].images.[0] | Image not pinned with digest - registry.com:9001/whatever/image:latest")
 		// Testing import / compose + variables are working
-		require.Contains(t, strippedStdOut, ".components.[2].images.[3] | Image not pinned with digest - busybox:latest")
+		require.Contains(t, strippedStdout, ".components.[2].images.[3] | Image not pinned with digest - busybox:latest")
 		// Testing OCI imports get linted
-		require.Contains(t, strippedStdOut, ".components.[0].images.[0] | Image not pinned with digest - ghcr.io/zarf-dev/doom-game:0.0.1")
+		require.Contains(t, strippedStdout, ".components.[0].images.[0] | Image not pinned with digest - ghcr.io/zarf-dev/doom-game:0.0.1")
 
 		// Check flavors
-		require.NotContains(t, strippedStdOut, "image-in-bad-flavor-component:unpinned")
-		require.Contains(t, strippedStdOut, "image-in-good-flavor-component:unpinned")
+		require.NotContains(t, stdout, "image-in-bad-flavor-component:unpinned")
+		require.Contains(t, stdout, "image-in-good-flavor-component:unpinned")
 
 		// Check reported filepaths
-		require.Contains(t, strippedStdErr, "linting package name=dos-games path=oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0")
-		require.Contains(t, strippedStdErr, fmt.Sprintf("linting package name=lint path=%s", testPackagePath))
+		require.Contains(t, stderr, "linting package name=dos-games path=oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0")
+		require.Contains(t, stderr, fmt.Sprintf("linting package name=lint path=%s", testPackagePath))
 	})
 }
