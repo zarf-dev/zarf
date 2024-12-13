@@ -27,7 +27,7 @@ require (
 	github.com/fluxcd/pkg/apis/meta v1.9.0
 	github.com/fluxcd/source-controller/api v1.4.1
 	github.com/go-git/go-git/v5 v5.12.0
-	github.com/goccy/go-yaml v1.15.8
+	github.com/goccy/go-yaml v1.15.9
 	github.com/gofrs/flock v0.12.1
 	github.com/golang-cz/devslog v0.0.11
 	github.com/google/go-containerregistry v0.20.2
