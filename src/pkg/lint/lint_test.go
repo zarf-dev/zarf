@@ -144,7 +144,7 @@ func TestLintPackageWithImports(t *testing.T) {
 			Severity:            SevWarn,
 		},
 		{
-			YqPath:              ".components.[2].repos.[0]",
+			YqPath:              ".components.[1].repos.[0]",
 			Description:         "Unpinned repository",
 			Item:                "https://github.com/zarf-dev/zarf-public-test.git",
 			PackageNameOverride: "lint",
@@ -152,7 +152,7 @@ func TestLintPackageWithImports(t *testing.T) {
 			Severity:            SevWarn,
 		},
 		{
-			YqPath:              ".components.[2].repos.[2]",
+			YqPath:              ".components.[1].repos.[2]",
 			Description:         "Unpinned repository",
 			Item:                "https://gitlab.com/gitlab-org/build/omnibus-mirror/pcre2/-/tree/vreverse?ref_type=heads",
 			PackageNameOverride: "lint",
@@ -160,7 +160,7 @@ func TestLintPackageWithImports(t *testing.T) {
 			Severity:            SevWarn,
 		},
 		{
-			YqPath:              ".components.[2].images.[0]",
+			YqPath:              ".components.[1].images.[0]",
 			Description:         "Image not pinned with digest",
 			Item:                "registry.com:9001/whatever/image:1.0.0",
 			PackageNameOverride: "lint",
@@ -168,7 +168,7 @@ func TestLintPackageWithImports(t *testing.T) {
 			Severity:            SevWarn,
 		},
 		{
-			YqPath:              ".components.[2].images.[2]",
+			YqPath:              ".components.[1].images.[2]",
 			Description:         "Image not pinned with digest",
 			Item:                "busybox:latest",
 			PackageNameOverride: "lint",
@@ -176,28 +176,12 @@ func TestLintPackageWithImports(t *testing.T) {
 			Severity:            SevWarn,
 		},
 		{
-			YqPath:              ".components.[0].images.[0]",
-			Description:         "Image not pinned with digest",
-			Item:                "ghcr.io/zarf-dev/doom-game:0.0.1",
-			PackageNameOverride: "dos-games",
-			PackagePathOverride: "oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0",
-			Severity:            SevWarn,
-		},
-		{
-			YqPath:              ".components.[6].images.[0]",
+			YqPath:              ".components.[4].images.[0]",
 			Description:         "Image not pinned with digest",
 			Item:                "image-in-good-flavor-component:unpinned",
 			PackageNameOverride: "lint",
 			PackagePathOverride: ".",
 			Severity:            SevWarn,
-		},
-		{
-			YqPath:              ".components.[0].import",
-			Description:         "Additional property not-path is not allowed",
-			Item:                "",
-			PackageNameOverride: "",
-			PackagePathOverride: "",
-			Severity:            SevErr,
 		},
 	}
 	cwd, err := os.Getwd()

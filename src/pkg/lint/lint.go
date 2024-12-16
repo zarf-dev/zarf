@@ -133,9 +133,6 @@ func templateZarfObj(zarfObj any, setVariables map[string]string) ([]PackageFind
 				})
 			}
 		}
-		// if unSetTemplates {
-
-		// }
 		for key, value := range setVariables {
 			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
 		}

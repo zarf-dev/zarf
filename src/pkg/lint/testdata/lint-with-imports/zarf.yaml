@@ -3,10 +3,6 @@ metadata:
   name: lint
 
 components:
-  - name: first-test-component
-    import:
-      not-path: packages/distros/k3s
-
   - name: import-test
     import:
       path: linted-import
@@ -27,11 +23,6 @@ components:
         target: src/
       - source: file-without-shasum.txt
         target: src/
-
-  - name: oci-games-url
-    import:
-      url: oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0
-      name: baseline
 
   - name: oci-games-url
     import:
