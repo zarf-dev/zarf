@@ -1,4 +1,5 @@
 kind: ZarfPackageConfig
+# Tests that the schema regex validation happen after templating
 metadata:
   name: "###ZARF_PKG_VAR_PACKAGE_NAME###"
 components:
