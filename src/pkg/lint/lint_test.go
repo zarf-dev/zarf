@@ -120,6 +120,7 @@ func TestLintPackageWithImports(t *testing.T) {
 			PackagePathOverride: ".",
 			Severity:            SevWarn,
 		},
+		// Test imported skeleton package lints properly
 		{
 			YqPath:              ".components.[0].images.[0]",
 			Description:         "Image not pinned with digest",
@@ -128,6 +129,7 @@ func TestLintPackageWithImports(t *testing.T) {
 			PackagePathOverride: "oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0",
 			Severity:            SevWarn,
 		},
+		// Test local import lints properly
 		{
 			YqPath:              ".components.[1].images.[0]",
 			Description:         "Image not pinned with digest",
@@ -136,6 +138,7 @@ func TestLintPackageWithImports(t *testing.T) {
 			PackagePathOverride: "linted-import",
 			Severity:            SevWarn,
 		},
+		// Test flavors
 		{
 			YqPath:              ".components.[4].images.[0]",
 			Description:         "Image not pinned with digest",
