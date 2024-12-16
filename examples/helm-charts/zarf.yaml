@@ -8,50 +8,50 @@ components:
   - name: demo-helm-charts
     required: true
     charts:
-      # Charts are organized in a list with unique chart names per component - note that a Zarf chart name does not need to match the chart name in a Chart.yaml
-      - name: podinfo-local
-        version: 6.4.0
-        namespace: podinfo-from-local-chart
-        # In this case `localPath` will load the podinfo chart that is located in the `chart` directory
-        localPath: chart
-        valuesFiles:
-          - values.yaml
-        # Variables are used to override the default values in the chart
-        # This can be overridden by the user at deployment time with the `--set` flag
-        variables:
-          - name: REPLICA_COUNT
-            description: "Override the number of pod replicas"
-            path: replicaCount
+      # # Charts are organized in a list with unique chart names per component - note that a Zarf chart name does not need to match the chart name in a Chart.yaml
+      # - name: podinfo-local
+      #   version: 6.4.0
+      #   namespace: podinfo-from-local-chart
+      #   # In this case `localPath` will load the podinfo chart that is located in the `chart` directory
+      #   localPath: chart
+      #   valuesFiles:
+      #     - values.yaml
+      #   # Variables are used to override the default values in the chart
+      #   # This can be overridden by the user at deployment time with the `--set` flag
+      #   variables:
+      #     - name: REPLICA_COUNT
+      #       description: "Override the number of pod replicas"
+      #       path: replicaCount
 
-      - name: podinfo-oci
-        version: 6.4.0
-        namespace: podinfo-from-oci
-        # In this case `url` will load the helm chart located in the podinfo OCI repository
-        url: oci://ghcr.io/stefanprodan/charts/podinfo
-        valuesFiles:
-          - values.yaml
+      # - name: podinfo-oci
+      #   version: 6.4.0
+      #   namespace: podinfo-from-oci
+      #   # In this case `url` will load the helm chart located in the podinfo OCI repository
+      #   url: oci://ghcr.io/stefanprodan/charts/podinfo@main
+      #   valuesFiles:
+      #     - values.yaml
 
       - name: podinfo-git
         version: 6.4.0
         namespace: podinfo-from-git
         # In this case `url` will load the helm chart located in the podinfo git repository
-        url: https://github.com/stefanprodan/podinfo.git
+        url: https://github.com/stefanprodan/podinfo.git@refs/heads/master
         # By default git will look in the root of the git repository but you can define a sub directory with `gitPath`
         gitPath: charts/podinfo
         valuesFiles:
           - values.yaml
 
-      - name: podinfo-repo
-        version: 6.4.0
-        namespace: podinfo-from-repo
-        # In this case `url` will load the helm chart located in the podinfo helm repository
-        url: https://stefanprodan.github.io/podinfo
-        # By default the chart `name` will be what is used to search a repository but since Zarf chart names must be unique per-component you can override this with `repoName`
-        repoName: podinfo
-        # By default the release name will be the chart name, but you can override this with the `releaseName` key
-        releaseName: cool-release-name
-        valuesFiles:
-          - values.yaml
+      # - name: podinfo-repo
+      #   version: 6.4.0
+      #   namespace: podinfo-from-repo
+      #   # In this case `url` will load the helm chart located in the podinfo helm repository
+      #   url: https://stefanprodan.github.io/podinfo
+      #   # By default the chart `name` will be what is used to search a repository but since Zarf chart names must be unique per-component you can override this with `repoName`
+      #   repoName: podinfo
+      #   # By default the release name will be the chart name, but you can override this with the `releaseName` key
+      #   releaseName: cool-release-name
+      #   valuesFiles:
+      #     - values.yaml
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
       # This is the cosign signature for the podinfo image for image signature verification
