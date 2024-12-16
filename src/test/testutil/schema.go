@@ -6,8 +6,6 @@ package testutil
 import (
 	"io/fs"
 	"os"
-	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,13 +27,7 @@ func (m *schemaFS) Open(_ string) (fs.File, error) {
 func LoadSchema(t *testing.T, path string) fs.ReadFileFS {
 	t.Helper()
 
-	_, testFilePath, _, ok := runtime.Caller(1)
-	require.True(t, ok, "failed to determine the test file path")
-
-	// Resolve the schema file's absolute path
-	schemaPath := filepath.Join(filepath.Dir(testFilePath), path)
-
-	b, err := os.ReadFile(schemaPath)
+	b, err := os.ReadFile(path)
 	require.NoError(t, err)
 	return &schemaFS{b: b}
 }
