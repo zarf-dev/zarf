@@ -130,14 +130,6 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 release-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
 
-# INTERNAL: used to build an iron bank version of the init package with an ib version of the registry image
-ib-init-package:
-	@test -s $(ZARF_BIN) || $(MAKE)
-	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm . \
-		--set REGISTRY_IMAGE_DOMAIN="registry1.dso.mil/" \
-		--set REGISTRY_IMAGE="ironbank/opensource/docker/registry-v2" \
-		--set REGISTRY_IMAGE_TAG="2.8.3"
-
 # INTERNAL: used to publish the init package
 publish-init-package:
 	$(ZARF_BIN) package publish build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst oci://$(REPOSITORY_URL)

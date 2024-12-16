@@ -7,11 +7,13 @@ package lint
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 func TestLintError(t *testing.T) {
@@ -76,7 +78,7 @@ func TestFillObjTemplate(t *testing.T) {
 	expectedFindings := []PackageFinding{
 		{
 			Severity:    SevWarn,
-			Description: "There are templates that are not set and won't be evaluated during lint",
+			Description: "package template KEY3 is not set and won't be evaluated during lint",
 		},
 		{
 			Severity:    SevWarn,
@@ -92,4 +94,68 @@ func TestFillObjTemplate(t *testing.T) {
 	}
 	require.ElementsMatch(t, expectedFindings, findings)
 	require.Equal(t, expectedComponent, component)
+}
+
+func TestLintPackageWithImports(t *testing.T) {
+	ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
+	setVariables := map[string]string{
+		"BUSYBOX_IMAGE": "latest",
+	}
+	ctx := context.Background()
+	findings := []PackageFinding{
+		// unset exists in both the root and imported package
+		{
+			YqPath:              "",
+			Description:         "package template UNSET is not set and won't be evaluated during lint",
+			Item:                "",
+			PackageNameOverride: "linted-import",
+			PackagePathOverride: "linted-import",
+			Severity:            SevWarn,
+		},
+		{
+			YqPath:              "",
+			Description:         "package template UNSET is not set and won't be evaluated during lint",
+			Item:                "",
+			PackageNameOverride: "lint",
+			PackagePathOverride: ".",
+			Severity:            SevWarn,
+		},
+		// Test imported skeleton package lints properly
+		{
+			YqPath:              ".components.[0].images.[0]",
+			Description:         "Image not pinned with digest",
+			Item:                "ghcr.io/zarf-dev/doom-game:0.0.1",
+			PackageNameOverride: "dos-games",
+			PackagePathOverride: "oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0",
+			Severity:            SevWarn,
+		},
+		// Test local import lints properly
+		{
+			YqPath:              ".components.[1].images.[0]",
+			Description:         "Image not pinned with digest",
+			Item:                "busybox:latest",
+			PackageNameOverride: "linted-import",
+			PackagePathOverride: "linted-import",
+			Severity:            SevWarn,
+		},
+		// Test flavors
+		{
+			YqPath:              ".components.[4].images.[0]",
+			Description:         "Image not pinned with digest",
+			Item:                "image-in-good-flavor-component:unpinned",
+			PackageNameOverride: "lint",
+			PackagePathOverride: ".",
+			Severity:            SevWarn,
+		},
+	}
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	// TODO @austinabro321: remove this and parallelize the test once changing the working directory is no longer required
+	defer func() {
+		require.NoError(t, os.Chdir(cwd))
+	}()
+	err = Validate(ctx, "testdata/lint-with-imports", "good-flavor", setVariables)
+	var lintErr *LintError
+	require.ErrorAs(t, err, &lintErr)
+	require.ElementsMatch(t, findings, lintErr.Findings)
 }
