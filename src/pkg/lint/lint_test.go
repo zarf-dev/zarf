@@ -103,12 +103,21 @@ func TestLintPackageWithImports(t *testing.T) {
 	}
 	ctx := context.Background()
 	findings := []PackageFinding{
+		// unset exists in both the root and imported package
 		{
 			YqPath:              "",
 			Description:         "package template UNSET is not set and won't be evaluated during lint",
 			Item:                "",
 			PackageNameOverride: "linted-import",
 			PackagePathOverride: "linted-import",
+			Severity:            SevWarn,
+		},
+		{
+			YqPath:              "",
+			Description:         "package template UNSET is not set and won't be evaluated during lint",
+			Item:                "",
+			PackageNameOverride: "lint",
+			PackagePathOverride: ".",
 			Severity:            SevWarn,
 		},
 		{
@@ -122,57 +131,9 @@ func TestLintPackageWithImports(t *testing.T) {
 		{
 			YqPath:              ".components.[1].images.[0]",
 			Description:         "Image not pinned with digest",
-			Item:                "registry.com:9001/whatever/image:latest",
-			PackageNameOverride: "linted-import",
-			PackagePathOverride: "linted-import",
-			Severity:            SevWarn,
-		},
-		{
-			YqPath:              ".components.[1].images.[2]",
-			Description:         "Image not pinned with digest",
 			Item:                "busybox:latest",
 			PackageNameOverride: "linted-import",
 			PackagePathOverride: "linted-import",
-			Severity:            SevWarn,
-		},
-		{
-			YqPath:              "",
-			Description:         "package template UBUNTU_IMAGE is not set and won't be evaluated during lint",
-			Item:                "",
-			PackageNameOverride: "lint",
-			PackagePathOverride: ".",
-			Severity:            SevWarn,
-		},
-		{
-			YqPath:              ".components.[1].repos.[0]",
-			Description:         "Unpinned repository",
-			Item:                "https://github.com/zarf-dev/zarf-public-test.git",
-			PackageNameOverride: "lint",
-			PackagePathOverride: ".",
-			Severity:            SevWarn,
-		},
-		{
-			YqPath:              ".components.[1].repos.[2]",
-			Description:         "Unpinned repository",
-			Item:                "https://gitlab.com/gitlab-org/build/omnibus-mirror/pcre2/-/tree/vreverse?ref_type=heads",
-			PackageNameOverride: "lint",
-			PackagePathOverride: ".",
-			Severity:            SevWarn,
-		},
-		{
-			YqPath:              ".components.[1].images.[0]",
-			Description:         "Image not pinned with digest",
-			Item:                "registry.com:9001/whatever/image:1.0.0",
-			PackageNameOverride: "lint",
-			PackagePathOverride: ".",
-			Severity:            SevWarn,
-		},
-		{
-			YqPath:              ".components.[1].images.[2]",
-			Description:         "Image not pinned with digest",
-			Item:                "busybox:latest",
-			PackageNameOverride: "lint",
-			PackagePathOverride: ".",
 			Severity:            SevWarn,
 		},
 		{
