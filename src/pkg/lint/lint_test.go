@@ -7,6 +7,7 @@ package lint
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -77,7 +78,7 @@ func TestFillObjTemplate(t *testing.T) {
 	expectedFindings := []PackageFinding{
 		{
 			Severity:    SevWarn,
-			Description: "There are templates that are not set and won't be evaluated during lint",
+			Description: "package template KEY3 is not set and won't be evaluated during lint",
 		},
 		{
 			Severity:    SevWarn,
@@ -104,7 +105,7 @@ func TestLintPackageWithImports(t *testing.T) {
 	findings := []PackageFinding{
 		{
 			YqPath:              "",
-			Description:         "There are templates that are not set and won't be evaluated during lint",
+			Description:         "package template UNSET is not set and won't be evaluated during lint",
 			Item:                "",
 			PackageNameOverride: "linted-import",
 			PackagePathOverride: "linted-import",
@@ -136,23 +137,7 @@ func TestLintPackageWithImports(t *testing.T) {
 		},
 		{
 			YqPath:              "",
-			Description:         "There are templates that are not set and won't be evaluated during lint",
-			Item:                "",
-			PackageNameOverride: "lint",
-			PackagePathOverride: ".",
-			Severity:            SevWarn,
-		},
-		{
-			YqPath:              "",
-			Description:         `Package template "WHATEVER_IMAGE" is using the deprecated syntax ###ZARF_PKG_VAR_WHATEVER_IMAGE###. This will be removed in Zarf v1.0.0. Please update to ###ZARF_PKG_TMPL_WHATEVER_IMAGE###.`,
-			Item:                "",
-			PackageNameOverride: "lint",
-			PackagePathOverride: ".",
-			Severity:            SevWarn,
-		},
-		{
-			YqPath:              "",
-			Description:         "There are templates that are not set and won't be evaluated during lint",
+			Description:         "package template UBUNTU_IMAGE is not set and won't be evaluated during lint",
 			Item:                "",
 			PackageNameOverride: "lint",
 			PackagePathOverride: ".",
@@ -183,7 +168,7 @@ func TestLintPackageWithImports(t *testing.T) {
 			Severity:            SevWarn,
 		},
 		{
-			YqPath:              ".components.[2].images.[3]",
+			YqPath:              ".components.[2].images.[2]",
 			Description:         "Image not pinned with digest",
 			Item:                "busybox:latest",
 			PackageNameOverride: "lint",
@@ -223,14 +208,13 @@ func TestLintPackageWithImports(t *testing.T) {
 			Severity:            SevErr,
 		},
 	}
-	// cwd, err := os.Getwd()
-	// require.NoError(t, err)
-	// err = os.Chdir(filepath.Join("testdata", "lint-with-templates"))
-	// require.NoError(t, err)
-	// defer func() {
-	// 	require.NoError(t, os.Chdir(cwd))
-	// }()
-	err := Validate(ctx, "testdata/lint-with-imports", "good-flavor", setVariables)
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	// TODO @austinabro321: remove this and parallelize the test once changing the working directory is no longer required
+	defer func() {
+		require.NoError(t, os.Chdir(cwd))
+	}()
+	err = Validate(ctx, "testdata/lint-with-imports", "good-flavor", setVariables)
 	var lintErr *LintError
 	require.ErrorAs(t, err, &lintErr)
 	require.ElementsMatch(t, findings, lintErr.Findings)

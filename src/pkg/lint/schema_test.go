@@ -200,7 +200,7 @@ func TestValidatePackageSchema(t *testing.T) {
 	}
 	cwd, err := os.Getwd()
 	require.NoError(t, err)
-	err = os.Chdir(filepath.Join("testdata", "lint-with-templates"))
+	err = os.Chdir(filepath.Join("testdata", "package-with-templates"))
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, os.Chdir(cwd))

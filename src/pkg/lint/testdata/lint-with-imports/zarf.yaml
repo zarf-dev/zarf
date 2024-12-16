@@ -20,7 +20,6 @@ components:
     images:
       - registry.com:9001/whatever/image:1.0.0
       - busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79
-      - busybox:###ZARF_PKG_VAR_WHATEVER_IMAGE###
       - busybox:###ZARF_PKG_TMPL_BUSYBOX_IMAGE###
       - ubuntu:###ZARF_PKG_TMPL_UBUNTU_IMAGE###
     files:
