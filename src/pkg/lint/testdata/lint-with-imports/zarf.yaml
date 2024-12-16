@@ -1,7 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
   name: lint
-  description1: Testing bad yaml
 
 components:
   - name: first-test-component

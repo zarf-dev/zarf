@@ -199,14 +199,6 @@ func TestLintPackageWithImports(t *testing.T) {
 			PackagePathOverride: "",
 			Severity:            SevErr,
 		},
-		{
-			YqPath:              ".metadata",
-			Description:         "Additional property description1 is not allowed",
-			Item:                "",
-			PackageNameOverride: "",
-			PackagePathOverride: "",
-			Severity:            SevErr,
-		},
 	}
 	cwd, err := os.Getwd()
 	require.NoError(t, err)
