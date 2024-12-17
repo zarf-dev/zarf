@@ -8,19 +8,36 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-
+	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
-var toolsCmd = &cobra.Command{
-	Use:     "tools",
-	Aliases: []string{"t"},
-	Short:   lang.CmdToolsShort,
-}
+// NewToolsCommand creates the `tools` sub-command and its nested children.
+func NewToolsCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "tools",
+		Aliases: []string{"t"},
+		Short:   lang.CmdToolsShort,
+	}
 
-// Include adds the tools command to the root command.
-func Include(rootCmd *cobra.Command) {
-	rootCmd.AddCommand(toolsCmd)
+	v := common.GetViper()
+
+	cmd.AddCommand(NewArchiverCommand())
+	cmd.AddCommand(NewRegistryCommand())
+	cmd.AddCommand(NewHelmCommand())
+	cmd.AddCommand(NewK9sCommand())
+	cmd.AddCommand(NewKubectlCommand())
+	cmd.AddCommand(NewSbomCommand())
+	cmd.AddCommand(NewWaitForCommand())
+	cmd.AddCommand(NewYQCommand())
+	cmd.AddCommand(NewGetCredsCommand())
+	cmd.AddCommand(NewUpdateCredsCommand(v))
+	cmd.AddCommand(NewClearCacheCommand())
+	cmd.AddCommand(NewDownloadInitCommand())
+	cmd.AddCommand(NewGenPKICommand())
+	cmd.AddCommand(NewGenKeyCommand())
+
+	return cmd
 }
 
 // newVersionCmd is a generic version command for tools
