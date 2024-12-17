@@ -178,7 +178,7 @@ func init() {
 		return
 	}
 
-	v := common.InitViper()
+	v := common.GetViper()
 
 	// Logs
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(common.VLogLevel), lang.RootCmdFlagLogLevel)

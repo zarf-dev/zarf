@@ -116,13 +116,8 @@ var (
 	vConfigError error
 )
 
-// InitViper initializes the viper singleton for the CLI
-func InitViper() *viper.Viper {
-	// Already initialized by some other command
-	if v != nil {
-		return v
-	}
-
+// initializes the viper singleton for the CLI
+func initViper() *viper.Viper {
 	v = viper.New()
 
 	// Skip for vendor-only commands or the version command
@@ -159,6 +154,10 @@ func InitViper() *viper.Viper {
 
 // GetViper returns the viper singleton
 func GetViper() *viper.Viper {
+	if v == nil {
+		v = initViper()
+	}
+
 	return v
 }
 
