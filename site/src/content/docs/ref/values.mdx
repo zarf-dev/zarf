@@ -13,7 +13,7 @@ Deploy time values are used throughout the Zarf deployment process to template `
 
 ### Value Templates
 
-Values can be templated into `manifests`, `files`, and `charts` using a unique `###ZARF_<VALUE_KEY>###` syntax anywhere in the file, where `<VALUE_KEY>` is the name of the value along with any associated prefix in ALL_CAPS (see [Setting Values](#setting-values) below).  This allows you to punch through other templating engines to place values precisely where you want in a given file.  You can also control how this templating happens when defining a value such as with the `autoIndent` key on `constants` and `variables`.  A simple value template for a [Zarf Variable](#variables-zarf_var_) named `DATABASE_USERNAME` would look like the following:
+Values can be templated into `manifests`, `files`, and `charts` using a unique `###ZARF_VAR_<VALUE_KEY>###` syntax anywhere in the file, where `<VALUE_KEY>` is the name of the value along with any associated prefix in ALL_CAPS (see [Setting Values](#setting-values) below). This allows you to punch through other templating engines to place values precisely where you want in a given file.  You can also control how this templating happens when defining a value such as with the `autoIndent` key on `constants` and `variables`.  A simple value template for a [Zarf Variable](#variables-zarf_var_) named `DATABASE_USERNAME` would look like the following:
 
 ```yaml
 apiVersion: v1
@@ -23,6 +23,12 @@ metadata:
 data:
   username: ###ZARF_VAR_DATABASE_USERNAME###
 ```
+
+:::note
+
+Helm [chart hooks](https://helm.sh/docs/topics/charts_hooks/) can not templated by Zarf
+
+:::
 
 ### Helm Chart Mapping
 

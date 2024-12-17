@@ -293,6 +293,7 @@ var packageRemoveCmd = &cobra.Command{
 	Aliases: []string{"u", "rm"},
 	Args:    cobra.MaximumNArgs(1),
 	Short:   lang.CmdPackageRemoveShort,
+	Long:    lang.CmdPackageRemoveLong,
 	PreRun: func(_ *cobra.Command, _ []string) {
 		// If --insecure was provided, set --skip-signature-validation to match
 		if config.CommonOptions.Insecure {
