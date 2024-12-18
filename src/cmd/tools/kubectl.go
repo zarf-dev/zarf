@@ -19,9 +19,10 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
-func init() {
+// NewKubectlCommand creates the `tools kubectl` sub-command.
+func NewKubectlCommand() *cobra.Command {
 	// Kubectl stub command.
-	kubectlCmd := &cobra.Command{
+	cmd := &cobra.Command{
 		Short: lang.CmdToolsKubectlDocs,
 		Run:   func(_ *cobra.Command, _ []string) {},
 	}
@@ -29,17 +30,17 @@ func init() {
 	// Only load this command if it is being called directly.
 	if common.IsVendorCmd(os.Args, []string{"kubectl", "k"}) {
 		// Add the kubectl command to the tools command.
-		kubectlCmd = kubeCmd.NewDefaultKubectlCommand()
+		cmd = kubeCmd.NewDefaultKubectlCommand()
 
-		if err := kubeCLI.RunNoErrOutput(kubectlCmd); err != nil {
+		if err := kubeCLI.RunNoErrOutput(cmd); err != nil {
 			// @todo(jeff-mccoy) - Kubectl gets mad about being a subcommand.
 			message.Debug(err)
 			logger.Default().Debug(err.Error())
 		}
 	}
 
-	kubectlCmd.Use = "kubectl"
-	kubectlCmd.Aliases = []string{"k"}
+	cmd.Use = "kubectl"
+	cmd.Aliases = []string{"k"}
 
-	toolsCmd.AddCommand(kubectlCmd)
+	return cmd
 }
