@@ -628,7 +628,7 @@ func (o *PackagePullOptions) Run(cmd *cobra.Command, args []string) error {
 		}
 		outputDir = wd
 	}
-	err := packager2.Pull(cmd.Context(), args[0], outputDir, pkgConfig.PkgOpts.Shasum, filters.Empty())
+	err := packager2.Pull(cmd.Context(), args[0], outputDir, pkgConfig.PkgOpts.Shasum, filters.Empty(), pkgConfig.PkgOpts.PublicKeyPath)
 	if err != nil {
 		return err
 	}
