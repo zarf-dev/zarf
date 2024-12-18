@@ -43,7 +43,7 @@ func NewPackageCommand() *cobra.Command {
 		Short:   lang.CmdPackageShort,
 	}
 
-	v := common.InitViper()
+	v := common.GetViper()
 
 	persistentFlags := cmd.PersistentFlags()
 	persistentFlags.IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(common.VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)

@@ -7,25 +7,27 @@ package tools
 import (
 	"github.com/anchore/clio"
 	syftCLI "github.com/anchore/syft/cmd/syft/cli"
+	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
 // ldflags github.com/zarf-dev/zarf/src/cmd/tools.syftVersion=x.x.x
 var syftVersion string
 
-func init() {
-	syftCmd := syftCLI.Command(clio.Identification{
+// NewSbomCommand creates the `tools sbom` sub-command.
+func NewSbomCommand() *cobra.Command {
+	cmd := syftCLI.Command(clio.Identification{
 		Name:    "syft",
 		Version: syftVersion,
 	})
-	syftCmd.Use = "sbom"
-	syftCmd.Short = lang.CmdToolsSbomShort
-	syftCmd.Aliases = []string{"s", "syft"}
-	syftCmd.Example = ""
+	cmd.Use = "sbom"
+	cmd.Short = lang.CmdToolsSbomShort
+	cmd.Aliases = []string{"s", "syft"}
+	cmd.Example = ""
 
-	for _, subCmd := range syftCmd.Commands() {
+	for _, subCmd := range cmd.Commands() {
 		subCmd.Example = ""
 	}
 
-	toolsCmd.AddCommand(syftCmd)
+	return cmd
 }

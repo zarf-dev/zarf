@@ -18,8 +18,9 @@ import (
 //go:linkname k9sRootCmd github.com/derailed/k9s/cmd.rootCmd
 var k9sRootCmd *cobra.Command
 
-func init() {
-	k9sCmd := &cobra.Command{
+// NewK9sCommand creates the `tools k9s` sub-command.
+func NewK9sCommand() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:     "monitor",
 		Aliases: []string{"m", "k9s"},
 		Short:   lang.CmdToolsMonitorShort,
@@ -30,7 +31,7 @@ func init() {
 		},
 	}
 
-	k9sCmd.Flags().AddFlagSet(k9sRootCmd.Flags())
+	cmd.Flags().AddFlagSet(k9sRootCmd.Flags())
 
-	toolsCmd.AddCommand(k9sCmd)
+	return cmd
 }

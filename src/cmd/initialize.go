@@ -45,7 +45,7 @@ func NewInitCommand() *cobra.Command {
 		RunE:    o.Run,
 	}
 
-	v := common.InitViper()
+	v := common.GetViper()
 
 	// Init package variable defaults that are non-zero values
 	// NOTE: these are not in common.setDefaults so that zarf tools update-creds does not erroneously update values back to the default

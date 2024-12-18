@@ -6,14 +6,16 @@ package tools
 
 import (
 	yq "github.com/mikefarah/yq/v4/cmd"
+	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
-func init() {
-	yqCmd := yq.New()
-	yqCmd.Example = lang.CmdToolsYqExample
-	yqCmd.Use = "yq"
-	for _, subCmd := range yqCmd.Commands() {
+// NewYQCommand creates the `tools yq` sub-command and its nested children.
+func NewYQCommand() *cobra.Command {
+	cmd := yq.New()
+	cmd.Example = lang.CmdToolsYqExample
+	cmd.Use = "yq"
+	for _, subCmd := range cmd.Commands() {
 		if subCmd.Name() == "eval" {
 			subCmd.Example = lang.CmdToolsYqEvalExample
 		}
@@ -22,5 +24,5 @@ func init() {
 		}
 	}
 
-	toolsCmd.AddCommand(yqCmd)
+	return cmd
 }

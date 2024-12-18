@@ -26,16 +26,27 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-func init() {
-	verbose := false
-	insecure := false
-	ndlayers := false
-	platform := "all"
+// RegistryOptions holds the command-line options for 'tools registry' sub-command.
+type RegistryOptions struct {
+	verbose  bool
+	insecure bool
+	ndlayers bool
+	platform string
+}
+
+// NewRegistryCommand creates the `tools registry` sub-command and its nested children.
+func NewRegistryCommand() *cobra.Command {
+	o := &RegistryOptions{
+		verbose:  false,
+		insecure: false,
+		ndlayers: false,
+		platform: "all",
+	}
 
 	// No package information is available so do not pass in a list of architectures
 	craneOptions := []crane.Option{}
 
-	registryCmd := &cobra.Command{
+	cmd := &cobra.Command{
 		Use:     "registry",
 		Aliases: []string{"r", "crane"},
 		Short:   lang.CmdToolsRegistryShort,
@@ -48,21 +59,21 @@ func init() {
 			// The crane options loading here comes from the rootCmd of crane
 			craneOptions = append(craneOptions, crane.WithContext(cmd.Context()))
 			// TODO(jonjohnsonjr): crane.Verbose option?
-			if verbose {
+			if o.verbose {
 				logs.Debug.SetOutput(os.Stderr)
 			}
-			if insecure {
+			if o.insecure {
 				craneOptions = append(craneOptions, crane.Insecure)
 			}
-			if ndlayers {
+			if o.ndlayers {
 				craneOptions = append(craneOptions, crane.WithNondistributable())
 			}
 			var err error
 			var v1Platform *v1.Platform
-			if platform != "all" {
-				v1Platform, err = v1.ParsePlatform(platform)
+			if o.platform != "all" {
+				v1Platform, err = v1.ParsePlatform(o.platform)
 				if err != nil {
-					return fmt.Errorf("invalid platform %s: %w", platform, err)
+					return fmt.Errorf("invalid platform %s: %w", o.platform, err)
 				}
 			}
 
@@ -71,151 +82,125 @@ func init() {
 		},
 	}
 
-	pruneCmd := &cobra.Command{
+	cmd.AddCommand(NewRegistryPruneCommand())
+	cmd.AddCommand(NewRegistryLoginCommand())
+	cmd.AddCommand(NewRegistryCopyCommand())
+	cmd.AddCommand(NewRegistryCatalogCommand())
+
+	// TODO(soltysh): consider splitting craneOptions to be per command
+	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdList, &craneOptions, lang.CmdToolsRegistryListExample, 0))
+	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPush, &craneOptions, lang.CmdToolsRegistryPushExample, 1))
+	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPull, &craneOptions, lang.CmdToolsRegistryPullExample, 0))
+	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
+	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, &craneOptions, lang.CmdToolsRegistryDigestExample, 0))
+
+	cmd.AddCommand(craneCmd.NewCmdVersion())
+
+	cmd.PersistentFlags().BoolVarP(&o.verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
+	cmd.PersistentFlags().BoolVar(&o.insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
+	cmd.PersistentFlags().BoolVar(&o.ndlayers, "allow-nondistributable-artifacts", false, lang.CmdToolsRegistryFlagNonDist)
+	cmd.PersistentFlags().StringVar(&o.platform, "platform", "all", lang.CmdToolsRegistryFlagPlatform)
+
+	return cmd
+}
+
+// NewRegistryLoginCommand creates the `tools registry login` sub-command.
+func NewRegistryLoginCommand() *cobra.Command {
+	cmd := craneCmd.NewCmdAuthLogin()
+	cmd.Example = ""
+	return cmd
+}
+
+// NewRegistryCopyCommand creates the `tools registry copy` sub-command.
+func NewRegistryCopyCommand() *cobra.Command {
+	// No package information is available so do not pass in a list of architectures
+	craneOptions := []crane.Option{}
+	cmd := craneCmd.NewCmdCopy(&craneOptions)
+	return cmd
+}
+
+// RegistryCatalogOptions holds the command-line options for 'tools registry catalog' sub-command.
+type RegistryCatalogOptions struct {
+	craneOptions  []crane.Option
+	originalRunFn func(cmd *cobra.Command, args []string) error
+}
+
+// NewRegistryCatalogCommand creates the `tools registry catalog` sub-command.
+func NewRegistryCatalogCommand() *cobra.Command {
+	o := RegistryCatalogOptions{
+		// No package information is available so do not pass in a list of architectures
+		craneOptions: []crane.Option{},
+	}
+
+	cmd := craneCmd.NewCmdCatalog(&o.craneOptions)
+	cmd.Example = lang.CmdToolsRegistryCatalogExample
+	cmd.Args = nil
+
+	o.originalRunFn = cmd.RunE
+	cmd.RunE = o.Run
+
+	return cmd
+}
+
+// Run performs the execution of 'tools registry catalog' sub-command.
+func (o *RegistryCatalogOptions) Run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	l := logger.From(cmd.Context())
+	if len(args) > 0 {
+		return o.originalRunFn(cmd, args)
+	}
+
+	l.Info("retrieving registry information from Zarf state")
+
+	c, err := cluster.NewCluster()
+	if err != nil {
+		return err
+	}
+
+	zarfState, err := c.LoadZarfState(ctx)
+	if err != nil {
+		return err
+	}
+
+	registryEndpoint, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, zarfState.RegistryInfo)
+	if err != nil {
+		return err
+	}
+
+	// Add the correct authentication to the crane command options
+	authOption := images.WithPullAuth(zarfState.RegistryInfo)
+	o.craneOptions = append(o.craneOptions, authOption)
+
+	if tunnel != nil {
+		defer tunnel.Close()
+		return tunnel.Wrap(func() error { return o.originalRunFn(cmd, []string{registryEndpoint}) })
+	}
+
+	return o.originalRunFn(cmd, []string{registryEndpoint})
+}
+
+// RegistryPruneOptions holds the command-line options for 'tools registry prune' sub-command.
+type RegistryPruneOptions struct{}
+
+// NewRegistryPruneCommand creates the `tools registry prune` sub-command.
+func NewRegistryPruneCommand() *cobra.Command {
+	o := RegistryPruneOptions{}
+
+	cmd := &cobra.Command{
 		Use:     "prune",
 		Aliases: []string{"p"},
 		Short:   lang.CmdToolsRegistryPruneShort,
-		RunE:    pruneImages,
+		RunE:    o.Run,
 	}
 
 	// Always require confirm flag (no viper)
-	pruneCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdToolsRegistryPruneFlagConfirm)
+	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdToolsRegistryPruneFlagConfirm)
 
-	craneLogin := craneCmd.NewCmdAuthLogin()
-	craneLogin.Example = ""
-
-	registryCmd.AddCommand(craneLogin)
-
-	craneCopy := craneCmd.NewCmdCopy(&craneOptions)
-
-	registryCmd.AddCommand(craneCopy)
-	registryCmd.AddCommand(zarfCraneCatalog(&craneOptions))
-	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdList, &craneOptions, lang.CmdToolsRegistryListExample, 0))
-	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPush, &craneOptions, lang.CmdToolsRegistryPushExample, 1))
-	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPull, &craneOptions, lang.CmdToolsRegistryPullExample, 0))
-	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
-	registryCmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, &craneOptions, lang.CmdToolsRegistryDigestExample, 0))
-	registryCmd.AddCommand(pruneCmd)
-	registryCmd.AddCommand(craneCmd.NewCmdVersion())
-
-	registryCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
-	registryCmd.PersistentFlags().BoolVar(&insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
-	registryCmd.PersistentFlags().BoolVar(&ndlayers, "allow-nondistributable-artifacts", false, lang.CmdToolsRegistryFlagNonDist)
-	registryCmd.PersistentFlags().StringVar(&platform, "platform", "all", lang.CmdToolsRegistryFlagPlatform)
-
-	toolsCmd.AddCommand(registryCmd)
+	return cmd
 }
 
-// Wrap the original crane catalog with a zarf specific version
-func zarfCraneCatalog(cranePlatformOptions *[]crane.Option) *cobra.Command {
-	craneCatalog := craneCmd.NewCmdCatalog(cranePlatformOptions)
-
-	craneCatalog.Example = lang.CmdToolsRegistryCatalogExample
-	craneCatalog.Args = nil
-
-	originalCatalogFn := craneCatalog.RunE
-
-	craneCatalog.RunE = func(cmd *cobra.Command, args []string) error {
-		ctx := cmd.Context()
-		l := logger.From(cmd.Context())
-		if len(args) > 0 {
-			return originalCatalogFn(cmd, args)
-		}
-
-		l.Info("retrieving registry information from Zarf state")
-
-		c, err := cluster.NewCluster()
-		if err != nil {
-			return err
-		}
-
-		zarfState, err := c.LoadZarfState(ctx)
-		if err != nil {
-			return err
-		}
-
-		registryEndpoint, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, zarfState.RegistryInfo)
-		if err != nil {
-			return err
-		}
-
-		// Add the correct authentication to the crane command options
-		authOption := images.WithPullAuth(zarfState.RegistryInfo)
-		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
-
-		if tunnel != nil {
-			defer tunnel.Close()
-			return tunnel.Wrap(func() error { return originalCatalogFn(cmd, []string{registryEndpoint}) })
-		}
-
-		return originalCatalogFn(cmd, []string{registryEndpoint})
-	}
-
-	return craneCatalog
-}
-
-// Wrap the original crane list with a zarf specific version
-func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command, cranePlatformOptions *[]crane.Option, exampleText string, imageNameArgumentIndex int) *cobra.Command {
-	wrappedCommand := commandToWrap(cranePlatformOptions)
-
-	wrappedCommand.Example = exampleText
-	wrappedCommand.Args = nil
-
-	originalListFn := wrappedCommand.RunE
-
-	wrappedCommand.RunE = func(cmd *cobra.Command, args []string) error {
-		ctx := cmd.Context()
-		l := logger.From(ctx)
-		if len(args) < imageNameArgumentIndex+1 {
-			return errors.New("not have enough arguments specified for this command")
-		}
-
-		// Try to connect to a Zarf initialized cluster otherwise then pass it down to crane.
-		c, err := cluster.NewCluster()
-		if err != nil {
-			return originalListFn(cmd, args)
-		}
-
-		l.Info("retrieving registry information from Zarf state")
-
-		zarfState, err := c.LoadZarfState(ctx)
-		if err != nil {
-			l.Warn("could not get Zarf state from Kubernetes cluster, continuing without state information", "error", err.Error())
-			return originalListFn(cmd, args)
-		}
-
-		// Check to see if it matches the existing internal address.
-		if !strings.HasPrefix(args[imageNameArgumentIndex], zarfState.RegistryInfo.Address) {
-			return originalListFn(cmd, args)
-		}
-
-		_, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, zarfState.RegistryInfo)
-		if err != nil {
-			return err
-		}
-
-		// Add the correct authentication to the crane command options
-		authOption := images.WithPushAuth(zarfState.RegistryInfo)
-		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
-
-		if tunnel != nil {
-			l.Info("opening a tunnel to the Zarf registry", "local-endpoint", tunnel.Endpoint(), "cluster-address", zarfState.RegistryInfo.Address)
-
-			defer tunnel.Close()
-
-			givenAddress := fmt.Sprintf("%s/", zarfState.RegistryInfo.Address)
-			tunnelAddress := fmt.Sprintf("%s/", tunnel.Endpoint())
-			args[imageNameArgumentIndex] = strings.Replace(args[imageNameArgumentIndex], givenAddress, tunnelAddress, 1)
-			return tunnel.Wrap(func() error { return originalListFn(cmd, args) })
-		}
-
-		return originalListFn(cmd, args)
-	}
-
-	return wrappedCommand
-}
-
-func pruneImages(cmd *cobra.Command, _ []string) error {
+// Run performs the execution of 'tools registry prune' sub-command.
+func (o *RegistryPruneOptions) Run(cmd *cobra.Command, _ []string) error {
 	// Try to connect to a Zarf initialized cluster
 	c, err := cluster.NewCluster()
 	if err != nil {
@@ -350,4 +335,65 @@ func doPruneImagesForPackages(ctx context.Context, zarfState *types.ZarfState, z
 		}
 	}
 	return nil
+}
+
+// Wrap the original crane list with a zarf specific version
+func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command, cranePlatformOptions *[]crane.Option, exampleText string, imageNameArgumentIndex int) *cobra.Command {
+	wrappedCommand := commandToWrap(cranePlatformOptions)
+
+	wrappedCommand.Example = exampleText
+	wrappedCommand.Args = nil
+
+	originalListFn := wrappedCommand.RunE
+
+	wrappedCommand.RunE = func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+		l := logger.From(ctx)
+		if len(args) < imageNameArgumentIndex+1 {
+			return errors.New("not have enough arguments specified for this command")
+		}
+
+		// Try to connect to a Zarf initialized cluster otherwise then pass it down to crane.
+		c, err := cluster.NewCluster()
+		if err != nil {
+			return originalListFn(cmd, args)
+		}
+
+		l.Info("retrieving registry information from Zarf state")
+
+		zarfState, err := c.LoadZarfState(ctx)
+		if err != nil {
+			l.Warn("could not get Zarf state from Kubernetes cluster, continuing without state information", "error", err.Error())
+			return originalListFn(cmd, args)
+		}
+
+		// Check to see if it matches the existing internal address.
+		if !strings.HasPrefix(args[imageNameArgumentIndex], zarfState.RegistryInfo.Address) {
+			return originalListFn(cmd, args)
+		}
+
+		_, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, zarfState.RegistryInfo)
+		if err != nil {
+			return err
+		}
+
+		// Add the correct authentication to the crane command options
+		authOption := images.WithPushAuth(zarfState.RegistryInfo)
+		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
+
+		if tunnel != nil {
+			l.Info("opening a tunnel to the Zarf registry", "local-endpoint", tunnel.Endpoint(), "cluster-address", zarfState.RegistryInfo.Address)
+
+			defer tunnel.Close()
+
+			givenAddress := fmt.Sprintf("%s/", zarfState.RegistryInfo.Address)
+			tunnelAddress := fmt.Sprintf("%s/", tunnel.Endpoint())
+			args[imageNameArgumentIndex] = strings.Replace(args[imageNameArgumentIndex], givenAddress, tunnelAddress, 1)
+			return tunnel.Wrap(func() error { return originalListFn(cmd, args) })
+		}
+
+		return originalListFn(cmd, args)
+	}
+
+	return wrappedCommand
 }

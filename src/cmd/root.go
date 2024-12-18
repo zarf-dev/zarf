@@ -130,6 +130,13 @@ func NewZarfCommand() *cobra.Command {
 		Run:               run,
 	}
 
+	// Add the tools commands
+	// IMPORTANT: we need to make sure the tools command are added first
+	// to ensure the config defaulting doesn't kick in, and inject values
+	// into zart tools update-creds command
+	// see https://github.com/zarf-dev/zarf/pull/3340#discussion_r1889221826
+	rootCmd.AddCommand(tools.NewToolsCommand())
+
 	// TODO(soltysh): consider adding command groups
 	rootCmd.AddCommand(NewConnectCommand())
 	rootCmd.AddCommand(NewDestroyCommand())
@@ -170,15 +177,12 @@ func Execute(ctx context.Context) {
 }
 
 func init() {
-	// Add the tools commands
-	tools.Include(rootCmd)
-
 	// Skip for vendor-only commands
 	if common.CheckVendorOnlyFromArgs() {
 		return
 	}
 
-	v := common.InitViper()
+	v := common.GetViper()
 
 	// Logs
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(common.VLogLevel), lang.RootCmdFlagLogLevel)
