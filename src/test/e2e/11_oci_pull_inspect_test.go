@@ -34,11 +34,6 @@ func (suite *PullInspectTestSuite) SetupSuite() {
 	suite.Reference.Registry = testutil.SetupInMemoryRegistry(testutil.TestContext(suite.T()), suite.T(), 31888)
 }
 
-func (suite *PullInspectTestSuite) TearDownSuite() {
-	local := fmt.Sprintf("zarf-package-dos-games-%s-1.0.0.tar.zst", e2e.Arch)
-	e2e.CleanFiles(suite.T(), local)
-}
-
 func (suite *PullInspectTestSuite) Test_0_Pull() {
 	suite.T().Log("E2E: Package Pull oci://")
 
@@ -51,15 +46,12 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 
 	out := filepath.Join(outputPath, fmt.Sprintf("zarf-package-simple-package-%s-0.0.1.tar.zst", e2e.Arch))
 	ref := suite.Reference.String()
-	_, _, err = e2e.Zarf(suite.T(), "package", "publish", out, "oci://"+ref, "--plain-http", publicKeyFlag)
-	suite.NoError(err)
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", out, "oci://"+ref, "--plain-http", publicKeyFlag)
+	suite.NoError(err, stdOut, stdErr)
 
 	simplePackageRef := fmt.Sprintf("oci://%s/simple-package:0.0.1", ref)
 	// fail to pull the package without providing the public key
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http")
-	suite.Error(err, stdOut, stdErr)
-
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+badPullInspectRef.String(), "--plain-http")
 	suite.Error(err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http", publicKeyFlag)
@@ -70,6 +62,9 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", simplePackageRef, "--plain-http", publicKeyFlag, "--sbom-out", suite.T().TempDir())
 	suite.NoError(err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+badPullInspectRef.String(), "--plain-http")
+	suite.Error(err, stdOut, stdErr)
 }
 
 func (suite *PullInspectTestSuite) Test_1_Remote_Inspect() {
