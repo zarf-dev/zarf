@@ -259,8 +259,8 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	CmdPackageCreateFlagSbomOut               = "Specify an output directory for the SBOMs from the created Zarf package"
 	CmdPackageCreateFlagSkipSbom              = "Skip generating SBOM for this package"
 	CmdPackageCreateFlagMaxPackageSize        = "Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts to be loaded onto smaller media (i.e. DVDs). Use 0 to disable splitting."
-	CmdPackageCreateFlagSigningKey            = "Path to private key file for signing packages"
-	CmdPackageCreateFlagSigningKeyPassword    = "Password to the private key file used for signing packages"
+	CmdPackageCreateFlagSigningKey            = "Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider"
+	CmdPackageCreateFlagSigningKeyPassword    = "Password to the private key used for signing packages"
 	CmdPackageCreateFlagDeprecatedKey         = "[Deprecated] Path to private key file for signing packages (use --signing-key instead)"
 	CmdPackageCreateFlagDeprecatedKeyPassword = "[Deprecated] Password to the private key file used for signing packages (use --signing-key-pass instead)"
 	CmdPackageCreateFlagDifferential          = "[beta] Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package"
@@ -298,8 +298,9 @@ $ zarf package publish my-package.tar oci://my-registry.com/my-namespace
 # Publish a skeleton package to a remote registry
 $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 `
-	CmdPackagePublishFlagSigningKey         = "Path to a private key file for signing or re-signing packages with a new key"
-	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key file used for publishing packages"
+	CmdPackagePublishFlagSigningKey         = "Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider"
+	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key used for publishing packages"
+	CmdPackagePublishFlagConfirm            = "Confirms package publish without prompting. Skips prompt for the signing key password"
 
 	CmdPackagePullShort   = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample = `
