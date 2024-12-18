@@ -18,8 +18,7 @@ import (
 type PullInspectTestSuite struct {
 	suite.Suite
 	*require.Assertions
-	Reference   registry.Reference
-	PackagesDir string
+	Reference registry.Reference
 }
 
 var badPullInspectRef = registry.Reference{
@@ -30,7 +29,6 @@ var badPullInspectRef = registry.Reference{
 
 func (suite *PullInspectTestSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
-	suite.PackagesDir = "build"
 	suite.Reference.Registry = testutil.SetupInMemoryRegistry(testutil.TestContext(suite.T()), suite.T(), 31888)
 }
 
