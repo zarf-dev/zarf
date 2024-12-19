@@ -8,6 +8,9 @@ updates:
       k8s:
         patterns:
           - "k8s.io/*"
+      cosign-providers:
+        patterns:
+          - "github.com/sigstore/sigstore/pkg/signature/kms/*"
   - package-ecosystem: github-actions
     directory: /
     schedule:
