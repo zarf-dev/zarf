@@ -31,9 +31,10 @@ $ zarf package pull oci://ghcr.io/defenseunicorns/packages/dos-games:1.0.0 -a sk
 ### Options
 
 ```
-  -h, --help                      help for pull
-  -o, --output-directory string   Specify the output directory for the pulled Zarf package
-      --shasum string             Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'
+  -h, --help                        help for pull
+  -o, --output-directory string     Specify the output directory for the pulled Zarf package
+      --shasum string               Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'
+      --skip-signature-validation   Skip validating the signature of the Zarf package
 ```
 
 ### Options inherited from parent commands
