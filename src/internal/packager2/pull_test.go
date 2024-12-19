@@ -39,7 +39,7 @@ func TestPull(t *testing.T) {
 
 	dir := t.TempDir()
 	shasum := "bef73d652f004d214d5cf9e00195293f7ae8390b8ff6ed45e39c2c9eb622b873"
-	err := Pull(ctx, srv.URL, dir, shasum, filters.Empty(), "")
+	err := Pull(ctx, srv.URL, dir, shasum, filters.Empty(), "", false)
 	require.NoError(t, err)
 
 	packageData, err := os.ReadFile(packagePath)

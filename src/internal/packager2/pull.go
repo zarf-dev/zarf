@@ -29,7 +29,7 @@ import (
 )
 
 // Pull fetches the Zarf package from the given sources.
-func Pull(ctx context.Context, src, dir, shasum string, filter filters.ComponentFilterStrategy, publicKeyPath string) error {
+func Pull(ctx context.Context, src, dir, shasum string, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) error {
 	u, err := url.Parse(src)
 	if err != nil {
 		return err
@@ -48,9 +48,10 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 	defer os.Remove(tmpDir)
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
 
+	isPartial := false
 	switch u.Scheme {
 	case "oci":
-		_, err := pullOCI(ctx, src, tmpPath, shasum, filter)
+		isPartial, err = pullOCI(ctx, src, tmpPath, shasum, filter)
 		if err != nil {
 			return err
 		}
@@ -66,8 +67,8 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 	// This loadFromTar is done so that validatePackageIntegrtiy and validatePackageSignature are called
 	layoutOpt := layout.PackageLayoutOptions{
 		PublicKeyPath:           publicKeyPath,
-		SkipSignatureValidation: false,
-		IsPartial:               false,
+		SkipSignatureValidation: skipSignatureValidation,
+		IsPartial:               isPartial,
 	}
 	_, err = layout.LoadFromTar(ctx, tmpPath, layoutOpt)
 	if err != nil {
