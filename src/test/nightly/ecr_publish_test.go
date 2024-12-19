@@ -66,9 +66,11 @@ func TestECRPublishing(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", upstreamPackageURL, keyFlag, fmt.Sprintf("-o=%s", tmpDir))
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", testPackageFileName, "--skip-signature-validation")
+	pulledPath := filepath.Join(tmpDir, testPackageFileName)
+
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pulledPath, "--skip-signature-validation")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", testPackageFileName, keyFlag)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pulledPath, keyFlag)
 	require.NoError(t, err, stdOut, stdErr)
 }
