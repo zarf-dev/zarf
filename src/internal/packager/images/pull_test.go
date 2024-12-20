@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/otiai10/copy"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -156,26 +155,27 @@ func TestPull(t *testing.T) {
 	})
 }
 
-func TestPullCache(t *testing.T) {
+func TestPullWithInvalidLayerInCache(t *testing.T) {
 	t.Parallel()
 
-	t.Run("pulling an image with an invalid layer in the cache still results in a success", func(t *testing.T) {
-		ref, err := transform.ParseImageRef("ghcr.io/fluxcd/image-automation-controller@sha256:48a89734dc82c3a2d4138554b3ad4acf93230f770b3a582f7f48be38436d031c")
-		require.NoError(t, err)
-		destDir := t.TempDir()
-		cacheDir := t.TempDir()
-		require.NoError(t, err)
-		copy.Copy(filepath.Join("testdata", "invalid-layer", "sha256:94c7366c1c3058fbc60a5ea04b6d13199a592a67939a043c41c051c4bfcd117a"), cacheDir)
-		pullConfig := PullConfig{
-			DestinationDirectory: destDir,
-			CacheDirectory:       cacheDir,
-			ImageList: []transform.Image{
-				ref,
-			},
-		}
+	ref, err := transform.ParseImageRef("ghcr.io/fluxcd/image-automation-controller@sha256:48a89734dc82c3a2d4138554b3ad4acf93230f770b3a582f7f48be38436d031c")
+	require.NoError(t, err)
+	destDir := t.TempDir()
+	cacheDir := t.TempDir()
+	require.NoError(t, err)
+	invalidText := []byte("this text here is not the valid layer that the image is looking for")
+	err = os.WriteFile(filepath.Join(cacheDir, "sha256:94c7366c1c3058fbc60a5ea04b6d13199a592a67939a043c41c051c4bfcd117a"), invalidText, 0644)
+	require.NoError(t, err)
 
-		_, err = Pull(context.Background(), pullConfig)
-		require.NoError(t, err)
-		require.FileExists(t, filepath.Join(destDir, "blobs/sha256/94c7366c1c3058fbc60a5ea04b6d13199a592a67939a043c41c051c4bfcd117a"))
-	})
+	pullConfig := PullConfig{
+		DestinationDirectory: destDir,
+		CacheDirectory:       cacheDir,
+		ImageList: []transform.Image{
+			ref,
+		},
+	}
+
+	_, err = Pull(context.Background(), pullConfig)
+	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(destDir, "blobs/sha256/94c7366c1c3058fbc60a5ea04b6d13199a592a67939a043c41c051c4bfcd117a"))
 }
