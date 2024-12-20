@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/otiai10/copy"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -158,11 +159,13 @@ func TestPull(t *testing.T) {
 func TestPullCache(t *testing.T) {
 	t.Parallel()
 
-	t.Run("pulling an image with an invalid layer in the cache is successful", func(t *testing.T) {
+	t.Run("pulling an image with an invalid layer in the cache still results in a success", func(t *testing.T) {
 		ref, err := transform.ParseImageRef("ghcr.io/fluxcd/image-automation-controller@sha256:48a89734dc82c3a2d4138554b3ad4acf93230f770b3a582f7f48be38436d031c")
 		require.NoError(t, err)
 		destDir := t.TempDir()
-		cacheDir := filepath.Join("testdata", "cache")
+		cacheDir := t.TempDir()
+		require.NoError(t, err)
+		copy.Copy(filepath.Join("testdata", "invalid-layer", "sha256:94c7366c1c3058fbc60a5ea04b6d13199a592a67939a043c41c051c4bfcd117a"), cacheDir)
 		pullConfig := PullConfig{
 			DestinationDirectory: destDir,
 			CacheDirectory:       cacheDir,
@@ -174,6 +177,5 @@ func TestPullCache(t *testing.T) {
 		_, err = Pull(context.Background(), pullConfig)
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(destDir, "blobs/sha256/94c7366c1c3058fbc60a5ea04b6d13199a592a67939a043c41c051c4bfcd117a"))
-
 	})
 }
