@@ -332,7 +332,6 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image, cacheDirectory s
 			}
 			location := filepath.Join(cacheDirectory, digest.String())
 			info, err := os.Stat(location)
-			fmt.Println("location to delete is", location, err)
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
 			}
