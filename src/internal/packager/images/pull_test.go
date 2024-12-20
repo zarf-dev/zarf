@@ -164,7 +164,8 @@ func TestPullWithInvalidLayerInCache(t *testing.T) {
 	cacheDir := t.TempDir()
 	require.NoError(t, err)
 	layerContent := []byte("this text here is not the valid layer that the image is looking for")
-	err = os.WriteFile(filepath.Join(cacheDir, "sha256:94c7366c1c3058fbc60a5ea04b6d13199a592a67939a043c41c051c4bfcd117a"), layerContent, 0600)
+	invalidLayerPath := filepath.Join(cacheDir, "sha256:94c7366c1c3058fbc60a5ea04b6d13199a592a67939a043c41c051c4bfcd117a")
+	err = os.WriteFile(invalidLayerPath, layerContent, 0777)
 	require.NoError(t, err)
 
 	pullConfig := PullConfig{
