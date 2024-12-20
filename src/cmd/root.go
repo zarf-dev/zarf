@@ -124,8 +124,7 @@ func NewZarfCommand() *cobra.Command {
 		Long:         lang.RootCmdLong,
 		Args:         cobra.MaximumNArgs(1),
 		SilenceUsage: true,
-		// TODO(mkcp): Do we actually want to silence errors here?
-		SilenceErrors:     true,
+		SilenceErrors:     true, // If false, Cobra will emit unstructured log lines. We don't want that. We'd rather emit our own slog lines when returning an error.
 		PersistentPreRunE: preRun,
 		Run:               run,
 	}
