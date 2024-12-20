@@ -483,6 +483,7 @@ func NewPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 		Aliases:           []string{"u", "rm"},
 		Args:              cobra.MaximumNArgs(1),
 		Short:             lang.CmdPackageRemoveShort,
+		Long:              lang.CmdPackageRemoveLong,
 		PreRun:            o.PreRun,
 		RunE:              o.Run,
 		ValidArgsFunction: getPackageCompletionArgs,
