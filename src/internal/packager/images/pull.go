@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"io/fs"
 	"maps"
 	"os"
@@ -18,6 +17,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -34,8 +35,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/moby/moby/client"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -249,7 +248,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	toPull := maps.Clone(fetched)
 
 	err = retry.Do(func() error {
-		saved, err := SaveConcurrent(ctx, cranePath, toPull)
+		saved, err := SaveConcurrent(ctx, cranePath, toPull, cfg.CacheDirectory)
 		// Done save, remove from download list.
 		for k := range saved {
 			delete(toPull, k)
@@ -264,7 +263,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		message.Warnf("Failed to save images in parallel, falling back to sequential save: %s", err.Error())
 		l.Warn("failed to save images in parallel, falling back to sequential save", "error", err.Error())
 		err = retry.Do(func() error {
-			saved, err := SaveSequential(ctx, cranePath, toPull)
+			saved, err := SaveSequential(ctx, cranePath, toPull, cfg.CacheDirectory)
 			for k := range saved {
 				delete(toPull, k)
 			}
@@ -314,7 +313,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 }
 
 // CleanupInProgressLayers removes incomplete layers from the cache.
-func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
+func CleanupInProgressLayers(ctx context.Context, img v1.Image, cacheDirectory string) error {
 	layers, err := img.Layers()
 	if err != nil {
 		return err
@@ -331,13 +330,9 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
 			if err != nil {
 				return err
 			}
-			absPath, err := config.GetAbsCachePath()
-			if err != nil {
-				return err
-			}
-			cacheDir := filepath.Join(absPath, layout.ImagesDir)
-			location := filepath.Join(cacheDir, digest.String())
+			location := filepath.Join(cacheDirectory, digest.String())
 			info, err := os.Stat(location)
+			fmt.Println("location to delete is", location, err)
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
 			}
@@ -356,7 +351,7 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
 }
 
 // SaveSequential saves images sequentially.
-func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]v1.Image) (map[transform.Image]v1.Image, error) {
+func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]v1.Image, cacheDirectory string) (map[transform.Image]v1.Image, error) {
 	l := logger.From(ctx)
 	saved := map[transform.Image]v1.Image{}
 	for info, img := range m {
@@ -370,7 +365,7 @@ func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]
 		}
 		l.Info("saving image", "ref", info.Reference, "size", size, "method", "sequential")
 		if err := cl.AppendImage(img, clayout.WithAnnotations(annotations)); err != nil {
-			if err := CleanupInProgressLayers(ctx, img); err != nil {
+			if err := CleanupInProgressLayers(ctx, img, cacheDirectory); err != nil {
 				message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
 				l.Error("failed to clean up in-progress layers. please run `zarf tools clear-cache`")
 			}
@@ -388,7 +383,7 @@ func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]
 }
 
 // SaveConcurrent saves images in a concurrent, bounded manner.
-func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]v1.Image) (map[transform.Image]v1.Image, error) {
+func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]v1.Image, cacheDirectory string) (map[transform.Image]v1.Image, error) {
 	l := logger.From(ctx)
 	saved := map[transform.Image]v1.Image{}
 
@@ -416,7 +411,7 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 				wStart := time.Now()
 				l.Info("saving image", "ref", info.Reference, "size", size, "method", "concurrent")
 				if err := cl.WriteImage(img); err != nil {
-					if err := CleanupInProgressLayers(ectx, img); err != nil {
+					if err := CleanupInProgressLayers(ectx, img, cacheDirectory); err != nil {
 						message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
 						l.Error("failed to clean up in-progress layers. please run `zarf tools clear-cache`")
 					}
