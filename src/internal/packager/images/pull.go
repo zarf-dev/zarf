@@ -13,6 +13,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -312,6 +313,17 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	return fetched, nil
 }
 
+// from https://github.com/google/go-containerregistry/blob/6bce25ecf0297c1aa9072bc665b5cf58d53e1c54/pkg/v1/cache/fs.go#L143
+func layerCachePath(path string, h v1.Hash) string {
+	var file string
+	if runtime.GOOS == "windows" {
+		file = fmt.Sprintf("%s-%s", h.Algorithm, h.Hex)
+	} else {
+		file = h.String()
+	}
+	return filepath.Join(path, file)
+}
+
 // CleanupInProgressLayers removes incomplete layers from the cache.
 func CleanupInProgressLayers(ctx context.Context, img v1.Image, cacheDirectory string) error {
 	layers, err := img.Layers()
@@ -330,7 +342,7 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image, cacheDirectory s
 			if err != nil {
 				return err
 			}
-			location := filepath.Join(cacheDirectory, digest.String())
+			location := layerCachePath(cacheDirectory, digest)
 			info, err := os.Stat(location)
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
