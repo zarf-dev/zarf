@@ -145,6 +145,8 @@ func NewZarfCommand() *cobra.Command {
 	rootCmd.AddCommand(NewInternalCommand(rootCmd))
 	rootCmd.AddCommand(NewPackageCommand())
 
+	rootCmd.AddCommand(NewVersionCommand())
+
 	return rootCmd
 }
 
