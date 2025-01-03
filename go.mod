@@ -21,7 +21,7 @@ require (
 	github.com/derailed/k9s v0.32.7
 	github.com/distribution/distribution/v3 v3.0.0-rc.2
 	github.com/distribution/reference v0.6.0
-	github.com/fairwindsops/pluto/v5 v5.20.3
+	github.com/fairwindsops/pluto/v5 v5.21.1
 	github.com/fatih/color v1.18.0
 	github.com/fluxcd/gitkit v0.6.0
 	github.com/fluxcd/pkg/apis/meta v1.9.0
@@ -541,7 +541,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa // indirect
 	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/net v0.32.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/oauth2 v0.24.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
