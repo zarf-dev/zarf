@@ -26,7 +26,7 @@ require (
 	github.com/fluxcd/gitkit v0.6.0
 	github.com/fluxcd/pkg/apis/meta v1.9.0
 	github.com/fluxcd/source-controller/api v1.4.1
-	github.com/go-git/go-git/v5 v5.12.0
+	github.com/go-git/go-git/v5 v5.13.1
 	github.com/goccy/go-yaml v1.15.13
 	github.com/gofrs/flock v0.12.1
 	github.com/golang-cz/devslog v0.0.11
@@ -490,7 +490,7 @@ require (
 	github.com/sigstore/sigstore v1.8.10 // indirect
 	github.com/sigstore/timestamp-authority v1.2.2 // indirect
 	github.com/sirupsen/logrus v1.9.3
-	github.com/skeema/knownhosts v1.2.2 // indirect
+	github.com/skeema/knownhosts v1.3.0 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spdx/tools-golang v0.5.5 // indirect
