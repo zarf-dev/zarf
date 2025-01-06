@@ -22,3 +22,9 @@ jobs:
         run: |
           go mod tidy
           git diff --exit-code go.mod go.sum
+
+      - name: Test go mod hack
+        working-directory: ./hack/schema
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
