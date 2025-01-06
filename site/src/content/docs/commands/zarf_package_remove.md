@@ -10,6 +10,10 @@ tableOfContents: false
 
 Removes a Zarf package that has been deployed already (runs offline)
 
+### Synopsis
+
+Removes a Zarf package that has been deployed already (runs offline). Remove reverses the deployment order, the last component is removed first.
+
 ```
 zarf package remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm [flags]
 ```
