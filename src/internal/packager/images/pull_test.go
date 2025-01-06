@@ -162,7 +162,6 @@ func TestPull(t *testing.T) {
 		require.NoError(t, err)
 		destDir := t.TempDir()
 		cacheDir := t.TempDir()
-		require.NoError(t, err)
 		invalidContent := []byte("this text here is not the valid layer that the image is looking for")
 		hash, err := v1.NewHash("sha256:d94c8059c3cffb9278601bf9f8be070d50c84796401a4c5106eb8a4042445bbc")
 		require.NoError(t, err)
