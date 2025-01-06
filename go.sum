@@ -739,8 +739,8 @@ github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f/go.mod h1:OSY
 github.com/facebookincubator/flog v0.0.0-20190930132826-d2511d0ce33c/go.mod h1:QGzNH9ujQ2ZUr/CjDGZGWeDAVStrWNjHeEcjJL96Nuk=
 github.com/facebookincubator/nvdtools v0.1.5 h1:jbmDT1nd6+k+rlvKhnkgMokrCAzHoASWE5LtHbX2qFQ=
 github.com/facebookincubator/nvdtools v0.1.5/go.mod h1:Kh55SAWnjckS96TBSrXI99KrEKH4iB0OJby3N8GRJO4=
-github.com/fairwindsops/pluto/v5 v5.20.3 h1:VznhtWQL5YETPOJdQro84cyK/Y0eZthwqTZ2smdWxrI=
-github.com/fairwindsops/pluto/v5 v5.20.3/go.mod h1:EyAsOnv93/1zXAuNjnoq/v3Taxz7YNOpmPPhAPEzb/A=
+github.com/fairwindsops/pluto/v5 v5.21.1 h1:w+9lwXmmIRZtZsKpS3zN38ktQzSsuJJgO0e5qVac81Q=
+github.com/fairwindsops/pluto/v5 v5.21.1/go.mod h1:xVluG5XjaVGCAraBz3mDnt80DauFxo0hmnBoNpLDMYA=
 github.com/fatih/camelcase v1.0.0 h1:hxNvNX/xYBp0ovncs8WyWZrOrpBNub/JfaMvbURyft8=
 github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwoZc+/fpc=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
