@@ -401,6 +401,7 @@ func (o *PackageInspectOptions) Run(cmd *cobra.Command, args []string) error {
 				return err
 			}
 		}
+		return nil
 	}
 
 	output, err := packager2.Inspect(ctx, inspectOpt)
