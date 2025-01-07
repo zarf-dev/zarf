@@ -30,6 +30,9 @@ jobs:
           aws-region: us-east-1
           role-duration-seconds: 1800
 
+      - name: Login to the ECR Registry
+        run: aws ecr-public get-login-password --region us-east-1 | ./build/zarf tools registry login --username AWS --password-stdin public.ecr.aws
+
       - name: Setup golang
         uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
         with:
@@ -47,8 +50,8 @@ jobs:
       #     role-duration-seconds: 3600
 
       # NOTE: The aws cli will need to be explicitly installed on self-hosted runners
-      - name: Login to the ECR Registry
-        run: aws ecr-public get-login-password --region us-east-1 | ./build/zarf tools registry login --username AWS --password-stdin public.ecr.aws
+      # - name: Login to the ECR Registry
+      #   run: aws ecr-public get-login-password --region us-east-1 | ./build/zarf tools registry login --username AWS --password-stdin public.ecr.aws
 
       - name: Test publishing and pulling to ECR
         run: go test ./src/test/nightly/ecr_publish_test.go
