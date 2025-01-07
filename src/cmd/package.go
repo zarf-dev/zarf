@@ -373,6 +373,11 @@ func (o *PackageInspectOptions) PreRun(_ *cobra.Command, _ []string) {
 // Run performs the execution of 'package inspect' sub-command.
 func (o *PackageInspectOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+
+	if pkgConfig.InspectOpts.ListImages && (pkgConfig.InspectOpts.SBOMOutputDir != "" || pkgConfig.InspectOpts.ViewSBOM) {
+		return fmt.Errorf("cannot use --sbom or --sbom-out and --list-images at the same time")
+	}
+
 	// NOTE(mkcp): Gets user input with message
 	src, err := choosePackage(ctx, args)
 	if err != nil {
