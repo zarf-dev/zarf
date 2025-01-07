@@ -32,7 +32,7 @@ require (
 	github.com/golang-cz/devslog v0.0.11
 	github.com/google/go-containerregistry v0.20.2
 	github.com/gosuri/uitable v0.0.4
-	github.com/invopop/jsonschema v0.12.0
+	github.com/invopop/jsonschema v0.13.0
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/moby/moby v27.4.1+incompatible
 	github.com/opencontainers/image-spec v1.1.0
