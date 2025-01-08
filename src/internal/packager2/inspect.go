@@ -54,19 +54,14 @@ func InspectList(ctx context.Context, opt ZarfInspectOptions) ([]string, error) 
 	if err != nil {
 		return nil, err
 	}
-	// Only list images if we have components
-	if len(pkg.Components) > 0 {
-		for _, component := range pkg.Components {
-			imageList = append(imageList, component.Images...)
-		}
-		if len(imageList) > 0 {
-			imageList = helpers.Unique(imageList)
-			return imageList, nil
-		}
-		return nil, fmt.Errorf("failed listing images: list of images found in components: %d", len(imageList))
+	for _, component := range pkg.Components {
+		imageList = append(imageList, component.Images...)
 	}
-
-	return imageList, err
+	if imageList == nil {
+		return nil, fmt.Errorf("failed listing images: 0 images found in package")
+	}
+	imageList = helpers.Unique(imageList)
+	return imageList, nil
 }
 
 func getPackageMetadata(ctx context.Context, opt ZarfInspectOptions) (v1alpha1.ZarfPackage, error) {
