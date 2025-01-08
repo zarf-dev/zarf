@@ -5,7 +5,7 @@ go 1.23.3
 replace github.com/zarf-dev/zarf => ../..
 
 require (
-	github.com/invopop/jsonschema v0.12.0
+	github.com/invopop/jsonschema v0.13.0
 	github.com/zarf-dev/zarf v0.38.2
 )
 
