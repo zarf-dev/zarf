@@ -4,13 +4,33 @@
 package layout
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+func TestResolveImportsCircular(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+
+	b, err := os.ReadFile(filepath.Join("./testdata/import/first", ZarfYAML))
+	require.NoError(t, err)
+	pkg, err := ParseZarfPackage(b)
+	require.NoError(t, err)
+
+	_, err = resolveImports(ctx, pkg, "./testdata/import/first", "", "", map[string]interface{}{})
+	require.EqualError(t, err, "package testdata/import/second imported in cycle by testdata/import/third")
+}
 
 func TestValidateComponentCompose(t *testing.T) {
 	t.Parallel()

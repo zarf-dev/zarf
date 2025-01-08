@@ -23,7 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string) (v1alpha1.ZarfPackage, error) {
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, seenImports map[string]interface{}) (v1alpha1.ZarfPackage, error) {
 	variables := pkg.Variables
 	constants := pkg.Constants
 	components := []v1alpha1.ZarfComponent{}
@@ -45,11 +45,20 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 
 		var importedPkg v1alpha1.ZarfPackage
 		if component.Import.Path != "" {
-			b, err := os.ReadFile(filepath.Join(packagePath, component.Import.Path, layout.ZarfYAML))
+			importPath := filepath.Join(packagePath, component.Import.Path)
+			if _, ok := seenImports[importPath]; ok {
+				return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s", filepath.ToSlash(importPath), filepath.ToSlash(packagePath))
+			}
+			seenImports[importPath] = nil
+			b, err := os.ReadFile(filepath.Join(importPath, layout.ZarfYAML))
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
 			importedPkg, err = ParseZarfPackage(b)
+			if err != nil {
+				return v1alpha1.ZarfPackage{}, err
+			}
+			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, seenImports)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -84,9 +93,6 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("multiple components named %s found", name)
 		}
 		importedComponent := found[0]
-		if importedComponent.Import.Path != "" || importedComponent.Import.URL != "" {
-			return v1alpha1.ZarfPackage{}, fmt.Errorf("imported component %s has imports which is not supported", importedComponent.Name)
-		}
 
 		importPath, err := fetchOCISkeleton(ctx, component, packagePath)
 		if err != nil {
