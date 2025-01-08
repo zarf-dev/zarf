@@ -62,7 +62,7 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) 
 
 	pkg.Metadata.Architecture = config.GetArch()
 
-	pkg, err = resolveImports(ctx, pkg, packagePath, pkg.Metadata.Architecture, opt.Flavor)
+	pkg, err = resolveImports(ctx, pkg, packagePath, pkg.Metadata.Architecture, opt.Flavor, map[string]interface{}{})
 	if err != nil {
 		return "", err
 	}
