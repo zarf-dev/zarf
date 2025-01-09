@@ -6,6 +6,7 @@ package images
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -162,12 +163,16 @@ func TestPull(t *testing.T) {
 		require.NoError(t, err)
 		destDir := t.TempDir()
 		cacheDir := t.TempDir()
-		invalidContent := []byte("this text here is not the valid layer that the image is looking for")
-		hash, err := v1.NewHash("sha256:d94c8059c3cffb9278601bf9f8be070d50c84796401a4c5106eb8a4042445bbc")
+		invalidContent := []byte("this mimics a corrupted file")
+		// This is the sha of a layer of the image. Crane will make a file using this sha in the cache
+		// we intentionally put junk data into the cache with this layer to test that it will get cleaned up.
+		correctLayerSha := "d94c8059c3cffb9278601bf9f8be070d50c84796401a4c5106eb8a4042445bbc"
+		hash, err := v1.NewHash(fmt.Sprintf("sha256:%s", correctLayerSha))
 		require.NoError(t, err)
 		invalidLayerPath := layerCachePath(cacheDir, hash)
 		err = os.WriteFile(invalidLayerPath, invalidContent, 0777)
 		require.NoError(t, err)
+
 		pullConfig := PullConfig{
 			DestinationDirectory: destDir,
 			CacheDirectory:       cacheDir,
@@ -175,17 +180,19 @@ func TestPull(t *testing.T) {
 				ref,
 			},
 		}
-
 		_, err = Pull(context.Background(), pullConfig)
+		require.NoError(t, err)
 
-		// Verify the cache is fixed and the new image layer was pulled
+		// Verify the cache layer has the correct sha
+		nowValidCachedLayer, err := os.ReadFile(invalidLayerPath)
+		cachedLayerSha := sha256.Sum256(nowValidCachedLayer)
+		require.Equal(t, correctLayerSha, fmt.Sprintf("%x", cachedLayerSha))
 		require.NoError(t, err)
-		nowValidContents, err := os.ReadFile(invalidLayerPath)
-		require.NoError(t, err)
+		// Verify the pulled layer hsa the correct sha
 		pulledLayerPath := filepath.Join(destDir, "blobs", "sha256", hash.Hex)
 		pulledLayer, err := os.ReadFile(pulledLayerPath)
 		require.NoError(t, err)
-		require.Equal(t, nowValidContents, pulledLayer)
-		require.NotEqual(t, nowValidContents, invalidContent)
+		pulledLayerSha := sha256.Sum256(pulledLayer)
+		require.Equal(t, correctLayerSha, fmt.Sprintf("%x", pulledLayerSha))
 	})
 }
