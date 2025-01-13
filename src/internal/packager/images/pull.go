@@ -65,6 +65,28 @@ func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
 	return nil
 }
 
+func getDockerEndpoint() (string, error) {
+	dockerCli, err := command.NewDockerCli(command.WithStandardStreams())
+	if err != nil {
+		return "", err
+	}
+	newClientOpts := flags.NewClientOptions()
+	err = dockerCli.Initialize(newClientOpts)
+	if err != nil {
+		return "", err
+	}
+	store := dockerCli.ContextStore()
+	metadata, err := store.GetMetadata(dockerCli.CurrentContext())
+	if err != nil {
+		return "", err
+	}
+	endpoint, err := docker.EndpointFromContext(metadata)
+	if err != nil {
+		return "", err
+	}
+	return endpoint.Host, nil
+}
+
 // Pull pulls all images from the given config.
 func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, error) {
 	l := logger.From(ctx)
@@ -108,6 +130,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	fetched := map[transform.Image]v1.Image{}
 
 	var counter, totalBytes atomic.Int64
+	var dockerEndPointHost string
 
 	// Spawn a goroutine for each
 	for _, refInfo := range cfg.ImageList {
@@ -149,23 +172,19 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 					message.Warnf("Falling back to local 'docker', failed to find the manifest on a remote: %s", err.Error())
 					l.Warn("Falling back to local 'docker', failed to find the manifest on a remote", "error", err.Error())
 
-					dockerCli, err := command.NewDockerCli(command.WithStandardStreams())
-					if err != nil {
-						return err
+					if dockerEndPointHost == "" {
+						dockerEndPointHost, err = getDockerEndpoint()
+						if err != nil {
+							return err
+						}
 					}
-					newClientOpts := flags.NewClientOptions()
-					err = dockerCli.Initialize(newClientOpts)
-					if err != nil {
-						return err
-					}
-					store := dockerCli.ContextStore()
-					metadata, err := store.GetMetadata(dockerCli.CurrentContext())
-					if err != nil {
-						return err
-					}
-					endpoint, err := docker.EndpointFromContext(metadata)
+
 					// Attempt to connect to the local docker daemon.
-					cli, err := client.NewClientWithOpts(client.FromEnv, client.WithHost(endpoint.Host))
+					cli, err := client.NewClientWithOpts(
+						client.WithHost(dockerEndPointHost),
+						client.WithTLSClientConfigFromEnv(),
+						client.WithVersionFromEnv(),
+					)
 					if err != nil {
 						return fmt.Errorf("docker not available: %w", err)
 					}
