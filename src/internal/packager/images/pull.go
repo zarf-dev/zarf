@@ -178,7 +178,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 							return err
 						}
 					}
-
 					// Attempt to connect to the local docker daemon.
 					cli, err := client.NewClientWithOpts(
 						client.WithHost(dockerEndPointHost),
@@ -205,7 +204,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 					// Use unbuffered opener to avoid OOM Kill issues https://github.com/zarf-dev/zarf/issues/1214.
 					// This will also take forever to load large images.
-					img, err = daemon.Image(reference, daemon.WithUnbufferedOpener())
+
+					img, err = daemon.Image(reference, daemon.WithUnbufferedOpener(), daemon.WithClient(cli))
 					if err != nil {
 						return fmt.Errorf("failed to load from docker daemon: %w", err)
 					}
