@@ -24,7 +24,7 @@ func TestCreateSkeleton(t *testing.T) {
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
 	opt := CreateOptions{}
-	path, err := CreateSkeleton(ctx, "./testdata/zarf-package", opt)
+	path, err := CreateSkeleton(ctx, "./testdata/zarf-skeleton-package", opt)
 	require.NoError(t, err)
 
 	pkgPath := layout.New(path)
@@ -100,7 +100,7 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	require.NoError(t, err)
 	tarPath := filepath.Join(t.TempDir(), "data.tar")
 
-	err = createReproducibleTarballFromDir(tmpDir, "", tarPath)
+	err = createReproducibleTarballFromDir(tmpDir, "", tarPath, true)
 	require.NoError(t, err)
 
 	shaSum, err := helpers.GetSHA256OfFile(tarPath)
