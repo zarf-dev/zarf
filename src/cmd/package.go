@@ -139,16 +139,19 @@ func (o *PackageCreateOptions) Run(cmd *cobra.Command, args []string) error {
 	pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-	pkgClient, err := packager.New(&pkgConfig,
-		packager.WithContext(ctx),
-	)
-	if err != nil {
-		return err
+	opt := packager2.CreateOptions{
+		Flavor:                  pkgConfig.CreateOpts.Flavor,
+		RegistryOverrides:       pkgConfig.CreateOpts.RegistryOverrides,
+		SigningKeyPath:          pkgConfig.CreateOpts.SigningKeyPath,
+		SigningKeyPassword:      pkgConfig.CreateOpts.SigningKeyPassword,
+		SetVariables:            pkgConfig.CreateOpts.SetVariables,
+		MaxPackageSizeMB:        pkgConfig.CreateOpts.MaxPackageSizeMB,
+		SBOMOut:                 pkgConfig.CreateOpts.SBOMOutputDir,
+		SkipSBOM:                pkgConfig.CreateOpts.SkipSBOM,
+		Output:                  pkgConfig.CreateOpts.Output,
+		DifferentialPackagePath: pkgConfig.CreateOpts.DifferentialPackagePath,
 	}
-	defer pkgClient.ClearTempPaths()
-
-	err = pkgClient.Create(ctx)
-
+	err := packager2.Create(cmd.Context(), pkgConfig.CreateOpts.BaseDir, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {

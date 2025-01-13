@@ -29,7 +29,7 @@ func TestResolveImportsCircular(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = resolveImports(ctx, pkg, "./testdata/import/first", "", "", map[string]interface{}{})
-	require.EqualError(t, err, "package testdata/import/second imported in cycle by testdata/import/third")
+	require.EqualError(t, err, "package testdata/import/second imported in cycle by testdata/import/third in component component")
 }
 
 func TestValidateComponentCompose(t *testing.T) {

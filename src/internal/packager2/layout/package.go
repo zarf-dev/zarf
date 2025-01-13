@@ -24,6 +24,9 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -187,6 +190,38 @@ func (p *PackageLayout) GetImage(ref transform.Image) (registryv1.Image, error) 
 		}
 	}
 	return nil, fmt.Errorf("unable to find the image %s", ref.Reference)
+}
+
+func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
+	packageName := fmt.Sprintf("%s%s", sources.NameFromMetadata(&p.Pkg, false), sources.PkgSuffix(p.Pkg.Metadata.Uncompressed))
+	tarballPath := filepath.Join(dirPath, packageName)
+	err := os.Remove(tarballPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	message.Notef("Saving package to path %s", tarballPath)
+	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
+	err = archiver.Archive([]string{p.dirPath + string(os.PathSeparator)}, tarballPath)
+	if err != nil {
+		return fmt.Errorf("unable to create package: %w", err)
+	}
+	fi, err := os.Stat(tarballPath)
+	if err != nil {
+		return fmt.Errorf("unable to read the package archive: %w", err)
+	}
+	// Convert Megabytes to bytes.
+	chunkSize := maxPackageSize * 1000 * 1000
+	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
+	if maxPackageSize > 0 && fi.Size() > int64(chunkSize) {
+		if fi.Size()/int64(chunkSize) > 999 {
+			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
+		}
+		err := splitFile(tarballPath, chunkSize)
+		if err != nil {
+			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
+		}
+	}
+	return nil
 }
 
 // Files returns a map off all the files in the package.
