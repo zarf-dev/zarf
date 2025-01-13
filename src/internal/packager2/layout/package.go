@@ -232,7 +232,7 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 		for _, chunk := range existingChunks {
 			err := os.Remove(chunk)
 			if err != nil {
-				return fmt.Errorf("unable to remove existing chunk file %s: %w", chunk, err)
+				return err
 			}
 		}
 		err = splitFile(tarballPath, chunkSize)
