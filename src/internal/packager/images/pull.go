@@ -65,7 +65,7 @@ func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
 	return nil
 }
 
-func getDockerEndpoint() (string, error) {
+func getDockerEndpointHost() (string, error) {
 	dockerCli, err := command.NewDockerCli(command.WithStandardStreams())
 	if err != nil {
 		return "", err
@@ -173,7 +173,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 					l.Warn("Falling back to local 'docker', failed to find the manifest on a remote", "error", err.Error())
 
 					if dockerEndPointHost == "" {
-						dockerEndPointHost, err = getDockerEndpoint()
+						dockerEndPointHost, err = getDockerEndpointHost()
 						if err != nil {
 							return err
 						}
