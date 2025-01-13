@@ -292,7 +292,7 @@ require (
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/edsrzf/mmap-go v1.1.0 // indirect
-	github.com/elliotchance/orderedmap v1.7.0 // indirect
+	github.com/elliotchance/orderedmap v1.7.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/emicklei/proto v1.12.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -332,7 +332,7 @@ require (
 	github.com/go-restruct/restruct v1.2.0-alpha // indirect
 	github.com/go-test/deep v1.1.1 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/goccy/go-json v0.10.3 // indirect
+	github.com/goccy/go-json v0.10.4 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
@@ -414,7 +414,7 @@ require (
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/microsoft/go-rustaudit v0.0.0-20220730194248-4b17361d90a5 // indirect
 	github.com/miekg/pkcs11 v1.1.1 // indirect
-	github.com/mikefarah/yq/v4 v4.44.6
+	github.com/mikefarah/yq/v4 v4.45.1
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
