@@ -921,6 +921,54 @@ func reloadComponentTemplatesInPackage(zarfPackage *v1alpha1.ZarfPackage) error 
 	return nil
 }
 
+func assembleSplitTar(src, tarPath string) error {
+	pattern := strings.Replace(src, ".part000", ".part*", 1)
+	splitFiles, err := filepath.Glob(pattern)
+	if err != nil {
+		return fmt.Errorf("unable to find split tarball files: %w", err)
+	}
+	// Ensure the files are in order so they are appended in the correct order
+	slices.Sort(splitFiles)
+
+	tarFile, err := os.Create(tarPath)
+	if err != nil {
+		return err
+	}
+	defer tarFile.Close()
+	for i, splitFile := range splitFiles {
+		if i == 0 {
+			b, err := os.ReadFile(splitFile)
+			if err != nil {
+				return err
+			}
+			var pkgData types.ZarfSplitPackageData
+			err = json.Unmarshal(b, &pkgData)
+			if err != nil {
+				return err
+			}
+			expectedCount := len(splitFiles) - 1
+			if expectedCount != pkgData.Count {
+				return fmt.Errorf("split file count to not match, expected %d but have %d", pkgData.Count, expectedCount)
+			}
+			continue
+		}
+		f, err := os.Open(splitFile)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		_, err = io.Copy(tarFile, f)
+		if err != nil {
+			return err
+		}
+		err = f.Close()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func splitFile(srcPath string, chunkSize int) (err error) {
 	srcFile, err := os.Open(srcPath)
 	if err != nil {
@@ -953,7 +1001,7 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 	//   iteration as soon as we're done writing.
 	for {
 		path := fmt.Sprintf("%s.part%03d", srcPath, fileCount+1)
-		dstFile, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, helpers.ReadAllWriteUser)
+		dstFile, err := os.Create(path)
 		if err != nil {
 			return err
 		}
