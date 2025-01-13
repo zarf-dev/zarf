@@ -27,7 +27,7 @@ import (
 
 const (
 	// DefaultTimeout is the default time to wait for a cluster to be ready.
-	DefaultTimeout = 30 * time.Second
+	DefaultTimeout = 60 * time.Second
 	// AgentLabel is used to give instructions to the Zarf agent
 	AgentLabel = "zarf.dev/agent"
 	// FieldManagerName is the field manager used during server side apply
