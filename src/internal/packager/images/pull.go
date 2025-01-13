@@ -19,6 +19,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/docker/cli/cli/command"
+	"github.com/docker/cli/cli/context/docker"
+	"github.com/docker/cli/cli/flags"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/avast/retry-go/v4"
@@ -146,8 +149,23 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 					message.Warnf("Falling back to local 'docker', failed to find the manifest on a remote: %s", err.Error())
 					l.Warn("Falling back to local 'docker', failed to find the manifest on a remote", "error", err.Error())
 
+					dockerCli, err := command.NewDockerCli(command.WithStandardStreams())
+					if err != nil {
+						return err
+					}
+					newClientOpts := flags.NewClientOptions()
+					err = dockerCli.Initialize(newClientOpts)
+					if err != nil {
+						return err
+					}
+					store := dockerCli.ContextStore()
+					metadata, err := store.GetMetadata(dockerCli.CurrentContext())
+					if err != nil {
+						return err
+					}
+					endpoint, err := docker.EndpointFromContext(metadata)
 					// Attempt to connect to the local docker daemon.
-					cli, err := client.NewClientWithOpts(client.FromEnv)
+					cli, err := client.NewClientWithOpts(client.FromEnv, client.WithHost(endpoint.Host))
 					if err != nil {
 						return fmt.Errorf("docker not available: %w", err)
 					}
