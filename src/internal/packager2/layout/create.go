@@ -921,7 +921,6 @@ func reloadComponentTemplatesInPackage(zarfPackage *v1alpha1.ZarfPackage) error 
 	return nil
 }
 
-// File will split the file into chunks and remove the original file.
 func splitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 	// Remove any existing split files
 	existingChunks, err := filepath.Glob(srcPath + ".part*")
@@ -1040,6 +1039,6 @@ func splitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 		return fmt.Errorf("unable to write the file %s: %w", path, err)
 	}
 	progressBar.Successf("Package split across %d files", fileCount+1)
-	logger.From(ctx).Info("package split across multiple files", "count", fileCount+1)
+	logger.From(ctx).Info("package split across files", "count", fileCount+1)
 	return nil
 }
