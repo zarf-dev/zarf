@@ -111,8 +111,9 @@ func TestSplitDeleteExistingFiles(t *testing.T) {
 	require.NoError(t, err)
 	// Create many fake split files
 	for i := range 15 {
-		_, err := os.Create(fmt.Sprintf("%s.part%03d", inputFilename, i))
+		f, err := os.Create(fmt.Sprintf("%s.part%03d", inputFilename, i))
 		require.NoError(t, err)
+		require.NoError(t, f.Close())
 	}
 
 	chunkSize := 20
