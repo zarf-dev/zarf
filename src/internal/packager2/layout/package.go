@@ -37,6 +37,10 @@ type PackageLayout struct {
 	Pkg     v1alpha1.ZarfPackage
 }
 
+func (p *PackageLayout) GetBasePath() string {
+	return p.dirPath
+}
+
 // PackageLayoutOptions are the options used when loading a package.
 type PackageLayoutOptions struct {
 	PublicKeyPath           string

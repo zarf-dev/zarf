@@ -213,25 +213,25 @@ func (o *PackageDeployOptions) PreRun(_ *cobra.Command, _ []string) {
 // Run performs the execution of 'package deploy' sub-command.
 func (o *PackageDeployOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	packageSource, err := choosePackage(ctx, args)
+
+	src, err := choosePackage(ctx, args)
 	if err != nil {
 		return err
 	}
-	pkgConfig.PkgOpts.PackageSource = packageSource
 
 	v := common.GetViper()
-	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+	setVariables := helpers.TransformAndMergeMap(v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	pkgClient, err := packager.New(&pkgConfig, packager.WithContext(cmd.Context()))
-	if err != nil {
-		return err
+	deployOpt := packager2.DeployOptions{
+		Source:             src,
+		SetVariables:       setVariables,
+		OptionalComponents: pkgConfig.PkgOpts.OptionalComponents,
 	}
-	defer pkgClient.ClearTempPaths()
-
-	if err := pkgClient.Deploy(ctx); err != nil {
+	deployedComponents, err := packager2.Deploy(ctx, deployOpt)
+	if err != nil {
 		return fmt.Errorf("failed to deploy package: %w", err)
 	}
+	fmt.Println(deployedComponents)
 	return nil
 }
 
