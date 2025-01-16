@@ -4,9 +4,6 @@
 package layout
 
 import (
-	"crypto/sha256"
-	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,40 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"github.com/zarf-dev/zarf/src/types"
 )
-
-func TestSplitFile(t *testing.T) {
-	tempDir := t.TempDir()
-	inputFilename := filepath.Join(tempDir, "testfile.dat")
-	testData := []byte("This is some data to test out that we can split files into chunks and put them back together")
-	err := os.WriteFile(inputFilename, testData, helpers.ReadAllWriteUser)
-	require.NoError(t, err)
-
-	chunkSize := 30
-	err = splitFile(inputFilename, chunkSize)
-	require.NoError(t, err)
-
-	_, err = os.Stat(inputFilename)
-	require.True(t, os.IsNotExist(err))
-	headerPath := inputFilename + ".part000"
-	headerData, err := os.ReadFile(headerPath)
-	require.NoError(t, err)
-	var splitData types.ZarfSplitPackageData
-	err = json.Unmarshal(headerData, &splitData)
-	require.NoError(t, err)
-	require.EqualValues(t, len(testData), splitData.Bytes)
-	require.Greater(t, splitData.Count, 2, "make sure we actually split the file")
-
-
-	assembledPath := filepath.Join(tempDir, "assembled.dat")
-	err = assembleSplitTar(headerPath, assembledPath)
-	require.NoError(t, err)
-	reconstructed, err := os.ReadFile(assembledPath)
-	require.Equal(t, testData, reconstructed)
-	actualHash := sha256.Sum256(reconstructed)
-	require.Equal(t, splitData.Sha256Sum, fmt.Sprintf("%x", actualHash))
-}
 
 func TestCreateSkeleton(t *testing.T) {
 	t.Parallel()

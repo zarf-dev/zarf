@@ -19,10 +19,10 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // LoadOptions are the options for LoadPackage.
@@ -124,7 +124,7 @@ func assembleSplitTar(src, tarPath string) error {
 			if err != nil {
 				return err
 			}
-			var pkgData types.ZarfSplitPackageData
+			var pkgData split.ZarfSplitPackageData
 			err = json.Unmarshal(b, &pkgData)
 			if err != nil {
 				return err

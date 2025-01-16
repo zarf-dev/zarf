@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package layout
+package split
 
 import (
 	"context"
@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/internal/split"
 )
 
 func TestSplitFile(t *testing.T) {
@@ -65,7 +64,7 @@ func TestSplitFile(t *testing.T) {
 			err = f.Close()
 			require.NoError(t, err)
 
-			err = splitFile(context.Background(), p, tt.chunkSize)
+			err = File(context.Background(), p, tt.chunkSize)
 			require.NoError(t, err)
 
 			_, err = os.Stat(p)
@@ -87,7 +86,7 @@ func TestSplitFile(t *testing.T) {
 
 			b, err = os.ReadFile(filepath.Join(dir, fmt.Sprintf("%s.part000", name)))
 			require.NoError(t, err)
-			var data split.ZarfSplitPackageData
+			var data ZarfSplitPackageData
 			err = json.Unmarshal(b, &data)
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedFileCount, data.Count)
@@ -95,4 +94,30 @@ func TestSplitFile(t *testing.T) {
 			require.Equal(t, tt.expectedSha256Sum, data.Sha256Sum)
 		})
 	}
+}
+
+func TestSplitDeleteExistingFiles(t *testing.T) {
+	t.Parallel()
+	tempDir := t.TempDir()
+	inputFilename := filepath.Join(tempDir, "testfile.txt")
+	data := make([]byte, 50)
+	err := os.WriteFile(inputFilename, data, 0644)
+	require.NoError(t, err)
+	// Create many fake split files
+	for i := range 15 {
+		_, err := os.Create(fmt.Sprintf("%s.part%03d", inputFilename, i))
+		require.NoError(t, err)
+	}
+
+	chunkSize := 20
+	err = File(context.Background(), inputFilename, chunkSize)
+	require.NoError(t, err)
+
+	// Verify fake split files were deleted
+	_, err = os.Stat(inputFilename)
+	require.ErrorIs(t, err, os.ErrNotExist)
+	entries, err := os.ReadDir(tempDir)
+	require.NoError(t, err)
+	// Header file + 3 data files
+	require.Len(t, entries, 4)
 }

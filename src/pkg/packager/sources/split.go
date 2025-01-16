@@ -16,6 +16,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -52,7 +53,7 @@ func (s *SplitTarballSource) Collect(ctx context.Context, dir string) (string, e
 	}
 	defer pkgFile.Close()
 
-	var pkgData types.ZarfSplitPackageData
+	var pkgData split.ZarfSplitPackageData
 	for idx, file := range fileList {
 		// The first file contains metadata about the package
 		if idx == 0 {

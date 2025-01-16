@@ -164,16 +164,6 @@ type ZarfCreateOptions struct {
 	NoYOLO bool
 }
 
-// ZarfSplitPackageData contains info about a split package.
-type ZarfSplitPackageData struct {
-	// The sha256sum of the package
-	Sha256Sum string
-	// The size of the package in bytes
-	Bytes int64
-	// The number of parts the package is split into
-	Count int
-}
-
 // DifferentialData contains image and repository information about the package a Differential Package is Based on.
 type DifferentialData struct {
 	DifferentialImages         map[string]bool
