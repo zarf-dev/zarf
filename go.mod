@@ -340,7 +340,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/btree v1.1.2 // indirect
+	github.com/google/btree v1.1.3 // indirect
 	github.com/google/certificate-transparency-go v1.2.1 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
@@ -574,7 +574,7 @@ require (
 	modernc.org/memory v1.8.0 // indirect
 	modernc.org/sqlite v1.34.2 // indirect
 	oras.land/oras-go v1.2.5 // indirect
-	sigs.k8s.io/controller-runtime v0.19.4
+	sigs.k8s.io/controller-runtime v0.20.0
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/kustomize/kustomize/v5 v5.5.0 // indirect
 	sigs.k8s.io/release-utils v0.8.4 // indirect
