@@ -27,7 +27,7 @@ require (
 	github.com/fluxcd/pkg/apis/meta v1.9.0
 	github.com/fluxcd/source-controller/api v1.4.1
 	github.com/go-git/go-git/v5 v5.13.1
-	github.com/goccy/go-yaml v1.15.13
+	github.com/goccy/go-yaml v1.15.14
 	github.com/gofrs/flock v0.12.1
 	github.com/golang-cz/devslog v0.0.11
 	github.com/google/go-containerregistry v0.20.3
@@ -55,12 +55,12 @@ require (
 	golang.org/x/sync v0.10.0
 	golang.org/x/term v0.28.0
 	helm.sh/helm/v3 v3.17.0
-	k8s.io/api v0.32.0
-	k8s.io/apimachinery v0.32.0
-	k8s.io/client-go v0.32.0
-	k8s.io/component-base v0.32.0
+	k8s.io/api v0.32.1
+	k8s.io/apimachinery v0.32.1
+	k8s.io/client-go v0.32.1
+	k8s.io/component-base v0.32.1
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kubectl v0.32.0
+	k8s.io/kubectl v0.32.1
 	oras.land/oras-go/v2 v2.5.0
 	sigs.k8s.io/cli-utils v0.37.2
 	sigs.k8s.io/kustomize/api v0.19.0
@@ -342,7 +342,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/btree v1.1.2 // indirect
+	github.com/google/btree v1.1.3 // indirect
 	github.com/google/certificate-transparency-go v1.2.1 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
@@ -566,17 +566,17 @@ require (
 	gorm.io/gorm v1.25.12 // indirect
 	k8s.io/apiextensions-apiserver v0.32.0 // indirect
 	k8s.io/apiserver v0.32.0 // indirect
-	k8s.io/cli-runtime v0.32.0 // indirect
-	k8s.io/component-helpers v0.32.0 // indirect
+	k8s.io/cli-runtime v0.32.1 // indirect
+	k8s.io/component-helpers v0.32.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20241212222426-2c72e554b1e7 // indirect
-	k8s.io/metrics v0.32.0 // indirect
+	k8s.io/metrics v0.32.1 // indirect
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
 	modernc.org/libc v1.55.3 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
 	modernc.org/sqlite v1.34.2 // indirect
 	oras.land/oras-go v1.2.5 // indirect
-	sigs.k8s.io/controller-runtime v0.19.4
+	sigs.k8s.io/controller-runtime v0.20.0
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/kustomize/kustomize/v5 v5.5.0 // indirect
 	sigs.k8s.io/release-utils v0.8.4 // indirect
