@@ -19,6 +19,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/docker/cli/cli/command"
+	"github.com/docker/cli/cli/context/docker"
+	"github.com/docker/cli/cli/flags"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/avast/retry-go/v4"
@@ -60,6 +63,28 @@ func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
 		return fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", refInfo.Reference, imageOptions)
 	}
 	return nil
+}
+
+func getDockerEndpointHost() (string, error) {
+	dockerCli, err := command.NewDockerCli(command.WithStandardStreams())
+	if err != nil {
+		return "", err
+	}
+	newClientOpts := flags.NewClientOptions()
+	err = dockerCli.Initialize(newClientOpts)
+	if err != nil {
+		return "", err
+	}
+	store := dockerCli.ContextStore()
+	metadata, err := store.GetMetadata(dockerCli.CurrentContext())
+	if err != nil {
+		return "", err
+	}
+	endpoint, err := docker.EndpointFromContext(metadata)
+	if err != nil {
+		return "", err
+	}
+	return endpoint.Host, nil
 }
 
 // Pull pulls all images from the given config.
@@ -105,6 +130,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	fetched := map[transform.Image]v1.Image{}
 
 	var counter, totalBytes atomic.Int64
+	var dockerEndPointHost string
 
 	// Spawn a goroutine for each
 	for _, refInfo := range cfg.ImageList {
@@ -146,8 +172,18 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 					message.Warnf("Falling back to local 'docker', failed to find the manifest on a remote: %s", err.Error())
 					l.Warn("Falling back to local 'docker', failed to find the manifest on a remote", "error", err.Error())
 
+					if dockerEndPointHost == "" {
+						dockerEndPointHost, err = getDockerEndpointHost()
+						if err != nil {
+							return err
+						}
+					}
 					// Attempt to connect to the local docker daemon.
-					cli, err := client.NewClientWithOpts(client.FromEnv)
+					cli, err := client.NewClientWithOpts(
+						client.WithHost(dockerEndPointHost),
+						client.WithTLSClientConfigFromEnv(),
+						client.WithVersionFromEnv(),
+					)
 					if err != nil {
 						return fmt.Errorf("docker not available: %w", err)
 					}
@@ -168,7 +204,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 					// Use unbuffered opener to avoid OOM Kill issues https://github.com/zarf-dev/zarf/issues/1214.
 					// This will also take forever to load large images.
-					img, err = daemon.Image(reference, daemon.WithUnbufferedOpener())
+					img, err = daemon.Image(reference, daemon.WithUnbufferedOpener(), daemon.WithClient(cli))
 					if err != nil {
 						return fmt.Errorf("failed to load from docker daemon: %w", err)
 					}

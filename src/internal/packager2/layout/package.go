@@ -201,7 +201,15 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 	}
 	message.Notef("Saving package to path %s", tarballPath)
 	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
-	err = archiver.Archive([]string{p.dirPath + string(os.PathSeparator)}, tarballPath)
+	files, err := os.ReadDir(p.dirPath)
+	if err != nil {
+		return err
+	}
+	var filePaths []string
+	for _, file := range files {
+		filePaths = append(filePaths, filepath.Join(p.dirPath, file.Name()))
+	}
+	err = archiver.Archive(filePaths, tarballPath)
 	if err != nil {
 		return fmt.Errorf("unable to create package: %w", err)
 	}
