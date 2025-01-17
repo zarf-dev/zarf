@@ -1,0 +1,23 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-inspect-definition
+  architecture: amd64
+build:
+  terminal: ""
+  user: ""
+  architecture: ""
+  timestamp: ""
+  version: ""
+  migrations:
+  - scripts-to-actions
+  - pluralize-set-variable
+  lastNonBreakingVersion: v0.27.0
+components:
+- name: import-test
+  description: worked-fine
+- name: flavor-test
+  description: this component should be included
+  only:
+    flavor: ice-cream
+- name: set-variables
+  description: "ensure that package templates were set: worked-as-expected"
