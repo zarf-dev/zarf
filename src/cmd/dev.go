@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -50,8 +51,58 @@ func NewDevCommand() *cobra.Command {
 	cmd.AddCommand(NewDevFindImagesCommand(v))
 	cmd.AddCommand(NewDevGenerateConfigCommand())
 	cmd.AddCommand(NewDevLintCommand(v))
+	cmd.AddCommand(NewDevInspectCommand(v))
 
 	return cmd
+}
+
+// NewDevInspectCommand creates the `dev inspect` sub-command.
+func NewDevInspectCommand(v *viper.Viper) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "inspect",
+		Short: "Inspect a zarf package ",
+	}
+
+	cmd.AddCommand(NewDevInspectDefinitionCommand(v))
+	return cmd
+}
+
+// DevInspectDefinitionOptions holds the command-line options for 'dev inspect definition' sub-command.
+type DevInspectDefinitionOptions struct {
+	flavor       string
+	setVariables map[string]string
+}
+
+// NewDevInspectDefinitionCommand creates the `dev inspect definition` sub-command.
+func NewDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
+	o := &DevInspectDefinitionOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "definition [ DIRECTORY ]",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Displays the definition of a Zarf package",
+		Long:  "Displays the 'zarf.yaml' definition of a Zarf after package templating, flavors, and component imports are applied",
+		RunE:  o.Run,
+	}
+
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+
+	return cmd
+}
+
+// Run performs the execution of 'dev inspect definition' sub-command.
+func (o *DevInspectDefinitionOptions) Run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	pkg, err := layout2.LoadPackage(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
+	if err != nil {
+		return err
+	}
+	err = utils.ColorPrintYAML(pkg, nil, false)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // DevDeployOptions holds the command-line options for 'dev deploy' sub-command.
