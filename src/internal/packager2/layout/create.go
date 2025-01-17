@@ -260,7 +260,7 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) 
 	return buildPath, nil
 }
 
-// LoadPackage returns the package definition at the given path after flavors, imports, and variables are applied.
+// LoadPackage returns a validated package definition after flavors, imports, and variables are applied.
 func LoadPackage(ctx context.Context, packagePath, flavor string, setVariables map[string]string) (v1alpha1.ZarfPackage, error) {
 	b, err := os.ReadFile(filepath.Join(packagePath, ZarfYAML))
 	if err != nil {
