@@ -61,7 +61,7 @@ func NewDevCommand() *cobra.Command {
 func NewDevInspectCommand(v *viper.Viper) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inspect",
-		Short: "Inspect a zarf package ",
+		Short: "Commands to get information about a Zarf package using a `zarf.yaml`",
 	}
 
 	cmd.AddCommand(NewDevInspectDefinitionCommand(v))
@@ -81,7 +81,7 @@ func NewDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "definition [ DIRECTORY ]",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Displays the definition of a Zarf package",
+		Short: "Displays the fully rendered package definition",
 		Long:  "Displays the 'zarf.yaml' definition of a Zarf after package templating, flavors, and component imports are applied",
 		RunE:  o.Run,
 	}
