@@ -19,6 +19,7 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -98,6 +99,7 @@ func (o *DevInspectDefinitionOptions) Run(cmd *cobra.Command, args []string) err
 	if err != nil {
 		return err
 	}
+	pkg.Build = v1alpha1.ZarfBuildData{}
 	err = utils.ColorPrintYAML(pkg, nil, false)
 	if err != nil {
 		return err

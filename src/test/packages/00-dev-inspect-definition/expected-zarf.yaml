@@ -2,16 +2,6 @@ kind: ZarfPackageConfig
 metadata:
   name: test-inspect-definition
   architecture: amd64
-build:
-  terminal: ""
-  user: ""
-  architecture: ""
-  timestamp: ""
-  version: ""
-  migrations:
-  - scripts-to-actions
-  - pluralize-set-variable
-  lastNonBreakingVersion: v0.27.0
 components:
 - name: import-test
   description: worked-fine

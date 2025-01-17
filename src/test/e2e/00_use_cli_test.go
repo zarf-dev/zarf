@@ -25,11 +25,11 @@ func TestUseCLI(t *testing.T) {
 		t.Parallel()
 		pathToPackage := filepath.Join("src", "test", "packages", "00-dev-inspect-definition")
 
-		stdout, _, err := e2e.Zarf(t, "dev", "inspect", "definition", pathToPackage, "--flavor=ice-cream", "--set=MY_VAR=worked-as-expected")
+		stdOut, _, err := e2e.Zarf(t, "dev", "inspect", "definition", pathToPackage, "--flavor=ice-cream", "--set=MY_VAR=worked-as-expected", "--architecture=amd64")
 		require.NoError(t, err)
 		b, err := os.ReadFile(filepath.Join(pathToPackage, "expected-zarf.yaml"))
 		require.NoError(t, err)
-		require.Contains(t, stdout, string(b))
+		require.Contains(t, stdOut, string(b))
 	})
 
 	t.Run("zarf prepare sha256sum <local>", func(t *testing.T) {
