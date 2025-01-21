@@ -386,15 +386,15 @@ func (o *PackageInspectOptions) Run(cmd *cobra.Command, args []string) error {
 
 	if pkgConfig.InspectOpts.SBOMOutputDir != "" {
 		sbomOpts := PackageInspectSBOMOptions{
-			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
-			SBOMOutputDir:           pkgConfig.InspectOpts.SBOMOutputDir,
+			skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+			sbomOutputDir:           pkgConfig.InspectOpts.SBOMOutputDir,
 		}
 		return sbomOpts.Run(cmd, args)
 	}
 
 	if pkgConfig.InspectOpts.ListImages {
 		listImagesOpts := PackageInspectListImagesOptions{
-			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+			skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		}
 		return listImagesOpts.Run(cmd, args)
 	}
@@ -429,8 +429,8 @@ func (o *PackageInspectOptions) Run(cmd *cobra.Command, args []string) error {
 
 // PackageInspectSBOMOptions holds the command-line options for 'package inspect sbom' sub-command.
 type PackageInspectSBOMOptions struct {
-	SkipSignatureValidation bool
-	SBOMOutputDir           string
+	skipSignatureValidation bool
+	sbomOutputDir           string
 }
 
 // NewPackageInspectSBOMCommand creates the `inspect sbom` sub-command.
@@ -443,8 +443,8 @@ func NewPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 		RunE:  o.Run,
 	}
 
-	cmd.Flags().BoolVar(&o.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-	cmd.Flags().StringVar(&o.SBOMOutputDir, "output", v.GetString(common.VPkgCreateSbomOutput), lang.CmdPackageCreateFlagSbomOut)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().StringVar(&o.sbomOutputDir, "output", v.GetString(common.VPkgCreateSbomOutput), lang.CmdPackageCreateFlagSbomOut)
 
 	return cmd
 }
@@ -458,7 +458,7 @@ func (o *PackageInspectSBOMOptions) Run(cmd *cobra.Command, args []string) error
 	}
 	loadOpt := packager2.LoadOptions{
 		Source:                  src,
-		SkipSignatureValidation: o.SkipSignatureValidation,
+		SkipSignatureValidation: o.skipSignatureValidation,
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 	}
@@ -466,7 +466,7 @@ func (o *PackageInspectSBOMOptions) Run(cmd *cobra.Command, args []string) error
 	if err != nil {
 		return err
 	}
-	outputPath, err := layout.GetSBOM(o.SBOMOutputDir)
+	outputPath, err := layout.GetSBOM(o.sbomOutputDir)
 	if err != nil {
 		return err
 	}
@@ -480,7 +480,7 @@ func (o *PackageInspectSBOMOptions) Run(cmd *cobra.Command, args []string) error
 
 // PackageInspectListImagesOptions holds the command-line options for 'package inspect list-images' sub-command.
 type PackageInspectListImagesOptions struct {
-	SkipSignatureValidation bool
+	skipSignatureValidation bool
 }
 
 // NewPackageInspectListImagesCommand creates the `inspect list-images` sub-command.
@@ -494,7 +494,7 @@ func NewPackageInspectListImagesCommand() *cobra.Command {
 		RunE:  o.Run,
 	}
 
-	cmd.Flags().BoolVar(&o.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
 }
@@ -512,7 +512,7 @@ func (o *PackageInspectListImagesOptions) Run(cmd *cobra.Command, args []string)
 	cluster, _ := cluster.NewCluster() //nolint:errcheck
 	inspectOpt := packager2.ZarfInspectOptions{
 		Source:                  src,
-		SkipSignatureValidation: o.SkipSignatureValidation,
+		SkipSignatureValidation: o.skipSignatureValidation,
 		Cluster:                 cluster,
 	}
 
@@ -531,7 +531,7 @@ func (o *PackageInspectListImagesOptions) Run(cmd *cobra.Command, args []string)
 
 // PackageInspectDefinitionOptions holds the command-line options for 'package inspect' sub-command.
 type PackageInspectDefinitionOptions struct {
-	SkipSignatureValidation bool
+	skipSignatureValidation bool
 }
 
 // NewPackageInspectDefinitionCommand creates the `inspect definition` sub-command.
@@ -545,7 +545,7 @@ func NewPackageInspectDefinitionCommand() *cobra.Command {
 		RunE:  o.Run,
 	}
 
-	cmd.Flags().BoolVar(&o.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
 }
@@ -561,7 +561,7 @@ func (o *PackageInspectDefinitionOptions) Run(cmd *cobra.Command, args []string)
 
 	cluster, _ := cluster.NewCluster() //nolint:errcheck
 
-	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.SkipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
+	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
 	if err != nil {
 		return err
 	}
