@@ -21,7 +21,7 @@ func TestUseCLI(t *testing.T) {
 	t.Log("E2E: Use CLI")
 
 	// TODO once cmd is refactored to accept an io.Writer, move this test to DevInspectDefinitionOptions.Run()
-	t.Run("zarf package inspect definition", func(t *testing.T) {
+	t.Run("zarf dev inspect definition", func(t *testing.T) {
 		t.Parallel()
 		pathToPackage := filepath.Join("src", "test", "packages", "00-dev-inspect-definition")
 
