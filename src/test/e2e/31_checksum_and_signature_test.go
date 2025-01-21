@@ -24,12 +24,12 @@ func TestChecksumAndSignature(t *testing.T) {
 	defer e2e.CleanFiles(t, pkgName)
 
 	// Test that we don't get an error when we remember to provide the public key
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName, publicKeyFlag)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "definition", pkgName, publicKeyFlag)
 	require.NoError(t, err, stdOut, stdErr)
 
 	/* Test operations during package inspect */
 	// Test that we can inspect the yaml of the package without the private key
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName, "--skip-signature-validation")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "definition", pkgName, "--skip-signature-validation")
 	require.NoError(t, err, stdOut, stdErr)
 
 	/* Test operations during package deploy */

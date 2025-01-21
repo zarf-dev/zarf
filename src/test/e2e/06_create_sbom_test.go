@@ -46,14 +46,14 @@ func TestCreateSBOM(t *testing.T) {
 	err = os.RemoveAll(outSbomPath)
 	require.NoError(t, err)
 
-	_, _, err = e2e.Zarf(t, "package", "inspect", tarPath, "--sbom-out", outSbomPath)
+	_, _, err = e2e.Zarf(t, "package", "inspect", "sbom", tarPath, "--output", outSbomPath)
 	require.NoError(t, err)
 
 	for _, expectedFile := range expectedFiles {
 		require.FileExists(t, filepath.Join(outSbomPath, "dos-games", expectedFile))
 	}
 
-	stdOut, _, err := e2e.Zarf(t, "package", "inspect", tarPath, "--list-images")
+	stdOut, _, err := e2e.Zarf(t, "package", "inspect", "images", tarPath, "--list-images")
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "- ghcr.io/zarf-dev/doom-game:0.0.1\n")
 
@@ -62,7 +62,7 @@ func TestCreateSBOM(t *testing.T) {
 	require.NoError(t, err)
 
 	initName := fmt.Sprintf("build/zarf-init-%s-%s.tar.zst", e2e.Arch, strings.TrimSpace(version))
-	_, _, err = e2e.Zarf(t, "package", "inspect", initName, "--sbom-out", outSbomPath)
+	_, _, err = e2e.Zarf(t, "package", "inspect", "sbom", initName, "--output", outSbomPath)
 	require.NoError(t, err)
 
 	// Test that we preserve the filepath
