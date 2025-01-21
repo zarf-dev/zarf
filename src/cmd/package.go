@@ -403,7 +403,6 @@ func (o *PackageInspectOptions) Run(cmd *cobra.Command, args []string) error {
 	definitionOpts := PackageInspectDefinitionOptions{
 		skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 	}
-
 	return definitionOpts.Run(cmd, args)
 }
 
@@ -458,12 +457,12 @@ func (o *PackageInspectSBOMOptions) Run(cmd *cobra.Command, args []string) error
 	return nil
 }
 
-// PackageInspectImagesOptions holds the command-line options for 'package inspect list-images' sub-command.
+// PackageInspectImagesOptions holds the command-line options for 'package inspect images' sub-command.
 type PackageInspectImagesOptions struct {
 	skipSignatureValidation bool
 }
 
-// NewPackageInspectImagesCommand creates the `inspect list-images` sub-command.
+// NewPackageInspectImagesCommand creates the `inspect images` sub-command.
 func NewPackageInspectImagesCommand() *cobra.Command {
 	o := PackageInspectImagesOptions{}
 	cmd := &cobra.Command{
@@ -478,11 +477,10 @@ func NewPackageInspectImagesCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'package inspect list-images' sub-command.
+// Run performs the execution of 'package inspect images' sub-command.
 func (o *PackageInspectImagesOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	// NOTE(mkcp): Gets user input with message
 	src, err := choosePackage(ctx, args)
 	if err != nil {
 		return err
@@ -521,8 +519,7 @@ func NewPackageInspectDefinitionCommand() *cobra.Command {
 	o := PackageInspectDefinitionOptions{}
 	cmd := &cobra.Command{
 		Use:   "definition [ PACKAGE_SOURCE ]",
-		Short: "Show the package definition",
-		Long:  "Inspect a package and display its definition details.",
+		Short: "Displays the 'zarf.yaml' definition for the specified package",
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  o.Run,
 	}
