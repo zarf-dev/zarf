@@ -65,7 +65,7 @@ func InspectList(ctx context.Context, opt ZarfInspectOptions) ([]string, error) 
 }
 
 func getPackageMetadata(ctx context.Context, opt ZarfInspectOptions) (v1alpha1.ZarfPackage, error) {
-	pkg, err := packageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath)
 	if err != nil {
 		return pkg, err
 	}
