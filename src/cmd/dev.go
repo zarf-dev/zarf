@@ -70,8 +70,8 @@ func NewDevInspectCommand(v *viper.Viper) *cobra.Command {
 
 // DevInspectDefinitionOptions holds the command-line options for 'dev inspect definition' sub-command.
 type DevInspectDefinitionOptions struct {
-	flavor       string
-	setVariables map[string]string
+	Flavor       string
+	SetVariables map[string]string
 }
 
 // NewDevInspectDefinitionCommand creates the `dev inspect definition` sub-command.
@@ -86,8 +86,8 @@ func NewDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 		RunE:  o.Run,
 	}
 
-	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringVarP(&o.Flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&o.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
 
 	return cmd
 }
@@ -95,7 +95,7 @@ func NewDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 // Run performs the execution of 'dev inspect definition' sub-command.
 func (o *DevInspectDefinitionOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	pkg, err := layout2.LoadPackage(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
+	pkg, err := layout2.LoadPackage(ctx, setBaseDirectory(args), o.Flavor, o.SetVariables)
 	if err != nil {
 		return err
 	}
