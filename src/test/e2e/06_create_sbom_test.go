@@ -53,7 +53,7 @@ func TestCreateSBOM(t *testing.T) {
 		require.FileExists(t, filepath.Join(outSbomPath, "dos-games", expectedFile))
 	}
 
-	stdOut, _, err := e2e.Zarf(t, "package", "inspect", "images", tarPath, "--list-images")
+	stdOut, _, err := e2e.Zarf(t, "package", "inspect", "images", tarPath)
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "- ghcr.io/zarf-dev/doom-game:0.0.1\n")
 

@@ -412,7 +412,7 @@ type PackageInspectSBOMOptions struct {
 	sbomOutputDir           string
 }
 
-// NewPackageInspectSBOMCommand creates the `inspect sbom` sub-command.
+// NewPackageInspectSBOMCommand creates the `package inspect sbom` sub-command.
 func NewPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 	o := &PackageInspectSBOMOptions{}
 	cmd := &cobra.Command{
@@ -509,12 +509,12 @@ func (o *PackageInspectImagesOptions) Run(cmd *cobra.Command, args []string) err
 	return nil
 }
 
-// PackageInspectDefinitionOptions holds the command-line options for 'package inspect' sub-command.
+// PackageInspectDefinitionOptions holds the command-line options for 'package inspect definition' sub-command.
 type PackageInspectDefinitionOptions struct {
 	skipSignatureValidation bool
 }
 
-// NewPackageInspectDefinitionCommand creates the `inspect definition` sub-command.
+// NewPackageInspectDefinitionCommand creates the `package inspect definition` sub-command.
 func NewPackageInspectDefinitionCommand() *cobra.Command {
 	o := PackageInspectDefinitionOptions{}
 	cmd := &cobra.Command{
