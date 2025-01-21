@@ -358,7 +358,7 @@ func NewPackageInspectCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.AddCommand(NewPackageInspectSBOMCommand(v))
-	cmd.AddCommand(NewPackageInspectListImagesCommand())
+	cmd.AddCommand(NewPackageInspectImagesCommand())
 	cmd.AddCommand(NewPackageInspectDefinitionCommand())
 
 	cmd.Flags().StringVar(&pkgConfig.InspectOpts.SBOMOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
@@ -379,8 +379,9 @@ func (o *PackageInspectOptions) PreRun(_ *cobra.Command, _ []string) {
 // Run performs the execution of 'package inspect' sub-command.
 func (o *PackageInspectOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	logger.From(ctx).Warn("Direct usage of inspect is deprecated and will be removed in a future release. Inspect is now a parent command. Use 'zarf package inspect definition|sbom|images' instead.")
 
-	if pkgConfig.InspectOpts.ListImages && (pkgConfig.InspectOpts.SBOMOutputDir != "" || pkgConfig.InspectOpts.ViewSBOM) {
+	if pkgConfig.InspectOpts.ListImages && (pkgConfig.InspectOpts.SBOMOutputDir != "") {
 		return fmt.Errorf("cannot use --sbom or --sbom-out and --list-images at the same time")
 	}
 
@@ -393,10 +394,10 @@ func (o *PackageInspectOptions) Run(cmd *cobra.Command, args []string) error {
 	}
 
 	if pkgConfig.InspectOpts.ListImages {
-		listImagesOpts := PackageInspectListImagesOptions{
+		imagesOpts := PackageInspectImagesOptions{
 			skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		}
-		return listImagesOpts.Run(cmd, args)
+		return imagesOpts.Run(cmd, args)
 	}
 
 	// NOTE(mkcp): Gets user input with message
@@ -411,7 +412,6 @@ func (o *PackageInspectOptions) Run(cmd *cobra.Command, args []string) error {
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		Cluster:                 cluster,
 		ListImages:              pkgConfig.InspectOpts.ListImages,
-		ViewSBOM:                pkgConfig.InspectOpts.ViewSBOM,
 		SBOMOutputDir:           pkgConfig.InspectOpts.SBOMOutputDir,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 	}
@@ -478,18 +478,17 @@ func (o *PackageInspectSBOMOptions) Run(cmd *cobra.Command, args []string) error
 	return nil
 }
 
-// PackageInspectListImagesOptions holds the command-line options for 'package inspect list-images' sub-command.
-type PackageInspectListImagesOptions struct {
+// PackageInspectImagesOptions holds the command-line options for 'package inspect list-images' sub-command.
+type PackageInspectImagesOptions struct {
 	skipSignatureValidation bool
 }
 
-// NewPackageInspectListImagesCommand creates the `inspect list-images` sub-command.
-func NewPackageInspectListImagesCommand() *cobra.Command {
-	o := PackageInspectListImagesOptions{}
+// NewPackageInspectImagesCommand creates the `inspect list-images` sub-command.
+func NewPackageInspectImagesCommand() *cobra.Command {
+	o := PackageInspectImagesOptions{}
 	cmd := &cobra.Command{
-		Use:   "list-images [ PACKAGE_SOURCE ]",
+		Use:   "images [ PACKAGE_SOURCE ]",
 		Short: "List all container images contained in the package",
-		Long:  "Inspect a package and list all container images that it contains.",
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  o.Run,
 	}
@@ -500,7 +499,7 @@ func NewPackageInspectListImagesCommand() *cobra.Command {
 }
 
 // Run performs the execution of 'package inspect list-images' sub-command.
-func (o *PackageInspectListImagesOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *PackageInspectImagesOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	// NOTE(mkcp): Gets user input with message
@@ -510,17 +509,20 @@ func (o *PackageInspectListImagesOptions) Run(cmd *cobra.Command, args []string)
 	}
 
 	cluster, _ := cluster.NewCluster() //nolint:errcheck
-	inspectOpt := packager2.ZarfInspectOptions{
-		Source:                  src,
-		SkipSignatureValidation: o.skipSignatureValidation,
-		Cluster:                 cluster,
-	}
 
-	output, err := packager2.InspectList(ctx, inspectOpt)
+	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
 	if err != nil {
-		return fmt.Errorf("failed to inspect package: %w", err)
+		return err
 	}
-	for _, image := range output {
+	var imageList []string
+	for _, component := range pkg.Components {
+		imageList = append(imageList, component.Images...)
+	}
+	if imageList == nil {
+		return fmt.Errorf("failed listing images: 0 images found in package")
+	}
+	imageList = helpers.Unique(imageList)
+	for _, image := range imageList {
 		_, err := fmt.Fprintln(os.Stdout, "-", image)
 		if err != nil {
 			return err
