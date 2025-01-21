@@ -400,31 +400,11 @@ func (o *PackageInspectOptions) Run(cmd *cobra.Command, args []string) error {
 		return imagesOpts.Run(cmd, args)
 	}
 
-	// NOTE(mkcp): Gets user input with message
-	src, err := choosePackage(ctx, args)
-	if err != nil {
-		return err
+	definitionOpts := PackageInspectDefinitionOptions{
+		skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 	}
 
-	cluster, _ := cluster.NewCluster() //nolint:errcheck
-	inspectOpt := packager2.ZarfInspectOptions{
-		Source:                  src,
-		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
-		Cluster:                 cluster,
-		ListImages:              pkgConfig.InspectOpts.ListImages,
-		SBOMOutputDir:           pkgConfig.InspectOpts.SBOMOutputDir,
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-	}
-
-	output, err := packager2.Inspect(ctx, inspectOpt)
-	if err != nil {
-		return fmt.Errorf("failed to inspect package: %w", err)
-	}
-	err = utils.ColorPrintYAML(output, nil, false)
-	if err != nil {
-		return err
-	}
-	return nil
+	return definitionOpts.Run(cmd, args)
 }
 
 // PackageInspectSBOMOptions holds the command-line options for 'package inspect sbom' sub-command.
