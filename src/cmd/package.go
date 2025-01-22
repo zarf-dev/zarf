@@ -52,7 +52,7 @@ func NewPackageCommand() *cobra.Command {
 	cmd.AddCommand(NewPackageCreateCommand(v))
 	cmd.AddCommand(NewPackageDeployCommand(v))
 	cmd.AddCommand(NewPackageMirrorResourcesCommand(v))
-	cmd.AddCommand(NewPackageInspectCommand(v))
+	cmd.AddCommand(NewPackageInspectCommand())
 	cmd.AddCommand(NewPackageRemoveCommand(v))
 	cmd.AddCommand(NewPackageListCommand())
 	cmd.AddCommand(NewPackagePublishCommand(v))
@@ -345,7 +345,7 @@ func (o *PackageMirrorResourcesOptions) Run(cmd *cobra.Command, args []string) (
 type PackageInspectOptions struct{}
 
 // NewPackageInspectCommand creates the `package inspect` sub-command.
-func NewPackageInspectCommand(v *viper.Viper) *cobra.Command {
+func NewPackageInspectCommand() *cobra.Command {
 	o := &PackageInspectOptions{}
 	cmd := &cobra.Command{
 		Use:     "inspect [ PACKAGE_SOURCE ]",
@@ -357,7 +357,7 @@ func NewPackageInspectCommand(v *viper.Viper) *cobra.Command {
 		RunE:    o.Run,
 	}
 
-	cmd.AddCommand(NewPackageInspectSBOMCommand(v))
+	cmd.AddCommand(NewPackageInspectSBOMCommand())
 	cmd.AddCommand(NewPackageInspectImagesCommand())
 	cmd.AddCommand(NewPackageInspectDefinitionCommand())
 
@@ -381,14 +381,14 @@ func (o *PackageInspectOptions) Run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	logger.From(ctx).Warn("Direct usage of inspect is deprecated and will be removed in a future release. Inspect is now a parent command. Use 'zarf package inspect definition|sbom|images' instead.")
 
-	if pkgConfig.InspectOpts.ListImages && (pkgConfig.InspectOpts.SBOMOutputDir != "") {
-		return fmt.Errorf("cannot use --sbom or --sbom-out and --list-images at the same time")
+	if pkgConfig.InspectOpts.ListImages && pkgConfig.InspectOpts.SBOMOutputDir != "" {
+		return fmt.Errorf("cannot use --sbom-out and --list-images at the same time")
 	}
 
 	if pkgConfig.InspectOpts.SBOMOutputDir != "" {
 		sbomOpts := PackageInspectSBOMOptions{
-			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
-			SBOMOutputDir:           pkgConfig.InspectOpts.SBOMOutputDir,
+			skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+			outputDir:               pkgConfig.InspectOpts.SBOMOutputDir,
 		}
 		return sbomOpts.Run(cmd, args)
 	}
@@ -408,13 +408,20 @@ func (o *PackageInspectOptions) Run(cmd *cobra.Command, args []string) error {
 
 // PackageInspectSBOMOptions holds the command-line options for 'package inspect sbom' sub-command.
 type PackageInspectSBOMOptions struct {
-	SkipSignatureValidation bool
-	SBOMOutputDir           string
+	skipSignatureValidation bool
+	outputDir               string
+}
+
+func newPackageInspectSBOMOptions() *PackageInspectSBOMOptions {
+	return &PackageInspectSBOMOptions{
+		outputDir:               "",
+		skipSignatureValidation: false,
+	}
 }
 
 // NewPackageInspectSBOMCommand creates the `package inspect sbom` sub-command.
-func NewPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
-	o := &PackageInspectSBOMOptions{}
+func NewPackageInspectSBOMCommand() *cobra.Command {
+	o := newPackageInspectSBOMOptions()
 	cmd := &cobra.Command{
 		Use:   "sbom [ PACKAGE ]",
 		Short: "Output the package SBOM (Software Bill Of Materials) to the specified directory",
@@ -422,8 +429,8 @@ func NewPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 		RunE:  o.Run,
 	}
 
-	cmd.Flags().BoolVar(&o.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-	cmd.Flags().StringVar(&o.SBOMOutputDir, "output", v.GetString(common.VPkgCreateSbomOutput), lang.CmdPackageCreateFlagSbomOut)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, lang.CmdPackageCreateFlagSbomOut)
 
 	return cmd
 }
@@ -437,7 +444,7 @@ func (o *PackageInspectSBOMOptions) Run(cmd *cobra.Command, args []string) error
 	}
 	loadOpt := packager2.LoadOptions{
 		Source:                  src,
-		SkipSignatureValidation: o.SkipSignatureValidation,
+		SkipSignatureValidation: o.skipSignatureValidation,
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 	}
@@ -445,13 +452,14 @@ func (o *PackageInspectSBOMOptions) Run(cmd *cobra.Command, args []string) error
 	if err != nil {
 		return err
 	}
-	outputPath, err := layout.GetSBOM(o.SBOMOutputDir)
+	outputPath, err := layout.GetSBOM(o.outputDir)
 	if err != nil {
 		return err
 	}
 	outputPath, err = filepath.Abs(outputPath)
 	if err != nil {
 		logger.From(ctx).Warn("SBOM successfully extracted, couldn't get output path", "error", err)
+		return nil
 	}
 	logger.From(ctx).Info("SBOM successfully extracted", "path", outputPath)
 	return nil
@@ -462,9 +470,15 @@ type PackageInspectImagesOptions struct {
 	SkipSignatureValidation bool
 }
 
+func newPackageInspectImagesOptions() *PackageInspectImagesOptions {
+	return &PackageInspectImagesOptions{
+		SkipSignatureValidation: false,
+	}
+}
+
 // NewPackageInspectImagesCommand creates the `inspect images` sub-command.
 func NewPackageInspectImagesCommand() *cobra.Command {
-	o := PackageInspectImagesOptions{}
+	o := newPackageInspectImagesOptions()
 	cmd := &cobra.Command{
 		Use:   "images [ PACKAGE_SOURCE ]",
 		Short: "List all container images contained in the package",
@@ -472,7 +486,7 @@ func NewPackageInspectImagesCommand() *cobra.Command {
 		RunE:  o.Run,
 	}
 
-	cmd.Flags().BoolVar(&o.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.SkipSignatureValidation, "skip-signature-validation", o.SkipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
 }
@@ -486,6 +500,8 @@ func (o *PackageInspectImagesOptions) Run(cmd *cobra.Command, args []string) err
 		return err
 	}
 
+	// The user may be pulling the package from the cluster or using a built package
+	// since we don't know we don't check this error
 	cluster, _ := cluster.NewCluster() //nolint:errcheck
 
 	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.SkipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
@@ -501,10 +517,7 @@ func (o *PackageInspectImagesOptions) Run(cmd *cobra.Command, args []string) err
 	}
 	imageList = helpers.Unique(imageList)
 	for _, image := range imageList {
-		_, err := fmt.Fprintln(os.Stdout, "-", image)
-		if err != nil {
-			return err
-		}
+		fmt.Println("-", image)
 	}
 	return nil
 }
@@ -514,9 +527,15 @@ type PackageInspectDefinitionOptions struct {
 	SkipSignatureValidation bool
 }
 
+func newPackageInspectDefinitionOptions() *PackageInspectDefinitionOptions {
+	return &PackageInspectDefinitionOptions{
+		SkipSignatureValidation: false,
+	}
+}
+
 // NewPackageInspectDefinitionCommand creates the `package inspect definition` sub-command.
 func NewPackageInspectDefinitionCommand() *cobra.Command {
-	o := PackageInspectDefinitionOptions{}
+	o := newPackageInspectDefinitionOptions()
 	cmd := &cobra.Command{
 		Use:   "definition [ PACKAGE_SOURCE ]",
 		Short: "Displays the 'zarf.yaml' definition for the specified package",
@@ -524,7 +543,7 @@ func NewPackageInspectDefinitionCommand() *cobra.Command {
 		RunE:  o.Run,
 	}
 
-	cmd.Flags().BoolVar(&o.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.SkipSignatureValidation, "skip-signature-validation", o.SkipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
 }
@@ -538,6 +557,8 @@ func (o *PackageInspectDefinitionOptions) Run(cmd *cobra.Command, args []string)
 		return err
 	}
 
+	// The user may be pulling the package from the cluster or using a built package
+	// since we don't know we don't check this error
 	cluster, _ := cluster.NewCluster() //nolint:errcheck
 
 	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.SkipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
