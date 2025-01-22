@@ -35,7 +35,8 @@ import (
 
 var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, types.ZarfInClusterContainerRegistryNodePort)
 
-func newDevCommand() *cobra.Command {
+// NewDevCommand creates the `dev` sub-command and its nested children.
+func NewDevCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "dev",
 		Aliases: []string{"prepare", "prep"},
