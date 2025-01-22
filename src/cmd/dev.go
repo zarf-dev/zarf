@@ -35,8 +35,7 @@ import (
 
 var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, types.ZarfInClusterContainerRegistryNodePort)
 
-// NewDevCommand creates the `dev` sub-command and its nested children.
-func NewDevCommand() *cobra.Command {
+func newDevCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "dev",
 		Aliases: []string{"prepare", "prep"},
@@ -52,50 +51,46 @@ func NewDevCommand() *cobra.Command {
 	cmd.AddCommand(NewDevFindImagesCommand(v))
 	cmd.AddCommand(NewDevGenerateConfigCommand())
 	cmd.AddCommand(NewDevLintCommand(v))
-	cmd.AddCommand(NewDevInspectCommand(v))
+	cmd.AddCommand(newDevInspectCommand(v))
 
 	return cmd
 }
 
-// NewDevInspectCommand creates the `dev inspect` sub-command.
-func NewDevInspectCommand(v *viper.Viper) *cobra.Command {
+func newDevInspectCommand(v *viper.Viper) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inspect",
 		Short: "Commands to get information about a Zarf package using a `zarf.yaml`",
 	}
 
-	cmd.AddCommand(NewDevInspectDefinitionCommand(v))
+	cmd.AddCommand(newDevInspectDefinitionCommand(v))
 	return cmd
 }
 
-// DevInspectDefinitionOptions holds the command-line options for 'dev inspect definition' sub-command.
-type DevInspectDefinitionOptions struct {
-	Flavor       string
-	SetVariables map[string]string
+type devInspectDefinitionOptions struct {
+	flavor       string
+	setVariables map[string]string
 }
 
-// NewDevInspectDefinitionCommand creates the `dev inspect definition` sub-command.
-func NewDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
-	o := &DevInspectDefinitionOptions{}
+func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
+	o := &devInspectDefinitionOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "definition [ DIRECTORY ]",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Displays the fully rendered package definition",
 		Long:  "Displays the 'zarf.yaml' definition of a Zarf after package templating, flavors, and component imports are applied",
-		RunE:  o.Run,
+		RunE:  o.run,
 	}
 
-	cmd.Flags().StringVarP(&o.Flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().StringToStringVar(&o.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
 
 	return cmd
 }
 
-// Run performs the execution of 'dev inspect definition' sub-command.
-func (o *DevInspectDefinitionOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	pkg, err := layout2.LoadPackage(ctx, setBaseDirectory(args), o.Flavor, o.SetVariables)
+	pkg, err := layout2.LoadPackage(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
 	if err != nil {
 		return err
 	}

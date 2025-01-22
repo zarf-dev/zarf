@@ -140,7 +140,7 @@ func NewZarfCommand() *cobra.Command {
 	// TODO(soltysh): consider adding command groups
 	rootCmd.AddCommand(NewConnectCommand())
 	rootCmd.AddCommand(NewDestroyCommand())
-	rootCmd.AddCommand(NewDevCommand())
+	rootCmd.AddCommand(newDevCommand())
 	rootCmd.AddCommand(NewInitCommand())
 	rootCmd.AddCommand(NewInternalCommand(rootCmd))
 	rootCmd.AddCommand(NewPackageCommand())
