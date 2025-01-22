@@ -48,9 +48,9 @@ BUILD_ARGS += -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor=$(K8S_MODULES_MIN
 BUILD_ARGS += -X k8s.io/component-base/version.gitVersion=v$(K8S_MODULES_MAJOR_VER).$(K8S_MODULES_MINOR_VER).$(K8S_MODULES_PATCH_VER)
 BUILD_ARGS += -X github.com/derailed/k9s/cmd.version=$(K9S_VERSION)
 BUILD_ARGS += -X github.com/google/go-containerregistry/cmd/crane/cmd.Version=$(CRANE_VERSION)
-BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd/tools.syftVersion=$(SYFT_VERSION)
-BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd/tools.archiverVersion=$(ARCHIVER_VERSION)
-BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd/tools.helmVersion=$(HELM_VERSION)
+BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.syftVersion=$(SYFT_VERSION)
+BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.archiverVersion=$(ARCHIVER_VERSION)
+BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.helmVersion=$(HELM_VERSION)
 
 GIT_SHA := $(if $(shell git rev-parse HEAD),$(shell git rev-parse HEAD),"")
 BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')

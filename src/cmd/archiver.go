@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package tools contains the CLI commands for Zarf.
-package tools
+// Package cmd contains the CLI commands for Zarf.
+package cmd
 
 import (
 	"fmt"
@@ -16,11 +16,10 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 )
 
-// ldflags github.com/zarf-dev/zarf/src/cmd/tools.archiverVersion=x.x.x
+// ldflags github.com/zarf-dev/zarf/src/cmd.archiverVersion=x.x.x
 var archiverVersion string
 
-// NewArchiverCommand creates the `tools archiver` sub-command and its nested children.
-func NewArchiverCommand() *cobra.Command {
+func newArchiverCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "archiver",
 		Aliases: []string{"a"},
@@ -28,33 +27,30 @@ func NewArchiverCommand() *cobra.Command {
 		Version: archiverVersion,
 	}
 
-	cmd.AddCommand(NewArchiverCompressCommand())
-	cmd.AddCommand(NewArchiverDecompressCommand())
-	cmd.AddCommand(newVersionCmd("mholt/archiver", archiverVersion))
+	cmd.AddCommand(newArchiverCompressCommand())
+	cmd.AddCommand(newArchiverDecompressCommand())
+	cmd.AddCommand(newToolsVersionCmd("mholt/archiver", archiverVersion))
 
 	return cmd
 }
 
-// ArchiverCompressOptions holds the command-line options for 'tools archiver compress' sub-command.
-type ArchiverCompressOptions struct{}
+type archiverCompressOptions struct{}
 
-// NewArchiverCompressCommand creates the `tools archiver compress` sub-command.
-func NewArchiverCompressCommand() *cobra.Command {
-	o := ArchiverCompressOptions{}
+func newArchiverCompressCommand() *cobra.Command {
+	o := archiverCompressOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "compress SOURCES ARCHIVE",
 		Aliases: []string{"c"},
 		Short:   lang.CmdToolsArchiverCompressShort,
 		Args:    cobra.MinimumNArgs(2),
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	return cmd
 }
 
-// Run performs the execution of 'tools archiver compress' sub-command.
-func (o *ArchiverCompressOptions) Run(_ *cobra.Command, args []string) error {
+func (o *archiverCompressOptions) run(_ *cobra.Command, args []string) error {
 	sourceFiles, destinationArchive := args[:len(args)-1], args[len(args)-1]
 	err := archiver.Archive(sourceFiles, destinationArchive)
 	if err != nil {
@@ -63,21 +59,19 @@ func (o *ArchiverCompressOptions) Run(_ *cobra.Command, args []string) error {
 	return err
 }
 
-// ArchiverDecompressOptions holds the command-line options for 'tools archiver decompress' sub-command.
-type ArchiverDecompressOptions struct {
+type archiverDecompressOptions struct {
 	unarchiveAll bool
 }
 
-// NewArchiverDecompressCommand creates the `tools archiver decompress` sub-command.
-func NewArchiverDecompressCommand() *cobra.Command {
-	o := ArchiverDecompressOptions{}
+func newArchiverDecompressCommand() *cobra.Command {
+	o := archiverDecompressOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "decompress ARCHIVE DESTINATION",
 		Aliases: []string{"d"},
 		Short:   lang.CmdToolsArchiverDecompressShort,
 		Args:    cobra.ExactArgs(2),
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().BoolVar(&o.unarchiveAll, "decompress-all", false, "Decompress all tarballs in the archive")
@@ -88,8 +82,7 @@ func NewArchiverDecompressCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'tools archiver decompress' sub-command.
-func (o *ArchiverDecompressOptions) Run(_ *cobra.Command, args []string) error {
+func (o *archiverDecompressOptions) run(_ *cobra.Command, args []string) error {
 	sourceArchive, destinationPath := args[0], args[1]
 	err := archiver.Unarchive(sourceArchive, destinationPath)
 	if err != nil {

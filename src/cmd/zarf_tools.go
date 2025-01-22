@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package tools contains the CLI commands for Zarf.
-package tools
+// Package cmd contains the CLI commands for Zarf.
+package cmd
 
 import (
 	"context"
@@ -19,7 +19,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
@@ -46,12 +45,10 @@ const (
 	agentKey        = "agent"
 )
 
-// GetCredsOptions holds the command-line options for 'tools get-creds' sub-command.
-type GetCredsOptions struct{}
+type getCredsOptions struct{}
 
-// NewGetCredsCommand creates the `tools get-creds` sub-command.
-func NewGetCredsCommand() *cobra.Command {
-	o := GetCredsOptions{}
+func newGetCredsCommand() *cobra.Command {
+	o := getCredsOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "get-creds",
@@ -60,14 +57,13 @@ func NewGetCredsCommand() *cobra.Command {
 		Example: lang.CmdToolsGetCredsExample,
 		Aliases: []string{"gc"},
 		Args:    cobra.MaximumNArgs(1),
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	return cmd
 }
 
-// Run performs the execution of 'tools get-creds' sub-command.
-func (o *GetCredsOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *getCredsOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
@@ -117,12 +113,10 @@ func printComponentCredential(ctx context.Context, state *types.ZarfState, compo
 	}
 }
 
-// UpdateCredsOptions holds the command-line options for 'tools update-creds' sub-command.
-type UpdateCredsOptions struct{}
+type updateCredsOptions struct{}
 
-// NewUpdateCredsCommand creates the `tools update-creds` sub-command.
-func NewUpdateCredsCommand(v *viper.Viper) *cobra.Command {
-	o := UpdateCredsOptions{}
+func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
+	o := updateCredsOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "update-creds",
@@ -131,38 +125,37 @@ func NewUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 		Example: lang.CmdToolsUpdateCredsExample,
 		Aliases: []string{"uc"},
 		Args:    cobra.MaximumNArgs(1),
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	// Always require confirm flag (no viper)
 	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdToolsUpdateCredsConfirmFlag)
 
 	// Flags for using an external Git server
-	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.Address, "git-url", v.GetString(common.VInitGitURL), lang.CmdInitFlagGitURL)
-	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PushUsername, "git-push-username", v.GetString(common.VInitGitPushUser), lang.CmdInitFlagGitPushUser)
-	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PushPassword, "git-push-password", v.GetString(common.VInitGitPushPass), lang.CmdInitFlagGitPushPass)
-	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PullUsername, "git-pull-username", v.GetString(common.VInitGitPullUser), lang.CmdInitFlagGitPullUser)
-	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PullPassword, "git-pull-password", v.GetString(common.VInitGitPullPass), lang.CmdInitFlagGitPullPass)
+	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
+	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PushUsername, "git-push-username", v.GetString(VInitGitPushUser), lang.CmdInitFlagGitPushUser)
+	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PushPassword, "git-push-password", v.GetString(VInitGitPushPass), lang.CmdInitFlagGitPushPass)
+	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PullUsername, "git-pull-username", v.GetString(VInitGitPullUser), lang.CmdInitFlagGitPullUser)
+	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PullPassword, "git-pull-password", v.GetString(VInitGitPullPass), lang.CmdInitFlagGitPullPass)
 
 	// Flags for using an external registry
-	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.Address, "registry-url", v.GetString(common.VInitRegistryURL), lang.CmdInitFlagRegURL)
-	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(common.VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
-	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(common.VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
-	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(common.VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
-	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(common.VInitRegistryPullPass), lang.CmdInitFlagRegPullPass)
+	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.Address, "registry-url", v.GetString(VInitRegistryURL), lang.CmdInitFlagRegURL)
+	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
+	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
+	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
+	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(VInitRegistryPullPass), lang.CmdInitFlagRegPullPass)
 
 	// Flags for using an external artifact server
-	cmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.Address, "artifact-url", v.GetString(common.VInitArtifactURL), lang.CmdInitFlagArtifactURL)
-	cmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.PushUsername, "artifact-push-username", v.GetString(common.VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
-	cmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(common.VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
+	cmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.Address, "artifact-url", v.GetString(VInitArtifactURL), lang.CmdInitFlagArtifactURL)
+	cmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
+	cmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
 
 	cmd.Flags().SortFlags = true
 
 	return cmd
 }
 
-// Run performs the execution of 'tools update-creds' sub-command.
-func (o *UpdateCredsOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	validKeys := []string{message.RegistryKey, message.GitKey, message.ArtifactKey, message.AgentKey}
 	if len(args) == 0 {
 		args = validKeys
@@ -316,18 +309,16 @@ func printCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newS
 	}
 }
 
-// ClearCacheOptions holds the command-line options for 'tools clear-cache' sub-command.
-type ClearCacheOptions struct{}
+type clearCacheOptions struct{}
 
-// NewClearCacheCommand creates the `tools clear-cache` sub-command.
-func NewClearCacheCommand() *cobra.Command {
-	o := &ClearCacheOptions{}
+func newClearCacheCommand() *cobra.Command {
+	o := &clearCacheOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "clear-cache",
 		Aliases: []string{"c"},
 		Short:   lang.CmdToolsClearCacheShort,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", config.ZarfDefaultCachePath, lang.CmdToolsClearCacheFlagCachePath)
@@ -335,8 +326,7 @@ func NewClearCacheCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'tools clear-cache' sub-command.
-func (o *ClearCacheOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *clearCacheOptions) run(cmd *cobra.Command, _ []string) error {
 	l := logger.From(cmd.Context())
 	cachePath, err := config.GetAbsCachePath()
 	if err != nil {
@@ -352,17 +342,15 @@ func (o *ClearCacheOptions) Run(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-// DownloadInitOptions holds the command-line options for 'tools download-init' sub-command.
-type DownloadInitOptions struct{}
+type downloadInitOptions struct{}
 
-// NewDownloadInitCommand creates the `tools download-init` sub-command.
-func NewDownloadInitCommand() *cobra.Command {
-	o := &DownloadInitOptions{}
+func newDownloadInitCommand() *cobra.Command {
+	o := &downloadInitOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "download-init",
 		Short: lang.CmdToolsDownloadInitShort,
-		RunE:  o.Run,
+		RunE:  o.run,
 	}
 
 	cmd.Flags().StringVarP(&outputDirectory, "output-directory", "o", "", lang.CmdToolsDownloadInitFlagOutputDirectory)
@@ -370,8 +358,7 @@ func NewDownloadInitCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'tools download-init' sub-command.
-func (o *DownloadInitOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 	url := zoci.GetInitPackageURL(config.CLIVersion)
 	remote, err := zoci.NewRemote(ctx, url, oci.PlatformForArch(config.GetArch()))
@@ -386,19 +373,17 @@ func (o *DownloadInitOptions) Run(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-// GenPKIOptions holds the command-line options for 'tools gen-pki' sub-command.
-type GenPKIOptions struct{}
+type genPKIOptions struct{}
 
-// NewGenPKICommand creates the `tools gen-pki` sub-command.
-func NewGenPKICommand() *cobra.Command {
-	o := &GenPKIOptions{}
+func newGenPKICommand() *cobra.Command {
+	o := &genPKIOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "gen-pki HOST",
 		Aliases: []string{"pki"},
 		Short:   lang.CmdToolsGenPkiShort,
 		Args:    cobra.ExactArgs(1),
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringArrayVar(&subAltNames, "sub-alt-name", []string{}, lang.CmdToolsGenPkiFlagAltName)
@@ -406,8 +391,7 @@ func NewGenPKICommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'tools gen-pki' sub-command.
-func (o *GenPKIOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *genPKIOptions) run(cmd *cobra.Command, args []string) error {
 	pki, err := pki.GeneratePKI(args[0], subAltNames...)
 	if err != nil {
 		return err
@@ -427,25 +411,22 @@ func (o *GenPKIOptions) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// GenKeyOptions holds the command-line options for 'tools gen-key' sub-command.
-type GenKeyOptions struct{}
+type genKeyOptions struct{}
 
-// NewGenKeyCommand creates the `tools gen-key` sub-command.
-func NewGenKeyCommand() *cobra.Command {
-	o := &GenKeyOptions{}
+func newGenKeyCommand() *cobra.Command {
+	o := &genKeyOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "gen-key",
 		Aliases: []string{"key"},
 		Short:   lang.CmdToolsGenKeyShort,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	return cmd
 }
 
-// Run performs the execution of 'tools gen-key' sub-command.
-func (o *GenKeyOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 	// Utility function to prompt the user for the password to the private key
 	passwordFunc := func(bool) ([]byte, error) {
 		// perform the first prompt
