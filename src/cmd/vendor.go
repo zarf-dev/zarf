@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package common handles command configuration across all commands
-package common
+// Package cmd contains the CLI commands for Zarf.
+package cmd
 
 import (
 	"os"
@@ -34,14 +34,14 @@ var vendorCmds = []string{
 	"yq",
 }
 
-// CheckVendorOnlyFromArgs checks if the command being run is a vendor-only command
-func CheckVendorOnlyFromArgs() bool {
+// checkVendorOnlyFromArgs checks if the command being run is a vendor-only command
+func checkVendorOnlyFromArgs() bool {
 	// Check for "zarf tools|t <cmd>" where <cmd> is in the vendorCmd list
 	return IsVendorCmd(os.Args, vendorCmds)
 }
 
-// CheckVendorOnlyFromPath checks if the cobra command is a vendor-only command
-func CheckVendorOnlyFromPath(cmd *cobra.Command) bool {
+// checkVendorOnlyFromPath checks if the cobra command is a vendor-only command
+func checkVendorOnlyFromPath(cmd *cobra.Command) bool {
 	args := strings.Split(cmd.CommandPath(), " ")
 	// Check for "zarf tools|t <cmd>" where <cmd> is in the vendorCmd list
 	return IsVendorCmd(args, vendorCmds)
