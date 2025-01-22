@@ -30,12 +30,12 @@ func NewToolsCommand() *cobra.Command {
 	cmd.AddCommand(newSbomCommand())
 	cmd.AddCommand(newWaitForCommand())
 	cmd.AddCommand(newYQCommand())
-	cmd.AddCommand(NewGetCredsCommand())
-	cmd.AddCommand(NewUpdateCredsCommand(v))
-	cmd.AddCommand(NewClearCacheCommand())
-	cmd.AddCommand(NewDownloadInitCommand())
-	cmd.AddCommand(NewGenPKICommand())
-	cmd.AddCommand(NewGenKeyCommand())
+	cmd.AddCommand(newGetCredsCommand())
+	cmd.AddCommand(newUpdateCredsCommand(v))
+	cmd.AddCommand(newClearCacheCommand())
+	cmd.AddCommand(newDownloadInitCommand())
+	cmd.AddCommand(newGenPKICommand())
+	cmd.AddCommand(newGenKeyCommand())
 
 	return cmd
 }

@@ -46,12 +46,10 @@ const (
 	agentKey        = "agent"
 )
 
-// GetCredsOptions holds the command-line options for 'tools get-creds' sub-command.
-type GetCredsOptions struct{}
+type getCredsOptions struct{}
 
-// NewGetCredsCommand creates the `tools get-creds` sub-command.
-func NewGetCredsCommand() *cobra.Command {
-	o := GetCredsOptions{}
+func newGetCredsCommand() *cobra.Command {
+	o := getCredsOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "get-creds",
@@ -66,8 +64,7 @@ func NewGetCredsCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'tools get-creds' sub-command.
-func (o *GetCredsOptions) run(cmd *cobra.Command, args []string) error {
+func (o *getCredsOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
@@ -117,12 +114,10 @@ func printComponentCredential(ctx context.Context, state *types.ZarfState, compo
 	}
 }
 
-// UpdateCredsOptions holds the command-line options for 'tools update-creds' sub-command.
-type UpdateCredsOptions struct{}
+type updateCredsOptions struct{}
 
-// NewUpdateCredsCommand creates the `tools update-creds` sub-command.
-func NewUpdateCredsCommand(v *viper.Viper) *cobra.Command {
-	o := UpdateCredsOptions{}
+func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
+	o := updateCredsOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "update-creds",
@@ -161,8 +156,7 @@ func NewUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'tools update-creds' sub-command.
-func (o *UpdateCredsOptions) run(cmd *cobra.Command, args []string) error {
+func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	validKeys := []string{message.RegistryKey, message.GitKey, message.ArtifactKey, message.AgentKey}
 	if len(args) == 0 {
 		args = validKeys
@@ -316,12 +310,10 @@ func printCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newS
 	}
 }
 
-// ClearCacheOptions holds the command-line options for 'tools clear-cache' sub-command.
-type ClearCacheOptions struct{}
+type clearCacheOptions struct{}
 
-// NewClearCacheCommand creates the `tools clear-cache` sub-command.
-func NewClearCacheCommand() *cobra.Command {
-	o := &ClearCacheOptions{}
+func newClearCacheCommand() *cobra.Command {
+	o := &clearCacheOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "clear-cache",
@@ -335,8 +327,7 @@ func NewClearCacheCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'tools clear-cache' sub-command.
-func (o *ClearCacheOptions) run(cmd *cobra.Command, _ []string) error {
+func (o *clearCacheOptions) run(cmd *cobra.Command, _ []string) error {
 	l := logger.From(cmd.Context())
 	cachePath, err := config.GetAbsCachePath()
 	if err != nil {
@@ -352,12 +343,10 @@ func (o *ClearCacheOptions) run(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-// DownloadInitOptions holds the command-line options for 'tools download-init' sub-command.
-type DownloadInitOptions struct{}
+type downloadInitOptions struct{}
 
-// NewDownloadInitCommand creates the `tools download-init` sub-command.
-func NewDownloadInitCommand() *cobra.Command {
-	o := &DownloadInitOptions{}
+func newDownloadInitCommand() *cobra.Command {
+	o := &downloadInitOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "download-init",
@@ -370,8 +359,7 @@ func NewDownloadInitCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'tools download-init' sub-command.
-func (o *DownloadInitOptions) run(cmd *cobra.Command, _ []string) error {
+func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 	url := zoci.GetInitPackageURL(config.CLIVersion)
 	remote, err := zoci.NewRemote(ctx, url, oci.PlatformForArch(config.GetArch()))
@@ -386,12 +374,10 @@ func (o *DownloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-// GenPKIOptions holds the command-line options for 'tools gen-pki' sub-command.
-type GenPKIOptions struct{}
+type genPKIOptions struct{}
 
-// NewGenPKICommand creates the `tools gen-pki` sub-command.
-func NewGenPKICommand() *cobra.Command {
-	o := &GenPKIOptions{}
+func newGenPKICommand() *cobra.Command {
+	o := &genPKIOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "gen-pki HOST",
@@ -406,8 +392,7 @@ func NewGenPKICommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'tools gen-pki' sub-command.
-func (o *GenPKIOptions) run(cmd *cobra.Command, args []string) error {
+func (o *genPKIOptions) run(cmd *cobra.Command, args []string) error {
 	pki, err := pki.GeneratePKI(args[0], subAltNames...)
 	if err != nil {
 		return err
@@ -427,12 +412,10 @@ func (o *GenPKIOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// GenKeyOptions holds the command-line options for 'tools gen-key' sub-command.
-type GenKeyOptions struct{}
+type genKeyOptions struct{}
 
-// NewGenKeyCommand creates the `tools gen-key` sub-command.
-func NewGenKeyCommand() *cobra.Command {
-	o := &GenKeyOptions{}
+func newGenKeyCommand() *cobra.Command {
+	o := &genKeyOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "gen-key",
@@ -444,8 +427,7 @@ func NewGenKeyCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'tools gen-key' sub-command.
-func (o *GenKeyOptions) run(cmd *cobra.Command, _ []string) error {
+func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 	// Utility function to prompt the user for the password to the private key
 	passwordFunc := func(bool) ([]byte, error) {
 		// perform the first prompt
