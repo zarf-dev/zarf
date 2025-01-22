@@ -61,7 +61,7 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", simplePackageRef, "--plain-http")
 	suite.Error(err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", simplePackageRef, "--plain-http", publicKeyFlag, "--sbom-out", suite.T().TempDir())
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "sbom", simplePackageRef, "--plain-http", publicKeyFlag, "--output", suite.T().TempDir())
 	suite.NoError(err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+badPullInspectRef.String(), "--plain-http")
