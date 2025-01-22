@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package tools contains the CLI commands for Zarf.
-package tools
+// Package cmd contains the CLI commands for Zarf.
+package cmd
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 )
 
-// ldflags github.com/zarf-dev/zarf/src/cmd/tools.archiverVersion=x.x.x
+// ldflags github.com/zarf-dev/zarf/src/cmd.archiverVersion=x.x.x
 var archiverVersion string
 
 func newArchiverCommand() *cobra.Command {
@@ -29,7 +29,7 @@ func newArchiverCommand() *cobra.Command {
 
 	cmd.AddCommand(newArchiverCompressCommand())
 	cmd.AddCommand(newArchiverDecompressCommand())
-	cmd.AddCommand(newVersionCmd("mholt/archiver", archiverVersion))
+	cmd.AddCommand(newToolsVersionCmd("mholt/archiver", archiverVersion))
 
 	return cmd
 }

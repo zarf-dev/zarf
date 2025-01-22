@@ -78,7 +78,7 @@ issues:
     - EXC0014
     - EXC0015
   exclude-dirs:
-    - "src/cmd/tools/helm"     # Exclude linting code copied from Helm.
+    - "src/cmd/helm"     # Exclude linting code copied from Helm.
     - "src/internal/packager"
     - "src/pkg/packager"       # TODO(mkcp): Delete packager rules once refactor is complete
     - "src/internal/packager2" # TODO(mkcp): Delete packager rules once refactor is complete

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package tools contains the CLI commands for Zarf.
-package tools
+// Package cmd contains the CLI commands for Zarf.
+package cmd
 
 import (
 	"github.com/anchore/clio"
@@ -11,7 +11,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
-// ldflags github.com/zarf-dev/zarf/src/cmd/tools.syftVersion=x.x.x
+// ldflags github.com/zarf-dev/zarf/src/cmd.syftVersion=x.x.x
 var syftVersion string
 
 func newSbomCommand() *cobra.Command {

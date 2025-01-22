@@ -1,26 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package tools contains the CLI commands for Zarf.
-package tools
+// Package cmd contains the CLI commands for Zarf.
+package cmd
 
 import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
-// NewToolsCommand creates the `tools` sub-command and its nested children.
-func NewToolsCommand() *cobra.Command {
+func newToolsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "tools",
 		Aliases: []string{"t"},
 		Short:   lang.CmdToolsShort,
 	}
 
-	v := common.GetViper()
+	v := getViper()
 
 	cmd.AddCommand(newArchiverCommand())
 	cmd.AddCommand(newRegistryCommand())
@@ -40,7 +38,7 @@ func NewToolsCommand() *cobra.Command {
 	return cmd
 }
 
-func newVersionCmd(name, version string) *cobra.Command {
+func newToolsVersionCmd(name, version string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Args:  cobra.NoArgs,

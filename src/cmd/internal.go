@@ -15,7 +15,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 	"github.com/spf13/pflag"
-	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
@@ -124,7 +123,7 @@ func (o *internalGenCliDocsOptions) run(_ *cobra.Command, _ []string) error {
 		if cmd.Use == "tools" {
 			for _, toolCmd := range cmd.Commands() {
 				// If the command is a vendored command, add a dummy flag to hide root flags from the docs
-				if common.CheckVendorOnlyFromPath(toolCmd) {
+				if checkVendorOnlyFromPath(toolCmd) {
 					addHiddenDummyFlag(toolCmd, "log-level")
 					addHiddenDummyFlag(toolCmd, "log-format")
 					addHiddenDummyFlag(toolCmd, "architecture")
