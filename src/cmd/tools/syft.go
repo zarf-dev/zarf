@@ -14,8 +14,7 @@ import (
 // ldflags github.com/zarf-dev/zarf/src/cmd/tools.syftVersion=x.x.x
 var syftVersion string
 
-// NewSbomCommand creates the `tools sbom` sub-command.
-func NewSbomCommand() *cobra.Command {
+func newSbomCommand() *cobra.Command {
 	cmd := syftCLI.Command(clio.Identification{
 		Name:    "syft",
 		Version: syftVersion,

@@ -10,8 +10,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
-// NewYQCommand creates the `tools yq` sub-command and its nested children.
-func NewYQCommand() *cobra.Command {
+func newYQCommand() *cobra.Command {
 	cmd := yq.New()
 	cmd.Example = lang.CmdToolsYqExample
 	cmd.Use = "yq"

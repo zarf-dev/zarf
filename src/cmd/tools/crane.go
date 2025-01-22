@@ -26,17 +26,15 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// RegistryOptions holds the command-line options for 'tools registry' sub-command.
-type RegistryOptions struct {
+type registryOptions struct {
 	verbose  bool
 	insecure bool
 	ndlayers bool
 	platform string
 }
 
-// NewRegistryCommand creates the `tools registry` sub-command and its nested children.
-func NewRegistryCommand() *cobra.Command {
-	o := &RegistryOptions{
+func newRegistryCommand() *cobra.Command {
+	o := &registryOptions{
 		verbose:  false,
 		insecure: false,
 		ndlayers: false,
@@ -82,10 +80,10 @@ func NewRegistryCommand() *cobra.Command {
 		},
 	}
 
-	cmd.AddCommand(NewRegistryPruneCommand())
-	cmd.AddCommand(NewRegistryLoginCommand())
-	cmd.AddCommand(NewRegistryCopyCommand())
-	cmd.AddCommand(NewRegistryCatalogCommand())
+	cmd.AddCommand(newRegistryPruneCommand())
+	cmd.AddCommand(newRegistryLoginCommand())
+	cmd.AddCommand(newRegistryCopyCommand())
+	cmd.AddCommand(newRegistryCatalogCommand())
 
 	// TODO(soltysh): consider splitting craneOptions to be per command
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdList, &craneOptions, lang.CmdToolsRegistryListExample, 0))
@@ -104,30 +102,26 @@ func NewRegistryCommand() *cobra.Command {
 	return cmd
 }
 
-// NewRegistryLoginCommand creates the `tools registry login` sub-command.
-func NewRegistryLoginCommand() *cobra.Command {
+func newRegistryLoginCommand() *cobra.Command {
 	cmd := craneCmd.NewCmdAuthLogin()
 	cmd.Example = ""
 	return cmd
 }
 
-// NewRegistryCopyCommand creates the `tools registry copy` sub-command.
-func NewRegistryCopyCommand() *cobra.Command {
+func newRegistryCopyCommand() *cobra.Command {
 	// No package information is available so do not pass in a list of architectures
 	craneOptions := []crane.Option{}
 	cmd := craneCmd.NewCmdCopy(&craneOptions)
 	return cmd
 }
 
-// RegistryCatalogOptions holds the command-line options for 'tools registry catalog' sub-command.
-type RegistryCatalogOptions struct {
+type registryCatalogOptions struct {
 	craneOptions  []crane.Option
 	originalRunFn func(cmd *cobra.Command, args []string) error
 }
 
-// NewRegistryCatalogCommand creates the `tools registry catalog` sub-command.
-func NewRegistryCatalogCommand() *cobra.Command {
-	o := RegistryCatalogOptions{
+func newRegistryCatalogCommand() *cobra.Command {
+	o := registryCatalogOptions{
 		// No package information is available so do not pass in a list of architectures
 		craneOptions: []crane.Option{},
 	}
@@ -137,13 +131,12 @@ func NewRegistryCatalogCommand() *cobra.Command {
 	cmd.Args = nil
 
 	o.originalRunFn = cmd.RunE
-	cmd.RunE = o.Run
+	cmd.RunE = o.run
 
 	return cmd
 }
 
-// Run performs the execution of 'tools registry catalog' sub-command.
-func (o *RegistryCatalogOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	l := logger.From(cmd.Context())
 	if len(args) > 0 {
@@ -179,18 +172,16 @@ func (o *RegistryCatalogOptions) Run(cmd *cobra.Command, args []string) error {
 	return o.originalRunFn(cmd, []string{registryEndpoint})
 }
 
-// RegistryPruneOptions holds the command-line options for 'tools registry prune' sub-command.
-type RegistryPruneOptions struct{}
+type registryPruneOptions struct{}
 
-// NewRegistryPruneCommand creates the `tools registry prune` sub-command.
-func NewRegistryPruneCommand() *cobra.Command {
-	o := RegistryPruneOptions{}
+func newRegistryPruneCommand() *cobra.Command {
+	o := registryPruneOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "prune",
 		Aliases: []string{"p"},
 		Short:   lang.CmdToolsRegistryPruneShort,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	// Always require confirm flag (no viper)
@@ -199,8 +190,7 @@ func NewRegistryPruneCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'tools registry prune' sub-command.
-func (o *RegistryPruneOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	// Try to connect to a Zarf initialized cluster
 	c, err := cluster.NewCluster()
 	if err != nil {

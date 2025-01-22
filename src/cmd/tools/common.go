@@ -22,14 +22,14 @@ func NewToolsCommand() *cobra.Command {
 
 	v := common.GetViper()
 
-	cmd.AddCommand(NewArchiverCommand())
-	cmd.AddCommand(NewRegistryCommand())
-	cmd.AddCommand(NewHelmCommand())
-	cmd.AddCommand(NewK9sCommand())
-	cmd.AddCommand(NewKubectlCommand())
-	cmd.AddCommand(NewSbomCommand())
-	cmd.AddCommand(NewWaitForCommand())
-	cmd.AddCommand(NewYQCommand())
+	cmd.AddCommand(newArchiverCommand())
+	cmd.AddCommand(newRegistryCommand())
+	cmd.AddCommand(newHelmCommand())
+	cmd.AddCommand(newK9sCommand())
+	cmd.AddCommand(newKubectlCommand())
+	cmd.AddCommand(newSbomCommand())
+	cmd.AddCommand(newWaitForCommand())
+	cmd.AddCommand(newYQCommand())
 	cmd.AddCommand(NewGetCredsCommand())
 	cmd.AddCommand(NewUpdateCredsCommand(v))
 	cmd.AddCommand(NewClearCacheCommand())
@@ -40,7 +40,6 @@ func NewToolsCommand() *cobra.Command {
 	return cmd
 }
 
-// newVersionCmd is a generic version command for tools
 func newVersionCmd(name, version string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",

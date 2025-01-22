@@ -29,12 +29,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// InitOptions holds the command-line options for 'init' sub-command.
-type InitOptions struct{}
+type initOptions struct{}
 
-// NewInitCommand creates the `init` sub-command.
-func NewInitCommand() *cobra.Command {
-	o := InitOptions{}
+func newInitCommand() *cobra.Command {
+	o := initOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "init",
@@ -42,7 +40,7 @@ func NewInitCommand() *cobra.Command {
 		Short:   lang.CmdInitShort,
 		Long:    lang.CmdInitLong,
 		Example: lang.CmdInitExample,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	v := common.GetViper()
@@ -95,8 +93,7 @@ func NewInitCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'init' sub-command.
-func (o *InitOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 	if err := validateInitFlags(); err != nil {
 		return fmt.Errorf("invalid command flags were provided: %w", err)

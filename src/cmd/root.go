@@ -15,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/cmd/say"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/pterm/pterm"
@@ -138,23 +137,21 @@ func NewZarfCommand() *cobra.Command {
 	rootCmd.AddCommand(tools.NewToolsCommand())
 
 	// TODO(soltysh): consider adding command groups
-	rootCmd.AddCommand(NewConnectCommand())
-	rootCmd.AddCommand(NewDestroyCommand())
-	rootCmd.AddCommand(NewDevCommand())
-	rootCmd.AddCommand(NewInitCommand())
-	rootCmd.AddCommand(NewInternalCommand(rootCmd))
-	rootCmd.AddCommand(NewPackageCommand())
+	rootCmd.AddCommand(newConnectCommand())
+	rootCmd.AddCommand(sayCommand())
+	rootCmd.AddCommand(newDestroyCommand())
+	rootCmd.AddCommand(newDevCommand())
+	rootCmd.AddCommand(newInitCommand())
+	rootCmd.AddCommand(newInternalCommand(rootCmd))
+	rootCmd.AddCommand(newPackageCommand())
 
-	rootCmd.AddCommand(NewVersionCommand())
+	rootCmd.AddCommand(newVersionCommand())
 
 	return rootCmd
 }
 
 // Execute is the entrypoint for the CLI.
 func Execute(ctx context.Context) {
-	// Add `zarf say`
-	rootCmd.AddCommand(say.Command())
-
 	cmd, err := rootCmd.ExecuteContextC(ctx)
 	if err == nil {
 		return

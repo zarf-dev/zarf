@@ -19,8 +19,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
-// NewKubectlCommand creates the `tools kubectl` sub-command.
-func NewKubectlCommand() *cobra.Command {
+func newKubectlCommand() *cobra.Command {
 	// Kubectl stub command.
 	cmd := &cobra.Command{
 		Short: lang.CmdToolsKubectlDocs,

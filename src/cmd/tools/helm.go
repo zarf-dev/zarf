@@ -18,8 +18,7 @@ import (
 // ldflags github.com/zarf-dev/zarf/src/cmd/tools.helmVersion=x.x.x
 var helmVersion string
 
-// NewHelmCommand creates the `tools helm` sub-command.
-func NewHelmCommand() *cobra.Command {
+func newHelmCommand() *cobra.Command {
 	actionConfig := new(action.Configuration)
 
 	// Truncate Helm's arguments so that it thinks its all alone

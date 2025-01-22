@@ -60,14 +60,14 @@ func NewGetCredsCommand() *cobra.Command {
 		Example: lang.CmdToolsGetCredsExample,
 		Aliases: []string{"gc"},
 		Args:    cobra.MaximumNArgs(1),
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	return cmd
 }
 
 // Run performs the execution of 'tools get-creds' sub-command.
-func (o *GetCredsOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *GetCredsOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
@@ -131,7 +131,7 @@ func NewUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 		Example: lang.CmdToolsUpdateCredsExample,
 		Aliases: []string{"uc"},
 		Args:    cobra.MaximumNArgs(1),
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	// Always require confirm flag (no viper)
@@ -162,7 +162,7 @@ func NewUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 }
 
 // Run performs the execution of 'tools update-creds' sub-command.
-func (o *UpdateCredsOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *UpdateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	validKeys := []string{message.RegistryKey, message.GitKey, message.ArtifactKey, message.AgentKey}
 	if len(args) == 0 {
 		args = validKeys
@@ -327,7 +327,7 @@ func NewClearCacheCommand() *cobra.Command {
 		Use:     "clear-cache",
 		Aliases: []string{"c"},
 		Short:   lang.CmdToolsClearCacheShort,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", config.ZarfDefaultCachePath, lang.CmdToolsClearCacheFlagCachePath)
@@ -336,7 +336,7 @@ func NewClearCacheCommand() *cobra.Command {
 }
 
 // Run performs the execution of 'tools clear-cache' sub-command.
-func (o *ClearCacheOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *ClearCacheOptions) run(cmd *cobra.Command, _ []string) error {
 	l := logger.From(cmd.Context())
 	cachePath, err := config.GetAbsCachePath()
 	if err != nil {
@@ -362,7 +362,7 @@ func NewDownloadInitCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "download-init",
 		Short: lang.CmdToolsDownloadInitShort,
-		RunE:  o.Run,
+		RunE:  o.run,
 	}
 
 	cmd.Flags().StringVarP(&outputDirectory, "output-directory", "o", "", lang.CmdToolsDownloadInitFlagOutputDirectory)
@@ -371,7 +371,7 @@ func NewDownloadInitCommand() *cobra.Command {
 }
 
 // Run performs the execution of 'tools download-init' sub-command.
-func (o *DownloadInitOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *DownloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 	url := zoci.GetInitPackageURL(config.CLIVersion)
 	remote, err := zoci.NewRemote(ctx, url, oci.PlatformForArch(config.GetArch()))
@@ -398,7 +398,7 @@ func NewGenPKICommand() *cobra.Command {
 		Aliases: []string{"pki"},
 		Short:   lang.CmdToolsGenPkiShort,
 		Args:    cobra.ExactArgs(1),
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringArrayVar(&subAltNames, "sub-alt-name", []string{}, lang.CmdToolsGenPkiFlagAltName)
@@ -407,7 +407,7 @@ func NewGenPKICommand() *cobra.Command {
 }
 
 // Run performs the execution of 'tools gen-pki' sub-command.
-func (o *GenPKIOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *GenPKIOptions) run(cmd *cobra.Command, args []string) error {
 	pki, err := pki.GeneratePKI(args[0], subAltNames...)
 	if err != nil {
 		return err
@@ -438,14 +438,14 @@ func NewGenKeyCommand() *cobra.Command {
 		Use:     "gen-key",
 		Aliases: []string{"key"},
 		Short:   lang.CmdToolsGenKeyShort,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	return cmd
 }
 
 // Run performs the execution of 'tools gen-key' sub-command.
-func (o *GenKeyOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *GenKeyOptions) run(cmd *cobra.Command, _ []string) error {
 	// Utility function to prompt the user for the password to the private key
 	passwordFunc := func(bool) ([]byte, error) {
 		// perform the first prompt

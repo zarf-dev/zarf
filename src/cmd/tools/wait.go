@@ -17,15 +17,13 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
-// WaitForOptions holds the command-line options for 'tools registry' sub-command.
-type WaitForOptions struct {
+type waitForOptions struct {
 	waitTimeout   string
 	waitNamespace string
 }
 
-// NewWaitForCommand creates the `tools wait-for` sub-command.
-func NewWaitForCommand() *cobra.Command {
-	o := WaitForOptions{}
+func newWaitForCommand() *cobra.Command {
+	o := waitForOptions{}
 	cmd := &cobra.Command{
 		Use:     "wait-for { KIND | PROTOCOL } { NAME | SELECTOR | URI } { CONDITION | HTTP_CODE }",
 		Aliases: []string{"w", "wait"},
@@ -33,7 +31,7 @@ func NewWaitForCommand() *cobra.Command {
 		Long:    lang.CmdToolsWaitForLong,
 		Example: lang.CmdToolsWaitForExample,
 		Args:    cobra.MinimumNArgs(1),
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringVar(&o.waitTimeout, "timeout", "5m", lang.CmdToolsWaitForFlagTimeout)
@@ -43,8 +41,7 @@ func NewWaitForCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'tools wait-for' sub-command.
-func (o *WaitForOptions) Run(_ *cobra.Command, args []string) error {
+func (o *waitForOptions) run(_ *cobra.Command, args []string) error {
 	// Parse the timeout string
 	timeout, err := time.ParseDuration(o.waitTimeout)
 	if err != nil {

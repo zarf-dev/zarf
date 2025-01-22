@@ -33,8 +33,7 @@ import (
 
 var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, types.ZarfInClusterContainerRegistryNodePort)
 
-// NewDevCommand creates the `dev` sub-command and its nested children.
-func NewDevCommand() *cobra.Command {
+func newDevCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "dev",
 		Aliases: []string{"prepare", "prep"},
@@ -43,30 +42,28 @@ func NewDevCommand() *cobra.Command {
 
 	v := common.GetViper()
 
-	cmd.AddCommand(NewDevDeployCommand(v))
-	cmd.AddCommand(NewDevGenerateCommand())
-	cmd.AddCommand(NewDevPatchGitCommand())
-	cmd.AddCommand(NewDevSha256SumCommand())
-	cmd.AddCommand(NewDevFindImagesCommand(v))
-	cmd.AddCommand(NewDevGenerateConfigCommand())
-	cmd.AddCommand(NewDevLintCommand(v))
+	cmd.AddCommand(newDevDeployCommand(v))
+	cmd.AddCommand(newDevGenerateCommand())
+	cmd.AddCommand(newDevPatchGitCommand())
+	cmd.AddCommand(newDevSha256SumCommand())
+	cmd.AddCommand(newDevFindImagesCommand(v))
+	cmd.AddCommand(newDevGenerateConfigCommand())
+	cmd.AddCommand(newDevLintCommand(v))
 
 	return cmd
 }
 
-// DevDeployOptions holds the command-line options for 'dev deploy' sub-command.
-type DevDeployOptions struct{}
+type devDeployOptions struct{}
 
-// NewDevDeployCommand creates the `dev deploy` sub-command.
-func NewDevDeployCommand(v *viper.Viper) *cobra.Command {
-	o := &DevDeployOptions{}
+func newDevDeployCommand(v *viper.Viper) *cobra.Command {
+	o := &devDeployOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Args:  cobra.MaximumNArgs(1),
 		Short: lang.CmdDevDeployShort,
 		Long:  lang.CmdDevDeployLong,
-		RunE:  o.Run,
+		RunE:  o.run,
 	}
 
 	// TODO(soltysh): get rid of pkgConfig global
@@ -94,8 +91,7 @@ func NewDevDeployCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'dev deploy' sub-command.
-func (o *DevDeployOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 
@@ -124,12 +120,10 @@ func (o *DevDeployOptions) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// DevGenerateOptions holds the command-line options for 'dev generate' sub-command.
-type DevGenerateOptions struct{}
+type devGenerateOptions struct{}
 
-// NewDevGenerateCommand creates the `dev generate` sub-command.
-func NewDevGenerateCommand() *cobra.Command {
-	o := &DevGenerateOptions{}
+func newDevGenerateCommand() *cobra.Command {
+	o := &devGenerateOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "generate NAME",
@@ -137,7 +131,7 @@ func NewDevGenerateCommand() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Short:   lang.CmdDevGenerateShort,
 		Example: lang.CmdDevGenerateExample,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringVar(&pkgConfig.GenerateOpts.URL, "url", "", "URL to the source git repository")
@@ -152,8 +146,7 @@ func NewDevGenerateCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'dev generate' sub-command.
-func (o *DevGenerateOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) error {
 	pkgConfig.GenerateOpts.Name = args[0]
 
 	pkgConfig.CreateOpts.BaseDir = "."
@@ -172,19 +165,17 @@ func (o *DevGenerateOptions) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// DevPatchGitOptions holds the command-line options for 'dev patch-git' sub-command.
-type DevPatchGitOptions struct{}
+type devPatchGitOptions struct{}
 
-// NewDevPatchGitCommand creates the `dev patch-git` sub-command.
-func NewDevPatchGitCommand() *cobra.Command {
-	o := &DevDeployOptions{}
+func newDevPatchGitCommand() *cobra.Command {
+	o := &devPatchGitOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "patch-git HOST FILE",
 		Aliases: []string{"p"},
 		Short:   lang.CmdDevPatchGitShort,
 		Args:    cobra.ExactArgs(2),
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	// TODO(soltysh): get rid of pkgConfig global
@@ -193,8 +184,7 @@ func NewDevPatchGitCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'dev patch-git' sub-command.
-func (o *DevPatchGitOptions) Run(_ *cobra.Command, args []string) error {
+func (o *devPatchGitOptions) run(_ *cobra.Command, args []string) error {
 	host, fileName := args[0], args[1]
 
 	// Read the contents of the given file
@@ -239,21 +229,19 @@ func (o *DevPatchGitOptions) Run(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-// DevSha256SumOptions holds the command-line options for 'dev sha256sum' sub-command.
-type DevSha256SumOptions struct {
+type devSha256SumOptions struct {
 	extractPath string
 }
 
-// NewDevSha256SumCommand creates the `dev sha256sum` sub-command.
-func NewDevSha256SumCommand() *cobra.Command {
-	o := &DevSha256SumOptions{}
+func newDevSha256SumCommand() *cobra.Command {
+	o := &devSha256SumOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "sha256sum { FILE | URL }",
 		Aliases: []string{"s"},
 		Short:   lang.CmdDevSha256sumShort,
 		Args:    cobra.ExactArgs(1),
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringVarP(&o.extractPath, "extract-path", "e", "", lang.CmdDevFlagExtractPath)
@@ -261,8 +249,7 @@ func NewDevSha256SumCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'dev sha256sum' sub-command.
-func (o *DevSha256SumOptions) Run(cmd *cobra.Command, args []string) (err error) {
+func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error) {
 	hashErr := errors.New("unable to compute the SHA256SUM hash")
 
 	fileName := args[0]
@@ -341,12 +328,10 @@ func (o *DevSha256SumOptions) Run(cmd *cobra.Command, args []string) (err error)
 	return nil
 }
 
-// DevFindImagesOptions holds the command-line options for 'dev find-images' sub-command.
-type DevFindImagesOptions struct{}
+type devFindImagesOptions struct{}
 
-// NewDevFindImagesCommand creates the `dev find-images` sub-command.
-func NewDevFindImagesCommand(v *viper.Viper) *cobra.Command {
-	o := &DevFindImagesOptions{}
+func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
+	o := &devFindImagesOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "find-images [ DIRECTORY ]",
@@ -354,7 +339,7 @@ func NewDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   lang.CmdDevFindImagesShort,
 		Long:    lang.CmdDevFindImagesLong,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	// TODO(soltysh): get rid of pkgConfig global
@@ -385,8 +370,7 @@ func NewDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'dev find-images' sub-command.
-func (o *DevFindImagesOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 
@@ -414,12 +398,10 @@ func (o *DevFindImagesOptions) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// DevGenerateConfigOptions holds the command-line options for 'dev generate-config' sub-command.
-type DevGenerateConfigOptions struct{}
+type devGenerateConfigOptions struct{}
 
-// NewDevGenerateConfigCommand creates the `dev generate-config` sub-command.
-func NewDevGenerateConfigCommand() *cobra.Command {
-	o := &DevGenerateConfigOptions{}
+func newDevGenerateConfigCommand() *cobra.Command {
+	o := &devGenerateConfigOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "generate-config [ FILENAME ]",
@@ -427,14 +409,13 @@ func NewDevGenerateConfigCommand() *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   lang.CmdDevGenerateConfigShort,
 		Long:    lang.CmdDevGenerateConfigLong,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	return cmd
 }
 
-// Run performs the execution of 'dev generate-config' sub-command.
-func (o *DevGenerateConfigOptions) Run(_ *cobra.Command, args []string) error {
+func (o *devGenerateConfigOptions) run(_ *cobra.Command, args []string) error {
 	// If a filename was provided, use that
 	fileName := "zarf-config.toml"
 	if len(args) > 0 {
@@ -448,12 +429,10 @@ func (o *DevGenerateConfigOptions) Run(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-// DevLintOptions holds the command-line options for 'dev lint' sub-command.
-type DevLintOptions struct{}
+type devLintOptions struct{}
 
-// NewDevLintCommand creates the `dev lint` sub-command.
-func NewDevLintCommand(v *viper.Viper) *cobra.Command {
-	o := &DevLintOptions{}
+func newDevLintCommand(v *viper.Viper) *cobra.Command {
+	o := &devLintOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "lint [ DIRECTORY ]",
@@ -461,7 +440,7 @@ func NewDevLintCommand(v *viper.Viper) *cobra.Command {
 		Aliases: []string{"l"},
 		Short:   lang.CmdDevLintShort,
 		Long:    lang.CmdDevLintLong,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
@@ -470,8 +449,7 @@ func NewDevLintCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'dev lint' sub-command.
-func (o *DevLintOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	config.CommonOptions.Confirm = true
 	pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)

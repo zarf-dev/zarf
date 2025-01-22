@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package say prints out the adorable creature we all know and love.
-package say
+// Package cmd contains the CLI commands for Zarf.
+package cmd
 
 import (
 	"fmt"
@@ -11,14 +11,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Command prints out the Zarf logo.
-func Command() *cobra.Command {
+func sayCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "say",
 		Short: "Print Zarf logo",
 		Long:  "Print out the adorable Zarf logo",
-		// HACK(mkcp): Hidden is a workaround until we update `test-docs-and-schema` for the new command and flags.
-		Hidden: true,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			_, err := fmt.Fprintln(os.Stderr, logo())
 			return err
