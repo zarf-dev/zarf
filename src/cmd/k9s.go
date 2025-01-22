@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package tools contains the CLI commands for Zarf.
-package tools
+// Package cmd contains the CLI commands for Zarf.
+package cmd
 
 import (
 	"os"
@@ -18,8 +18,7 @@ import (
 //go:linkname k9sRootCmd github.com/derailed/k9s/cmd.rootCmd
 var k9sRootCmd *cobra.Command
 
-// NewK9sCommand creates the `tools k9s` sub-command.
-func NewK9sCommand() *cobra.Command {
+func newK9sCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "monitor",
 		Aliases: []string{"m", "k9s"},

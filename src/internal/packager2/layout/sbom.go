@@ -31,6 +31,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -42,6 +43,7 @@ var viewerAssets embed.FS
 var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
 func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath string, images []transform.Image) error {
+	l := logger.From(ctx)
 	outputPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -73,6 +75,7 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 		if err != nil {
 			return err
 		}
+		l.Info("creating image SBOMs", "reference", refInfo.Reference)
 		err = createSBOMViewerAsset(outputPath, refInfo.Reference, b, jsonList)
 		if err != nil {
 			return err
@@ -147,6 +150,7 @@ func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.I
 }
 
 func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outputPath, buildPath string) ([]byte, error) {
+	l := logger.From(ctx)
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -192,6 +196,7 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 	catalog := pkg.NewCollection()
 	relationships := []artifact.Relationship{}
 	for _, sbomFile := range sbomFiles {
+		l.Info("creating file SBOMs", "file", sbomFile)
 		fileSrc, err := filesource.NewFromPath(sbomFile)
 		if err != nil {
 			return nil, err

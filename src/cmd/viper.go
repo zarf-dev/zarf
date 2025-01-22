@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package common handles command configuration across all commands
-package common
+// Package cmd contains the CLI commands for Zarf.
+package cmd
 
 import (
 	"context"
@@ -121,7 +121,7 @@ func initViper() *viper.Viper {
 	v = viper.New()
 
 	// Skip for vendor-only commands or the version command
-	if CheckVendorOnlyFromArgs() || isVersionCmd() {
+	if checkVendorOnlyFromArgs() || isVersionCmd() {
 		return v
 	}
 
@@ -152,8 +152,8 @@ func initViper() *viper.Viper {
 	return v
 }
 
-// GetViper returns the viper singleton
-func GetViper() *viper.Viper {
+// getViper returns the viper singleton
+func getViper() *viper.Viper {
 	if v == nil {
 		v = initViper()
 	}
@@ -193,6 +193,7 @@ func setDefaults() {
 	// Root defaults that are non-zero values
 	v.SetDefault(VLogLevel, "info")
 	v.SetDefault(VZarfCache, config.ZarfDefaultCachePath)
+	v.SetDefault(VLogFormat, string(logger.FormatConsole))
 
 	// Package defaults that are non-zero values
 	v.SetDefault(VPkgOCIConcurrency, 3)

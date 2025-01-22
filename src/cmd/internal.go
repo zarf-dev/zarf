@@ -15,7 +15,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 	"github.com/spf13/pflag"
-	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
@@ -24,45 +23,41 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
-// NewInternalCommand creates the `internal` sub-command and its nested children.
-func NewInternalCommand(rootCmd *cobra.Command) *cobra.Command {
+func newInternalCommand(rootCmd *cobra.Command) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "internal",
 		Hidden: true,
 		Short:  lang.CmdInternalShort,
 	}
 
-	cmd.AddCommand(NewInternalAgentCommand())
-	cmd.AddCommand(NewInternalHTTPProxyCommand())
-	cmd.AddCommand(NewInternalGenCliDocsCommand(rootCmd))
-	cmd.AddCommand(NewInternalCreateReadOnlyGiteaUserCommand())
-	cmd.AddCommand(NewInternalCreateArtifactRegistryTokenCommand())
-	cmd.AddCommand(NewInternalUpdateGiteaPVCCommand())
-	cmd.AddCommand(NewInternalIsValidHostnameCommand())
-	cmd.AddCommand(NewInternalCrc32Command())
+	cmd.AddCommand(newInternalAgentCommand())
+	cmd.AddCommand(newInternalHTTPProxyCommand())
+	cmd.AddCommand(newInternalGenCliDocsCommand(rootCmd))
+	cmd.AddCommand(newInternalCreateReadOnlyGiteaUserCommand())
+	cmd.AddCommand(newInternalCreateArtifactRegistryTokenCommand())
+	cmd.AddCommand(newInternalUpdateGiteaPVCCommand())
+	cmd.AddCommand(newInternalIsValidHostnameCommand())
+	cmd.AddCommand(newInternalCrc32Command())
 
 	return cmd
 }
 
-// InternalAgentOptions holds the command-line options for 'internal agent' sub-command.
-type InternalAgentOptions struct{}
+type internalAgentOptions struct{}
 
-// NewInternalAgentCommand creates the `internal agent` sub-command.
-func NewInternalAgentCommand() *cobra.Command {
-	o := &InternalAgentOptions{}
+func newInternalAgentCommand() *cobra.Command {
+	o := &internalAgentOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "agent",
 		Short: lang.CmdInternalAgentShort,
 		Long:  lang.CmdInternalAgentLong,
-		RunE:  o.Run,
+		RunE:  o.run,
 	}
 
 	return cmd
 }
 
-// Run performs the execution of 'internal agent' sub-command.
-func (o *InternalAgentOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *internalAgentOptions) run(cmd *cobra.Command, _ []string) error {
 	cluster, err := cluster.NewCluster()
 	if err != nil {
 		return err
@@ -70,25 +65,22 @@ func (o *InternalAgentOptions) Run(cmd *cobra.Command, _ []string) error {
 	return agent.StartWebhook(cmd.Context(), cluster)
 }
 
-// InternalHTTPProxyOptions holds the command-line options for 'internal http-proxy' sub-command.
-type InternalHTTPProxyOptions struct{}
+type internalHTTPProxyOptions struct{}
 
-// NewInternalHTTPProxyCommand creates the `internal http-proxy` sub-command.
-func NewInternalHTTPProxyCommand() *cobra.Command {
-	o := &InternalHTTPProxyOptions{}
+func newInternalHTTPProxyCommand() *cobra.Command {
+	o := &internalHTTPProxyOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "http-proxy",
 		Short: lang.CmdInternalProxyShort,
 		Long:  lang.CmdInternalProxyLong,
-		RunE:  o.Run,
+		RunE:  o.run,
 	}
 
 	return cmd
 }
 
-// Run performs the execution of 'internal http-proxy' sub-command.
-func (o *InternalHTTPProxyOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *internalHTTPProxyOptions) run(cmd *cobra.Command, _ []string) error {
 	cluster, err := cluster.NewCluster()
 	if err != nil {
 		return err
@@ -96,29 +88,26 @@ func (o *InternalHTTPProxyOptions) Run(cmd *cobra.Command, _ []string) error {
 	return agent.StartHTTPProxy(cmd.Context(), cluster)
 }
 
-// InternalGenCliDocsOptions holds the command-line options for 'internal gen-cli-docs' sub-command.
-type InternalGenCliDocsOptions struct {
+type internalGenCliDocsOptions struct {
 	rootCmd *cobra.Command
 }
 
-// NewInternalGenCliDocsCommand creates the `internal gen-cli-docs` sub-command.
-func NewInternalGenCliDocsCommand(root *cobra.Command) *cobra.Command {
+func newInternalGenCliDocsCommand(root *cobra.Command) *cobra.Command {
 	// TODO(soltysh): ideally this should be replace with cmd.Root() call from cobra
-	o := &InternalGenCliDocsOptions{
+	o := &internalGenCliDocsOptions{
 		rootCmd: root,
 	}
 
 	cmd := &cobra.Command{
 		Use:   "gen-cli-docs",
 		Short: lang.CmdInternalGenerateCliDocsShort,
-		RunE:  o.Run,
+		RunE:  o.run,
 	}
 
 	return cmd
 }
 
-// Run performs the execution of 'internal gen-cli-docs' sub-command.
-func (o *InternalGenCliDocsOptions) Run(_ *cobra.Command, _ []string) error {
+func (o *internalGenCliDocsOptions) run(_ *cobra.Command, _ []string) error {
 	// Don't include the datestamp in the output
 	o.rootCmd.DisableAutoGenTag = true
 
@@ -134,7 +123,7 @@ func (o *InternalGenCliDocsOptions) Run(_ *cobra.Command, _ []string) error {
 		if cmd.Use == "tools" {
 			for _, toolCmd := range cmd.Commands() {
 				// If the command is a vendored command, add a dummy flag to hide root flags from the docs
-				if common.CheckVendorOnlyFromPath(toolCmd) {
+				if checkVendorOnlyFromPath(toolCmd) {
 					addHiddenDummyFlag(toolCmd, "log-level")
 					addHiddenDummyFlag(toolCmd, "log-format")
 					addHiddenDummyFlag(toolCmd, "architecture")
@@ -224,25 +213,22 @@ func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {
 	}
 }
 
-// InternalCreateReadOnlyGiteaUserOptions holds the command-line options for 'internal create-read-only-gitea-user' sub-command.
-type InternalCreateReadOnlyGiteaUserOptions struct{}
+type internalCreateReadOnlyGiteaUserOptions struct{}
 
-// NewInternalCreateReadOnlyGiteaUserCommand creates the `internal create-read-oly-gitea-user` sub-command.
-func NewInternalCreateReadOnlyGiteaUserCommand() *cobra.Command {
-	o := &InternalCreateReadOnlyGiteaUserOptions{}
+func newInternalCreateReadOnlyGiteaUserCommand() *cobra.Command {
+	o := &internalCreateReadOnlyGiteaUserOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "create-read-only-gitea-user",
 		Short: lang.CmdInternalCreateReadOnlyGiteaUserShort,
 		Long:  lang.CmdInternalCreateReadOnlyGiteaUserLong,
-		RunE:  o.Run,
+		RunE:  o.run,
 	}
 
 	return cmd
 }
 
-// Run performs the execution of 'internal create-read-only-gitea-user' sub-command.
-func (o *InternalCreateReadOnlyGiteaUserOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *internalCreateReadOnlyGiteaUserOptions) run(cmd *cobra.Command, _ []string) error {
 	timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
 	defer cancel()
 	c, err := cluster.NewClusterWithWait(timeoutCtx)
@@ -280,25 +266,22 @@ func (o *InternalCreateReadOnlyGiteaUserOptions) Run(cmd *cobra.Command, _ []str
 	return nil
 }
 
-// InternalCreateArtifactRegistryTokenOptions holds the command-line options for 'internal create-artifact-registry-token' sub-command.
-type InternalCreateArtifactRegistryTokenOptions struct{}
+type internalCreateArtifactRegistryTokenOptions struct{}
 
-// NewInternalCreateArtifactRegistryTokenCommand creates the `internal create-artifact-registry-token` sub-command.
-func NewInternalCreateArtifactRegistryTokenCommand() *cobra.Command {
-	o := &InternalCreateArtifactRegistryTokenOptions{}
+func newInternalCreateArtifactRegistryTokenCommand() *cobra.Command {
+	o := &internalCreateArtifactRegistryTokenOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "create-artifact-registry-token",
 		Short: lang.CmdInternalArtifactRegistryGiteaTokenShort,
 		Long:  lang.CmdInternalArtifactRegistryGiteaTokenLong,
-		RunE:  o.Run,
+		RunE:  o.run,
 	}
 
 	return cmd
 }
 
-// Run performs the execution of 'internal create-artifact-registry-token' sub-command.
-func (o *InternalCreateArtifactRegistryTokenOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *internalCreateArtifactRegistryTokenOptions) run(cmd *cobra.Command, _ []string) error {
 	timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
 	defer cancel()
 	c, err := cluster.NewClusterWithWait(timeoutCtx)
@@ -345,20 +328,18 @@ func (o *InternalCreateArtifactRegistryTokenOptions) Run(cmd *cobra.Command, _ [
 	return nil
 }
 
-// InternalUpdateGiteaPVCOptions holds the command-line options for 'internal update-gitea-pvc' sub-command.
-type InternalUpdateGiteaPVCOptions struct {
+type internalUpdateGiteaPVCOptions struct {
 	rollback bool
 }
 
-// NewInternalUpdateGiteaPVCCommand creates the `internal update-gitea-pvc` sub-command.
-func NewInternalUpdateGiteaPVCCommand() *cobra.Command {
-	o := &InternalUpdateGiteaPVCOptions{}
+func newInternalUpdateGiteaPVCCommand() *cobra.Command {
+	o := &internalUpdateGiteaPVCOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "update-gitea-pvc",
 		Short: lang.CmdInternalUpdateGiteaPVCShort,
 		Long:  lang.CmdInternalUpdateGiteaPVCLong,
-		RunE:  o.Run,
+		RunE:  o.run,
 	}
 
 	cmd.Flags().BoolVarP(&o.rollback, "rollback", "r", false, lang.CmdInternalFlagUpdateGiteaPVCRollback)
@@ -366,8 +347,7 @@ func NewInternalUpdateGiteaPVCCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'internal update-gitea-pvc' sub-command.
-func (o *InternalUpdateGiteaPVCOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *internalUpdateGiteaPVCOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 	pvcName := os.Getenv("ZARF_VAR_GIT_SERVER_EXISTING_PVC")
 
@@ -385,24 +365,21 @@ func (o *InternalUpdateGiteaPVCOptions) Run(cmd *cobra.Command, _ []string) erro
 	return nil
 }
 
-// InternalIsValidHostnameOptions holds the command-line options for 'internal is-valid-hostname' sub-command.
-type InternalIsValidHostnameOptions struct{}
+type internalIsValidHostnameOptions struct{}
 
-// NewInternalIsValidHostnameCommand creates the `internal is-valid-hostname` sub-command.
-func NewInternalIsValidHostnameCommand() *cobra.Command {
-	o := &InternalIsValidHostnameOptions{}
+func newInternalIsValidHostnameCommand() *cobra.Command {
+	o := &internalIsValidHostnameOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "is-valid-hostname",
 		Short: lang.CmdInternalIsValidHostnameShort,
-		RunE:  o.Run,
+		RunE:  o.run,
 	}
 
 	return cmd
 }
 
-// Run performs the execution of 'internal is-valid-hostname' sub-command.
-func (o *InternalIsValidHostnameOptions) Run(_ *cobra.Command, _ []string) error {
+func (o *internalIsValidHostnameOptions) run(_ *cobra.Command, _ []string) error {
 	if valid := helpers.IsValidHostName(); !valid {
 		hostname, err := os.Hostname()
 		return fmt.Errorf("the hostname %s is not valid. Ensure the hostname meets RFC1123 requirements https://www.rfc-editor.org/rfc/rfc1123.html, error=%w", hostname, err)
@@ -410,26 +387,23 @@ func (o *InternalIsValidHostnameOptions) Run(_ *cobra.Command, _ []string) error
 	return nil
 }
 
-// InternalCrc32Options holds the command-line options for 'intenral crc32' sub-command.
-type InternalCrc32Options struct{}
+type internalCrc32Options struct{}
 
-// NewInternalCrc32Command creates the `internal crc32` sub-command.
-func NewInternalCrc32Command() *cobra.Command {
-	o := &InternalCrc32Options{}
+func newInternalCrc32Command() *cobra.Command {
+	o := &internalCrc32Options{}
 
 	cmd := &cobra.Command{
 		Use:     "crc32 TEXT",
 		Aliases: []string{"c"},
 		Short:   lang.CmdInternalCrc32Short,
 		Args:    cobra.ExactArgs(1),
-		Run:     o.Run,
+		Run:     o.run,
 	}
 
 	return cmd
 }
 
-// Run performs the execution of 'internal crc32' sub-command.
-func (o *InternalCrc32Options) Run(_ *cobra.Command, args []string) {
+func (o *internalCrc32Options) run(_ *cobra.Command, args []string) {
 	text := args[0]
 	hash := helpers.GetCRCHash(text)
 	fmt.Printf("%d\n", hash)
