@@ -25,7 +25,7 @@ func TestUseCLI(t *testing.T) {
 		t.Parallel()
 		pathToPackage := filepath.Join("src", "test", "packages", "00-dev-inspect-definition")
 
-		stdOut, _, err := e2e.Zarf(t, "dev", "inspect", "definition", pathToPackage, "--flavor=ice-cream", "--set=MY_VAR=worked-as-expected", "--architecture=amd64")
+		stdOut, _, err := e2e.Zarf(t, "dev", "inspect", "definition", pathToPackage, "--flavor=ice-cream", "--set=my_var=worked-as-expected", "--architecture=amd64")
 		require.NoError(t, err)
 		b, err := os.ReadFile(filepath.Join(pathToPackage, "expected-zarf.yaml"))
 		require.NoError(t, err)
