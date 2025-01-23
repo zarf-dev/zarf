@@ -14,7 +14,7 @@ require (
 	github.com/agnivade/levenshtein v1.2.0
 	github.com/anchore/clio v0.0.0-20241115144204-29e89f9fa837
 	github.com/anchore/stereoscope v0.0.13
-	github.com/anchore/syft v1.18.1
+	github.com/anchore/syft v1.19.0
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.1
 	github.com/defenseunicorns/pkg/oci v1.0.2
@@ -75,6 +75,7 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.25.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.48.1 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.48.1 // indirect
+	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/anchore/archiver/v3 v3.5.3-0.20241210171143-5b1d8d1c7c51 // indirect
 	github.com/anchore/go-collections v0.0.0-20240216171411-9321230ce537 // indirect
 	github.com/bshuster-repo/logrus-logstash-hook v1.0.0 // indirect
@@ -102,8 +103,9 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.0 // indirect
 	github.com/hashicorp/golang-lru/arc/v2 v2.0.5 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
+	github.com/hashicorp/hcl/v2 v2.23.0 // indirect
 	github.com/in-toto/attestation v1.1.0 // indirect
-	github.com/jedib0t/go-pretty/v6 v6.6.4 // indirect
+	github.com/jedib0t/go-pretty/v6 v6.6.5 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
@@ -139,6 +141,7 @@ require (
 	go.opentelemetry.io/otel/sdk/log v0.8.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.32.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.4.0 // indirect
+	golang.org/x/tools v0.29.0 // indirect
 	google.golang.org/grpc/stats/opentelemetry v0.0.0-20240907200651-3ffb98b2c93a // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 )
@@ -178,7 +181,7 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.3.1 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
-	github.com/CycloneDX/cyclonedx-go v0.9.1 // indirect
+	github.com/CycloneDX/cyclonedx-go v0.9.2 // indirect
 	github.com/DataDog/zstd v1.5.5 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -213,11 +216,11 @@ require (
 	github.com/anchore/go-struct-converter v0.0.0-20221118182256-c68fdcfa2092 // indirect
 	github.com/anchore/go-version v1.2.2-0.20210903204242-51efa5b487c4 // indirect
 	github.com/anchore/grype v0.84.0 // indirect
-	github.com/anchore/packageurl-go v0.1.1-0.20241018175412-5c22e6360c4f // indirect
+	github.com/anchore/packageurl-go v0.1.1-0.20250117185454-edf36a908b10 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
-	github.com/aquasecurity/go-pep440-version v0.0.0-20210121094942-22b2f8951d46 // indirect
-	github.com/aquasecurity/go-version v0.0.0-20210121072130-637058cfe492 // indirect
+	github.com/aquasecurity/go-pep440-version v0.0.1 // indirect
+	github.com/aquasecurity/go-version v0.0.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aws/aws-sdk-go v1.55.5 // indirect
@@ -246,7 +249,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/bmatcuk/doublestar/v2 v2.0.4 // indirect
-	github.com/bmatcuk/doublestar/v4 v4.7.1 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.8.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/buildkite/agent/v3 v3.81.0 // indirect
 	github.com/buildkite/go-pipeline v0.13.1 // indirect
@@ -574,7 +577,7 @@ require (
 	modernc.org/libc v1.55.3 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
-	modernc.org/sqlite v1.34.2 // indirect
+	modernc.org/sqlite v1.34.5 // indirect
 	oras.land/oras-go v1.2.5 // indirect
 	sigs.k8s.io/controller-runtime v0.20.0
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
