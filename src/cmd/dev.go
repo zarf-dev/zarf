@@ -91,7 +91,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	ctx := cmd.Context()
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
+		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
 	pkg, err := layout2.LoadPackage(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
 	if err != nil {
 		return err
