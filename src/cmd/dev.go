@@ -89,6 +89,7 @@ func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	o.setVariables = helpers.TransformMapKeys(o.setVariables, strings.ToUpper)
 	pkg, err := layout2.LoadPackage(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
 	if err != nil {
 		return err
