@@ -20,6 +20,18 @@ import (
 func TestUseCLI(t *testing.T) {
 	t.Log("E2E: Use CLI")
 
+	// TODO once cmd is refactored to accept an io.Writer, move this test to DevInspectDefinitionOptions.Run()
+	t.Run("zarf dev inspect definition", func(t *testing.T) {
+		t.Parallel()
+		pathToPackage := filepath.Join("src", "test", "packages", "00-dev-inspect-definition")
+
+		stdOut, _, err := e2e.Zarf(t, "dev", "inspect", "definition", pathToPackage, "--flavor=ice-cream", "--set=MY_VAR=worked-as-expected", "--architecture=amd64")
+		require.NoError(t, err)
+		b, err := os.ReadFile(filepath.Join(pathToPackage, "expected-zarf.yaml"))
+		require.NoError(t, err)
+		require.Contains(t, stdOut, string(b))
+	})
+
 	t.Run("zarf prepare sha256sum <local>", func(t *testing.T) {
 		t.Parallel()
 

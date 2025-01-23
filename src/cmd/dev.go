@@ -19,8 +19,10 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -45,11 +47,58 @@ func newDevCommand() *cobra.Command {
 	cmd.AddCommand(newDevGenerateCommand())
 	cmd.AddCommand(newDevPatchGitCommand())
 	cmd.AddCommand(newDevSha256SumCommand())
+	cmd.AddCommand(newDevInspectCommand(v))
 	cmd.AddCommand(newDevFindImagesCommand(v))
 	cmd.AddCommand(newDevGenerateConfigCommand())
 	cmd.AddCommand(newDevLintCommand(v))
 
 	return cmd
+}
+
+func newDevInspectCommand(v *viper.Viper) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "inspect",
+		Short: "Commands to get information about a Zarf package using a `zarf.yaml`",
+	}
+
+	cmd.AddCommand(newDevInspectDefinitionCommand(v))
+	return cmd
+}
+
+type devInspectDefinitionOptions struct {
+	flavor       string
+	setVariables map[string]string
+}
+
+func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
+	o := &devInspectDefinitionOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "definition [ DIRECTORY ]",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Displays the fully rendered package definition",
+		Long:  "Displays the 'zarf.yaml' definition of a Zarf after package templating, flavors, and component imports are applied",
+		RunE:  o.run,
+	}
+
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+
+	return cmd
+}
+
+func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	pkg, err := layout2.LoadPackage(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
+	if err != nil {
+		return err
+	}
+	pkg.Build = v1alpha1.ZarfBuildData{}
+	err = utils.ColorPrintYAML(pkg, nil, false)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type devDeployOptions struct{}
