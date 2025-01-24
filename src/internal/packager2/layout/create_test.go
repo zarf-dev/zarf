@@ -120,12 +120,9 @@ func TestSplitDeleteExistingFiles(t *testing.T) {
 	err = splitFile(context.Background(), inputFilename, chunkSize)
 	require.NoError(t, err)
 
-	// Verify fake split files were deleted
-	_, err = os.Stat(inputFilename)
-	require.ErrorIs(t, err, os.ErrNotExist)
 	entries, err := os.ReadDir(tempDir)
 	require.NoError(t, err)
-	// Header file + 3 data files
+	// Verify only header file + 3 data files remain, and not the 15 test split files
 	require.Len(t, entries, 4)
 }
 
