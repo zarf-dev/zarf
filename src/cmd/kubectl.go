@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package tools contains the CLI commands for Zarf.
-package tools
+// Package cmd contains the CLI commands for Zarf.
+package cmd
 
 import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -19,8 +18,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
-// NewKubectlCommand creates the `tools kubectl` sub-command.
-func NewKubectlCommand() *cobra.Command {
+func newKubectlCommand() *cobra.Command {
 	// Kubectl stub command.
 	cmd := &cobra.Command{
 		Short: lang.CmdToolsKubectlDocs,
@@ -28,7 +26,7 @@ func NewKubectlCommand() *cobra.Command {
 	}
 
 	// Only load this command if it is being called directly.
-	if common.IsVendorCmd(os.Args, []string{"kubectl", "k"}) {
+	if IsVendorCmd(os.Args, []string{"kubectl", "k"}) {
 		// Add the kubectl command to the tools command.
 		cmd = kubeCmd.NewDefaultKubectlCommand()
 

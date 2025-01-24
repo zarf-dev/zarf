@@ -19,9 +19,10 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/zarf-dev/zarf/src/cmd/common"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -33,46 +34,93 @@ import (
 
 var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, types.ZarfInClusterContainerRegistryNodePort)
 
-// NewDevCommand creates the `dev` sub-command and its nested children.
-func NewDevCommand() *cobra.Command {
+func newDevCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "dev",
 		Aliases: []string{"prepare", "prep"},
 		Short:   lang.CmdDevShort,
 	}
 
-	v := common.GetViper()
+	v := getViper()
 
-	cmd.AddCommand(NewDevDeployCommand(v))
-	cmd.AddCommand(NewDevGenerateCommand())
-	cmd.AddCommand(NewDevPatchGitCommand())
-	cmd.AddCommand(NewDevSha256SumCommand())
-	cmd.AddCommand(NewDevFindImagesCommand(v))
-	cmd.AddCommand(NewDevGenerateConfigCommand())
-	cmd.AddCommand(NewDevLintCommand(v))
+	cmd.AddCommand(newDevDeployCommand(v))
+	cmd.AddCommand(newDevGenerateCommand())
+	cmd.AddCommand(newDevPatchGitCommand())
+	cmd.AddCommand(newDevSha256SumCommand())
+	cmd.AddCommand(newDevInspectCommand(v))
+	cmd.AddCommand(newDevFindImagesCommand(v))
+	cmd.AddCommand(newDevGenerateConfigCommand())
+	cmd.AddCommand(newDevLintCommand(v))
 
 	return cmd
 }
 
-// DevDeployOptions holds the command-line options for 'dev deploy' sub-command.
-type DevDeployOptions struct{}
+func newDevInspectCommand(v *viper.Viper) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "inspect",
+		Short: "Commands to get information about a Zarf package using a `zarf.yaml`",
+	}
 
-// NewDevDeployCommand creates the `dev deploy` sub-command.
-func NewDevDeployCommand(v *viper.Viper) *cobra.Command {
-	o := &DevDeployOptions{}
+	cmd.AddCommand(newDevInspectDefinitionCommand(v))
+	return cmd
+}
+
+type devInspectDefinitionOptions struct {
+	flavor       string
+	setVariables map[string]string
+}
+
+func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
+	o := &devInspectDefinitionOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "definition [ DIRECTORY ]",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Displays the fully rendered package definition",
+		Long:  "Displays the 'zarf.yaml' definition of a Zarf after package templating, flavors, and component imports are applied",
+		RunE:  o.run,
+	}
+
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+
+	return cmd
+}
+
+func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	v := getViper()
+	o.setVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
+	pkg, err := layout2.LoadPackage(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
+	if err != nil {
+		return err
+	}
+	pkg.Build = v1alpha1.ZarfBuildData{}
+	err = utils.ColorPrintYAML(pkg, nil, false)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type devDeployOptions struct{}
+
+func newDevDeployCommand(v *viper.Viper) *cobra.Command {
+	o := &devDeployOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Args:  cobra.MaximumNArgs(1),
 		Short: lang.CmdDevDeployShort,
 		Long:  lang.CmdDevDeployLong,
-		RunE:  o.Run,
+		RunE:  o.run,
 	}
 
 	// TODO(soltysh): get rid of pkgConfig global
-	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
-	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringMapString(common.VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
-	cmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringMapString(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
+	cmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
 	cmd.Flags().StringVar(&pkgConfig.DeployOpts.RegistryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
 	err := cmd.Flags().MarkHidden("registry-url")
@@ -80,31 +128,30 @@ func NewDevDeployCommand(v *viper.Viper) *cobra.Command {
 		logger.Default().Debug("unable to mark dev-deploy flag as hidden", "error", err)
 	}
 
-	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 
 	// Always require adopt-existing-resources flag (no viper)
 	cmd.Flags().BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	cmd.Flags().DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
+	cmd.Flags().DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
-	cmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
+	cmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
+	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 
-	cmd.Flags().BoolVar(&pkgConfig.CreateOpts.NoYOLO, "no-yolo", v.GetBool(common.VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
+	cmd.Flags().BoolVar(&pkgConfig.CreateOpts.NoYOLO, "no-yolo", v.GetBool(VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
 
 	return cmd
 }
 
-// Run performs the execution of 'dev deploy' sub-command.
-func (o *DevDeployOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 
-	v := common.GetViper()
+	v := getViper()
 	pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
+		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
 	pkgClient, err := packager.New(&pkgConfig, packager.WithContext(ctx))
 	if err != nil {
@@ -115,7 +162,7 @@ func (o *DevDeployOptions) Run(cmd *cobra.Command, args []string) error {
 	err = pkgClient.DevDeploy(ctx)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
-		common.PrintFindings(ctx, lintErr)
+		PrintFindings(ctx, lintErr)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to dev deploy: %w", err)
@@ -124,12 +171,10 @@ func (o *DevDeployOptions) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// DevGenerateOptions holds the command-line options for 'dev generate' sub-command.
-type DevGenerateOptions struct{}
+type devGenerateOptions struct{}
 
-// NewDevGenerateCommand creates the `dev generate` sub-command.
-func NewDevGenerateCommand() *cobra.Command {
-	o := &DevGenerateOptions{}
+func newDevGenerateCommand() *cobra.Command {
+	o := &devGenerateOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "generate NAME",
@@ -137,7 +182,7 @@ func NewDevGenerateCommand() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Short:   lang.CmdDevGenerateShort,
 		Example: lang.CmdDevGenerateExample,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringVar(&pkgConfig.GenerateOpts.URL, "url", "", "URL to the source git repository")
@@ -152,8 +197,7 @@ func NewDevGenerateCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'dev generate' sub-command.
-func (o *DevGenerateOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) error {
 	pkgConfig.GenerateOpts.Name = args[0]
 
 	pkgConfig.CreateOpts.BaseDir = "."
@@ -172,19 +216,17 @@ func (o *DevGenerateOptions) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// DevPatchGitOptions holds the command-line options for 'dev patch-git' sub-command.
-type DevPatchGitOptions struct{}
+type devPatchGitOptions struct{}
 
-// NewDevPatchGitCommand creates the `dev patch-git` sub-command.
-func NewDevPatchGitCommand() *cobra.Command {
-	o := &DevDeployOptions{}
+func newDevPatchGitCommand() *cobra.Command {
+	o := &devPatchGitOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "patch-git HOST FILE",
 		Aliases: []string{"p"},
 		Short:   lang.CmdDevPatchGitShort,
 		Args:    cobra.ExactArgs(2),
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	// TODO(soltysh): get rid of pkgConfig global
@@ -193,8 +235,7 @@ func NewDevPatchGitCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'dev patch-git' sub-command.
-func (o *DevPatchGitOptions) Run(_ *cobra.Command, args []string) error {
+func (o *devPatchGitOptions) run(_ *cobra.Command, args []string) error {
 	host, fileName := args[0], args[1]
 
 	// Read the contents of the given file
@@ -239,21 +280,19 @@ func (o *DevPatchGitOptions) Run(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-// DevSha256SumOptions holds the command-line options for 'dev sha256sum' sub-command.
-type DevSha256SumOptions struct {
+type devSha256SumOptions struct {
 	extractPath string
 }
 
-// NewDevSha256SumCommand creates the `dev sha256sum` sub-command.
-func NewDevSha256SumCommand() *cobra.Command {
-	o := &DevSha256SumOptions{}
+func newDevSha256SumCommand() *cobra.Command {
+	o := &devSha256SumOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "sha256sum { FILE | URL }",
 		Aliases: []string{"s"},
 		Short:   lang.CmdDevSha256sumShort,
 		Args:    cobra.ExactArgs(1),
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringVarP(&o.extractPath, "extract-path", "e", "", lang.CmdDevFlagExtractPath)
@@ -261,8 +300,7 @@ func NewDevSha256SumCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'dev sha256sum' sub-command.
-func (o *DevSha256SumOptions) Run(cmd *cobra.Command, args []string) (err error) {
+func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error) {
 	hashErr := errors.New("unable to compute the SHA256SUM hash")
 
 	fileName := args[0]
@@ -341,12 +379,10 @@ func (o *DevSha256SumOptions) Run(cmd *cobra.Command, args []string) (err error)
 	return nil
 }
 
-// DevFindImagesOptions holds the command-line options for 'dev find-images' sub-command.
-type DevFindImagesOptions struct{}
+type devFindImagesOptions struct{}
 
-// NewDevFindImagesCommand creates the `dev find-images` sub-command.
-func NewDevFindImagesCommand(v *viper.Viper) *cobra.Command {
-	o := &DevFindImagesOptions{}
+func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
+	o := &devFindImagesOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "find-images [ DIRECTORY ]",
@@ -354,13 +390,13 @@ func NewDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   lang.CmdDevFindImagesShort,
 		Long:    lang.CmdDevFindImagesLong,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	// TODO(soltysh): get rid of pkgConfig global
 	cmd.Flags().StringVarP(&pkgConfig.FindImagesOpts.RepoHelmChartPath, "repo-chart-path", "p", "", lang.CmdDevFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
-	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
+	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSet)
 
 	err := cmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
 	if err != nil {
@@ -370,9 +406,9 @@ func NewDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	if err != nil {
 		logger.Default().Debug("unable to mark dev-find-images flag as hidden", "error", err)
 	}
-	cmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdDevFlagSet)
-	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSet)
+	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 	// allow for the override of the default helm KubeVersion
 	cmd.Flags().StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	// check which manifests are using this particular image
@@ -385,17 +421,16 @@ func NewDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'dev find-images' sub-command.
-func (o *DevFindImagesOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 
-	v := common.GetViper()
+	v := getViper()
 
 	pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
+		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 	pkgClient, err := packager.New(&pkgConfig, packager.WithContext(cmd.Context()))
 	if err != nil {
 		return err
@@ -406,7 +441,7 @@ func (o *DevFindImagesOptions) Run(cmd *cobra.Command, args []string) error {
 
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
-		common.PrintFindings(ctx, lintErr)
+		PrintFindings(ctx, lintErr)
 	}
 	if err != nil {
 		return fmt.Errorf("unable to find images: %w", err)
@@ -414,12 +449,10 @@ func (o *DevFindImagesOptions) Run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// DevGenerateConfigOptions holds the command-line options for 'dev generate-config' sub-command.
-type DevGenerateConfigOptions struct{}
+type devGenerateConfigOptions struct{}
 
-// NewDevGenerateConfigCommand creates the `dev generate-config` sub-command.
-func NewDevGenerateConfigCommand() *cobra.Command {
-	o := &DevGenerateConfigOptions{}
+func newDevGenerateConfigCommand() *cobra.Command {
+	o := &devGenerateConfigOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "generate-config [ FILENAME ]",
@@ -427,33 +460,30 @@ func NewDevGenerateConfigCommand() *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   lang.CmdDevGenerateConfigShort,
 		Long:    lang.CmdDevGenerateConfigLong,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	return cmd
 }
 
-// Run performs the execution of 'dev generate-config' sub-command.
-func (o *DevGenerateConfigOptions) Run(_ *cobra.Command, args []string) error {
+func (o *devGenerateConfigOptions) run(_ *cobra.Command, args []string) error {
 	// If a filename was provided, use that
 	fileName := "zarf-config.toml"
 	if len(args) > 0 {
 		fileName = args[0]
 	}
 
-	v := common.GetViper()
+	v := getViper()
 	if err := v.SafeWriteConfigAs(fileName); err != nil {
 		return fmt.Errorf("unable to write the config file %s, make sure the file doesn't already exist: %w", fileName, err)
 	}
 	return nil
 }
 
-// DevLintOptions holds the command-line options for 'dev lint' sub-command.
-type DevLintOptions struct{}
+type devLintOptions struct{}
 
-// NewDevLintCommand creates the `dev lint` sub-command.
-func NewDevLintCommand(v *viper.Viper) *cobra.Command {
-	o := &DevLintOptions{}
+func newDevLintCommand(v *viper.Viper) *cobra.Command {
+	o := &devLintOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "lint [ DIRECTORY ]",
@@ -461,28 +491,27 @@ func NewDevLintCommand(v *viper.Viper) *cobra.Command {
 		Aliases: []string{"l"},
 		Short:   lang.CmdDevLintShort,
 		Long:    lang.CmdDevLintLong,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
-	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(common.VPkgCreateSet), lang.CmdPackageCreateFlagSet)
-	cmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(common.VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
 	return cmd
 }
 
-// Run performs the execution of 'dev lint' sub-command.
-func (o *DevLintOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	config.CommonOptions.Confirm = true
 	pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
-	v := common.GetViper()
+	v := getViper()
 	pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(common.VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
+		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
 	err := lint.Validate(ctx, pkgConfig.CreateOpts.BaseDir, pkgConfig.CreateOpts.Flavor, pkgConfig.CreateOpts.SetVariables)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
-		common.PrintFindings(ctx, lintErr)
+		PrintFindings(ctx, lintErr)
 		// Do not return an error if the findings are all warnings.
 		if lintErr.OnlyWarnings() {
 			return nil

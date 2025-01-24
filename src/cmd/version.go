@@ -19,21 +19,19 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 )
 
-// VersionOptions holds the command-line options for 'version' sub-command.
-type VersionOptions struct {
+type versionOptions struct {
 	outputFormat string
 }
 
-// NewVersionCommand creates the `version` sub-command.
-func NewVersionCommand() *cobra.Command {
-	o := VersionOptions{}
+func newVersionCommand() *cobra.Command {
+	o := versionOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "version",
 		Aliases: []string{"v"},
 		Short:   lang.CmdVersionShort,
 		Long:    lang.CmdVersionLong,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringVarP(&o.outputFormat, "output", "o", "", "Output format (yaml|json)")
@@ -41,8 +39,7 @@ func NewVersionCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'version' sub-command.
-func (o *VersionOptions) Run(_ *cobra.Command, _ []string) error {
+func (o *versionOptions) run(_ *cobra.Command, _ []string) error {
 	if o.outputFormat == "" {
 		fmt.Println(config.CLIVersion)
 		return nil

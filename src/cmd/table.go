@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package common
+// Package cmd contains the CLI commands for Zarf.
+package cmd
 
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -15,9 +15,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
-
-// OutputWriter provides a writer to stdout for user-focused output
-var OutputWriter = os.Stdout
 
 // PrintFindings prints the findings in the LintError as a table.
 func PrintFindings(ctx context.Context, lintErr *lint.LintError) {
