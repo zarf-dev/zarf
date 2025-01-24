@@ -5,6 +5,7 @@ package layout
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -112,6 +113,6 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 func TestLoadPackageErrorWithoutCompatibleFlavor(t *testing.T) {
 	t.Parallel()
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
-	_, err := loadPackage(context.Background(), filepath.Join("testdata", "package-with-flavors"), "non-existent-flavor", map[string]string{})
-	require.ErrorContains(t, err, "package does not contain any compatible components")
+	_, err := LoadPackage(context.Background(), filepath.Join("testdata", "package-with-flavors"), "non-existent-flavor", map[string]string{})
+	require.EqualError(t, err, fmt.Sprintf("package validation failed: %s", lint.PkgValidateErrNoComponents))
 }

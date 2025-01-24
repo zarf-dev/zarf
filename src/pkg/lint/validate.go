@@ -72,7 +72,7 @@ const (
 func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	var err error
 	if len(pkg.Components) == 0 {
-		err = errors.Join(err, errors.New("package does not contain any compatible components"))
+		err = errors.Join(err, errors.New(PkgValidateErrNoComponents))
 	}
 	if pkg.Kind == v1alpha1.ZarfInitConfig && pkg.Metadata.YOLO {
 		err = errors.Join(err, errors.New(PkgValidateErrInitNoYOLO))
