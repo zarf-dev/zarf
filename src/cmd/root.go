@@ -19,6 +19,7 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -40,6 +41,35 @@ var (
 	// OutputWriter provides a default writer to Stdout for user-facing command output
 	OutputWriter = os.Stdout
 )
+
+type outputFormat string
+
+const (
+	outputTable outputFormat = "table"
+	outputJSON  outputFormat = "json"
+	outputYAML  outputFormat = "yaml"
+)
+
+// must implement this interface for cmd.Flags().VarP
+var _ pflag.Value = (*outputFormat)(nil)
+
+func (o *outputFormat) Set(s string) error {
+	switch s {
+	case string(outputTable), string(outputJSON), string(outputYAML):
+		*o = outputFormat(s)
+		return nil
+	default:
+		return fmt.Errorf("invalid output format: %s", s)
+	}
+}
+
+func (o *outputFormat) String() string {
+	return string(*o)
+}
+
+func (o *outputFormat) Type() string {
+	return "outputFormat"
+}
 
 var rootCmd = NewZarfCommand()
 

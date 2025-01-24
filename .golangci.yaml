@@ -66,6 +66,8 @@ linters-settings:
       - (*github.com/spf13/cobra.Command).MarkFlagRequired
       - (*github.com/spf13/pflag.FlagSet).MarkHidden
       - (*github.com/spf13/pflag.FlagSet).MarkDeprecated
+      - fmt.Fprintln
+      - fmt.Fprint
   sloglint:
     no-mixed-args: true
     key-naming-case: camel

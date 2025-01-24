@@ -21,8 +21,8 @@ zarf version [flags]
 ### Options
 
 ```
-  -h, --help            help for version
-  -o, --output string   Output format (yaml|json)
+  -h, --help                         help for version
+  -o, --output-format outputFormat   Output format (yaml|json)
 ```
 
 ### Options inherited from parent commands

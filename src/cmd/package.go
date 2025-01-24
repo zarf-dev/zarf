@@ -6,8 +6,10 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,6 +18,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"oras.land/oras-go/v2/registry"
@@ -406,56 +409,103 @@ func (o *packageInspectOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-type packageListOptions struct{}
+type packageListOptions struct {
+	outputFormat outputFormat
+	outputWriter io.Writer
+	cluster      *cluster.Cluster
+}
+
+func newPackageListOptions() *packageListOptions {
+	return &packageListOptions{
+		outputFormat: outputTable,
+		// TODO accept output writer as a parameter to the root Zarf command and pass it through here
+		outputWriter: message.OutputWriter,
+	}
+}
 
 func newPackageListCommand() *cobra.Command {
-	o := &packageListOptions{}
+	o := newPackageListOptions()
 
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"l", "ls"},
 		Short:   lang.CmdPackageListShort,
-		RunE:    o.run,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			ctx := cmd.Context()
+			err := o.complete(ctx)
+			if err != nil {
+				return err
+			}
+			return o.run(ctx)
+		},
 	}
+
+	cmd.Flags().VarP(&o.outputFormat, "output-format", "o", "Prints the output in the specified format. Valid options: table, json, yaml")
 
 	return cmd
 }
 
-func (o *packageListOptions) run(cmd *cobra.Command, _ []string) error {
-	timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
+func (o *packageListOptions) complete(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
 	c, err := cluster.NewClusterWithWait(timeoutCtx)
 	if err != nil {
 		return err
 	}
+	o.cluster = c
+	return nil
+}
 
-	ctx := cmd.Context()
-	deployedZarfPackages, err := c.GetDeployedZarfPackages(ctx)
+// packageListInfo represents the package information for output.
+type packageListInfo struct {
+	Package    string   `json:"package"`
+	Version    string   `json:"version"`
+	Components []string `json:"components"`
+}
+
+func (o *packageListOptions) run(ctx context.Context) error {
+	deployedZarfPackages, err := o.cluster.GetDeployedZarfPackages(ctx)
 	if err != nil && len(deployedZarfPackages) == 0 {
 		return fmt.Errorf("unable to get the packages deployed to the cluster: %w", err)
 	}
 
-	// Populate a matrix of all the deployed packages
-	packageData := [][]string{}
-
+	var packageList []packageListInfo
 	for _, pkg := range deployedZarfPackages {
 		var components []string
-
 		for _, component := range pkg.DeployedComponents {
 			components = append(components, component.Name)
 		}
-
-		packageData = append(packageData, []string{
-			pkg.Name, pkg.Data.Metadata.Version, fmt.Sprintf("%v", components),
+		packageList = append(packageList, packageListInfo{
+			Package:    pkg.Name,
+			Version:    pkg.Data.Metadata.Version,
+			Components: components,
 		})
 	}
 
-	header := []string{"Package", "Version", "Components"}
-	message.TableWithWriter(message.OutputWriter, header, packageData)
-
-	// Print out any unmarshalling errors
-	if err != nil {
-		return fmt.Errorf("unable to read all of the packages deployed to the cluster: %w", err)
+	switch o.outputFormat {
+	case outputJSON:
+		output, err := json.MarshalIndent(packageList, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(o.outputWriter, string(output))
+	case outputYAML:
+		output, err := goyaml.Marshal(packageList)
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(o.outputWriter, string(output))
+	case outputTable:
+		header := []string{"Package", "Version", "Components"}
+		var packageData [][]string
+		for _, info := range packageList {
+			packageData = append(packageData, []string{
+				info.Package, info.Version, fmt.Sprintf("%v", info.Components),
+			})
+		}
+		message.TableWithWriter(o.outputWriter, header, packageData)
+	default:
+		return fmt.Errorf("unsupported output format: %s", o.outputFormat)
 	}
 	return nil
 }
