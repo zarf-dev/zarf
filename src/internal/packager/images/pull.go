@@ -228,11 +228,11 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 				img = cache.Image(img, cache.NewFilesystemCache(cfg.CacheDirectory))
 			}
 
-			manifest, err := img.Manifest()
+			size, err := getSizeOfImage(img)
 			if err != nil {
-				return fmt.Errorf("unable to get manifest for %s: %w", refInfo.Reference, err)
+				return fmt.Errorf("failed to get size of image: %w", err)
 			}
-			totalBytes.Add(manifest.Config.Size)
+			totalBytes.Add(size)
 
 			layers, err := img.Layers()
 			if err != nil {
@@ -246,14 +246,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 				if err != nil {
 					return fmt.Errorf("unable to get digest for image layer: %w", err)
 				}
-
 				if _, ok := shas[digest.Hex]; !ok {
 					shas[digest.Hex] = true
-					size, err := layer.Size()
-					if err != nil {
-						return fmt.Errorf("unable to get size for image layer: %w", err)
-					}
-					totalBytes.Add(size)
 				}
 			}
 
@@ -397,6 +391,32 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image, cacheDirectory s
 	return eg.Wait()
 }
 
+func getSizeOfImage(img v1.Image) (int64, error) {
+	var totalSize int64
+	manifestSize, err := img.Size()
+	if err != nil {
+		return 0, err
+	}
+	totalSize += manifestSize
+	manifest, err := img.Manifest()
+	if err != nil {
+		return 0, err
+	}
+	totalSize += manifest.Config.Size
+	layers, err := img.Layers()
+	if err != nil {
+		return 0, err
+	}
+	for _, layer := range layers {
+		size, err := layer.Size()
+		if err != nil {
+			return 0, err
+		}
+		totalSize += size
+	}
+	return totalSize, nil
+}
+
 // SaveSequential saves images sequentially.
 func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]v1.Image, cacheDirectory string) (map[transform.Image]v1.Image, error) {
 	l := logger.From(ctx)
@@ -406,11 +426,12 @@ func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]
 			ocispec.AnnotationBaseImageName: info.Reference,
 		}
 		wStart := time.Now()
-		size, err := img.Size()
+		size, err := getSizeOfImage(img)
 		if err != nil {
-			return saved, err
+			return saved, fmt.Errorf("failed to get size of image: %w", err)
 		}
-		l.Info("saving image", "ref", info.Reference, "size", size, "method", "sequential")
+		byteSize := utils.ByteFormat(float64(size), 2)
+		l.Info("saving image", "ref", info.Reference, "size", byteSize, "method", "sequential")
 		if err := cl.AppendImage(img, clayout.WithAnnotations(annotations)); err != nil {
 			if err := CleanupInProgressLayers(ctx, img, cacheDirectory); err != nil {
 				message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
@@ -421,7 +442,7 @@ func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]
 		saved[info] = img
 		l.Debug("done saving image",
 			"ref", info.Reference,
-			"size", size,
+			"size-in-bytes", size,
 			"method", "sequential",
 			"duration", time.Since(wStart),
 		)
@@ -450,13 +471,13 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 				if err != nil {
 					return err
 				}
-
-				size, err := img.Size()
+				size, err := getSizeOfImage(img)
 				if err != nil {
 					return err
 				}
+				byteSize := utils.ByteFormat(float64(size), 2)
 				wStart := time.Now()
-				l.Info("saving image", "ref", info.Reference, "size", size, "method", "concurrent")
+				l.Info("saving image", "ref", info.Reference, "size", byteSize, "method", "concurrent")
 				if err := cl.WriteImage(img); err != nil {
 					if err := CleanupInProgressLayers(ectx, img, cacheDirectory); err != nil {
 						message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
@@ -466,7 +487,7 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 				}
 				l.Debug("done saving image",
 					"ref", info.Reference,
-					"size", size,
+					"size-in-bytes", size,
 					"method", "concurrent",
 					"duration", time.Since(wStart),
 				)
