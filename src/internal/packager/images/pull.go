@@ -442,7 +442,7 @@ func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]
 		saved[info] = img
 		l.Debug("done saving image",
 			"ref", info.Reference,
-			"size-in-bytes", size,
+			"bytes", size,
 			"method", "sequential",
 			"duration", time.Since(wStart),
 		)
@@ -487,7 +487,7 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 				}
 				l.Debug("done saving image",
 					"ref", info.Reference,
-					"size-in-bytes", size,
+					"bytes", size,
 					"method", "concurrent",
 					"duration", time.Since(wStart),
 				)
