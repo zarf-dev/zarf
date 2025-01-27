@@ -97,7 +97,17 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			patchedURL = fmt.Sprintf("%s:%s", patchedURL, src.Spec.Reference.Tag)
 		}
 
-		patchedSrc, err := transform.ImageTransformHost(registryAddress, patchedURL)
+		var (
+			patchedSrc string
+			err        error
+		)
+
+		if hasRemoveChecksumAnnotation(src.Annotations) {
+			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, patchedURL)
+		} else {
+			patchedSrc, err = transform.ImageTransformHost(registryAddress, patchedURL)
+		}
+
 		if err != nil {
 			return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
 		}
