@@ -69,11 +69,11 @@ func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
 	suite.NoError(err, stdOut, stdErr)
 
 	// Inspect published flavor.
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "oci://"+ref+"/package-flavors:1.0.0-oracle-cookie-crunch", "--plain-http")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", "oci://"+ref+"/package-flavors:1.0.0-oracle-cookie-crunch", "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Inspect the published package.
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "oci://"+ref+"/helm-charts:0.0.1", "--plain-http")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", "oci://"+ref+"/helm-charts:0.0.1", "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 }
 
