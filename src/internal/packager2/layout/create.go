@@ -66,7 +66,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 		return nil, err
 	}
 
-	pkg, err := loadPackage(ctx, packagePath, opt.Flavor, opt.SetVariables)
+	pkg, err := LoadPackage(ctx, packagePath, opt.Flavor, opt.SetVariables)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 
 // CreateSkeleton creates a skeleton package and returns the path to the created package.
 func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) (string, error) {
-	pkg, err := loadPackage(ctx, packagePath, opt.Flavor, nil)
+	pkg, err := LoadPackage(ctx, packagePath, opt.Flavor, nil)
 	if err != nil {
 		return "", err
 	}
@@ -260,7 +260,8 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) 
 	return buildPath, nil
 }
 
-func loadPackage(ctx context.Context, packagePath, flavor string, setVariables map[string]string) (v1alpha1.ZarfPackage, error) {
+// LoadPackage returns a validated package definition after flavors, imports, and variables are applied.
+func LoadPackage(ctx context.Context, packagePath, flavor string, setVariables map[string]string) (v1alpha1.ZarfPackage, error) {
 	b, err := os.ReadFile(filepath.Join(packagePath, ZarfYAML))
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
@@ -921,7 +922,18 @@ func reloadComponentTemplatesInPackage(zarfPackage *v1alpha1.ZarfPackage) error 
 	return nil
 }
 
-func splitFile(srcPath string, chunkSize int) (err error) {
+func splitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
+	// Remove any existing split files
+	existingChunks, err := filepath.Glob(srcPath + ".part*")
+	if err != nil {
+		return err
+	}
+	for _, chunk := range existingChunks {
+		err := os.Remove(chunk)
+		if err != nil {
+			return err
+		}
+	}
 	srcFile, err := os.Open(srcPath)
 	if err != nil {
 		return err
@@ -953,7 +965,7 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 	//   iteration as soon as we're done writing.
 	for {
 		path := fmt.Sprintf("%s.part%03d", srcPath, fileCount+1)
-		dstFile, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, helpers.ReadAllWriteUser)
+		dstFile, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 		if err != nil {
 			return err
 		}
@@ -1024,10 +1036,10 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 		return fmt.Errorf("unable to marshal the split package data: %w", err)
 	}
 	path := fmt.Sprintf("%s.part000", srcPath)
-	if err := os.WriteFile(path, b, helpers.ReadAllWriteUser); err != nil {
+	if err := os.WriteFile(path, b, 0644); err != nil {
 		return fmt.Errorf("unable to write the file %s: %w", path, err)
 	}
 	progressBar.Successf("Package split across %d files", fileCount+1)
-
+	logger.From(ctx).Info("package split across files", "count", fileCount+1)
 	return nil
 }

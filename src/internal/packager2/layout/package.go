@@ -224,7 +224,7 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 		if fi.Size()/int64(chunkSize) > 999 {
 			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
 		}
-		err := splitFile(tarballPath, chunkSize)
+		err := splitFile(ctx, tarballPath, chunkSize)
 		if err != nil {
 			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
 		}

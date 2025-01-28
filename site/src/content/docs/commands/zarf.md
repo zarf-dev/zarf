@@ -25,7 +25,7 @@ zarf COMMAND [flags]
   -a, --architecture string        Architecture for OCI images and Zarf packages
   -h, --help                       help for zarf
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --log-format string          [beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'
+      --log-format string          [beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev', 'legacy'. The legacy option will be removed in a coming release (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable colors in output
       --no-log-file                Disable log file creation
@@ -43,6 +43,7 @@ zarf COMMAND [flags]
 * [zarf dev](/commands/zarf_dev/)	 - Commands useful for developing packages
 * [zarf init](/commands/zarf_init/)	 - Prepares a k8s cluster for the deployment of Zarf packages
 * [zarf package](/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf say](/commands/zarf_say/)	 - Print Zarf logo
 * [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
 * [zarf version](/commands/zarf_version/)	 - Shows the version of the running Zarf binary
 
