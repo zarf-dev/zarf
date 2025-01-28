@@ -120,8 +120,21 @@ var (
 func initViper() *viper.Viper {
 	v = viper.New()
 
-	// Skip for vendor-only commands or the version command
-	if checkVendorOnlyFromArgs() || isVersionCmd() {
+	// Skip viper file setup for vendor-only commands
+	if checkVendorOnlyFromArgs() {
+		return v
+	}
+
+	// E.g. ZARF_LOG_LEVEL=debug
+	v.SetEnvPrefix("zarf")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+
+	// Set default values for viper
+	setDefaults()
+
+	// skip config file setup for version command
+	if isVersionCmd() {
 		return v
 	}
 
@@ -139,15 +152,7 @@ func initViper() *viper.Viper {
 		v.SetConfigName("zarf-config")
 	}
 
-	// E.g. ZARF_LOG_LEVEL=debug
-	v.SetEnvPrefix("zarf")
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	v.AutomaticEnv()
-
 	vConfigError = v.ReadInConfig()
-
-	// Set default values for viper
-	setDefaults()
 
 	return v
 }
