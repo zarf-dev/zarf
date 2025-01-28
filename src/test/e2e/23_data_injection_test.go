@@ -56,7 +56,7 @@ func TestDataInjection(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure that the `requirements.txt` file is discovered correctly
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", path, "--sbom-out", sbomPath)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "sbom", path, "--output", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 	require.FileExists(t, filepath.Join(sbomPath, "kiwix", "compare.html"), "A compare.html file should have been made")
 

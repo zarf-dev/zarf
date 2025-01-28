@@ -1,0 +1,25 @@
+- application: Registry
+  username: push-user
+  password: push-password
+  connect: zarf connect registry
+  getCredsKey: registry
+- application: Registry (read-only)
+  username: pull-user
+  password: pull-password
+  connect: zarf connect registry
+  getCredsKey: registry-readonly
+- application: Git
+  username: push-user
+  password: push-password
+  connect: zarf connect git
+  getCredsKey: git
+- application: Git (read-only)
+  username: pull-user
+  password: pull-password
+  connect: zarf connect git
+  getCredsKey: git-readonly
+- application: Artifact Token
+  username: "push-user"
+  password: "push-password"
+  connect: zarf connect git
+  getCredsKey: artifact

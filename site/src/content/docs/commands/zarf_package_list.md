@@ -17,7 +17,8 @@ zarf package list [flags]
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help                         help for list
+  -o, --output-format outputFormat   Prints the output in the specified format. Valid options: table, json, yaml (default table)
 ```
 
 ### Options inherited from parent commands

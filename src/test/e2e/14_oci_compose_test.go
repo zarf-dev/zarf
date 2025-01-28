@@ -77,7 +77,7 @@ func (suite *PublishCopySkeletonSuite) Test_0_Publish_Skeletons() {
 	_, _, err = e2e.Zarf(suite.T(), "package", "publish", importEverything, "oci://"+ref, "--plain-http")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf(suite.T(), "package", "inspect", "oci://"+ref+"/import-everything:0.0.1", "--plain-http", "-a", "skeleton")
+	_, _, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", "oci://"+ref+"/import-everything:0.0.1", "--plain-http", "-a", "skeleton")
 	suite.NoError(err)
 
 	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/import-everything:0.0.1", "-o", "build", "--plain-http", "-a", "skeleton")
@@ -99,7 +99,7 @@ func (suite *PublishCopySkeletonSuite) Test_1_Compose_Everything_Inception() {
 	_, _, err = e2e.Zarf(suite.T(), "package", "create", importception, "-o", "build", "--plain-http", "--confirm")
 	suite.NoError(err)
 
-	stdOut, _, err := e2e.Zarf(suite.T(), "package", "inspect", importEverythingPath)
+	stdOut, _, err := e2e.Zarf(suite.T(), "package", "inspect", "definition", importEverythingPath)
 	suite.NoError(err)
 
 	targets := []string{

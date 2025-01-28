@@ -6,8 +6,10 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,6 +18,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"oras.land/oras-go/v2/registry"
@@ -342,7 +345,10 @@ func newPackageInspectCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().BoolVarP(&pkgConfig.InspectOpts.ViewSBOM, "sbom", "s", false, lang.CmdPackageInspectFlagSbom)
+	cmd.AddCommand(newPackageInspectSBOMCommand())
+	cmd.AddCommand(newPackageInspectImagesCommand())
+	cmd.AddCommand(newPackageInspectDefinitionCommand())
+
 	cmd.Flags().StringVar(&pkgConfig.InspectOpts.SBOMOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
 	cmd.Flags().BoolVar(&pkgConfig.InspectOpts.ListImages, "list-images", false, lang.CmdPackageInspectFlagListImages)
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
@@ -359,103 +365,290 @@ func (o *packageInspectOptions) preRun(_ *cobra.Command, _ []string) {
 
 func (o *packageInspectOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	logger.From(ctx).Warn("Direct usage of inspect is deprecated and will be removed in a future release. Inspect is now a parent command. Use 'zarf package inspect definition|sbom|images' instead.")
 
-	if pkgConfig.InspectOpts.ListImages && (pkgConfig.InspectOpts.SBOMOutputDir != "" || pkgConfig.InspectOpts.ViewSBOM) {
-		return fmt.Errorf("cannot use --sbom or --sbom-out and --list-images at the same time")
+	if pkgConfig.InspectOpts.ListImages && pkgConfig.InspectOpts.SBOMOutputDir != "" {
+		return fmt.Errorf("cannot use --sbom-out and --list-images at the same time")
 	}
 
-	// NOTE(mkcp): Gets user input with message
+	if pkgConfig.InspectOpts.SBOMOutputDir != "" {
+		sbomOpts := PackageInspectSBOMOptions{
+			skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+			outputDir:               pkgConfig.InspectOpts.SBOMOutputDir,
+		}
+		return sbomOpts.Run(cmd, args)
+	}
+
+	if pkgConfig.InspectOpts.ListImages {
+		imagesOpts := packageInspectImagesOptions{
+			skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		}
+		return imagesOpts.run(cmd, args)
+	}
+
+	definitionOpts := packageInspectDefinitionOptions{
+		skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+	}
+	return definitionOpts.run(cmd, args)
+}
+
+// PackageInspectSBOMOptions holds the command-line options for 'package inspect sbom' sub-command.
+type PackageInspectSBOMOptions struct {
+	skipSignatureValidation bool
+	outputDir               string
+}
+
+func newPackageInspectSBOMOptions() *PackageInspectSBOMOptions {
+	return &PackageInspectSBOMOptions{
+		outputDir:               "",
+		skipSignatureValidation: false,
+	}
+}
+
+// newPackageInspectSBOMCommand creates the `package inspect sbom` sub-command.
+func newPackageInspectSBOMCommand() *cobra.Command {
+	o := newPackageInspectSBOMOptions()
+	cmd := &cobra.Command{
+		Use:   "sbom [ PACKAGE ]",
+		Short: "Output the package SBOM (Software Bill Of Materials) to the specified directory",
+		Args:  cobra.MaximumNArgs(1),
+		RunE:  o.Run,
+	}
+
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, lang.CmdPackageCreateFlagSbomOut)
+
+	return cmd
+}
+
+// Run performs the execution of 'package inspect sbom' sub-command.
+func (o *PackageInspectSBOMOptions) Run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	src, err := choosePackage(ctx, args)
+	if err != nil {
+		return err
+	}
+	loadOpt := packager2.LoadOptions{
+		Source:                  src,
+		SkipSignatureValidation: o.skipSignatureValidation,
+		Filter:                  filters.Empty(),
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+	}
+	layout, err := packager2.LoadPackage(ctx, loadOpt)
+	if err != nil {
+		return err
+	}
+	outputPath, err := layout.GetSBOM(o.outputDir)
+	if err != nil {
+		return err
+	}
+	outputPath, err = filepath.Abs(outputPath)
+	if err != nil {
+		logger.From(ctx).Warn("SBOM successfully extracted, couldn't get output path", "error", err)
+		return nil
+	}
+	logger.From(ctx).Info("SBOM successfully extracted", "path", outputPath)
+	return nil
+}
+
+type packageInspectImagesOptions struct {
+	skipSignatureValidation bool
+}
+
+func newPackageInspectImagesOptions() *packageInspectImagesOptions {
+	return &packageInspectImagesOptions{
+		skipSignatureValidation: false,
+	}
+}
+
+func newPackageInspectImagesCommand() *cobra.Command {
+	o := newPackageInspectImagesOptions()
+	cmd := &cobra.Command{
+		Use:   "images [ PACKAGE_SOURCE ]",
+		Short: "List all container images contained in the package",
+		Args:  cobra.MaximumNArgs(1),
+		RunE:  o.run,
+	}
+
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
+
+	return cmd
+}
+
+func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+
 	src, err := choosePackage(ctx, args)
 	if err != nil {
 		return err
 	}
 
+	// The user may be pulling the package from the cluster or using a built package
+	// since we don't know we don't check this error
 	cluster, _ := cluster.NewCluster() //nolint:errcheck
-	inspectOpt := packager2.ZarfInspectOptions{
-		Source:                  src,
-		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
-		Cluster:                 cluster,
-		ListImages:              pkgConfig.InspectOpts.ListImages,
-		ViewSBOM:                pkgConfig.InspectOpts.ViewSBOM,
-		SBOMOutputDir:           pkgConfig.InspectOpts.SBOMOutputDir,
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-	}
 
-	if pkgConfig.InspectOpts.ListImages {
-		output, err := packager2.InspectList(ctx, inspectOpt)
-		if err != nil {
-			return fmt.Errorf("failed to inspect package: %w", err)
-		}
-		for _, image := range output {
-			_, err := fmt.Fprintln(os.Stdout, "-", image)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	output, err := packager2.Inspect(ctx, inspectOpt)
+	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
 	if err != nil {
-		return fmt.Errorf("failed to inspect package: %w", err)
+		return err
 	}
-	err = utils.ColorPrintYAML(output, nil, false)
+	var imageList []string
+	for _, component := range pkg.Components {
+		imageList = append(imageList, component.Images...)
+	}
+	if imageList == nil {
+		return fmt.Errorf("failed listing images: 0 images found in package")
+	}
+	imageList = helpers.Unique(imageList)
+	for _, image := range imageList {
+		fmt.Println("-", image)
+	}
+	return nil
+}
+
+type packageInspectDefinitionOptions struct {
+	skipSignatureValidation bool
+}
+
+func newPackageInspectDefinitionOptions() *packageInspectDefinitionOptions {
+	return &packageInspectDefinitionOptions{
+		skipSignatureValidation: false,
+	}
+}
+
+func newPackageInspectDefinitionCommand() *cobra.Command {
+	o := newPackageInspectDefinitionOptions()
+	cmd := &cobra.Command{
+		Use:   "definition [ PACKAGE_SOURCE ]",
+		Short: "Displays the 'zarf.yaml' definition for the specified package",
+		Args:  cobra.MaximumNArgs(1),
+		RunE:  o.run,
+	}
+
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
+
+	return cmd
+}
+
+func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+
+	src, err := choosePackage(ctx, args)
+	if err != nil {
+		return err
+	}
+
+	// The user may be pulling the package from the cluster or using a built package
+	// since we don't know we don't check this error
+	cluster, _ := cluster.NewCluster() //nolint:errcheck
+
+	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
+	if err != nil {
+		return err
+	}
+	err = utils.ColorPrintYAML(pkg, nil, false)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-type packageListOptions struct{}
+type packageListOptions struct {
+	outputFormat outputFormat
+	outputWriter io.Writer
+	cluster      *cluster.Cluster
+}
+
+func newPackageListOptions() *packageListOptions {
+	return &packageListOptions{
+		outputFormat: outputTable,
+		// TODO accept output writer as a parameter to the root Zarf command and pass it through here
+		outputWriter: message.OutputWriter,
+	}
+}
 
 func newPackageListCommand() *cobra.Command {
-	o := &packageListOptions{}
+	o := newPackageListOptions()
 
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"l", "ls"},
 		Short:   lang.CmdPackageListShort,
-		RunE:    o.run,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			ctx := cmd.Context()
+			err := o.complete(ctx)
+			if err != nil {
+				return err
+			}
+			return o.run(ctx)
+		},
 	}
+
+	cmd.Flags().VarP(&o.outputFormat, "output-format", "o", "Prints the output in the specified format. Valid options: table, json, yaml")
 
 	return cmd
 }
 
-func (o *packageListOptions) run(cmd *cobra.Command, _ []string) error {
-	timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
+func (o *packageListOptions) complete(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
 	c, err := cluster.NewClusterWithWait(timeoutCtx)
 	if err != nil {
 		return err
 	}
+	o.cluster = c
+	return nil
+}
 
-	ctx := cmd.Context()
-	deployedZarfPackages, err := c.GetDeployedZarfPackages(ctx)
+// packageListInfo represents the package information for output.
+type packageListInfo struct {
+	Package    string   `json:"package"`
+	Version    string   `json:"version"`
+	Components []string `json:"components"`
+}
+
+func (o *packageListOptions) run(ctx context.Context) error {
+	deployedZarfPackages, err := o.cluster.GetDeployedZarfPackages(ctx)
 	if err != nil && len(deployedZarfPackages) == 0 {
 		return fmt.Errorf("unable to get the packages deployed to the cluster: %w", err)
 	}
 
-	// Populate a matrix of all the deployed packages
-	packageData := [][]string{}
-
+	var packageList []packageListInfo
 	for _, pkg := range deployedZarfPackages {
 		var components []string
-
 		for _, component := range pkg.DeployedComponents {
 			components = append(components, component.Name)
 		}
-
-		packageData = append(packageData, []string{
-			pkg.Name, pkg.Data.Metadata.Version, fmt.Sprintf("%v", components),
+		packageList = append(packageList, packageListInfo{
+			Package:    pkg.Name,
+			Version:    pkg.Data.Metadata.Version,
+			Components: components,
 		})
 	}
 
-	header := []string{"Package", "Version", "Components"}
-	message.TableWithWriter(message.OutputWriter, header, packageData)
-
-	// Print out any unmarshalling errors
-	if err != nil {
-		return fmt.Errorf("unable to read all of the packages deployed to the cluster: %w", err)
+	switch o.outputFormat {
+	case outputJSON:
+		output, err := json.MarshalIndent(packageList, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(o.outputWriter, string(output))
+	case outputYAML:
+		output, err := goyaml.Marshal(packageList)
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(o.outputWriter, string(output))
+	case outputTable:
+		header := []string{"Package", "Version", "Components"}
+		var packageData [][]string
+		for _, info := range packageList {
+			packageData = append(packageData, []string{
+				info.Package, info.Version, fmt.Sprintf("%v", info.Components),
+			})
+		}
+		message.TableWithWriter(o.outputWriter, header, packageData)
+	default:
+		return fmt.Errorf("unsupported output format: %s", o.outputFormat)
 	}
 	return nil
 }
