@@ -6,8 +6,10 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"slices"
 	"strings"
@@ -19,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
@@ -45,10 +48,22 @@ const (
 	agentKey        = "agent"
 )
 
-type getCredsOptions struct{}
+type getCredsOptions struct {
+	outputFormat outputFormat
+	outputWriter io.Writer
+	cluster      *cluster.Cluster
+}
+
+func newGetCredsOptions() *getCredsOptions {
+	return &getCredsOptions{
+		outputFormat: outputTable,
+		// TODO accept output writer as a parameter to the root Zarf command and pass it through here
+		outputWriter: message.OutputWriter,
+	}
+}
 
 func newGetCredsCommand() *cobra.Command {
-	o := getCredsOptions{}
+	o := newGetCredsOptions()
 
 	cmd := &cobra.Command{
 		Use:     "get-creds",
@@ -57,23 +72,34 @@ func newGetCredsCommand() *cobra.Command {
 		Example: lang.CmdToolsGetCredsExample,
 		Aliases: []string{"gc"},
 		Args:    cobra.MaximumNArgs(1),
-		RunE:    o.run,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			err := o.complete(ctx)
+			if err != nil {
+				return err
+			}
+			return o.run(ctx, args)
+		},
 	}
+
+	cmd.Flags().VarP(&o.outputFormat, "output-format", "o", "Prints the output in the specified format. Valid options: table, json, yaml")
 
 	return cmd
 }
 
-func (o *getCredsOptions) run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-
+func (o *getCredsOptions) complete(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
 	c, err := cluster.NewClusterWithWait(timeoutCtx)
 	if err != nil {
 		return err
 	}
+	o.cluster = c
+	return nil
+}
 
-	state, err := c.LoadZarfState(ctx)
+func (o *getCredsOptions) run(ctx context.Context, args []string) error {
+	state, err := o.cluster.LoadZarfState(ctx)
 	if err != nil {
 		return err
 	}
@@ -85,29 +111,116 @@ func (o *getCredsOptions) run(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		// If a component name is provided, only show that component's credentials
 		// Printing both the pterm output and slogger for now
-		printComponentCredential(ctx, state, args[0])
+		printComponentCredential(ctx, state, args[0], o.outputWriter)
 		message.PrintComponentCredential(state, args[0])
-	} else {
-		message.PrintCredentialTable(state, nil)
+		return nil
+	}
+	return printCredentialTable(state, o.outputFormat, o.outputWriter)
+}
+
+type credentialInfo struct {
+	Application string `json:"application"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	Connect     string `json:"connect"`
+	GetCredsKey string `json:"getCredsKey"`
+}
+
+// TODO Zarf state should be changed to have empty values when a service is not in use
+// Once this change is in place, this function should check if the git server, artifact server, or registry server
+// information is empty and avoid printing that service if so
+func printCredentialTable(state *types.ZarfState, outputFormat outputFormat, out io.Writer) error {
+	var credentials []credentialInfo
+
+	if state.RegistryInfo.IsInternal() {
+		credentials = append(credentials,
+			credentialInfo{
+				Application: "Registry",
+				Username:    state.RegistryInfo.PushUsername,
+				Password:    state.RegistryInfo.PushPassword,
+				Connect:     "zarf connect registry",
+				GetCredsKey: registryKey,
+			},
+			credentialInfo{
+				Application: "Registry (read-only)",
+				Username:    state.RegistryInfo.PullUsername,
+				Password:    state.RegistryInfo.PullPassword,
+				Connect:     "zarf connect registry",
+				GetCredsKey: registryReadKey,
+			},
+		)
+	}
+
+	credentials = append(credentials,
+		credentialInfo{
+			Application: "Git",
+			Username:    state.GitServer.PushUsername,
+			Password:    state.GitServer.PushPassword,
+			Connect:     "zarf connect git",
+			GetCredsKey: gitKey,
+		},
+		credentialInfo{
+			Application: "Git (read-only)",
+			Username:    state.GitServer.PullUsername,
+			Password:    state.GitServer.PullPassword,
+			Connect:     "zarf connect git",
+			GetCredsKey: gitReadKey,
+		},
+		credentialInfo{
+			Application: "Artifact Token",
+			Username:    state.ArtifactServer.PushUsername,
+			Password:    state.ArtifactServer.PushToken,
+			Connect:     "zarf connect git",
+			GetCredsKey: artifactKey,
+		},
+	)
+
+	switch outputFormat {
+	case outputJSON:
+		output, err := json.MarshalIndent(credentials, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(out, string(output))
+	case outputYAML:
+		output, err := goyaml.Marshal(credentials)
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(out, string(output))
+	case outputTable:
+		header := []string{"Application", "Username", "Password", "Connect", "Get-Creds Key"}
+		var tableData [][]string
+		for _, cred := range credentials {
+			tableData = append(tableData, []string{
+				cred.Application, cred.Username, cred.Password, cred.Connect, cred.GetCredsKey,
+			})
+		}
+		message.TableWithWriter(out, header, tableData)
+	default:
+		return fmt.Errorf("unsupported output format: %s", outputFormat)
 	}
 	return nil
 }
 
-func printComponentCredential(ctx context.Context, state *types.ZarfState, componentName string) {
-	// TODO (@austinabro321) when we move over to the new logger, we can should add fmt.Println calls
-	// to this function as they will be removed from message.PrintComponentCredential
+func printComponentCredential(ctx context.Context, state *types.ZarfState, componentName string, out io.Writer) {
 	l := logger.From(ctx)
 	switch strings.ToLower(componentName) {
 	case gitKey:
 		l.Info("Git server push password", "username", state.GitServer.PushUsername)
+		fmt.Fprintln(out, state.GitServer.PushPassword)
 	case gitReadKey:
 		l.Info("Git server (read-only) password", "username", state.GitServer.PullUsername)
+		fmt.Fprintln(out, state.GitServer.PullPassword)
 	case artifactKey:
 		l.Info("artifact server token", "username", state.ArtifactServer.PushUsername)
+		fmt.Fprintln(out, state.ArtifactServer.PushToken)
 	case registryKey:
 		l.Info("image registry password", "username", state.RegistryInfo.PushUsername)
+		fmt.Fprintln(out, state.RegistryInfo.PushPassword)
 	case registryReadKey:
 		l.Info("image registry (read-only) password", "username", state.RegistryInfo.PullUsername)
+		fmt.Fprintln(out, state.RegistryInfo.PullPassword)
 	default:
 		l.Warn("unknown component", "component", componentName)
 	}

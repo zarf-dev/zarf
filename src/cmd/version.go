@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"runtime"
 	"runtime/debug"
 
@@ -17,14 +18,24 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 type versionOptions struct {
-	outputFormat string
+	outputFormat outputFormat
+	outputWriter io.Writer
+}
+
+func newVersionOptions() *versionOptions {
+	return &versionOptions{
+		outputFormat: "",
+		// TODO accept output writer as a parameter to the root Zarf command and pass it through here
+		outputWriter: message.OutputWriter,
+	}
 }
 
 func newVersionCommand() *cobra.Command {
-	o := versionOptions{}
+	o := newVersionOptions()
 
 	cmd := &cobra.Command{
 		Use:     "version",
@@ -34,14 +45,16 @@ func newVersionCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringVarP(&o.outputFormat, "output", "o", "", "Output format (yaml|json)")
+	cmd.Flags().VarP(&o.outputFormat, "output-format", "o", "Output format (yaml|json)")
+	cmd.Flags().VarP(&o.outputFormat, "output", "", "Output format (yaml|json)")
+	cmd.Flags().MarkDeprecated("output", "output is deprecated. Please use --output-format instead")
 
 	return cmd
 }
 
 func (o *versionOptions) run(_ *cobra.Command, _ []string) error {
 	if o.outputFormat == "" {
-		fmt.Println(config.CLIVersion)
+		fmt.Fprintln(o.outputWriter, config.CLIVersion)
 		return nil
 	}
 
@@ -83,14 +96,15 @@ func (o *versionOptions) run(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("could not marshal yaml output: %w", err)
 		}
-		fmt.Println(string(b))
+		fmt.Fprintln(o.outputWriter, string(b))
 	case "json":
-		b, err := json.Marshal(output)
+		b, err := json.MarshalIndent(output, "", "  ")
 		if err != nil {
 			return fmt.Errorf("could not marshal json output: %w", err)
 		}
-		fmt.Println(string(b))
+		fmt.Fprintln(o.outputWriter, string(b))
+	default:
+		return fmt.Errorf("unsupported output format: %s", o.outputFormat)
 	}
-
 	return nil
 }

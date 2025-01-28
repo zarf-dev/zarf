@@ -37,7 +37,8 @@ $ zarf tools get-creds artifact
 ### Options
 
 ```
-  -h, --help   help for get-creds
+  -h, --help                         help for get-creds
+  -o, --output-format outputFormat   Prints the output in the specified format. Valid options: table, json, yaml (default table)
 ```
 
 ### Options inherited from parent commands

@@ -81,14 +81,14 @@ func TestUseCLI(t *testing.T) {
 		require.NotEmpty(t, version, "Zarf version should not be an empty string")
 		version = strings.Trim(version, "\n")
 
-		// test `zarf version --output=json`
-		stdOut, _, err := e2e.Zarf(t, "version", "--output=json")
+		// test `zarf version --output-format=json`
+		stdOut, _, err := e2e.Zarf(t, "version", "--output-format=json")
 		require.NoError(t, err)
-		jsonVersion := fmt.Sprintf(",\"version\":\"%s\"}", version)
+		jsonVersion := fmt.Sprintf("\"version\": \"%s\"", version)
 		require.Contains(t, stdOut, jsonVersion, "Zarf version should be the same in all formats")
 
-		// test `zarf version --output=yaml`
-		stdOut, _, err = e2e.Zarf(t, "version", "--output=yaml")
+		// test `zarf version --output-format=yaml`
+		stdOut, _, err = e2e.Zarf(t, "version", "--output-format=yaml")
 		require.NoError(t, err)
 		yamlVersion := fmt.Sprintf("version: %s", version)
 		require.Contains(t, stdOut, yamlVersion, "Zarf version should be the same in all formats")
