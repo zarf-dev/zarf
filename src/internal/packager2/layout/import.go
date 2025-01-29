@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -24,7 +23,15 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, seenImports map[string]interface{}) (v1alpha1.ZarfPackage, error) {
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, stack []string) (v1alpha1.ZarfPackage, error) {
+	for _, sp := range stack {
+		if sp == packagePath {
+			return v1alpha1.ZarfPackage{}, fmt.Errorf("import cycle detected for package path: %s", packagePath)
+		}
+	}
+
+	stack = append(stack, packagePath)
+
 	variables := pkg.Variables
 	constants := pkg.Constants
 	components := []v1alpha1.ZarfComponent{}
@@ -47,12 +54,6 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		var importedPkg v1alpha1.ZarfPackage
 		if component.Import.Path != "" {
 			importPath := filepath.Join(packagePath, component.Import.Path)
-			importKey := fmt.Sprintf("%s-%s", component.Name, importPath)
-			if _, ok := seenImports[importKey]; ok {
-				return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(packagePath), component.Name)
-			}
-			seenImports = maps.Clone(seenImports)
-			seenImports[importKey] = nil
 			b, err := os.ReadFile(filepath.Join(importPath, layout.ZarfYAML))
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
@@ -61,7 +62,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
-			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, seenImports)
+			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, stack)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -91,7 +92,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			}
 		}
 		if len(found) == 0 {
-			return v1alpha1.ZarfPackage{}, fmt.Errorf("component %s not found", name)
+			return v1alpha1.ZarfPackage{}, fmt.Errorf("no compatible component %s not found", name)
 		} else if len(found) > 1 {
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("multiple components named %s found", name)
 		}
@@ -122,7 +123,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	pkg.Constants = slices.CompactFunc(constants, func(l, r v1alpha1.Constant) bool {
 		return l.Name == r.Name
 	})
-
+	stack = stack[:len(stack)-1]
 	return pkg, nil
 }
 

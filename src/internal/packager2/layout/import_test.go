@@ -28,8 +28,8 @@ func TestResolveImportsCircular(t *testing.T) {
 	pkg, err := ParseZarfPackage(b)
 	require.NoError(t, err)
 
-	_, err = resolveImports(ctx, pkg, "./testdata/import/first", "", "", map[string]interface{}{})
-	require.EqualError(t, err, "package testdata/import/second imported in cycle by testdata/import/third in component component")
+	_, err = resolveImports(ctx, pkg, "./testdata/import/first", "", "", []string{})
+	require.EqualError(t, err, "import cycle detected for package path: testdata/import/second")
 }
 
 func TestValidateComponentCompose(t *testing.T) {
