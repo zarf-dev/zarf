@@ -13,12 +13,3 @@ components:
       - source: https://github.com/stedolan/jq/releases/latest/download/jq-linux64
         target: ./bin/jq
         executable: true
-  - name: jq-darwin
-    only:
-      localOS: darwin
-    required: true
-    description: Deploy ./bin/jq bin for use in other components
-    files:
-      - source: https://github.com/stedolan/jq/releases/latest/download/jq-osx-amd64
-        target: ./bin/jq
-        executable: true

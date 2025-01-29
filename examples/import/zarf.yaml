@@ -10,11 +10,6 @@ components:
     import:
       path: jq
 
-  - name: jq-darwin
-    required: true
-    import:
-      path: jq
-
   - name: child-jq-command
     required: true
     import:
