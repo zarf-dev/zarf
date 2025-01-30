@@ -23,8 +23,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, stack []string) (v1alpha1.ZarfPackage, error) {
-	stack = append(stack, packagePath)
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string) (v1alpha1.ZarfPackage, error) {
+	importStack = append(importStack, packagePath)
 
 	variables := pkg.Variables
 	constants := pkg.Constants
@@ -48,7 +48,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		var importedPkg v1alpha1.ZarfPackage
 		if component.Import.Path != "" {
 			importPath := filepath.Join(packagePath, component.Import.Path)
-			for _, sp := range stack {
+			for _, sp := range importStack {
 				if sp == importPath {
 					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(packagePath), component.Name)
 				}
@@ -61,7 +61,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
-			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, stack)
+			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, importStack)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -122,7 +122,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	pkg.Constants = slices.CompactFunc(constants, func(l, r v1alpha1.Constant) bool {
 		return l.Name == r.Name
 	})
-	stack = stack[0:len(stack)-1]
+	importStack = importStack[0:len(importStack)-1]
 	return pkg, nil
 }
 
