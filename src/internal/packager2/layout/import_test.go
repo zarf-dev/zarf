@@ -4,7 +4,6 @@
 package layout
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,7 +29,7 @@ func TestResolveImportsCircular(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = resolveImports(ctx, pkg, "./testdata/import/first", "", "", []string{})
-	require.EqualError(t, err, fmt.Sprintf("import cycle detected for package path: %s", filepath.Join("testdata", "import", "second")))
+	require.EqualError(t, err, "package testdata/import/second imported in cycle by testdata/import/third in component component")
 }
 
 func TestValidateComponentCompose(t *testing.T) {
