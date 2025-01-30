@@ -122,7 +122,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	pkg.Constants = slices.CompactFunc(constants, func(l, r v1alpha1.Constant) bool {
 		return l.Name == r.Name
 	})
-	stack = stack[:len(stack)-1]
+	stack = stack[0:len(stack)-1]
 	return pkg, nil
 }
 
