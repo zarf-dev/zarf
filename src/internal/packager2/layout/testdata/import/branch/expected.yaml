@@ -1,0 +1,10 @@
+kind: ZarfPackageConfig
+metadata:
+  name: example-package
+components:
+- name: common
+  description: This gets imported by the parent and child directly
+  required: true
+- name: parent-child-common
+  description: This gets imported in a chain parent->child->common
+  required: true
