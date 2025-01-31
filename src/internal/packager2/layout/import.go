@@ -23,7 +23,13 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string) (v1alpha1.ZarfPackage, error) {
+// The main issue here is that we are still evaluating the child component in a different tree
+// We need a way to say, hey we don't actually care about the child component here and stop considering it
+
+// after the first round of recursion we have an imported package and we start building out the entire dag
+// The issue is that when we go to resolve imports, we are checking both components. We don't know the original component name we are checking against
+
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, componentToFind string) (v1alpha1.ZarfPackage, error) {
 	importStack = append(importStack, packagePath)
 
 	variables := pkg.Variables
@@ -35,6 +41,13 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			continue
 		}
 
+		name := component.Name
+		if component.Import.Name != "" {
+			name = component.Import.Name
+		}
+		if componentToFind != "" && componentToFind != name {
+			continue
+		}
 		// Skip as component does not have any imports.
 		if component.Import.Path == "" && component.Import.URL == "" {
 			components = append(components, component)
@@ -61,7 +74,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
-			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, importStack)
+			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, importStack, component.Name)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -80,7 +93,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			}
 		}
 
-		name := component.Name
+		name = component.Name
 		if component.Import.Name != "" {
 			name = component.Import.Name
 		}
@@ -122,7 +135,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	pkg.Constants = slices.CompactFunc(constants, func(l, r v1alpha1.Constant) bool {
 		return l.Name == r.Name
 	})
-	importStack = importStack[0:len(importStack)-1]
+	importStack = importStack[0 : len(importStack)-1]
 	return pkg, nil
 }
 

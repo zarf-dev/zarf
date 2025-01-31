@@ -1,0 +1,19 @@
+kind: ZarfPackageConfig
+metadata:
+  name: child-package
+
+components:
+  - name: child-jq-command
+    actions:
+      onDeploy:
+        defaults:
+          mute: true
+        before:
+          - cmd: |
+              echo "I'm doing something cool with JQ"
+              echo "{}" | ./bin/jq
+
+  - name: jq-command
+    required: true
+    import:
+      path: ../

@@ -28,8 +28,24 @@ func TestResolveImportsCircular(t *testing.T) {
 	pkg, err := ParseZarfPackage(b)
 	require.NoError(t, err)
 
-	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{})
+	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "")
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
+}
+
+func TestResolveImportsParentChildSeparateComponents(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+
+	b, err := os.ReadFile(filepath.Join("./testdata/import/parent-child", ZarfYAML))
+	require.NoError(t, err)
+	pkg, err := ParseZarfPackage(b)
+	require.NoError(t, err)
+
+	_, err = resolveImports(ctx, pkg, "./testdata/import/parent-child", "", "", []string{}, "")
+	require.NoError(t, err)
 }
 
 func TestResolveImportsBranches(t *testing.T) {
@@ -43,7 +59,7 @@ func TestResolveImportsBranches(t *testing.T) {
 	pkg, err := ParseZarfPackage(b)
 	require.NoError(t, err)
 
-	resolvedPkg, err := resolveImports(ctx, pkg, "./testdata/import/branch", "", "", []string{})
+	resolvedPkg, err := resolveImports(ctx, pkg, "./testdata/import/branch", "", "", []string{}, "")
 	require.NoError(t, err)
 
 	// ensure imports were resolved correctly
