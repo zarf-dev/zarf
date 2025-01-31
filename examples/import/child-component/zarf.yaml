@@ -3,17 +3,6 @@ metadata:
   name: child-component
 
 components:
-  # JQ
-  - name: jq-amd64
-    required: true
-    import:
-      path: ../jq
-
-  - name: jq-darwin
-    required: true
-    import:
-      path: ../jq
-
   - name: child-jq-command
     actions:
       onDeploy:
