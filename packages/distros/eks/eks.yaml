@@ -1,9 +1,11 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/eksctl-io/eksctl/v0.202.0/pkg/apis/eksctl.io/v1alpha5/assets/schema.json
 # eksctl create cluster --config-file=eks.yaml
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 metadata:
-  name: ###ZARF_VAR_EKS_CLUSTER_NAME###
-  region: ###ZARF_VAR_EKS_CLUSTER_REGION###
+  name: "###ZARF_VAR_EKS_CLUSTER_NAME###"
+  region: "###ZARF_VAR_EKS_CLUSTER_REGION###"
   tags:
     PermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_TAG###"
 
@@ -27,8 +29,8 @@ addons:
       PermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_TAG###"
 
 managedNodeGroups:
-- instanceType: ###ZARF_VAR_EKS_INSTANCE_TYPE###
-  name: ###ZARF_VAR_EKS_CLUSTER_NAME###-ng
+- instanceType: "###ZARF_VAR_EKS_INSTANCE_TYPE###"
+  name: "###ZARF_VAR_EKS_CLUSTER_NAME###-ng"
   minSize: 3
   maxSize: 6
   spot: true
