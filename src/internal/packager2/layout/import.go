@@ -37,6 +37,11 @@ func toImportName(component v1alpha1.ZarfComponent) string {
 }
 
 func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string) (v1alpha1.ZarfPackage, error) {
+	// The oddity of Zarf imports, is that while imports take in top level package objects such as
+	// variables and constants they are defined at the component level
+	// this means two packages can import each other without it being cyclic.
+	// To detect cyclic imports, we check if the package has already been imported on that chain of the recursion stack
+	// Additionally recursive calls only include components in the pkg that can be imported.
 	importStack = append(importStack, packagePath)
 
 	variables := pkg.Variables
