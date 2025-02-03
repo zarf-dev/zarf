@@ -29,9 +29,14 @@ import (
 // after the first round of recursion we have an imported package and we start building out the entire dag
 // The issue is that when we go to resolve imports, we are checking both components. We don't know the original component name we are checking against
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, componentToFind string) (v1alpha1.ZarfPackage, error) {
-	importStack = append(importStack, packagePath)
+func toImportName(component v1alpha1.ZarfComponent) string {
+	if component.Import.Name != "" {
+		return component.Import.Name
+	}
+	return component.Name
+}
 
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string) (v1alpha1.ZarfPackage, error) {
 	variables := pkg.Variables
 	constants := pkg.Constants
 	components := []v1alpha1.ZarfComponent{}
@@ -41,14 +46,6 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			continue
 		}
 
-		name := component.Name
-		if component.Import.Name != "" {
-			name = component.Import.Name
-		}
-		if componentToFind != "" && componentToFind != name {
-			continue
-		}
-		// Skip as component does not have any imports.
 		if component.Import.Path == "" && component.Import.URL == "" {
 			components = append(components, component)
 			continue
@@ -60,13 +57,19 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 
 		var importedPkg v1alpha1.ZarfPackage
 		if component.Import.Path != "" {
-			importPath := filepath.Join(packagePath, component.Import.Path)
+			// We never want another component importing the same component even on a cleaned file path
+			// This key makes sure that another component doesn't try to import the same key at the same path
+			importKey := fmt.Sprintf("%s-%s", packagePath, component.Name)
+			importStack = append(importStack, importKey)
+
+			toImportPath := filepath.Join(packagePath, component.Import.Path)
+			toImportKey := fmt.Sprintf("%s-%s", toImportPath, toImportName(component))
 			for _, sp := range importStack {
-				if sp == importPath {
-					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(packagePath), component.Name)
+				if sp == toImportKey {
+					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(toImportPath), filepath.ToSlash(packagePath), component.Name)
 				}
 			}
-			b, err := os.ReadFile(filepath.Join(importPath, layout.ZarfYAML))
+			b, err := os.ReadFile(filepath.Join(toImportPath, layout.ZarfYAML))
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -74,7 +77,15 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
-			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, importStack, component.Name)
+			// Delete the components from the imported package that are not going to be imported to avoid import cycles
+			var relevantComponents []v1alpha1.ZarfComponent
+			for _, importedComponent := range importedPkg.Components {
+				if importedComponent.Name == toImportName(component) {
+					relevantComponents = append(relevantComponents, importedComponent)
+				}
+			}
+			importedPkg.Components = relevantComponents
+			importedPkg, err = resolveImports(ctx, importedPkg, toImportPath, arch, flavor, importStack)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -93,7 +104,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			}
 		}
 
-		name = component.Name
+		name := component.Name
 		if component.Import.Name != "" {
 			name = component.Import.Name
 		}
@@ -126,6 +137,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		components = append(components, composed)
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
+		importStack = importStack[0 : len(importStack)-1]
 	}
 
 	pkg.Components = components
@@ -135,7 +147,6 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	pkg.Constants = slices.CompactFunc(constants, func(l, r v1alpha1.Constant) bool {
 		return l.Name == r.Name
 	})
-	importStack = importStack[0 : len(importStack)-1]
 	return pkg, nil
 }
 

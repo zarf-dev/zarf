@@ -271,7 +271,7 @@ func LoadPackage(ctx context.Context, packagePath, flavor string, setVariables m
 		return v1alpha1.ZarfPackage{}, err
 	}
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-	pkg, err = resolveImports(ctx, pkg, packagePath, pkg.Metadata.Architecture, flavor, []string{}, "")
+	pkg, err = resolveImports(ctx, pkg, packagePath, pkg.Metadata.Architecture, flavor, []string{})
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
