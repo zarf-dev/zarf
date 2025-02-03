@@ -23,7 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
-func toImportName(component v1alpha1.ZarfComponent) string {
+func getComponentToImportName(component v1alpha1.ZarfComponent) string {
 	if component.Import.Name != "" {
 		return component.Import.Name
 	}
@@ -76,7 +76,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			// Only include components from the package that have the potential to be imported (match the name of the .import.name)
 			var relevantComponents []v1alpha1.ZarfComponent
 			for _, importedComponent := range importedPkg.Components {
-				if importedComponent.Name == toImportName(component) {
+				if importedComponent.Name == getComponentToImportName(component) {
 					relevantComponents = append(relevantComponents, importedComponent)
 				}
 			}
@@ -100,16 +100,13 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			}
 		}
 
-		name := component.Name
-		if component.Import.Name != "" {
-			name = component.Import.Name
-		}
 		found := []v1alpha1.ZarfComponent{}
 		for _, component := range importedPkg.Components {
-			if component.Name == name && compatibleComponent(component, arch, flavor) {
+			if compatibleComponent(component, arch, flavor) {
 				found = append(found, component)
 			}
 		}
+		name := getComponentToImportName(component)
 		if len(found) == 0 {
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("no compatible component named %s found", name)
 		} else if len(found) > 1 {

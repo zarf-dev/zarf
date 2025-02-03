@@ -32,64 +32,51 @@ func TestResolveImportsCircular(t *testing.T) {
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
 }
 
-func TestResolveImportsParentChildSeparateComponents(t *testing.T) {
+func TestResolveImports(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+	testCases := []struct {
+		name string
+		path string
+	}{
+		{
+			name: "two zarf.yaml files import each other",
+			path: "./testdata/import/import-each-other",
+		},
+		{
+			name: "variables and constants are resolved correctly",
+			path: "./testdata/import/variables",
+		},
+		{
+			name: "two separate chains of imports importing a common file",
+			path: "./testdata/import/branch",
+		},
+	}
 
-	b, err := os.ReadFile(filepath.Join("./testdata/import/parent-child", ZarfYAML))
-	require.NoError(t, err)
-	pkg, err := ParseZarfPackage(b)
-	require.NoError(t, err)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 
-	_, err = resolveImports(ctx, pkg, "./testdata/import/parent-child", "", "", []string{})
-	require.NoError(t, err)
-}
+			b, err := os.ReadFile(filepath.Join(tc.path, ZarfYAML))
+			require.NoError(t, err)
 
-func TestImportVariables(t *testing.T) {
-	t.Parallel()
+			pkg, err := ParseZarfPackage(b)
+			require.NoError(t, err)
 
-	ctx := testutil.TestContext(t)
+			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", "", []string{})
+			require.NoError(t, err)
 
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
+			require.NoError(t, err)
 
-	b, err := os.ReadFile(filepath.Join("./testdata/import/variables", ZarfYAML))
-	require.NoError(t, err)
-	pkg, err := ParseZarfPackage(b)
-	require.NoError(t, err)
+			expectedPkg, err := ParseZarfPackage(b)
+			require.NoError(t, err)
 
-	resolvedPkg, err := resolveImports(ctx, pkg, "./testdata/import/variables", "", "", []string{})
-	require.NoError(t, err)
-
-	b, err = os.ReadFile(filepath.Join("./testdata/import/variables", "expected.yaml"))
-	require.NoError(t, err)
-	expectedPkg, err := ParseZarfPackage(b)
-	require.NoError(t, err)
-	require.Equal(t, expectedPkg, resolvedPkg)
-}
-
-func TestResolveImportsBranches(t *testing.T) {
-	t.Parallel()
-	ctx := testutil.TestContext(t)
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
-
-	// Get the parent package
-	b, err := os.ReadFile(filepath.Join("./testdata/import/branch", ZarfYAML))
-	require.NoError(t, err)
-	pkg, err := ParseZarfPackage(b)
-	require.NoError(t, err)
-
-	resolvedPkg, err := resolveImports(ctx, pkg, "./testdata/import/branch", "", "", []string{})
-	require.NoError(t, err)
-
-	// ensure imports were resolved correctly
-	b, err = os.ReadFile(filepath.Join("./testdata/import/branch", "expected.yaml"))
-	require.NoError(t, err)
-	expectedPkg, err := ParseZarfPackage(b)
-	require.NoError(t, err)
-	require.Equal(t, expectedPkg, resolvedPkg)
+			require.Equal(t, expectedPkg, resolvedPkg)
+		})
+	}
 }
 
 func TestValidateComponentCompose(t *testing.T) {
