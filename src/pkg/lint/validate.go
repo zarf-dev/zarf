@@ -65,11 +65,15 @@ const (
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
 	PkgValidateErrVariable                = "invalid package variable: %w"
+	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 )
 
 // ValidatePackage runs all validation checks on the package.
 func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	var err error
+	if len(pkg.Components) == 0 {
+		err = errors.Join(err, errors.New(PkgValidateErrNoComponents))
+	}
 	if pkg.Kind == v1alpha1.ZarfInitConfig && pkg.Metadata.YOLO {
 		err = errors.Join(err, errors.New(PkgValidateErrInitNoYOLO))
 	}
