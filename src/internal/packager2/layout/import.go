@@ -23,12 +23,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
-// The main issue here is that we are still evaluating the child component in a different tree
-// We need a way to say, hey we don't actually care about the child component here and stop considering it
-
-// after the first round of recursion we have an imported package and we start building out the entire dag
-// The issue is that when we go to resolve imports, we are checking both components. We don't know the original component name we are checking against
-
 func toImportName(component v1alpha1.ZarfComponent) string {
 	if component.Import.Name != "" {
 		return component.Import.Name
@@ -37,10 +31,10 @@ func toImportName(component v1alpha1.ZarfComponent) string {
 }
 
 func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string) (v1alpha1.ZarfPackage, error) {
-	// The oddity of Zarf imports, is that while imports take in top level package objects such as
-	// variables and constants they are defined at the component level
-	// this means two packages can import each other without it being cyclic.
-	// To detect cyclic imports, we check if the package has already been imported on that chain of the recursion stack
+	// The oddity of Zarf imports, is that imports take in top level package objects such as
+	// variables and constants, but are defined at the component level.
+	// this means two packages can import each other without creating a cyclic dependency.
+	// To detect cyclic imports, the package is checked to see if it's been imported on that chain of the recursion stack
 	// Additionally recursive calls only include components in the pkg that can be imported.
 	importStack = append(importStack, packagePath)
 

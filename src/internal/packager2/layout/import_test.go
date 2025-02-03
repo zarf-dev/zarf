@@ -48,6 +48,28 @@ func TestResolveImportsParentChildSeparateComponents(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestImportVariables(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+
+	b, err := os.ReadFile(filepath.Join("./testdata/import/variables", ZarfYAML))
+	require.NoError(t, err)
+	pkg, err := ParseZarfPackage(b)
+	require.NoError(t, err)
+
+	resolvedPkg, err := resolveImports(ctx, pkg, "./testdata/import/variables", "", "", []string{})
+	require.NoError(t, err)
+
+	b, err = os.ReadFile(filepath.Join("./testdata/import/variables", "expected.yaml"))
+	require.NoError(t, err)
+	expectedPkg, err := ParseZarfPackage(b)
+	require.NoError(t, err)
+	require.Equal(t, expectedPkg, resolvedPkg)
+}
+
 func TestResolveImportsBranches(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
