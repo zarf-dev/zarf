@@ -34,7 +34,6 @@ func TestResolveImportsCircular(t *testing.T) {
 
 func TestResolveImports(t *testing.T) {
 	t.Parallel()
-
 	ctx := testutil.TestContext(t)
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 	testCases := []struct {
@@ -61,7 +60,6 @@ func TestResolveImports(t *testing.T) {
 
 			b, err := os.ReadFile(filepath.Join(tc.path, ZarfYAML))
 			require.NoError(t, err)
-
 			pkg, err := ParseZarfPackage(b)
 			require.NoError(t, err)
 
@@ -70,10 +68,8 @@ func TestResolveImports(t *testing.T) {
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
 			require.NoError(t, err)
-
 			expectedPkg, err := ParseZarfPackage(b)
 			require.NoError(t, err)
-
 			require.Equal(t, expectedPkg, resolvedPkg)
 		})
 	}
