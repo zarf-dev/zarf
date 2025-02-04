@@ -100,13 +100,13 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			}
 		}
 
+		name := getComponentToImportName(component)
 		found := []v1alpha1.ZarfComponent{}
 		for _, component := range importedPkg.Components {
-			if compatibleComponent(component, arch, flavor) {
+			if component.Name == name && compatibleComponent(component, arch, flavor) {
 				found = append(found, component)
 			}
 		}
-		name := getComponentToImportName(component)
 		if len(found) == 0 {
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("no compatible component named %s found", name)
 		} else if len(found) > 1 {
