@@ -1,0 +1,11 @@
+kind: ZarfPackageConfig
+metadata:
+  name: remote-resources
+  description: Test nearly every type of import
+  version: 0.0.1
+
+components:
+  - name: empty-oci-component
+    description: "the logic for skeleton imports differs when there are only remote resources in the package"
+    images:
+    - ghcr.io/stefanprodan/podinfo:6.4.0

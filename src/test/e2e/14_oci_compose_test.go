@@ -37,10 +37,11 @@ type PublishCopySkeletonSuite struct {
 }
 
 var (
-	importEverything     = filepath.Join("src", "test", "packages", "14-import-everything")
-	importEverythingPath string
-	importception        = filepath.Join("src", "test", "packages", "14-import-everything", "inception")
-	importceptionPath    string
+	importEverything      = filepath.Join("src", "test", "packages", "14-import-everything")
+	importEverythingPath  string
+	importception         = filepath.Join("src", "test", "packages", "14-import-everything", "inception")
+	importceptionPath     string
+	importRemoteResources = filepath.Join("src", "test", "packages", "14-import-everything", "remote-resources")
 )
 
 func (suite *PublishCopySkeletonSuite) SetupSuite() {
@@ -72,6 +73,9 @@ func (suite *PublishCopySkeletonSuite) Test_0_Publish_Skeletons() {
 
 	composable := filepath.Join("src", "test", "packages", "09-composable-packages")
 	_, _, err = e2e.Zarf(suite.T(), "package", "publish", composable, "oci://"+ref, "--plain-http")
+	suite.NoError(err)
+
+	_, _, err = e2e.Zarf(suite.T(), "package", "publish", importRemoteResources, "oci://"+ref, "--plain-http")
 	suite.NoError(err)
 
 	_, _, err = e2e.Zarf(suite.T(), "package", "publish", importEverything, "oci://"+ref, "--plain-http")
