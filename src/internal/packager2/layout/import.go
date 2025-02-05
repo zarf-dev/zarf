@@ -5,6 +5,7 @@ package layout
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"os"
@@ -122,7 +123,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	pkg.Constants = slices.CompactFunc(constants, func(l, r v1alpha1.Constant) bool {
 		return l.Name == r.Name
 	})
-	importStack = importStack[0:len(importStack)-1]
+	importStack = importStack[0 : len(importStack)-1]
 	return pkg, nil
 }
 
@@ -188,43 +189,58 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		return "", err
 	}
 	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", name)))
+	var tarball, dir string
+	// If the descriptor was not found all resources in the component are remote
+	// We add an empty addition to the cache in this case
 	if oci.IsEmptyDescriptor(componentDesc) {
-		return "", fmt.Errorf("component %s not found", name)
-	}
+		h := sha256.New()
+		h.Write([]byte(component.Import.URL + name))
+		id := fmt.Sprintf("%x", h.Sum(nil))
 
-	store, err := ocistore.New(cache)
-	if err != nil {
-		return "", err
-	}
-	exists, err := store.Exists(ctx, componentDesc)
-	if err != nil {
-		return "", err
-	}
-	if !exists {
-		err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
+		dir = filepath.Join(cache, "dirs", id)
+	} else {
+		tarball = filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.Encoded())
+		dir = filepath.Join(cache, "dirs", componentDesc.Digest.Encoded())
+		store, err := ocistore.New(cache)
 		if err != nil {
 			return "", err
 		}
+		exists, err := store.Exists(ctx, componentDesc)
+		if err != nil {
+			return "", err
+		}
+		if !exists {
+			err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
+			if err != nil {
+				return "", err
+			}
+		}
 	}
-	dir := filepath.Join(cache, "dirs", componentDesc.Digest.Encoded())
+
 	if err := helpers.CreateDirectory(dir, helpers.ReadWriteExecuteUser); err != nil {
 		return "", err
 	}
-	tu := archiver.Tar{
-		OverwriteExisting: true,
-		// removes /<component-name>/ from the paths
-		StripComponents: 1,
-	}
-	tb := filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.Encoded())
-	err = tu.Unarchive(tb, dir)
-	if err != nil {
-		return "", err
-	}
+
 	abs, err := filepath.Abs(packagePath)
 	if err != nil {
 		return "", err
 	}
 	rel, err := filepath.Rel(abs, dir)
+	if err != nil {
+		return "", err
+	}
+
+	// If it is a remote component, there is nothing to extract
+	if oci.IsEmptyDescriptor(componentDesc) {
+		return rel, nil
+	}
+
+	tu := archiver.Tar{
+		OverwriteExisting: true,
+		// removes /<component-name>/ from the paths
+		StripComponents: 1,
+	}
+	err = tu.Unarchive(tarball, dir)
 	if err != nil {
 		return "", err
 	}
