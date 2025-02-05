@@ -84,6 +84,22 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
+	if strings.HasSuffix(name, ".tar") {
+		tmpDataPath := filepath.Join(tmpDir, "data")
+		err := archiver.Unarchive(tmpPath, tmpDataPath)
+		if err != nil {
+			return err
+		}
+		allTheFiles, err := filepath.Glob(filepath.Join(tmpDataPath, "*"))
+		if err != nil {
+			return err
+		}
+		err = archiver.Archive(allTheFiles, tarPath)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 	dstFile, err := os.Create(tarPath)
 	if err != nil {
 		return err
@@ -235,6 +251,9 @@ func nameFromMetadata(path string) (string, error) {
 		name = fmt.Sprintf("%s-%s-differential-%s", name, pkg.Build.DifferentialPackageVersion, pkg.Metadata.Version)
 	} else if pkg.Metadata.Version != "" {
 		name = fmt.Sprintf("%s-%s", name, pkg.Metadata.Version)
+	}
+	if pkg.Metadata.Uncompressed {
+		return fmt.Sprintf("%s.tar", name), nil
 	}
 	return fmt.Sprintf("%s.tar.zst", name), nil
 }
