@@ -37,6 +37,16 @@ func TestZarfPackageValidate(t *testing.T) {
 			expectedErrs: nil,
 		},
 		{
+			name: "no components",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name: "valid-package",
+				},
+			},
+			expectedErrs: []string{PkgValidateErrNoComponents},
+		},
+		{
 			name: "invalid package",
 			pkg: v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfPackageConfig,
