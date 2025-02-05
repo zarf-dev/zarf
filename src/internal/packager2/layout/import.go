@@ -190,8 +190,8 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	}
 	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", name)))
 	var tarball, dir string
-	// If the descriptor was not found all resources in the component are remote
-	// We add an empty addition to the cache in this case
+	// If the descriptor for the component tarball was not found then all resources in the component are remote
+	// In this case, we represent the component with an empty directory
 	if oci.IsEmptyDescriptor(componentDesc) {
 		h := sha256.New()
 		h.Write([]byte(component.Import.URL + name))
