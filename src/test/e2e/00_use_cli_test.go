@@ -133,15 +133,14 @@ func TestUseCLI(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "packages/distros/eks", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
-		path := fmt.Sprintf("zarf-package-distro-eks-%s-0.0.3.tar.zst", e2e.Arch)
+		path := fmt.Sprintf("zarf-package-distro-eks-%s-0.0.4.tar.zst", e2e.Arch)
+		defer e2e.CleanFiles(t, "binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", path, "eks.yaml")
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
 		require.FileExists(t, "binaries/eksctl_Darwin_x86_64")
 		require.FileExists(t, "binaries/eksctl_Darwin_arm64")
 		require.FileExists(t, "binaries/eksctl_Linux_x86_64")
-
-		e2e.CleanFiles(t, "binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", path, "eks.yaml")
 	})
 
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {
