@@ -8,7 +8,8 @@ components:
     import:
       path: common
 
-  - name: parent-child-common
+  - name: parent-importing-child
     required: true
     import:
+      name: parent-child-common
       path: child
