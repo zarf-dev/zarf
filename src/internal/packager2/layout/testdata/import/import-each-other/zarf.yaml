@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+
+metadata:
+  name: parent-package
+
+components:
+  - name: first-is-parent
+    import:
+      path: first-import
+
+  - name: second-is-parent
+    import:
+      path: second-import

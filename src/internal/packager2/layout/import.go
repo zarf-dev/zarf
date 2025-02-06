@@ -24,7 +24,19 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
+func getComponentToImportName(component v1alpha1.ZarfComponent) string {
+	if component.Import.Name != "" {
+		return component.Import.Name
+	}
+	return component.Name
+}
+
 func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string) (v1alpha1.ZarfPackage, error) {
+	// Zarf imports merge in the top level package objects variables and constants
+	// however, imports are defined at the component level.
+	// Two packages can both import one another as long as the importing components are on a different chains.
+	// To detect cyclic imports, the stack is checked to see if the package has already been imported on that chain.
+	// Recursive calls only include components from the imported pkg that have the name of the component to import
 	importStack = append(importStack, packagePath)
 
 	variables := pkg.Variables
@@ -62,6 +74,13 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
+			var relevantComponents []v1alpha1.ZarfComponent
+			for _, importedComponent := range importedPkg.Components {
+				if importedComponent.Name == getComponentToImportName(component) {
+					relevantComponents = append(relevantComponents, importedComponent)
+				}
+			}
+			importedPkg.Components = relevantComponents
 			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, importStack)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
@@ -81,10 +100,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			}
 		}
 
-		name := component.Name
-		if component.Import.Name != "" {
-			name = component.Import.Name
-		}
+		name := getComponentToImportName(component)
 		found := []v1alpha1.ZarfComponent{}
 		for _, component := range importedPkg.Components {
 			if component.Name == name && compatibleComponent(component, arch, flavor) {
