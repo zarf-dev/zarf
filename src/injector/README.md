@@ -24,32 +24,33 @@ The `zarf-injector` binary serves 2 purposes during 'init'.
 
 This enables a distro-agnostic way to inject real `registry:2` image into a running cluster, thereby enabling air-gapped deployments.
 
-## Building on Linux amd64 Systems
+# pre-req
 
-Install [Rust](https://rustup.rs/) and `build-essential`.
+* Install Rust using https://rustup.rs/
+* install cross with `make install-cross`
+* Install Docker or Podman have it running
 
+## Building on debian-based Systems
+
+Install build-essential
 ```bash
-make build-injector-linux list-sizes
+sudo apt-get update
+sudo apt-get install build-essential
+```
+Then build
+```bash
+make injector-linux list-sizes
 ```
 
 ## Building on Apple Silicon
-
-* Rust must be installed via Rustup (Check `which rustc` if you're unsure)
-* Install Docker or Podman have it running
-* Install Cross
-
-```
-make install-cross
-```
 
 Whichever arch. of `musl` used, add to toolchain
 ```
 rustup toolchain install --force-non-host stable-x86_64-unknown-linux-musl
 ```
+Then build
 ```
-cross build --target x86_64-unknown-linux-musl --release
-
-cross build --target aarch64-unknown-linux-musl --release
+make injector-linux list-sizes
 ```
 
 This will build into `target/*--unknown-linux-musl/release`
@@ -65,17 +66,7 @@ make list-sizes
 ```
 
 ```sh
-$ make build-with-docker
-...
-
-Size of Zarf injector binaries:
-
-840k    target/x86_64-unknown-linux-musl/release/zarf-injector
-713k    target/aarch64-unknown-linux-musl/release/zarf-injector
-```
-
-```sh
-$ make build-with-docker
+make injector-linux
 ...
 
 Size of Zarf injector binaries:
@@ -88,7 +79,7 @@ Size of Zarf injector binaries:
 
 Build your injector by following the steps above, or running one of the following:
 ```
-make build-injector-linux
+make injector-linux
 
 ## OR
 ## works on apple silicon

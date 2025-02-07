@@ -13,7 +13,7 @@ clean: ## Clean the build directory
 install-cross:
 	cargo install cross --git https://github.com/cross-rs/cross
 
-build-injector-linux: cross-injector-amd cross-injector-arm
+injector-linux: cross-injector-amd cross-injector-arm
 
 cross-injector-amd:
 	rustup target add x86_64-unknown-linux-musl
