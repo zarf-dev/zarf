@@ -51,7 +51,7 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 	isPartial := false
 	switch u.Scheme {
 	case "oci":
-		isPartial, err = pullOCI(ctx, src, tmpPath, shasum, filter)
+		isPartial, tmpPath, err = pullOCI(ctx, src, tmpDir, shasum, filter)
 		if err != nil {
 			return err
 		}
@@ -84,22 +84,6 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	if strings.HasSuffix(name, ".tar") {
-		tmpDataPath := filepath.Join(tmpDir, "data")
-		err := archiver.Unarchive(tmpPath, tmpDataPath)
-		if err != nil {
-			return err
-		}
-		allTheFiles, err := filepath.Glob(filepath.Join(tmpDataPath, "*"))
-		if err != nil {
-			return err
-		}
-		err = archiver.Archive(allTheFiles, tarPath)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
 	dstFile, err := os.Create(tarPath)
 	if err != nil {
 		return err
@@ -117,10 +101,10 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 	return nil
 }
 
-func pullOCI(ctx context.Context, src, tarPath, shasum string, filter filters.ComponentFilterStrategy) (bool, error) {
+func pullOCI(ctx context.Context, src, tarDir, shasum string, filter filters.ComponentFilterStrategy) (bool, string, error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 	defer os.Remove(tmpDir)
 	if shasum != "" {
@@ -129,48 +113,52 @@ func pullOCI(ctx context.Context, src, tarPath, shasum string, filter filters.Co
 	arch := config.GetArch()
 	remote, err := zoci.NewRemote(ctx, src, oci.PlatformForArch(arch))
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 	desc, err := remote.ResolveRoot(ctx)
 	if err != nil {
-		return false, fmt.Errorf("could not fetch images index: %w", err)
+		return false, "", fmt.Errorf("could not fetch images index: %w", err)
 	}
 	layersToPull := []ocispec.Descriptor{}
 	isPartial := false
+	tarPath := filepath.Join(tarDir, "data.tar")
 	if supportsFiltering(desc.Platform) {
 		root, err := remote.FetchRoot(ctx)
 		if err != nil {
-			return false, err
+			return false, "", err
 		}
 		if len(root.Layers) != len(layersToPull) {
 			isPartial = true
 		}
 		pkg, err := remote.FetchZarfYAML(ctx)
 		if err != nil {
-			return false, err
+			return false, "", err
 		}
 		pkg.Components, err = filter.Apply(pkg)
 		if err != nil {
-			return false, err
+			return false, "", err
 		}
 		layersToPull, err = remote.LayersFromRequestedComponents(ctx, pkg.Components)
 		if err != nil {
-			return false, err
+			return false, "", err
+		}
+		if !pkg.Metadata.Uncompressed {
+			tarPath = fmt.Sprintf("%s.zst", tarPath)
 		}
 	}
 	_, err = remote.PullPackage(ctx, tmpDir, config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 	allTheLayers, err := filepath.Glob(filepath.Join(tmpDir, "*"))
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 	err = archiver.Archive(allTheLayers, tarPath)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
-	return isPartial, nil
+	return isPartial, tarPath, nil
 }
 
 func pullHTTP(ctx context.Context, src, tarPath, shasum string) error {
