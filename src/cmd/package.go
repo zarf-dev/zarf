@@ -223,7 +223,18 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) error {
 	}
 	defer pkgClient.ClearTempPaths()
 
-	if err := pkgClient.Deploy(ctx); err != nil {
+	onPackageLoad := func(pkgCfg *types.PackagerConfig) error {
+		// Check Viper for environment variable overrides
+		for _, pkgVar := range pkgCfg.Pkg.Variables {
+			if val := v.GetString(VPkgDeploySet + "." + pkgVar.Name); val != "" {
+				pkgCfg.PkgOpts.SetVariables[pkgVar.Name] = val
+			}
+		}
+
+		return nil
+	}
+
+	if err := pkgClient.Deploy(ctx, onPackageLoad); err != nil {
 		return fmt.Errorf("failed to deploy package: %w", err)
 	}
 	return nil
