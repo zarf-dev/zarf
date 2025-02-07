@@ -24,13 +24,7 @@ The `zarf-injector` binary serves 2 purposes during 'init'.
 
 This enables a distro-agnostic way to inject real `registry:2` image into a running cluster, thereby enabling air-gapped deployments.
 
-## Building in Docker (recommended)
-
-```bash
-make build-with-docker
-```
-
-## Building on Debian-based Systems
+## Building on Linux amd64 Systems
 
 Install [Rust](https://rustup.rs/) and `build-essential`.
 
@@ -38,22 +32,14 @@ Install [Rust](https://rustup.rs/) and `build-essential`.
 make build-injector-linux list-sizes
 ```
 
-## Building on Debian-based Systems
+## Building on Apple Silicon
 
-Install [Rust](https://rustup.rs/) and `build-essential`.
-
-```bash
-make build-injector-linux list-sizes
-```
-
-## Building on Apple Silicon 
-
-* Install Cross
-* Install Docker & have it running
 * Rust must be installed via Rustup (Check `which rustc` if you're unsure)
+* Install Docker or Podman have it running
+* Install Cross
 
 ```
-cargo install cross --git https://github.com/cross-rs/cross
+make install-cross
 ```
 
 Whichever arch. of `musl` used, add to toolchain
@@ -104,9 +90,9 @@ Build your injector by following the steps above, or running one of the followin
 ```
 make build-injector-linux
 
-## OR 
-## works on apple silicon 
-make cross-injector-linux 
+## OR
+## works on apple silicon
+make cross-injector-linux
 
 ```
 
