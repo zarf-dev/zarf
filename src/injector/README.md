@@ -27,7 +27,7 @@ This enables a distro-agnostic way to inject real `registry:2` image into a runn
 # pre-req
 
 * Install Rust using https://rustup.rs/
-* install cross with `make install-cross`
+* Install cross with `make install-cross`
 * Install Docker or Podman have it running
 
 ## Building on debian-based Systems
