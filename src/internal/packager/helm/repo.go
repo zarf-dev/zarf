@@ -221,7 +221,18 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 			}
 		}
 
-		chartURL, err = repo.FindChartInAuthRepoURL(h.chart.URL, username, password, chartName, h.chart.Version, pull.CertFile, pull.KeyFile, pull.CaFile, getter.All(pull.Settings))
+		chartURL, err = repo.FindChartInAuthAndTLSRepoURL(
+			h.chart.URL,
+			username,
+			password,
+			chartName,
+			h.chart.Version,
+			pull.CertFile,
+			pull.KeyFile,
+			pull.CaFile,
+			config.CommonOptions.InsecureSkipTLSVerify,
+			getter.All(pull.Settings),
+		)
 		if err != nil {
 			return fmt.Errorf("unable to pull the helm chart: %w", err)
 		}
