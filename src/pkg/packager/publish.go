@@ -113,6 +113,7 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 		return err
 	}
 	if p.cfg.CreateOpts.IsSkeleton {
+		l.Info("skeleton packages contain metadata and local resources to allow for remote component imports")
 		message.Title("How to import components from this skeleton:", "")
 		ex := []v1alpha1.ZarfComponent{}
 		for _, c := range p.cfg.Pkg.Components {
@@ -128,6 +129,7 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 		if err != nil {
 			return err
 		}
+		l.Info("find more info on skeleton packages at https://docs.zarf.dev/faq/#what-is-a-skeleton-zarf-package")
 	}
 	l.Info("packaged successfully published",
 		"name", p.cfg.Pkg.Metadata.Name,
