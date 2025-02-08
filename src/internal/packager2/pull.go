@@ -16,6 +16,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
+	"github.com/gabriel-vasile/mimetype"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -46,7 +47,7 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 		return err
 	}
 	defer os.Remove(tmpDir)
-	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
+	tmpPath := ""
 
 	isPartial := false
 	switch u.Scheme {
@@ -56,7 +57,7 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 			return err
 		}
 	case "http", "https":
-		err := pullHTTP(ctx, src, tmpPath, shasum)
+		tmpPath, err = pullHTTP(ctx, src, tmpDir, shasum)
 		if err != nil {
 			return err
 		}
@@ -161,43 +162,73 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, filter filters.Com
 	return isPartial, tarPath, nil
 }
 
-func pullHTTP(ctx context.Context, src, tarPath, shasum string) error {
+func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 	if shasum == "" {
-		return errors.New("shasum cannot be empty")
+		return "", errors.New("shasum cannot be empty")
 	}
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(tmpDir)
+
+	tarPath := filepath.Join(tarDir, "data")
+
 	f, err := os.Create(tarPath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer f.Close()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		_, err := io.Copy(io.Discard, resp.Body)
 		if err != nil {
-			return err
+			return "", err
 		}
-		return fmt.Errorf("unexpected http response status code %s for source %s", resp.Status, src)
+		return "", fmt.Errorf("unexpected http response status code %s for source %s", resp.Status, src)
 	}
 	_, err = io.Copy(f, resp.Body)
 	if err != nil {
-		return err
+		return "", err
 	}
 	received, err := helpers.GetSHA256OfFile(tarPath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if received != shasum {
-		return fmt.Errorf("shasum mismatch for file %s, expected %s but got %s", tarPath, shasum, received)
+		return "", fmt.Errorf("shasum mismatch for file %s, expected %s but got %s", tarPath, shasum, received)
 	}
-	return nil
+
+	mtype, err := mimetype.DetectFile(tarPath)
+	if err != nil {
+		return "", err
+	}
+
+	newPath := filepath.Join(tarDir, "data.tar")
+
+	if mtype.Is("application/x-tar") {
+		err = os.Rename(tarPath, newPath)
+		if err != nil {
+			return "", err
+		}
+		return newPath, nil
+	} else if mtype.Is("application/zstd") {
+		newPath = fmt.Sprintf("%s.zst", newPath)
+		err = os.Rename(tarPath, newPath)
+		if err != nil {
+			return "", err
+		}
+		return newPath, nil
+	}
+	return "", fmt.Errorf("unsupported file type: %s", mtype.Extension())
 }
 
 func nameFromMetadata(path string) (string, error) {
