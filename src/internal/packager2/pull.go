@@ -123,6 +123,13 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, filter filters.Com
 	layersToPull := []ocispec.Descriptor{}
 	isPartial := false
 	tarPath := filepath.Join(tarDir, "data.tar")
+	pkg, err := remote.FetchZarfYAML(ctx)
+	if err != nil {
+		return false, "", err
+	}
+	if !pkg.Metadata.Uncompressed {
+		tarPath = fmt.Sprintf("%s.zst", tarPath)
+	}
 	if supportsFiltering(desc.Platform) {
 		root, err := remote.FetchRoot(ctx)
 		if err != nil {
@@ -131,10 +138,6 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, filter filters.Com
 		if len(root.Layers) != len(layersToPull) {
 			isPartial = true
 		}
-		pkg, err := remote.FetchZarfYAML(ctx)
-		if err != nil {
-			return false, "", err
-		}
 		pkg.Components, err = filter.Apply(pkg)
 		if err != nil {
 			return false, "", err
@@ -142,9 +145,6 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, filter filters.Com
 		layersToPull, err = remote.LayersFromRequestedComponents(ctx, pkg.Components)
 		if err != nil {
 			return false, "", err
-		}
-		if !pkg.Metadata.Uncompressed {
-			tarPath = fmt.Sprintf("%s.zst", tarPath)
 		}
 	}
 	_, err = remote.PullPackage(ctx, tmpDir, config.CommonOptions.OCIConcurrency, layersToPull...)
