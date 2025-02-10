@@ -38,6 +38,12 @@ func TestComposabilityExample(t *testing.T) {
 	b, err := goyaml.Marshal(pkgLayout.Pkg.Components)
 	require.NoError(t, err)
 
+	absComposeExample, err := filepath.Abs(composeExample)
+	require.NoError(t, err)
+
+	rel, err := filepath.Rel(absComposeExample, tmpDir)
+	require.NoError(t, err)
+
 	expectedYaml := fmt.Sprintf(`- name: local-games-path
   description: Example of a local composed package with a unique description for this component
   required: true
@@ -55,8 +61,8 @@ func TestComposabilityExample(t *testing.T) {
   - name: multi-games
     namespace: dos-games
     files:
-    - ../../../../../../..%s/oci/dirs/9ece174e362633b637e3c6b554b70f7d009d0a27107bee822336fdf2ce9a9def/manifests/multi-games-0.yaml
-    - ../../../../../../..%s/oci/dirs/9ece174e362633b637e3c6b554b70f7d009d0a27107bee822336fdf2ce9a9def/manifests/multi-games-1.yaml
+    - %s/oci/dirs/9ece174e362633b637e3c6b554b70f7d009d0a27107bee822336fdf2ce9a9def/manifests/multi-games-0.yaml
+    - %s/oci/dirs/9ece174e362633b637e3c6b554b70f7d009d0a27107bee822336fdf2ce9a9def/manifests/multi-games-1.yaml
   images:
   - ghcr.io/zarf-dev/doom-game:0.0.1
   actions:
@@ -70,7 +76,7 @@ func TestComposabilityExample(t *testing.T) {
             name: game
             namespace: dos-games
             condition: available
-`, tmpDir, tmpDir)
+`, rel, rel)
 	require.YAMLEq(t, expectedYaml, string(b))
 }
 
