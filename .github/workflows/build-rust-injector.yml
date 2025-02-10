@@ -24,7 +24,7 @@ jobs:
       - name: "Build Rust Binary for x86_64 and arm64"
         run: |
           cd src/injector
-          make build-injector-linux
+          make injector-linux
           cd target
           mkdir -p ../dist
           cp x86_64-unknown-linux-musl/release/zarf-injector ../dist/zarf-injector-amd64

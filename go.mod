@@ -24,10 +24,10 @@ require (
 	github.com/fairwindsops/pluto/v5 v5.21.1
 	github.com/fatih/color v1.18.0
 	github.com/fluxcd/gitkit v0.6.0
-	github.com/fluxcd/pkg/apis/meta v1.9.0
+	github.com/fluxcd/pkg/apis/meta v1.10.0
 	github.com/fluxcd/source-controller/api v1.4.1
 	github.com/go-git/go-git/v5 v5.13.2
-	github.com/goccy/go-yaml v1.15.15
+	github.com/goccy/go-yaml v1.15.19
 	github.com/gofrs/flock v0.12.1
 	github.com/golang-cz/devslog v0.0.11
 	github.com/google/go-containerregistry v0.20.3
@@ -51,8 +51,8 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.10.0
 	github.com/xeipuuv/gojsonschema v1.2.0
-	golang.org/x/crypto v0.32.0
-	golang.org/x/sync v0.10.0
+	golang.org/x/crypto v0.33.0
+	golang.org/x/sync v0.11.0
 	golang.org/x/term v0.29.0
 	helm.sh/helm/v3 v3.17.0
 	k8s.io/api v0.32.1
@@ -551,7 +551,7 @@ require (
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/oauth2 v0.25.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	google.golang.org/api v0.215.0 // indirect
