@@ -176,26 +176,32 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 
 	f, err := os.Create(tarPath)
 	if err != nil {
+		f.Close()
 		return "", err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
 	if err != nil {
+		f.Close()
 		return "", err
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		f.Close()
 		return "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		_, err := io.Copy(io.Discard, resp.Body)
 		if err != nil {
+			f.Close()
 			return "", err
 		}
+		f.Close()
 		return "", fmt.Errorf("unexpected http response status code %s for source %s", resp.Status, src)
 	}
 	_, err = io.Copy(f, resp.Body)
 	if err != nil {
+		f.Close()
 		return "", err
 	}
 	f.Close()
