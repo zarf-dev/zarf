@@ -174,37 +174,11 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 
 	tarPath := filepath.Join(tarDir, "data")
 
-	f, err := os.Create(tarPath)
+	err = pullHTTPFile(ctx, src, tarPath)
 	if err != nil {
-		f.Close()
 		return "", err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
-	if err != nil {
-		f.Close()
-		return "", err
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		f.Close()
-		return "", err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		_, err := io.Copy(io.Discard, resp.Body)
-		if err != nil {
-			f.Close()
-			return "", err
-		}
-		f.Close()
-		return "", fmt.Errorf("unexpected http response status code %s for source %s", resp.Status, src)
-	}
-	_, err = io.Copy(f, resp.Body)
-	if err != nil {
-		f.Close()
-		return "", err
-	}
-	f.Close()
+
 	received, err := helpers.GetSHA256OfFile(tarPath)
 	if err != nil {
 		return "", err
@@ -235,6 +209,35 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 		return newPath, nil
 	}
 	return "", fmt.Errorf("unsupported file type: %s", mtype.Extension())
+}
+
+func pullHTTPFile(ctx context.Context, src, tarPath string) error {
+	f, err := os.Create(tarPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		_, err := io.Copy(io.Discard, resp.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("unexpected http response status code %s for source %s", resp.Status, src)
+	}
+	_, err = io.Copy(f, resp.Body)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func nameFromMetadata(path string) (string, error) {
