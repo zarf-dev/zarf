@@ -178,7 +178,6 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
 	if err != nil {
 		return "", err
@@ -199,6 +198,7 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	f.Close()
 	received, err := helpers.GetSHA256OfFile(tarPath)
 	if err != nil {
 		return "", err
