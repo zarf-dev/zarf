@@ -1,8 +1,0 @@
-kind: ZarfPackageConfig
-metadata:
-  name: doesnotexist
-components:
-  - name: doesnotexist-docker
-    required: true
-    images:
-      - ghcr.io/zarf-dev/doesnotexist:1.3.3.7

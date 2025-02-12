@@ -15,25 +15,6 @@ import (
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 )
 
-func TestFlavorExample(t *testing.T) {
-	t.Parallel()
-
-	tmpDir := t.TempDir()
-	flavorExample := filepath.Join("examples", "package-flavors")
-	_, _, err := e2e.Zarf(t, "package", "create", flavorExample, "-o", tmpDir, "--flavor", "oracle-cookie-crunch", "--no-color", "--confirm")
-	require.NoError(t, err)
-
-	tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-package-flavors-%s-1.0.0.tar.zst", e2e.Arch))
-	pkgLayout, err := layout2.LoadFromTar(context.Background(), tarPath, layout2.PackageLayoutOptions{})
-	require.NoError(t, err)
-	pkgLayout.Pkg.Metadata.Description = "The pod that runs the specified flavor of Enterprise Linux"
-	imgs := []string{}
-	for _, comp := range pkgLayout.Pkg.Components {
-		imgs = append(imgs, comp.Images...)
-	}
-	require.ElementsMatch(t, imgs, []string{"oraclelinux:9-slim"})
-}
-
 func TestFlavorArchFiltering(t *testing.T) {
 	t.Parallel()
 

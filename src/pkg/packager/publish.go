@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -17,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -27,6 +29,10 @@ import (
 
 // Publish publishes the package to a registry
 func (p *Packager) Publish(ctx context.Context) (err error) {
+	l := logger.From(ctx)
+	start := time.Now()
+	l.Debug("start publish")
+
 	_, isOCISource := p.source.(*sources.OCISource)
 	if isOCISource && p.cfg.PublishOpts.SigningKeyPath == "" {
 		// oci --> oci is a special case, where we will use oci.CopyPackage so that we can transfer the package
@@ -107,6 +113,7 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 		return err
 	}
 	if p.cfg.CreateOpts.IsSkeleton {
+		l.Info("skeleton packages contain metadata and local resources to allow for remote component imports")
 		message.Title("How to import components from this skeleton:", "")
 		ex := []v1alpha1.ZarfComponent{}
 		for _, c := range p.cfg.Pkg.Components {
@@ -122,6 +129,12 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 		if err != nil {
 			return err
 		}
+		l.Info("find more info on skeleton packages at https://docs.zarf.dev/faq/#what-is-a-skeleton-zarf-package")
 	}
+	l.Info("packaged successfully published",
+		"name", p.cfg.Pkg.Metadata.Name,
+		"ref", ref,
+		"duration", time.Since(start),
+	)
 	return nil
 }

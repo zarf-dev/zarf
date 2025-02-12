@@ -261,7 +261,7 @@ func (pp *PackagePaths) ArchivePackage(ctx context.Context, destinationTarball s
 		}
 		message.Notef("Package is larger than %dMB, splitting into multiple files", maxPackageSizeMB)
 		l.Info("package is larger than max, splitting into multiple files", "maxPackageSize", maxPackageSizeMB)
-		err := splitFile(destinationTarball, chunkSize)
+		err := splitFile(ctx, destinationTarball, chunkSize)
 		if err != nil {
 			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
 		}

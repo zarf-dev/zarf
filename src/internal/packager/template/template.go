@@ -34,7 +34,7 @@ func GetZarfVariableConfig(ctx context.Context) *variables.VariableConfig {
 		if config.CommonOptions.Confirm {
 			return variable.Default, nil
 		}
-		return interactive.PromptVariable(variable)
+		return interactive.PromptVariable(ctx, variable)
 	}
 
 	if logger.Enabled(ctx) {

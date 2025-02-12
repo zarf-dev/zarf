@@ -9,15 +9,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/docker/cli/cli/command"
+	"github.com/docker/cli/cli/context/docker"
+	"github.com/docker/cli/cli/flags"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -34,8 +39,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/moby/moby/client"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -60,6 +63,28 @@ func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
 		return fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", refInfo.Reference, imageOptions)
 	}
 	return nil
+}
+
+func getDockerEndpointHost() (string, error) {
+	dockerCli, err := command.NewDockerCli(command.WithStandardStreams())
+	if err != nil {
+		return "", err
+	}
+	newClientOpts := flags.NewClientOptions()
+	err = dockerCli.Initialize(newClientOpts)
+	if err != nil {
+		return "", err
+	}
+	store := dockerCli.ContextStore()
+	metadata, err := store.GetMetadata(dockerCli.CurrentContext())
+	if err != nil {
+		return "", err
+	}
+	endpoint, err := docker.EndpointFromContext(metadata)
+	if err != nil {
+		return "", err
+	}
+	return endpoint.Host, nil
 }
 
 // Pull pulls all images from the given config.
@@ -105,6 +130,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	fetched := map[transform.Image]v1.Image{}
 
 	var counter, totalBytes atomic.Int64
+	var dockerEndPointHost string
 
 	// Spawn a goroutine for each
 	for _, refInfo := range cfg.ImageList {
@@ -146,8 +172,18 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 					message.Warnf("Falling back to local 'docker', failed to find the manifest on a remote: %s", err.Error())
 					l.Warn("Falling back to local 'docker', failed to find the manifest on a remote", "error", err.Error())
 
+					if dockerEndPointHost == "" {
+						dockerEndPointHost, err = getDockerEndpointHost()
+						if err != nil {
+							return err
+						}
+					}
 					// Attempt to connect to the local docker daemon.
-					cli, err := client.NewClientWithOpts(client.FromEnv)
+					cli, err := client.NewClientWithOpts(
+						client.WithHost(dockerEndPointHost),
+						client.WithTLSClientConfigFromEnv(),
+						client.WithVersionFromEnv(),
+					)
 					if err != nil {
 						return fmt.Errorf("docker not available: %w", err)
 					}
@@ -168,7 +204,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 					// Use unbuffered opener to avoid OOM Kill issues https://github.com/zarf-dev/zarf/issues/1214.
 					// This will also take forever to load large images.
-					img, err = daemon.Image(reference, daemon.WithUnbufferedOpener())
+					img, err = daemon.Image(reference, daemon.WithUnbufferedOpener(), daemon.WithClient(cli))
 					if err != nil {
 						return fmt.Errorf("failed to load from docker daemon: %w", err)
 					}
@@ -188,15 +224,15 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 			if err != nil {
 				return err
 			}
-			if cacheImg {
+			if cacheImg && cfg.CacheDirectory != "" {
 				img = cache.Image(img, cache.NewFilesystemCache(cfg.CacheDirectory))
 			}
 
-			manifest, err := img.Manifest()
+			size, err := getSizeOfImage(img)
 			if err != nil {
-				return fmt.Errorf("unable to get manifest for %s: %w", refInfo.Reference, err)
+				return fmt.Errorf("failed to get size of image: %w", err)
 			}
-			totalBytes.Add(manifest.Config.Size)
+			totalBytes.Add(size)
 
 			layers, err := img.Layers()
 			if err != nil {
@@ -210,14 +246,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 				if err != nil {
 					return fmt.Errorf("unable to get digest for image layer: %w", err)
 				}
-
 				if _, ok := shas[digest.Hex]; !ok {
 					shas[digest.Hex] = true
-					size, err := layer.Size()
-					if err != nil {
-						return fmt.Errorf("unable to get size for image layer: %w", err)
-					}
-					totalBytes.Add(size)
 				}
 			}
 
@@ -249,7 +279,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	toPull := maps.Clone(fetched)
 
 	err = retry.Do(func() error {
-		saved, err := SaveConcurrent(ctx, cranePath, toPull)
+		saved, err := SaveConcurrent(ctx, cranePath, toPull, cfg.CacheDirectory)
 		// Done save, remove from download list.
 		for k := range saved {
 			delete(toPull, k)
@@ -264,7 +294,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		message.Warnf("Failed to save images in parallel, falling back to sequential save: %s", err.Error())
 		l.Warn("failed to save images in parallel, falling back to sequential save", "error", err.Error())
 		err = retry.Do(func() error {
-			saved, err := SaveSequential(ctx, cranePath, toPull)
+			saved, err := SaveSequential(ctx, cranePath, toPull, cfg.CacheDirectory)
 			for k := range saved {
 				delete(toPull, k)
 			}
@@ -313,8 +343,19 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 	return fetched, nil
 }
 
+// from https://github.com/google/go-containerregistry/blob/6bce25ecf0297c1aa9072bc665b5cf58d53e1c54/pkg/v1/cache/fs.go#L143
+func layerCachePath(path string, h v1.Hash) string {
+	var file string
+	if runtime.GOOS == "windows" {
+		file = fmt.Sprintf("%s-%s", h.Algorithm, h.Hex)
+	} else {
+		file = h.String()
+	}
+	return filepath.Join(path, file)
+}
+
 // CleanupInProgressLayers removes incomplete layers from the cache.
-func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
+func CleanupInProgressLayers(ctx context.Context, img v1.Image, cacheDirectory string) error {
 	layers, err := img.Layers()
 	if err != nil {
 		return err
@@ -331,12 +372,7 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
 			if err != nil {
 				return err
 			}
-			absPath, err := config.GetAbsCachePath()
-			if err != nil {
-				return err
-			}
-			cacheDir := filepath.Join(absPath, layout.ImagesDir)
-			location := filepath.Join(cacheDir, digest.String())
+			location := layerCachePath(cacheDirectory, digest)
 			info, err := os.Stat(location)
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
@@ -355,8 +391,34 @@ func CleanupInProgressLayers(ctx context.Context, img v1.Image) error {
 	return eg.Wait()
 }
 
+func getSizeOfImage(img v1.Image) (int64, error) {
+	var totalSize int64
+	manifestSize, err := img.Size()
+	if err != nil {
+		return 0, err
+	}
+	totalSize += manifestSize
+	manifest, err := img.Manifest()
+	if err != nil {
+		return 0, err
+	}
+	totalSize += manifest.Config.Size
+	layers, err := img.Layers()
+	if err != nil {
+		return 0, err
+	}
+	for _, layer := range layers {
+		size, err := layer.Size()
+		if err != nil {
+			return 0, err
+		}
+		totalSize += size
+	}
+	return totalSize, nil
+}
+
 // SaveSequential saves images sequentially.
-func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]v1.Image) (map[transform.Image]v1.Image, error) {
+func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]v1.Image, cacheDirectory string) (map[transform.Image]v1.Image, error) {
 	l := logger.From(ctx)
 	saved := map[transform.Image]v1.Image{}
 	for info, img := range m {
@@ -364,13 +426,14 @@ func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]
 			ocispec.AnnotationBaseImageName: info.Reference,
 		}
 		wStart := time.Now()
-		size, err := img.Size()
+		size, err := getSizeOfImage(img)
 		if err != nil {
-			return saved, err
+			return saved, fmt.Errorf("failed to get size of image: %w", err)
 		}
-		l.Info("saving image", "ref", info.Reference, "size", size, "method", "sequential")
+		byteSize := utils.ByteFormat(float64(size), 2)
+		l.Info("saving image", "ref", info.Reference, "size", byteSize, "method", "sequential")
 		if err := cl.AppendImage(img, clayout.WithAnnotations(annotations)); err != nil {
-			if err := CleanupInProgressLayers(ctx, img); err != nil {
+			if err := CleanupInProgressLayers(ctx, img, cacheDirectory); err != nil {
 				message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
 				l.Error("failed to clean up in-progress layers. please run `zarf tools clear-cache`")
 			}
@@ -379,7 +442,7 @@ func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]
 		saved[info] = img
 		l.Debug("done saving image",
 			"ref", info.Reference,
-			"size", size,
+			"bytes", size,
 			"method", "sequential",
 			"duration", time.Since(wStart),
 		)
@@ -388,7 +451,7 @@ func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]
 }
 
 // SaveConcurrent saves images in a concurrent, bounded manner.
-func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]v1.Image) (map[transform.Image]v1.Image, error) {
+func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]v1.Image, cacheDirectory string) (map[transform.Image]v1.Image, error) {
 	l := logger.From(ctx)
 	saved := map[transform.Image]v1.Image{}
 
@@ -408,15 +471,15 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 				if err != nil {
 					return err
 				}
-
-				size, err := img.Size()
+				size, err := getSizeOfImage(img)
 				if err != nil {
 					return err
 				}
+				byteSize := utils.ByteFormat(float64(size), 2)
 				wStart := time.Now()
-				l.Info("saving image", "ref", info.Reference, "size", size, "method", "concurrent")
+				l.Info("saving image", "ref", info.Reference, "size", byteSize, "method", "concurrent")
 				if err := cl.WriteImage(img); err != nil {
-					if err := CleanupInProgressLayers(ectx, img); err != nil {
+					if err := CleanupInProgressLayers(ectx, img, cacheDirectory); err != nil {
 						message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
 						l.Error("failed to clean up in-progress layers. please run `zarf tools clear-cache`")
 					}
@@ -424,7 +487,7 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 				}
 				l.Debug("done saving image",
 					"ref", info.Reference,
-					"size", size,
+					"bytes", size,
 					"method", "concurrent",
 					"duration", time.Since(wStart),
 				)

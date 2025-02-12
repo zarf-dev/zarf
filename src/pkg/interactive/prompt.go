@@ -5,10 +5,12 @@
 package interactive
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
@@ -27,9 +29,10 @@ func PromptSigPassword() ([]byte, error) {
 }
 
 // PromptVariable prompts the user for a value for a variable
-func PromptVariable(variable v1alpha1.InteractiveVariable) (string, error) {
+func PromptVariable(ctx context.Context, variable v1alpha1.InteractiveVariable) (string, error) {
 	if variable.Description != "" {
 		message.Question(variable.Description)
+		logger.From(ctx).Info(variable.Description)
 	}
 
 	prompt := &survey.Input{

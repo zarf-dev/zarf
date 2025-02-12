@@ -103,8 +103,8 @@ func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) erro
 		outputYAML = ansiRegex.ReplaceAllString(outputYAML, "")
 	}
 
-	pterm.Println()
-	pterm.Println(outputYAML)
+	content := strings.Join([]string{"\n", outputYAML}, "")
+	pterm.Fprintln(message.OutputWriter, content)
 	return nil
 }
 

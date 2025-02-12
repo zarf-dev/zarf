@@ -1,0 +1,12 @@
+kind: ZarfPackageConfig
+metadata:
+  name: simple-package
+  description: simple small package to test pullling, publishing, and inspecting
+  version: 0.0.1
+
+components:
+  - name: on-deploy-with-template-use-of-variable
+    required: true
+    files:
+      - source: test.txt
+        target: test.txt

@@ -22,14 +22,14 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
 // Pull fetches the Zarf package from the given sources.
-func Pull(ctx context.Context, src, dir, shasum string, filter filters.ComponentFilterStrategy) error {
+func Pull(ctx context.Context, src, dir, shasum string, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) error {
 	u, err := url.Parse(src)
 	if err != nil {
 		return err
@@ -48,9 +48,10 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 	defer os.Remove(tmpDir)
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
 
+	isPartial := false
 	switch u.Scheme {
 	case "oci":
-		_, err := pullOCI(ctx, src, tmpPath, shasum, filter)
+		isPartial, err = pullOCI(ctx, src, tmpPath, shasum, filter)
 		if err != nil {
 			return err
 		}
@@ -61,6 +62,17 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 		}
 	default:
 		return fmt.Errorf("unknown scheme %s", u.Scheme)
+	}
+
+	// This loadFromTar is done so that validatePackageIntegrtiy and validatePackageSignature are called
+	layoutOpt := layout.PackageLayoutOptions{
+		PublicKeyPath:           publicKeyPath,
+		SkipSignatureValidation: skipSignatureValidation,
+		IsPartial:               isPartial,
+	}
+	_, err = layout.LoadFromTar(ctx, tmpPath, layoutOpt)
+	if err != nil {
+		return err
 	}
 
 	name, err := nameFromMetadata(tmpPath)

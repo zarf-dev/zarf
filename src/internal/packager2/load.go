@@ -152,7 +152,7 @@ func assembleSplitTar(src, tarPath string) error {
 	return nil
 }
 
-func packageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string) (v1alpha1.ZarfPackage, error) {
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string) (v1alpha1.ZarfPackage, error) {
 	_, err := identifySource(src)
 	if err != nil {
 		if cluster == nil {

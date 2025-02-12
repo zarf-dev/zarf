@@ -1,0 +1,11 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test
+components:
+  - name: test-flavor
+    only:
+      flavor: pistachio
+
+  - name: test-flavor
+    only:
+      flavor: cashew

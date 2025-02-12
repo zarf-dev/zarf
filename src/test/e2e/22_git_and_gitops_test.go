@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/test"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -35,7 +37,8 @@ func TestGit(t *testing.T) {
 
 	c, err := cluster.NewCluster()
 	require.NoError(t, err)
-	ctx := context.Background()
+	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
+
 	tunnelGit, err := c.Connect(ctx, cluster.ZarfGit)
 	require.NoError(t, err)
 	defer tunnelGit.Close()
@@ -132,7 +135,7 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 }
 
 func waitFluxPodInfoDeployment(t *testing.T) {
-	ctx := context.Background()
+	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
 	cluster, err := cluster.NewClusterWithWait(ctx)
 	require.NoError(t, err)
 	zarfState, err := cluster.LoadZarfState(ctx)

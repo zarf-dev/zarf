@@ -32,6 +32,7 @@ import (
 
 // Packager is the main struct for managing packages.
 type Packager struct {
+	// NOTE(mkcp): Storing ctx on structs is not recommended, but this is intended as a temporary workaround.
 	ctx            context.Context
 	cfg            *types.PackagerConfig
 	variableConfig *variables.VariableConfig
@@ -181,6 +182,7 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) error {
 	if err := p.validatePackageArchitecture(ctx); err != nil {
 		if errors.Is(err, lang.ErrUnableToCheckArch) {
 			message.Warnf("Unable to validate package architecture: %s", err.Error())
+			logger.From(ctx).Warn("unable to validate package architecture", "error", err)
 		} else {
 			return err
 		}

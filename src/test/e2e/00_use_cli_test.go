@@ -20,6 +20,18 @@ import (
 func TestUseCLI(t *testing.T) {
 	t.Log("E2E: Use CLI")
 
+	// TODO once cmd is refactored to accept an io.Writer, move this test to DevInspectDefinitionOptions.Run()
+	t.Run("zarf dev inspect definition", func(t *testing.T) {
+		t.Parallel()
+		pathToPackage := filepath.Join("src", "test", "packages", "00-dev-inspect-definition")
+
+		stdOut, _, err := e2e.Zarf(t, "dev", "inspect", "definition", pathToPackage, "--flavor=ice-cream", "--set=my_var=worked-as-expected", "--architecture=amd64")
+		require.NoError(t, err)
+		b, err := os.ReadFile(filepath.Join(pathToPackage, "expected-zarf.yaml"))
+		require.NoError(t, err)
+		require.Contains(t, stdOut, string(b))
+	})
+
 	t.Run("zarf prepare sha256sum <local>", func(t *testing.T) {
 		t.Parallel()
 
@@ -69,14 +81,14 @@ func TestUseCLI(t *testing.T) {
 		require.NotEmpty(t, version, "Zarf version should not be an empty string")
 		version = strings.Trim(version, "\n")
 
-		// test `zarf version --output=json`
-		stdOut, _, err := e2e.Zarf(t, "version", "--output=json")
+		// test `zarf version --output-format=json`
+		stdOut, _, err := e2e.Zarf(t, "version", "--output-format=json")
 		require.NoError(t, err)
-		jsonVersion := fmt.Sprintf(",\"version\":\"%s\"}", version)
+		jsonVersion := fmt.Sprintf("\"version\": \"%s\"", version)
 		require.Contains(t, stdOut, jsonVersion, "Zarf version should be the same in all formats")
 
-		// test `zarf version --output=yaml`
-		stdOut, _, err = e2e.Zarf(t, "version", "--output=yaml")
+		// test `zarf version --output-format=yaml`
+		stdOut, _, err = e2e.Zarf(t, "version", "--output-format=yaml")
 		require.NoError(t, err)
 		yamlVersion := fmt.Sprintf("version: %s", version)
 		require.Contains(t, stdOut, yamlVersion, "Zarf version should be the same in all formats")
@@ -99,7 +111,7 @@ func TestUseCLI(t *testing.T) {
 		// Test that excluding all components with a leading dash results in a warning
 		_, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=-deselect-me", "--confirm")
 		require.NoError(t, err)
-		require.Contains(t, stdErr, "No components were selected for deployment")
+		require.Contains(t, stdErr, "no components were selected for deployment")
 
 		// Test that excluding still works even if a wildcard is given
 		_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=*,-deselect-me", "--confirm")
@@ -112,18 +124,8 @@ func TestUseCLI(t *testing.T) {
 		// Test that changing the log level actually applies the requested level
 		_, stdErr, err := e2e.Zarf(t, "internal", "crc32", "zarf", "--log-level=debug")
 		require.NoError(t, err)
-		expectedOutString := "Log level set to debug"
+		expectedOutString := "cfg.level=debug"
 		require.Contains(t, stdErr, expectedOutString, "The log level should be changed to 'debug'")
-	})
-
-	t.Run("zarf package to test bad remote images", func(t *testing.T) {
-		_, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-remote-pull-fail", "--confirm")
-		// expecting zarf to have an error and output to stderr
-		require.Error(t, err)
-		// Make sure we print the get request error (only look for GET since the actual error changes based on login status)
-		require.Contains(t, stdErr, "failed to find the manifest on a remote: GET")
-		// And the docker error
-		require.Contains(t, stdErr, "response from daemon: No such image")
 	})
 
 	t.Run("zarf package to test archive path", func(t *testing.T) {
@@ -147,7 +149,6 @@ func TestUseCLI(t *testing.T) {
 		tmpdir := t.TempDir()
 		cacheDir := filepath.Join(t.TempDir(), ".cache-location")
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "--zarf-cache", cacheDir, "--tmpdir", tmpdir, "--log-level=debug", "-o=build", "--confirm")
-		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
 		require.NoError(t, err, stdOut, stdErr)
 
 		files, err := os.ReadDir(filepath.Join(cacheDir, "images"))
@@ -202,7 +203,6 @@ func TestUseCLI(t *testing.T) {
 		})
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "gen-pki", "github.com", "--sub-alt-name", "google.com")
 		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "Successfully created a chain of trust for github.com")
 
 		require.FileExists(t, tlsCA)
 

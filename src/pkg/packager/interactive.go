@@ -5,6 +5,7 @@
 package packager
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,13 +15,15 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
-func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles []string) bool {
+func (p *Packager) confirmAction(ctx context.Context, stage string, warnings []string, sbomViewFiles []string) bool {
 	pterm.Println()
 	message.HeaderInfof("📦 PACKAGE DEFINITION")
+	l := logger.From(ctx)
 	err := utils.ColorPrintYAML(p.cfg.Pkg, p.getPackageYAMLHints(stage), true)
 	if err != nil {
 		message.WarnErr(err, "unable to print yaml")
@@ -50,6 +53,7 @@ func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles 
 				message.Note(msg)
 				pterm.Println(viewNow)
 				pterm.Println(viewLater)
+				l.Info("this package has SBOMs available for review in a temporary directory", "directory", filepath.Join(cwd, layout.SBOMDir))
 			} else {
 				message.Warn("This package does NOT contain an SBOM.  If you require an SBOM, please contact the creator of this package to request a version that includes an SBOM.")
 			}
@@ -61,6 +65,7 @@ func (p *Packager) confirmAction(stage string, warnings []string, sbomViewFiles 
 		message.Title("Package Warnings", "the following warnings were flagged while reading the package")
 		for _, warning := range warnings {
 			message.Warn(warning)
+			l.Warn(warning)
 		}
 	}
 

@@ -93,14 +93,15 @@ func (f Format) ToLower() Format {
 }
 
 var (
-	// FormatText uses the standard slog TextHandler
-	FormatText Format = "text"
 	// FormatJSON uses the standard slog JSONHandler
 	FormatJSON Format = "json"
 	// FormatConsole uses console-slog to provide prettier colorful messages
 	FormatConsole Format = "console"
-	// FormatDev uses a verbose and prettyprinting devslog handler
+	// FormatDev uses a verbose and pretty printing devslog handler
 	FormatDev Format = "dev"
+	// FormatLegacy indicates that the user is continuing to use the legacy logger. The same as FormatNone.
+	// This option will be removed in a coming release
+	FormatLegacy Format = "legacy"
 	// FormatNone sends log writes to DestinationNone / io.Discard
 	FormatNone Format = "none"
 )
@@ -133,14 +134,19 @@ type Config struct {
 	Level
 	Format
 	Destination
+	Color
 }
+
+// Color is a type that represents whether or not to use color in the logger.
+type Color bool
 
 // LogValue of config
 func (c Config) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("level", c.Level.String()),
 		slog.Any("format", c.Format),
-		slog.Any("Destination", destinationString(c.Destination)),
+		slog.Any("destination", destinationString(c.Destination)),
+		slog.Bool("color", bool(c.Color)),
 	)
 }
 
@@ -148,8 +154,9 @@ func (c Config) LogValue() slog.Value {
 func ConfigDefault() Config {
 	return Config{
 		Level:       Info,
-		Format:      FormatText,
+		Format:      FormatConsole,
 		Destination: DestinationDefault, // Stderr
+		Color:       true,
 	}
 }
 
@@ -171,10 +178,10 @@ func New(cfg Config) (*slog.Logger, error) {
 
 	var handler slog.Handler
 	switch cfg.Format.ToLower() {
-	case FormatText:
+	case FormatConsole:
 		handler = console.NewHandler(cfg.Destination, &console.HandlerOptions{
 			Level:   slog.Level(cfg.Level),
-			NoColor: true,
+			NoColor: !bool(cfg.Color),
 		})
 	case FormatJSON:
 		handler = slog.NewJSONHandler(cfg.Destination, &opts)
@@ -184,12 +191,13 @@ func New(cfg Config) (*slog.Logger, error) {
 		})
 	case FormatDev:
 		opts.AddSource = true
-		handler = devslog.NewHandler(DestinationDefault, &devslog.Options{
+		handler = devslog.NewHandler(cfg.Destination, &devslog.Options{
 			HandlerOptions:  &opts,
 			NewLineAfterLog: true,
+			NoColor:         !bool(cfg.Color),
 		})
 	// Use discard handler if no format provided
-	case "", FormatNone:
+	case "", FormatNone, FormatLegacy:
 		handler = slog.NewTextHandler(DestinationNone, &slog.HandlerOptions{})
 	// Format not found, let's error out
 	default:

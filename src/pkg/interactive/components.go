@@ -25,6 +25,7 @@ func SelectOptionalComponent(component v1alpha1.ZarfComponent) (bool, error) {
 		return false, err
 	}
 	if component.Description != "" {
+		// TODO (@austinabro321) once we move interactiveness to CLI level we should replace this with logger.Info
 		message.Question(component.Description)
 	}
 

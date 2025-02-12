@@ -30,6 +30,7 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
@@ -192,6 +193,7 @@ func CosignVerifyBlob(ctx context.Context, blobRef, sigRef, keyPath string) erro
 	}
 
 	message.Successf("Package signature validated!")
+	logger.From(ctx).Debug("package signature validated", "key", keyPath)
 	return nil
 }
 

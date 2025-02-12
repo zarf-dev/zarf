@@ -5,6 +5,7 @@
 package layout
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -13,12 +14,13 @@ import (
 	"os"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
 // splitFile will split the file into chunks and remove the original file.
-func splitFile(srcPath string, chunkSize int) (err error) {
+func splitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 	srcFile, err := os.Open(srcPath)
 	if err != nil {
 		return err
@@ -125,6 +127,6 @@ func splitFile(srcPath string, chunkSize int) (err error) {
 		return fmt.Errorf("unable to write the file %s: %w", path, err)
 	}
 	progressBar.Successf("Package split across %d files", fileCount+1)
-
+	logger.From(ctx).Info("package split across multiple files", "count", fileCount+1)
 	return nil
 }

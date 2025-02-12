@@ -32,7 +32,7 @@ zarf tools monitor [flags]
       --insecure-skip-tls-verify       If true, the server's caCertFile will not be checked for validity
       --kubeconfig string              Path to the kubeconfig file to use for CLI requests
       --logFile string                 Specify the log file
-  -l, --logLevel string                Specify a log level (info, warn, debug, trace, error)
+  -l, --logLevel string                Specify a log level (error, warn, info, debug, trace)
       --logoless                       Turn K9s logo off
   -n, --namespace string               If present, the namespace scope for this CLI request
       --readonly                       Sets readOnly mode by overriding readOnly configuration setting

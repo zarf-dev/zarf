@@ -119,7 +119,6 @@ func templateZarfObj(zarfObj any, setVariables map[string]string) ([]PackageFind
 			return err
 		}
 
-		var unSetTemplates bool
 		for key := range yamlTemplates {
 			if deprecated {
 				findings = append(findings, PackageFinding{
@@ -128,14 +127,11 @@ func templateZarfObj(zarfObj any, setVariables map[string]string) ([]PackageFind
 				})
 			}
 			if _, present := setVariables[key]; !present {
-				unSetTemplates = true
+				findings = append(findings, PackageFinding{
+					Description: fmt.Sprintf("package template %s is not set and won't be evaluated during lint", key),
+					Severity:    SevWarn,
+				})
 			}
-		}
-		if unSetTemplates {
-			findings = append(findings, PackageFinding{
-				Description: lang.UnsetVarLintWarning,
-				Severity:    SevWarn,
-			})
 		}
 		for key, value := range setVariables {
 			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
