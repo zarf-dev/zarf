@@ -135,7 +135,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			if err != nil {
 				return nil, err
 			}
-			updatedAnnotations[getImageAnnotationKey(volume.Image.Reference)] = volume.Image.Reference
+			updatedAnnotations[getImageAnnotationKey(ctx, volume.Image.Reference)] = volume.Image.Reference
 			patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 		}
 	}
