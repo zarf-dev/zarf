@@ -20,10 +20,15 @@ import (
 func TestDosGames(t *testing.T) {
 	t.Log("E2E: Dos games")
 
-	path := filepath.Join("build", fmt.Sprintf("zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch))
+	tmpdir := t.TempDir()
+
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "-o", tmpdir, "--skip-sbom")
+	require.NoError(t, err, stdOut, stdErr)
+	packageName := fmt.Sprintf("zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
 
 	// Deploy the game
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	c, err := cluster.NewCluster()

@@ -33,7 +33,8 @@ import (
 type PublishCopySkeletonSuite struct {
 	suite.Suite
 	*require.Assertions
-	Reference registry.Reference
+	Reference   registry.Reference
+	PackagesDir string
 }
 
 var (
