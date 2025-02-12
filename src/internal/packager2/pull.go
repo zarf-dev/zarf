@@ -166,15 +166,9 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 	if shasum == "" {
 		return "", errors.New("shasum cannot be empty")
 	}
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return "", err
-	}
-	defer os.Remove(tmpDir)
-
 	tarPath := filepath.Join(tarDir, "data")
 
-	err = pullHTTPFile(ctx, src, tarPath)
+	err := pullHTTPFile(ctx, src, tarPath)
 	if err != nil {
 		return "", err
 	}
