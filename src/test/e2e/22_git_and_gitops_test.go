@@ -135,6 +135,7 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 }
 
 func waitFluxPodInfoDeployment(t *testing.T) {
+	tmp := t.TempDir()
 	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
 	cluster, err := cluster.NewClusterWithWait(ctx)
 	require.NoError(t, err)
@@ -143,8 +144,10 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo.Address)
 	require.NoError(t, err)
 	// Deploy the flux example and verify that it works
-	path := fmt.Sprintf("build/zarf-package-podinfo-flux-%s.tar.zst", e2e.Arch)
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/podinfo-flux", "-o", tmp, "--skip-sbom")
+	require.NoError(t, err, stdOut, stdErr)
+	packageName := fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", e2e.Arch)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", filepath.Join(tmp, packageName), "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Tests the URL mutation for GitRepository CRD for Flux.
