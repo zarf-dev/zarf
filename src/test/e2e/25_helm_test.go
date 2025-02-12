@@ -39,9 +39,13 @@ func TestHelmReleaseHistory(t *testing.T) {
 func TestHelm(t *testing.T) {
 	t.Log("E2E: Helm chart")
 
-	testHelmUninstallRollback(t)
+	tmpdir := t.TempDir()
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "-o", tmpdir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
-	testHelmAdoption(t)
+	testHelmUninstallRollback(t, tmpdir)
+
+	testHelmAdoption(t, tmpdir)
 
 	t.Run("helm charts example", testHelmChartsExample)
 
@@ -132,15 +136,18 @@ func testHelmEscaping(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func testHelmUninstallRollback(t *testing.T) {
+func testHelmUninstallRollback(t *testing.T, tmpdir string) {
 	t.Log("E2E: Helm Uninstall and Rollback")
 
-	goodPath := fmt.Sprintf("build/zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch)
-	evilPath := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
+	packageName := fmt.Sprintf("zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch)
+	goodPath := filepath.Join(tmpdir, packageName)
 
 	// Create the evil package (with the bad service).
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/25-evil-dos-games/", "--skip-sbom", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/25-evil-dos-games/", "-o", tmpdir, "--skip-sbom", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	evilName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
+	evilPath := filepath.Join(tmpdir, evilName)
 
 	// Deploy the evil package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", evilPath, "--timeout", "10s", "--confirm")
@@ -186,10 +193,10 @@ func testHelmUninstallRollback(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func testHelmAdoption(t *testing.T) {
+func testHelmAdoption(t *testing.T, tmpdir string) {
 	t.Log("E2E: Helm Adopt a Deployment")
 
-	packagePath := fmt.Sprintf("build/zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch)
+	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch))
 	deploymentManifest := "src/test/packages/25-manifest-adoption/deployment.yaml"
 
 	// Deploy dos-games manually into the cluster without Zarf

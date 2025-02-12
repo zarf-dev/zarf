@@ -107,10 +107,10 @@ func (suite *ExtOutClusterTestSuite) TearDownSuite() {
 func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	// Use Zarf to mirror a package to the services (do this as test 0 so that the registry is unpolluted)
 	t := suite.T()
-	tmp := t.TempDir()
-	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmp, "--skip-sbom")
+	tmpdir := t.TempDir()
+	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom")
 	suite.NoError(err)
-	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmp, "zarf-package-argocd-amd64.tar.zst"), "--confirm"}
+	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, "zarf-package-argocd-amd64.tar.zst"), "--confirm"}
 	mirrorArgs = append(mirrorArgs, outClusterCredentialArgs...)
 	err = exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
 	suite.NoError(err, "unable to mirror the package with zarf")

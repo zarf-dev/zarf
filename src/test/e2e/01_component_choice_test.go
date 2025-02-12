@@ -14,7 +14,7 @@ import (
 
 func TestComponentChoice(t *testing.T) {
 	t.Log("E2E: Component choice")
-	tmp := t.TempDir()
+	tmpdir := t.TempDir()
 	t.Parallel()
 
 	var (
@@ -25,10 +25,10 @@ func TestComponentChoice(t *testing.T) {
 		e2e.CleanFiles(t, firstFile, secondFile)
 	})
 
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/component-choice", "-o", tmp)
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/component-choice", "-o", tmpdir)
 	require.NoError(t, err, stdOut, stdErr)
 	packageName := fmt.Sprintf("zarf-package-component-choice-%s.tar.zst", e2e.Arch)
-	path := filepath.Join(tmp, packageName)
+	path := filepath.Join(tmpdir, packageName)
 
 	// Try to deploy both and expect failure due to only one component allowed at a time
 	// We currently don't have a pattern to actually test the interactive prompt, so just testing automation for now
