@@ -31,7 +31,7 @@ func createPodInfoPackageWithInsecureSources(t *testing.T, packageDir string) {
 	err = exec.CmdWithPrint(zarfBinPath, "tools", "yq", "eval", ".spec.insecure = true", "-i", filepath.Join(packageDir, "oci", "podinfo-source.yaml"))
 	require.NoError(t, err, "unable to yq edit oci source")
 	// avoiding Zarf cache because of flake https://github.com/zarf-dev/zarf/issues/3194
-	err = exec.CmdWithPrint(zarfBinPath, "package", "create", packageDir, "--confirm", "--output", packageDir, "--zarf-cache", temp)
+	err = exec.CmdWithPrint(zarfBinPath, "package", "create", packageDir, "--confirm", "--output", packageDir, "--zarf-cache", temp, "--skip-sbom")
 	require.NoError(t, err, "unable to create package")
 }
 

@@ -181,9 +181,12 @@ func (suite *PublishCopySkeletonSuite) Test_2_FilePaths() {
 
 func (suite *PublishCopySkeletonSuite) Test_3_Copy() {
 	t := suite.T()
+	tmp := t.TempDir()
 
-	example := filepath.Join("build", fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "publish", example, "oci://"+suite.Reference.Registry, "--plain-http")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/helm-charts", "-o", tmp, "--skip-sbom")
+	suite.NoError(err, stdOut, stdErr)
+	example := filepath.Join(tmp, fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "publish", example, "oci://"+suite.Reference.Registry, "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 
 	suite.Reference.Repository = "helm-charts"
