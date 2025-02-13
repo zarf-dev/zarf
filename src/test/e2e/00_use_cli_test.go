@@ -97,12 +97,12 @@ func TestUseCLI(t *testing.T) {
 	t.Run("zarf deploy should fail when given a bad component input", func(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/component-actions", "-o", tmpdir)
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-no-components", "-o", tmpdir)
 		require.NoError(t, err, stdOut, stdErr)
 		// Test for expected failure when given a bad component input
-		packageName := fmt.Sprintf("zarf-package-component-actions-%s.tar.zst", e2e.Arch)
+		packageName := fmt.Sprintf("zarf-package-no-components-%s.tar.zst", e2e.Arch)
 		path := filepath.Join(tmpdir, packageName)
-		_, _, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-create,foo,git-server", "--confirm")
+		_, _, err = e2e.Zarf(t, "package", "deploy", path, "--components=non-existent", "--confirm")
 		require.Error(t, err)
 	})
 
