@@ -38,6 +38,12 @@ func TestComposabilityExample(t *testing.T) {
 	b, err := goyaml.Marshal(pkgLayout.Pkg.Components)
 	require.NoError(t, err)
 
+	absComposeExample, err := filepath.Abs(composeExample)
+	require.NoError(t, err)
+
+	rel, err := filepath.Rel(absComposeExample, tmpDir)
+	require.NoError(t, err)
+
 	expectedYaml := fmt.Sprintf(`- name: local-games-path
   description: Example of a local composed package with a unique description for this component
   required: true
@@ -55,8 +61,8 @@ func TestComposabilityExample(t *testing.T) {
   - name: multi-games
     namespace: dos-games
     files:
-    - ../../../../../../..%s/oci/dirs/9ece174e362633b637e3c6b554b70f7d009d0a27107bee822336fdf2ce9a9def/manifests/multi-games-0.yaml
-    - ../../../../../../..%s/oci/dirs/9ece174e362633b637e3c6b554b70f7d009d0a27107bee822336fdf2ce9a9def/manifests/multi-games-1.yaml
+    - %s/oci/dirs/9ece174e362633b637e3c6b554b70f7d009d0a27107bee822336fdf2ce9a9def/manifests/multi-games-0.yaml
+    - %s/oci/dirs/9ece174e362633b637e3c6b554b70f7d009d0a27107bee822336fdf2ce9a9def/manifests/multi-games-1.yaml
   images:
   - ghcr.io/zarf-dev/doom-game:0.0.1
   actions:
@@ -70,7 +76,7 @@ func TestComposabilityExample(t *testing.T) {
             name: game
             namespace: dos-games
             condition: available
-`, tmpDir, tmpDir)
+`, rel, rel)
 	require.YAMLEq(t, expectedYaml, string(b))
 }
 
@@ -108,13 +114,13 @@ func TestFullComposability(t *testing.T) {
     - files/service.yaml
     kustomizations:
     - files
-    - files
+    - files/
   - name: connect-service-two
     namespace: podinfo-compose-two
     files:
     - files/service.yaml
     kustomizations:
-    - files
+    - files/
   charts:
   - name: podinfo-compose
     version: 6.4.0
@@ -160,8 +166,7 @@ func TestFullComposability(t *testing.T) {
       before:
       - dir: sub-package
         cmd: ls
-      - dir: .
-        cmd: ls
+      - cmd: ls
     onDeploy:
       after:
       - cmd: cat coffee-ipsum.txt
@@ -181,5 +186,5 @@ func TestComposabilityBadLocalOS(t *testing.T) {
 	composeTestBadLocalOS := filepath.Join("src", "test", "packages", "09-composable-packages", "bad-local-os")
 	_, stdErr, err := e2e.Zarf(t, "package", "create", composeTestBadLocalOS, "-o", "build", "--no-color", "--confirm")
 	require.Error(t, err)
-	require.Contains(t, e2e.StripMessageFormatting(stdErr), "\"only.localOS\" \"linux\" cannot be redefined as \"windows\" during compose")
+	require.Contains(t, stdErr, "\"only.localOS\" \"linux\" cannot be redefined as \"windows\" during compose")
 }

@@ -24,24 +24,23 @@ func TestChecksumAndSignature(t *testing.T) {
 	defer e2e.CleanFiles(t, pkgName)
 
 	// Test that we don't get an error when we remember to provide the public key
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName, publicKeyFlag)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "definition", pkgName, publicKeyFlag)
 	require.NoError(t, err, stdOut, stdErr)
 
 	/* Test operations during package inspect */
 	// Test that we can inspect the yaml of the package without the private key
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", pkgName, "--skip-signature-validation")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "definition", pkgName, "--skip-signature-validation")
 	require.NoError(t, err, stdOut, stdErr)
 
 	/* Test operations during package deploy */
 	// Test that we get an error when trying to deploy a package without providing the public key
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgName, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, e2e.StripMessageFormatting(stdErr), "failed to deploy package: unable to load the package: package is signed but no key was provided - add a key with the --key flag or use the --skip-signature-validation flag and run the command again")
+	require.Contains(t, stdErr, "failed to deploy package: unable to load the package: package is signed but no key was provided - add a key with the --key flag or use the --skip-signature-validation flag and run the command again")
 
 	// Test that we don't get an error when we remember to provide the public key
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgName, publicKeyFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Zarf deployment complete")
 
 	// Remove the package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", pkgName, publicKeyFlag, "--confirm")

@@ -88,7 +88,7 @@ func Catalog(ctx context.Context, componentSBOMs map[string]*layout.ComponentSBO
 	for _, refInfo := range imageList {
 		// TODO(mkcp): Remove message on logger release
 		builder.spinner.Updatef("Creating image SBOMs (%d of %d): %s", currImage, imageCount, refInfo.Reference)
-		l.Info("creating image SBOMs", "reference", refInfo.Reference)
+		l.Info("creating image SBOM", "image-name", refInfo.Reference)
 
 		// Get the image that we are creating an SBOM for
 		img, err := utils.LoadOCIImage(paths.Images.Base, refInfo)

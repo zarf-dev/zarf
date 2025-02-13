@@ -24,7 +24,8 @@ jobs:
       - name: "Build Rust Binary for x86_64 and arm64"
         run: |
           cd src/injector
-          make build-injector-linux
+          make install-cross
+          make injector-linux
           cd target
           mkdir -p ../dist
           cp x86_64-unknown-linux-musl/release/zarf-injector ../dist/zarf-injector-amd64
@@ -34,7 +35,7 @@ jobs:
           shasum zarf-injector-arm64 >> checksums.txt
 
       - name: Auth with AWS
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        uses: aws-actions/configure-aws-credentials@ececac1a45f3b08a01d2dd070d28d111c5fe6722 # v4.1.0
         with:
           role-to-assume: ${{ secrets.AWS_WRITE_ROLE }}
           role-session-name: ${{ github.job || github.event.client_payload.pull_request.head.sha || github.sha }}

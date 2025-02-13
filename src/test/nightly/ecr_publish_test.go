@@ -58,21 +58,16 @@ func TestECRPublishing(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "publish", testPackageLocation, registryURL, keyFlag)
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Ensure we get a warning when trying to inspect the online published package
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", upstreamPackageURL, keyFlag, "--sbom-out", tmpDir, "--skip-signature-validation")
-	require.NoError(t, err, stdOut, stdErr)
-
 	// Validate that we can pull the package down from ECR
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", upstreamPackageURL)
-	require.NoError(t, err, stdOut, stdErr)
-	defer e2e.CleanFiles(t, testPackageFileName)
-
-	// Ensure we get a warning when trying to inspect the package without providing the public key
-	// and the insecure flag
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", testPackageFileName, "--skip-signature-validation")
+	pullTempDir := t.TempDir()
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", upstreamPackageURL, keyFlag, fmt.Sprintf("-o=%s", pullTempDir))
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Validate that we get no warnings when inspecting the package while providing the public key
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", testPackageFileName, keyFlag)
+	pulledPackagePath := filepath.Join(pullTempDir, testPackageFileName)
+
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "definition", pulledPackagePath, "--skip-signature-validation")
+	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "definition", pulledPackagePath, keyFlag)
 	require.NoError(t, err, stdOut, stdErr)
 }

@@ -63,14 +63,14 @@ func testHelmChartsExample(t *testing.T) {
 	evilChartDepsPath := filepath.Join("src", "test", "packages", "25-evil-chart-deps")
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", evilChartDepsPath, "--tmpdir", tmpdir, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, e2e.StripMessageFormatting(stdErr), "could not download https://charts.jetstack.io/charts/cert-manager-v1.11.1.tgz")
+	require.Contains(t, stdErr, "could not download https://charts.jetstack.io/charts/cert-manager-v1.11.1.tgz")
 	require.FileExists(t, filepath.Join(evilChartDepsPath, "good-chart", "charts", "gitlab-runner-0.55.0.tgz"))
 
 	// Create a package with a chart name that doesn't exist in a repo
 	evilChartLookupPath := filepath.Join("src", "test", "packages", "25-evil-chart-lookup")
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", evilChartLookupPath, "--tmpdir", tmpdir, "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, e2e.StripMessageFormatting(stdErr), "chart \"asdf\" version \"6.4.0\" not found")
+	require.Contains(t, stdErr, "chart \"asdf\" version \"6.4.0\" not found")
 
 	// Create a test package (with a registry override (host+subpath to host+subpath) to test that as well)
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", "examples/helm-charts", "-o", "build", "--registry-override", "ghcr.io/stefanprodan=docker.io/stefanprodan", "--tmpdir", tmpdir, "--confirm")
@@ -96,8 +96,8 @@ func testHelmChartsExample(t *testing.T) {
 	helmChartsPkg := filepath.Join("build", fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", helmChartsPkg, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, string(stdErr), "registryOverrides", "registry overrides was not saved to build data")
-	require.Contains(t, string(stdErr), "docker.io", "docker.io not found in registry overrides")
+	require.Contains(t, stdOut, "registryOverrides", "registry overrides was not saved to build data")
+	require.Contains(t, stdOut, "docker.io", "docker.io not found in registry overrides")
 
 	// Remove the example package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "helm-charts", "--confirm")
@@ -145,9 +145,6 @@ func testHelmUninstallRollback(t *testing.T) {
 	// Deploy the evil package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", evilPath, "--timeout", "10s", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-
-	// This package contains SBOMable things but was created with --skip-sbom
-	require.Contains(t, string(stdErr), "This package does NOT contain an SBOM.")
 
 	// Ensure this leaves behind a dos-games chart.
 	// We do not want to uninstall charts that had failed installs/upgrades

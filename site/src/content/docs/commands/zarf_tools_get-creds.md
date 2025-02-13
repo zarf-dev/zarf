@@ -37,7 +37,8 @@ $ zarf tools get-creds artifact
 ### Options
 
 ```
-  -h, --help   help for get-creds
+  -h, --help                         help for get-creds
+  -o, --output-format outputFormat   Prints the output in the specified format. Valid options: table, json, yaml (default table)
 ```
 
 ### Options inherited from parent commands
@@ -45,7 +46,7 @@ $ zarf tools get-creds artifact
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --log-format string          [alpha] Select a logging format. Defaults to 'text'. Valid options are: 'text', 'json', 'console', 'dev'
+      --log-format string          [beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev', 'legacy'. The legacy option will be removed in a coming release (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable colors in output
       --no-log-file                Disable log file creation

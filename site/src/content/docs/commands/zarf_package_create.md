@@ -34,8 +34,8 @@ zarf package create [ DIRECTORY ] [flags]
   -s, --sbom                               View SBOM contents after creating the package
       --sbom-out string                    Specify an output directory for the SBOMs from the created Zarf package
       --set stringToString                 Specify package variables to set on the command line (KEY=value) (default [])
-      --signing-key string                 Path to private key file for signing packages
-      --signing-key-pass string            Password to the private key file used for signing packages
+      --signing-key string                 Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
+      --signing-key-pass string            Password to the private key used for signing packages
       --skip-sbom                          Skip generating SBOM for this package
 ```
 
@@ -44,7 +44,7 @@ zarf package create [ DIRECTORY ] [flags]
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --log-format string          [alpha] Select a logging format. Defaults to 'text'. Valid options are: 'text', 'json', 'console', 'dev'
+      --log-format string          [beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev', 'legacy'. The legacy option will be removed in a coming release (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable colors in output
       --no-log-file                Disable log file creation

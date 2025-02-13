@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"runtime"
@@ -19,6 +20,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
 
@@ -30,7 +32,19 @@ type ZarfE2ETest struct {
 	ApplianceModeKeep bool
 }
 
-var logRegex = regexp.MustCompile(`Saving log file to (?P<logFile>.*?\.log)`)
+// GetLogger returns the default log configuration for the tests.
+func GetLogger(t *testing.T) *slog.Logger {
+	t.Helper()
+	cfg := logger.Config{
+		Level:       logger.Info,
+		Format:      logger.FormatConsole,
+		Destination: logger.DestinationDefault, // Stderr
+		Color:       false,
+	}
+	l, err := logger.New(cfg)
+	require.NoError(t, err)
+	return l
+}
 
 // GetCLIName looks at the OS and CPU architecture to determine which Zarf binary needs to be run.
 func GetCLIName() string {
@@ -60,6 +74,9 @@ func (e2e *ZarfE2ETest) Zarf(t *testing.T, args ...string) (_ string, _ string, 
 
 // ZarfInDir executes a Zarf command in specific directory.
 func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ string, _ string, err error) {
+	if !slices.Contains(args, "tools") {
+		args = append(args, "--log-format=console", "--no-color")
+	}
 	if !slices.Contains(args, "--tmpdir") && !slices.Contains(args, "tools") {
 		tmpdir, err := os.MkdirTemp("", "zarf-")
 		if err != nil {
@@ -119,32 +136,12 @@ func (e2e *ZarfE2ETest) GetMismatchedArch() string {
 	}
 }
 
-// GetLogFileContents gets the log file contents from a given run's std error.
-func (e2e *ZarfE2ETest) GetLogFileContents(t *testing.T, stdErr string) string {
-	get, err := helpers.MatchRegex(logRegex, stdErr)
-	require.NoError(t, err)
-	logFile := get("logFile")
-	logContents, err := os.ReadFile(logFile)
-	require.NoError(t, err)
-	return string(logContents)
-}
-
 // GetZarfVersion returns the current build/zarf version
 func (e2e *ZarfE2ETest) GetZarfVersion(t *testing.T) string {
 	// Get the version of the CLI
 	stdOut, stdErr, err := e2e.Zarf(t, "version")
 	require.NoError(t, err, stdOut, stdErr)
 	return strings.Trim(stdOut, "\n")
-}
-
-// StripMessageFormatting strips any ANSI color codes and extra spaces from a given string
-func (e2e *ZarfE2ETest) StripMessageFormatting(input string) string {
-	// Regex to strip any color codes from the output - https://regex101.com/r/YFyIwC/2
-	ansiRegex := regexp.MustCompile(`\x1b\[(.*?)m`)
-	unAnsiInput := ansiRegex.ReplaceAllString(input, "")
-	// Regex to strip any more than two spaces or newline - https://regex101.com/r/wqQmys/1
-	multiSpaceRegex := regexp.MustCompile(`\s{2,}|\n`)
-	return multiSpaceRegex.ReplaceAllString(unAnsiInput, " ")
 }
 
 // NormalizeYAMLFilenames normalizes YAML filenames / paths across Operating Systems (i.e Windows vs Linux)

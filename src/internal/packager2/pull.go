@@ -16,20 +16,21 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
+	"github.com/gabriel-vasile/mimetype"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
 // Pull fetches the Zarf package from the given sources.
-func Pull(ctx context.Context, src, dir, shasum string, filter filters.ComponentFilterStrategy) error {
+func Pull(ctx context.Context, src, dir, shasum string, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) error {
 	u, err := url.Parse(src)
 	if err != nil {
 		return err
@@ -46,21 +47,33 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 		return err
 	}
 	defer os.Remove(tmpDir)
-	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
+	tmpPath := ""
 
+	isPartial := false
 	switch u.Scheme {
 	case "oci":
-		_, err := pullOCI(ctx, src, tmpPath, shasum, filter)
+		isPartial, tmpPath, err = pullOCI(ctx, src, tmpDir, shasum, filter)
 		if err != nil {
 			return err
 		}
 	case "http", "https":
-		err := pullHTTP(ctx, src, tmpPath, shasum)
+		tmpPath, err = pullHTTP(ctx, src, tmpDir, shasum)
 		if err != nil {
 			return err
 		}
 	default:
 		return fmt.Errorf("unknown scheme %s", u.Scheme)
+	}
+
+	// This loadFromTar is done so that validatePackageIntegrtiy and validatePackageSignature are called
+	layoutOpt := layout.PackageLayoutOptions{
+		PublicKeyPath:           publicKeyPath,
+		SkipSignatureValidation: skipSignatureValidation,
+		IsPartial:               isPartial,
+	}
+	_, err = layout.LoadFromTar(ctx, tmpPath, layoutOpt)
+	if err != nil {
+		return err
 	}
 
 	name, err := nameFromMetadata(tmpPath)
@@ -89,10 +102,10 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 	return nil
 }
 
-func pullOCI(ctx context.Context, src, tarPath, shasum string, filter filters.ComponentFilterStrategy) (bool, error) {
+func pullOCI(ctx context.Context, src, tarDir, shasum string, filter filters.ComponentFilterStrategy) (bool, string, error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 	defer os.Remove(tmpDir)
 	if shasum != "" {
@@ -101,54 +114,98 @@ func pullOCI(ctx context.Context, src, tarPath, shasum string, filter filters.Co
 	arch := config.GetArch()
 	remote, err := zoci.NewRemote(ctx, src, oci.PlatformForArch(arch))
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 	desc, err := remote.ResolveRoot(ctx)
 	if err != nil {
-		return false, fmt.Errorf("could not fetch images index: %w", err)
+		return false, "", fmt.Errorf("could not fetch images index: %w", err)
 	}
 	layersToPull := []ocispec.Descriptor{}
 	isPartial := false
+	tarPath := filepath.Join(tarDir, "data.tar")
+	pkg, err := remote.FetchZarfYAML(ctx)
+	if err != nil {
+		return false, "", err
+	}
+	if !pkg.Metadata.Uncompressed {
+		tarPath = fmt.Sprintf("%s.zst", tarPath)
+	}
 	if supportsFiltering(desc.Platform) {
 		root, err := remote.FetchRoot(ctx)
 		if err != nil {
-			return false, err
+			return false, "", err
 		}
 		if len(root.Layers) != len(layersToPull) {
 			isPartial = true
 		}
-		pkg, err := remote.FetchZarfYAML(ctx)
-		if err != nil {
-			return false, err
-		}
 		pkg.Components, err = filter.Apply(pkg)
 		if err != nil {
-			return false, err
+			return false, "", err
 		}
 		layersToPull, err = remote.LayersFromRequestedComponents(ctx, pkg.Components)
 		if err != nil {
-			return false, err
+			return false, "", err
 		}
 	}
 	_, err = remote.PullPackage(ctx, tmpDir, config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 	allTheLayers, err := filepath.Glob(filepath.Join(tmpDir, "*"))
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 	err = archiver.Archive(allTheLayers, tarPath)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
-	return isPartial, nil
+	return isPartial, tarPath, nil
 }
 
-func pullHTTP(ctx context.Context, src, tarPath, shasum string) error {
+func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 	if shasum == "" {
-		return errors.New("shasum cannot be empty")
+		return "", errors.New("shasum cannot be empty")
 	}
+	tarPath := filepath.Join(tarDir, "data")
+
+	err := pullHTTPFile(ctx, src, tarPath)
+	if err != nil {
+		return "", err
+	}
+
+	received, err := helpers.GetSHA256OfFile(tarPath)
+	if err != nil {
+		return "", err
+	}
+	if received != shasum {
+		return "", fmt.Errorf("shasum mismatch for file %s, expected %s but got %s", tarPath, shasum, received)
+	}
+
+	mtype, err := mimetype.DetectFile(tarPath)
+	if err != nil {
+		return "", err
+	}
+
+	newPath := filepath.Join(tarDir, "data.tar")
+
+	if mtype.Is("application/x-tar") {
+		err = os.Rename(tarPath, newPath)
+		if err != nil {
+			return "", err
+		}
+		return newPath, nil
+	} else if mtype.Is("application/zstd") {
+		newPath = fmt.Sprintf("%s.zst", newPath)
+		err = os.Rename(tarPath, newPath)
+		if err != nil {
+			return "", err
+		}
+		return newPath, nil
+	}
+	return "", fmt.Errorf("unsupported file type: %s", mtype.Extension())
+}
+
+func pullHTTPFile(ctx context.Context, src, tarPath string) error {
 	f, err := os.Create(tarPath)
 	if err != nil {
 		return err
@@ -173,13 +230,6 @@ func pullHTTP(ctx context.Context, src, tarPath, shasum string) error {
 	_, err = io.Copy(f, resp.Body)
 	if err != nil {
 		return err
-	}
-	received, err := helpers.GetSHA256OfFile(tarPath)
-	if err != nil {
-		return err
-	}
-	if received != shasum {
-		return fmt.Errorf("shasum mismatch for file %s, expected %s but got %s", tarPath, shasum, received)
 	}
 	return nil
 }
@@ -223,6 +273,9 @@ func nameFromMetadata(path string) (string, error) {
 		name = fmt.Sprintf("%s-%s-differential-%s", name, pkg.Build.DifferentialPackageVersion, pkg.Metadata.Version)
 	} else if pkg.Metadata.Version != "" {
 		name = fmt.Sprintf("%s-%s", name, pkg.Metadata.Version)
+	}
+	if pkg.Metadata.Uncompressed {
+		return fmt.Sprintf("%s.tar", name), nil
 	}
 	return fmt.Sprintf("%s.tar.zst", name), nil
 }

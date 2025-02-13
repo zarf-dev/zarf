@@ -18,7 +18,9 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/test"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
@@ -86,7 +88,8 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 			Name:      "gitea-0",
 		},
 	}
-	waitCtx, waitCancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx := logger.WithContext(context.Background(), test.GetLogger(suite.T()))
+	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
 	defer waitCancel()
 	err = healthchecks.WaitForReady(waitCtx, c.Watcher, objs)
 	suite.NoError(err)

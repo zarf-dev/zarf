@@ -10,6 +10,10 @@ tableOfContents: false
 
 Removes a Zarf package that has been deployed already (runs offline)
 
+### Synopsis
+
+Removes a Zarf package that has been deployed already (runs offline). Remove reverses the deployment order, the last component is removed first.
+
 ```
 zarf package remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm [flags]
 ```
@@ -29,7 +33,7 @@ zarf package remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm [flags]
   -a, --architecture string        Architecture for OCI images and Zarf packages
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -k, --key string                 Path to public key file for validating signed packages
-      --log-format string          [alpha] Select a logging format. Defaults to 'text'. Valid options are: 'text', 'json', 'console', 'dev'
+      --log-format string          [beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev', 'legacy'. The legacy option will be removed in a coming release (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable colors in output
       --no-log-file                Disable log file creation

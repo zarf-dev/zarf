@@ -8,7 +8,6 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 )
 
 // Constants used in the default package layout.
@@ -47,10 +46,6 @@ func ParseZarfPackage(b []byte) (v1alpha1.ZarfPackage, error) {
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	if len(pkg.Build.Migrations) > 0 {
-		for idx, component := range pkg.Components {
-			pkg.Components[idx], _ = deprecated.MigrateComponent(pkg.Build, component)
-		}
-	}
+	pkg, _ = migrateDeprecated(pkg)
 	return pkg, nil
 }

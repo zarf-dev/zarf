@@ -15,14 +15,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/cmd/say"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
-	"github.com/zarf-dev/zarf/src/cmd/common"
-	"github.com/zarf-dev/zarf/src/cmd/tools"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -40,19 +38,40 @@ var (
 	SkipLogFile bool
 	// NoColor is a flag to disable colors in output
 	NoColor bool
+	// OutputWriter provides a default writer to Stdout for user-facing command output
+	OutputWriter = os.Stdout
 )
 
-var rootCmd = &cobra.Command{
-	Use:          "zarf COMMAND",
-	Short:        lang.RootCmdShort,
-	Long:         lang.RootCmdLong,
-	Args:         cobra.MaximumNArgs(1),
-	SilenceUsage: true,
-	// TODO(mkcp): Do we actually want to silence errors here?
-	SilenceErrors:     true,
-	PersistentPreRunE: preRun,
-	Run:               run,
+type outputFormat string
+
+const (
+	outputTable outputFormat = "table"
+	outputJSON  outputFormat = "json"
+	outputYAML  outputFormat = "yaml"
+)
+
+// must implement this interface for cmd.Flags().VarP
+var _ pflag.Value = (*outputFormat)(nil)
+
+func (o *outputFormat) Set(s string) error {
+	switch s {
+	case string(outputTable), string(outputJSON), string(outputYAML):
+		*o = outputFormat(s)
+		return nil
+	default:
+		return fmt.Errorf("invalid output format: %s", s)
+	}
 }
+
+func (o *outputFormat) String() string {
+	return string(*o)
+}
+
+func (o *outputFormat) Type() string {
+	return "outputFormat"
+}
+
+var rootCmd = NewZarfCommand()
 
 func preRun(cmd *cobra.Command, _ []string) error {
 	// If --insecure was provided, set --insecure-skip-tls-verify and --plain-http to match
@@ -62,7 +81,7 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Skip for vendor only commands
-	if common.CheckVendorOnlyFromPath(cmd) {
+	if checkVendorOnlyFromPath(cmd) {
 		return nil
 	}
 
@@ -84,7 +103,7 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Configure logger and add it to cmd context.
-	l, err := setupLogger(LogLevelCLI, LogFormat)
+	l, err := setupLogger(LogLevelCLI, LogFormat, !NoColor)
 	if err != nil {
 		return err
 	}
@@ -93,7 +112,7 @@ func preRun(cmd *cobra.Command, _ []string) error {
 
 	// Configure the global message instance.
 	var disableMessage bool
-	if LogFormat != "" {
+	if LogFormat != string(logger.FormatLegacy) {
 		disableMessage = true
 		skipLogFile = true
 		ctx := logger.WithLoggingEnabled(ctx, true)
@@ -110,7 +129,7 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Print out config location
-	err = common.PrintViperConfigUsed(cmd.Context())
+	err = PrintViperConfigUsed(cmd.Context())
 	if err != nil {
 		return err
 	}
@@ -124,11 +143,43 @@ func run(cmd *cobra.Command, _ []string) {
 	}
 }
 
+// NewZarfCommand creates the `zarf` command and its nested children.
+func NewZarfCommand() *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:          "zarf COMMAND",
+		Short:        lang.RootCmdShort,
+		Long:         lang.RootCmdLong,
+		Args:         cobra.MaximumNArgs(1),
+		SilenceUsage: true,
+		// TODO(mkcp): Do we actually want to silence errors here?
+		SilenceErrors:     true,
+		PersistentPreRunE: preRun,
+		Run:               run,
+	}
+
+	// Add the tools commands
+	// IMPORTANT: we need to make sure the tools command are added first
+	// to ensure the config defaulting doesn't kick in, and inject values
+	// into zart tools update-creds command
+	// see https://github.com/zarf-dev/zarf/pull/3340#discussion_r1889221826
+	rootCmd.AddCommand(newToolsCommand())
+
+	// TODO(soltysh): consider adding command groups
+	rootCmd.AddCommand(newConnectCommand())
+	rootCmd.AddCommand(sayCommand())
+	rootCmd.AddCommand(newDestroyCommand())
+	rootCmd.AddCommand(newDevCommand())
+	rootCmd.AddCommand(newInitCommand())
+	rootCmd.AddCommand(newInternalCommand(rootCmd))
+	rootCmd.AddCommand(newPackageCommand())
+
+	rootCmd.AddCommand(newVersionCommand())
+
+	return rootCmd
+}
+
 // Execute is the entrypoint for the CLI.
 func Execute(ctx context.Context) {
-	// Add `zarf say`
-	rootCmd.AddCommand(say.Command())
-
 	cmd, err := rootCmd.ExecuteContextC(ctx)
 	if err == nil {
 		return
@@ -153,36 +204,33 @@ func Execute(ctx context.Context) {
 }
 
 func init() {
-	// Add the tools commands
-	tools.Include(rootCmd)
-
 	// Skip for vendor-only commands
-	if common.CheckVendorOnlyFromArgs() {
+	if checkVendorOnlyFromArgs() {
 		return
 	}
 
-	v := common.InitViper()
+	v := getViper()
 
 	// Logs
-	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(common.VLogLevel), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(common.VLogFormat), "[alpha] Select a logging format. Defaults to 'text'. Valid options are: 'text', 'json', 'console', 'dev'")
-	rootCmd.PersistentFlags().BoolVar(&SkipLogFile, "no-log-file", v.GetBool(common.VNoLogFile), lang.RootCmdFlagSkipLogFile)
-	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(common.VNoProgress), lang.RootCmdFlagNoProgress)
-	rootCmd.PersistentFlags().BoolVar(&NoColor, "no-color", v.GetBool(common.VNoColor), lang.RootCmdFlagNoColor)
+	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(VLogFormat), "[beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev', 'legacy'. The legacy option will be removed in a coming release")
+	rootCmd.PersistentFlags().BoolVar(&SkipLogFile, "no-log-file", v.GetBool(VNoLogFile), lang.RootCmdFlagSkipLogFile)
+	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(VNoProgress), lang.RootCmdFlagNoProgress)
+	rootCmd.PersistentFlags().BoolVar(&NoColor, "no-color", v.GetBool(VNoColor), lang.RootCmdFlagNoColor)
 
-	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(common.VArchitecture), lang.RootCmdFlagArch)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(common.VZarfCache), lang.RootCmdFlagCachePath)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(common.VTmpDir), lang.RootCmdFlagTempDir)
+	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(VArchitecture), lang.RootCmdFlagArch)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(VZarfCache), lang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(VTmpDir), lang.RootCmdFlagTempDir)
 
 	// Security
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(common.VInsecure), lang.RootCmdFlagInsecure)
+	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(VInsecure), lang.RootCmdFlagInsecure)
 	rootCmd.PersistentFlags().MarkDeprecated("insecure", "please use --plain-http, --insecure-skip-tls-verify, or --skip-signature-validation instead.")
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.PlainHTTP, "plain-http", v.GetBool(common.VPlainHTTP), lang.RootCmdFlagPlainHTTP)
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", v.GetBool(common.VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
+	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.PlainHTTP, "plain-http", v.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
+	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", v.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
 }
 
 // setup Logger handles creating a logger and setting it as the global default.
-func setupLogger(level, format string) (*slog.Logger, error) {
+func setupLogger(level, format string, color bool) (*slog.Logger, error) {
 	// If we didn't get a level from config, fallback to "info"
 	if level == "" {
 		level = "info"
@@ -195,10 +243,14 @@ func setupLogger(level, format string) (*slog.Logger, error) {
 		Level:       sLevel,
 		Format:      logger.Format(format),
 		Destination: logger.DestinationDefault,
+		Color:       logger.Color(color),
 	}
 	l, err := logger.New(cfg)
 	if err != nil {
 		return nil, err
+	}
+	if !color {
+		pterm.DisableColor()
 	}
 	logger.SetDefault(l)
 	l.Debug("logger successfully initialized", "cfg", cfg)
