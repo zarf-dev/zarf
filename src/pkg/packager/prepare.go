@@ -39,7 +39,6 @@ import (
 )
 
 var imageCheck = regexp.MustCompile(`(?mi)"image":"((([a-z0-9._-]+)/)?([a-z0-9._-]+)(:([a-z0-9._-]+))?)"`)
-var imagePodCheck = regexp.MustCompile(`(?mi)^(([a-z0-9._-]+)/)?([a-z0-9._-]+)(:([a-z0-9._-]+))?$`)
 var imageFuzzyCheck = regexp.MustCompile(`(?mi)["|=]([a-z0-9\-.\/:]+:[\w.\-]*[a-z\.\-][\w.\-]*)"`)
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
@@ -456,17 +455,17 @@ func findWhyResources(resources []*unstructured.Unstructured, whyImage, componen
 
 func appendToImageMap(imgMap map[string]bool, pod corev1.PodSpec) map[string]bool {
 	for _, container := range pod.InitContainers {
-		if imagePodCheck.MatchString(container.Image) {
+		if ReferenceRegexp.MatchString(container.Image) {
 			imgMap[container.Image] = true
 		}
 	}
 	for _, container := range pod.Containers {
-		if imagePodCheck.MatchString(container.Image) {
+		if ReferenceRegexp.MatchString(container.Image) {
 			imgMap[container.Image] = true
 		}
 	}
 	for _, container := range pod.EphemeralContainers {
-		if imagePodCheck.MatchString(container.Image) {
+		if ReferenceRegexp.MatchString(container.Image) {
 			imgMap[container.Image] = true
 		}
 	}

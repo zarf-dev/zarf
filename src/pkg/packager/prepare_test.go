@@ -75,11 +75,19 @@ func TestFindImages(t *testing.T) {
 				CreateOpts: types.ZarfCreateOptions{
 					BaseDir: "./testdata/find-images/valid-image-uri",
 				},
+				FindImagesOpts: types.ZarfFindImagesOptions{
+					SkipCosign: true,
+				},
 			},
 			expectedImages: map[string][]string{
 				"baseline": {
 					"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
-					"ghcr.io/zarf-dev/zarf/agent:sha256-f8b1c2f99349516ae1bd0711a19697abcc41555076b0ae90f1a70ca6b50dcbd8.sig",
+					"10.0.0.1:443/zarf-dev/zarf/agent:v0.38.1",
+					"alpine",
+					"xn--7o8h.com/myimage:9.8.7",
+					"registry.io/foo/project--id.module--name.ver---sion--name",
+					"foo_bar:latest",
+					"foo.com:8080/bar:1.2.3",
 				},
 			},
 		},
