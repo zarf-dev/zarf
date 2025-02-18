@@ -15,14 +15,15 @@ import (
 func TestManifestWithSymlink(t *testing.T) {
 	t.Log("E2E: Manifest With Symlink")
 
+	tmpdir := t.TempDir()
 	// Build the package, should succeed, even though there is a symlink in the package.
 	buildPath := filepath.Join("src", "test", "packages", "34-manifest-with-symlink")
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", buildPath, "-o=build", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", buildPath, "-o", tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	path := fmt.Sprintf("build/zarf-package-manifest-with-symlink-%s-0.0.1.tar.zst", e2e.Arch)
+	packageName := fmt.Sprintf("zarf-package-manifest-with-symlink-%s-0.0.1.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
 	require.FileExists(t, path)
-	defer e2e.CleanFiles(t, path)
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	defer e2e.CleanFiles(t, "temp/manifests")

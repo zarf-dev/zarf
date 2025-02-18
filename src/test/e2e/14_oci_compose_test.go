@@ -33,7 +33,8 @@ import (
 type PublishCopySkeletonSuite struct {
 	suite.Suite
 	*require.Assertions
-	Reference registry.Reference
+	Reference   registry.Reference
+	PackagesDir string
 }
 
 var (
@@ -49,9 +50,10 @@ func (suite *PublishCopySkeletonSuite) SetupSuite() {
 
 	// This port must match the registry URL in 14-import-everything/zarf.yaml
 	suite.Reference.Registry = testutil.SetupInMemoryRegistry(testutil.TestContext(suite.T()), suite.T(), 31888)
+	suite.PackagesDir = suite.T().TempDir()
 	// Setup the package paths after e2e has been initialized
-	importEverythingPath = filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch))
-	importceptionPath = filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch))
+	importEverythingPath = filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch))
+	importceptionPath = filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch))
 }
 
 func (suite *PublishCopySkeletonSuite) TearDownSuite() {
@@ -84,23 +86,23 @@ func (suite *PublishCopySkeletonSuite) Test_0_Publish_Skeletons() {
 	_, _, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", "oci://"+ref+"/import-everything:0.0.1", "--plain-http", "-a", "skeleton")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/import-everything:0.0.1", "-o", "build", "--plain-http", "-a", "skeleton")
+	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/import-everything:0.0.1", "-o", suite.PackagesDir, "--plain-http", "-a", "skeleton")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "-o", "build", "--plain-http", "-a", "skeleton")
+	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/helm-charts:0.0.1", "-o", suite.PackagesDir, "--plain-http", "-a", "skeleton")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/test-compose-package:0.0.1", "-o", "build", "--plain-http", "-a", "skeleton")
+	_, _, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+ref+"/test-compose-package:0.0.1", "-o", suite.PackagesDir, "--plain-http", "-a", "skeleton")
 	suite.NoError(err)
 }
 
 func (suite *PublishCopySkeletonSuite) Test_1_Compose_Everything_Inception() {
 	suite.T().Log("E2E: Skeleton Package Compose oci://")
 
-	_, _, err := e2e.Zarf(suite.T(), "package", "create", importEverything, "-o", "build", "--plain-http", "--confirm")
+	_, _, err := e2e.Zarf(suite.T(), "package", "create", importEverything, "-o", suite.PackagesDir, "--plain-http", "--confirm")
 	suite.NoError(err)
 
-	_, _, err = e2e.Zarf(suite.T(), "package", "create", importception, "-o", "build", "--plain-http", "--confirm")
+	_, _, err = e2e.Zarf(suite.T(), "package", "create", importception, "-o", suite.PackagesDir, "--plain-http", "--confirm")
 	suite.NoError(err)
 
 	stdOut, _, err := e2e.Zarf(suite.T(), "package", "inspect", "definition", importEverythingPath)
@@ -120,11 +122,11 @@ func (suite *PublishCopySkeletonSuite) Test_2_FilePaths() {
 	suite.T().Log("E2E: Skeleton + Package File Paths")
 
 	pkgTars := []string{
-		filepath.Join("build", fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch)),
-		filepath.Join("build", "zarf-package-import-everything-skeleton-0.0.1.tar.zst"),
-		filepath.Join("build", fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch)),
-		filepath.Join("build", "zarf-package-helm-charts-skeleton-0.0.1.tar.zst"),
-		filepath.Join("build", "zarf-package-test-compose-package-skeleton-0.0.1.tar.zst"),
+		filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-import-everything-%s-0.0.1.tar.zst", e2e.Arch)),
+		filepath.Join(suite.PackagesDir, "zarf-package-import-everything-skeleton-0.0.1.tar.zst"),
+		filepath.Join(suite.PackagesDir, fmt.Sprintf("zarf-package-importception-%s-0.0.1.tar.zst", e2e.Arch)),
+		filepath.Join(suite.PackagesDir, "zarf-package-helm-charts-skeleton-0.0.1.tar.zst"),
+		filepath.Join(suite.PackagesDir, "zarf-package-test-compose-package-skeleton-0.0.1.tar.zst"),
 	}
 
 	for _, pkgTar := range pkgTars {
@@ -181,9 +183,12 @@ func (suite *PublishCopySkeletonSuite) Test_2_FilePaths() {
 
 func (suite *PublishCopySkeletonSuite) Test_3_Copy() {
 	t := suite.T()
+	tmpdir := t.TempDir()
 
-	example := filepath.Join("build", fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "publish", example, "oci://"+suite.Reference.Registry, "--plain-http")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/helm-charts", "-o", tmpdir, "--skip-sbom")
+	suite.NoError(err, stdOut, stdErr)
+	example := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch))
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "publish", example, "oci://"+suite.Reference.Registry, "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 
 	suite.Reference.Repository = "helm-charts"
@@ -257,7 +262,7 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 		}
 
 		if isSkeleton && component.DeprecatedCosignKeyPath != "" {
-			suite.FileExists(filepath.Join(base, component.DeprecatedCosignKeyPath))
+			suite.FileExists(filepath.Join(base, filepath.Base(component.DeprecatedCosignKeyPath)))
 		}
 
 		for chartIdx, chart := range component.Charts {
