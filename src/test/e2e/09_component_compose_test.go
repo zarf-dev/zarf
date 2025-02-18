@@ -183,8 +183,9 @@ func TestFullComposability(t *testing.T) {
 func TestComposabilityBadLocalOS(t *testing.T) {
 	t.Parallel()
 
+	tmpdir := t.TempDir()
 	composeTestBadLocalOS := filepath.Join("src", "test", "packages", "09-composable-packages", "bad-local-os")
-	_, stdErr, err := e2e.Zarf(t, "package", "create", composeTestBadLocalOS, "-o", "build", "--no-color", "--confirm")
+	_, stdErr, err := e2e.Zarf(t, "package", "create", composeTestBadLocalOS, "-o", tmpdir, "--no-color", "--confirm")
 	require.Error(t, err)
 	require.Contains(t, stdErr, "\"only.localOS\" \"linux\" cannot be redefined as \"windows\" during compose")
 }

@@ -106,9 +106,13 @@ func (suite *ExtOutClusterTestSuite) TearDownSuite() {
 
 func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	// Use Zarf to mirror a package to the services (do this as test 0 so that the registry is unpolluted)
-	mirrorArgs := []string{"package", "mirror-resources", "../../../build/zarf-package-argocd-amd64.tar.zst", "--confirm"}
+	t := suite.T()
+	tmpdir := t.TempDir()
+	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom")
+	suite.NoError(err)
+	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, "zarf-package-argocd-amd64.tar.zst"), "--confirm"}
 	mirrorArgs = append(mirrorArgs, outClusterCredentialArgs...)
-	err := exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
+	err = exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
 	suite.NoError(err, "unable to mirror the package with zarf")
 
 	// Check that the registry contains the images we want
@@ -143,17 +147,14 @@ func (suite *ExtOutClusterTestSuite) Test_1_Deploy() {
 func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	// Deploy the flux example package
 	temp := suite.T().TempDir()
-	defer func() {
-		suite.NoError(os.RemoveAll(temp), "unable to remove temporary directory")
-	}()
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
-
 	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--confirm"}
 	err := exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 
-	path := fmt.Sprintf("../../../build/zarf-package-argocd-%s.tar.zst", "amd64")
-	deployArgs = []string{"package", "deploy", path, "--confirm"}
+	err = exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", temp, "--skip-sbom")
+	suite.NoError(err)
+	deployArgs = []string{"package", "deploy", filepath.Join(temp, "zarf-package-argocd-amd64.tar.zst"), "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err)
 }
