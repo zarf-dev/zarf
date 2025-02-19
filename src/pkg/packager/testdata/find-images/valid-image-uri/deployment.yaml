@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent
+spec:
+  selector:
+    matchLabels:
+      app: agent
+  template:
+    metadata:
+      labels:
+        app: agent
+    spec:
+      containers:
+        # these should be detected
+        - name: agent
+          image: ghcr.io/zarf-dev/zarf/agent:v0.38.1
+        - name: port
+          image: 10.0.0.1:443/zarf-dev/zarf/agent:v0.38.1
+        - name: alpine
+          image: alpine
+        - name: punycode
+          image: xn--7o8h.com/myimage:9.8.7
+        - name: project
+          image: registry.io/foo/project--id.module--name.ver---sion--name
+        - name: seperate
+          image: foo_bar:latest
+        - name: domain-port
+          image: foo.com:8080/bar:1.2.3
+        # these should NOT be detected
+        - name: under
+          image: _docker/_docker
+        - name: quad-under
+          image: ____/____
+        - name: dash-namespace
+          image: foo/-bar
+        - name: slash-tag
+          image: foo.com:http/bar
+        - name: bad-image
+          image: registry1.dso.mil*
