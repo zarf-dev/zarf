@@ -191,9 +191,16 @@ func PrintViperConfigUsed(ctx context.Context) error {
 	// Zarf skips loading the config file for version and tool commands, this avoids output in those cases
 	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
 		l.Info("using config file", "location", cfgFile)
-		fileType := strings.TrimPrefix(filepath.Ext(cfgFile), ".")
-		if !(fileType == "yml" || fileType == "yaml" || fileType == "toml") {
-			l.Warn("configuration file types other than yaml and toml deprecated and will be removed in a future release", "fileType", fileType)
+		ext := filepath.Ext(cfgFile)
+		switch ext {
+		case ".yml", ".yaml":
+			return nil
+		case ".toml":
+			return nil
+		default:
+			l.Warn("configuration file types other than yaml and toml are deprecated and will be removed in a future release",
+				"fileType", strings.TrimPrefix(ext, "."))
+			return nil
 		}
 	}
 	return nil
