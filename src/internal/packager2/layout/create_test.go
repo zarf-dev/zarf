@@ -284,18 +284,21 @@ func TestAbsoluteFilePathImports(t *testing.T) {
 	b, err := goyaml.Marshal(parentPkg)
 	require.NoError(t, err)
 	parentPath := filepath.Join(tmpdir, "zarf.yaml")
-	err = os.WriteFile(parentPath, b, 0777)
+	err = os.WriteFile(parentPath, b, 0700)
 	require.NoError(t, err)
 	b, err = goyaml.Marshal(childPkg)
 	require.NoError(t, err)
-	err = os.Mkdir(filepath.Join(tmpdir, "child"), 0777)
+	err = os.Mkdir(filepath.Join(tmpdir, "child"), 0700)
 	require.NoError(t, err)
 	childPath := filepath.Join(tmpdir, "child", "zarf.yaml")
-	err = os.WriteFile(childPath, b, 0777)
+	err = os.WriteFile(childPath, b, 0700)
 	require.NoError(t, err)
 	require.FileExists(t, childPath)
 
+	// create the package
 	pkgLayout, err := CreatePackage(context.Background(), tmpdir, CreateOptions{})
+
+	// Ensure the components are created correctly
 	require.NoError(t, err)
 	fileComponent, err := pkgLayout.GetComponentDir(tmpdir, "file", FilesComponentDir)
 	defer os.Remove(fileComponent)
