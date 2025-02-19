@@ -35,7 +35,7 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *v1alpha1.ZarfPackage, 
 	spinner := message.NewProgressSpinner("")
 	defer spinner.Stop()
 
-	// Get all of the layers in the package
+	// Get all the layers in the package
 	var descs []ocispec.Descriptor
 	for name, path := range paths.Files() {
 		spinner.Updatef("Preparing layer %s", helpers.First30Last30(name))
@@ -85,11 +85,10 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *v1alpha1.ZarfPackage, 
 
 	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), r.Repo(), "", copyOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to copy: %w", err)
 	}
-
 	if err := r.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc); err != nil {
-		return err
+		return fmt.Errorf("failed to update index: %w", err)
 	}
 
 	progressBar.Successf("Published %s [%s]", r.Repo().Reference, ZarfLayerMediaTypeBlob)
