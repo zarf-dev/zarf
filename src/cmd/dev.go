@@ -474,6 +474,8 @@ func (o *devGenerateConfigOptions) run(_ *cobra.Command, args []string) error {
 	}
 
 	v := getViper()
+	// TODO once other formats are fully deprecated move this to the global viper config
+	viper.SupportedExts = []string{"toml", "yaml", "yml"}
 	if err := v.SafeWriteConfigAs(fileName); err != nil {
 		return fmt.Errorf("unable to write the config file %s, make sure the file doesn't already exist: %w", fileName, err)
 	}
