@@ -12,8 +12,10 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -223,4 +225,86 @@ func TestLoadPackageErrorWithoutCompatibleFlavor(t *testing.T) {
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 	_, err := LoadPackage(context.Background(), filepath.Join("testdata", "package-with-flavors"), "non-existent-flavor", map[string]string{})
 	require.EqualError(t, err, fmt.Sprintf("package validation failed: %s", lint.PkgValidateErrNoComponents))
+}
+
+func TestAbsoluteFilePathImports(t *testing.T) {
+	t.Parallel()
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+
+	// Create file with absolute paths
+	tmpdir := t.TempDir()
+	absoluteFilePath, err := filepath.Abs(filepath.Join(tmpdir, "file.txt"))
+	require.NoError(t, err)
+	_, err = os.Create(absoluteFilePath)
+	require.NoError(t, err)
+
+	// Create package using absolute path
+	parentPkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
+			Name: "parent",
+		},
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Name: "file",
+				Files: []v1alpha1.ZarfFile{
+					{
+						Source: absoluteFilePath,
+						Target: "file.txt",
+					},
+				},
+			},
+			{
+				Name: "file-import",
+				Import: v1alpha1.ZarfComponentImport{
+					Path: "child",
+				},
+			},
+		},
+	}
+	// Create package using absolute file path set to be import
+	childPkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
+			Name: "child",
+		},
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Name: "file-import",
+				Files: []v1alpha1.ZarfFile{
+					{
+						Source: absoluteFilePath,
+						Target: "file2.txt",
+					},
+				},
+			},
+		},
+	}
+	// Create zarf.yaml files in the tempdir
+	b, err := goyaml.Marshal(parentPkg)
+	require.NoError(t, err)
+	parentPath := filepath.Join(tmpdir, "zarf.yaml")
+	err = os.WriteFile(parentPath, b, 0777)
+	require.NoError(t, err)
+	b, err = goyaml.Marshal(childPkg)
+	require.NoError(t, err)
+	err = os.Mkdir(filepath.Join(tmpdir, "child"), 0777)
+	require.NoError(t, err)
+	childPath := filepath.Join(tmpdir, "child", "zarf.yaml")
+	err = os.WriteFile(childPath, b, 0777)
+	require.NoError(t, err)
+	require.FileExists(t, childPath)
+
+	pkgLayout, err := CreatePackage(context.Background(), tmpdir, CreateOptions{})
+	require.NoError(t, err)
+	fileComponent, err := pkgLayout.GetComponentDir(tmpdir, "file", FilesComponentDir)
+	defer os.Remove(fileComponent)
+	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(fileComponent, "0", "file.txt"))
+
+	tmpdir2 := t.TempDir()
+	importedFileComponent, err := pkgLayout.GetComponentDir(tmpdir2, "file-import", FilesComponentDir)
+	defer os.Remove(importedFileComponent)
+	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(importedFileComponent, "0", "file2.txt"))
 }
