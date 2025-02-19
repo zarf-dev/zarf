@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -190,6 +191,11 @@ func PrintViperConfigUsed(ctx context.Context) error {
 	// Zarf skips loading the config file for version and tool commands, this avoids output in those cases
 	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
 		l.Info("using config file", "location", cfgFile)
+		fileType := strings.TrimPrefix(filepath.Ext(cfgFile), ".")
+		fmt.Println("file type is", fileType)
+		if !(fileType == "yml" || fileType == "yaml" || fileType == "toml") {
+			l.Warn("configuration file types other than YAML and TOML are deprecated and will be removed in a future release", "fileType", fileType)
+		}
 	}
 	return nil
 }
