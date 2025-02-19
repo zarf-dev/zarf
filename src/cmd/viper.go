@@ -193,7 +193,7 @@ func PrintViperConfigUsed(ctx context.Context) error {
 		l.Info("using config file", "location", cfgFile)
 		fileType := strings.TrimPrefix(filepath.Ext(cfgFile), ".")
 		if !(fileType == "yml" || fileType == "yaml" || fileType == "toml") {
-			l.Warn("configuration file types other than YAML and TOML are deprecated and will be removed in a future release", "fileType", fileType)
+			l.Warn("configuration file types other than yaml and toml deprecated and will be removed in a future release", "fileType", fileType)
 		}
 	}
 	return nil
