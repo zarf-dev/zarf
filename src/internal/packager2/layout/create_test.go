@@ -320,9 +320,10 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		}
 		// Create zarf.yaml files in the tempdir
 		writePackageToDisk(t, parentPkg, tmpdir)
-		err := os.Mkdir(filepath.Join(tmpdir, "child"), 0700)
+		childDir := filepath.Join(tmpdir, "child")
+		err := os.Mkdir(childDir, 0700)
 		require.NoError(t, err)
-		writePackageToDisk(t, childPkg, tmpdir)
+		writePackageToDisk(t, childPkg, childDir)
 		// create the package
 		pkgLayout, err := CreatePackage(context.Background(), tmpdir, CreateOptions{})
 		require.NoError(t, err)
