@@ -231,7 +231,6 @@ func TestAbsoluteFilePathImports(t *testing.T) {
 	t.Parallel()
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
-	// Create file with absolute paths
 	createFileToImport := func(t *testing.T, dir string) string {
 		t.Helper()
 		absoluteFilePath, err := filepath.Abs(filepath.Join(dir, "file.txt"))
@@ -274,11 +273,10 @@ func TestAbsoluteFilePathImports(t *testing.T) {
 		// Create the zarf.yaml files in the tmpdir
 		writePackageToDisk(t, pkg, tmpdir)
 
-		// create the package
 		pkgLayout, err := CreatePackage(context.Background(), tmpdir, CreateOptions{})
 		require.NoError(t, err)
 
-		// Ensure the components are created correctly
+		// Ensure the components have the correct file
 		fileComponent, err := pkgLayout.GetComponentDir(tmpdir, "file", FilesComponentDir)
 		defer os.Remove(fileComponent)
 		require.NoError(t, err)
@@ -321,24 +319,15 @@ func TestAbsoluteFilePathImports(t *testing.T) {
 			},
 		}
 		// Create zarf.yaml files in the tempdir
-		b, err := goyaml.Marshal(parentPkg)
+		writePackageToDisk(t, parentPkg, tmpdir)
+		err := os.Mkdir(filepath.Join(tmpdir, "child"), 0700)
 		require.NoError(t, err)
-		parentPath := filepath.Join(tmpdir, "zarf.yaml")
-		err = os.WriteFile(parentPath, b, 0700)
-		require.NoError(t, err)
-		b, err = goyaml.Marshal(childPkg)
-		require.NoError(t, err)
-		err = os.Mkdir(filepath.Join(tmpdir, "child"), 0700)
-		require.NoError(t, err)
-		childPath := filepath.Join(tmpdir, "child", "zarf.yaml")
-		err = os.WriteFile(childPath, b, 0700)
-		require.NoError(t, err)
-		require.FileExists(t, childPath)
-
+		writePackageToDisk(t, childPkg, tmpdir)
 		// create the package
 		pkgLayout, err := CreatePackage(context.Background(), tmpdir, CreateOptions{})
 		require.NoError(t, err)
 
+		// Ensure the component has the correct file
 		importedFileComponent, err := pkgLayout.GetComponentDir(tmpdir, "file-import", FilesComponentDir)
 		defer os.Remove(importedFileComponent)
 		require.NoError(t, err)
