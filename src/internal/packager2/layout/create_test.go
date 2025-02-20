@@ -227,7 +227,7 @@ func TestLoadPackageErrorWithoutCompatibleFlavor(t *testing.T) {
 	require.EqualError(t, err, fmt.Sprintf("package validation failed: %s", lint.PkgValidateErrNoComponents))
 }
 
-func TestAbsoluteFilePathImports(t *testing.T) {
+func TestCreateAbsolutePathFileSource(t *testing.T) {
 	t.Parallel()
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
