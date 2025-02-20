@@ -244,8 +244,8 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		t.Helper()
 		b, err := goyaml.Marshal(pkg)
 		require.NoError(t, err)
-		parentPath := filepath.Join(dir, "zarf.yaml")
-		err = os.WriteFile(parentPath, b, 0700)
+		path := filepath.Join(dir, "zarf.yaml")
+		err = os.WriteFile(path, b, 0700)
 		require.NoError(t, err)
 	}
 
@@ -270,7 +270,7 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 				},
 			},
 		}
-		// Create the zarf.yaml files in the tmpdir
+		// Create the zarf.yaml file in the tmpdir
 		writePackageToDisk(t, pkg, tmpdir)
 
 		pkgLayout, err := CreatePackage(context.Background(), tmpdir, CreateOptions{})
@@ -278,12 +278,12 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 
 		// Ensure the components have the correct file
 		fileComponent, err := pkgLayout.GetComponentDir(tmpdir, "file", FilesComponentDir)
-		defer os.Remove(fileComponent)
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(fileComponent, "0", "file.txt"))
 	})
 
 	t.Run("test that imports handle absolute paths properly", func(t *testing.T) {
+		t.Parallel()
 		tmpdir := t.TempDir()
 		absoluteFilePath := createFileToImport(t, tmpdir)
 		parentPkg := v1alpha1.ZarfPackage{
@@ -329,7 +329,6 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 
 		// Ensure the component has the correct file
 		importedFileComponent, err := pkgLayout.GetComponentDir(tmpdir, "file-import", FilesComponentDir)
-		defer os.Remove(importedFileComponent)
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(importedFileComponent, "0", "file.txt"))
 	})
