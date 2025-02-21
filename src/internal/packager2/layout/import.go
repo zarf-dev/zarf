@@ -385,6 +385,9 @@ func makePathRelativeTo(path, relativeTo string) string {
 	if helpers.IsURL(path) {
 		return path
 	}
+	if filepath.IsAbs(path) {
+		return path
+	}
 	return filepath.Join(relativeTo, path)
 }
 
