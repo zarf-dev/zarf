@@ -227,6 +227,18 @@ func TestLoadPackageErrorWithoutCompatibleFlavor(t *testing.T) {
 	require.EqualError(t, err, fmt.Sprintf("package validation failed: %s", lint.PkgValidateErrNoComponents))
 }
 
+func TestGetSBOM(t *testing.T) {
+	tmpdir := t.TempDir()
+	packagePath := filepath.Join("testdata", "non-sbom-package")
+
+	pkgLayout, err := CreatePackage(context.Background(), packagePath, CreateOptions{})
+	require.NoError(t, err)
+
+	// Ensure the SBOM does not exist
+	_, err = pkgLayout.GetSBOM(tmpdir)
+	require.ErrorIs(t, err, ErrNoSBOMAvailable)
+}
+
 func TestCreateAbsolutePathFileSource(t *testing.T) {
 	t.Parallel()
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")

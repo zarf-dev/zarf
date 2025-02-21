@@ -5,12 +5,15 @@ package packager2
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 
 	"github.com/zarf-dev/zarf/src/config"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 type CreateOptions struct {
@@ -64,6 +67,11 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 
 	if opt.SBOMOut != "" {
 		_, err := pkgLayout.GetSBOM(opt.SBOMOut)
+		// Don't fail package create if the package doesn't have an sbom
+		if errors.Is(err, layout2.ErrNoSBOMAvailable) {
+			logger.From(ctx).Error(fmt.Sprintf("cannot output sbom: %s", err.Error()))
+			return nil
+		}
 		if err != nil {
 			return err
 		}

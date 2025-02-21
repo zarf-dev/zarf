@@ -440,7 +440,7 @@ func (o *PackageInspectSBOMOptions) Run(cmd *cobra.Command, args []string) error
 	}
 	outputPath, err := layout.GetSBOM(o.outputDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get SBOM: %w", err)
 	}
 	outputPath, err = filepath.Abs(outputPath)
 	if err != nil {

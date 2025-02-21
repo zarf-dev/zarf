@@ -1,0 +1,7 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-no-sbom
+  version: v0.0.1
+components:
+  - name: does-nothing-really
+    required: true
