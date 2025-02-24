@@ -72,6 +72,11 @@ export default defineConfig({
           collapsed: true,
         },
         {
+          label: "Best Practices",
+          autogenerate: { directory: "best-practices" },
+          collapsed: true,
+        },
+        {
           label: "Reference",
           autogenerate: { directory: "ref", collapsed: true },
           collapsed: true,

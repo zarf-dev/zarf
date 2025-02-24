@@ -1,0 +1,17 @@
+---
+title: "Upgrading Zarf"
+---
+
+# Upgrading the Init Package
+
+Upgrading the init package is a bit different from upgrading a regular application package because it establishes your cluster’s foundational infrastructure (like the internal registry, injector, and agent). Follow these steps to upgrade your init package:
+
+## 1. Obtain the Updated Init Package
+
+- **New Version:** When a new version of Zarf is released—or you’ve made improvements to your custom init package—you’ll generate (or download) a new init package tarball. It is typically named following the convention:  
+  `zarf-init-<ARCH>-<VERSION>.tar.zst`.
+
+- **Default Package:** If you’re using the default package, run the following command to fetch the latest init package (if it’s not already present locally):
+
+  ```bash
+  zarf tools download-init
