@@ -30,6 +30,10 @@ type CreateOptions struct {
 }
 
 func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
+	if opt.SkipSBOM && opt.SBOMOut != "" {
+		return fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
+	}
+
 	createOpt := layout2.CreateOptions{
 		Flavor:                  opt.Flavor,
 		RegistryOverrides:       opt.RegistryOverrides,
@@ -68,7 +72,8 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 	if opt.SBOMOut != "" {
 		_, err := pkgLayout.GetSBOM(opt.SBOMOut)
 		// Don't fail package create if the package doesn't have an sbom
-		if errors.Is(err, layout2.ErrNoSBOMAvailable) {
+		var noSBOMErr *layout2.NoSBOMAvailableError
+		if errors.As(err, &noSBOMErr) {
 			logger.From(ctx).Error(fmt.Sprintf("cannot output sbom: %s", err.Error()))
 			return nil
 		}

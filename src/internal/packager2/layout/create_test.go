@@ -261,7 +261,8 @@ func TestGetSBOM(t *testing.T) {
 	require.NoFileExists(t, filepath.Join(pkgLayout.dirPath, SBOMTar))
 	// Ensure Zarf errors correctly
 	_, err = pkgLayout.GetSBOM(tmpdir)
-	require.ErrorIs(t, err, ErrNoSBOMAvailable)
+	noSBOMErr := NoSBOMAvailableError{pkgName: "test-sbom"}
+	require.ErrorAs(t, err, &noSBOMErr)
 }
 
 func TestCreateAbsolutePathFileSource(t *testing.T) {
