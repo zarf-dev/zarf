@@ -121,8 +121,20 @@ func (p *PackageLayout) Cleanup() error {
 	return nil
 }
 
+// NoSBOMAvailableError is returned when a user tries to access a package SBOM, but it is not available
+type NoSBOMAvailableError struct {
+	pkgName string
+}
+
+func (e *NoSBOMAvailableError) Error() string {
+	return fmt.Sprintf("zarf package %s does not have an SBOM available", e.pkgName)
+}
+
 // GetSBOM outputs the SBOM data from the package to the give destination path.
 func (p *PackageLayout) GetSBOM(destPath string) (string, error) {
+	if !p.Pkg.IsSBOMAble() {
+		return "", &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
+	}
 	path := filepath.Join(destPath, p.Pkg.Metadata.Name)
 	err := archiver.Extract(filepath.Join(p.dirPath, SBOMTar), "", path)
 	if err != nil {

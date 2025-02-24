@@ -167,5 +167,6 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 		}
 	}
 
+	l.Info("package successfully removed", "name", pkg.Metadata.Name)
 	return nil
 }
