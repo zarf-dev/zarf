@@ -29,8 +29,6 @@ func TestConfigFileCreate(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "This is a zebra and they have stripes", pkgLayout.Pkg.Components[1].Description)
 	require.Equal(t, "This is a leopard and they have spots", pkgLayout.Pkg.Components[2].Description)
-	_, err = pkgLayout.GetSBOM(t.TempDir())
-	require.NoError(t, err)
 
 	_, _, err = e2e.Zarf(t, "package", "deploy", tarPath, "--confirm")
 	require.NoError(t, err)

@@ -227,6 +227,44 @@ func TestLoadPackageErrorWithoutCompatibleFlavor(t *testing.T) {
 	require.EqualError(t, err, fmt.Sprintf("package validation failed: %s", lint.PkgValidateErrNoComponents))
 }
 
+func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
+	t.Helper()
+	b, err := goyaml.Marshal(pkg)
+	require.NoError(t, err)
+	path := filepath.Join(dir, ZarfYAML)
+	err = os.WriteFile(path, b, 0700)
+	require.NoError(t, err)
+}
+
+func TestGetSBOM(t *testing.T) {
+	t.Parallel()
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+
+	tmpdir := t.TempDir()
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
+			Name: "test-sbom",
+		},
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Name: "do-nothing",
+			},
+		},
+	}
+	writePackageToDisk(t, pkg, tmpdir)
+
+	pkgLayout, err := CreatePackage(context.Background(), tmpdir, CreateOptions{})
+	require.NoError(t, err)
+
+	// Ensure the SBOM does not exist
+	require.NoFileExists(t, filepath.Join(pkgLayout.dirPath, SBOMTar))
+	// Ensure Zarf errors correctly
+	_, err = pkgLayout.GetSBOM(tmpdir)
+	var noSBOMErr *NoSBOMAvailableError
+	require.ErrorAs(t, err, &noSBOMErr)
+}
+
 func TestCreateAbsolutePathFileSource(t *testing.T) {
 	t.Parallel()
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
@@ -238,15 +276,6 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		_, err = os.Create(absoluteFilePath)
 		require.NoError(t, err)
 		return absoluteFilePath
-	}
-
-	writePackageToDisk := func(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
-		t.Helper()
-		b, err := goyaml.Marshal(pkg)
-		require.NoError(t, err)
-		path := filepath.Join(dir, "zarf.yaml")
-		err = os.WriteFile(path, b, 0700)
-		require.NoError(t, err)
 	}
 
 	t.Run("test a standard package can use absolute file paths", func(t *testing.T) {

@@ -165,7 +165,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 
 	l.Info("composed components successfully")
 
-	if !opt.SkipSBOM {
+	if !opt.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
 		err = generateSBOM(ctx, pkg, buildPath, sbomImageList)
 		if err != nil {
