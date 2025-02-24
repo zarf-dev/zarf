@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -228,13 +229,19 @@ func TestLoadPackageErrorWithoutCompatibleFlavor(t *testing.T) {
 }
 
 func TestGetSBOM(t *testing.T) {
-	tmpdir := t.TempDir()
-	packagePath := filepath.Join("testdata", "non-sbom-package")
+	t.Parallel()
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
-	pkgLayout, err := CreatePackage(context.Background(), packagePath, CreateOptions{})
+	tmpdir := t.TempDir()
+	packageDefinitionPath := filepath.Join("testdata", "non-sbom-package")
+	config.CommonOptions.TempDirectory = tmpdir
+
+	pkgLayout, err := CreatePackage(context.Background(), packageDefinitionPath, CreateOptions{})
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
+	require.NoFileExists(t, filepath.Join(pkgLayout.dirPath, SBOMTar))
+	// Ensure Zarf errors correctly
 	_, err = pkgLayout.GetSBOM(tmpdir)
 	require.ErrorIs(t, err, ErrNoSBOMAvailable)
 }
