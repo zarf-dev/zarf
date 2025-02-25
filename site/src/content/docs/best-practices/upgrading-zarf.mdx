@@ -2,16 +2,59 @@
 title: "Upgrading Zarf"
 ---
 
+TODO:
+- Understand the zarf init process
+- Fill in the TODO blanks for links and references
+- Consider the issue regarding existing init and attempting to change registry/secret information
+
+Optimally the version of Zarf performing the `package create` and `package deploy` operations aligns to the version of [Init Package]() that is installed within the cluster. 
+
+Follow [CLI Installation](../../getting-started/install) ateps for installing updates to the version of binary installed. 
+
 # Upgrading the Init Package
 
-Upgrading the init package is a bit different from upgrading a regular application package because it establishes your cluster’s foundational infrastructure (like the internal registry, injector, and agent). Follow these steps to upgrade your init package:
+Upgrading the init package is a bit different from upgrading a regular application package because it establishes your cluster’s foundational infrastructure. Follow these steps to upgrade your init package:
 
 ## 1. Obtain the Updated Init Package
-
-- **New Version:** When a new version of Zarf is released—or you’ve made improvements to your custom init package—you’ll generate (or download) a new init package tarball. It is typically named following the convention:  
-  `zarf-init-<ARCH>-<VERSION>.tar.zst`.
 
 - **Default Package:** If you’re using the default package, run the following command to fetch the latest init package (if it’s not already present locally):
 
   ```bash
   zarf tools download-init
+  ```
+
+- **Validate:** This will download the associated init package to TODO: insert location - zarf cache?
+
+- **Manual:** The Init Package can also be manually downloaded from the Github releases to a storage location of your choice.
+
+  ```bash
+  curl -LO <TODO insert an example version download>
+  ```
+
+## 2. Re-initialize the cluster
+
+TODO: when do we recommend one over the other? Do we recommend standard package deploy at all? Look at command flags
+
+- **Init:** The init process can be executed to upgrade a cluster from one version to another.
+
+  ```bash
+  zarf init --confirm
+  ```
+
+- **Deploy:** The Init Package can also be deployed directly with `package deploy` - allowing for explicit deployment specification.
+
+```bash
+zarf package deploy zarf-init-package....TODO --confirm
+```
+
+> :warning: **NOTE**: TODO note about the command required to update the registry information / secrets. 
+
+## 3. Validate Zarf infrastructure
+
+- **Validate:** Ensure the following zarf resources are healthy:
+  - Registry if deployed
+  - Agent pods
+
+  ```bash
+  zarf tools kubectl get pods -n zarf
+  ```
