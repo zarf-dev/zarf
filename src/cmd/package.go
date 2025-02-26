@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 	"io"
 	"os"
 	"path/filepath"
@@ -30,7 +31,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -900,7 +900,6 @@ func getPackageCompletionArgs(cmd *cobra.Command, _ []string, _ string) ([]strin
 
 	deployedZarfPackages, err := c.GetDeployedZarfPackages(ctx)
 	if err != nil {
-		message.Debug("Unable to get deployed zarf packages for package completion args", "error", err)
 		logger.From(cmd.Context()).Debug("unable to get deployed zarf packages for package completion args", "error", err)
 	}
 	// Populate list of package names

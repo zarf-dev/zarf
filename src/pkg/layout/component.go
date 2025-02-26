@@ -15,7 +15,6 @@ import (
 	"github.com/mholt/archiver/v3"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // ComponentPaths contains paths for a component.
@@ -133,15 +132,12 @@ func (c *Components) Unarchive(ctx context.Context, component v1alpha1.ZarfCompo
 
 	// if the component is already unarchived, skip
 	if !helpers.InvalidPath(cs.Base) {
-		// TODO(mkcp): Bring in context and port to logger
 		l.Debug("component already unarchived", "component", name)
-		message.Debugf("Component %q already unarchived", name)
 		return nil
 	}
 
 	// TODO(mkcp): Bring in context and port to logger
-	l.Debug("unarchiving %q", filepath.Base(tb))
-	message.Debugf("Unarchiving %q", filepath.Base(tb))
+	l.Debug("unarchiving", "component", filepath.Base(tb))
 	if err := archiver.Unarchive(tb, c.Base); err != nil {
 		return err
 	}
