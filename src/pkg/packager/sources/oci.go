@@ -89,7 +89,7 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 
 	if unarchiveAll {
 		for _, component := range pkg.Components {
-			if err := dst.Components.Unarchive(component); err != nil {
+			if err := dst.Components.Unarchive(ctx, component); err != nil {
 				if errors.Is(err, layout.ErrNotLoaded) {
 					_, err := dst.Components.Create(component)
 					if err != nil {

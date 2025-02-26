@@ -45,11 +45,6 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	if source == "" {
 		source = "Zarf-generated"
 	}
-	spinner := message.NewProgressSpinner("Processing helm chart %s:%s source: %s",
-		h.chart.Name,
-		h.chart.Version,
-		source)
-	defer spinner.Stop()
 	l.Info("processing Helm chart", "name", h.chart.Name, "version", h.chart.Version, "source", source)
 
 	// If no release name is specified, use the chart name.
@@ -58,7 +53,7 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	}
 
 	// Setup K8s connection.
-	err := h.createActionConfig(ctx, h.chart.Namespace, spinner)
+	err := h.createActionConfig(ctx, h.chart.Namespace)
 	if err != nil {
 		return nil, "", fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
@@ -79,18 +74,15 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 
 		releases, histErr := histClient.Run(h.chart.ReleaseName)
 
-		spinner.Updatef("Checking for existing helm deployment")
 		l.Debug("checking for existing helm deployment")
 
 		if errors.Is(histErr, driver.ErrReleaseNotFound) {
 			// No prior release, try to install it.
-			spinner.Updatef("Attempting chart installation")
 			l.Info("performing Helm install", "chart", h.chart.Name)
 
 			release, err = h.installChart(helmCtx, postRender)
 		} else if histErr == nil && len(releases) > 0 {
 			// Otherwise, there is a prior release so upgrade it.
-			spinner.Updatef("Attempting chart upgrade")
 			l.Info("performing Helm upgrade", "chart", h.chart.Name)
 
 			lastRelease := releases[len(releases)-1]
@@ -104,7 +96,6 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 			return err
 		}
 
-		spinner.Success()
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(h.retries)), retry.Delay(500*time.Millisecond))
 	if err != nil {
@@ -127,7 +118,6 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 		}
 
 		// Attempt to rollback on a failed upgrade.
-		spinner.Updatef("Performing chart rollback")
 		l.Info("performing Helm rollback", "chart", h.chart.Name)
 		err = h.rollbackChart(h.chart.ReleaseName, previouslyDeployedVersion)
 		if err != nil {
@@ -147,13 +137,11 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	}
 	if !h.chart.NoWait {
 		// Ensure we don't go past the timeout by using a context initialized with the helm timeout
-		spinner.Updatef("Running health checks")
 		l.Info("running health checks", "chart", h.chart.Name)
 		if err := healthchecks.WaitForReadyRuntime(helmCtx, h.cluster.Watcher, runtimeObjs); err != nil {
 			return nil, "", err
 		}
 	}
-	spinner.Success()
 	l.Debug("done processing Helm chart", "name", h.chart.Name, "duration", time.Since(start))
 
 	// return any collected connect strings for zarf connect.
@@ -163,11 +151,9 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 // TemplateChart generates a helm template from a given chart.
 func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues chartutil.Values, err error) {
 	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Templating helm chart %s", h.chart.Name)
-	defer spinner.Stop()
 	l.Debug("templating helm chart", "name", h.chart.Name)
 
-	err = h.createActionConfig(ctx, h.chart.Namespace, spinner)
+	err = h.createActionConfig(ctx, h.chart.Namespace)
 
 	// Setup K8s connection.
 	if err != nil {
@@ -223,15 +209,13 @@ func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues 
 		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest)
 	}
 
-	spinner.Success()
-
 	return manifest, chartValues, nil
 }
 
 // RemoveChart removes a chart from the cluster.
-func (h *Helm) RemoveChart(ctx context.Context, namespace string, name string, spinner *message.Spinner) error {
+func (h *Helm) RemoveChart(ctx context.Context, namespace string, name string) error {
 	// Establish a new actionConfig for the namespace.
-	_ = h.createActionConfig(ctx, namespace, spinner)
+	_ = h.createActionConfig(ctx, namespace)
 	// Perform the uninstall.
 	response, err := h.uninstallChart(name)
 	message.Debug(response)
@@ -243,11 +227,9 @@ func (h *Helm) RemoveChart(ctx context.Context, namespace string, name string, s
 // (note: this only works on single-deep charts, charts with dependencies (like loki-stack) will not work)
 func (h *Helm) UpdateReleaseValues(ctx context.Context, updatedValues map[string]interface{}) error {
 	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Updating values for helm release %s", h.chart.ReleaseName)
-	defer spinner.Stop()
 	l.Debug("updating values for helm release", "name", h.chart.ReleaseName)
 
-	err := h.createActionConfig(ctx, h.chart.Namespace, spinner)
+	err := h.createActionConfig(ctx, h.chart.Namespace)
 	if err != nil {
 		return fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
@@ -288,8 +270,6 @@ func (h *Helm) UpdateReleaseValues(ctx context.Context, updatedValues map[string
 		if err != nil {
 			return err
 		}
-
-		spinner.Success()
 
 		return nil
 	}

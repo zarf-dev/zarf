@@ -38,8 +38,6 @@ type TarballSource struct {
 // LoadPackage loads a package from a tarball.
 func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
 	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Loading package from %q", s.PackageSource)
-	defer spinner.Stop()
 	start := time.Now()
 	l.Info("loading package", "source", s.PackageSource)
 
@@ -123,7 +121,7 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 
 	if unarchiveAll {
 		for _, component := range pkg.Components {
-			if err := dst.Components.Unarchive(component); err != nil {
+			if err := dst.Components.Unarchive(ctx, component); err != nil {
 				if errors.Is(err, layout.ErrNotLoaded) {
 					_, err := dst.Components.Create(component)
 					if err != nil {
@@ -142,7 +140,6 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 		}
 	}
 
-	spinner.Success()
 	l.Debug("done loading package", "source", s.PackageSource, "duration", time.Since(start))
 
 	return pkg, warnings, nil

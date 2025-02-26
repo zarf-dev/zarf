@@ -127,8 +127,6 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 
 	var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 	if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
-		// TODO(mkcp): Remove message on logger release
-		message.Warnf(lang.CmdPackageCreateCleanPathErr, config.ZarfDefaultCachePath)
 		l.Warn("invalid characters in Zarf cache path, using default", "cfg", config.ZarfDefaultCachePath, "default", config.ZarfDefaultCachePath)
 		config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 	}
@@ -565,6 +563,7 @@ func newPackageListOptions() *packageListOptions {
 	return &packageListOptions{
 		outputFormat: outputTable,
 		// TODO accept output writer as a parameter to the root Zarf command and pass it through here
+		// FIXME(mkcp): fully remove message in zarf critical path
 		outputWriter: message.OutputWriter,
 	}
 }
