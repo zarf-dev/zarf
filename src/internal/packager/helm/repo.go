@@ -41,8 +41,6 @@ func (h *Helm) PackageChart(ctx context.Context, cosignKeyPath string) error {
 		// check if the chart is a git url with a ref (if an error is returned url will be empty)
 		isGitURL := strings.HasSuffix(url, ".git")
 		if err != nil {
-			// TODO(mkcp): Remove message on logger release
-			message.Debugf("unable to parse the url, continuing with %s", h.chart.URL)
 			logger.From(ctx).Debug("unable to parse the url, continuing", "url", h.chart.URL)
 		}
 
@@ -79,10 +77,6 @@ func (h *Helm) PackageChartFromLocalFiles(ctx context.Context, cosignKeyPath str
 		"version", h.chart.Version,
 		"path", h.chart.LocalPath,
 	)
-	// TODO(mkcp): Remove message on logger release
-	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", h.chart.Name, h.chart.Version, h.chart.LocalPath)
-	defer spinner.Stop()
-
 	// Load and validate the chart
 	cl, _, err := h.loadAndValidateChart(h.chart.LocalPath)
 	if err != nil {
@@ -123,8 +117,6 @@ func (h *Helm) PackageChartFromLocalFiles(ctx context.Context, cosignKeyPath str
 		return err
 	}
 
-	spinner.Success()
-
 	l.Debug("done processing local helm chart",
 		"name", h.chart.Name,
 		"version", h.chart.Version,
@@ -137,10 +129,6 @@ func (h *Helm) PackageChartFromLocalFiles(ctx context.Context, cosignKeyPath str
 func (h *Helm) PackageChartFromGit(ctx context.Context, cosignKeyPath string) error {
 	l := logger.From(ctx)
 	l.Info("processing Helm chart", "name", h.chart.Name)
-	// TODO(mkcp): Remove message on logger release
-	spinner := message.NewProgressSpinner("Processing Helm chart %s", h.chart.Name)
-	defer spinner.Stop()
-
 	// Retrieve the repo containing the chart
 	gitPath, err := DownloadChartFromGitToTemp(ctx, h.chart.URL)
 	if err != nil {
@@ -166,9 +154,6 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 		"repo", h.chart.URL,
 	)
 	start := time.Now()
-	// TODO(mkcp): Remove message on logger release
-	spinner := message.NewProgressSpinner("Processing Helm chart %s:%s from repo %s", h.chart.Name, h.chart.Version, h.chart.URL)
-	defer spinner.Stop()
 
 	// Set up the helm pull config
 	pull := action.NewPull()
@@ -183,8 +168,6 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 
 	// Not returning the error here since the repo file is only needed if we are pulling from a repo that requires authentication
 	if err != nil {
-		// TODO(mkcp): Remove message on logger release
-		message.Debugf("Unable to load the repo file at %q: %s", pull.Settings.RepositoryConfig, err.Error())
 		l.Debug("unable to load the repo file",
 			"path", pull.Settings.RepositoryConfig,
 			"error", err.Error(),
@@ -239,7 +222,8 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 
 	// Set up the chart chartDownloader
 	chartDownloader := downloader.ChartDownloader{
-		Out:            spinner,
+		// FIXME(mkcp): Should we be using OutputWriter here?
+		Out:            message.OutputWriter,
 		RegistryClient: regClient,
 		// TODO: Further research this with regular/OCI charts
 		Verify:  downloader.VerifyNever,
@@ -279,7 +263,6 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 		return err
 	}
 
-	spinner.Success()
 	l.Debug("done downloading helm chart",
 		"name", h.chart.Name,
 		"version", h.chart.Version,

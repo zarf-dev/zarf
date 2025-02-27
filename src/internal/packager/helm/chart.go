@@ -30,7 +30,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -218,7 +217,6 @@ func (h *Helm) RemoveChart(ctx context.Context, namespace string, name string) e
 	_ = h.createActionConfig(ctx, namespace)
 	// Perform the uninstall.
 	response, err := h.uninstallChart(name)
-	message.Debug(response)
 	logger.From(ctx).Debug("chart uninstalled", "response", response)
 	return err
 }
@@ -439,7 +437,6 @@ func (h *Helm) migrateDeprecatedAPIs(ctx context.Context, latestRelease *release
 
 	// If the release was modified in the above loop, save it back to the cluster
 	if modified {
-		message.Warnf("Zarf detected deprecated APIs for the '%s' helm release.  Attempting automatic upgrade.", latestRelease.Name)
 		logger.From(ctx).Warn("detected deprecated APIs for the helm release", "name", latestRelease.Name)
 
 		// Update current release version to be superseded (same as the helm mapkubeapis plugin)

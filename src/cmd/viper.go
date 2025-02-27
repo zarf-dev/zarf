@@ -34,6 +34,7 @@ const (
 
 	VLogLevel  = "log_level"
 	VLogFormat = "log_format"
+	VNoColor   = "no_color"
 
 	// Init config keys
 

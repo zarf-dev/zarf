@@ -31,10 +31,8 @@ var (
 	LogLevelCLI string
 	// LogFormat holds the log format as input from a command
 	LogFormat string
-	// SkipLogFile is a flag to skip logging to a file
-	SkipLogFile bool
 	// NoColor is a flag to disable colors in output
-	NoColor bool
+	IsColorDisabled bool
 	// OutputWriter provides a default writer to Stdout for user-facing command output
 	OutputWriter = os.Stdout
 )
@@ -82,13 +80,18 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	// Configure logger and add it to cmd context.
-	l, err := setupLogger(LogLevelCLI, LogFormat, !NoColor)
+	// Configure logger and add it to cmd context. We flip NoColor because setLogger wants "isColor"
+	l, err := setupLogger(LogLevelCLI, LogFormat, !IsColorDisabled)
 	if err != nil {
 		return err
 	}
 	ctx := logger.WithContext(cmd.Context(), l)
 	cmd.SetContext(ctx)
+
+	// if --no-color is set, disable PTerm color in message prints
+	if IsColorDisabled {
+		pterm.DisableColor()
+	}
 
 	// Print out config location
 	err = PrintViperConfigUsed(cmd.Context())
@@ -171,25 +174,27 @@ func init() {
 		return
 	}
 
-	v := getViper()
+	vpr := getViper()
 
 	// Logs
-	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(VLogFormat), "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'.")
+	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", vpr.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", vpr.GetString(VLogFormat), "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'.")
+	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", vpr.GetBool(VNoColor), "Disable terminal color codes in logging and stdout prints.")
 
-	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(VArchitecture), lang.RootCmdFlagArch)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(VZarfCache), lang.RootCmdFlagCachePath)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(VTmpDir), lang.RootCmdFlagTempDir)
+	// Core functionality
+	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", vpr.GetString(VZarfCache), lang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", vpr.GetString(VTmpDir), lang.RootCmdFlagTempDir)
 
 	// Security
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(VInsecure), lang.RootCmdFlagInsecure)
-	rootCmd.PersistentFlags().MarkDeprecated("insecure", "please use --plain-http, --insecure-skip-tls-verify, or --skip-signature-validation instead.")
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.PlainHTTP, "plain-http", v.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", v.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
+	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", vpr.GetBool(VInsecure), lang.RootCmdFlagInsecure)
+	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.PlainHTTP, "plain-http", vpr.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
+	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", vpr.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
+	_ = rootCmd.PersistentFlags().MarkDeprecated("insecure", "please use --plain-http, --insecure-skip-tls-verify, or --skip-signature-validation instead.")
 }
 
-// setup Logger handles creating a logger and setting it as the global default.
-func setupLogger(level, format string, color bool) (*slog.Logger, error) {
+// setupLogger handles creating a logger and setting it as the global default.
+func setupLogger(level, format string, isColor bool) (*slog.Logger, error) {
 	// If we didn't get a level from config, fallback to "info"
 	if level == "" {
 		level = "info"
@@ -202,14 +207,11 @@ func setupLogger(level, format string, color bool) (*slog.Logger, error) {
 		Level:       sLevel,
 		Format:      logger.Format(format),
 		Destination: logger.DestinationDefault,
-		Color:       logger.Color(color),
+		Color:       logger.Color(isColor),
 	}
 	l, err := logger.New(cfg)
 	if err != nil {
 		return nil, err
-	}
-	if !color {
-		pterm.DisableColor()
 	}
 	logger.SetDefault(l)
 	l.Debug("logger successfully initialized", "cfg", cfg)

@@ -7,7 +7,6 @@ package template
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -18,7 +17,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
@@ -129,13 +127,6 @@ func generateHtpasswd(regInfo *types.RegistryInfo) (string, error) {
 
 func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) error {
 	sanitizedMap := getSanitizedTemplateMap(templateMap)
-
-	b, err := json.MarshalIndent(sanitizedMap, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	message.Debug(fmt.Sprintf("templateMap = %s", string(b)))
 	logger.From(ctx).Debug("cluster.debugPrintTemplateMap", "templateMap", sanitizedMap)
 	return nil
 }
