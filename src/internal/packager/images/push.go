@@ -14,7 +14,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -65,7 +64,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 		}()
 		for refInfo, img := range toPush {
-			message.Infof("Pushing %s", refInfo.Reference)
 			l.Info("pushing image", "name", refInfo.Reference)
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {

@@ -54,9 +54,6 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 		target = args[0]
 	}
 
-	spinner := message.NewProgressSpinner(lang.CmdConnectPreparingTunnel, target)
-	defer spinner.Stop()
-
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return err
@@ -84,20 +81,17 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 	defer tunnel.Close()
 
 	if o.open {
-		spinner.Updatef(lang.CmdConnectEstablishedWeb, tunnel.FullURL())
 		l.Info("Tunnel established, opening your default web browser (ctrl-c to end)", "url", tunnel.FullURL())
 		if err := exec.LaunchURL(tunnel.FullURL()); err != nil {
 			return err
 		}
 	} else {
-		spinner.Updatef(lang.CmdConnectEstablishedCLI, tunnel.FullURL())
 		l.Info("Tunnel established, waiting for user to interrupt (ctrl-c to end)", "url", tunnel.FullURL())
 	}
 
 	// Wait for the interrupt signal or an error.
 	select {
 	case <-ctx.Done():
-		spinner.Successf(lang.CmdConnectTunnelClosed, tunnel.FullURL())
 		return nil
 	case err = <-tunnel.ErrChan():
 		return fmt.Errorf("lost connection to the service: %w", err)

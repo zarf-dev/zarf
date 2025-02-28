@@ -17,7 +17,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -95,8 +94,6 @@ func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo typ
 // UpdateZarfManagedImageSecrets updates all Zarf-managed image secrets in all namespaces based on state
 func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *types.ZarfState) error {
 	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Updating existing Zarf-managed image secrets")
-	defer spinner.Stop()
 
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -120,21 +117,17 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 			return err
 		}
 		l.Info("applying Zarf managed registry secret for namespace", "name", namespace.Name)
-		spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
 		_, err = c.Clientset.CoreV1().Secrets(*newRegistrySecret.Namespace).Apply(ctx, newRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return err
 		}
 	}
 
-	spinner.Success()
 	return nil
 }
 
 // UpdateZarfManagedGitSecrets updates all Zarf-managed git secrets in all namespaces based on state
 func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.ZarfState) error {
-	spinner := message.NewProgressSpinner("Updating existing Zarf-managed git secrets")
-	defer spinner.Stop()
 	l := logger.From(ctx)
 
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
@@ -154,15 +147,12 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 			continue
 		}
 		newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, state.GitServer)
-		spinner.Updatef("Updating existing Zarf-managed git secret for namespace: %s", namespace.Name)
 		l.Info("applying Zarf managed git secret for namespace", "name", namespace.Name)
 		_, err = c.Clientset.CoreV1().Secrets(*newGitSecret.Namespace).Apply(ctx, newGitSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return err
 		}
 	}
-
-	spinner.Success()
 	return nil
 }
 
@@ -176,7 +166,6 @@ func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, stateRe
 	// If this is an internal service then we need to look it up and
 	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, stateRegistryAddress)
 	if err != nil {
-		message.Debugf("registry appears to not be a nodeport service, using original address %q", stateRegistryAddress)
 		logger.From(ctx).Debug("registry appears to not be a nodeport service, using original address", "address", stateRegistryAddress)
 		return stateRegistryAddress, nil
 	}

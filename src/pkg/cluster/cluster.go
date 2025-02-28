@@ -19,7 +19,6 @@ import (
 	"github.com/avast/retry-go/v4"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -45,8 +44,6 @@ type Cluster struct {
 func NewClusterWithWait(ctx context.Context) (*Cluster, error) {
 	start := time.Now()
 	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Waiting for cluster connection")
-	defer spinner.Stop()
 	l.Info("waiting for cluster connection")
 
 	c, err := NewCluster()
@@ -76,7 +73,6 @@ func NewClusterWithWait(ctx context.Context) (*Cluster, error) {
 		return nil, err
 	}
 
-	spinner.Success()
 	l.Debug("done waiting for cluster, connected", "duration", time.Since(start))
 
 	return c, nil

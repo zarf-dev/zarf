@@ -17,7 +17,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -64,21 +63,16 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 	if err != nil {
 		return pkg, nil, fmt.Errorf("unable to pull the package: %w", err)
 	}
-	dst.SetFromLayers(layersFetched)
+	dst.SetFromLayers(ctx, layersFetched)
 
-	if err := dst.MigrateLegacy(); err != nil {
+	if err := dst.MigrateLegacy(ctx); err != nil {
 		return pkg, nil, err
 	}
 
 	if !dst.IsLegacyLayout() {
-		spinner := message.NewProgressSpinner("Validating pulled layer checksums")
-		defer spinner.Stop()
-
 		if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, isPartial); err != nil {
 			return pkg, nil, err
 		}
-
-		spinner.Success()
 
 		if !s.SkipSignatureValidation {
 			if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
@@ -89,7 +83,7 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 
 	if unarchiveAll {
 		for _, component := range pkg.Components {
-			if err := dst.Components.Unarchive(component); err != nil {
+			if err := dst.Components.Unarchive(ctx, component); err != nil {
 				if errors.Is(err, layout.ErrNotLoaded) {
 					_, err := dst.Components.Create(component)
 					if err != nil {
@@ -121,33 +115,27 @@ func (s *OCISource) LoadPackageMetadata(ctx context.Context, dst *layout.Package
 	if err != nil {
 		return pkg, nil, err
 	}
-	dst.SetFromLayers(layersFetched)
+	dst.SetFromLayers(ctx, layersFetched)
 
 	pkg, warnings, err = dst.ReadZarfYAML()
 	if err != nil {
 		return pkg, nil, err
 	}
 
-	if err := dst.MigrateLegacy(); err != nil {
+	if err := dst.MigrateLegacy(ctx); err != nil {
 		return pkg, nil, err
 	}
 
 	if !dst.IsLegacyLayout() {
 		if wantSBOM {
-			spinner := message.NewProgressSpinner("Validating SBOM checksums")
-			defer spinner.Stop()
-
 			if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, true); err != nil {
 				return pkg, nil, err
 			}
-
-			spinner.Success()
 		}
 
 		if !s.SkipSignatureValidation {
 			if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
 				if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
-					message.Warn("The package was signed but no public key was provided, skipping signature validation")
 					logger.From(ctx).Warn("the package was signed but no public key was provided, skipping signature validation")
 				} else {
 					return pkg, nil, err
@@ -179,7 +167,7 @@ func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 	}
 
 	loaded := layout.New(tmp)
-	loaded.SetFromLayers(fetched)
+	loaded.SetFromLayers(ctx, fetched)
 
 	var pkg v1alpha1.ZarfPackage
 
@@ -187,15 +175,10 @@ func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 		return "", err
 	}
 
-	spinner := message.NewProgressSpinner("Validating full package checksums")
-	defer spinner.Stop()
 	logger.From(ctx).Debug("validating full package checksums")
-
 	if err := ValidatePackageIntegrity(loaded, pkg.Metadata.AggregateChecksum, false); err != nil {
 		return "", err
 	}
-
-	spinner.Success()
 
 	// TODO (@Noxsios) remove the suffix check at v1.0.0
 	isSkeleton := pkg.Build.Architecture == zoci.SkeletonArch || strings.HasSuffix(s.Repo().Reference.Reference, zoci.SkeletonArch)
