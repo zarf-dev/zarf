@@ -113,6 +113,7 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 
 func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, src string) ([]byte, error) {
 	imageCachePath := filepath.Join(cachePath, ImagesDir)
+	// TODO make sure the cache works
 	err := os.MkdirAll(imageCachePath, helpers.ReadWriteExecuteUser)
 	if err != nil {
 		return nil, err

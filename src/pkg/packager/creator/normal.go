@@ -199,23 +199,23 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 			CacheDirectory:       filepath.Join(cachePath, layout.ImagesDir),
 		}
 
-		pulled, err := images.Pull(ctx, pullCfg)
+		_, err = images.Pull(ctx, pullCfg)
 		if err != nil {
 			return err
 		}
 
-		for info, img := range pulled {
-			if err := dst.Images.AddV1Image(img); err != nil {
-				return err
-			}
-			ok, err := utils.OnlyHasImageLayers(img)
-			if err != nil {
-				return fmt.Errorf("failed to validate %s is an image and not an artifact: %w", info, err)
-			}
-			if ok {
-				sbomImageList = append(sbomImageList, info)
-			}
-		}
+		// for info, img := range pulled {
+		// 	if err := dst.Images.AddV1Image(img); err != nil {
+		// 		return err
+		// 	}
+		// 	ok, err := utils.OnlyHasImageLayers(img)
+		// 	if err != nil {
+		// 		return fmt.Errorf("failed to validate %s is an image and not an artifact: %w", info, err)
+		// 	}
+		// 	if ok {
+		// 		sbomImageList = append(sbomImageList, info)
+		// 	}
+		// }
 
 		// Sort images index to make build reproducible.
 		err = utils.SortImagesIndex(dst.Images.Base)
