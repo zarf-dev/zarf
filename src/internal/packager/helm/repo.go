@@ -346,21 +346,16 @@ func (h *Helm) buildChartDependencies(ctx context.Context) error {
 	var notFoundErr *downloader.ErrRepoNotFound
 	if errors.As(err, &notFoundErr) {
 		// If we encounter a repo not found error point the user to `zarf tools helm repo add`
-		// TODO(mkcp): Remove message on logger release
-		message.Warnf("%s. Please add the missing repo(s) via the following:", notFoundErr.Error())
 		l.Warn("Error occurred", "error", notFoundErr.Error())
 		l.Warn("Please add the missing repo(s) via the following:")
 		for _, repository := range notFoundErr.Repos {
-			l.Warn("$zarf tools helm repo add <your-repo-name> %s")
-			// TODO(mkcp): Remove message on logger release
-			message.ZarfCommand(fmt.Sprintf("tools helm repo add <your-repo-name> %s", repository))
+			l.Warn("$zarf tools helm repo add <your-repo-name>", "repository", repository)
 		}
 		return err
 	}
 	if err != nil {
-		// TODO(mkcp): Remove message on logger release
-		message.ZarfCommand("tools helm dependency build --verify")
-		message.Warnf("Unable to perform a rebuild of Helm dependencies: %s", err.Error())
+		l.Info("$zarf tools helm dependency build --verify")
+		l.Warn("unable to perform a rebuild of Helm dependencies", "error", err.Error())
 		return err
 	}
 	return nil

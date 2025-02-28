@@ -25,7 +25,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -231,7 +230,6 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 		// Add the url suffix too.
 		zt.urlSuffix = svc.Annotations[ZarfConnectAnnotationURL]
 
-		message.Debugf("tunnel connection match: %s/%s on port %d", svc.Namespace, svc.Name, zt.RemotePort)
 		logger.From(ctx).Debug("tunnel connection match",
 			"namespace", svc.Namespace,
 			"name", svc.Name,
@@ -420,26 +418,16 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 	// since there is a brief moment between `GetAvailablePort` and `forwarder.ForwardPorts` where the selected port
 	// is available for selection again.
 	if localPort == 0 {
-		message.Debugf("Requested local port is 0. Selecting an open port on host system")
 		l.Debug("requested local port is 0. Selecting an open port on host system")
 		localPort, err = helpers.GetAvailablePort()
 		if err != nil {
 			return "", fmt.Errorf("unable to find an available port: %w", err)
 		}
-		message.Debugf("Selected port %d", localPort)
 		l.Debug("selected port", "port", localPort)
 		globalMutex.Lock()
 		defer globalMutex.Unlock()
 	}
 
-	msg := fmt.Sprintf("Opening tunnel %d -> %d for %s/%s in namespace %s",
-		localPort,
-		tunnel.remotePort,
-		tunnel.resourceType,
-		tunnel.resourceName,
-		tunnel.namespace,
-	)
-	message.Debugf(msg)
 	l.Debug("opening tunnel",
 		"localPort", localPort,
 		"remotePort", tunnel.remotePort,
@@ -453,7 +441,6 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to find pod attached to given resource: %w", err)
 	}
-	message.Debugf("Selected pod %s to open port forward to", podName)
 	l.Debug("selected pod to open port forward to", "name", podName)
 
 	// Build url to the port forward endpoint.
@@ -467,7 +454,6 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 		SubResource("portforward").
 		URL()
 
-	message.Debugf("Using URL %s to create portforward", portForwardCreateURL)
 	l.Debug("using URL to create portforward", "url", portForwardCreateURL)
 
 	// Construct the spdy client required by the client-go portforward library.
@@ -503,7 +489,6 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 		// Store the error channel to listen for errors
 		tunnel.errChan = errChan
 
-		message.Debugf("Creating port forwarding tunnel at %s", url)
 		l.Debug("creating port forwarding tunnel", "url", url)
 		return url, nil
 	}

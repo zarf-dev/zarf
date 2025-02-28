@@ -17,7 +17,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	ocistore "oras.land/oras-go/v2/content/oci"
@@ -46,6 +46,7 @@ func (ic *ImportChain) ContainsOCIImport() bool {
 }
 
 func (ic *ImportChain) fetchOCISkeleton(ctx context.Context) error {
+	l := logger.From(ctx)
 	if !ic.ContainsOCIImport() {
 		return nil
 	}
@@ -84,7 +85,7 @@ func (ic *ImportChain) fetchOCISkeleton(ctx context.Context) error {
 
 		dir = filepath.Join(cache, "dirs", id)
 
-		message.Debug("creating empty directory for remote component:", filepath.Join("<zarf-cache>", "oci", "dirs", id))
+		l.Debug("creating empty directory for remote component", "component", filepath.Join("<zarf-cache>", "oci", "dirs", id))
 	} else {
 		tb = filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.Encoded())
 		dir = filepath.Join(cache, "dirs", componentDesc.Digest.Encoded())
