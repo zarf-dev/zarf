@@ -16,8 +16,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/zarf-dev/zarf/src/pkg/message"
-
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
@@ -32,6 +30,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -564,7 +563,6 @@ func newPackageListOptions() *packageListOptions {
 	return &packageListOptions{
 		outputFormat: outputTable,
 		// TODO accept output writer as a parameter to the root Zarf command and pass it through here
-		// FIXME(mkcp): fully remove message in zarf critical path
 		outputWriter: message.OutputWriter,
 	}
 }

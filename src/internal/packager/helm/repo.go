@@ -87,7 +87,7 @@ func (h *Helm) PackageChartFromLocalFiles(ctx context.Context, cosignKeyPath str
 	var saved string
 	temp := filepath.Join(h.chartPath, "temp")
 	if _, ok := cl.(loader.DirLoader); ok {
-		err = h.buildChartDependencies()
+		err = h.buildChartDependencies(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to build dependencies for the chart: %w", err)
 		}
@@ -319,7 +319,8 @@ func (h *Helm) packageValues(ctx context.Context, cosignKeyPath string) error {
 }
 
 // buildChartDependencies builds the helm chart dependencies
-func (h *Helm) buildChartDependencies() error {
+func (h *Helm) buildChartDependencies(ctx context.Context) error {
+	l := logger.From(ctx)
 	// Download and build the specified dependencies
 	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
 	if err != nil {
@@ -347,7 +348,10 @@ func (h *Helm) buildChartDependencies() error {
 		// If we encounter a repo not found error point the user to `zarf tools helm repo add`
 		// TODO(mkcp): Remove message on logger release
 		message.Warnf("%s. Please add the missing repo(s) via the following:", notFoundErr.Error())
+		l.Warn("Error occurred", "error", notFoundErr.Error())
+		l.Warn("Please add the missing repo(s) via the following:")
 		for _, repository := range notFoundErr.Repos {
+			l.Warn("$zarf tools helm repo add <your-repo-name> %s")
 			// TODO(mkcp): Remove message on logger release
 			message.ZarfCommand(fmt.Sprintf("tools helm repo add <your-repo-name> %s", repository))
 		}

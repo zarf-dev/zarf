@@ -31,7 +31,7 @@ var (
 	LogLevelCLI string
 	// LogFormat holds the log format as input from a command
 	LogFormat string
-	// NoColor is a flag to disable colors in output
+	// IsColorDisabled corresponds to the --no-color flag. It disables color codes in terminal output
 	IsColorDisabled bool
 	// OutputWriter provides a default writer to Stdout for user-facing command output
 	OutputWriter = os.Stdout

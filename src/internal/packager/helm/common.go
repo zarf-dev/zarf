@@ -96,7 +96,6 @@ func NewFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageNa
 
 	// Add the manifest files so helm does its thing.
 	for _, file := range manifest.Files {
-		spinner.Updatef("Processing %s", file)
 		manifest := path.Join(manifestPath, file)
 		data, err := os.ReadFile(manifest)
 		if err != nil {
@@ -127,8 +126,6 @@ func NewFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageNa
 	for _, mod := range mods {
 		mod(h)
 	}
-
-	spinner.Success()
 
 	return h, nil
 }
