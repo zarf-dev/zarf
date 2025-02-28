@@ -142,18 +142,16 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 			RegistryOverrides:    opt.RegistryOverrides,
 			CacheDirectory:       filepath.Join(cachePath, ImagesDir),
 		}
-		pulled, err := images.Pull(ctx, pullCfg)
+		_, err = images.Pull(ctx, pullCfg)
 		if err != nil {
 			return nil, err
 		}
-		for info, img := range pulled {
-			ok, err := utils.OnlyHasImageLayers(img)
-			if err != nil {
-				return nil, fmt.Errorf("failed to validate %s is an image and not an artifact: %w", info, err)
-			}
-			if ok {
-				sbomImageList = append(sbomImageList, info)
-			}
+		for _, info := range pullCfg.ImageList {
+			// ok, err := utils.OnlyHasImageLayers(img)
+			// if err != nil {
+			// 	return nil, fmt.Errorf("failed to validate %s is an image and not an artifact: %w", info, err)
+			// }
+			sbomImageList = append(sbomImageList, info)
 		}
 
 		// Sort images index to make build reproducible.
