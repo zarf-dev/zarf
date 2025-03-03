@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -130,21 +131,53 @@ func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Descriptor, error) {
 
 		localRepo.Client = client
 
-		// It's not going to be an index unless they ask for it, but even if they ask for it it won't be an index since we are setting the target platform
-		// Therefore we first have to
-		desc, err := oras.Resolve(ctx, localRepo, image.Reference, oras.DefaultResolveOptions)
+		// It's not going to be an index unless a digest is used, but even if a digest is used if we set the platform then a manifest will be used
+		// because of this if a digest is used we have to first check if it's an index if it is not then we continue. Otherwise we error
+
+		if image.Digest != "" {
+			desc, rc, err := oras.Fetch(ctx, localRepo, image.Reference, oras.DefaultFetchOptions)
+			if err != nil {
+				return nil, err
+			}
+			// TODO case statement this
+			if desc.MediaType == ocispec.MediaTypeImageIndex || desc.MediaType == DockerMediaTypeManifestList {
+				var idx ocispec.Index
+				b, err := io.ReadAll(rc)
+				if err != nil {
+					return nil, err
+				}
+				defer rc.Close()
+				if err := json.Unmarshal(b, &idx); err != nil {
+					return nil, fmt.Errorf("unable to unmarshal index.json: %w", err)
+				}
+				lines := []string{"The following images are available in the index:"}
+				name := image.Name
+				if image.Tag != "" {
+					name += ":" + image.Tag
+				}
+				for _, desc := range idx.Manifests {
+					lines = append(lines, fmt.Sprintf("image - %s@%s with platform %s", name, desc.Digest, desc.Platform))
+				}
+				imageOptions := strings.Join(lines, "\n")
+				return nil, fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", image.Reference, imageOptions)
+			}
+		}
+
+		fetchOpts := oras.DefaultFetchBytesOptions
+		fetchOpts.FetchOptions.TargetPlatform = &ocispec.Platform{
+			Architecture: cfg.Arch,
+			OS:           "linux",
+		}
+		desc, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, fetchOpts)
 		if err != nil {
 			// Save image so we can fall back later
 			dockerFallBack = append(dockerFallBack, image)
 			continue
 		}
+		fmt.Println("media type is", desc.MediaType, "digest is", desc.Digest)
 		// TODO check if it's still possible for this to be a docker distribution list
-		if desc.MediaType == ocispec.MediaTypeImageIndex {
+		if desc.MediaType == ocispec.MediaTypeImageIndex || desc.MediaType == DockerMediaTypeManifestList {
 			var idx ocispec.Index
-			_, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, oras.DefaultFetchBytesOptions)
-			if err != nil {
-				return nil, fmt.Errorf("unable to fetch manifest bytes %w", err)
-			}
 			if err := json.Unmarshal(b, &idx); err != nil {
 				return nil, fmt.Errorf("unable to unmarshal index.json: %w", err)
 			}
@@ -157,18 +190,9 @@ func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Descriptor, error) {
 				lines = append(lines, fmt.Sprintf("image - %s@%s with platform %s", name, desc.Digest, desc.Platform))
 			}
 			imageOptions := strings.Join(lines, "\n")
-			return nil, fmt.Errorf("%s resolved to an OCI mage index which is not supported by Zarf, select a specific platform to use: %s", image.Reference, imageOptions)
+			return nil, fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", image.Reference, imageOptions)
 		} else if desc.MediaType == ocispec.MediaTypeImageManifest {
 			var manifest ocispec.Manifest
-			fetchOpts := oras.DefaultFetchBytesOptions
-			fetchOpts.FetchOptions.TargetPlatform = &ocispec.Platform{
-				Architecture: cfg.Arch,
-				OS:           "linux",
-			}
-			_, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, oras.DefaultFetchBytesOptions)
-			if err != nil {
-				return nil, fmt.Errorf("unable to fetch manifest bytes %w", err)
-			}
 			if err := json.Unmarshal(b, &manifest); err != nil {
 				return nil, err
 			}
