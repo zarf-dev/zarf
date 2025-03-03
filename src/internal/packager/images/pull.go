@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -86,7 +85,7 @@ func getDockerEndpointHost() (string, error) {
 }
 
 // Pull pulls all images from the given config.
-func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Descriptor, error) {
+func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Manifest, error) {
 	l := logger.From(ctx)
 	pullStart := time.Now()
 
@@ -133,20 +132,15 @@ func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Descriptor, error) {
 
 		// It's not going to be an index unless a digest is used, but even if a digest is used if we set the platform then a manifest will be used
 		// because of this if a digest is used we have to first check if it's an index if it is not then we continue. Otherwise we error
-
+		desc, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, oras.DefaultFetchBytesOptions)
+		if err != nil {
+			dockerFallBack = append(dockerFallBack, image)
+			return nil, err
+		}
 		if image.Digest != "" {
-			desc, rc, err := oras.Fetch(ctx, localRepo, image.Reference, oras.DefaultFetchOptions)
-			if err != nil {
-				return nil, err
-			}
 			// TODO case statement this
 			if desc.MediaType == ocispec.MediaTypeImageIndex || desc.MediaType == DockerMediaTypeManifestList {
 				var idx ocispec.Index
-				b, err := io.ReadAll(rc)
-				if err != nil {
-					return nil, err
-				}
-				defer rc.Close()
 				if err := json.Unmarshal(b, &idx); err != nil {
 					return nil, fmt.Errorf("unable to unmarshal index.json: %w", err)
 				}
@@ -168,30 +162,11 @@ func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Descriptor, error) {
 			Architecture: cfg.Arch,
 			OS:           "linux",
 		}
-		desc, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, fetchOpts)
+		desc, b, err = oras.FetchBytes(ctx, localRepo, image.Reference, fetchOpts)
 		if err != nil {
-			// Save image so we can fall back later
-			dockerFallBack = append(dockerFallBack, image)
-			continue
+			return nil, err
 		}
-		fmt.Println("media type is", desc.MediaType, "digest is", desc.Digest)
-		// TODO check if it's still possible for this to be a docker distribution list
-		if desc.MediaType == ocispec.MediaTypeImageIndex || desc.MediaType == DockerMediaTypeManifestList {
-			var idx ocispec.Index
-			if err := json.Unmarshal(b, &idx); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal index.json: %w", err)
-			}
-			lines := []string{"The following images are available in the index:"}
-			name := image.Name
-			if image.Tag != "" {
-				name += ":" + image.Tag
-			}
-			for _, desc := range idx.Manifests {
-				lines = append(lines, fmt.Sprintf("image - %s@%s with platform %s", name, desc.Digest, desc.Platform))
-			}
-			imageOptions := strings.Join(lines, "\n")
-			return nil, fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", image.Reference, imageOptions)
-		} else if desc.MediaType == ocispec.MediaTypeImageManifest {
+		if desc.MediaType == ocispec.MediaTypeImageManifest || desc.MediaType == DockerMediaTypeManifest {
 			var manifest ocispec.Manifest
 			if err := json.Unmarshal(b, &manifest); err != nil {
 				return nil, err
@@ -201,7 +176,6 @@ func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Descriptor, error) {
 			return nil, fmt.Errorf("received unexpected mediatype %s", desc.MediaType)
 		}
 	}
-	fmt.Println(imageManifests)
 	l.Debug("done fetching info for images", "count", len(cfg.ImageList), "duration", time.Since(imageFetchStart))
 
 	l.Info("pulling images", "count", len(cfg.ImageList))
@@ -212,30 +186,29 @@ func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Descriptor, error) {
 	// https://github.com/zarf-dev/zarf/issues/2584
 	// This is a band aid fix while we wait for crane and or docker to create the permanent fix
 
-	descs, err := orasSave(ctx, cfg.ImageList, dst, cfg.CacheDirectory, cfg.Arch, client)
+	err = orasSave(ctx, cfg.ImageList, dst, cfg.CacheDirectory, cfg.Arch, client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save images: %w", err)
 	}
 
 	l.Debug("done pulling images", "count", len(cfg.ImageList), "duration", time.Since(pullStart))
 
-	return descs, nil
+	return imageManifests, nil
 }
 
-func orasSave(ctx context.Context, images []transform.Image, dst oras.Target, cachePath string, arch string, client *auth.Client) ([]ocispec.Descriptor, error) {
+func orasSave(ctx context.Context, images []transform.Image, dst oras.Target, cachePath string, arch string, client *auth.Client) error {
 	l := logger.From(ctx)
-	descs := []ocispec.Descriptor{}
 	for _, image := range images {
 		var err error
 		localRepo := &orasRemote.Repository{PlainHTTP: true}
 		localRepo.Reference, err = registry.ParseReference(image.Reference)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		localRepo.Client = client
 		localCache, err := oci.NewWithContext(ctx, cachePath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create oci formatted directory: %w", err)
+			return fmt.Errorf("failed to create oci formatted directory: %w", err)
 		}
 		remoteWithCache := orasCache.New(localRepo, localCache)
 		// TODO add size in bytes
@@ -247,12 +220,11 @@ func orasSave(ctx context.Context, images []transform.Image, dst oras.Target, ca
 		l.Info("saving image", "ref", image.Reference, "method", "sequential")
 		desc, err := oras.Copy(ctx, remoteWithCache, image.Reference, dst, "", copyOpts)
 		if err != nil {
-			return nil, fmt.Errorf("failed to copy: %w", err)
+			return fmt.Errorf("failed to copy: %w", err)
 		}
-		descs = append(descs, desc)
 		fmt.Println("finished copying image", desc.Digest)
 	}
-	return descs, nil
+	return nil
 }
 
 // from https://github.com/google/go-containerregistry/blob/6bce25ecf0297c1aa9072bc665b5cf58d53e1c54/pkg/v1/cache/fs.go#L143
