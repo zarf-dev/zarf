@@ -30,6 +30,11 @@ type PullConfig struct {
 	CacheDirectory string
 }
 
+const (
+	DockerMediaTypeManifest     = "application/vnd.docker.distribution.manifest.v2+json"
+	DockerMediaTypeManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
+)
+
 // PushConfig is the configuration for pushing images.
 type PushConfig struct {
 	SourceDirectory string
