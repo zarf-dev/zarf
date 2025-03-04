@@ -2,9 +2,9 @@
 title: "Upgrading Zarf"
 ---
 
-Optimally the version of Zarf performing the `package create` and `package deploy` operations aligns to the version of [Init Package]() that is installed within the cluster.
+Optimally the version of Zarf performing the `package create` and `package deploy` operations aligns to the version of [Init Package](/ref/init-package) that is installed within the cluster.
 
-Follow [CLI Installation](../../getting-started/install) steps for installing updates to the version of binary installed on the machine executing zarf commands.
+Follow [CLI Installation](/getting-started/install) steps for installing updates to the version of binary installed on the machine executing zarf commands.
 
 # Upgrading the Init Package
 
@@ -34,7 +34,7 @@ Upgrading the init package is a bit different from upgrading a regular applicati
   zarf init --confirm
   ```
 
-- **Deploy:** The Init Package can also be deployed directly with `package deploy` - allowing for explicit deployment specification.
+- **Deploy:** Init Packages can also be deployed directly with `package deploy` - allowing for explicit deployment specification and the use of [custom init packages](/tutorials/7-custom-init-packages).
 
   ```bash
   zarf package deploy <zarf-init-package tarball> --confirm
@@ -45,8 +45,9 @@ Upgrading the init package is a bit different from upgrading a regular applicati
 ## 3. Validate Zarf Infrastructure
 
 - **Validate:** Ensure the following zarf resources are healthy:
-  - Registry if deployed
+  - Registry (if deployed)
   - Agent pods
+  - Git server (if deployed)
 
   ```bash
   zarf tools kubectl get pods -n zarf
@@ -56,6 +57,6 @@ Upgrading the init package is a bit different from upgrading a regular applicati
 
 After the original `zarf init` has taken place - any following initialize actions will use the same `secret` for obtaining information provided by any `zarf init` flags.
 
-See the [init command](../../commands/zarf_init/#options) for reference.
+See the [init command](/commands/zarf_init/#options) for reference.
 
-In order to update any configuration passed into the `zarf init` command, you will need to run [zarf tools update-creds](../../commands/zarf_tools_update-creds/#options) with the information necessary.
+In order to update any configuration passed into the `zarf init` command, you will need to run [zarf tools update-creds](/commands/zarf_tools_update-creds/#options) with the information necessary.
