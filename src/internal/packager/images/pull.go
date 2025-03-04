@@ -133,6 +133,29 @@ func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Manifest, error) {
 
 		// It's not going to be an index unless a digest is used, but even if a digest is used if we set the platform then a manifest will be used
 		// because of this if a digest is used we have to first check if it's an index if it is not then we continue. Otherwise we error
+
+		// Question if an image fails to resolve with a nil platform, will it ever resolve with a specified platform
+		desc, err := oras.Resolve(ctx, localRepo, image.Reference, oras.DefaultResolveOptions)
+		if err != nil {
+			fmt.Println("falling back to docker")
+			dockerFallBack = append(dockerFallBack, image)
+			continue
+		}
+		// How does an index sha react with a platform
+		if desc.Platform == nil {
+			ImagesWithDescriptors[image] = desc
+			_, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, oras.DefaultFetchBytesOptions)
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch bytes: %w", err)
+			}
+			var manifest ocispec.Manifest
+			if err := json.Unmarshal(b, &manifest); err != nil {
+				return nil, err
+			}
+			imageManifests = append(imageManifests, manifest)
+			continue
+		}
+
 		fetchOpts := oras.DefaultFetchBytesOptions
 		fetchOpts.FetchOptions.TargetPlatform = &ocispec.Platform{
 			Architecture: cfg.Arch,
@@ -140,9 +163,7 @@ func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Manifest, error) {
 		}
 		desc, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, fetchOpts)
 		if err != nil {
-			fmt.Println("falling back to docker")
-			dockerFallBack = append(dockerFallBack, image)
-			continue
+			return nil, err
 		}
 		if image.Digest != "" {
 			desc, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, oras.DefaultFetchBytesOptions)
