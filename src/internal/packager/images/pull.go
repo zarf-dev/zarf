@@ -113,6 +113,7 @@ func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Manifest, error) {
 		Credential: credentials.Credential(credStore),
 	}
 	imageManifests := []ocispec.Manifest{}
+	ImagesWithDescriptors := map[transform.Image]ocispec.Descriptor{}
 	dockerFallBack := []transform.Image{}
 
 	// This loop pulls the metadata from images with three goals
@@ -132,12 +133,22 @@ func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Manifest, error) {
 
 		// It's not going to be an index unless a digest is used, but even if a digest is used if we set the platform then a manifest will be used
 		// because of this if a digest is used we have to first check if it's an index if it is not then we continue. Otherwise we error
-		desc, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, oras.DefaultFetchBytesOptions)
+		fetchOpts := oras.DefaultFetchBytesOptions
+		fetchOpts.FetchOptions.TargetPlatform = &ocispec.Platform{
+			Architecture: cfg.Arch,
+			OS:           "linux",
+		}
+		desc, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, fetchOpts)
 		if err != nil {
+			fmt.Println("falling back to docker")
 			dockerFallBack = append(dockerFallBack, image)
-			return nil, err
+			continue
 		}
 		if image.Digest != "" {
+			desc, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, oras.DefaultFetchBytesOptions)
+			if err != nil {
+				return nil, err
+			}
 			// TODO case statement this
 			if desc.MediaType == ocispec.MediaTypeImageIndex || desc.MediaType == DockerMediaTypeManifestList {
 				var idx ocispec.Index
@@ -157,20 +168,12 @@ func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Manifest, error) {
 			}
 		}
 
-		fetchOpts := oras.DefaultFetchBytesOptions
-		fetchOpts.FetchOptions.TargetPlatform = &ocispec.Platform{
-			Architecture: cfg.Arch,
-			OS:           "linux",
-		}
-		desc, b, err = oras.FetchBytes(ctx, localRepo, image.Reference, fetchOpts)
-		if err != nil {
-			return nil, err
-		}
 		if desc.MediaType == ocispec.MediaTypeImageManifest || desc.MediaType == DockerMediaTypeManifest {
 			var manifest ocispec.Manifest
 			if err := json.Unmarshal(b, &manifest); err != nil {
 				return nil, err
 			}
+			ImagesWithDescriptors[image] = desc
 			imageManifests = append(imageManifests, manifest)
 		} else {
 			return nil, fmt.Errorf("received unexpected mediatype %s", desc.MediaType)
@@ -180,13 +183,17 @@ func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Manifest, error) {
 
 	l.Info("pulling images", "count", len(cfg.ImageList))
 
+	if len(dockerFallBack) > 0 {
+		return nil, fmt.Errorf("docker not implemented yet")
+	}
+
 	// TODO need to see if this is still an issue
 	// Needed because when pulling from the local docker daemon, while using the docker containerd runtime
 	// Crane incorrectly names the blob of the docker image config to a sha that does not match the contents
 	// https://github.com/zarf-dev/zarf/issues/2584
 	// This is a band aid fix while we wait for crane and or docker to create the permanent fix
 
-	err = orasSave(ctx, cfg.ImageList, dst, cfg.CacheDirectory, cfg.Arch, client)
+	err = orasSave(ctx, ImagesWithDescriptors, dst, cfg.CacheDirectory, client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save images: %w", err)
 	}
@@ -196,9 +203,9 @@ func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Manifest, error) {
 	return imageManifests, nil
 }
 
-func orasSave(ctx context.Context, images []transform.Image, dst oras.Target, cachePath string, arch string, client *auth.Client) error {
+func orasSave(ctx context.Context, images map[transform.Image]ocispec.Descriptor, dst oras.Target, cachePath string, client *auth.Client) error {
 	l := logger.From(ctx)
-	for _, image := range images {
+	for image, desc := range images {
 		var err error
 		localRepo := &orasRemote.Repository{PlainHTTP: true}
 		localRepo.Reference, err = registry.ParseReference(image.Reference)
@@ -206,23 +213,25 @@ func orasSave(ctx context.Context, images []transform.Image, dst oras.Target, ca
 			return err
 		}
 		localRepo.Client = client
+		// TODO fix this
+		if cachePath == "" {
+			cachePath = "/tmp/images"
+		}
 		localCache, err := oci.NewWithContext(ctx, cachePath)
 		if err != nil {
 			return fmt.Errorf("failed to create oci formatted directory: %w", err)
 		}
-		remoteWithCache := orasCache.New(localRepo, localCache)
+
 		// TODO add size in bytes
 		copyOpts := oras.DefaultCopyOptions
-		if !strings.HasSuffix(image.Reference, ".sig") {
-			copyOpts.WithTargetPlatform(&ocispec.Platform{Architecture: arch, OS: "linux"})
-			fmt.Println("using arch", arch)
-		}
+		copyOpts.WithTargetPlatform(desc.Platform)
 		l.Info("saving image", "ref", image.Reference, "method", "sequential")
+		remoteWithCache := orasCache.New(localRepo, localCache)
 		desc, err := oras.Copy(ctx, remoteWithCache, image.Reference, dst, "", copyOpts)
 		if err != nil {
 			return fmt.Errorf("failed to copy: %w", err)
 		}
-		fmt.Println("finished copying image", desc.Digest)
+		fmt.Println("finished copying image", desc.Digest, desc.Platform)
 	}
 	return nil
 }
