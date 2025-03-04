@@ -141,8 +141,8 @@ func Pull(ctx context.Context, cfg PullConfig) ([]ocispec.Manifest, error) {
 			dockerFallBack = append(dockerFallBack, image)
 			continue
 		}
-		// If the platform is nil, it is either an image index in which case we should fail
-		// or it is not a container image and we should use it and continue
+		// If the platform is nil, it is either an image index, in which case we should fail
+		// or it is not a container image in which case we should continue.
 		if desc.Platform == nil {
 			if image.Digest != "" {
 				desc, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, oras.DefaultFetchBytesOptions)
