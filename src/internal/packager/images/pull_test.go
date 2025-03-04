@@ -83,28 +83,6 @@ func TestCheckForIndex(t *testing.T) {
 	}
 }
 
-func TestPullCosign(t *testing.T) {
-	t.Parallel()
-	ref, err := transform.ParseImageRef("ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig")
-	require.NoError(t, err)
-	destDir := t.TempDir()
-	cacheDir := t.TempDir()
-	pullConfig := PullConfig{
-		DestinationDirectory: destDir,
-		CacheDirectory:       cacheDir,
-		ImageList: []transform.Image{
-			ref,
-		},
-	}
-
-	_, err = Pull(context.Background(), pullConfig)
-	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(destDir, "blobs/sha256/3e84ea487b4c52a3299cf2996f70e7e1721236a0998da33a0e30107108486b3e"))
-
-	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(cacheDir, "blobs/sha256/3e84ea487b4c52a3299cf2996f70e7e1721236a0998da33a0e30107108486b3e"))
-}
-
 func TestPull(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
@@ -121,8 +99,11 @@ func TestPull(t *testing.T) {
 		{
 			name:      "error when pulling an image that doesn't exist",
 			ref:       "ghcr.io/zarf-dev/zarf/imagethatdoesntexist:v1.1.1",
-			arch:      "amd64",
 			expectErr: true,
+		},
+		{
+			name: "pull an image signature",
+			ref:  "ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
 		},
 	}
 
@@ -132,28 +113,30 @@ func TestPull(t *testing.T) {
 			ref, err := transform.ParseImageRef(tc.ref)
 			require.NoError(t, err)
 			destDir := t.TempDir()
+			cacheDir := t.TempDir()
 			pullConfig := PullConfig{
 				DestinationDirectory: destDir,
+				CacheDirectory:       cacheDir,
 				Arch:                 tc.arch,
 				ImageList: []transform.Image{
 					ref,
 				},
 			}
 
-			_, err = Pull(context.Background(), pullConfig)
+			imageManifests, err := Pull(context.Background(), pullConfig)
 			if tc.expectErr {
 				require.Error(t, err, tc.expectErr)
 				return
 			}
 			require.NoError(t, err)
 
-			// // Make sure all the layers of the image are pulled in
-			// for _, desc := range descs {
-			// 	digestHash, err := desc.
-			// 	require.NoError(t, err)
-			// 	digest, _ := strings.CutPrefix(digestHash.String(), "sha256:")
-			// 	require.FileExists(t, filepath.Join(destDir, fmt.Sprintf("blobs/sha256/%s", digest)))
-			// }
+			// Make sure all the layers of the image are pulled in
+			for _, manifest := range imageManifests {
+				for _, layer := range manifest.Layers {
+					require.FileExists(t, filepath.Join(destDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
+					require.FileExists(t, filepath.Join(cacheDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
+				}
+			}
 		})
 	}
 
