@@ -35,7 +35,7 @@ require (
 	github.com/invopop/jsonschema v0.13.0
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/moby/moby v27.5.1+incompatible
-	github.com/opencontainers/image-spec v1.1.0
+	github.com/opencontainers/image-spec v1.1.1
 	github.com/phsym/console-slog v0.3.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.21.0
