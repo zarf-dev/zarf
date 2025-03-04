@@ -105,6 +105,10 @@ func TestPull(t *testing.T) {
 			name: "pull an image signature",
 			ref:  "ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
 		},
+		{
+			name: "pull a Helm OCI object",
+			ref:  "ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
+		},
 	}
 
 	for _, tc := range testCases {

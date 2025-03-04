@@ -25,7 +25,7 @@ func LoadOCIImage(imgPath string, refInfo transform.Image) (v1.Image, error) {
 	layoutPath := layout.Path(imgPath)
 	imgIdx, err := layoutPath.ImageIndex()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get image index: %w", err)
 	}
 	idxManifest, err := imgIdx.IndexManifest()
 	if err != nil {

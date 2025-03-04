@@ -12,6 +12,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
@@ -34,6 +35,33 @@ const (
 	DockerMediaTypeManifest     = "application/vnd.docker.distribution.manifest.v2+json"
 	DockerMediaTypeManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
 )
+
+const (
+	DockerLayer                    = "application/vnd.docker.image.rootfs.diff.tar.gzip"
+	DockerUncompressedLayer        = "application/vnd.docker.image.rootfs.diff.tar"
+	OCILayer                       = "application/vnd.oci.image.layer.v1.tar+gzip"
+	OCILayerZStd                   = "application/vnd.oci.image.layer.v1.tar+zstd"
+	OCIUncompressedLayer           = "application/vnd.oci.image.layer.v1.tar"
+	DockerForeignLayer             = "application/vnd.docker.image.rootfs.foreign.diff.tar.gzip"
+	OCIRestrictedLayer             = "application/vnd.oci.image.layer.nondistributable.v1.tar+gzip"
+	OCIUncompressedRestrictedLayer = "application/vnd.oci.image.layer.nondistributable.v1.tar"
+)
+
+func isLayer(mediaType string) bool {
+	switch mediaType {
+	case DockerLayer, DockerUncompressedLayer, OCILayer, OCILayerZStd, OCIUncompressedLayer, DockerForeignLayer, OCIRestrictedLayer, OCIUncompressedRestrictedLayer:
+		return true
+	}
+	return false
+}
+func OnlyHasImageLayers(manifest ocispec.Manifest) bool {
+	for _, layer := range manifest.Layers {
+		if !isLayer(string(layer.MediaType)) {
+			return false
+		}
+	}
+	return true
+}
 
 // PushConfig is the configuration for pushing images.
 type PushConfig struct {
