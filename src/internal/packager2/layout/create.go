@@ -142,16 +142,15 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 			RegistryOverrides:    opt.RegistryOverrides,
 			CacheDirectory:       filepath.Join(cachePath, ImagesDir),
 		}
-		_, err = images.Pull(ctx, pullCfg)
+		manifests, err := images.Pull(ctx, pullCfg)
 		if err != nil {
 			return nil, err
 		}
-		for _, info := range pullCfg.ImageList {
-			// ok, err := utils.OnlyHasImageLayers(img)
-			// if err != nil {
-			// 	return nil, fmt.Errorf("failed to validate %s is an image and not an artifact: %w", info, err)
-			// }
-			sbomImageList = append(sbomImageList, info)
+		for image, manifest := range manifests {
+			ok := images.OnlyHasImageLayers(manifest)
+			if ok{
+				sbomImageList = append(sbomImageList, image)
+			}
 		}
 
 		// Sort images index to make build reproducible.
@@ -165,9 +164,10 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 
 	if !opt.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
+		fmt.Println("sbom image list", len(sbomImageList))
 		err = generateSBOM(ctx, pkg, buildPath, sbomImageList)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
 		}
 	}
 
