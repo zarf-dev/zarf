@@ -7,12 +7,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -31,6 +33,11 @@ import (
 
 // Pull fetches the Zarf package from the given sources.
 func Pull(ctx context.Context, src, dir, shasum string, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) error {
+	l := logger.From(ctx)
+	start := time.Now()
+	defer func() {
+		l.Debug("done Pull", "src", src, "dir", dir, "duration", time.Since(start))
+	}()
 	u, err := url.Parse(src)
 	if err != nil {
 		return err
@@ -52,11 +59,13 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 	isPartial := false
 	switch u.Scheme {
 	case "oci":
+		l.Info("starting pull from oci source", "src", src, "digest", shasum)
 		isPartial, tmpPath, err = pullOCI(ctx, src, tmpDir, shasum, filter)
 		if err != nil {
 			return err
 		}
 	case "http", "https":
+		l.Info("starting pull from http(s) source", "src", src, "digest", shasum)
 		tmpPath, err = pullHTTP(ctx, src, tmpDir, shasum)
 		if err != nil {
 			return err
@@ -103,6 +112,7 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 }
 
 func pullOCI(ctx context.Context, src, tarDir, shasum string, filter filters.ComponentFilterStrategy) (bool, string, error) {
+	l := logger.From(ctx)
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return false, "", err
@@ -112,12 +122,14 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, filter filters.Com
 		src = fmt.Sprintf("%s@sha256:%s", src, shasum)
 	}
 	arch := config.GetArch()
-	remote, err := zoci.NewRemote(ctx, src, oci.PlatformForArch(arch))
+	platform := oci.PlatformForArch(arch)
+	remote, err := zoci.NewRemote(ctx, src, platform)
 	if err != nil {
 		return false, "", err
 	}
 	desc, err := remote.ResolveRoot(ctx)
 	if err != nil {
+		l.Error("unable to resolve oci descriptor", "os", platform.OS, "arch", platform.Architecture, "error", err)
 		return false, "", fmt.Errorf("could not fetch images index: %w", err)
 	}
 	layersToPull := []ocispec.Descriptor{}
