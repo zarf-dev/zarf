@@ -55,7 +55,7 @@ Upgrading the init package is a bit different from upgrading a regular applicati
 
 # Special Considerations
 
-After the original `zarf init` has taken place - any following initialize actions will use the same `secret` for obtaining information provided by any `zarf init` flags.
+After the original `zarf init` has taken place - any following initialize actions will use the values in the `zarf-state` secret in the `zarf` namespace to obtain information for Zarf infrastructure such as the registry. For example, the `--registry-pull-password` flag is ignored on subsequent runs.
 
 See the [init command](/commands/zarf_init/#options) for reference.
 
