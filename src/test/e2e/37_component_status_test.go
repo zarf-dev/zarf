@@ -31,8 +31,8 @@ func TestComponentStatus(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		deployingSeen := false
-		// The package takes 10 seconds to deploy so give an extra 5 seconds before timing out
-		ticker := time.NewTicker(15 * time.Second)
+		// The package takes 10 seconds to deploy so give extra time to build and push the image
+		ticker := time.NewTicker(30 * time.Second)
 		for {
 			select {
 			case <-ticker.C:
