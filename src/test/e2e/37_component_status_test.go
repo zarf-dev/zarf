@@ -31,8 +31,13 @@ func TestComponentStatus(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		deployingSeen := false
+		// The package takes 10 seconds to deploy so give an extra 5 seconds before timing out
+		ticker := time.NewTicker(15 * time.Second)
 		for {
 			select {
+			case <-ticker.C:
+				t.Error("Timed out waiting for package to deploy")
+				return
 			case <-stop:
 				return
 			default:
@@ -63,12 +68,10 @@ func TestComponentStatus(t *testing.T) {
 			}
 		}
 	}()
-	_, _, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
-	require.NoError(t, err)
-	defer func() {
-		_, _, err = e2e.Zarf(t, "package", "remove", "component-status", "--confirm")
-		require.NoError(t, err)
-	}()
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 	close(stop)
 	wg.Wait()
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "component-status", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }
