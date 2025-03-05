@@ -189,6 +189,7 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 		idx := len(deployedComponents) - 1
 
 		// Deploy the component
+		p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents)
 		var charts []types.InstalledChart
 		var deployErr error
 		if p.cfg.Pkg.IsInitConfig() {
