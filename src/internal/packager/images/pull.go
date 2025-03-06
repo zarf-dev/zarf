@@ -27,7 +27,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/oci"
-	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -101,7 +100,6 @@ func pullFromDockerDaemon(ctx context.Context, images []transform.Image, dst ora
 	}
 	defer os.Remove(tmpDir)
 	for _, image := range images {
-		// Attempt to connect to the local docker daemon.
 		cli, err := client.NewClientWithOpts(
 			client.WithHost(dockerEndPointHost),
 			client.WithTLSClientConfigFromEnv(),
@@ -111,12 +109,10 @@ func pullFromDockerDaemon(ctx context.Context, images []transform.Image, dst ora
 			return nil, fmt.Errorf("failed to create Docker client: %w", err)
 		}
 		defer cli.Close()
-		// Save the image to a tar stream
-		p := ocispec.Platform{
-			Architecture: arch,
-			OS:           "linux",
-		}
-		imageReader, err := cli.ImageSave(ctx, []string{image.Reference}, client.ImageSaveWithPlatforms(p))
+		// Note: ImageSave accepts a ocispec.Platform, BUT it would require users have docker engine API version 1.48
+		// which was released in Feb 2025. This could make the code more efficient in some cases, but we are
+		// avoiding this for now to give users more time to update.
+		imageReader, err := cli.ImageSave(ctx, []string{image.Reference})
 		if err != nil {
 			return nil, fmt.Errorf("failed to save image: %w", err)
 		}
@@ -133,12 +129,12 @@ func pullFromDockerDaemon(ctx context.Context, images []transform.Image, dst ora
 		if _, err := io.Copy(tarFile, imageReader); err != nil {
 			return nil, fmt.Errorf("error writing image to tar file: %w", err)
 		}
-
-		if err := archiver.Unarchive(imageTarPath, "docker-image"); err != nil {
+		dockerImageOCILayoutPath := filepath.Join(tmpDir, "docker-image-oci-layout")
+		if err := archiver.Unarchive(imageTarPath, dockerImageOCILayoutPath); err != nil {
 			return nil, fmt.Errorf("failed to write tar file: %w", err)
 		}
 
-		b, err := os.ReadFile(filepath.Join("docker-image", "index.json"))
+		b, err := os.ReadFile(filepath.Join(dockerImageOCILayoutPath, "index.json"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to read index.json: %w", err)
 		}
@@ -157,31 +153,37 @@ func pullFromDockerDaemon(ctx context.Context, images []transform.Image, dst ora
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal index.json: %w", err)
 		}
-		err = os.WriteFile(filepath.Join("docker-image", "index.json"), b, 0o644)
+		err = os.WriteFile(filepath.Join(dockerImageOCILayoutPath, "index.json"), b, 0o644)
 		if err != nil {
 			return nil, fmt.Errorf("failed to write index.json: %w", err)
 		}
 
-		dockerImageSrc, err := oci.New("docker-image")
+		dockerImageSrc, err := oci.New(dockerImageOCILayoutPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create OCI store: %w", err)
 		}
 
 		fetchBytesOpts := oras.DefaultFetchBytesOptions
-		fetchBytesOpts.TargetPlatform = &p
-		desc, b, err := oras.FetchBytes(ctx, dst, image.Reference, fetchBytesOpts)
+		platform := &ocispec.Platform{
+			Architecture: "amd64",
+			OS:           "linux",
+		}
+		fetchBytesOpts.TargetPlatform = platform
+		desc, b, err := oras.FetchBytes(ctx, dockerImageSrc, image.Reference, fetchBytesOpts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get manifest from docker image source: %w", err)
 		}
-		if !(desc.MediaType == ocispec.MediaTypeImageManifest || desc.MediaType == ocispec.MediaTypeImageManifest) {
+		if !(desc.MediaType == ocispec.MediaTypeImageManifest || desc.MediaType == DockerMediaTypeManifest) {
 			return nil, fmt.Errorf("expected to find image manifest instead found %s", desc.MediaType)
 		}
 		var manifest ocispec.Manifest
 		if err := json.Unmarshal(b, &manifest); err != nil {
 			return nil, err
 		}
-
-		_, err = oras.Copy(ctx, dockerImageSrc, image.Reference, dst, "", oras.DefaultCopyOptions)
+		imagesWithManifests[image] = manifest
+		copyOpts := oras.DefaultCopyOptions
+		copyOpts.WithTargetPlatform(platform)
+		_, err = oras.Copy(ctx, dockerImageSrc, image.Reference, dst, "", copyOpts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to copy: %w", err)
 		}
@@ -266,19 +268,12 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		if err != nil {
 			// If the image was not found it could be an image signature or Helm image
 			// In this case we can check if the image was not found by using default fetch byte options
-			if errors.Is(err, errdef.ErrNotFound) {
-				// If the image is found this time we assume that it is not a container image
-				desc, b, err = oras.FetchBytes(ctx, localRepo, image.Reference, oras.DefaultFetchBytesOptions)
-				if err != nil {
-					if errors.Is(err, errdef.ErrNotFound) {
-						// If the image is not found again then we should try to pull it from the daemon
-						dockerFallBack = append(dockerFallBack, image)
-						continue
-					}
-					return nil, fmt.Errorf("failed to fetch bytes: %w", err)
-				}
-			} else {
-				return nil, err
+			// If the image is found this time we assume that it is not a container image
+			desc, b, err = oras.FetchBytes(ctx, localRepo, image.Reference, oras.DefaultFetchBytesOptions)
+			if err != nil {
+				// If the image is not found again then we should try to pull it from the daemon
+				dockerFallBack = append(dockerFallBack, image)
+				continue
 			}
 		}
 		if desc.MediaType == ocispec.MediaTypeImageManifest || desc.MediaType == DockerMediaTypeManifest {

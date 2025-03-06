@@ -29,7 +29,7 @@ func LoadOCIImage(imgPath string, refInfo transform.Image) (v1.Image, error) {
 	}
 	idxManifest, err := imgIdx.IndexManifest()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get image manifest: %w", err)
 	}
 
 	// Search through all the manifests within this package until we find the annotation that matches our ref
@@ -38,7 +38,11 @@ func LoadOCIImage(imgPath string, refInfo transform.Image) (v1.Image, error) {
 			// A backwards compatibility shim for older Zarf versions that would leave docker.io off of image annotations
 			(manifest.Annotations[ocispec.AnnotationRefName] == refInfo.Path+refInfo.TagOrDigest && refInfo.Host == "docker.io") {
 			// This is the image we are looking for, load it and then return
-			return layoutPath.Image(manifest.Digest)
+			img, err := layoutPath.Image(manifest.Digest)
+			if err != nil {
+				return nil, fmt.Errorf("failed to lookup image %s: %w", refInfo.Reference, err)
+			}
+			return img, nil
 		}
 	}
 
