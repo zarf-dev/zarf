@@ -327,17 +327,15 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 func orasSave(ctx context.Context, images map[transform.Image]ocispec.Descriptor, dst oras.Target, cachePath string, client *auth.Client) error {
 	l := logger.From(ctx)
 	for image, desc := range images {
+		var pullSrc oras.ReadOnlyTarget
 		var err error
-		localRepo := &orasRemote.Repository{PlainHTTP: true}
-		localRepo.Reference, err = registry.ParseReference(image.Reference)
+		// TODO no plain HTTP !
+		remoteRepo := &orasRemote.Repository{PlainHTTP: true}
+		remoteRepo.Reference, err = registry.ParseReference(image.Reference)
 		if err != nil {
 			return err
 		}
-		localRepo.Client = client
-		// TODO fix this
-		if cachePath == "" {
-			cachePath = "/tmp/images"
-		}
+		remoteRepo.Client = client
 		localCache, err := oci.NewWithContext(ctx, cachePath)
 		if err != nil {
 			return fmt.Errorf("failed to create oci formatted directory: %w", err)
@@ -347,8 +345,12 @@ func orasSave(ctx context.Context, images map[transform.Image]ocispec.Descriptor
 		copyOpts := oras.DefaultCopyOptions
 		copyOpts.WithTargetPlatform(desc.Platform)
 		l.Info("saving image", "ref", image.Reference, "method", "sequential")
-		remoteWithCache := orasCache.New(localRepo, localCache)
-		_, err = oras.Copy(ctx, remoteWithCache, image.Reference, dst, "", copyOpts)
+		if cachePath == "" {
+			pullSrc = remoteRepo
+		} else {
+			pullSrc = orasCache.New(remoteRepo, localCache)
+		}
+		_, err = oras.Copy(ctx, pullSrc, image.Reference, dst, "", copyOpts)
 		if err != nil {
 			return fmt.Errorf("failed to copy: %w", err)
 		}
