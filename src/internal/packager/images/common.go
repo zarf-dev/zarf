@@ -20,6 +20,8 @@ import (
 
 // PullConfig is the configuration for pulling images.
 type PullConfig struct {
+	Concurrency int
+
 	DestinationDirectory string
 
 	ImageList []transform.Image
@@ -29,6 +31,8 @@ type PullConfig struct {
 	RegistryOverrides map[string]string
 
 	CacheDirectory string
+
+	PlainHTTP bool
 }
 
 const (
@@ -65,6 +69,8 @@ func OnlyHasImageLayers(manifest ocispec.Manifest) bool {
 
 // PushConfig is the configuration for pushing images.
 type PushConfig struct {
+	Concurrency int
+
 	SourceDirectory string
 
 	ImageList []transform.Image
