@@ -76,6 +76,8 @@ type PushConfig struct {
 	Arch string
 
 	Retries int
+
+	PlainHTTP bool
 }
 
 // NoopOpt is a no-op option for crane.

@@ -6,96 +6,112 @@ package images
 
 import (
 	"context"
-	"time"
+	"fmt"
 
-	"github.com/avast/retry-go/v4"
-	"github.com/google/go-containerregistry/pkg/crane"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content/oci"
+	"oras.land/oras-go/v2/registry"
+	orasRemote "oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/retry"
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // Push pushes images to a registry.
 func Push(ctx context.Context, cfg PushConfig) error {
 	l := logger.From(ctx)
-
-	toPush := map[transform.Image]v1.Image{}
-	// Build an image list from the references
-	for _, refInfo := range cfg.ImageList {
-		img, err := utils.LoadOCIImage(cfg.SourceDirectory, refInfo)
-		if err != nil {
-			return err
-		}
-		toPush[refInfo] = img
-	}
-
 	var (
 		err         error
 		tunnel      *cluster.Tunnel
 		registryURL = cfg.RegInfo.Address
 	)
-	err = retry.Do(func() error {
-		c, _ := cluster.NewCluster()
-		if c != nil {
-			registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegInfo)
-			if err != nil {
-				return err
-			}
-			if tunnel != nil {
-				defer tunnel.Close()
-			}
+	c, _ := cluster.NewCluster()
+	if c != nil {
+		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegInfo)
+		if err != nil {
+			return err
 		}
-		pushOptions := createPushOpts(cfg)
-
-		pushImage := func(img v1.Image, name string) error {
-			if tunnel != nil {
-				return tunnel.Wrap(func() error { return crane.Push(img, name, pushOptions...) })
-			}
-			return crane.Push(img, name, pushOptions...)
+		if tunnel != nil {
+			defer tunnel.Close()
 		}
+	}
 
-		pushed := []transform.Image{}
-		defer func() {
-			for _, refInfo := range pushed {
-				delete(toPush, refInfo)
-			}
-		}()
-		for refInfo, img := range toPush {
-			message.Infof("Pushing %s", refInfo.Reference)
-			l.Info("pushing image", "name", refInfo.Reference)
-			// If this is not a no checksum image push it for use with the Zarf agent
-			if !cfg.NoChecksum {
-				offlineNameCRC, err := transform.ImageTransformHost(registryURL, refInfo.Reference)
-				if err != nil {
-					return err
-				}
+	client := &auth.Client{
+		Client: retry.DefaultClient,
+		Cache:  auth.NewCache(),
+		Credential: auth.StaticCredential(registryURL, auth.Credential{
+			Username: cfg.RegInfo.PushUsername,
+			Password: cfg.RegInfo.PushPassword,
+		}),
+	}
 
-				if err = pushImage(img, offlineNameCRC); err != nil {
-					return err
-				}
-			}
-
-			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
-			// (this may result in collisions but this is acceptable for this use case)
-			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, refInfo.Reference)
-			if err != nil {
-				return err
-			}
-
-			if err = pushImage(img, offlineName); err != nil {
-				return err
-			}
-
-			pushed = append(pushed, refInfo)
-		}
-		return nil
-	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
+	src, err := oci.NewWithContext(ctx, cfg.SourceDirectory)
 	if err != nil {
+		return fmt.Errorf("failed to instantiate oci directory: %w", err)
+	}
+
+	pushImage := func(srcName, dstName string) error {
+		remoteRepo := &orasRemote.Repository{
+			PlainHTTP: cfg.PlainHTTP,
+			Client:    client,
+		}
+		copyOpts := oras.DefaultCopyOptions
+		p := &ocispec.Platform{
+			OS:           "linux",
+			Architecture: cfg.Arch,
+		}
+		remoteRepo.Reference, err = registry.ParseReference(dstName)
+		if err != nil {
+			return fmt.Errorf("failed to parse ref %s: %w", dstName, err)
+		}
+		copyOpts.WithTargetPlatform(p)
+		if tunnel != nil {
+			return tunnel.Wrap(func() error {
+				remoteRepo.PlainHTTP = true
+
+				_, err := oras.Copy(ctx, src, srcName, remoteRepo, dstName, copyOpts)
+				if err != nil {
+					return fmt.Errorf("failed to push image %s: %s: %w", srcName, dstName, err)
+				}
+				return err
+			})
+		}
+		_, err := oras.Copy(ctx, src, srcName, remoteRepo, dstName, copyOpts)
+		if err != nil {
+			return fmt.Errorf("failed to push image %s: %w", srcName, err)
+		}
 		return err
+	}
+
+	for _, img := range cfg.ImageList {
+		l.Info("pushing image", "name", img.Reference)
+		// If this is not a no checksum image push it for use with the Zarf agent
+		if !cfg.NoChecksum {
+			offlineNameCRC, err := transform.ImageTransformHost(registryURL, img.Reference)
+			if err != nil {
+				return err
+			}
+
+			if err = pushImage(img.Reference, offlineNameCRC); err != nil {
+				return err
+			}
+		}
+
+		// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
+		// (this may result in collisions but this is acceptable for this use case)
+		offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, img.Reference)
+		if err != nil {
+			return err
+		}
+
+		if err = pushImage(img.Reference, offlineName); err != nil {
+			return err
+		}
+
 	}
 
 	return nil
