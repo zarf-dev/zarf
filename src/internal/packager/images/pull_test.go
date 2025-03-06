@@ -8,13 +8,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"oras.land/oras-go/v2"
+	orasRemote "oras.land/oras-go/v2/registry/remote"
 )
 
 func TestCheckForIndex(t *testing.T) {
@@ -54,13 +55,15 @@ func TestCheckForIndex(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+			ctx := context.Background()
 			refInfo, err := transform.ParseImageRef(tc.ref)
 			require.NoError(t, err)
-			file := filepath.Join("testdata", tc.file)
-			manifest, err := os.ReadFile(file)
+			repo, err := orasRemote.NewRepository(refInfo.Reference)
 			require.NoError(t, err)
-			var idx v1.IndexManifest
-			err = json.Unmarshal(manifest, &idx)
+			_, b, err := oras.FetchBytes(ctx, repo, refInfo.Reference, oras.DefaultFetchBytesOptions)
+			require.NoError(t, err)
+			var idx ocispec.Index
+			err = json.Unmarshal(b, &idx)
 			require.NoError(t, err)
 			tmp := t.TempDir()
 			cfg := PullConfig{
@@ -69,7 +72,7 @@ func TestCheckForIndex(t *testing.T) {
 				ImageList:            []transform.Image{refInfo},
 				CacheDirectory:       t.TempDir(),
 			}
-			_, err = Pull(context.Background(), cfg)
+			_, err = Pull(ctx, cfg)
 			if tc.expectedErr != "" {
 				require.ErrorContains(t, err, fmt.Sprintf(tc.expectedErr, refInfo.Reference))
 				// Ensure the error message contains the digest of the manifests the user can use
