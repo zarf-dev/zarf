@@ -35,9 +35,6 @@ import (
 func Pull(ctx context.Context, src, dir, shasum string, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) error {
 	l := logger.From(ctx)
 	start := time.Now()
-	defer func() {
-		l.Debug("done Pull", "src", src, "dir", dir, "duration", time.Since(start))
-	}()
 	u, err := url.Parse(src)
 	if err != nil {
 		return err
@@ -108,11 +105,12 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 	if err != nil {
 		return err
 	}
+
+	l.Debug("done packager2.Pull", "src", src, "dir", dir, "duration", time.Since(start))
 	return nil
 }
 
 func pullOCI(ctx context.Context, src, tarDir, shasum string, filter filters.ComponentFilterStrategy) (bool, string, error) {
-	l := logger.From(ctx)
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return false, "", err
@@ -129,8 +127,7 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, filter filters.Com
 	}
 	desc, err := remote.ResolveRoot(ctx)
 	if err != nil {
-		l.Error("unable to resolve oci descriptor", "os", platform.OS, "arch", platform.Architecture, "error", err)
-		return false, "", fmt.Errorf("could not fetch images index: %w", err)
+		return false, "", fmt.Errorf("could not find package %s with architecture %s: %w", src, platform.Architecture, err)
 	}
 	layersToPull := []ocispec.Descriptor{}
 	isPartial := false
