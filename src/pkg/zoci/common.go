@@ -22,6 +22,8 @@ const (
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
 	// SkeletonArch is the architecture used for skeleton packages
 	SkeletonArch = "skeleton"
+	// DefaultConcurrency is the default concurrency used for operations
+	DefaultConcurrency = 3
 )
 
 // Remote is a wrapper around the Oras remote repository with zarf specific functions

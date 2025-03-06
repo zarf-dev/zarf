@@ -38,8 +38,8 @@ func TestPull(t *testing.T) {
 	})
 
 	dir := t.TempDir()
-	shasum := "bef73d652f004d214d5cf9e00195293f7ae8390b8ff6ed45e39c2c9eb622b873"
-	err := Pull(ctx, srv.URL, dir, shasum, filters.Empty(), "", false)
+	shasum := "f9b15b1bc0f760a87bad68196b339a8ce8330e3a0241191a826a8962a88061f1"
+	err := Pull(ctx, srv.URL, dir, shasum, "amd64", filters.Empty(), "", false)
 	require.NoError(t, err)
 
 	packageData, err := os.ReadFile(packagePath)
@@ -70,7 +70,7 @@ func TestPullUncompressed(t *testing.T) {
 
 	dir := t.TempDir()
 	shasum := "a118a4d306acc5dd4eab2c161e78fa3dfd1e08ae1e1794a4393be98c79257f5c"
-	err := Pull(ctx, srv.URL, dir, shasum, filters.Empty(), "", false)
+	err := Pull(ctx, srv.URL, dir, shasum, "amd64", filters.Empty(), "", false)
 	require.NoError(t, err)
 
 	packageData, err := os.ReadFile(packagePath)
@@ -101,7 +101,7 @@ func TestPullUnsupported(t *testing.T) {
 
 	dir := t.TempDir()
 	shasum := "6e9dccce07ba9d3c45b7c872fae863c5415d296fd5e2fb72a2583530aa750ccd"
-	err := Pull(ctx, srv.URL, dir, shasum, filters.Empty(), "", false)
+	err := Pull(ctx, srv.URL, dir, shasum, "amd64", filters.Empty(), "", false)
 	require.EqualError(t, err, "unsupported file type: .txt", "unsupported file type: .txt")
 }
 
