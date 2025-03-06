@@ -26,45 +26,46 @@ func TestComponentStatus(t *testing.T) {
 	path := filepath.Join(tmpDir, packageName)
 	// Stop channel getting the zarf state
 	stop := make(chan bool)
+	// Error channel to return any errors from the goroutine. Testify doesn't like require in a goroutine
+	errCh := make(chan error, 1)
 	var wg sync.WaitGroup
 	wg.Add(1)
+	// Goroutine to wait for the package to show "deploying" status
 	go func() {
 		defer wg.Done()
-		deployingSeen := false
-		// The package takes 10 seconds to deploy so give extra time to build and push the image
+		// Give extra time to build and push the package
 		ticker := time.NewTicker(30 * time.Second)
 		for {
 			select {
 			case <-ticker.C:
-				t.Error("Timed out waiting for package to deploy")
+				t.Log("Timed out waiting for package to deploy")
+				errCh <- fmt.Errorf("timed out waiting for package to deploy")
 				return
 			case <-stop:
 				return
 			default:
-				deployedPackage := types.DeployedPackage{}
 				stdOut, _, err := e2e.Kubectl(t, "get", "secret", "zarf-package-component-status", "-n", "zarf", "-o", "jsonpath={.data.data}")
 				if err != nil {
 					// Wait for the secret to be created and try again
 					time.Sleep(2 * time.Second)
 					continue
 				}
-				decoded, err := base64.StdEncoding.DecodeString(stdOut)
-				require.NoError(t, err)
-				err = json.Unmarshal(decoded, &deployedPackage)
-				require.Len(t, deployedPackage.DeployedComponents, 1)
-				status := deployedPackage.DeployedComponents[0].Status
-				// We expect to see deploying first and then succeeded
-				if !deployingSeen {
-					require.Equal(t, types.ComponentStatusDeploying, status)
-					deployingSeen = true
-				} else {
-					if status != types.ComponentStatusDeploying {
-						require.Equal(t, types.ComponentStatusSucceeded, status)
-						break
-					}
+				deployedPackage, err := getDeployedPackage(stdOut)
+				if err != nil {
+					errCh <- err
+					return
 				}
-				require.NoError(t, err)
+				if len(deployedPackage.DeployedComponents) != 1 {
+					errCh <- fmt.Errorf("expected 1 component got %d", len(deployedPackage.DeployedComponents))
+					return
+				}
+				status := deployedPackage.DeployedComponents[0].Status
+				if status != types.ComponentStatusDeploying {
+					errCh <- fmt.Errorf("expected %s got %s", types.ComponentStatusDeploying, status)
+					return
+				}
 				time.Sleep(2 * time.Second)
+				return
 			}
 		}
 	}()
@@ -72,6 +73,34 @@ func TestComponentStatus(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 	close(stop)
 	wg.Wait()
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "component-status", "--confirm")
+	select {
+	case err := <-errCh:
+		require.NoError(t, err)
+	default:
+	}
+	// Verify that the component status is "succeeded"
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "secret", "zarf-package-component-status", "-n", "zarf", "-o", "jsonpath={.data.data}")
 	require.NoError(t, err, stdOut, stdErr)
+	deployedPackage, err := getDeployedPackage(stdOut)
+	require.NoError(t, err)
+	require.Len(t, deployedPackage.DeployedComponents, 1)
+	require.Equal(t, types.ComponentStatusSucceeded, deployedPackage.DeployedComponents[0].Status)
+	// Remove the package
+	t.Cleanup(func() {
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "component-status", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+	})
+}
+
+func getDeployedPackage(secret string) (*types.DeployedPackage, error) {
+	deployedPackage := &types.DeployedPackage{}
+	decoded, err := base64.StdEncoding.DecodeString(secret)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(decoded, &deployedPackage)
+	if err != nil {
+		return nil, err
+	}
+	return deployedPackage, nil
 }
