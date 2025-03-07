@@ -150,7 +150,7 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	c := &cluster.Cluster{
 		Clientset: fake.NewClientset(),
 	}
-	_, err = c.RecordPackageDeployment(ctx, pkg, nil)
+	_, err = c.RecordPackageDeployment(ctx, pkg, nil, 1)
 	require.NoError(t, err)
 	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", false, "")
 	require.NoError(t, err)
