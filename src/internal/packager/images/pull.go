@@ -84,6 +84,7 @@ func pullFromDockerDaemon(ctx context.Context, images []transform.Image, dst ora
 			return nil, fmt.Errorf("failed to create Docker client: %w", err)
 		}
 		defer cli.Close()
+		cli.NegotiateAPIVersion(ctx)
 		// Note: ImageSave accepts a ocispec.Platform, BUT it would require users have docker engine API version 1.48
 		// which was released in Feb 2025. This could make the code more efficient in some cases, but we are
 		// avoiding this for now to give users more time to update.
