@@ -66,7 +66,9 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		return nil, fmt.Errorf(lang.AgentErrParsePod, err)
 	}
 
-	if pod.Labels != nil && pod.Labels["zarf-agent"] == "patched" {
+	// EphemeralContainers will only be an "UPDATE" operation and we expect the pod to already container the "zarf-agent/patched" label
+	// Therefore we need to re-run the patching. Given that this is an idempotent operation - impact should be minimal
+	if pod.Labels != nil && pod.Labels["zarf-agent"] == "patched" && r.SubResource != "ephemeralcontainers" {
 		// We've already played with this pod, just keep swimming 🐟
 		return &operations.Result{
 			Allowed:  true,
