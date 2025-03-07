@@ -140,7 +140,7 @@ func pullFromDockerDaemon(ctx context.Context, images []transform.Image, dst ora
 
 		fetchBytesOpts := oras.DefaultFetchBytesOptions
 		platform := &ocispec.Platform{
-			Architecture: "amd64",
+			Architecture: arch,
 			OS:           "linux",
 		}
 		fetchBytesOpts.TargetPlatform = platform
@@ -290,7 +290,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	// https://github.com/zarf-dev/zarf/issues/2584
 	// This is a band aid fix while we wait for crane and or docker to create the permanent fix
 
-	err = orasSave(ctx, cfg, dst, platform, client)
+	err = orasSave(ctx, ImagesWithDescriptors, cfg, dst, platform, client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save images: %w", err)
 	}
@@ -300,22 +300,22 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	return imagesWithManifests, nil
 }
 
-func orasSave(ctx context.Context, cfg PullConfig, dst oras.Target, platform *ocispec.Platform, client *auth.Client) error {
+func orasSave(ctx context.Context, ImagesWithDescriptors map[transform.Image]ocispec.Descriptor, cfg PullConfig, dst oras.Target, platform *ocispec.Platform, client *auth.Client) error {
 	l := logger.From(ctx)
-	for _, image := range cfg.ImageList {
+	for image, desc := range ImagesWithDescriptors {
 		var pullSrc oras.ReadOnlyTarget
 		var err error
 		remoteRepo := &orasRemote.Repository{PlainHTTP: cfg.PlainHTTP}
 		remoteRepo.Reference, err = registry.ParseReference(image.Reference)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to parse image reference %s: %w", image.Reference, err)
 		}
 		remoteRepo.Client = client
 
 		// TODO add size in bytes
 		copyOpts := oras.DefaultCopyOptions
 
-		copyOpts.WithTargetPlatform(platform)
+		copyOpts.WithTargetPlatform(desc.Platform)
 		l.Info("saving image", "ref", image.Reference, "method", "sequential")
 		if cfg.CacheDirectory == "" {
 			pullSrc = remoteRepo
