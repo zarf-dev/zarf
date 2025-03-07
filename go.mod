@@ -21,7 +21,7 @@ require (
 	github.com/derailed/k9s v0.40.5
 	github.com/distribution/distribution/v3 v3.0.0-rc.3
 	github.com/distribution/reference v0.6.0
-	github.com/docker/docker v28.0.1+incompatible
+	github.com/docker/docker v27.5.1+incompatible
 	github.com/fairwindsops/pluto/v5 v5.21.3
 	github.com/fatih/color v1.18.0
 	github.com/fluxcd/gitkit v0.6.0
