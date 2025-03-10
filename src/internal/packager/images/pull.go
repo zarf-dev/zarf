@@ -7,13 +7,10 @@ package images
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -29,12 +26,10 @@ import (
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	orasCache "github.com/zarf-dev/zarf/src/internal/packager/images/cache"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"golang.org/x/sync/errgroup"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
@@ -167,6 +162,12 @@ func pullFromDockerDaemon(ctx context.Context, images []transform.Image, dst ora
 	return imagesWithManifests, nil
 }
 
+type imageInfo struct {
+	reference    string
+	manifestDesc ocispec.Descriptor
+	byteSize     int64
+}
+
 // Pull pulls all images from the given config.
 func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Manifest, error) {
 	l := logger.From(ctx)
@@ -195,7 +196,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		OS:           "linux",
 	}
 	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
-	ImagesWithDescriptors := map[transform.Image]ocispec.Descriptor{}
+	ImagesWithDescriptors := []imageInfo{}
 	dockerFallBack := []transform.Image{}
 
 	// This loop pulls the metadata from images with three goals
@@ -203,7 +204,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	// - If the repo doesn't contain an image mark them so that we can try to pull them from the daemon instead
 	// - Get all the manifests from images that will be pulled so they can be returned
 	for _, image := range cfg.ImageList {
-		localRepo := &orasRemote.Repository{PlainHTTP: true}
+		localRepo := &orasRemote.Repository{PlainHTTP: cfg.PlainHTTP}
 		var err error
 
 		localRepo.Reference, err = registry.ParseReference(image.Reference)
@@ -248,6 +249,10 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 			// If the image is found this time we assume that it is not a container image
 			desc, b, err = oras.FetchBytes(ctx, localRepo, image.Reference, oras.DefaultFetchBytesOptions)
 			if err != nil {
+				if strings.Contains(err.Error(), "toomanyrequests") {
+					return nil, fmt.Errorf("rate limited by registry: %w", err)
+				}
+				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", image.Reference, "err", err)
 				// If the image is not found again then we should try to pull it from the daemon
 				dockerFallBack = append(dockerFallBack, image)
 				continue
@@ -260,8 +265,14 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 			if err := json.Unmarshal(b, &manifest); err != nil {
 				return nil, err
 			}
-			ImagesWithDescriptors[image] = desc
+			size := getSizeOfImage(desc, manifest)
+			ImagesWithDescriptors = append(ImagesWithDescriptors, imageInfo{
+				reference:    image.Reference,
+				byteSize:     size,
+				manifestDesc: desc,
+			})
 			imagesWithManifests[image] = manifest
+			l.Debug("pulled manifest for image", "name", image.Reference)
 		} else {
 			return nil, fmt.Errorf("received unexpected mediatype %s", desc.MediaType)
 		}
@@ -291,7 +302,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	// https://github.com/zarf-dev/zarf/issues/2584
 	// This is a band aid fix while we wait for crane and or docker to create the permanent fix
 
-	err = orasSave(ctx, ImagesWithDescriptors, cfg, dst, platform, client)
+	err = orasSave(ctx, ImagesWithDescriptors, cfg, dst, client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save images: %w", err)
 	}
@@ -301,23 +312,24 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	return imagesWithManifests, nil
 }
 
-func orasSave(ctx context.Context, ImagesWithDescriptors map[transform.Image]ocispec.Descriptor, cfg PullConfig, dst oras.Target, platform *ocispec.Platform, client *auth.Client) error {
+func orasSave(ctx context.Context, imagesInfo []imageInfo, cfg PullConfig, dst oras.Target, client *auth.Client) error {
 	l := logger.From(ctx)
-	for image, desc := range ImagesWithDescriptors {
+	for _, imageInfo := range imagesInfo {
 		var pullSrc oras.ReadOnlyTarget
 		var err error
 		remoteRepo := &orasRemote.Repository{PlainHTTP: cfg.PlainHTTP}
-		remoteRepo.Reference, err = registry.ParseReference(image.Reference)
+		remoteRepo.Reference, err = registry.ParseReference(imageInfo.reference)
 		if err != nil {
-			return fmt.Errorf("failed to parse image reference %s: %w", image.Reference, err)
+			return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.reference, err)
 		}
 		remoteRepo.Client = client
 
 		// TODO add size in bytes
 		copyOpts := oras.DefaultCopyOptions
+		copyOpts.Concurrency = cfg.Concurrency
 
-		copyOpts.WithTargetPlatform(desc.Platform)
-		l.Info("saving image", "ref", image.Reference, "method", "sequential")
+		copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
+		l.Info("saving image", "name", imageInfo.reference, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
 		if cfg.CacheDirectory == "" {
 			pullSrc = remoteRepo
 		} else {
@@ -327,7 +339,7 @@ func orasSave(ctx context.Context, ImagesWithDescriptors map[transform.Image]oci
 			}
 			pullSrc = orasCache.New(remoteRepo, localCache)
 		}
-		_, err = oras.Copy(ctx, pullSrc, image.Reference, dst, "", copyOpts)
+		_, err = oras.Copy(ctx, pullSrc, imageInfo.reference, dst, "", copyOpts)
 		if err != nil {
 			return fmt.Errorf("failed to copy: %w", err)
 		}
@@ -335,76 +347,13 @@ func orasSave(ctx context.Context, ImagesWithDescriptors map[transform.Image]oci
 	return nil
 }
 
-// from https://github.com/google/go-containerregistry/blob/6bce25ecf0297c1aa9072bc665b5cf58d53e1c54/pkg/v1/cache/fs.go#L143
-func layerCachePath(path string, h v1.Hash) string {
-	var file string
-	if runtime.GOOS == "windows" {
-		file = fmt.Sprintf("%s-%s", h.Algorithm, h.Hex)
-	} else {
-		file = h.String()
-	}
-	return filepath.Join(path, file)
-}
-
-// CleanupInProgressLayers removes incomplete layers from the cache.
-func CleanupInProgressLayers(ctx context.Context, img v1.Image, cacheDirectory string) error {
-	layers, err := img.Layers()
-	if err != nil {
-		return err
-	}
-	eg, _ := errgroup.WithContext(ctx)
-	for _, layer := range layers {
-		layer := layer
-		eg.Go(func() error {
-			digest, err := layer.Digest()
-			if err != nil {
-				return err
-			}
-			size, err := layer.Size()
-			if err != nil {
-				return err
-			}
-			location := layerCachePath(cacheDirectory, digest)
-			info, err := os.Stat(location)
-			if errors.Is(err, fs.ErrNotExist) {
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-			if info.Size() != size {
-				if err := os.Remove(location); err != nil {
-					return fmt.Errorf("failed to remove incomplete layer %s: %w", digest.Hex, err)
-				}
-			}
-			return nil
-		})
-	}
-	return eg.Wait()
-}
-
-func getSizeOfImage(img v1.Image) (int64, error) {
+// technically this doesn't include the manifest
+func getSizeOfImage(manifestDesc ocispec.Descriptor, manifest ocispec.Manifest) int64 {
 	var totalSize int64
-	manifestSize, err := img.Size()
-	if err != nil {
-		return 0, err
-	}
-	totalSize += manifestSize
-	manifest, err := img.Manifest()
-	if err != nil {
-		return 0, err
+	totalSize += manifestDesc.Size
+	for _, layer := range manifest.Layers {
+		totalSize += layer.Size
 	}
 	totalSize += manifest.Config.Size
-	layers, err := img.Layers()
-	if err != nil {
-		return 0, err
-	}
-	for _, layer := range layers {
-		size, err := layer.Size()
-		if err != nil {
-			return 0, err
-		}
-		totalSize += size
-	}
-	return totalSize, nil
+	return totalSize
 }

@@ -49,6 +49,9 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		}),
 	}
 
+	// TODO, go through cfg source directory and make the annotations the same between them.
+
+
 	src, err := oci.NewWithContext(ctx, cfg.SourceDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to instantiate oci directory: %w", err)
@@ -72,7 +75,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		if tunnel != nil {
 			return tunnel.Wrap(func() error {
 				remoteRepo.PlainHTTP = true
-
 				_, err := oras.Copy(ctx, src, srcName, remoteRepo, dstName, copyOpts)
 				if err != nil {
 					return fmt.Errorf("failed to push image %s: %s: %w", srcName, dstName, err)
