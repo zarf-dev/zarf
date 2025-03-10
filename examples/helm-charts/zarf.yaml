@@ -53,7 +53,7 @@ components:
         valuesFiles:
           - values.yaml
     images:
-      - ghcr.io/local/small-image:0.0.1
+      # - ghcr.io/local/small-image:0.0.1
       - ghcr.io/stefanprodan/podinfo:6.4.0
       # This is the cosign signature for the podinfo image for image signature verification
       - ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig
