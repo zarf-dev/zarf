@@ -32,11 +32,9 @@ const (
 
 	// Root config, Logging
 
-	VLogLevel   = "log_level"
-	VLogFormat  = "log_format"
-	VNoLogFile  = "no_log_file"
-	VNoProgress = "no_progress"
-	VNoColor    = "no_color"
+	VLogLevel  = "log_level"
+	VLogFormat = "log_format"
+	VNoColor   = "no_color"
 
 	// Init config keys
 

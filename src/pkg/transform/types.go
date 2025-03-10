@@ -4,5 +4,4 @@
 package transform
 
 // Log is a function that logs a message.
-// TODO(mkcp): Remove Log and port over to logger once we remove message.
 type Log func(string, ...any)

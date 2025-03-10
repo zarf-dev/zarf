@@ -36,6 +36,7 @@ func newWaitForCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&o.waitTimeout, "timeout", "5m", lang.CmdToolsWaitForFlagTimeout)
 	cmd.Flags().StringVarP(&o.waitNamespace, "namespace", "n", "", lang.CmdToolsWaitForFlagNamespace)
+	// FIXME(mkcp): Progress bars should be removed from message logging.
 	cmd.Flags().BoolVar(&message.NoProgress, "no-progress", false, lang.RootCmdFlagNoProgress)
 
 	return cmd

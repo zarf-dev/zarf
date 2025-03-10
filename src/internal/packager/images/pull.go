@@ -9,14 +9,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
+	"log/slog"
 	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/docker/cli/cli/command"
@@ -36,17 +37,15 @@ import (
 	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/moby/moby/client"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"golang.org/x/sync/errgroup"
 )
 
 func checkForIndex(refInfo transform.Image, desc *remote.Descriptor) error {
-	if refInfo.Digest != "" && desc != nil && types.MediaType(desc.MediaType).IsIndex() {
+	if refInfo.Digest != "" && desc != nil && desc.MediaType.IsIndex() {
 		var idx v1.IndexManifest
 		if err := json.Unmarshal(desc.Manifest, &idx); err != nil {
 			return fmt.Errorf("unable to unmarshal index.json: %w", err)
@@ -90,16 +89,7 @@ func getDockerEndpointHost() (string, error) {
 // Pull pulls all images from the given config.
 func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, error) {
 	l := logger.From(ctx)
-	var longer string
 	pullStart := time.Now()
-
-	imageCount := len(cfg.ImageList)
-	// Give some additional user feedback on larger image sets
-	if imageCount > 15 {
-		longer = "This step may take a couple of minutes to complete."
-	} else if imageCount > 5 {
-		longer = "This step may take several seconds to complete."
-	}
 
 	if err := helpers.CreateDirectory(cfg.DestinationDirectory, helpers.ReadExecuteAllWriteUser); err != nil {
 		return nil, fmt.Errorf("failed to create image path %s: %w", cfg.DestinationDirectory, err)
@@ -110,15 +100,21 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		return nil, err
 	}
 
-	// Give some additional user feedback on larger image sets
 	imageFetchStart := time.Now()
-	// TODO(mkcp): Remove message on logger release
-	spinner := message.NewProgressSpinner("Fetching info for %d images. %s", imageCount, longer)
-	defer spinner.Stop()
+	// Give some additional user feedback on larger image sets
+	imageCount := len(cfg.ImageList)
 	l.Info("fetching info for images", "count", imageCount, "destination", cfg.DestinationDirectory)
+	switch {
+	case imageCount > 15:
+		l.Warn("This step may take a couple of minutes to complete.")
+		break
+	case imageCount > 5:
+		l.Warn("This step may take several seconds to complete.")
+		break
+	}
 
-	logs.Warn.SetOutput(&message.DebugWriter{})
-	logs.Progress.SetOutput(&message.DebugWriter{})
+	logs.Warn.SetOutput(warnWriter{l: l})
+	logs.Progress.SetOutput(progressWriter{l: l})
 
 	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
@@ -129,16 +125,12 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 	fetched := map[transform.Image]v1.Image{}
 
-	var counter, totalBytes atomic.Int64
 	var dockerEndPointHost string
 
 	// Spawn a goroutine for each
 	for _, refInfo := range cfg.ImageList {
 		refInfo := refInfo
 		eg.Go(func() error {
-			idx := counter.Add(1)
-			// TODO(mkcp): Remove message on logger release
-			spinner.Updatef("Fetching image info (%d of %d)", idx, imageCount)
 			l.Debug("fetching image info", "name", refInfo.Name)
 
 			ref := refInfo.Reference
@@ -168,8 +160,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 						return fmt.Errorf("rate limited by registry: %w", err)
 					}
 
-					// TODO(mkcp): Remove message on logger release
-					message.Warnf("Falling back to local 'docker', failed to find the manifest on a remote: %s", err.Error())
 					l.Warn("Falling back to local 'docker', failed to find the manifest on a remote", "error", err.Error())
 
 					if dockerEndPointHost == "" {
@@ -197,9 +187,9 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 
 					// Warn the user if the image is large.
 					if rawImg.Size > 750*1000*1000 {
-						message.Warnf("%s is %s and may take a very long time to load via docker. "+
-							"See https://docs.zarf.dev/faq for suggestions on how to improve large local image loading operations.",
-							ref, utils.ByteFormat(float64(rawImg.Size), 2))
+						l.Warn("ref is large and may take a very long time to load via docker. See https://docs.zarf.dev/faq for suggestions on how to improve large local image loading operations.",
+							"ref", ref,
+							"size", utils.ByteFormat(float64(rawImg.Size), 2))
 					}
 
 					// Use unbuffered opener to avoid OOM Kill issues https://github.com/zarf-dev/zarf/issues/1214.
@@ -227,12 +217,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 			if cacheImg && cfg.CacheDirectory != "" {
 				img = cache.Image(img, cache.NewFilesystemCache(cfg.CacheDirectory))
 			}
-
-			size, err := getSizeOfImage(img)
-			if err != nil {
-				return fmt.Errorf("failed to get size of image: %w", err)
-			}
-			totalBytes.Add(size)
 
 			layers, err := img.Layers()
 			if err != nil {
@@ -266,14 +250,9 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		return nil, err
 	}
 
-	// TODO(mkcp): Remove message on logger release
-	spinner.Successf("Fetched info for %d images", imageCount)
 	l.Debug("done fetching info for images", "count", len(cfg.ImageList), "duration", time.Since(imageFetchStart))
 
 	doneSaving := make(chan error)
-	updateText := fmt.Sprintf("Pulling %d images", imageCount)
-	// TODO(mkcp): Remove progress bar on logger release
-	go utils.RenderProgressBarForLocalDirWrite(cfg.DestinationDirectory, totalBytes.Load(), doneSaving, updateText, updateText)
 	l.Info("pulling images", "count", len(cfg.ImageList))
 
 	toPull := maps.Clone(fetched)
@@ -290,8 +269,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]v1.Image, er
 		retry.Attempts(2),
 	)
 	if err != nil {
-		// TODO(mkcp): Remove message on logger release
-		message.Warnf("Failed to save images in parallel, falling back to sequential save: %s", err.Error())
 		l.Warn("failed to save images in parallel, falling back to sequential save", "error", err.Error())
 		err = retry.Do(func() error {
 			saved, err := SaveSequential(ctx, cranePath, toPull, cfg.CacheDirectory)
@@ -434,7 +411,6 @@ func SaveSequential(ctx context.Context, cl clayout.Path, m map[transform.Image]
 		l.Info("saving image", "ref", info.Reference, "size", byteSize, "method", "sequential")
 		if err := cl.AppendImage(img, clayout.WithAnnotations(annotations)); err != nil {
 			if err := CleanupInProgressLayers(ctx, img, cacheDirectory); err != nil {
-				message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
 				l.Error("failed to clean up in-progress layers. please run `zarf tools clear-cache`")
 			}
 			return saved, err
@@ -480,7 +456,6 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 				l.Info("saving image", "ref", info.Reference, "size", byteSize, "method", "concurrent")
 				if err := cl.WriteImage(img); err != nil {
 					if err := CleanupInProgressLayers(ectx, img, cacheDirectory); err != nil {
-						message.WarnErr(err, "failed to clean up in-progress layers, please run `zarf tools clear-cache`")
 						l.Error("failed to clean up in-progress layers. please run `zarf tools clear-cache`")
 					}
 					return err
@@ -509,4 +484,26 @@ func SaveConcurrent(ctx context.Context, cl clayout.Path, m map[transform.Image]
 	}
 
 	return saved, eg.Wait()
+}
+
+var _ io.Writer = warnWriter{}
+
+// warnWriter wraps the current slog.Logger.Warn level into a Writer for go-containerregistry/pkg/logs
+// HACK(mkcp): Surely there's a better way to do this.
+type warnWriter struct{ l *slog.Logger }
+
+func (w warnWriter) Write(raw []byte) (int, error) {
+	w.l.Warn(string(raw))
+	return len(raw), nil
+}
+
+var _ io.Writer = progressWriter{}
+
+// progressWriter wraps the current slog.Logger.Info level into a Writer for go-containerregistry/pkg/logs
+// HACK(mkcp): Surely there's a better way to do this.
+type progressWriter struct{ l *slog.Logger }
+
+func (w progressWriter) Write(raw []byte) (int, error) {
+	w.l.Info(string(raw))
+	return len(raw), nil
 }
