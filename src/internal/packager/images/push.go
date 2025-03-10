@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/oci"
 	"oras.land/oras-go/v2/registry"
@@ -51,7 +50,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 	// TODO, go through cfg source directory and make the annotations the same between them.
 
-
 	src, err := oci.NewWithContext(ctx, cfg.SourceDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to instantiate oci directory: %w", err)
@@ -63,15 +61,15 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			Client:    client,
 		}
 		copyOpts := oras.DefaultCopyOptions
-		p := &ocispec.Platform{
-			OS:           "linux",
-			Architecture: cfg.Arch,
-		}
+		// p := &ocispec.Platform{
+		// 	OS:           "linux",
+		// 	Architecture: cfg.Arch,
+		// }
 		remoteRepo.Reference, err = registry.ParseReference(dstName)
 		if err != nil {
 			return fmt.Errorf("failed to parse ref %s: %w", dstName, err)
 		}
-		copyOpts.WithTargetPlatform(p)
+		// copyOpts.WithTargetPlatform(p)
 		if tunnel != nil {
 			return tunnel.Wrap(func() error {
 				remoteRepo.PlainHTTP = true
