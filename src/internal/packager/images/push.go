@@ -6,7 +6,10 @@ package images
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/oci"
@@ -15,6 +18,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
 
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -47,8 +51,31 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			Password: cfg.RegInfo.PushPassword,
 		}),
 	}
-
-	// TODO, go through cfg source directory and make the annotations the same between them.
+	idxPath := filepath.Join(cfg.SourceDirectory, "index.json")
+	b, err := os.ReadFile(idxPath)
+	if err != nil {
+		return fmt.Errorf("failed to get index.json: %w", err)
+	}
+	var idx ocispec.Index
+	if err := json.Unmarshal(b, &idx); err != nil {
+		return fmt.Errorf("unable to unmarshal index.json: %w", err)
+	}
+	var correctedManifests []ocispec.Descriptor
+	for _, manifest := range idx.Manifests {
+		if manifest.Annotations[ocispec.AnnotationBaseImageName] != ""{
+			manifest.Annotations[ocispec.AnnotationRefName] = manifest.Annotations[ocispec.AnnotationBaseImageName]
+		}
+		correctedManifests = append(correctedManifests, manifest)
+	}
+	idx.Manifests = correctedManifests
+	b, err = json.Marshal(idx)
+	if err != nil {
+		return fmt.Errorf("unable to marshal index.json: %w", err)
+	}
+	err = os.WriteFile(idxPath, b, 0o644)
+	if err != nil {
+		return fmt.Errorf("failed to save changes to index.json: %w", err)
+	}
 
 	src, err := oci.NewWithContext(ctx, cfg.SourceDirectory)
 	if err != nil {
@@ -104,6 +131,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 }
 
 func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string) error {
+
 	// We get the platform dynamically because it can be nil in non container image cases
 	desc, _, err := oras.Fetch(ctx, src, srcName, oras.DefaultFetchOptions)
 	if err != nil {
