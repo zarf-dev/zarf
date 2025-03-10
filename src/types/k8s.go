@@ -72,6 +72,7 @@ type DeployedPackage struct {
 	Name               string               `json:"name"`
 	Data               v1alpha1.ZarfPackage `json:"data"`
 	CLIVersion         string               `json:"cliVersion"`
+	Generation         int                  `json:"generation"`
 	DeployedComponents []DeployedComponent  `json:"deployedComponents"`
 	ConnectStrings     ConnectStrings       `json:"connectStrings,omitempty"`
 }
@@ -89,8 +90,10 @@ type ConnectStrings map[string]ConnectString
 
 // DeployedComponent contains information about a Zarf Package Component that has been deployed to a cluster.
 type DeployedComponent struct {
-	Name            string           `json:"name"`
-	InstalledCharts []InstalledChart `json:"installedCharts"`
+	Name               string           `json:"name"`
+	InstalledCharts    []InstalledChart `json:"installedCharts"`
+	Status             ComponentStatus  `json:"status"`
+	ObservedGeneration int              `json:"observedGeneration"`
 }
 
 // InstalledChart contains information about a Helm Chart that has been deployed to a cluster.
