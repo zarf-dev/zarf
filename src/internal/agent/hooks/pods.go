@@ -66,9 +66,11 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		return nil, fmt.Errorf(lang.AgentErrParsePod, err)
 	}
 
-	// EphemeralContainers will only be an "UPDATE" operation and we expect the pod to already container the "zarf-agent/patched" label
-	// Therefore we need to re-run the patching. Given that this is an idempotent operation - impact should be minimal
-	if pod.Labels != nil && pod.Labels["zarf-agent"] == "patched" && r.SubResource != "ephemeralcontainers" {
+	if r.SubResource != "" {
+		return mutatePodSubresource(ctx, r, cluster)
+	}
+
+	if pod.Labels != nil && pod.Labels["zarf-agent"] == "patched" {
 		// We've already played with this pod, just keep swimming 🐟
 		return &operations.Result{
 			Allowed:  true,
@@ -107,17 +109,6 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
-	// update the image host for each ephemeral container
-	for idx, container := range pod.Spec.EphemeralContainers {
-		path := fmt.Sprintf("/spec/ephemeralContainers/%d/image", idx)
-		replacement, err := transform.ImageTransformHost(registryURL, container.Image)
-		if err != nil {
-			return nil, err
-		}
-		updatedAnnotations[getImageAnnotationKey(ctx, container.Name)] = container.Image
-		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
-	}
-
 	// update the image host for each normal container
 	for idx, container := range pod.Spec.Containers {
 		path := fmt.Sprintf("/spec/containers/%d/image", idx)
@@ -129,10 +120,70 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
 
+	// Add the "zarf-agent"="patched" label patch
 	patches = append(patches, getLabelPatch(pod.Labels))
 
+	// Add the annotations label patch
 	patches = append(patches, operations.ReplacePatchOperation("/metadata/annotations", updatedAnnotations))
 
+	return &operations.Result{
+		Allowed:  true,
+		PatchOps: patches,
+	}, nil
+}
+
+// mutatePodSubresource handles pod subresource mutation
+func mutatePodSubresource(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+
+	switch res := r.SubResource; res {
+	case "ephemeralcontainers":
+		return mutateEphemeralContainers(ctx, r, cluster)
+	default:
+		// this likely won't be hit as the MutatingWebhookConfiguration would need to be modified - but this can help ensure they stay synchronized
+		return nil, fmt.Errorf("attempted mutation of unsupported subresource: %s", res)
+	}
+
+}
+
+func mutateEphemeralContainers(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+
+	l := logger.From(ctx)
+	pod, err := parsePod(r.Object.Raw)
+	if err != nil {
+		return nil, fmt.Errorf(lang.AgentErrParsePod, err)
+	}
+
+	state, err := cluster.LoadZarfState(ctx)
+	if err != nil {
+		return nil, err
+	}
+	registryURL := state.RegistryInfo.Address
+
+	// Pods do not have a metadata.name at the time of admission if from a deployment so we don't log the name
+	l.Info("using the Zarf registry URL to mutate the Pod", "registry", registryURL)
+
+	updatedAnnotations := pod.Annotations
+	if updatedAnnotations == nil {
+		updatedAnnotations = make(map[string]string)
+	}
+
+	var patches []operations.PatchOperation
+
+	// update the image host for each ephemeral container
+	for idx, container := range pod.Spec.EphemeralContainers {
+		path := fmt.Sprintf("/spec/ephemeralContainers/%d/image", idx)
+		replacement, err := transform.ImageTransformHost(registryURL, container.Image)
+		if err != nil {
+			return nil, err
+		}
+		updatedAnnotations[getImageAnnotationKey(ctx, container.Name)] = container.Image
+		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
+	}
+
+	// Add the annotations label patch
+	patches = append(patches, operations.ReplacePatchOperation("/metadata/annotations", updatedAnnotations))
+
+	// Return the result of the subresource mutation
 	return &operations.Result{
 		Allowed:  true,
 		PatchOps: patches,
