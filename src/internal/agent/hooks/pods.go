@@ -134,7 +134,6 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 
 // mutatePodSubresource handles pod subresource mutation
 func mutatePodSubresource(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
-
 	switch res := r.SubResource; res {
 	case "ephemeralcontainers":
 		return mutateEphemeralContainers(ctx, r, cluster)
@@ -142,11 +141,9 @@ func mutatePodSubresource(ctx context.Context, r *v1.AdmissionRequest, cluster *
 		// this likely won't be hit as the MutatingWebhookConfiguration would need to be modified - but this can help ensure they stay synchronized
 		return nil, fmt.Errorf("attempted mutation of unsupported subresource: %s", res)
 	}
-
 }
 
 func mutateEphemeralContainers(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
-
 	l := logger.From(ctx)
 	pod, err := parsePod(r.Object.Raw)
 	if err != nil {
