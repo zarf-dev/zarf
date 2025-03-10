@@ -62,7 +62,8 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	}
 	var correctedManifests []ocispec.Descriptor
 	for _, manifest := range idx.Manifests {
-		if manifest.Annotations[ocispec.AnnotationBaseImageName] != ""{
+		// Crane does not set ocispec.AnnotationRefName which ORAS uses to find images
+		if manifest.Annotations[ocispec.AnnotationRefName] == "" {
 			manifest.Annotations[ocispec.AnnotationRefName] = manifest.Annotations[ocispec.AnnotationBaseImageName]
 		}
 		correctedManifests = append(correctedManifests, manifest)
