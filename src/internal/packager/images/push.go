@@ -60,31 +60,17 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			PlainHTTP: cfg.PlainHTTP,
 			Client:    client,
 		}
-		copyOpts := oras.DefaultCopyOptions
-		// p := &ocispec.Platform{
-		// 	OS:           "linux",
-		// 	Architecture: cfg.Arch,
-		// }
 		remoteRepo.Reference, err = registry.ParseReference(dstName)
 		if err != nil {
 			return fmt.Errorf("failed to parse ref %s: %w", dstName, err)
 		}
-		// copyOpts.WithTargetPlatform(p)
 		if tunnel != nil {
 			return tunnel.Wrap(func() error {
 				remoteRepo.PlainHTTP = true
-				_, err := oras.Copy(ctx, src, srcName, remoteRepo, dstName, copyOpts)
-				if err != nil {
-					return fmt.Errorf("failed to push image %s: %s: %w", srcName, dstName, err)
-				}
-				return err
+				return copyImage(ctx, src, remoteRepo, srcName, dstName)
 			})
 		}
-		_, err := oras.Copy(ctx, src, srcName, remoteRepo, dstName, copyOpts)
-		if err != nil {
-			return fmt.Errorf("failed to push image %s: %w", srcName, err)
-		}
-		return err
+		return copyImage(ctx, src, remoteRepo, srcName, dstName)
 	}
 
 	for _, img := range cfg.ImageList {
@@ -114,5 +100,25 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 	}
 
+	return nil
+}
+
+func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string) error {
+	// We get the platform dynamically because it can be nil in non container image cases
+	desc, _, err := oras.Fetch(ctx, src, srcName, oras.DefaultFetchOptions)
+	if err != nil {
+		return fmt.Errorf("failed to fetch: %w", err)
+	}
+	// we only allow manifests during pull, this allows us to get the platform from the descriptor
+	if !isManifest(desc.MediaType) {
+		return fmt.Errorf("only OCI manifests are supported in Zarf, got %s", desc.MediaType)
+	}
+	copyOpts := oras.DefaultCopyOptions
+	// We get the
+	copyOpts.WithTargetPlatform(desc.Platform)
+	_, err = oras.Copy(ctx, src, srcName, remote, dstName, copyOpts)
+	if err != nil {
+		return fmt.Errorf("failed to push image %s: %w", srcName, err)
+	}
 	return nil
 }

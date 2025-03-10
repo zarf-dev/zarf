@@ -58,6 +58,7 @@ func isLayer(mediaType string) bool {
 	}
 	return false
 }
+
 func OnlyHasImageLayers(manifest ocispec.Manifest) bool {
 	for _, layer := range manifest.Layers {
 		if !isLayer(string(layer.MediaType)) {
@@ -65,6 +66,15 @@ func OnlyHasImageLayers(manifest ocispec.Manifest) bool {
 		}
 	}
 	return true
+}
+
+func isManifest(mediaType string) bool{
+	// TODO make sure we have a docker media type for testing
+	switch mediaType {
+	case ocispec.MediaTypeImageManifest, DockerMediaTypeManifest:
+		return true
+	}
+	return false
 }
 
 // PushConfig is the configuration for pushing images.
