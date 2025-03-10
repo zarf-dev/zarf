@@ -16,3 +16,6 @@ indent_size = 4
 
 [*.md]
 trim_trailing_whitespace = false
+
+[src/internal/packages/images/testdata/**/*.json]
+insert_final_newline = false

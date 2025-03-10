@@ -107,7 +107,7 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 	// We get the platform dynamically because it can be nil in non container image cases
 	desc, _, err := oras.Fetch(ctx, src, srcName, oras.DefaultFetchOptions)
 	if err != nil {
-		return fmt.Errorf("failed to fetch: %w", err)
+		return fmt.Errorf("failed to fetch image: %s: %w", srcName, err)
 	}
 	// we only allow manifests during pull, this allows us to get the platform from the descriptor
 	if !isManifest(desc.MediaType) {

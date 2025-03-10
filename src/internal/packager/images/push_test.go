@@ -23,9 +23,23 @@ func TestPush(t *testing.T) {
 		expectErr  bool
 	}{
 		{
-			name: "push local images",
+			name: "push local images oras",
 			cfg: PushConfig{
 				SourceDirectory: "testdata/oras-oci-layout/images",
+				PlainHTTP:       true,
+				Arch:            "amd64",
+			},
+			imageNames: []string{
+				"ghcr.io/local/small:1.0.0",
+				"cgr.dev/chainguard/static:latest",
+				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
+				"ghcr.io/stefanprodan/charts/podinfo:6.4.0",
+			},
+		},
+		{
+			name: "push local images crane",
+			cfg: PushConfig{
+				SourceDirectory: "testdata/crane-oci-layout/images",
 				PlainHTTP:       true,
 				Arch:            "amd64",
 			},
