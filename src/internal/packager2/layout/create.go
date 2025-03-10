@@ -164,7 +164,6 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 
 	if !opt.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
-		fmt.Println("sbom image list", len(sbomImageList))
 		err = generateSBOM(ctx, pkg, buildPath, sbomImageList)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
