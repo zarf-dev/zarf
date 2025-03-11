@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package test provides e2e tests for Zarf.
 package test
 
 import (
@@ -37,5 +41,4 @@ func TestEphemeralContainers(t *testing.T) {
 	// cleanup
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "basic-pod", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
-
 }
