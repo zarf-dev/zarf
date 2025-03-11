@@ -209,7 +209,7 @@ func TestPullRegistryOverrides(t *testing.T) {
 				ocispec.AnnotationRefName:       tc.ref,
 				ocispec.AnnotationBaseImageName: tc.ref,
 			}
-			require.ElementsMatch(t, idx.Manifests[0].Annotations, expectedAnnotations)
+			require.Equal(t, idx.Manifests[0].Annotations, expectedAnnotations)
 
 			// Make sure all the layers of the image are pulled in
 			for _, manifest := range imageManifests {

@@ -156,10 +156,11 @@ func pullFromDockerDaemon(ctx context.Context, images []transform.Image, dst ora
 	return imagesWithManifests, nil
 }
 
-type imageInfo struct {
-	reference    string
-	manifestDesc ocispec.Descriptor
-	byteSize     int64
+type imagePullInfo struct {
+	overriddenRef string
+	originalRef   string
+	manifestDesc  ocispec.Descriptor
+	byteSize      int64
 }
 
 // Pull pulls all images from the given config.
@@ -190,8 +191,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		OS:           "linux",
 	}
 	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
-	imagesInfo := []imageInfo{}
-	dockerFallBack := []transform.Image{}
+	imagesInfo := []imagePullInfo{}
+	dockerFallBackImages := []transform.Image{}
 
 	// This loop pulls the metadata from images with three goals
 	// - discover if any images are sha'd to an index, if so error which options for different platforms
@@ -201,13 +202,15 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		localRepo := &orasRemote.Repository{PlainHTTP: cfg.PlainHTTP}
 		var err error
 
+		originalRef := image.Reference
+		var overriddenRef string
 		for k, v := range cfg.RegistryOverrides {
 			if strings.HasPrefix(image.Reference, k) {
-				image.Reference = strings.Replace(image.Reference, k, v, 1)
+				overriddenRef = strings.Replace(image.Reference, k, v, 1)
 			}
 		}
 
-		localRepo.Reference, err = registry.ParseReference(image.Reference)
+		localRepo.Reference, err = registry.ParseReference(overriddenRef)
 		if err != nil {
 			return nil, err
 		}
@@ -216,7 +219,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 
 		// If the image has a digest start out by checking if it's an index sha
 		if image.Digest != "" {
-			desc, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, oras.DefaultFetchBytesOptions)
+			desc, b, err := oras.FetchBytes(ctx, localRepo, overriddenRef, oras.DefaultFetchBytesOptions)
 			if err != nil {
 				return nil, err
 			}
@@ -236,24 +239,28 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 					lines = append(lines, fmt.Sprintf("image - %s@%s with platform %s", name, desc.Digest, desc.Platform))
 				}
 				imageOptions := strings.Join(lines, "\n")
-				return nil, fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", image.Reference, imageOptions)
+				return nil, fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", overriddenRef, imageOptions)
 			}
 		}
 
 		fetchOpts := oras.DefaultFetchBytesOptions
 		fetchOpts.FetchOptions.TargetPlatform = platform
-		desc, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, fetchOpts)
+		desc, b, err := oras.FetchBytes(ctx, localRepo, overriddenRef, fetchOpts)
 		if err != nil {
 			// If the image was not found it could be a image signature or Helm image
 			// non container images don't have platforms so we check using the default opts
-			desc, b, err = oras.FetchBytes(ctx, localRepo, image.Reference, oras.DefaultFetchBytesOptions)
+			desc, b, err = oras.FetchBytes(ctx, localRepo, overriddenRef, oras.DefaultFetchBytesOptions)
 			if err != nil {
 				if strings.Contains(err.Error(), "toomanyrequests") {
 					return nil, fmt.Errorf("rate limited by registry: %w", err)
 				}
-				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", image.Reference, "err", err)
+				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", overriddenRef, "err", err)
 				// If the image is not found again then we should try to pull it from the daemon
-				dockerFallBack = append(dockerFallBack, image)
+				overriddenImage, err := transform.ParseImageRef(overriddenRef)
+				if err != nil {
+					fmt.Errorf("unable to parse image ref %s: %w", overriddenImage, err)
+				}
+				dockerFallBackImages = append(dockerFallBackImages, overriddenImage)
 				continue
 			}
 		}
@@ -265,13 +272,14 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 				return nil, err
 			}
 			size := getSizeOfImage(desc, manifest)
-			imagesInfo = append(imagesInfo, imageInfo{
-				reference:    image.Reference,
-				byteSize:     size,
-				manifestDesc: desc,
+			imagesInfo = append(imagesInfo, imagePullInfo{
+				overriddenRef: overriddenRef,
+				originalRef:   originalRef,
+				byteSize:      size,
+				manifestDesc:  desc,
 			})
 			imagesWithManifests[image] = manifest
-			l.Debug("pulled manifest for image", "name", image.Reference)
+			l.Debug("pulled manifest for image", "name", overriddenRef)
 		} else {
 			return nil, fmt.Errorf("received unexpected mediatype %s", desc.MediaType)
 		}
@@ -285,8 +293,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		return nil, fmt.Errorf("failed to create oci formatted directory: %w", err)
 	}
 
-	if len(dockerFallBack) > 0 {
-		daemonImagesWithManifests, err := pullFromDockerDaemon(ctx, dockerFallBack, dst, cfg.Arch)
+	if len(dockerFallBackImages) > 0 {
+		daemonImagesWithManifests, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, cfg.Arch)
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull images from docker: %w", err)
 		}
@@ -311,23 +319,23 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 }
 
 // TODO ensure images have org.opencontainers.image.base.name tag set to refname after pull
-func orasSave(ctx context.Context, imagesInfo []imageInfo, cfg PullConfig, dst *oci.Store, client *auth.Client) error {
+func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, dst *oci.Store, client *auth.Client) error {
 	l := logger.From(ctx)
 	var descs []ocispec.Descriptor
 	for _, imageInfo := range imagesInfo {
 		var pullSrc oras.ReadOnlyTarget
 		var err error
 		remoteRepo := &orasRemote.Repository{PlainHTTP: cfg.PlainHTTP}
-		remoteRepo.Reference, err = registry.ParseReference(imageInfo.reference)
+		remoteRepo.Reference, err = registry.ParseReference(imageInfo.overriddenRef)
 		if err != nil {
-			return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.reference, err)
+			return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.overriddenRef, err)
 		}
 		remoteRepo.Client = client
 
 		copyOpts := oras.DefaultCopyOptions
 		copyOpts.Concurrency = cfg.Concurrency
 		copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
-		l.Info("saving image", "name", imageInfo.reference, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
+		l.Info("saving image", "name", imageInfo.overriddenRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
 		if cfg.CacheDirectory == "" {
 			pullSrc = remoteRepo
 		} else {
@@ -337,15 +345,15 @@ func orasSave(ctx context.Context, imagesInfo []imageInfo, cfg PullConfig, dst *
 			}
 			pullSrc = orasCache.New(remoteRepo, localCache)
 		}
-		desc, err := oras.Copy(ctx, pullSrc, imageInfo.reference, dst, "", copyOpts)
+		desc, err := oras.Copy(ctx, pullSrc, imageInfo.overriddenRef, dst, "", copyOpts)
 		if err != nil {
 			return fmt.Errorf("failed to copy: %w", err)
 		}
 		if desc.Annotations == nil {
 			desc.Annotations = make(map[string]string)
 		}
-		desc.Annotations[ocispec.AnnotationRefName] = imageInfo.reference
-		desc.Annotations[ocispec.AnnotationBaseImageName] = imageInfo.reference
+		desc.Annotations[ocispec.AnnotationRefName] = imageInfo.originalRef
+		desc.Annotations[ocispec.AnnotationBaseImageName] = imageInfo.originalRef
 		descs = append(descs, desc)
 	}
 	idx, err := getIndexFromOCILayout(cfg.DestinationDirectory)
