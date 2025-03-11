@@ -560,6 +560,7 @@ func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []s
 		NoChecksum:      noImgChecksum,
 		Arch:            p.cfg.Pkg.Build.Architecture,
 		Retries:         p.cfg.PkgOpts.Retries,
+		PlainHTTP:       config.CommonOptions.PlainHTTP,
 	}
 
 	return images.Push(ctx, pushCfg)

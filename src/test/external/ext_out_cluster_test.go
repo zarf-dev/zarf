@@ -149,13 +149,13 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	// Deploy the flux example package
 	temp := suite.T().TempDir()
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
-	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--confirm"}
+	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--plain-http", "--confirm"}
 	err := exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 
 	err = exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", temp, "--skip-sbom")
 	suite.NoError(err)
-	deployArgs = []string{"package", "deploy", filepath.Join(temp, "zarf-package-argocd-amd64.tar.zst"), "--confirm"}
+	deployArgs = []string{"package", "deploy", filepath.Join(temp, "zarf-package-argocd-amd64.tar.zst"), "--plain-http", "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err)
 }
