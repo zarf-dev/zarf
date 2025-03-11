@@ -30,10 +30,11 @@ func TestPush(t *testing.T) {
 				Arch:            "amd64",
 			},
 			imageNames: []string{
-				"ghcr.io/local/small:1.0.0",
-				"cgr.dev/chainguard/static:latest",
+				"local-test:1.0.0",
+				"hello-world:latest",
 				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
 				"ghcr.io/stefanprodan/charts/podinfo:6.4.0",
+				"hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
 			},
 		},
 		{
@@ -44,10 +45,11 @@ func TestPush(t *testing.T) {
 				Arch:            "amd64",
 			},
 			imageNames: []string{
-				"ghcr.io/local/small:1.0.0",
-				"cgr.dev/chainguard/static:latest",
+				"local-test:1.0.0",
+				"hello-world:latest",
 				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
 				"ghcr.io/stefanprodan/charts/podinfo:6.4.0",
+				"hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
 			},
 		},
 	}

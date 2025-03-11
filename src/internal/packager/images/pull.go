@@ -244,9 +244,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		fetchOpts.FetchOptions.TargetPlatform = platform
 		desc, b, err := oras.FetchBytes(ctx, localRepo, image.Reference, fetchOpts)
 		if err != nil {
-			// If the image was not found it could be an image signature or Helm image
-			// In this case we can check if the image was not found by using default fetch byte options
-			// If the image is found this time we assume that it is not a container image
+			// If the image was not found it could be a image signature or Helm image
+			// non container images don't have platforms so we check using the default opts
 			desc, b, err = oras.FetchBytes(ctx, localRepo, image.Reference, oras.DefaultFetchBytesOptions)
 			if err != nil {
 				if strings.Contains(err.Error(), "toomanyrequests") {
