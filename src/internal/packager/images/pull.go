@@ -59,6 +59,7 @@ func getDockerEndpointHost() (string, error) {
 }
 
 func pullFromDockerDaemon(ctx context.Context, images []transform.Image, dst oras.Target, arch string) (map[transform.Image]ocispec.Manifest, error) {
+	l := logger.From(ctx)
 	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
 	dockerEndPointHost, err := getDockerEndpointHost()
 	if err != nil {
@@ -143,6 +144,8 @@ func pullFromDockerDaemon(ctx context.Context, images []transform.Image, dst ora
 			return nil, err
 		}
 		imagesWithManifests[image] = manifest
+		size := getSizeOfImage(desc, manifest)
+		l.Info("pulling image from docker daemon", "name", image.Reference, "size", utils.ByteFormat(float64(size), 2))
 		copyOpts := oras.DefaultCopyOptions
 		copyOpts.WithTargetPlatform(platform)
 		_, err = oras.Copy(ctx, dockerImageSrc, image.Reference, dst, "", copyOpts)
@@ -343,7 +346,6 @@ func orasSave(ctx context.Context, imagesInfo []imageInfo, cfg PullConfig, dst o
 	return nil
 }
 
-// technically this doesn't include the manifest
 func getSizeOfImage(manifestDesc ocispec.Descriptor, manifest ocispec.Manifest) int64 {
 	var totalSize int64
 	totalSize += manifestDesc.Size

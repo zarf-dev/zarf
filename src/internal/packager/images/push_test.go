@@ -17,18 +17,14 @@ import (
 func TestPush(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		name       string
-		cfg        PushConfig
-		imageNames []string
-		expectErr  bool
+		name            string
+		SourceDirectory string
+		imageNames      []string
+		expectErr       bool
 	}{
 		{
-			name: "push local images oras",
-			cfg: PushConfig{
-				SourceDirectory: "testdata/oras-oci-layout/images",
-				PlainHTTP:       true,
-				Arch:            "amd64",
-			},
+			name:            "push local images oras",
+			SourceDirectory: "testdata/oras-oci-layout/images",
 			imageNames: []string{
 				"local-test:1.0.0",
 				"hello-world:latest",
@@ -38,12 +34,8 @@ func TestPush(t *testing.T) {
 			},
 		},
 		{
-			name: "push local images crane",
-			cfg: PushConfig{
-				SourceDirectory: "testdata/crane-oci-layout/images",
-				PlainHTTP:       true,
-				Arch:            "amd64",
-			},
+			name:            "push local images crane",
+			SourceDirectory: "testdata/crane-oci-layout/images",
 			imageNames: []string{
 				"local-test:1.0.0",
 				"hello-world:latest",
@@ -51,6 +43,14 @@ func TestPush(t *testing.T) {
 				"ghcr.io/stefanprodan/charts/podinfo:6.4.0",
 				"hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
 			},
+		},
+		{
+			name:            "push local images crane",
+			SourceDirectory: "testdata/oras-oci-layout/images",
+			imageNames: []string{
+				"this-image-does-not-exist:1.0.0",
+			},
+			expectErr: true,
 		},
 	}
 
@@ -58,6 +58,7 @@ func TestPush(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := testutil.TestContext(t)
+			// setup in memory registry
 			port, err := helpers.GetAvailablePort()
 			require.NoError(t, err)
 			address := testutil.SetupInMemoryRegistry(ctx, t, port)
@@ -66,15 +67,24 @@ func TestPush(t *testing.T) {
 				Address: address,
 			}
 			require.NoError(t, err)
-			tc.cfg.RegInfo = regInfo
+
 			for _, name := range tc.imageNames {
 				ref, err := transform.ParseImageRef(name)
 				require.NoError(t, err)
 				imageList = append(imageList, ref)
 			}
-			tc.cfg.ImageList = imageList
 
-			err = Push(ctx, tc.cfg)
+			// push images to registry
+			cfg := PushConfig{
+				SourceDirectory: tc.SourceDirectory,
+				RegInfo:         regInfo,
+				PlainHTTP:       true,
+				Arch:            "amd64",
+				ImageList:       imageList,
+			}
+			err = Push(ctx, cfg)
+
+			// validate
 			if tc.expectErr {
 				require.Error(t, err, tc.expectErr)
 				return
