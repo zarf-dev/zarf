@@ -120,7 +120,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 }
 
 func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string) error {
-
 	// We get the platform dynamically because it can be nil in non container image cases
 	desc, _, err := oras.Fetch(ctx, src, srcName, oras.DefaultFetchOptions)
 	if err != nil {

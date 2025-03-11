@@ -155,37 +155,103 @@ func TestPull(t *testing.T) {
 			}
 		})
 	}
+}
 
-	t.Run("pulling an image with an invalid layer in the cache should still pull the image", func(t *testing.T) {
-		t.Parallel()
-		ref, err := transform.ParseImageRef("ghcr.io/fluxcd/image-automation-controller@sha256:48a89734dc82c3a2d4138554b3ad4acf93230f770b3a582f7f48be38436d031c")
-		require.NoError(t, err)
-		destDir := t.TempDir()
-		cacheDir := t.TempDir()
-		invalidContent := []byte("this mimics a corrupted file")
-		// This is the sha of a layer of the image.
-		// we intentionally put junk data into the cache with this layer to test that it will get cleaned up.
-		correctLayerSha := "d94c8059c3cffb9278601bf9f8be070d50c84796401a4c5106eb8a4042445bbc"
-		require.NoError(t, err)
-		invalidLayerPath := filepath.Join(cacheDir, fmt.Sprintf("sha256:%s", correctLayerSha))
-		err = os.WriteFile(invalidLayerPath, invalidContent, 0777)
-		require.NoError(t, err)
+func TestPullRegistryOverrides(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name      string
+		ref       string
+		arch      string
+		expectErr bool
+	}{
+		{
+			name: "pull an image",
+			ref:  "ghcr.io/stefanprodan/podinfo:6.4.0",
+			arch: "amd64",
+		},
+		{
+			name:      "error when pulling an image that doesn't exist",
+			ref:       "ghcr.io/zarf-dev/zarf/imagethatdoesntexist:v1.1.1",
+			expectErr: true,
+		},
+	}
 
-		pullConfig := PullConfig{
-			DestinationDirectory: destDir,
-			CacheDirectory:       cacheDir,
-			ImageList: []transform.Image{
-				ref,
-			},
-		}
-		_, err = Pull(context.Background(), pullConfig)
-		require.NoError(t, err)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ref, err := transform.ParseImageRef(tc.ref)
+			require.NoError(t, err)
+			destDir := t.TempDir()
+			cacheDir := t.TempDir()
+			pullConfig := PullConfig{
+				DestinationDirectory: destDir,
+				CacheDirectory:       cacheDir,
+				Arch:                 tc.arch,
+				RegistryOverrides: map[string]string{
+					"ghcr.io": "docker.io",
+				},
+				ImageList: []transform.Image{
+					ref,
+				},
+			}
 
-		// If the correct
-		pulledLayerPath := filepath.Join(destDir, "blobs", "sha256", correctLayerSha)
-		pulledLayer, err := os.ReadFile(pulledLayerPath)
-		require.NoError(t, err)
-		pulledLayerSha := sha256.Sum256(pulledLayer)
-		require.Equal(t, correctLayerSha, fmt.Sprintf("%x", pulledLayerSha))
-	})
+			imageManifests, err := Pull(context.Background(), pullConfig)
+			if tc.expectErr {
+				require.Error(t, err, tc.expectErr)
+				return
+			}
+			require.NoError(t, err)
+
+			idx, err := getIndexFromOCILayout(filepath.Join(destDir))
+			require.NoError(t, err)
+			expectedAnnotations := map[string]string{
+				ocispec.AnnotationRefName:       tc.ref,
+				ocispec.AnnotationBaseImageName: tc.ref,
+			}
+			require.ElementsMatch(t, idx.Manifests[0].Annotations, expectedAnnotations)
+
+			// Make sure all the layers of the image are pulled in
+			for _, manifest := range imageManifests {
+				for _, layer := range manifest.Layers {
+					require.FileExists(t, filepath.Join(destDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
+					require.FileExists(t, filepath.Join(cacheDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
+				}
+			}
+		})
+	}
+}
+
+func TestPullInvalidCache(t *testing.T) {
+	// pulling an image with an invalid layer in the cache should still pull the image
+	t.Parallel()
+	ref, err := transform.ParseImageRef("ghcr.io/fluxcd/image-automation-controller@sha256:48a89734dc82c3a2d4138554b3ad4acf93230f770b3a582f7f48be38436d031c")
+	require.NoError(t, err)
+	destDir := t.TempDir()
+	cacheDir := t.TempDir()
+	invalidContent := []byte("this mimics a corrupted file")
+	// This is the sha of a layer of the image.
+	// we intentionally put junk data into the cache with this layer to test that it will get cleaned up.
+	correctLayerSha := "d94c8059c3cffb9278601bf9f8be070d50c84796401a4c5106eb8a4042445bbc"
+	require.NoError(t, err)
+	invalidLayerPath := filepath.Join(cacheDir, fmt.Sprintf("sha256:%s", correctLayerSha))
+	err = os.WriteFile(invalidLayerPath, invalidContent, 0777)
+	require.NoError(t, err)
+
+	pullConfig := PullConfig{
+		DestinationDirectory: destDir,
+		CacheDirectory:       cacheDir,
+		ImageList: []transform.Image{
+			ref,
+		},
+	}
+	_, err = Pull(context.Background(), pullConfig)
+	require.NoError(t, err)
+
+	// If the correct
+	pulledLayerPath := filepath.Join(destDir, "blobs", "sha256", correctLayerSha)
+	pulledLayer, err := os.ReadFile(pulledLayerPath)
+	require.NoError(t, err)
+	pulledLayerSha := sha256.Sum256(pulledLayer)
+	require.Equal(t, correctLayerSha, fmt.Sprintf("%x", pulledLayerSha))
 }

@@ -190,7 +190,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		OS:           "linux",
 	}
 	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
-	ImagesWithDescriptors := []imageInfo{}
+	imagesInfo := []imageInfo{}
 	dockerFallBack := []transform.Image{}
 
 	// This loop pulls the metadata from images with three goals
@@ -265,7 +265,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 				return nil, err
 			}
 			size := getSizeOfImage(desc, manifest)
-			ImagesWithDescriptors = append(ImagesWithDescriptors, imageInfo{
+			imagesInfo = append(imagesInfo, imageInfo{
 				reference:    image.Reference,
 				byteSize:     size,
 				manifestDesc: desc,
@@ -300,8 +300,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	// Crane incorrectly names the blob of the docker image config to a sha that does not match the contents
 	// https://github.com/zarf-dev/zarf/issues/2584
 	// This is a band aid fix while we wait for crane and or docker to create the permanent fix
-
-	err = orasSave(ctx, ImagesWithDescriptors, cfg, dst, client)
+	err = orasSave(ctx, imagesInfo, cfg, dst, client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save images: %w", err)
 	}
@@ -311,8 +310,10 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	return imagesWithManifests, nil
 }
 
-func orasSave(ctx context.Context, imagesInfo []imageInfo, cfg PullConfig, dst oras.Target, client *auth.Client) error {
+// TODO ensure images have org.opencontainers.image.base.name tag set to refname after pull
+func orasSave(ctx context.Context, imagesInfo []imageInfo, cfg PullConfig, dst *oci.Store, client *auth.Client) error {
 	l := logger.From(ctx)
+	var descs []ocispec.Descriptor
 	for _, imageInfo := range imagesInfo {
 		var pullSrc oras.ReadOnlyTarget
 		var err error
@@ -323,10 +324,8 @@ func orasSave(ctx context.Context, imagesInfo []imageInfo, cfg PullConfig, dst o
 		}
 		remoteRepo.Client = client
 
-		// TODO add size in bytes
 		copyOpts := oras.DefaultCopyOptions
 		copyOpts.Concurrency = cfg.Concurrency
-
 		copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
 		l.Info("saving image", "name", imageInfo.reference, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
 		if cfg.CacheDirectory == "" {
@@ -338,12 +337,23 @@ func orasSave(ctx context.Context, imagesInfo []imageInfo, cfg PullConfig, dst o
 			}
 			pullSrc = orasCache.New(remoteRepo, localCache)
 		}
-		_, err = oras.Copy(ctx, pullSrc, imageInfo.reference, dst, "", copyOpts)
+		desc, err := oras.Copy(ctx, pullSrc, imageInfo.reference, dst, "", copyOpts)
 		if err != nil {
 			return fmt.Errorf("failed to copy: %w", err)
 		}
+		if desc.Annotations == nil {
+			desc.Annotations = make(map[string]string)
+		}
+		desc.Annotations[ocispec.AnnotationRefName] = imageInfo.reference
+		desc.Annotations[ocispec.AnnotationBaseImageName] = imageInfo.reference
+		descs = append(descs, desc)
 	}
-	return nil
+	idx, err := getIndexFromOCILayout(cfg.DestinationDirectory)
+	if err != nil {
+		return err
+	}
+	idx.Manifests = descs
+	return saveIndexToOCILayout(cfg.DestinationDirectory, idx)
 }
 
 func getSizeOfImage(manifestDesc ocispec.Descriptor, manifest ocispec.Manifest) int64 {
