@@ -6,10 +6,7 @@ package images
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/oci"
@@ -51,14 +48,9 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			Password: cfg.RegInfo.PushPassword,
 		}),
 	}
-	idxPath := filepath.Join(cfg.SourceDirectory, "index.json")
-	b, err := os.ReadFile(idxPath)
+	idx, err := getIndexFromOCILayout(cfg.SourceDirectory)
 	if err != nil {
-		return fmt.Errorf("failed to get index.json: %w", err)
-	}
-	var idx ocispec.Index
-	if err := json.Unmarshal(b, &idx); err != nil {
-		return fmt.Errorf("unable to unmarshal index.json: %w", err)
+		return err
 	}
 	var correctedManifests []ocispec.Descriptor
 	for _, manifest := range idx.Manifests {
@@ -69,13 +61,9 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		correctedManifests = append(correctedManifests, manifest)
 	}
 	idx.Manifests = correctedManifests
-	b, err = json.Marshal(idx)
+	err = saveIndexToOCILayout(cfg.SourceDirectory, idx)
 	if err != nil {
-		return fmt.Errorf("unable to marshal index.json: %w", err)
-	}
-	err = os.WriteFile(idxPath, b, 0o644)
-	if err != nil {
-		return fmt.Errorf("failed to save changes to index.json: %w", err)
+		return err
 	}
 
 	src, err := oci.NewWithContext(ctx, cfg.SourceDirectory)

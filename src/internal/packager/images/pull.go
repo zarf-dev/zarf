@@ -104,29 +104,20 @@ func pullFromDockerDaemon(ctx context.Context, images []transform.Image, dst ora
 		if err := archiver.Unarchive(imageTarPath, dockerImageOCILayoutPath); err != nil {
 			return nil, fmt.Errorf("failed to write tar file: %w", err)
 		}
-
-		b, err := os.ReadFile(filepath.Join(dockerImageOCILayoutPath, "index.json"))
+		idx, err := getIndexFromOCILayout(dockerImageOCILayoutPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read index.json: %w", err)
-		}
-		var index ocispec.Index
-		if err := json.Unmarshal(b, &index); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal index.json: %w", err)
+			return nil, err
 		}
 		// Indexes should always contain exactly one manifests for the single image we are pulling
-		if len(index.Manifests) != 1 {
+		if len(idx.Manifests) != 1 {
 			return nil, fmt.Errorf("index.json does not contain one manifest")
 		}
 		// Docker does set the annotation ref name in the way ORAS anticipates
 		// We set it here so that ORAS can pick up the image
-		index.Manifests[0].Annotations[ocispec.AnnotationRefName] = image.Reference
-		b, err = json.Marshal(index)
+		idx.Manifests[0].Annotations[ocispec.AnnotationRefName] = image.Reference
+		err = saveIndexToOCILayout(dockerImageOCILayoutPath, idx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal index.json: %w", err)
-		}
-		err = os.WriteFile(filepath.Join(dockerImageOCILayoutPath, "index.json"), b, 0o644)
-		if err != nil {
-			return nil, fmt.Errorf("failed to write index.json: %w", err)
+			return nil, err
 		}
 
 		dockerImageSrc, err := oci.New(dockerImageOCILayoutPath)
@@ -144,7 +135,7 @@ func pullFromDockerDaemon(ctx context.Context, images []transform.Image, dst ora
 		if err != nil {
 			return nil, fmt.Errorf("failed to get manifest from docker image source: %w", err)
 		}
-		if !(desc.MediaType == ocispec.MediaTypeImageManifest || desc.MediaType == DockerMediaTypeManifest) {
+		if !isManifest(desc.MediaType) {
 			return nil, fmt.Errorf("expected to find image manifest instead found %s", desc.MediaType)
 		}
 		var manifest ocispec.Manifest

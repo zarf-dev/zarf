@@ -5,10 +5,11 @@
 package images
 
 import (
-	"net/http"
-	"time"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -68,13 +69,39 @@ func OnlyHasImageLayers(manifest ocispec.Manifest) bool {
 	return true
 }
 
-func isManifest(mediaType string) bool{
+func isManifest(mediaType string) bool {
 	// TODO make sure we have a docker media type for testing
 	switch mediaType {
 	case ocispec.MediaTypeImageManifest, DockerMediaTypeManifest:
 		return true
 	}
 	return false
+}
+
+func getIndexFromOCILayout(dir string) (ocispec.Index, error) {
+	idxPath := filepath.Join(dir, "index.json")
+	b, err := os.ReadFile(idxPath)
+	if err != nil {
+		return ocispec.Index{}, fmt.Errorf("failed to get index.json: %w", err)
+	}
+	var idx ocispec.Index
+	if err := json.Unmarshal(b, &idx); err != nil {
+		return ocispec.Index{}, fmt.Errorf("unable to unmarshal index.json: %w", err)
+	}
+	return idx, nil
+}
+
+func saveIndexToOCILayout(dir string, idx ocispec.Index) error {
+	idxPath := filepath.Join(dir, "index.json")
+	b, err := json.Marshal(idx)
+	if err != nil {
+		return fmt.Errorf("unable to marshal index.json: %w", err)
+	}
+	err = os.WriteFile(idxPath, b, 0o644)
+	if err != nil {
+		return fmt.Errorf("failed to save changes to index.json: %w", err)
+	}
+	return nil
 }
 
 // PushConfig is the configuration for pushing images.
@@ -146,20 +173,4 @@ func WithPullAuth(ri types.RegistryInfo) crane.Option {
 // WithPushAuth returns an option for crane that sets push auth from a given registry info.
 func WithPushAuth(ri types.RegistryInfo) crane.Option {
 	return WithBasicAuth(ri.PushUsername, ri.PushPassword)
-}
-
-func createPushOpts(cfg PushConfig) []crane.Option {
-	opts := CommonOpts(cfg.Arch)
-	opts = append(opts, WithPushAuth(cfg.RegInfo))
-
-	defaultTransport := http.DefaultTransport.(*http.Transport).Clone()
-	defaultTransport.TLSClientConfig.InsecureSkipVerify = config.CommonOptions.InsecureSkipTLSVerify
-	// TODO (@WSTARR) This is set to match the TLSHandshakeTimeout to potentially mitigate effects of https://github.com/zarf-dev/zarf/issues/1444
-	defaultTransport.ResponseHeaderTimeout = 10 * time.Second
-
-	transport := helpers.NewTransport(defaultTransport, nil)
-
-	opts = append(opts, crane.WithTransport(transport))
-
-	return opts
 }
