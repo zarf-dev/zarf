@@ -58,72 +58,73 @@ func getDockerEndpointHost() (string, error) {
 	return endpoint.Host, nil
 }
 
-func pullFromDockerDaemon(ctx context.Context, images []transform.Image, dst oras.Target, arch string) (map[transform.Image]ocispec.Manifest, error) {
+func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullInfo, dst oras.Target, arch string) (map[transform.Image]ocispec.Manifest, []ocispec.Descriptor, error) {
 	l := logger.From(ctx)
 	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
 	dockerEndPointHost, err := getDockerEndpointHost()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer os.Remove(tmpDir)
-	for _, image := range images {
+	var manifestDescs []ocispec.Descriptor
+	for _, pullInfo := range daemonPullInfo {
 		cli, err := client.NewClientWithOpts(
 			client.WithHost(dockerEndPointHost),
 			client.WithTLSClientConfigFromEnv(),
 			client.WithVersionFromEnv(),
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create Docker client: %w", err)
+			return nil, nil, fmt.Errorf("failed to create Docker client: %w", err)
 		}
 		defer cli.Close()
 		cli.NegotiateAPIVersion(ctx)
 		// Note: ImageSave accepts a ocispec.Platform, BUT it would require users have docker engine API version 1.48
 		// which was released in Feb 2025. This could make the code more efficient in some cases, but we are
 		// avoiding this for now to give users more time to update.
-		imageReader, err := cli.ImageSave(ctx, []string{image.Reference})
+		imageReader, err := cli.ImageSave(ctx, []string{pullInfo.overriddenRef})
 		if err != nil {
-			return nil, fmt.Errorf("failed to save image: %w", err)
+			return nil, nil, fmt.Errorf("failed to save image: %w", err)
 		}
 		defer imageReader.Close()
 
 		imageTarPath := filepath.Join(tmpDir, "image.tar")
 		tarFile, err := os.Create(imageTarPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create tar file: %w", err)
+			return nil, nil, fmt.Errorf("failed to create tar file: %w", err)
 		}
 		defer tarFile.Close()
 
 		// Read bytes from imageReader and write them to tarFile
 		if _, err := io.Copy(tarFile, imageReader); err != nil {
-			return nil, fmt.Errorf("error writing image to tar file: %w", err)
+			return nil, nil, fmt.Errorf("error writing image to tar file: %w", err)
 		}
 		dockerImageOCILayoutPath := filepath.Join(tmpDir, "docker-image-oci-layout")
 		if err := archiver.Unarchive(imageTarPath, dockerImageOCILayoutPath); err != nil {
-			return nil, fmt.Errorf("failed to write tar file: %w", err)
+			return nil, nil, fmt.Errorf("failed to write tar file: %w", err)
 		}
 		idx, err := getIndexFromOCILayout(dockerImageOCILayoutPath)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		// Indexes should always contain exactly one manifests for the single image we are pulling
 		if len(idx.Manifests) != 1 {
-			return nil, fmt.Errorf("index.json does not contain one manifest")
+			return nil, nil, fmt.Errorf("index.json does not contain one manifest")
 		}
 		// Docker does set the annotation ref name in the way ORAS anticipates
 		// We set it here so that ORAS can pick up the image
-		idx.Manifests[0].Annotations[ocispec.AnnotationRefName] = image.Reference
+		idx.Manifests[0].Annotations[ocispec.AnnotationRefName] = pullInfo.overriddenRef
 		err = saveIndexToOCILayout(dockerImageOCILayoutPath, idx)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		dockerImageSrc, err := oci.New(dockerImageOCILayoutPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create OCI store: %w", err)
+			return nil, nil, fmt.Errorf("failed to create OCI store: %w", err)
 		}
 
 		fetchBytesOpts := oras.DefaultFetchBytesOptions
@@ -132,28 +133,35 @@ func pullFromDockerDaemon(ctx context.Context, images []transform.Image, dst ora
 			OS:           "linux",
 		}
 		fetchBytesOpts.TargetPlatform = platform
-		desc, b, err := oras.FetchBytes(ctx, dockerImageSrc, image.Reference, fetchBytesOpts)
+		desc, b, err := oras.FetchBytes(ctx, dockerImageSrc, pullInfo.overriddenRef, fetchBytesOpts)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get manifest from docker image source: %w", err)
+			return nil, nil, fmt.Errorf("failed to get manifest from docker image source: %w", err)
 		}
 		if !isManifest(desc.MediaType) {
-			return nil, fmt.Errorf("expected to find image manifest instead found %s", desc.MediaType)
+			return nil, nil, fmt.Errorf("expected to find image manifest instead found %s", desc.MediaType)
 		}
 		var manifest ocispec.Manifest
 		if err := json.Unmarshal(b, &manifest); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		imagesWithManifests[image] = manifest
+		imagesWithManifests[pullInfo.originalImage] = manifest
 		size := getSizeOfImage(desc, manifest)
-		l.Info("pulling image from docker daemon", "name", image.Reference, "size", utils.ByteFormat(float64(size), 2))
+		l.Info("pulling image from docker daemon", "name", pullInfo.overriddenRef, "size", utils.ByteFormat(float64(size), 2))
 		copyOpts := oras.DefaultCopyOptions
 		copyOpts.WithTargetPlatform(platform)
-		_, err = oras.Copy(ctx, dockerImageSrc, image.Reference, dst, "", copyOpts)
+		manifestDesc, err := oras.Copy(ctx, dockerImageSrc, pullInfo.overriddenRef, dst, "", copyOpts)
 		if err != nil {
-			return nil, fmt.Errorf("failed to copy: %w", err)
+			return nil, nil, fmt.Errorf("failed to copy: %w", err)
 		}
+		if manifestDesc.Annotations == nil {
+			manifestDesc.Annotations = make(map[string]string)
+		}
+		manifestDesc.Annotations[ocispec.AnnotationRefName] = pullInfo.originalImage.Reference
+		manifestDesc.Annotations[ocispec.AnnotationBaseImageName] = pullInfo.originalImage.Reference
+		manifestDescs = append(manifestDescs, manifestDesc)
 	}
-	return imagesWithManifests, nil
+
+	return imagesWithManifests, manifestDescs, nil
 }
 
 type imagePullInfo struct {
@@ -161,6 +169,11 @@ type imagePullInfo struct {
 	originalRef   string
 	manifestDesc  ocispec.Descriptor
 	byteSize      int64
+}
+
+type imageDaemonPullInfo struct {
+	overriddenRef string
+	originalImage transform.Image
 }
 
 // Pull pulls all images from the given config.
@@ -192,7 +205,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	}
 	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
 	imagesInfo := []imagePullInfo{}
-	dockerFallBackImages := []transform.Image{}
+	dockerFallBackImages := []imageDaemonPullInfo{}
 
 	// This loop pulls the metadata from images with three goals
 	// - discover if any images are sha'd to an index, if so error which options for different platforms
@@ -202,8 +215,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		localRepo := &orasRemote.Repository{PlainHTTP: cfg.PlainHTTP}
 		var err error
 
-		originalRef := image.Reference
-		var overriddenRef string
+		overriddenRef := image.Reference
 		for k, v := range cfg.RegistryOverrides {
 			if strings.HasPrefix(image.Reference, k) {
 				overriddenRef = strings.Replace(image.Reference, k, v, 1)
@@ -256,11 +268,10 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 				}
 				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", overriddenRef, "err", err)
 				// If the image is not found again then we should try to pull it from the daemon
-				overriddenImage, err := transform.ParseImageRef(overriddenRef)
-				if err != nil {
-					fmt.Errorf("unable to parse image ref %s: %w", overriddenImage, err)
-				}
-				dockerFallBackImages = append(dockerFallBackImages, overriddenImage)
+				dockerFallBackImages = append(dockerFallBackImages, imageDaemonPullInfo{
+					originalImage: image,
+					overriddenRef: overriddenRef,
+				})
 				continue
 			}
 		}
@@ -274,7 +285,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 			size := getSizeOfImage(desc, manifest)
 			imagesInfo = append(imagesInfo, imagePullInfo{
 				overriddenRef: overriddenRef,
-				originalRef:   originalRef,
+				originalRef:   image.Reference,
 				byteSize:      size,
 				manifestDesc:  desc,
 			})
@@ -293,14 +304,16 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		return nil, fmt.Errorf("failed to create oci formatted directory: %w", err)
 	}
 
+	var manifestDescs []ocispec.Descriptor
 	if len(dockerFallBackImages) > 0 {
-		daemonImagesWithManifests, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, cfg.Arch)
+		daemonImagesWithManifests, daemonManifestDescs, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, cfg.Arch)
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull images from docker: %w", err)
 		}
 		for k, v := range daemonImagesWithManifests {
 			imagesWithManifests[k] = v
 		}
+		manifestDescs = append(manifestDescs, daemonManifestDescs...)
 	}
 
 	// TODO need to see if this is still an issue
@@ -308,9 +321,19 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	// Crane incorrectly names the blob of the docker image config to a sha that does not match the contents
 	// https://github.com/zarf-dev/zarf/issues/2584
 	// This is a band aid fix while we wait for crane and or docker to create the permanent fix
-	err = orasSave(ctx, imagesInfo, cfg, dst, client)
+	pulledDescs, err := orasSave(ctx, imagesInfo, cfg, dst, client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save images: %w", err)
+	}
+	manifestDescs = append(manifestDescs, pulledDescs...)
+	idx, err := getIndexFromOCILayout(cfg.DestinationDirectory)
+	if err != nil {
+		return nil, err
+	}
+	idx.Manifests = manifestDescs
+	err = saveIndexToOCILayout(cfg.DestinationDirectory, idx)
+	if err != nil {
+		return nil, err
 	}
 
 	l.Debug("done pulling images", "count", len(cfg.ImageList), "duration", time.Since(pullStart))
@@ -319,7 +342,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 }
 
 // TODO ensure images have org.opencontainers.image.base.name tag set to refname after pull
-func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, dst *oci.Store, client *auth.Client) error {
+func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, dst *oci.Store, client *auth.Client) ([]ocispec.Descriptor, error) {
 	l := logger.From(ctx)
 	var descs []ocispec.Descriptor
 	for _, imageInfo := range imagesInfo {
@@ -328,7 +351,7 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 		remoteRepo := &orasRemote.Repository{PlainHTTP: cfg.PlainHTTP}
 		remoteRepo.Reference, err = registry.ParseReference(imageInfo.overriddenRef)
 		if err != nil {
-			return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.overriddenRef, err)
+			return nil, fmt.Errorf("failed to parse image reference %s: %w", imageInfo.overriddenRef, err)
 		}
 		remoteRepo.Client = client
 
@@ -341,13 +364,13 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 		} else {
 			localCache, err := oci.NewWithContext(ctx, cfg.CacheDirectory)
 			if err != nil {
-				return fmt.Errorf("failed to create oci formatted directory: %w", err)
+				return nil, fmt.Errorf("failed to create oci formatted directory: %w", err)
 			}
 			pullSrc = orasCache.New(remoteRepo, localCache)
 		}
 		desc, err := oras.Copy(ctx, pullSrc, imageInfo.overriddenRef, dst, "", copyOpts)
 		if err != nil {
-			return fmt.Errorf("failed to copy: %w", err)
+			return nil, fmt.Errorf("failed to copy: %w", err)
 		}
 		if desc.Annotations == nil {
 			desc.Annotations = make(map[string]string)
@@ -356,12 +379,8 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 		desc.Annotations[ocispec.AnnotationBaseImageName] = imageInfo.originalRef
 		descs = append(descs, desc)
 	}
-	idx, err := getIndexFromOCILayout(cfg.DestinationDirectory)
-	if err != nil {
-		return err
-	}
-	idx.Manifests = descs
-	return saveIndexToOCILayout(cfg.DestinationDirectory, idx)
+
+	return descs, nil
 }
 
 func getSizeOfImage(manifestDesc ocispec.Descriptor, manifest ocispec.Manifest) int64 {

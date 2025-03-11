@@ -44,7 +44,8 @@ var outClusterCredentialArgs = []string{
 	"--git-url=http://" + giteaHost + ":3000",
 	"--registry-push-username=" + registryUser,
 	"--registry-push-password=" + commonPassword,
-	"--registry-url=k3d-" + registryHost + ":5000"}
+	"--registry-url=k3d-" + registryHost + ":5000",
+	"--plain-http"}
 
 type ExtOutClusterTestSuite struct {
 	suite.Suite
