@@ -198,6 +198,12 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		localRepo := &orasRemote.Repository{PlainHTTP: cfg.PlainHTTP}
 		var err error
 
+		for k, v := range cfg.RegistryOverrides {
+			if strings.HasPrefix(image.Reference, k) {
+				image.Reference = strings.Replace(image.Reference, k, v, 1)
+			}
+		}
+
 		localRepo.Reference, err = registry.ParseReference(image.Reference)
 		if err != nil {
 			return nil, err
