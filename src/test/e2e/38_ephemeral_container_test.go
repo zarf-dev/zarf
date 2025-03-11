@@ -36,7 +36,7 @@ func TestEphemeralContainers(t *testing.T) {
 	// it should have been mutated
 	podStdOut, _, err := e2e.Kubectl(t, "get", "pod", "test-pod", "-n", "test", "-o", "jsonpath={.status.ephemeralContainerStatuses[*].image}")
 	require.NoError(t, err)
-	require.Contains(t, podStdOut, "127.0.0.1:31999/library/busybox:1.36-zarf-")
+	require.Contains(t, podStdOut, "127.0.0.1:31337/library/busybox:1.36-zarf-")
 
 	// cleanup
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "basic-pod", "--confirm")
