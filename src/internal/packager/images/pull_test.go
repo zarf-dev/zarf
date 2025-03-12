@@ -96,10 +96,11 @@ func TestCheckForIndex(t *testing.T) {
 func TestPull(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		name      string
-		ref       string
-		arch      string
-		expectErr bool
+		name              string
+		ref               string
+		RegistryOverrides map[string]string
+		arch              string
+		expectErr         bool
 	}{
 		{
 			name: "pull an image",
@@ -121,67 +122,13 @@ func TestPull(t *testing.T) {
 			ref:  "ghcr.io/stefanprodan/manifests/podinfo:6.4.0",
 			arch: "doesnt-matter",
 		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			ref, err := transform.ParseImageRef(tc.ref)
-			require.NoError(t, err)
-			destDir := t.TempDir()
-			cacheDir := t.TempDir()
-			pullConfig := PullConfig{
-				DestinationDirectory: destDir,
-				CacheDirectory:       cacheDir,
-				Arch:                 tc.arch,
-				ImageList: []transform.Image{
-					ref,
-				},
-			}
-
-			imageManifests, err := Pull(context.Background(), pullConfig)
-			if tc.expectErr {
-				require.Error(t, err, tc.expectErr)
-				return
-			}
-			require.NoError(t, err)
-
-			idx, err := getIndexFromOCILayout(filepath.Join(destDir))
-			require.NoError(t, err)
-			expectedAnnotations := map[string]string{
-				ocispec.AnnotationRefName:       tc.ref,
-				ocispec.AnnotationBaseImageName: tc.ref,
-			}
-			require.Equal(t, expectedAnnotations, idx.Manifests[0].Annotations)
-
-			// Make sure all the layers of the image are pulled in
-			for _, manifest := range imageManifests {
-				for _, layer := range manifest.Layers {
-					require.FileExists(t, filepath.Join(destDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
-					require.FileExists(t, filepath.Join(cacheDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
-				}
-			}
-		})
-	}
-}
-
-func TestPullRegistryOverrides(t *testing.T) {
-	t.Parallel()
-	testCases := []struct {
-		name      string
-		ref       string
-		arch      string
-		expectErr bool
-	}{
 		{
-			name: "pull an image",
+			name: "pull a Helm OCI object",
 			ref:  "ghcr.io/stefanprodan/podinfo:6.4.0",
 			arch: "amd64",
-		},
-		{
-			name:      "error when pulling an image that doesn't exist",
-			ref:       "ghcr.io/zarf-dev/zarf/imagethatdoesntexist:v1.1.1",
-			expectErr: true,
+			RegistryOverrides: map[string]string{
+				"ghcr.io": "docker.io",
+			},
 		},
 	}
 
@@ -195,10 +142,8 @@ func TestPullRegistryOverrides(t *testing.T) {
 			pullConfig := PullConfig{
 				DestinationDirectory: destDir,
 				CacheDirectory:       cacheDir,
+				RegistryOverrides:    tc.RegistryOverrides,
 				Arch:                 tc.arch,
-				RegistryOverrides: map[string]string{
-					"ghcr.io": "docker.io",
-				},
 				ImageList: []transform.Image{
 					ref,
 				},
