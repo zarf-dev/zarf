@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -32,13 +33,39 @@ func TestEphemeralContainers(t *testing.T) {
 	stdOut, stdErr, err = e2e.Kubectl(t, "debug", "test-pod", "-n", "test", "--image=busybox:1.36", "--profile", "general")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// verify the ephemeral container was mutated
-	podStdOut, _, err := e2e.Kubectl(t, "get", "pod", "test-pod", "-n", "test", "-o", "jsonpath={.status.ephemeralContainerStatuses[*].image}")
-	t.Log("Ephemeral Container: ", podStdOut)
-	require.NoError(t, err)
-	require.Contains(t, podStdOut, "127.0.0.1:31337/library/busybox:1.36-zarf-")
+	// there is no native 'wait' logic for ephemeral containers
+	timeout := 10 * time.Second // Timeout after 10 seconds
+	interval := 2 * time.Second // Check every 2 seconds
+	startTime := time.Now()
 
-	// cleanup - should perform cleanup in the event of pass or fail - separate from defer or direct use
+	var ephemeralContainer string
+
+	for {
+		podStdOut, _, err := e2e.Kubectl(t, "get", "pod", "test-pod", "-n", "test", "-o", "jsonpath={.status.ephemeralContainerStatuses[*].image}")
+		require.NoError(t, err)
+		if podStdOut != "" {
+			t.Log("Ephemeral container detected!", podStdOut)
+			ephemeralContainer = podStdOut
+			break
+		}
+
+		// Check timeout
+		if time.Since(startTime) > timeout {
+			t.Log("Timeout reached! Ephemeral container not found.")
+			break
+		}
+
+		t.Log("Waiting for ephemeral...")
+
+		time.Sleep(interval)
+	}
+
+	t.Log("Ephemeral Container: ", ephemeralContainer)
+
+	// ensure the image used contains the internal zarf registry (IE mutated)
+	require.Contains(t, ephemeralContainer, "127.0.0.1:31337/library/busybox:1.36-zarf-")
+
+	// cleanup - should perform cleanup in the event of pass or fail - separate from defer
 	t.Cleanup(func() {
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "basic-pod", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
