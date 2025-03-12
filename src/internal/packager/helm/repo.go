@@ -222,7 +222,7 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 
 	// Set up the chart chartDownloader
 	chartDownloader := downloader.ChartDownloader{
-		// FIXME(mkcp): Should we be using OutputWriter here?
+		// TODO(mkcp): Shouldn't rely on a global mutable var. Pass in a writer here somehow, or at least make atomic?
 		Out:            message.OutputWriter,
 		RegistryClient: regClient,
 		// TODO: Further research this with regular/OCI charts
@@ -330,6 +330,7 @@ func (h *Helm) buildChartDependencies(ctx context.Context) error {
 	h.settings = cli.New()
 
 	man := &downloader.Manager{
+		// TODO(mkcp): Shouldn't rely on a global mutable var. Pass in a writer here somehow, or at least make atomic?
 		Out:            &message.DebugWriter{},
 		ChartPath:      h.chart.LocalPath,
 		Getters:        getter.All(h.settings),

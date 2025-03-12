@@ -614,8 +614,3 @@ var (
 	ErrUnableToCheckArch   = errors.New("unable to get the configured cluster's architecture")
 	ErrUnableToGetPackages = errors.New("unable to load the Zarf Package data from the cluster")
 )
-
-// Collection of reusable warn messages.
-var (
-	WarnSGetDeprecation = "Using sget to download resources is being deprecated and will removed in the v1.0.0 release of Zarf. Please publish the packages as OCI artifacts instead."
-)

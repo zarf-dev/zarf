@@ -10,7 +10,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 
 	// Import to initialize client auth plugins.
@@ -36,13 +35,11 @@ func newWaitForCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&o.waitTimeout, "timeout", "5m", lang.CmdToolsWaitForFlagTimeout)
 	cmd.Flags().StringVarP(&o.waitNamespace, "namespace", "n", "", lang.CmdToolsWaitForFlagNamespace)
-	// FIXME(mkcp): Progress bars should be removed from message logging.
-	cmd.Flags().BoolVar(&message.NoProgress, "no-progress", false, lang.RootCmdFlagNoProgress)
 
 	return cmd
 }
 
-func (o *waitForOptions) run(_ *cobra.Command, args []string) error {
+func (o *waitForOptions) run(cmd *cobra.Command, args []string) error {
 	// Parse the timeout string
 	timeout, err := time.ParseDuration(o.waitTimeout)
 	if err != nil {
@@ -64,5 +61,5 @@ func (o *waitForOptions) run(_ *cobra.Command, args []string) error {
 	}
 
 	// Execute the wait command.
-	return utils.ExecuteWait(o.waitTimeout, o.waitNamespace, condition, kind, identifier, timeout)
+	return utils.ExecuteWait(cmd.Context(), o.waitTimeout, o.waitNamespace, condition, kind, identifier, timeout)
 }
