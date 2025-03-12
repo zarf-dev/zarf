@@ -146,6 +146,14 @@ func TestPull(t *testing.T) {
 			}
 			require.NoError(t, err)
 
+			idx, err := getIndexFromOCILayout(filepath.Join(destDir))
+			require.NoError(t, err)
+			expectedAnnotations := map[string]string{
+				ocispec.AnnotationRefName:       tc.ref,
+				ocispec.AnnotationBaseImageName: tc.ref,
+			}
+			require.Equal(t, expectedAnnotations, idx.Manifests[0].Annotations)
+
 			// Make sure all the layers of the image are pulled in
 			for _, manifest := range imageManifests {
 				for _, layer := range manifest.Layers {
@@ -209,7 +217,7 @@ func TestPullRegistryOverrides(t *testing.T) {
 				ocispec.AnnotationRefName:       tc.ref,
 				ocispec.AnnotationBaseImageName: tc.ref,
 			}
-			require.Equal(t, idx.Manifests[0].Annotations, expectedAnnotations)
+			require.Equal(t, expectedAnnotations, idx.Manifests[0].Annotations)
 
 			// Make sure all the layers of the image are pulled in
 			for _, manifest := range imageManifests {
@@ -248,7 +256,6 @@ func TestPullInvalidCache(t *testing.T) {
 	_, err = Pull(context.Background(), pullConfig)
 	require.NoError(t, err)
 
-	// If the correct
 	pulledLayerPath := filepath.Join(destDir, "blobs", "sha256", correctLayerSha)
 	pulledLayer, err := os.ReadFile(pulledLayerPath)
 	require.NoError(t, err)
