@@ -103,8 +103,8 @@ func TestPull(t *testing.T) {
 	}{
 		{
 			name: "pull an image",
-			ref:  "ghcr.io/zarf-dev/zarf/agent:v0.32.6@sha256:b3fabdc7d4ecd0f396016ef78da19002c39e3ace352ea0ae4baa2ce9d5958376",
-			arch: "arm64",
+			ref:  "ghcr.io/zarf-dev/doom-game:0.0.1",
+			arch: "amd64",
 		},
 		{
 			name:      "error when pulling an image that doesn't exist",
