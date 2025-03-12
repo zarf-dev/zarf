@@ -30,7 +30,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		registryURL = cfg.RegInfo.Address
 	)
 	c, _ := cluster.NewCluster()
-	fmt.Println("value of cluster is", c)
 	// Here are the rules
 	// If the registry is internal we want the cluster and we want to pull from the registry
 	// If the registry is external and is a service URL we want to be able to push to it
