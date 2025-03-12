@@ -29,13 +29,19 @@ func TestEphemeralContainers(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
+	// cleanup - should perform cleanup in the event of pass or fail
+	t.Cleanup(func() {
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "basic-pod", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+	})
+
 	// using a pod the package deploys - run a kubectl debug command
 	stdOut, stdErr, err = e2e.Kubectl(t, "debug", "test-pod", "-n", "test", "--image=busybox:1.36", "--profile", "general")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// there is no native 'wait' logic for ephemeral containers
-	timeout := 10 * time.Second // Timeout after 10 seconds
-	interval := 2 * time.Second // Check every 2 seconds
+	timeout := 10 * time.Second
+	interval := 2 * time.Second
 	startTime := time.Now()
 
 	var ephemeralContainer string
@@ -49,10 +55,9 @@ func TestEphemeralContainers(t *testing.T) {
 			break
 		}
 
-		// Check timeout
 		if time.Since(startTime) > timeout {
 			t.Log("Timeout reached! Ephemeral container not found.")
-			break
+			t.Fail()
 		}
 
 		t.Log("Waiting for ephemeral...")
@@ -64,10 +69,4 @@ func TestEphemeralContainers(t *testing.T) {
 
 	// ensure the image used contains the internal zarf registry (IE mutated)
 	require.Contains(t, ephemeralContainer, "127.0.0.1:31337/library/busybox:1.36-zarf-")
-
-	// cleanup - should perform cleanup in the event of pass or fail - separate from defer
-	t.Cleanup(func() {
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "basic-pod", "--confirm")
-		require.NoError(t, err, stdOut, stdErr)
-	})
 }
