@@ -183,25 +183,37 @@ func (p *PackageLayout) GetComponentDir(destPath, componentName string, ct Compo
 // GetImage returns the image with the given reference in the package layout.
 func (p *PackageLayout) GetImage(ref transform.Image) (registryv1.Image, error) {
 	// Use the manifest within the index.json to load the specific image we want
-	layoutPath := layout.Path(filepath.Join(p.dirPath, ImagesDir))
+	imgPath := filepath.Join(p.dirPath, ImagesDir)
+	layoutPath := layout.Path(imgPath)
 	imgIdx, err := layoutPath.ImageIndex()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get image index: %w", err)
 	}
 	idxManifest, err := imgIdx.IndexManifest()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get image manifest: %w", err)
 	}
+
 	// Search through all the manifests within this package until we find the annotation that matches our ref
 	for _, manifest := range idxManifest.Manifests {
-		if manifest.Annotations[ocispec.AnnotationBaseImageName] == ref.Reference ||
+		if manifest.Annotations[ocispec.AnnotationRefName] == ref.Reference ||
 			// A backwards compatibility shim for older Zarf versions that would leave docker.io off of image annotations
-			(manifest.Annotations[ocispec.AnnotationBaseImageName] == ref.Path+ref.TagOrDigest && ref.Host == "docker.io") {
+			(manifest.Annotations[ocispec.AnnotationRefName] == ref.Path+ref.TagOrDigest && ref.Host == "docker.io") {
 			// This is the image we are looking for, load it and then return
-			return layoutPath.Image(manifest.Digest)
+			img, err := layoutPath.Image(manifest.Digest)
+			if err != nil {
+				return nil, fmt.Errorf("failed to lookup image %s: %w", ref.Reference, err)
+			}
+			return img, nil
 		}
 	}
-	return nil, fmt.Errorf("unable to find the image %s", ref.Reference)
+
+	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", ref.Reference, imgPath)
+}
+
+func (p *PackageLayout) GetImageDir() string {
+	// Use the manifest within the index.json to load the specific image we want
+	return filepath.Join(p.dirPath, ImagesDir)
 }
 
 func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
