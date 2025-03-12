@@ -230,7 +230,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		if image.Digest != "" {
 			desc, b, err := oras.FetchBytes(ctx, localRepo, overriddenRef, oras.DefaultFetchBytesOptions)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to fetch bytes: %w",err)
 			}
 			if desc.MediaType == ocispec.MediaTypeImageIndex || desc.MediaType == DockerMediaTypeManifestList {
 				// Both index types can be marshalled into an ocispec.Index
