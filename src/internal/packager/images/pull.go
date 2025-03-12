@@ -84,7 +84,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 		// Note: ImageSave accepts a ocispec.Platform, BUT it would require users have docker engine API version 1.48
 		// which was released in Feb 2025. This could make the code more efficient in some cases, but we are
 		// avoiding this for now to give users more time to update.
-		imageReader, err := cli.ImageSave(ctx, []string{pullInfo.overriddenRef})
+		imageReader, err := cli.ImageSave(ctx, []string{pullInfo.registryOverrideRef})
 		if err != nil {
 			return nil, fmt.Errorf("failed to save image: %w", err)
 		}
@@ -115,7 +115,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 		}
 		// Docker does set the annotation ref name in the way ORAS anticipates
 		// We set it here so that ORAS can pick up the image
-		idx.Manifests[0].Annotations[ocispec.AnnotationRefName] = pullInfo.overriddenRef
+		idx.Manifests[0].Annotations[ocispec.AnnotationRefName] = pullInfo.registryOverrideRef
 		err = saveIndexToOCILayout(dockerImageOCILayoutPath, idx)
 		if err != nil {
 			return nil, err
@@ -132,7 +132,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 			OS:           "linux",
 		}
 		fetchBytesOpts.TargetPlatform = platform
-		desc, b, err := oras.FetchBytes(ctx, dockerImageSrc, pullInfo.overriddenRef, fetchBytesOpts)
+		desc, b, err := oras.FetchBytes(ctx, dockerImageSrc, pullInfo.registryOverrideRef, fetchBytesOpts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get manifest from docker image source: %w", err)
 		}
@@ -143,16 +143,16 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 		if err := json.Unmarshal(b, &manifest); err != nil {
 			return nil, err
 		}
-		imagesWithManifests[pullInfo.originalImage] = manifest
+		imagesWithManifests[pullInfo.image] = manifest
 		size := getSizeOfImage(desc, manifest)
-		l.Info("pulling image from docker daemon", "name", pullInfo.overriddenRef, "size", utils.ByteFormat(float64(size), 2))
+		l.Info("pulling image from docker daemon", "name", pullInfo.registryOverrideRef, "size", utils.ByteFormat(float64(size), 2))
 		copyOpts := oras.DefaultCopyOptions
 		copyOpts.WithTargetPlatform(platform)
-		manifestDesc, err := oras.Copy(ctx, dockerImageSrc, pullInfo.overriddenRef, dst, "", copyOpts)
+		manifestDesc, err := oras.Copy(ctx, dockerImageSrc, pullInfo.registryOverrideRef, dst, "", copyOpts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to copy: %w", err)
 		}
-		err = annotateImage(ctx, dst, manifestDesc, pullInfo.originalImage.Reference, pullInfo.overriddenRef)
+		err = annotateImage(ctx, dst, manifestDesc, pullInfo.registryOverrideRef, pullInfo.image.Reference)
 		if err != nil {
 			return nil, err
 		}
@@ -162,15 +162,15 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 }
 
 type imagePullInfo struct {
-	overriddenRef string
-	originalRef   string
+	registryOverrideRef string
+	ref   string
 	manifestDesc  ocispec.Descriptor
 	byteSize      int64
 }
 
 type imageDaemonPullInfo struct {
-	overriddenRef string
-	originalImage transform.Image
+	registryOverrideRef string
+	image transform.Image
 }
 
 // Pull pulls all images from the given config.
@@ -266,8 +266,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", overriddenRef, "err", err)
 				// If the image is not found again then we should try to pull it from the daemon
 				dockerFallBackImages = append(dockerFallBackImages, imageDaemonPullInfo{
-					originalImage: image,
-					overriddenRef: overriddenRef,
+					image: image,
+					registryOverrideRef: overriddenRef,
 				})
 				continue
 			}
@@ -281,8 +281,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 			}
 			size := getSizeOfImage(desc, manifest)
 			imagesInfo = append(imagesInfo, imagePullInfo{
-				overriddenRef: overriddenRef,
-				originalRef:   image.Reference,
+				registryOverrideRef: overriddenRef,
+				ref:   image.Reference,
 				byteSize:      size,
 				manifestDesc:  desc,
 			})
@@ -332,16 +332,16 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 		var pullSrc oras.ReadOnlyTarget
 		var err error
 		remoteRepo := &orasRemote.Repository{PlainHTTP: cfg.PlainHTTP}
-		remoteRepo.Reference, err = registry.ParseReference(imageInfo.overriddenRef)
+		remoteRepo.Reference, err = registry.ParseReference(imageInfo.registryOverrideRef)
 		if err != nil {
-			return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.overriddenRef, err)
+			return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.registryOverrideRef, err)
 		}
 		remoteRepo.Client = client
 
 		copyOpts := oras.DefaultCopyOptions
 		copyOpts.Concurrency = cfg.Concurrency
 		copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
-		l.Info("saving image", "name", imageInfo.overriddenRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
+		l.Info("saving image", "name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
 		if cfg.CacheDirectory == "" {
 			pullSrc = remoteRepo
 		} else {
@@ -351,11 +351,11 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 			}
 			pullSrc = orasCache.New(remoteRepo, localCache)
 		}
-		desc, err := oras.Copy(ctx, pullSrc, imageInfo.overriddenRef, dst, "", copyOpts)
+		desc, err := oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, dst, "", copyOpts)
 		if err != nil {
 			return fmt.Errorf("failed to copy: %w", err)
 		}
-		err = annotateImage(ctx, dst, desc, imageInfo.originalRef, imageInfo.overriddenRef)
+		err = annotateImage(ctx, dst, desc, imageInfo.registryOverrideRef, imageInfo.ref)
 		if err != nil {
 			return err
 		}
@@ -363,17 +363,17 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 	return nil
 }
 
-func annotateImage(ctx context.Context, dst *oci.Store, desc ocispec.Descriptor, originalRef string, overriddenRef string) error {
+func annotateImage(ctx context.Context, dst *oci.Store, desc ocispec.Descriptor, oldRef string, newRef string) error {
 	if desc.Annotations == nil {
 		desc.Annotations = make(map[string]string)
 	}
-	desc.Annotations[ocispec.AnnotationRefName] = originalRef
-	desc.Annotations[ocispec.AnnotationBaseImageName] = originalRef
-	err := dst.Untag(ctx, overriddenRef)
+	desc.Annotations[ocispec.AnnotationRefName] = newRef
+	desc.Annotations[ocispec.AnnotationBaseImageName] = newRef
+	err := dst.Untag(ctx, oldRef)
 	if err != nil {
 		return fmt.Errorf("failed to untag image: %w", err)
 	}
-	err = dst.Tag(ctx, desc, originalRef)
+	err = dst.Tag(ctx, desc, newRef)
 	if err != nil {
 		return fmt.Errorf("failed to tag image: %w", err)
 	}

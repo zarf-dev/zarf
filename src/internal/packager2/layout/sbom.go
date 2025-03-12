@@ -50,11 +50,6 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 	}
 	defer os.RemoveAll(outputPath)
 
-	cachePath, err := config.GetAbsCachePath()
-	if err != nil {
-		return err
-	}
-
 	componentSBOMs := []string{}
 	for _, comp := range pkg.Components {
 		if len(comp.Files) > 0 || len(comp.DataInjections) > 0 {
@@ -67,11 +62,12 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 	}
 
 	for _, refInfo := range images {
+		ociDirPath := filepath.Join(buildPath, ImagesDir)
 		img, err := utils.LoadOCIImage(filepath.Join(buildPath, string(ImagesDir)), refInfo)
 		if err != nil {
 			return fmt.Errorf("failed to load OCI image: %w", err)
 		}
-		b, err := createImageSBOM(ctx, cachePath, outputPath, img, refInfo.Reference)
+		b, err := createImageSBOM(ctx, ociDirPath, outputPath, img, refInfo.Reference)
 		if err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
 		}
@@ -111,10 +107,8 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 	return nil
 }
 
-func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, src string) ([]byte, error) {
-	imageCachePath := filepath.Join(cachePath, ImagesDir)
-	// TODO make sure the cache works
-	err := os.MkdirAll(imageCachePath, helpers.ReadWriteExecuteUser)
+func createImageSBOM(ctx context.Context, ociDirPath, outputPath string, img v1.Image, src string) ([]byte, error) {
+	err := os.MkdirAll(ociDirPath, helpers.ReadWriteExecuteUser)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +117,7 @@ func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.I
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
 	}
-	syftImage := image.NewImage(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(refInfo.Reference))
+	syftImage := image.NewImage(img, file.NewTempDirGenerator("zarf"), ociDirPath, image.WithTags(refInfo.Reference))
 	err = syftImage.Read()
 	if err != nil {
 		return nil, err

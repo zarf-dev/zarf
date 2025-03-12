@@ -30,6 +30,11 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		registryURL = cfg.RegInfo.Address
 	)
 	c, _ := cluster.NewCluster()
+	fmt.Println("value of cluster is", c)
+	// Here are the rules
+	// If the registry is internal we want the cluster and we want to pull from the registry
+	// If the registry is external and is a service URL we want to be able to push to it
+	// Otherwise we use
 	if c != nil {
 		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegInfo)
 		if err != nil {
@@ -52,9 +57,10 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	if err != nil {
 		return err
 	}
+	// Crane sets ocispec.AnnotationBaseImageName instead of ocispec.AnnotationRefName
+	// which ORAS uses to find images. We do this to be backwards compatible with packages built with Crane
 	var correctedManifests []ocispec.Descriptor
 	for _, manifest := range idx.Manifests {
-		// Crane does not set ocispec.AnnotationRefName which ORAS uses to find images
 		if manifest.Annotations[ocispec.AnnotationRefName] == "" {
 			manifest.Annotations[ocispec.AnnotationRefName] = manifest.Annotations[ocispec.AnnotationBaseImageName]
 		}
