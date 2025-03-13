@@ -83,8 +83,8 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 		}
 		defer cli.Close()
 		cli.NegotiateAPIVersion(ctx)
-		// Note: ImageSave accepts a ocispec.Platform, BUT the effects it would have on users without client API version 1.48
-		// which was released in Feb 2025 is unclear. This could make the code more efficient in some cases, but we are
+		// Note: ImageSave accepts a ocispec.Platform, but the effects it would have on users without client API version 1.48,
+		// which was released in Feb 2025, is unclear. This could make the code more efficient in some cases, but we are
 		// avoiding this for now to give users more time to update.
 		imageReader, err := cli.ImageSave(ctx, []string{pullInfo.registryOverrideRef})
 		if err != nil {
@@ -281,8 +281,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 					return nil
 				}
 			}
-			if desc.MediaType == ocispec.MediaTypeImageManifest || desc.MediaType == DockerMediaTypeManifest {
-				// Both manifest types can be marshalled into a manifest
+			if isManifest(desc.MediaType) {
+				// Both oci and docker manifest types can be marshalled into a manifest
 				// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L37
 				var manifest ocispec.Manifest
 				if err := json.Unmarshal(b, &manifest); err != nil {
@@ -352,15 +352,11 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 		copyOpts.Concurrency = cfg.Concurrency
 		copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
 		l.Info("saving image", "name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
-		if cfg.CacheDirectory == "" {
-			pullSrc = remoteRepo
-		} else {
-			localCache, err := oci.NewWithContext(ctx, cfg.CacheDirectory)
-			if err != nil {
-				return fmt.Errorf("failed to create oci formatted directory: %w", err)
-			}
-			pullSrc = orasCache.New(remoteRepo, localCache)
+		localCache, err := oci.NewWithContext(ctx, cfg.CacheDirectory)
+		if err != nil {
+			return fmt.Errorf("failed to create oci formatted directory: %w", err)
 		}
+		pullSrc = orasCache.New(remoteRepo, localCache)
 		desc, err := oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, dst, "", copyOpts)
 		if err != nil {
 			return fmt.Errorf("failed to copy: %w", err)
