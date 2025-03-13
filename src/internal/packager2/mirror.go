@@ -36,11 +36,12 @@ type MirrorOptions struct {
 	GitInfo         types.GitServerInfo
 	NoImageChecksum bool
 	Retries         int
+	PlainHTTP       bool
 }
 
 // Mirror mirrors the package contents to the given registry and git server.
 func Mirror(ctx context.Context, opt MirrorOptions) error {
-	err := pushImagesToRegistry(ctx, opt.PkgLayout, opt.Filter, opt.RegistryInfo, opt.NoImageChecksum, opt.Retries)
+	err := pushImagesToRegistry(ctx, opt.PkgLayout, opt.Filter, opt.RegistryInfo, opt.NoImageChecksum, opt.PlainHTTP)
 	if err != nil {
 		return err
 	}
@@ -51,7 +52,7 @@ func Mirror(ctx context.Context, opt MirrorOptions) error {
 	return nil
 }
 
-func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, regInfo types.RegistryInfo, noImgChecksum bool, retries int) error {
+func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, regInfo types.RegistryInfo, noImgChecksum bool, plainHTTP bool) error {
 	components, err := filter.Apply(pkgLayout.Pkg)
 	if err != nil {
 		return err

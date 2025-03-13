@@ -191,7 +191,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, spinner *message.
 		return nil, "", fmt.Errorf("unable to create the seed images directory: %w", err)
 	}
 
-	// TODO replace this with ORAS image
 	localReferenceToDigest := map[string]string{}
 	for _, src := range injectorSeedSrcs {
 		ref, err := transform.ParseImageRef(src)

@@ -326,11 +326,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		}
 	}
 
-	// TODO need to see if this is still an issue
-	// Needed because when pulling from the local docker daemon, while using the docker containerd runtime
-	// Crane incorrectly names the blob of the docker image config to a sha that does not match the contents
-	// https://github.com/zarf-dev/zarf/issues/2584
-	// This is a band aid fix while we wait for crane and or docker to create the permanent fix
 	err = orasSave(ctx, imagesInfo, cfg, dst, client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save images: %w", err)

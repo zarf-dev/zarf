@@ -323,6 +323,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		GitInfo:         pkgConfig.InitOpts.GitServer,
 		NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
 		Retries:         pkgConfig.PkgOpts.Retries,
+		PlainHTTP:       config.CommonOptions.PlainHTTP,
 	}
 	err = packager2.Mirror(ctx, mirrorOpt)
 	if err != nil {
