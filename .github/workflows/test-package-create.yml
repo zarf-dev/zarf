@@ -28,16 +28,12 @@ jobs:
       - name: Build examples
         run: make build-examples ARCH=amd64
 
-      - name: Upload tar artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: package-tars
-          path: build/zarf-package-dos-games-amd64-1.1.0.tar.zst
-
       - name: Compare checksums
         run: |
           set -e
 
+          # Any component tar files in a package will have the same permissions as the files included in them
+          # Therefore before building a package when example checksums need updating you must run chmod -R g-w in zarf/examples
           for f in hack/examples-checksums/*.txt
           do
             NAME=$(basename $f .txt)
