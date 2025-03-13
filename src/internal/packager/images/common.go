@@ -70,9 +70,15 @@ func OnlyHasImageLayers(manifest ocispec.Manifest) bool {
 }
 
 func isManifest(mediaType string) bool {
-	// TODO make sure we have a docker media type for testing
 	switch mediaType {
 	case ocispec.MediaTypeImageManifest, DockerMediaTypeManifest:
+		return true
+	}
+	return false
+}
+func isIndex(mediaType string) bool {
+	switch mediaType {
+	case ocispec.MediaTypeImageIndex, DockerMediaTypeManifestList:
 		return true
 	}
 	return false

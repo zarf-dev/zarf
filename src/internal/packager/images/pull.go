@@ -92,7 +92,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		image := image
 		eg.Go(func() error {
 			localRepo := &orasRemote.Repository{PlainHTTP: cfg.PlainHTTP}
-			var err error
 
 			overriddenRef := image.Reference
 			for k, v := range cfg.RegistryOverrides {
@@ -110,27 +109,9 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 
 			// If the image has a digest start out by checking if it's an index sha
 			if image.Digest != "" {
-				desc, b, err := oras.FetchBytes(ectx, localRepo, overriddenRef, oras.DefaultFetchBytesOptions)
+				err := checkForIndex(ectx, localRepo, overriddenRef, image)
 				if err != nil {
-					return fmt.Errorf("failed to fetch bytes: %w", err)
-				}
-				if desc.MediaType == ocispec.MediaTypeImageIndex || desc.MediaType == DockerMediaTypeManifestList {
-					// Both index types can be marshalled into an ocispec.Index
-					// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L55
-					var idx ocispec.Index
-					if err := json.Unmarshal(b, &idx); err != nil {
-						return fmt.Errorf("unable to unmarshal index.json: %w", err)
-					}
-					lines := []string{"The following images are available in the index:"}
-					name := image.Name
-					if image.Tag != "" {
-						name += ":" + image.Tag
-					}
-					for _, desc := range idx.Manifests {
-						lines = append(lines, fmt.Sprintf("image - %s@%s with platform %s", name, desc.Digest, desc.Platform))
-					}
-					imageOptions := strings.Join(lines, "\n")
-					return fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", overriddenRef, imageOptions)
+					return err
 				}
 			}
 
@@ -138,15 +119,14 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 			fetchOpts.FetchOptions.TargetPlatform = platform
 			desc, b, err := oras.FetchBytes(ectx, localRepo, overriddenRef, fetchOpts)
 			if err != nil {
+				if strings.Contains(err.Error(), "toomanyrequests") {
+					return fmt.Errorf("rate limited by registry: %w", err)
+				}
 				// If the image was not found it could be a image signature or Helm image
 				// non container images don't have platforms so we check using the default opts
 				desc, b, err = oras.FetchBytes(ectx, localRepo, overriddenRef, oras.DefaultFetchBytesOptions)
 				if err != nil {
-					if strings.Contains(err.Error(), "toomanyrequests") {
-						return fmt.Errorf("rate limited by registry: %w", err)
-					}
 					l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", overriddenRef, "err", err)
-					// If the image is not found again then we should try to pull it from the daemon
 					m.Lock()
 					defer m.Unlock()
 					dockerFallBackImages = append(dockerFallBackImages, imageDaemonPullInfo{
@@ -156,27 +136,28 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 					return nil
 				}
 			}
-			if isManifest(desc.MediaType) {
-				// Both oci and docker manifest types can be marshalled into a manifest
-				// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L37
-				var manifest ocispec.Manifest
-				if err := json.Unmarshal(b, &manifest); err != nil {
-					return err
-				}
-				size := getSizeOfImage(desc, manifest)
-				m.Lock()
-				defer m.Unlock()
-				imagesInfo = append(imagesInfo, imagePullInfo{
-					registryOverrideRef: overriddenRef,
-					ref:                 image.Reference,
-					byteSize:            size,
-					manifestDesc:        desc,
-				})
-				imagesWithManifests[image] = manifest
-				l.Debug("pulled manifest for image", "name", overriddenRef)
-				return nil
+			if !isManifest(desc.MediaType) {
+				return fmt.Errorf("received unexpected mediatype %s", desc.MediaType)
 			}
-			return fmt.Errorf("received unexpected mediatype %s", desc.MediaType)
+			// Both oci and docker manifest types can be marshalled into a manifest
+			// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L37
+			var manifest ocispec.Manifest
+			if err := json.Unmarshal(b, &manifest); err != nil {
+				return err
+			}
+			size := getSizeOfImage(desc, manifest)
+			m.Lock()
+			defer m.Unlock()
+			imagesInfo = append(imagesInfo, imagePullInfo{
+				registryOverrideRef: overriddenRef,
+				ref:                 image.Reference,
+				byteSize:            size,
+				manifestDesc:        desc,
+			})
+			imagesWithManifests[image] = manifest
+			l.Debug("pulled manifest for image", "name", overriddenRef)
+			return nil
+
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -209,6 +190,32 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	l.Debug("done pulling images", "count", len(cfg.ImageList), "duration", time.Since(pullStart))
 
 	return imagesWithManifests, nil
+}
+
+func checkForIndex(ctx context.Context, repo *orasRemote.Repository, overriddenRef string, image transform.Image) error {
+	desc, b, err := oras.FetchBytes(ctx, repo, overriddenRef, oras.DefaultFetchBytesOptions)
+	if err != nil {
+		return fmt.Errorf("failed to fetch bytes: %w", err)
+	}
+	if !isIndex(desc.MediaType) {
+		return nil
+	}
+	// Both index types can be marshalled into an ocispec.Index
+	// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L55
+	var idx ocispec.Index
+	if err := json.Unmarshal(b, &idx); err != nil {
+		return fmt.Errorf("unable to unmarshal index.json: %w", err)
+	}
+	lines := []string{"The following images are available in the index:"}
+	name := image.Name
+	if image.Tag != "" {
+		name += ":" + image.Tag
+	}
+	for _, desc := range idx.Manifests {
+		lines = append(lines, fmt.Sprintf("image - %s@%s with platform %s", name, desc.Digest, desc.Platform))
+	}
+	imageOptions := strings.Join(lines, "\n")
+	return fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", overriddenRef, imageOptions)
 }
 
 func getDockerEndpointHost() (string, error) {
