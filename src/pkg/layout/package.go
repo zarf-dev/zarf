@@ -21,7 +21,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -80,7 +79,8 @@ func (pp *PackagePaths) ReadZarfYAML() (v1alpha1.ZarfPackage, []string, error) {
 }
 
 // MigrateLegacy migrates a legacy package layout to the new layout.
-func (pp *PackagePaths) MigrateLegacy() (err error) {
+func (pp *PackagePaths) MigrateLegacy(ctx context.Context) (err error) {
+	l := logger.From(ctx)
 	var pkg v1alpha1.ZarfPackage
 	base := pp.Base
 
@@ -106,7 +106,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 	legacySBOMs := filepath.Join(base, "sboms")
 	if !helpers.InvalidPath(legacySBOMs) {
 		pp = pp.AddSBOMs()
-		message.Debugf("Migrating %q to %q", legacySBOMs, pp.SBOMs.Path)
+		l.Debug("migrating legacy sbom", "src", legacySBOMs, "dest", pp.SBOMs.Path)
 		if err := os.Rename(legacySBOMs, pp.SBOMs.Path); err != nil {
 			return err
 		}
@@ -116,7 +116,7 @@ func (pp *PackagePaths) MigrateLegacy() (err error) {
 	legacyImagesTar := filepath.Join(base, "images.tar")
 	if !helpers.InvalidPath(legacyImagesTar) {
 		pp = pp.AddImages()
-		message.Debugf("Migrating %q to %q", legacyImagesTar, pp.Images.Base)
+		l.Debug("migrating legacy images", "src", legacyImagesTar, "dest", pp.Images.Base)
 		defer func(name string) {
 			err2 := os.Remove(name)
 			err = errors.Join(err, err2)
@@ -229,9 +229,6 @@ func (pp *PackagePaths) GenerateChecksums() (string, error) {
 // ArchivePackage creates an archive for a Zarf package.
 func (pp *PackagePaths) ArchivePackage(ctx context.Context, destinationTarball string, maxPackageSizeMB int) error {
 	l := logger.From(ctx)
-	// TODO(mkcp): Remove message on logger release
-	spinner := message.NewProgressSpinner("Writing %s to %s", pp.Base, destinationTarball)
-	defer spinner.Stop()
 	l.Info("archiving zarf package", "base", pp.Base, "destination", destinationTarball)
 
 	// Make the archive
@@ -239,16 +236,12 @@ func (pp *PackagePaths) ArchivePackage(ctx context.Context, destinationTarball s
 	if err := archiver.Archive(archiveSrc, destinationTarball); err != nil {
 		return fmt.Errorf("unable to create package: %w", err)
 	}
-	// TODO(mkcp): Remove message on logger release
-	spinner.Updatef("Wrote %s to %s", pp.Base, destinationTarball)
 	l.Debug("ArchivePackage wrote", "base", pp.Base, "destination", destinationTarball)
 
 	fi, err := os.Stat(destinationTarball)
 	if err != nil {
 		return fmt.Errorf("unable to read the package archive: %w", err)
 	}
-	// TODO(mkcp): Remove message on logger release
-	spinner.Successf("Package saved to %q", destinationTarball)
 	l.Debug("package saved", "destination", destinationTarball)
 
 	// Convert Megabytes to bytes.
@@ -259,7 +252,6 @@ func (pp *PackagePaths) ArchivePackage(ctx context.Context, destinationTarball s
 		if fi.Size()/int64(chunkSize) > 999 {
 			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
 		}
-		message.Notef("Package is larger than %dMB, splitting into multiple files", maxPackageSizeMB)
 		l.Info("package is larger than max, splitting into multiple files", "maxPackageSize", maxPackageSizeMB)
 		err := splitFile(ctx, destinationTarball, chunkSize)
 		if err != nil {
@@ -286,18 +278,19 @@ func (pp *PackagePaths) AddSBOMs() *PackagePaths {
 }
 
 // SetFromLayers maps layers to package paths.
-func (pp *PackagePaths) SetFromLayers(layers []ocispec.Descriptor) {
+func (pp *PackagePaths) SetFromLayers(ctx context.Context, layers []ocispec.Descriptor) {
 	paths := []string{}
 	for _, layer := range layers {
 		if layer.Annotations[ocispec.AnnotationTitle] != "" {
 			paths = append(paths, layer.Annotations[ocispec.AnnotationTitle])
 		}
 	}
-	pp.SetFromPaths(paths)
+	pp.SetFromPaths(ctx, paths)
 }
 
 // SetFromPaths maps paths to package paths.
-func (pp *PackagePaths) SetFromPaths(paths []string) {
+func (pp *PackagePaths) SetFromPaths(ctx context.Context, paths []string) {
+	l := logger.From(ctx)
 	for _, rel := range paths {
 		// Convert from the standard '/' to the OS path separator for Windows support
 		switch path := filepath.FromSlash(rel); {
@@ -328,7 +321,7 @@ func (pp *PackagePaths) SetFromPaths(paths []string) {
 			}
 			pp.Components.Tarballs[componentName] = filepath.Join(pp.Base, path)
 		default:
-			message.Debug("ignoring path", path)
+			l.Debug("ignoring path", "path", path)
 		}
 	}
 }
@@ -340,7 +333,8 @@ func (pp *PackagePaths) Files() map[string]string {
 	stripBase := func(path string) string {
 		rel, err := filepath.Rel(pp.Base, path)
 		if err != nil {
-			message.Debug("unable to strip base from path", "error", err)
+			// HACK(mkcp): Source this logger from ctx chain instead or this logging behavior gets weird in testing.
+			logger.Default().Debug("unable to strip base from path", "error", err)
 		}
 		// Convert from the OS path separator to the standard '/' for Windows support
 		return filepath.ToSlash(rel)

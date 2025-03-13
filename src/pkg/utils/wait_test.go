@@ -48,6 +48,7 @@ func (suite *TestIsJSONPathWaitTypeSuite) Test_0_IsJSONPathWaitType() {
 	}
 }
 
+// FIXME(mkcp): What is this doing?
 func TestIsJSONPathWaitType(t *testing.T) {
 	message.SetLogLevel(message.DebugLevel)
 	suite.Run(t, new(TestIsJSONPathWaitTypeSuite))

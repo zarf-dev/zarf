@@ -29,7 +29,6 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 
-	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 )
@@ -44,13 +43,11 @@ const (
 //
 // Forked from https://github.com/sigstore/cosign/blob/v1.7.1/pkg/sget/sget.go
 func Sget(ctx context.Context, image, key string, out io.Writer) error {
-	message.Warnf(lang.WarnSGetDeprecation)
+	l := logger.From(ctx)
+	l.Warn("Using sget to download resources is being deprecated and will removed in the v1.0.0 release of Zarf. Please publish the packages as OCI artifacts instead.")
 
 	// Remove the custom protocol header from the url
 	image = strings.TrimPrefix(image, helpers.SGETURLPrefix)
-
-	spinner := message.NewProgressSpinner("Loading signed file %s", image)
-	defer spinner.Stop()
 
 	ref, err := name.ParseReference(image)
 	if err != nil {
@@ -92,8 +89,6 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	// 2. We're going to find an x509 certificate on the signature and verify against Fulcio root trust
 	// TODO(nsmith5): Refactor this verification logic to pass back _how_ verification
 	// was performed so we don't need to use this fragile logic here.
-	fulcioVerified := co.SigVerifier == nil
-
 	co.RootCerts, err = fulcio.GetRoots()
 	if err != nil {
 		return fmt.Errorf("getting Fulcio roots: %w", err)
@@ -132,10 +127,6 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 		verifyMsg += "PUBLIC KEY. "
 	}
 
-	if fulcioVerified {
-		spinner.Updatef("KEYLESS (OIDC). ")
-	}
-
 	for _, sig := range sp {
 		if cert, err := sig.Cert(); err == nil && cert != nil {
 			message.Debugf("Certificate subject: %s", cert.Subject)
@@ -148,10 +139,9 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 
 		p, err := sig.Payload()
 		if err != nil {
-			spinner.Errorf(err, "Error getting payload")
 			return err
 		}
-		message.Debug(string(p))
+		l.Debug(string(p))
 	}
 
 	// TODO(mattmoor): Depending on what this is, use the higher-level stuff.
@@ -172,7 +162,7 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	}
 
 	_, err = io.Copy(out, rc)
-	spinner.Successf(verifyMsg)
+	l.Info(verifyMsg)
 
 	return err
 }

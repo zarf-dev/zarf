@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -30,7 +31,7 @@ func isJSONPathWaitType(condition string) bool {
 }
 
 // ExecuteWait executes the wait-for command.
-func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string, timeout time.Duration) error {
+func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kind, identifier string, timeout time.Duration) error {
 	// Handle network endpoints.
 	switch kind {
 	case "http", "https", "tcp":

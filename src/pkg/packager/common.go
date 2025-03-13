@@ -22,7 +22,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -100,8 +99,6 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 	if config.CommonOptions.TempDirectory != "" {
 		// If the cache directory is within the temp directory, warn the user
 		if strings.HasPrefix(cacheDir, tmpDir) {
-			// TODO(mkcp): Remove message on logger release
-			message.Warnf("The cache directory (%q) is within the temp directory (%q) and will be removed when the temp directory is cleaned up", config.CommonOptions.CachePath, config.CommonOptions.TempDirectory)
 			l.Warn("the cache directory is within the temp directory and will be removed when the temp directory is cleaned up", "cacheDir", cacheDir, "tmpDir", tmpDir)
 		}
 	}
@@ -120,8 +117,6 @@ func New(cfg *types.PackagerConfig, mods ...Modifier) (*Packager, error) {
 		if err != nil {
 			return nil, fmt.Errorf("unable to create package temp paths: %w", err)
 		}
-		// TODO(mkcp): Remove message on logger release
-		message.Debug("Using temporary directory:", dir)
 		l.Debug("using temporary directory", "tmpDir", dir)
 		pkgr.layout = layout.New(dir)
 	}
@@ -175,13 +170,9 @@ func (p *Packager) isConnectedToCluster() bool {
 // attemptClusterChecks attempts to connect to the cluster and check for useful metadata and config mismatches.
 // NOTE: attemptClusterChecks should only return an error if there is a problem significant enough to halt a deployment, otherwise it should return nil and print a warning message.
 func (p *Packager) attemptClusterChecks(ctx context.Context) error {
-	spinner := message.NewProgressSpinner("Gathering additional cluster information (if available)")
-	defer spinner.Stop()
-
 	// Check the clusters architecture matches the package spec
 	if err := p.validatePackageArchitecture(ctx); err != nil {
 		if errors.Is(err, lang.ErrUnableToCheckArch) {
-			message.Warnf("Unable to validate package architecture: %s", err.Error())
 			logger.From(ctx).Warn("unable to validate package architecture", "error", err)
 		} else {
 			return err
@@ -196,8 +187,6 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) error {
 			return err
 		}
 	}
-
-	spinner.Success()
 
 	return nil
 }

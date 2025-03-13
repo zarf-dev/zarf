@@ -26,7 +26,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
@@ -62,7 +61,6 @@ func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDat
 		return fmt.Errorf("unable to execute tar, ensure it is installed in the $PATH: %w", err)
 	}
 
-	message.Debugf("Attempting to inject data into %s", data.Target)
 	l.Debug("performing data injection", "target", data.Target)
 
 	source := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
@@ -93,7 +91,6 @@ func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDat
 		zarfCommand, err := utils.GetFinalExecutableCommand()
 		kubectlBinPath := "kubectl"
 		if err != nil {
-			message.Warnf("Unable to get the zarf executable path, falling back to host kubectl: %s", err)
 			l.Warn("unable to get the zarf executable path, falling back to host kubectl", "error", err)
 		} else {
 			kubectlBinPath = fmt.Sprintf("%s tools kubectl", zarfCommand)
@@ -184,7 +181,6 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 		if err != nil {
 			return nil, err
 		}
-		message.Debugf("Found %d pods for target %#v", len(podList.Items), target)
 		l.Debug("found pods matching the target", "count", len(podList.Items), "target", target)
 		// Sort the pods from newest to oldest
 		sort.Slice(podList.Items, func(i, j int) bool {
@@ -193,7 +189,6 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 
 		readyPods := []corev1.Pod{}
 		for _, pod := range podList.Items {
-			message.Debugf("Testing pod %q", pod.Name)
 			l.Debug("testing pod", "name", pod.Name)
 
 			// If an include function is provided, only keep pods that return true
@@ -203,7 +198,6 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 
 			// Handle container targeting
 			if target.Container != "" {
-				message.Debugf("Testing pod %q for container %q", pod.Name, target.Container)
 				l.Debug("testing container", "name", target.Container, "source-pod", pod.Name)
 
 				// Check the status of initContainers for a running match
@@ -226,7 +220,6 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 				}
 			} else {
 				status := pod.Status.Phase
-				message.Debugf("Testing pod %q phase, want (%q) got (%q)", pod.Name, corev1.PodRunning, status)
 				l.Debug(fmt.Sprintf("checking pod for %s status", corev1.PodRunning), "pod", pod.Name, "status", status)
 				// Regular status checking without a container
 				if status == corev1.PodRunning {

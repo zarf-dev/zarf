@@ -44,7 +44,6 @@ func PrintFindings(ctx context.Context, lintErr *lint.LintError) {
 		}
 
 		// Print table to our OutputWriter
-		message.Notef("Linting package %q at %s", findings[0].PackageNameOverride, packagePathFromUser)
 		logger.From(ctx).Info("linting package", "name", findings[0].PackageNameOverride, "path", packagePathFromUser)
 		message.TableWithWriter(OutputWriter, []string{"Type", "Path", "Message"}, lintData)
 	}
