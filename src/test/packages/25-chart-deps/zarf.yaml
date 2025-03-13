@@ -8,6 +8,6 @@ components:
     required: true
     charts:
       - name: dogs
-        localPath: good-chart
+        localPath: parent-chart
         version: 1.0.0
         namespace: good
