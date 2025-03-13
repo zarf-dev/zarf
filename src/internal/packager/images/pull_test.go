@@ -97,34 +97,32 @@ func TestPull(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		name              string
-		ref               string
+		refs              []string
 		RegistryOverrides map[string]string
 		arch              string
 		expectErr         bool
 	}{
 		{
 			name: "pull an image",
-			ref:  "ghcr.io/zarf-dev/doom-game:0.0.1",
+			refs: []string{
+				"ghcr.io/zarf-dev/doom-game:0.0.1",
+				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
+				"ghcr.io/stefanprodan/manifests/podinfo:6.4.0",
+			},
 			arch: "amd64",
 		},
 		{
-			name:      "error when pulling an image that doesn't exist",
-			ref:       "ghcr.io/zarf-dev/zarf/imagethatdoesntexist:v1.1.1",
+			name: "error when pulling an image that doesn't exist",
+			refs: []string{
+				"ghcr.io/zarf-dev/zarf/imagethatdoesntexist:v1.1.1",
+			},
 			expectErr: true,
 		},
 		{
-			name: "pull an image signature",
-			ref:  "ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
-			arch: "doesnt-matter",
-		},
-		{
 			name: "pull a Helm OCI object",
-			ref:  "ghcr.io/stefanprodan/manifests/podinfo:6.4.0",
-			arch: "doesnt-matter",
-		},
-		{
-			name: "pull a Helm OCI object",
-			ref:  "ghcr.io/stefanprodan/podinfo:6.4.0",
+			refs: []string{
+				"ghcr.io/stefanprodan/podinfo:6.4.0",
+			},
 			arch: "amd64",
 			RegistryOverrides: map[string]string{
 				"ghcr.io": "docker.io",
@@ -135,8 +133,13 @@ func TestPull(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			ref, err := transform.ParseImageRef(tc.ref)
-			require.NoError(t, err)
+			var images []transform.Image
+			for _, ref := range tc.refs {
+				image, err := transform.ParseImageRef(ref)
+				require.NoError(t, err)
+				images = append(images, image)
+			}
+
 			destDir := t.TempDir()
 			cacheDir := t.TempDir()
 			pullConfig := PullConfig{
@@ -144,9 +147,7 @@ func TestPull(t *testing.T) {
 				CacheDirectory:       cacheDir,
 				RegistryOverrides:    tc.RegistryOverrides,
 				Arch:                 tc.arch,
-				ImageList: []transform.Image{
-					ref,
-				},
+				ImageList:            images,
 			}
 
 			imageManifests, err := Pull(context.Background(), pullConfig)
@@ -158,11 +159,19 @@ func TestPull(t *testing.T) {
 
 			idx, err := getIndexFromOCILayout(filepath.Join(destDir))
 			require.NoError(t, err)
-			expectedAnnotations := map[string]string{
-				ocispec.AnnotationRefName:       tc.ref,
-				ocispec.AnnotationBaseImageName: tc.ref,
+			var expectedImageAnnotations []map[string]string
+			for _, ref := range tc.refs {
+				expectedAnnotations := map[string]string{
+					ocispec.AnnotationRefName:       ref,
+					ocispec.AnnotationBaseImageName: ref,
+				}
+				expectedImageAnnotations = append(expectedImageAnnotations, expectedAnnotations)
 			}
-			require.Equal(t, expectedAnnotations, idx.Manifests[0].Annotations)
+			var actualImageAnnotations []map[string]string
+			for _, manifest := range idx.Manifests {
+				actualImageAnnotations = append(actualImageAnnotations, manifest.Annotations)
+			}
+			require.ElementsMatch(t, expectedImageAnnotations, actualImageAnnotations)
 
 			// Make sure all the layers of the image are pulled in
 			for _, manifest := range imageManifests {
