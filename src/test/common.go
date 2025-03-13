@@ -70,7 +70,7 @@ func GetCLIName() string {
 }
 
 // GetZarfAtVersion pulls Zarf at a given version for the specific OS and architecture
-func (e2e *ZarfE2ETest) GetZarfAtVersion(t *testing.T, version string) (string, error) {
+func (e2e *ZarfE2ETest) GetZarfAtVersion(t *testing.T, version string) string {
 	t.Helper()
 	var url string
 	switch {
@@ -83,30 +83,30 @@ func (e2e *ZarfE2ETest) GetZarfAtVersion(t *testing.T, version string) (string, 
 	case runtime.GOOS == "darwin" && runtime.GOARCH == "arm64":
 		url = fmt.Sprintf("https://github.com/zarf-dev/zarf/releases/download/%s/zarf_%s_Darwin_arm64", version, version)
 	default:
-		return "", fmt.Errorf("unsupported platform: %s_%s", runtime.GOOS, runtime.GOARCH)
+		t.Fatalf("unsupported platform: %s_%s", runtime.GOOS, runtime.GOARCH)
 	}
 
 	resp, err := http.Get(url)
-	if err != nil {
-		return "", fmt.Errorf("error downloading zarf from %s: %w", url, err)
-	}
-	defer require.NoError(t, resp.Body.Close())
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, resp.Body.Close())
+	}()
 
 	tmpFile, err := os.CreateTemp(t.TempDir(), "zarf-*")
-	if err != nil {
-		return "", fmt.Errorf("error creating temporary file: %w", err)
-	}
-	defer require.NoError(t, tmpFile.Close())
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, tmpFile.Close())
+	}()
 
 	if _, err = io.Copy(tmpFile, resp.Body); err != nil {
-		return "", fmt.Errorf("error copying zarf binary: %w", err)
+		require.NoError(t, err)
 	}
 
 	if err = os.Chmod(tmpFile.Name(), 0755); err != nil {
-		return "", fmt.Errorf("error making zarf binary executable: %w", err)
+		require.NoError(t, err)
 	}
 
-	return tmpFile.Name(), nil
+	return tmpFile.Name()
 }
 
 // Zarf executes a Zarf command.

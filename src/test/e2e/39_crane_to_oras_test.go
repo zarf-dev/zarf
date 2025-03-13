@@ -29,9 +29,11 @@ func TestCraneToORAS(t *testing.T) {
 
 	// A package is created with Crane
 	cranePkgDir := t.TempDir()
-	craneZarfPath, err := e2e.GetZarfAtVersion(t, "v0.49.1")
+	craneZarfPath := e2e.GetZarfAtVersion(t, "v0.49.1")
 	require.NoError(t, err)
-	defer require.NoError(t, os.RemoveAll(craneZarfPath))
+	defer func() {
+		require.NoError(t, os.RemoveAll(craneZarfPath))
+	}()
 	cfg := exec.PrintCfg()
 	pkgDefinitionPath := filepath.Join("src", "test", "packages", "39-crane-to-oras")
 	_, _, err = exec.CmdWithTesting(t, cfg, craneZarfPath, "package", "create", pkgDefinitionPath, "-o", cranePkgDir, "--skip-sbom", "--no-color")
