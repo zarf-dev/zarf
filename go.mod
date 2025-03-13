@@ -1,6 +1,7 @@
 module github.com/zarf-dev/zarf
 
 go 1.23.3
+toolchain go1.24.1
 
 // TODO (@AABRO): Pending merge into github.com/gojsonschema/gojsonschema (https://github.com/gojsonschema/gojsonschema/pull/5)
 replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
@@ -14,7 +15,7 @@ require (
 	github.com/agnivade/levenshtein v1.2.1
 	github.com/anchore/clio v0.0.0-20241115144204-29e89f9fa837
 	github.com/anchore/stereoscope v0.0.13
-	github.com/anchore/syft v1.19.0
+	github.com/anchore/syft v1.20.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.1
 	github.com/defenseunicorns/pkg/oci v1.0.2
@@ -78,6 +79,7 @@ require (
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/anchore/archiver/v3 v3.5.3-0.20241210171143-5b1d8d1c7c51 // indirect
 	github.com/anchore/go-collections v0.0.0-20240216171411-9321230ce537 // indirect
+	github.com/bitnami/go-version v0.0.0-20250131085805-b1f57a8634ef // indirect
 	github.com/bshuster-repo/logrus-logstash-hook v1.0.0 // indirect
 	github.com/buildkite/roko v1.2.0 // indirect
 	github.com/census-instrumentation/opencensus-proto v0.4.1 // indirect
@@ -105,7 +107,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl/v2 v2.23.0 // indirect
 	github.com/in-toto/attestation v1.1.0 // indirect
-	github.com/jedib0t/go-pretty/v6 v6.6.5 // indirect
+	github.com/jedib0t/go-pretty/v6 v6.6.6 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
@@ -216,7 +218,7 @@ require (
 	github.com/anchore/go-struct-converter v0.0.0-20221118182256-c68fdcfa2092 // indirect
 	github.com/anchore/go-version v1.2.2-0.20210903204242-51efa5b487c4 // indirect
 	github.com/anchore/grype v0.86.1 // indirect
-	github.com/anchore/packageurl-go v0.1.1-0.20250117185454-edf36a908b10 // indirect
+	github.com/anchore/packageurl-go v0.1.1-0.20250220190351-d62adb6e1115 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/aquasecurity/go-pep440-version v0.0.1 // indirect
@@ -249,7 +251,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/bmatcuk/doublestar/v2 v2.0.4 // indirect
-	github.com/bmatcuk/doublestar/v4 v4.8.0 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.8.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/buildkite/agent/v3 v3.81.0 // indirect
 	github.com/buildkite/go-pipeline v0.13.1 // indirect
@@ -289,7 +291,7 @@ require (
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/cli v27.5.1+incompatible
 	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker v27.5.0+incompatible // indirect
+	github.com/docker/docker v28.0.0+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.2 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
@@ -306,7 +308,7 @@ require (
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/facebookincubator/nvdtools v0.1.5 // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect
-	github.com/felixge/fgprof v0.9.3 // indirect
+	github.com/felixge/fgprof v0.9.5 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fluxcd/pkg/apis/acl v0.6.0 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
@@ -547,7 +549,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa // indirect
-	golang.org/x/mod v0.22.0 // indirect
+	golang.org/x/mod v0.23.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/oauth2 v0.25.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
@@ -574,10 +576,10 @@ require (
 	k8s.io/kube-openapi v0.0.0-20241212222426-2c72e554b1e7 // indirect
 	k8s.io/metrics v0.32.2 // indirect
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
-	modernc.org/libc v1.55.3 // indirect
-	modernc.org/mathutil v1.6.0 // indirect
-	modernc.org/memory v1.8.0 // indirect
-	modernc.org/sqlite v1.34.5 // indirect
+	modernc.org/libc v1.61.13 // indirect
+	modernc.org/mathutil v1.7.1 // indirect
+	modernc.org/memory v1.8.2 // indirect
+	modernc.org/sqlite v1.35.0 // indirect
 	oras.land/oras-go v1.2.5 // indirect
 	sigs.k8s.io/controller-runtime v0.20.2
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
