@@ -30,10 +30,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		registryURL = cfg.RegInfo.Address
 	)
 	c, _ := cluster.NewCluster()
-	// Here are the rules
-	// If the registry is internal we want the cluster and we want to pull from the registry
-	// If the registry is external and is a service URL we want to be able to push to it
-	// Otherwise we use
 	if c != nil {
 		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegInfo)
 		if err != nil {
