@@ -19,6 +19,7 @@ zarf tools download-init [flags]
 ```
   -h, --help                      help for download-init
   -o, --output-directory string   Specify a directory to place the init package in.
+  -v, --version string            Specify version to download (defaults to current CLI version)
 ```
 
 ### Options inherited from parent commands
