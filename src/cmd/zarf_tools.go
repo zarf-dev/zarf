@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -35,9 +36,11 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-var subAltNames []string
-var outputDirectory string
-var updateCredsInitOpts types.ZarfInitOptions
+var (
+	subAltNames         []string
+	outputDirectory     string
+	updateCredsInitOpts types.ZarfInitOptions
+)
 
 const (
 	registryKey     = "registry"
@@ -455,7 +458,9 @@ func (o *clearCacheOptions) run(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-type downloadInitOptions struct{}
+type downloadInitOptions struct {
+	version string
+}
 
 func newDownloadInitCommand() *cobra.Command {
 	o := &downloadInitOptions{}
@@ -467,13 +472,24 @@ func newDownloadInitCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&outputDirectory, "output-directory", "o", "", lang.CmdToolsDownloadInitFlagOutputDirectory)
-
+	cmd.Flags().StringVarP(&o.version, "version", "v", o.version, "Specify version to download (defaults to current CLI version)")
 	return cmd
 }
 
 func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
-	url := zoci.GetInitPackageURL(config.CLIVersion)
+	var url string
+
+	if o.version == "" {
+		url = zoci.GetInitPackageURL(config.CLIVersion)
+	} else {
+		ver, err := semver.NewVersion(o.version)
+		if err != nil {
+			return fmt.Errorf("unable to parse version %s: %w", o.version, err)
+		}
+
+		url = zoci.GetInitPackageURL(fmt.Sprintf("v%s", ver.String()))
+	}
 	remote, err := zoci.NewRemote(ctx, url, oci.PlatformForArch(config.GetArch()))
 	if err != nil {
 		return fmt.Errorf("unable to download the init package: %w", err)
