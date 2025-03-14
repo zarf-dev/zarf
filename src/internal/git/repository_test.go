@@ -54,10 +54,8 @@ func TestRepository(t *testing.T) {
 	}
 	initRepo, err := git.InitWithOptions(storer, fs, options)
 	require.NoError(t, err)
-
 	w, err := initRepo.Worktree()
 	require.NoError(t, err)
-
 	filePath := "test.txt"
 	newFile, err := fs.Create(filePath)
 	require.NoError(t, err)
@@ -78,7 +76,6 @@ func TestRepository(t *testing.T) {
 		URLs: []string{repoAddress},
 	})
 	require.NoError(t, err)
-	t.Log(initRepo.Head())
 	err = initRepo.Push(&git.PushOptions{
 		RemoteName: "origin",
 	})
