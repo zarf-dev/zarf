@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/stretchr/testify/require"
@@ -47,10 +49,15 @@ func TestRepository(t *testing.T) {
 
 	storer := memory.NewStorage()
 	fs := memfs.New()
-	initRepo, err := git.Init(storer, fs)
+	options := git.InitOptions{
+		DefaultBranch: plumbing.Main,
+	}
+	initRepo, err := git.InitWithOptions(storer, fs, options)
 	require.NoError(t, err)
+
 	w, err := initRepo.Worktree()
 	require.NoError(t, err)
+
 	filePath := "test.txt"
 	newFile, err := fs.Create(filePath)
 	require.NoError(t, err)
@@ -71,10 +78,17 @@ func TestRepository(t *testing.T) {
 		URLs: []string{repoAddress},
 	})
 	require.NoError(t, err)
+	t.Log(initRepo.Head())
 	err = initRepo.Push(&git.PushOptions{
 		RemoteName: "origin",
 	})
 	require.NoError(t, err)
+
+	// TODO: Is there a configuration that defines contents of HEAD that isn't read from ~/.gitconfig
+	// Force-write refs/heads/main ref to HEAD to disk - Matching the above reference and decoupling from host gitconfig
+	headFile := filepath.Join(cfg.Dir, "test.git", "HEAD")
+	err = os.WriteFile(headFile, []byte("ref: refs/heads/main\n"), 0644)
+	require.NoError(t, err, "Failed to write HEAD to disk")
 
 	repo, err := Clone(ctx, rootPath, repoAddress, false)
 	require.NoError(t, err)
