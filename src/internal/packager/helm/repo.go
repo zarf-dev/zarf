@@ -25,7 +25,6 @@ import (
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/repo"
-	"k8s.io/client-go/util/homedir"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -345,10 +344,6 @@ func (h *Helm) buildChartDependencies() error {
 	}
 
 	h.settings = cli.New()
-	defaultKeyring := filepath.Join(homedir.HomeDir(), ".gnupg", "pubring.gpg")
-	if v, ok := os.LookupEnv("GNUPGHOME"); ok {
-		defaultKeyring = filepath.Join(v, "pubring.gpg")
-	}
 
 	man := &downloader.Manager{
 		Out:            &message.DebugWriter{},
@@ -359,8 +354,7 @@ func (h *Helm) buildChartDependencies() error {
 		RepositoryConfig: h.settings.RepositoryConfig,
 		RepositoryCache:  h.settings.RepositoryCache,
 		Debug:            false,
-		Verify:           downloader.VerifyIfPossible,
-		Keyring:          defaultKeyring,
+		Verify:           downloader.VerifyNever,
 	}
 
 	// Build the deps from the helm chart
