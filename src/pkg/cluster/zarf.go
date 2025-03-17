@@ -47,7 +47,6 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 		// Process the k8s secret into our internal structs
 		err := json.Unmarshal(secret.Data["data"], &deployedPackage)
 		deployedPackage.Timestamp = secret.ManagedFields[0].Time.UTC().Format(time.RFC3339)
-		fmt.Println(secret.ManagedFields[0].Time)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
 			continue
