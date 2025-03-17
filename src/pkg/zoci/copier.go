@@ -8,10 +8,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"oras.land/oras-go/v2/content"
 )
 
