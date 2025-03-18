@@ -114,7 +114,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		if err = pushImage(img.Reference, offlineName); err != nil {
 			return err
 		}
-
 	}
 
 	return nil

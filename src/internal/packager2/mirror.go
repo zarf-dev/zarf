@@ -72,8 +72,7 @@ func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		return nil
 	}
 	pushCfg := images.PushConfig{
-		// TODO set as an option
-		PlainHTTP:       config.CommonOptions.PlainHTTP,
+		PlainHTTP:       plainHTTP,
 		SourceDirectory: pkgLayout.GetImageDir(),
 		ImageList:       refs,
 		NoChecksum:      noImgChecksum,
