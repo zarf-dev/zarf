@@ -397,13 +397,3 @@ func annotateImage(ctx context.Context, dst *oci.Store, desc ocispec.Descriptor,
 	}
 	return nil
 }
-
-func getSizeOfImage(manifestDesc ocispec.Descriptor, manifest ocispec.Manifest) int64 {
-	var totalSize int64
-	totalSize += manifestDesc.Size
-	for _, layer := range manifest.Layers {
-		totalSize += layer.Size
-	}
-	totalSize += manifest.Config.Size
-	return totalSize
-}

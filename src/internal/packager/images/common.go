@@ -180,3 +180,13 @@ func WithPullAuth(ri types.RegistryInfo) crane.Option {
 func WithPushAuth(ri types.RegistryInfo) crane.Option {
 	return WithBasicAuth(ri.PushUsername, ri.PushPassword)
 }
+
+func getSizeOfImage(manifestDesc ocispec.Descriptor, manifest ocispec.Manifest) int64 {
+	var totalSize int64
+	totalSize += manifestDesc.Size
+	for _, layer := range manifest.Layers {
+		totalSize += layer.Size
+	}
+	totalSize += manifest.Config.Size
+	return totalSize
+}
