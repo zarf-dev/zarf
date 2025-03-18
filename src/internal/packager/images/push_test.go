@@ -84,7 +84,6 @@ func TestPush(t *testing.T) {
 			}
 			err = Push(ctx, cfg)
 
-			// validate
 			if tc.expectErr {
 				require.Error(t, err, tc.expectErr)
 				return

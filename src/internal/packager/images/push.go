@@ -130,7 +130,6 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 		return fmt.Errorf("only OCI manifests are supported in Zarf, got %s", desc.MediaType)
 	}
 	copyOpts := oras.DefaultCopyOptions
-	// We get the
 	copyOpts.WithTargetPlatform(desc.Platform)
 	_, err = oras.Copy(ctx, src, srcName, remote, dstName, copyOpts)
 	if err != nil {
