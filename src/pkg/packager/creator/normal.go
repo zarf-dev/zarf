@@ -17,6 +17,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -204,18 +205,27 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 			return err
 		}
 
-		// for info, img := range pulled {
-		// 	if err := dst.Images.AddV1Image(img); err != nil {
-		// 		return err
-		// 	}
-		// 	ok, err := utils.OnlyHasImageLayers(img)
-		// 	if err != nil {
-		// 		return fmt.Errorf("failed to validate %s is an image and not an artifact: %w", info, err)
-		// 	}
-		// 	if ok {
-		// 		sbomImageList = append(sbomImageList, info)
-		// 	}
-		// }
+		pulled := map[transform.Image]v1.Image{}
+		for _, ref := range imageList {
+			image, err := utils.LoadOCIImage(dst.Images.Base, ref)
+			if err != nil {
+				return err
+			}
+			pulled[ref] = image
+		}
+
+		for info, img := range pulled {
+			if err := dst.Images.AddV1Image(img); err != nil {
+				return err
+			}
+			ok, err := utils.OnlyHasImageLayers(img)
+			if err != nil {
+				return fmt.Errorf("failed to validate %s is an image and not an artifact: %w", info, err)
+			}
+			if ok {
+				sbomImageList = append(sbomImageList, info)
+			}
+		}
 
 		// Sort images index to make build reproducible.
 		err = utils.SortImagesIndex(dst.Images.Base)

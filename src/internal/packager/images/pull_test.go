@@ -103,7 +103,7 @@ func TestPull(t *testing.T) {
 		expectErr         bool
 	}{
 		{
-			name: "pull an image",
+			name: "pull a container image, a cosign signature, and a Helm chart",
 			refs: []string{
 				"ghcr.io/zarf-dev/doom-game:0.0.1",
 				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
@@ -119,7 +119,7 @@ func TestPull(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			name: "pull a Helm OCI object",
+			name: "test registry overrides",
 			refs: []string{
 				"ghcr.io/stefanprodan/podinfo:6.4.0",
 			},
