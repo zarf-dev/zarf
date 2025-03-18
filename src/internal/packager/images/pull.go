@@ -60,7 +60,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		return nil, fmt.Errorf("failed to create image path %s: %w", cfg.DestinationDirectory, err)
 	}
 
-	// Give some additional user feedback on larger image sets
 	imageFetchStart := time.Now()
 	l.Info("fetching info for images", "count", imageCount, "destination", cfg.DestinationDirectory)
 	storeOpts := credentials.StoreOptions{}
@@ -247,10 +246,6 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 	if err != nil {
 		return nil, err
 	}
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return nil, err
-	}
 	cli, err := client.NewClientWithOpts(
 		client.WithHost(dockerEndPointHost),
 		client.WithTLSClientConfigFromEnv(),
@@ -261,80 +256,90 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 	}
 	defer cli.Close()
 	cli.NegotiateAPIVersion(ctx)
-	defer os.RemoveAll(tmpDir)
 	for _, pullInfo := range daemonPullInfo {
-		// Note: ImageSave accepts a ocispec.Platform, but the effects it would have on users without client API version 1.48,
-		// which was released in Feb 2025, is unclear. This could make the code more efficient in some cases, but we are
-		// avoiding this for now to give users more time to update.
-		imageReader, err := cli.ImageSave(ctx, []string{pullInfo.registryOverrideRef})
-		if err != nil {
-			return nil, fmt.Errorf("failed to save image: %w", err)
-		}
-		defer imageReader.Close()
+		err := func() error {
+			tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+			if err != nil {
+				return err
+			}
+			defer os.RemoveAll(tmpDir)
+			// Note: ImageSave accepts a ocispec.Platform, but the effects it would have on users without client API version 1.48,
+			// which was released in Feb 2025, is unclear. This could make the code more efficient in some cases, but we are
+			// avoiding this for now to give users more time to update.
+			imageReader, err := cli.ImageSave(ctx, []string{pullInfo.registryOverrideRef})
+			if err != nil {
+				return fmt.Errorf("failed to save image: %w", err)
+			}
+			defer imageReader.Close()
 
-		imageTarPath := filepath.Join(tmpDir, "image.tar")
-		tarFile, err := os.Create(imageTarPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create tar file: %w", err)
-		}
-		defer tarFile.Close()
+			imageTarPath := filepath.Join(tmpDir, "image.tar")
+			tarFile, err := os.Create(imageTarPath)
+			if err != nil {
+				return fmt.Errorf("failed to create tar file: %w", err)
+			}
+			defer tarFile.Close()
 
-		// Read bytes from imageReader and write them to tarFile
-		if _, err := io.Copy(tarFile, imageReader); err != nil {
-			return nil, fmt.Errorf("error writing image to tar file: %w", err)
-		}
-		dockerImageOCILayoutPath := filepath.Join(tmpDir, "docker-image-oci-layout")
-		if err := archiver.Unarchive(imageTarPath, dockerImageOCILayoutPath); err != nil {
-			return nil, fmt.Errorf("failed to write tar file: %w", err)
-		}
-		idx, err := getIndexFromOCILayout(dockerImageOCILayoutPath)
-		if err != nil {
-			return nil, err
-		}
-		// Indexes should always contain exactly one manifests for the single image we are pulling
-		if len(idx.Manifests) != 1 {
-			return nil, fmt.Errorf("index.json does not contain one manifest")
-		}
-		// Docker does set the annotation ref name in the way ORAS anticipates
-		// We set it here so that ORAS can pick up the image
-		idx.Manifests[0].Annotations[ocispec.AnnotationRefName] = pullInfo.registryOverrideRef
-		err = saveIndexToOCILayout(dockerImageOCILayoutPath, idx)
-		if err != nil {
-			return nil, err
-		}
+			// Read bytes from imageReader and write them to tarFile
+			if _, err := io.Copy(tarFile, imageReader); err != nil {
+				return fmt.Errorf("error writing image to tar file: %w", err)
+			}
+			dockerImageOCILayoutPath := filepath.Join(tmpDir, "docker-image-oci-layout")
+			if err := archiver.Unarchive(imageTarPath, dockerImageOCILayoutPath); err != nil {
+				return fmt.Errorf("failed to write tar file: %w", err)
+			}
+			idx, err := getIndexFromOCILayout(dockerImageOCILayoutPath)
+			if err != nil {
+				return err
+			}
+			// Indexes should always contain exactly one manifests for the single image we are pulling
+			if len(idx.Manifests) != 1 {
+				return fmt.Errorf("index.json does not contain one manifest")
+			}
+			// Docker does set the annotation ref name in the way ORAS anticipates
+			// We set it here so that ORAS can pick up the image
+			idx.Manifests[0].Annotations[ocispec.AnnotationRefName] = pullInfo.registryOverrideRef
+			err = saveIndexToOCILayout(dockerImageOCILayoutPath, idx)
+			if err != nil {
+				return err
+			}
 
-		dockerImageSrc, err := oci.New(dockerImageOCILayoutPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create OCI store: %w", err)
-		}
+			dockerImageSrc, err := oci.New(dockerImageOCILayoutPath)
+			if err != nil {
+				return fmt.Errorf("failed to create OCI store: %w", err)
+			}
 
-		fetchBytesOpts := oras.DefaultFetchBytesOptions
-		platform := &ocispec.Platform{
-			Architecture: arch,
-			OS:           "linux",
-		}
-		fetchBytesOpts.TargetPlatform = platform
-		desc, b, err := oras.FetchBytes(ctx, dockerImageSrc, pullInfo.registryOverrideRef, fetchBytesOpts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get manifest from docker image source: %w", err)
-		}
-		if !isManifest(desc.MediaType) {
-			return nil, fmt.Errorf("expected to find image manifest instead found %s", desc.MediaType)
-		}
-		var manifest ocispec.Manifest
-		if err := json.Unmarshal(b, &manifest); err != nil {
-			return nil, err
-		}
-		imagesWithManifests[pullInfo.image] = manifest
-		size := getSizeOfImage(desc, manifest)
-		l.Info("pulling image from docker daemon", "name", pullInfo.registryOverrideRef, "size", utils.ByteFormat(float64(size), 2))
-		copyOpts := oras.DefaultCopyOptions
-		copyOpts.WithTargetPlatform(platform)
-		manifestDesc, err := oras.Copy(ctx, dockerImageSrc, pullInfo.registryOverrideRef, dst, "", copyOpts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to copy: %w", err)
-		}
-		err = annotateImage(ctx, dst, manifestDesc, pullInfo.registryOverrideRef, pullInfo.image.Reference)
+			fetchBytesOpts := oras.DefaultFetchBytesOptions
+			platform := &ocispec.Platform{
+				Architecture: arch,
+				OS:           "linux",
+			}
+			fetchBytesOpts.TargetPlatform = platform
+			desc, b, err := oras.FetchBytes(ctx, dockerImageSrc, pullInfo.registryOverrideRef, fetchBytesOpts)
+			if err != nil {
+				return fmt.Errorf("failed to get manifest from docker image source: %w", err)
+			}
+			if !isManifest(desc.MediaType) {
+				return fmt.Errorf("expected to find image manifest instead found %s", desc.MediaType)
+			}
+			var manifest ocispec.Manifest
+			if err := json.Unmarshal(b, &manifest); err != nil {
+				return err
+			}
+			imagesWithManifests[pullInfo.image] = manifest
+			size := getSizeOfImage(desc, manifest)
+			l.Info("pulling image from docker daemon", "name", pullInfo.registryOverrideRef, "size", utils.ByteFormat(float64(size), 2))
+			copyOpts := oras.DefaultCopyOptions
+			copyOpts.WithTargetPlatform(platform)
+			manifestDesc, err := oras.Copy(ctx, dockerImageSrc, pullInfo.registryOverrideRef, dst, "", copyOpts)
+			if err != nil {
+				return fmt.Errorf("failed to copy: %w", err)
+			}
+			err = annotateImage(ctx, dst, manifestDesc, pullInfo.registryOverrideRef, pullInfo.image.Reference)
+			if err != nil {
+				return err
+			}
+			return nil
+		}()
 		if err != nil {
 			return nil, err
 		}
