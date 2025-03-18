@@ -148,7 +148,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 		}
 		for image, manifest := range manifests {
 			ok := images.OnlyHasImageLayers(manifest)
-			if ok{
+			if ok {
 				sbomImageList = append(sbomImageList, image)
 			}
 		}

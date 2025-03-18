@@ -84,7 +84,7 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 
 	// Stereoscope creates extra layers outside of the OCI formatted directory in the cache
 	// These are removed after SBOMs are created to save space
-	files, err := filepath.Glob(filepath.Join(cachePath, "images", "sha256*"))
+	files, err := filepath.Glob(filepath.Join(cachePath, ImagesDir, "sha256*"))
 	if err != nil {
 		return err
 	}
