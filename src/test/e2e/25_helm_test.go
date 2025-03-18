@@ -64,11 +64,10 @@ func testHelmChartsExample(t *testing.T) {
 	defer e2e.CleanFiles(t, fmt.Sprintf("zarf-package-helm-charts-local-tgz-%s-0.0.1.tar.zst", e2e.Arch))
 
 	// Create a package that needs dependencies
-	evilChartDepsPath := filepath.Join("src", "test", "packages", "25-evil-chart-deps")
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", evilChartDepsPath, "--tmpdir", tmpdir, "--confirm")
-	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "could not download https://charts.jetstack.io/charts/cert-manager-v1.11.1.tgz")
-	require.FileExists(t, filepath.Join(evilChartDepsPath, "good-chart", "charts", "gitlab-runner-0.55.0.tgz"))
+	chartDepsPath := filepath.Join("src", "test", "packages", "25-chart-deps")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", chartDepsPath, "--tmpdir", tmpdir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	require.FileExists(t, filepath.Join(chartDepsPath, "parent-chart", "charts", "gitlab-runner-0.55.0.tgz"))
 
 	// Create a package with a chart name that doesn't exist in a repo
 	evilChartLookupPath := filepath.Join("src", "test", "packages", "25-evil-chart-lookup")
