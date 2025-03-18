@@ -36,6 +36,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	actions2 "github.com/zarf-dev/zarf/src/internal/packager2/actions"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
+	images2 "github.com/zarf-dev/zarf/src/internal/packager2/images"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -135,21 +136,44 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 		if err != nil {
 			return nil, err
 		}
-		pullCfg := images.PullConfig{
-			DestinationDirectory: filepath.Join(buildPath, ImagesDir),
-			ImageList:            componentImages,
-			Arch:                 pkg.Metadata.Architecture,
-			RegistryOverrides:    opt.RegistryOverrides,
-			CacheDirectory:       filepath.Join(cachePath, ImagesDir),
-		}
-		manifests, err := images.Pull(ctx, pullCfg)
-		if err != nil {
-			return nil, err
-		}
-		for image, manifest := range manifests {
-			ok := images.OnlyHasImageLayers(manifest)
-			if ok{
-				sbomImageList = append(sbomImageList, image)
+		if images2.Enabled(ctx) {
+			pullCfg := images2.PullConfig{
+				DestinationDirectory: filepath.Join(buildPath, ImagesDir),
+				ImageList:            componentImages,
+				Arch:                 pkg.Metadata.Architecture,
+				RegistryOverrides:    opt.RegistryOverrides,
+				CacheDirectory:       filepath.Join(cachePath, ImagesDir),
+			}
+			manifests, err := images2.Pull(ctx, pullCfg)
+			if err != nil {
+				return nil, err
+			}
+			for image, manifest := range manifests {
+				ok := images2.OnlyHasImageLayers(manifest)
+				if ok {
+					sbomImageList = append(sbomImageList, image)
+				}
+			}
+		} else {
+			pullCfg := images.PullConfig{
+				DestinationDirectory: filepath.Join(buildPath, ImagesDir),
+				ImageList:            componentImages,
+				Arch:                 pkg.Metadata.Architecture,
+				RegistryOverrides:    opt.RegistryOverrides,
+				CacheDirectory:       filepath.Join(cachePath, ImagesDir),
+			}
+			pulled, err := images.Pull(ctx, pullCfg)
+			if err != nil {
+				return nil, err
+			}
+			for info, img := range pulled {
+				ok, err := utils.OnlyHasImageLayers(img)
+				if err != nil {
+					return nil, fmt.Errorf("failed to validate %s is an image and not an artifact: %w", info, err)
+				}
+				if ok {
+					sbomImageList = append(sbomImageList, info)
+				}
 			}
 		}
 

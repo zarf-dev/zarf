@@ -16,6 +16,7 @@ require (
 	github.com/anchore/stereoscope v0.0.13
 	github.com/anchore/syft v1.19.0
 	github.com/avast/retry-go/v4 v4.6.1
+	github.com/defenseunicorns/pkg/helpers v1.1.3
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.1
 	github.com/defenseunicorns/pkg/oci v1.0.2
 	github.com/derailed/k9s v0.40.5

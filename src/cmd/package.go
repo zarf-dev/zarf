@@ -27,6 +27,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
+	"github.com/zarf-dev/zarf/src/internal/packager2/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -37,10 +38,21 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+func packagePreRun(cmd *cobra.Command, _ []string) {
+	// If --insecure was provided, set --skip-signature-validation to match
+	if config.CommonOptions.Insecure {
+		pkgConfig.PkgOpts.SkipSignatureValidation = true
+	}
+	if os.Getenv("ORAS_PULL") == "true" {
+		images.WithNewClientEnabled(cmd.Context(), true)
+	}
+}
+
 func newPackageCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "package",
 		Aliases: []string{"p"},
+		PreRun:  packagePreRun,
 		Short:   lang.CmdPackageShort,
 	}
 

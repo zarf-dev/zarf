@@ -7,16 +7,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/defenseunicorns/pkg/helpers"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	images2 "github.com/zarf-dev/zarf/src/internal/packager2/images"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -41,18 +46,26 @@ type MirrorOptions struct {
 
 // Mirror mirrors the package contents to the given registry and git server.
 func Mirror(ctx context.Context, opt MirrorOptions) error {
-	err := pushImagesToRegistry(ctx, opt.PkgLayout, opt.Filter, opt.RegistryInfo, opt.NoImageChecksum, opt.PlainHTTP)
-	if err != nil {
-		return err
+	if images2.Enabled(ctx) {
+		err := pushImagesToRegistry2(ctx, opt.PkgLayout, opt.Filter, opt.RegistryInfo, opt.NoImageChecksum, opt.PlainHTTP)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := pushImagesToRegistry(ctx, opt.Cluster, opt.PkgLayout, opt.Filter, opt.RegistryInfo, opt.NoImageChecksum, opt.Retries)
+		if err != nil {
+			return err
+		}
 	}
-	err = pushReposToRepository(ctx, opt.Cluster, opt.PkgLayout, opt.Filter, opt.GitInfo, opt.Retries)
+
+	err := pushReposToRepository(ctx, opt.Cluster, opt.PkgLayout, opt.Filter, opt.GitInfo, opt.Retries)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, regInfo types.RegistryInfo, noImgChecksum bool, plainHTTP bool) error {
+func pushImagesToRegistry2(ctx context.Context, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, regInfo types.RegistryInfo, noImgChecksum bool, plainHTTP bool) error {
 	components, err := filter.Apply(pkgLayout.Pkg)
 	if err != nil {
 		return err
@@ -71,18 +84,129 @@ func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if len(refs) == 0 {
 		return nil
 	}
-	pushCfg := images.PushConfig{
-		// TODO set as an option
-		PlainHTTP:       config.CommonOptions.PlainHTTP,
+	pushCfg := images2.PushConfig{
+		PlainHTTP:       plainHTTP,
 		SourceDirectory: pkgLayout.GetImageDir(),
 		ImageList:       refs,
 		NoChecksum:      noImgChecksum,
 		Arch:            pkgLayout.Pkg.Build.Architecture,
 		RegInfo:         regInfo,
 	}
-	err = images.Push(ctx, pushCfg)
+	err = images2.Push(ctx, pushCfg)
 	if err != nil {
 		return fmt.Errorf("failed to mirror images: %w", err)
+	}
+	return nil
+}
+
+func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, regInfo types.RegistryInfo, noImgChecksum bool, retries int) error {
+	l := logger.From(ctx)
+
+	components, err := filter.Apply(pkgLayout.Pkg)
+	if err != nil {
+		return err
+	}
+
+	images := map[transform.Image]v1.Image{}
+	for _, component := range components {
+		for _, img := range component.Images {
+			ref, err := transform.ParseImageRef(img)
+			if err != nil {
+				return fmt.Errorf("failed to create ref for image %s: %w", img, err)
+			}
+			if _, ok := images[ref]; ok {
+				continue
+			}
+			img, err := pkgLayout.GetImage(ref)
+			if err != nil {
+				return err
+			}
+			images[ref] = img
+		}
+	}
+	if len(images) == 0 {
+		return nil
+	}
+
+	defaultTransport := http.DefaultTransport.(*http.Transport).Clone()
+	defaultTransport.TLSClientConfig.InsecureSkipVerify = config.CommonOptions.InsecureSkipTLSVerify
+	// TODO (@WSTARR) This is set to match the TLSHandshakeTimeout to potentially mitigate effects of https://github.com/zarf-dev/zarf/issues/1444
+	defaultTransport.ResponseHeaderTimeout = 10 * time.Second
+	transport := helpers.NewTransport(defaultTransport, nil)
+
+	pushOptions := []crane.Option{
+		crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: pkgLayout.Pkg.Build.Architecture}),
+		crane.WithTransport(transport),
+		crane.WithAuth(authn.FromConfig(authn.AuthConfig{
+			Username: regInfo.PushUsername,
+			Password: regInfo.PushPassword,
+		})),
+		crane.WithUserAgent("zarf"),
+		crane.WithNoClobber(true),
+		crane.WithJobs(1),
+	}
+	if config.CommonOptions.InsecureSkipTLSVerify {
+		pushOptions = append(pushOptions, crane.Insecure)
+	}
+
+	for refInfo, img := range images {
+		err = retry.Do(func() error {
+			pushImage := func(registryUrl string) error {
+				names := []string{}
+				if !noImgChecksum {
+					offlineNameCRC, err := transform.ImageTransformHost(registryUrl, refInfo.Reference)
+					if err != nil {
+						return retry.Unrecoverable(err)
+					}
+					names = append(names, offlineNameCRC)
+				}
+				offlineName, err := transform.ImageTransformHostWithoutChecksum(registryUrl, refInfo.Reference)
+				if err != nil {
+					return retry.Unrecoverable(err)
+				}
+				names = append(names, offlineName)
+				for _, name := range names {
+					message.Infof("Pushing image %s", name)
+					l.Info("pushing image", "name", name)
+					err = crane.Push(img, name, pushOptions...)
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			}
+
+			if !dns.IsServiceURL(regInfo.Address) {
+				return pushImage(regInfo.Address)
+			}
+
+			if c == nil {
+				return retry.Unrecoverable(errors.New("cannot push to internal OCI registry when cluster is nil"))
+			}
+			namespace, name, port, err := dns.ParseServiceURL(regInfo.Address)
+			if err != nil {
+				return err
+			}
+			tunnel, err := c.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
+			if err != nil {
+				return err
+			}
+			_, err = tunnel.Connect(ctx)
+			if err != nil {
+				return err
+			}
+			defer tunnel.Close()
+			err = tunnel.Wrap(func() error {
+				return pushImage(tunnel.Endpoint())
+			})
+			if err != nil {
+				return err
+			}
+			return nil
+		}, retry.Context(ctx), retry.Attempts(uint(retries)), retry.Delay(500*time.Millisecond))
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

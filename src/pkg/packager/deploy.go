@@ -32,6 +32,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	images2 "github.com/zarf-dev/zarf/src/internal/packager2/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -565,6 +566,18 @@ func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []s
 	}
 
 	imageList := helpers.Unique(combinedImageList)
+	if images2.Enabled(ctx) {
+		pushCfg := images2.PushConfig{
+			SourceDirectory: p.layout.Images.Base,
+			ImageList:       imageList,
+			RegInfo:         p.state.RegistryInfo,
+			NoChecksum:      noImgChecksum,
+			Arch:            p.cfg.Pkg.Build.Architecture,
+			Retries:         p.cfg.PkgOpts.Retries,
+			PlainHTTP:       config.CommonOptions.PlainHTTP,
+		}
+		return images2.Push(ctx, pushCfg)
+	}
 
 	pushCfg := images.PushConfig{
 		SourceDirectory: p.layout.Images.Base,
@@ -573,9 +586,7 @@ func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []s
 		NoChecksum:      noImgChecksum,
 		Arch:            p.cfg.Pkg.Build.Architecture,
 		Retries:         p.cfg.PkgOpts.Retries,
-		PlainHTTP:       config.CommonOptions.PlainHTTP,
 	}
-
 	return images.Push(ctx, pushCfg)
 }
 
