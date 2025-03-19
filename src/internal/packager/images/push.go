@@ -81,13 +81,17 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		if err != nil {
 			return fmt.Errorf("failed to parse ref %s: %w", dstName, err)
 		}
+		defaultPlatform := &ocispec.Platform{
+			Architecture: cfg.Arch,
+			OS:           "linux",
+		}
 		if tunnel != nil {
 			return tunnel.Wrap(func() error {
 				remoteRepo.PlainHTTP = true
-				return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.Concurrency)
+				return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.Concurrency, defaultPlatform)
 			})
 		}
-		return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.Concurrency)
+		return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.Concurrency, defaultPlatform)
 	}
 
 	for _, img := range cfg.ImageList {
@@ -119,15 +123,27 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	return nil
 }
 
-func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int) error {
-	// We get the platform dynamically since it can be nil in non container image cases
-	desc, err := oras.Resolve(ctx, src, srcName, oras.DefaultResolveOptions)
+func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int, defaultPlatform *ocispec.Platform) error {
+	// Assume no platform to start as it can be nil in non container image situations
+	resolveOpts := oras.DefaultResolveOptions
+	desc, err := oras.Resolve(ctx, src, srcName, resolveOpts)
 	if err != nil {
 		return fmt.Errorf("failed to fetch image: %s: %w", srcName, err)
 	}
-	if !isManifest(desc.MediaType) {
-		return fmt.Errorf("expected OCI manifest, got %s", desc.MediaType)
+
+	// If an index is pulled we should try pulling with the default platform
+	if isIndex(desc.MediaType) {
+		resolveOpts.TargetPlatform = defaultPlatform
+		desc, err = oras.Resolve(ctx, src, srcName, resolveOpts)
+		if err != nil {
+			return fmt.Errorf("failed to fetch image %s with architecture %s: %w", srcName, defaultPlatform.Architecture, err)
+		}
 	}
+
+	if !isManifest(desc.MediaType){
+		return fmt.Errorf("expected OCI manifest got %s", desc.MediaType)
+	}
+
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = concurrency
 	copyOpts.WithTargetPlatform(desc.Platform)

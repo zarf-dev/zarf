@@ -33,7 +33,7 @@ jobs:
           set -e
 
           # Any component tar files in a package will have the same permissions as the files included in them
-          # Therefore before building a package when example checksums need updating you must run chmod -R g-w in zarf/examples
+          # Therefore to before building a package to replace a file in hack/examples-checksums/ checksums you must run `chmod -R g-w in zarf/examples`
           for f in hack/examples-checksums/*.txt
           do
             NAME=$(basename $f .txt)
