@@ -108,6 +108,18 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 		return err
 	}
 
+	// Stereoscope creates extra layers outside of the OCI formatted directory in the cache
+	// We remove these after SBOMs are created to save space https://github.com/anchore/stereoscope/issues/387
+	files, err := filepath.Glob(filepath.Join(cachePath, ImagesDir, "sha256*"))
+	if err != nil {
+		return err
+	}
+	for _, f := range files {
+		if err := os.Remove(f); err != nil {
+			return fmt.Errorf("failed to remove file: %s", err)
+		}
+	}
+
 	return nil
 }
 
