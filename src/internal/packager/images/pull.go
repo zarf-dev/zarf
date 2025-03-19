@@ -74,12 +74,13 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	}
 	platform := &ocispec.Platform{
 		Architecture: cfg.Arch,
+		// TODO: in the future we could support Windows images
 		OS:           "linux",
 	}
 	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
 	imagesInfo := []imagePullInfo{}
 	dockerFallBackImages := []imageDaemonPullInfo{}
-	var m sync.Mutex
+	var fetchMu sync.Mutex
 
 	// This loop pulls the metadata from images with three goals
 	// - discover if any images are sha'd to an index, if so error and inform user on the different available platforms
@@ -109,12 +110,13 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 			fetchOpts := oras.DefaultFetchBytesOptions
 			desc, b, err := oras.FetchBytes(ectx, localRepo, overriddenRef, fetchOpts)
 			if err != nil {
+				// TODO we could use the k8s library for backoffs here - https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apimachinery/pkg/util/wait/backoff.go
 				if strings.Contains(err.Error(), "toomanyrequests") {
 					return fmt.Errorf("rate limited by registry: %w", err)
 				}
 				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", overriddenRef, "err", err)
-				m.Lock()
-				defer m.Unlock()
+				fetchMu.Lock()
+				defer fetchMu.Unlock()
 				dockerFallBackImages = append(dockerFallBackImages, imageDaemonPullInfo{
 					image:               image,
 					registryOverrideRef: overriddenRef,
@@ -152,8 +154,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 				return err
 			}
 			size := getSizeOfImage(desc, manifest)
-			m.Lock()
-			defer m.Unlock()
+			fetchMu.Lock()
+			defer fetchMu.Unlock()
 			imagesInfo = append(imagesInfo, imagePullInfo{
 				registryOverrideRef: overriddenRef,
 				ref:                 image.Reference,
