@@ -71,25 +71,13 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 		if err != nil {
 			return fmt.Errorf("failed to load OCI image: %w", err)
 		}
+		l.Info("creating image SBOM", "reference", refInfo.Reference)
 		b, err := createImageSBOM(ctx, cachePath, outputPath, img, refInfo.Reference)
 		if err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
 		}
-		l.Info("creating image SBOMs", "reference", refInfo.Reference)
 		err = createSBOMViewerAsset(outputPath, refInfo.Reference, b, jsonList)
 		if err != nil {
-			return err
-		}
-	}
-
-	// Stereoscope creates extra layers outside of the OCI formatted directory in the cache
-	// These are removed after SBOMs are created to save space
-	files, err := filepath.Glob(filepath.Join(cachePath, ImagesDir, "sha256*"))
-	if err != nil {
-		return err
-	}
-	for _, f := range files {
-		if err := os.Remove(f); err != nil {
 			return err
 		}
 	}

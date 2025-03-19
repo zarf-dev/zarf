@@ -168,6 +168,22 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
 		}
+		// FIXME testing if windows error still happens here
+		cachePath, err := config.GetAbsCachePath()
+		if err != nil {
+			return nil, err
+		}
+		// Stereoscope creates extra layers outside of the OCI formatted directory in the cache
+		// These are removed after SBOMs are created to save space
+		files, err := filepath.Glob(filepath.Join(cachePath, ImagesDir, "sha256*"))
+		if err != nil {
+			return nil, err
+		}
+		for _, f := range files {
+			if err := os.Remove(f); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	checksumContent, checksumSha, err := getChecksum(buildPath)

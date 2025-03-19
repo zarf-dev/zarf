@@ -82,9 +82,9 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	var m sync.Mutex
 
 	// This loop pulls the metadata from images with three goals
-	// - discover if any images are sha'd to an index, if so error which options for different platforms
-	// - If the repo doesn't contain an image mark them so that we can try to pull them from the daemon instead
-	// - Get all the manifests from images that will be pulled so they can be returned
+	// - discover if any images are sha'd to an index, if so error and inform user on the different available platforms
+	// - If the resolve fails mark the image for docker daemon pull instead
+	// - Get all the manifests from images that will be pulled so they can be returned to the function
 	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
 	for _, image := range cfg.ImageList {
@@ -106,35 +106,42 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 
 			localRepo.Client = client
 
-			// If the image has a digest start out by checking if it's an index sha
+			fetchOpts := oras.DefaultFetchBytesOptions
+			desc, b, err := oras.FetchBytes(ectx, localRepo, overriddenRef, fetchOpts)
+			if err != nil {
+				if strings.Contains(err.Error(), "toomanyrequests") {
+					return fmt.Errorf("rate limited by registry: %w", err)
+				}
+				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", overriddenRef, "err", err)
+				m.Lock()
+				defer m.Unlock()
+				dockerFallBackImages = append(dockerFallBackImages, imageDaemonPullInfo{
+					image:               image,
+					registryOverrideRef: overriddenRef,
+				})
+				return nil
+			}
+
+			// If the image has a digest make
 			if image.Digest != "" {
 				err := checkForIndex(ectx, localRepo, overriddenRef, image)
 				if err != nil {
 					return err
 				}
 			}
-
-			fetchOpts := oras.DefaultFetchBytesOptions
-			fetchOpts.FetchOptions.TargetPlatform = platform
-			desc, b, err := oras.FetchBytes(ectx, localRepo, overriddenRef, fetchOpts)
-			if err != nil {
-				if strings.Contains(err.Error(), "toomanyrequests") {
-					return fmt.Errorf("rate limited by registry: %w", err)
-				}
+			// If a manifest was returned from FetchBytes, either it's a tag with only one image or it's a non container image
+			// If it's not a manifest then we received an index and need to pull the manifest by platform
+			if !isManifest(desc.MediaType) {
+				fetchOpts.FetchOptions.TargetPlatform = platform
 				// If the image was not found it could be a image signature or Helm image
 				// non container images don't have platforms so we check using the default opts
-				desc, b, err = oras.FetchBytes(ectx, localRepo, overriddenRef, oras.DefaultFetchBytesOptions)
+				desc, b, err = oras.FetchBytes(ectx, localRepo, overriddenRef, fetchOpts)
 				if err != nil {
-					l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", overriddenRef, "err", err)
-					m.Lock()
-					defer m.Unlock()
-					dockerFallBackImages = append(dockerFallBackImages, imageDaemonPullInfo{
-						image:               image,
-						registryOverrideRef: overriddenRef,
-					})
-					return nil
+					return fmt.Errorf("failed to fetch image with architecture %s: %w", platform.Architecture, err)
 				}
 			}
+
+			// This should never be true, but it's extra validation before we marshall
 			if !isManifest(desc.MediaType) {
 				return fmt.Errorf("received unexpected mediatype %s", desc.MediaType)
 			}
@@ -294,6 +301,9 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 			// Indexes should always contain exactly one manifests for the single image we are pulling
 			if len(idx.Manifests) != 1 {
 				return fmt.Errorf("index.json does not contain one manifest")
+			}
+			if idx.Manifests[0].Annotations == nil {
+				idx.Manifests[0].Annotations = map[string]string{}
 			}
 			// Docker does set the annotation ref name in the way ORAS anticipates
 			// We set it here so that ORAS can pick up the image
