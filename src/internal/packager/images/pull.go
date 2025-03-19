@@ -60,6 +60,10 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		return nil, fmt.Errorf("failed to create image path %s: %w", cfg.DestinationDirectory, err)
 	}
 
+	if err := helpers.CreateDirectory(cfg.CacheDirectory, helpers.ReadExecuteAllWriteUser); err != nil {
+		return nil, fmt.Errorf("failed to create cache directory %s: %w", cfg.DestinationDirectory, err)
+	}
+
 	imageFetchStart := time.Now()
 	l.Info("fetching info for images", "count", imageCount, "destination", cfg.DestinationDirectory)
 	storeOpts := credentials.StoreOptions{}
@@ -75,7 +79,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	platform := &ocispec.Platform{
 		Architecture: cfg.Arch,
 		// TODO: in the future we could support Windows images
-		OS:           "linux",
+		OS: "linux",
 	}
 	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
 	imagesInfo := []imagePullInfo{}
@@ -124,12 +128,15 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 				return nil
 			}
 
-			// If the image has a digest make
-			if image.Digest != "" {
-				err := checkForIndex(ectx, localRepo, overriddenRef, image)
-				if err != nil {
-					return err
+			// If the image sha points to an index then error
+			if image.Digest != "" && isIndex(desc.MediaType) {
+				// Both index types can be marshalled into an ocispec.Index
+				// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L55
+				var idx ocispec.Index
+				if err := json.Unmarshal(b, &idx); err != nil {
+					return fmt.Errorf("unable to unmarshal index.json: %w", err)
 				}
+				return constructIndexError(ctx, idx, image)
 			}
 			// If a manifest was returned from FetchBytes, either it's a tag with only one image or it's a non container image
 			// If it's not a manifest then we received an index and need to pull the manifest by platform
@@ -200,20 +207,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	return imagesWithManifests, nil
 }
 
-func checkForIndex(ctx context.Context, repo *orasRemote.Repository, overriddenRef string, image transform.Image) error {
-	desc, b, err := oras.FetchBytes(ctx, repo, overriddenRef, oras.DefaultFetchBytesOptions)
-	if err != nil {
-		return fmt.Errorf("failed to fetch bytes: %w", err)
-	}
-	if !isIndex(desc.MediaType) {
-		return nil
-	}
-	// Both index types can be marshalled into an ocispec.Index
-	// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L55
-	var idx ocispec.Index
-	if err := json.Unmarshal(b, &idx); err != nil {
-		return fmt.Errorf("unable to unmarshal index.json: %w", err)
-	}
+func constructIndexError(ctx context.Context, idx ocispec.Index, image transform.Image) error {
 	lines := []string{"The following images are available in the index:"}
 	name := image.Name
 	if image.Tag != "" {
@@ -223,7 +217,7 @@ func checkForIndex(ctx context.Context, repo *orasRemote.Repository, overriddenR
 		lines = append(lines, fmt.Sprintf("image - %s@%s with platform %s", name, desc.Digest, desc.Platform))
 	}
 	imageOptions := strings.Join(lines, "\n")
-	return fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", overriddenRef, imageOptions)
+	return fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", image.Reference, imageOptions)
 }
 
 func getDockerEndpointHost() (string, error) {

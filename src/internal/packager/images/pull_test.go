@@ -108,6 +108,7 @@ func TestPull(t *testing.T) {
 				"ghcr.io/zarf-dev/doom-game:0.0.1",
 				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
 				"ghcr.io/stefanprodan/manifests/podinfo:6.4.0",
+				"ghcr.io/fluxcd/image-automation-controller@sha256:48a89734dc82c3a2d4138554b3ad4acf93230f770b3a582f7f48be38436d031c",
 			},
 			arch: "amd64",
 		},
@@ -191,11 +192,11 @@ func TestPullInvalidCache(t *testing.T) {
 	require.NoError(t, err)
 	destDir := t.TempDir()
 	cacheDir := t.TempDir()
+	require.NoError(t, os.MkdirAll(cacheDir, 0777))
 	invalidContent := []byte("this mimics a corrupted file")
 	// This is the sha of a layer of the image.
 	// we intentionally put junk data into the cache with this layer to test that it will get cleaned up.
 	correctLayerSha := "d94c8059c3cffb9278601bf9f8be070d50c84796401a4c5106eb8a4042445bbc"
-	require.NoError(t, err)
 	invalidLayerPath := filepath.Join(cacheDir, fmt.Sprintf("sha256:%s", correctLayerSha))
 	err = os.WriteFile(invalidLayerPath, invalidContent, 0777)
 	require.NoError(t, err)
