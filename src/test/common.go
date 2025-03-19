@@ -130,7 +130,7 @@ func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ s
 		}(tmpdir)
 		args = append(args, "--tmpdir", tmpdir)
 	}
-	if !slices.Contains(args, "--zarf-cache") && !slices.Contains(args, "tools") && os.Getenv("CI") == "true" {
+	if !slices.Contains(args, "--zarf-cache") && !slices.Contains(args, "tools") && os.Getenv("CI") == "true" && runtime.GOOS == "windows" {
 		// We make the cache dir relative to the working directory to make it work on the Windows Runners
 		// - they use two drives which filepath.Rel cannot cope with.
 		cwd, err := os.Getwd()
