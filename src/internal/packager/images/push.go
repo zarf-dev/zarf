@@ -84,10 +84,10 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		if tunnel != nil {
 			return tunnel.Wrap(func() error {
 				remoteRepo.PlainHTTP = true
-				return copyImage(ctx, src, remoteRepo, srcName, dstName)
+				return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.Concurrency)
 			})
 		}
-		return copyImage(ctx, src, remoteRepo, srcName, dstName)
+		return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.Concurrency)
 	}
 
 	for _, img := range cfg.ImageList {
@@ -119,17 +119,17 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	return nil
 }
 
-func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string) error {
-	// We get the platform dynamically because it can be nil in non container image cases
+func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int) error {
+	// We get the platform dynamically since it can be nil in non container image cases
 	desc, err := oras.Resolve(ctx, src, srcName, oras.DefaultResolveOptions)
 	if err != nil {
 		return fmt.Errorf("failed to fetch image: %s: %w", srcName, err)
 	}
-	// we only allow manifests during pull, this allows us to get the platform from the descriptor
 	if !isManifest(desc.MediaType) {
-		return fmt.Errorf("only OCI manifests are supported in Zarf, got %s", desc.MediaType)
+		return fmt.Errorf("expected OCI manifest, got %s", desc.MediaType)
 	}
 	copyOpts := oras.DefaultCopyOptions
+	copyOpts.Concurrency = concurrency
 	copyOpts.WithTargetPlatform(desc.Platform)
 	_, err = oras.Copy(ctx, src, srcName, remote, dstName, copyOpts)
 	if err != nil {
