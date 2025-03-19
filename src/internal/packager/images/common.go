@@ -44,17 +44,14 @@ const (
 const (
 	DockerLayer                    = "application/vnd.docker.image.rootfs.diff.tar.gzip"
 	DockerUncompressedLayer        = "application/vnd.docker.image.rootfs.diff.tar"
-	OCILayer                       = "application/vnd.oci.image.layer.v1.tar+gzip"
-	OCILayerZStd                   = "application/vnd.oci.image.layer.v1.tar+zstd"
-	OCIUncompressedLayer           = "application/vnd.oci.image.layer.v1.tar"
 	DockerForeignLayer             = "application/vnd.docker.image.rootfs.foreign.diff.tar.gzip"
-	OCIRestrictedLayer             = "application/vnd.oci.image.layer.nondistributable.v1.tar+gzip"
-	OCIUncompressedRestrictedLayer = "application/vnd.oci.image.layer.nondistributable.v1.tar"
 )
 
 func isLayer(mediaType string) bool {
 	switch mediaType {
-	case DockerLayer, DockerUncompressedLayer, OCILayer, OCILayerZStd, OCIUncompressedLayer, DockerForeignLayer, OCIRestrictedLayer, OCIUncompressedRestrictedLayer:
+	// many of these layers are deprecated now, but older images could still be using them
+	case DockerLayer, DockerUncompressedLayer, ocispec.MediaTypeImageLayerGzip, ocispec.MediaTypeImageLayerZstd, ocispec.MediaTypeImageLayer,
+		DockerForeignLayer, ocispec.MediaTypeImageLayerNonDistributableZstd, ocispec.MediaTypeImageLayerNonDistributable, ocispec.MediaTypeImageLayerNonDistributableGzip:
 		return true
 	}
 	return false
