@@ -116,7 +116,7 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 	}
 	for _, f := range files {
 		if err := os.Remove(f); err != nil {
-			return fmt.Errorf("failed to remove file: %s", err)
+			return fmt.Errorf("failed to remove file %s: %w", f, err)
 		}
 	}
 
