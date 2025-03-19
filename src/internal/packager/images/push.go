@@ -24,13 +24,11 @@ import (
 // Push pushes images to a registry.
 func Push(ctx context.Context, cfg PushConfig) error {
 	l := logger.From(ctx)
-	var (
-		err         error
-		tunnel      *cluster.Tunnel
-		registryURL = cfg.RegInfo.Address
-	)
+	registryURL := cfg.RegInfo.Address
+	var tunnel *cluster.Tunnel
 	c, _ := cluster.NewCluster()
 	if c != nil {
+		var err error
 		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegInfo)
 		if err != nil {
 			return err
@@ -140,7 +138,7 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 		}
 	}
 
-	if !isManifest(desc.MediaType){
+	if !isManifest(desc.MediaType) {
 		return fmt.Errorf("expected OCI manifest got %s", desc.MediaType)
 	}
 
