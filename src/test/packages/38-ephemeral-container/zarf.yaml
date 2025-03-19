@@ -6,12 +6,12 @@ metadata:
   version: 0.0.1
 
 components:
-  - name: busybox
+  - name: alpine
     required: true
     manifests:
-      - name: busybox
+      - name: alpine
         namespace: test
         files:
           - pod.yaml
     images:
-      - busybox:1.36
+      - ghcr.io/zarf-dev/images/alpine:3.21.3

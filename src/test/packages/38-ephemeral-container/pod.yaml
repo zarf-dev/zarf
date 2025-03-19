@@ -7,7 +7,7 @@ metadata:
   name: test-pod
 spec:
   containers:
-  - image: busybox:1.36
+  - image: ghcr.io/zarf-dev/images/alpine:3.21.3
     name: test-pod
     command: ["sleep", "3600"]
     resources: {}
