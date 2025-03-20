@@ -77,6 +77,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		Cache:      auth.NewCache(),
 		Credential: credentials.Credential(credStore),
 	}
+	l.Debug("gathering credentials from default Docker config file", "credentials_configured", credStore.IsAuthConfigured())
 	platform := &ocispec.Platform{
 		Architecture: cfg.Arch,
 		// TODO: in the future we could support Windows images
@@ -85,7 +86,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
 	imagesInfo := []imagePullInfo{}
 	dockerFallBackImages := []imageDaemonPullInfo{}
-	var fetchMu sync.Mutex
+	var imageListLock sync.Mutex
 
 	// This loop pulls the metadata from images with three goals
 	// - Get all the manifests from images that will be pulled so they can be returned to the function
@@ -121,8 +122,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 					return fmt.Errorf("rate limited by registry: %w", err)
 				}
 				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", overriddenRef, "err", err)
-				fetchMu.Lock()
-				defer fetchMu.Unlock()
+				imageListLock.Lock()
+				defer imageListLock.Unlock()
 				dockerFallBackImages = append(dockerFallBackImages, imageDaemonPullInfo{
 					image:               image,
 					registryOverrideRef: overriddenRef,
@@ -161,8 +162,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 				return err
 			}
 			size := getSizeOfImage(desc, manifest)
-			fetchMu.Lock()
-			defer fetchMu.Unlock()
+			imageListLock.Lock()
+			defer imageListLock.Unlock()
 			imagesInfo = append(imagesInfo, imagePullInfo{
 				registryOverrideRef: overriddenRef,
 				ref:                 image.Reference,
