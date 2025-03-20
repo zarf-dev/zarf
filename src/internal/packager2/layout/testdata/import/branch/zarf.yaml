@@ -1,0 +1,15 @@
+kind: ZarfPackageConfig
+metadata:
+  name: example-package
+
+components:
+  - name: common
+    required: true
+    import:
+      path: common
+
+  - name: parent-importing-child
+    required: true
+    import:
+      name: parent-child-common
+      path: child

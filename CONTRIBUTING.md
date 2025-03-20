@@ -105,9 +105,9 @@ GitHub: @dgershman
 Affiliation: Defense Unicorns
 GitHub: @jeff-mccoy
 
-#### Sarah Christoff
+#### Kit Patella
 Affiliation: Defense Unicorns
-GitHub: @schristoff-du
+GitHub: @mkcp
 
 #### Wayne Starr
 Affiliation: Defense Unicorns

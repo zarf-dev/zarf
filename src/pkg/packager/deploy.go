@@ -136,7 +136,7 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	message.Successf("Zarf deployment complete")
 	l.Debug("Zarf deployment complete", "duration", time.Since(start))
 
-	err = p.printTablesForDeployment(ctx, deployedComponents)
+	err = p.printTablesForDeployment(deployedComponents)
 	if err != nil {
 		return err
 	}
@@ -151,6 +151,7 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 
 	// Process all the components we are deploying
 	for _, component := range p.cfg.Pkg.Components {
+		packageGeneration := 1
 		// Connect to cluster if a component requires it.
 		if component.RequiresCluster() {
 			timeout := cluster.DefaultTimeout
@@ -162,10 +163,16 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 			if err := p.connectToCluster(connectCtx); err != nil {
 				return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 			}
+			// If this package has been deployed before, increment the package generation within the secret
+			if existingDeployedPackage, _ := p.cluster.GetDeployedPackage(ctx, p.cfg.Pkg.Metadata.Name); existingDeployedPackage != nil {
+				packageGeneration = existingDeployedPackage.Generation + 1
+			}
 		}
 
 		deployedComponent := types.DeployedComponent{
-			Name: component.Name,
+			Name:               component.Name,
+			Status:             types.ComponentStatusDeploying,
+			ObservedGeneration: packageGeneration,
 		}
 
 		// Ensure we don't overwrite any installedCharts data when updating the package secret
@@ -180,7 +187,12 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 
 		deployedComponents = append(deployedComponents, deployedComponent)
 		idx := len(deployedComponents) - 1
-
+		if p.isConnectedToCluster() {
+			if _, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents, packageGeneration); err != nil {
+				message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
+				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
+			}
+		}
 		// Deploy the component
 		var charts []types.InstalledChart
 		var deployErr error
@@ -201,9 +213,9 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 
 		if deployErr != nil {
 			onFailure()
-
+			deployedComponents[idx].Status = types.ComponentStatusFailed
 			if p.isConnectedToCluster() {
-				if _, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents); err != nil {
+				if _, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents, packageGeneration); err != nil {
 					message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 					l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 				}
@@ -213,8 +225,9 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 
 		// Update the package secret to indicate that we successfully deployed this component
 		deployedComponents[idx].InstalledCharts = charts
+		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 		if p.isConnectedToCluster() {
-			if _, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents); err != nil {
+			if _, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents, packageGeneration); err != nil {
 				message.Debugf("Unable to record package deployment for component %q: this will affect features like `zarf package remove`: %s", component.Name, err.Error())
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
@@ -758,30 +771,20 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 
 // TODO once deploy is refactored to load the Zarf package and cluster objects in the cmd package
 // table printing should be moved to cmd
-func (p *Packager) printTablesForDeployment(ctx context.Context, componentsToDeploy []types.DeployedComponent) error {
+func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedComponent) error {
 	// If not init config, print the application connection table
-	if !p.cfg.Pkg.IsInitConfig() {
-		connectStrings := types.ConnectStrings{}
-		for _, comp := range componentsToDeploy {
-			for _, chart := range comp.InstalledCharts {
-				for k, v := range chart.ConnectStrings {
-					connectStrings[k] = v
-				}
+	if p.cfg.Pkg.IsInitConfig() {
+		return nil
+	}
+	connectStrings := types.ConnectStrings{}
+	for _, comp := range componentsToDeploy {
+		for _, chart := range comp.InstalledCharts {
+			for k, v := range chart.ConnectStrings {
+				connectStrings[k] = v
 			}
 		}
-		message.PrintConnectStringTable(connectStrings)
-		return nil
 	}
-	// Don't print if cluster is not configured
-	if p.cluster == nil {
-		return nil
-	}
-	// Grab a fresh copy of the state to print the most up-to-date version of the creds
-	latestState, err := p.cluster.LoadZarfState(ctx)
-	if err != nil {
-		return err
-	}
-	message.PrintCredentialTable(latestState, componentsToDeploy)
+	message.PrintConnectStringTable(connectStrings)
 	return nil
 }
 

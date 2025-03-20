@@ -24,12 +24,13 @@ import (
 func TestGit(t *testing.T) {
 	t.Log("E2E: Git")
 
+	tmpdir := t.TempDir()
 	buildPath := filepath.Join("src", "test", "packages", "22-git-data")
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", buildPath, "-o=build", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", buildPath, "-o", tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	path := fmt.Sprintf("build/zarf-package-git-data-test-%s-1.0.0.tar.zst", e2e.Arch)
-	defer e2e.CleanFiles(t, path)
+	packageName := fmt.Sprintf("zarf-package-git-data-test-%s-1.0.0.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
 
 	// Deploy the git data example (with component globbing to test that as well)
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=full-repo,specific-*", "--confirm")
@@ -135,6 +136,7 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 }
 
 func waitFluxPodInfoDeployment(t *testing.T) {
+	tmpdir := t.TempDir()
 	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
 	cluster, err := cluster.NewClusterWithWait(ctx)
 	require.NoError(t, err)
@@ -143,8 +145,10 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo.Address)
 	require.NoError(t, err)
 	// Deploy the flux example and verify that it works
-	path := fmt.Sprintf("build/zarf-package-podinfo-flux-%s.tar.zst", e2e.Arch)
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/podinfo-flux", "-o", tmpdir, "--skip-sbom")
+	require.NoError(t, err, stdOut, stdErr)
+	packageName := fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", e2e.Arch)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", filepath.Join(tmpdir, packageName), "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Tests the URL mutation for GitRepository CRD for Flux.
@@ -184,8 +188,12 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 
 func waitArgoDeployment(t *testing.T) {
 	// Deploy the argocd example and verify that it works
-	path := fmt.Sprintf("build/zarf-package-argocd-%s.tar.zst", e2e.Arch)
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=argocd-apps", "--confirm")
+	tmpdir := t.TempDir()
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/argocd", "-o", tmpdir, "--skip-sbom")
+	require.NoError(t, err, stdOut, stdErr)
+	packageName := fmt.Sprintf("zarf-package-argocd-%s.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=argocd-apps", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", types.ZarfInClusterGitServiceURL, types.ZarfGitPushUser)

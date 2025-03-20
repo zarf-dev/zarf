@@ -22,61 +22,19 @@ const (
 	AgentKey        = "agent"
 )
 
-// PrintCredentialTable displays credentials in a table
-func PrintCredentialTable(state *types.ZarfState, componentsToDeploy []types.DeployedComponent) {
-	if len(componentsToDeploy) == 0 {
-		componentsToDeploy = []types.DeployedComponent{{Name: "git-server"}}
-	}
-
-	// Pause the logfile's output to avoid credentials being printed to the log file
-	if logFile != nil {
-		logFile.Pause()
-		defer logFile.Resume()
-	}
-
-	loginData := [][]string{}
-	if state.RegistryInfo.IsInternal() {
-		loginData = append(loginData,
-			[]string{"Registry", state.RegistryInfo.PushUsername, state.RegistryInfo.PushPassword, "zarf connect registry", RegistryKey},
-			[]string{"Registry (read-only)", state.RegistryInfo.PullUsername, state.RegistryInfo.PullPassword, "zarf connect registry", RegistryReadKey},
-		)
-	}
-
-	for _, component := range componentsToDeploy {
-		// Show message if including git-server
-		if component.Name == "git-server" {
-			loginData = append(loginData,
-				[]string{"Git", state.GitServer.PushUsername, state.GitServer.PushPassword, "zarf connect git", GitKey},
-				[]string{"Git (read-only)", state.GitServer.PullUsername, state.GitServer.PullPassword, "zarf connect git", GitReadKey},
-				[]string{"Artifact Token", state.ArtifactServer.PushUsername, state.ArtifactServer.PushToken, "zarf connect git", ArtifactKey},
-			)
-		}
-	}
-
-	if len(loginData) > 0 {
-		header := []string{"Application", "Username", "Password", "Connect", "Get-Creds Key"}
-		TableWithWriter(OutputWriter, header, loginData)
-	}
-}
-
 // PrintComponentCredential displays credentials for a single component
 func PrintComponentCredential(state *types.ZarfState, componentName string) {
 	switch strings.ToLower(componentName) {
 	case GitKey:
 		Notef("Git Server push password (username: %s):", state.GitServer.PushUsername)
-		fmt.Println(state.GitServer.PushPassword)
 	case GitReadKey:
 		Notef("Git Server (read-only) password (username: %s):", state.GitServer.PullUsername)
-		fmt.Println(state.GitServer.PullPassword)
 	case ArtifactKey:
 		Notef("Artifact Server token (username: %s):", state.ArtifactServer.PushUsername)
-		fmt.Println(state.ArtifactServer.PushToken)
 	case RegistryKey:
 		Notef("Image Registry password (username: %s):", state.RegistryInfo.PushUsername)
-		fmt.Println(state.RegistryInfo.PushPassword)
 	case RegistryReadKey:
 		Notef("Image Registry (read-only) password (username: %s):", state.RegistryInfo.PullUsername)
-		fmt.Println(state.RegistryInfo.PullPassword)
 	default:
 		Warn("Unknown component: " + componentName)
 	}

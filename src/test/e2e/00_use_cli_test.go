@@ -20,6 +20,18 @@ import (
 func TestUseCLI(t *testing.T) {
 	t.Log("E2E: Use CLI")
 
+	// TODO once cmd is refactored to accept an io.Writer, move this test to DevInspectDefinitionOptions.Run()
+	t.Run("zarf dev inspect definition", func(t *testing.T) {
+		t.Parallel()
+		pathToPackage := filepath.Join("src", "test", "packages", "00-dev-inspect-definition")
+
+		stdOut, _, err := e2e.Zarf(t, "dev", "inspect", "definition", pathToPackage, "--flavor=ice-cream", "--set=my_var=worked-as-expected", "--architecture=amd64")
+		require.NoError(t, err)
+		b, err := os.ReadFile(filepath.Join(pathToPackage, "expected-zarf.yaml"))
+		require.NoError(t, err)
+		require.Contains(t, stdOut, string(b))
+	})
+
 	t.Run("zarf prepare sha256sum <local>", func(t *testing.T) {
 		t.Parallel()
 
@@ -69,14 +81,14 @@ func TestUseCLI(t *testing.T) {
 		require.NotEmpty(t, version, "Zarf version should not be an empty string")
 		version = strings.Trim(version, "\n")
 
-		// test `zarf version --output=json`
-		stdOut, _, err := e2e.Zarf(t, "version", "--output=json")
+		// test `zarf version --output-format=json`
+		stdOut, _, err := e2e.Zarf(t, "version", "--output-format=json")
 		require.NoError(t, err)
-		jsonVersion := fmt.Sprintf(",\"version\":\"%s\"}", version)
+		jsonVersion := fmt.Sprintf("\"version\": \"%s\"", version)
 		require.Contains(t, stdOut, jsonVersion, "Zarf version should be the same in all formats")
 
-		// test `zarf version --output=yaml`
-		stdOut, _, err = e2e.Zarf(t, "version", "--output=yaml")
+		// test `zarf version --output-format=yaml`
+		stdOut, _, err = e2e.Zarf(t, "version", "--output-format=yaml")
 		require.NoError(t, err)
 		yamlVersion := fmt.Sprintf("version: %s", version)
 		require.Contains(t, stdOut, yamlVersion, "Zarf version should be the same in all formats")
@@ -84,17 +96,23 @@ func TestUseCLI(t *testing.T) {
 
 	t.Run("zarf deploy should fail when given a bad component input", func(t *testing.T) {
 		t.Parallel()
+		tmpdir := t.TempDir()
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-no-components", "-o", tmpdir)
+		require.NoError(t, err, stdOut, stdErr)
 		// Test for expected failure when given a bad component input
-		path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.Arch)
-		_, _, err := e2e.Zarf(t, "package", "deploy", path, "--components=on-create,foo,git-server", "--confirm")
+		packageName := fmt.Sprintf("zarf-package-no-components-%s.tar.zst", e2e.Arch)
+		path := filepath.Join(tmpdir, packageName)
+		_, _, err = e2e.Zarf(t, "package", "deploy", path, "--components=non-existent", "--confirm")
 		require.Error(t, err)
 	})
 
 	t.Run("zarf deploy should return a warning when no components are deployed", func(t *testing.T) {
 		t.Parallel()
-		_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-no-components", "-o=build", "--confirm")
+		tmpdir := t.TempDir()
+		_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-no-components", "-o", tmpdir, "--confirm")
 		require.NoError(t, err)
-		path := fmt.Sprintf("build/zarf-package-no-components-%s.tar.zst", e2e.Arch)
+		packageName := fmt.Sprintf("zarf-package-no-components-%s.tar.zst", e2e.Arch)
+		path := filepath.Join(tmpdir, packageName)
 
 		// Test that excluding all components with a leading dash results in a warning
 		_, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--components=-deselect-me", "--confirm")
@@ -136,8 +154,7 @@ func TestUseCLI(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()
 		cacheDir := filepath.Join(t.TempDir(), ".cache-location")
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "--zarf-cache", cacheDir, "--tmpdir", tmpdir, "--log-level=debug", "-o=build", "--confirm")
-		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "--zarf-cache", cacheDir, "--tmpdir", tmpdir, "--log-level=debug", "-o", tmpdir, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
 		files, err := os.ReadDir(filepath.Join(cacheDir, "images"))
@@ -157,8 +174,10 @@ func TestUseCLI(t *testing.T) {
 		t.Cleanup(func() {
 			e2e.CleanFiles(t, firstFile, secondFile)
 		})
-		path := fmt.Sprintf("build/zarf-package-component-choice-%s.tar.zst", e2e.Arch)
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/component-choice", "-o", tmpdir)
+		require.NoError(t, err, stdOut, stdErr)
+		packageName := fmt.Sprintf("zarf-package-component-choice-%s.tar.zst", e2e.Arch)
+		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", filepath.Join(tmpdir, packageName), "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
 		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
 		require.NoError(t, err, stdOut, stdErr)
 	})

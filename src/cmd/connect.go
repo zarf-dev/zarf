@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cmd contains the CLI commands for Zarf contains the CLI commands for Zarf.
+// Package cmd contains the CLI commands for Zarf.
 package cmd
 
 import (
@@ -16,22 +16,20 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
 
-// ConnectOptions holds the command-line options for 'connect' sub-command.
-type ConnectOptions struct {
-	cliOnly bool
-	zt      cluster.TunnelInfo
+type connectOptions struct {
+	open bool
+	zt   cluster.TunnelInfo
 }
 
-// NewConnectCommand creates the `connect` sub-command and its nested children.
-func NewConnectCommand() *cobra.Command {
-	o := &ConnectOptions{}
+func newConnectCommand() *cobra.Command {
+	o := &connectOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "connect { REGISTRY | GIT | connect-name }",
 		Aliases: []string{"c"},
 		Short:   lang.CmdConnectShort,
 		Long:    lang.CmdConnectLong,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringVar(&o.zt.ResourceName, "name", "", lang.CmdConnectFlagName)
@@ -39,19 +37,19 @@ func NewConnectCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.zt.ResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
 	cmd.Flags().IntVar(&o.zt.LocalPort, "local-port", 0, lang.CmdConnectFlagLocalPort)
 	cmd.Flags().IntVar(&o.zt.RemotePort, "remote-port", 0, lang.CmdConnectFlagRemotePort)
-	cmd.Flags().BoolVar(&o.cliOnly, "cli-only", false, lang.CmdConnectFlagCliOnly)
+	cmd.Flags().BoolVar(&o.open, "open", false, lang.CmdConnectFlagOpen)
 
 	// TODO(soltysh): consider splitting sub-commands into separate files
-	cmd.AddCommand(NewConnectListCommand())
+	cmd.AddCommand(newConnectListCommand())
 
 	return cmd
 }
 
-// Run performs the execution of 'connect' sub command.
-func (o *ConnectOptions) Run(cmd *cobra.Command, args []string) error {
+func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	l := logger.From(ctx)
 	target := ""
+	// TODO: this leaves room for ignoring potential misuse
 	if len(args) > 0 {
 		target = args[0]
 	}
@@ -85,15 +83,15 @@ func (o *ConnectOptions) Run(cmd *cobra.Command, args []string) error {
 
 	defer tunnel.Close()
 
-	if o.cliOnly {
-		spinner.Updatef(lang.CmdConnectEstablishedCLI, tunnel.FullURL())
-		l.Info("Tunnel established, waiting for user to interrupt (ctrl-c to end)", "url", tunnel.FullURL())
-	} else {
+	if o.open {
 		spinner.Updatef(lang.CmdConnectEstablishedWeb, tunnel.FullURL())
 		l.Info("Tunnel established, opening your default web browser (ctrl-c to end)", "url", tunnel.FullURL())
 		if err := exec.LaunchURL(tunnel.FullURL()); err != nil {
 			return err
 		}
+	} else {
+		spinner.Updatef(lang.CmdConnectEstablishedCLI, tunnel.FullURL())
+		l.Info("Tunnel established, waiting for user to interrupt (ctrl-c to end)", "url", tunnel.FullURL())
 	}
 
 	// Wait for the interrupt signal or an error.
@@ -106,23 +104,22 @@ func (o *ConnectOptions) Run(cmd *cobra.Command, args []string) error {
 	}
 }
 
-// ConnectListOptions holds the command-line options for 'connect list' sub-command.
-type ConnectListOptions struct{}
+// connectListOptions holds the command-line options for 'connect list' sub-command.
+type connectListOptions struct{}
 
-// NewConnectListCommand creates the `connect list` sub-command.
-func NewConnectListCommand() *cobra.Command {
-	o := &ConnectListOptions{}
+// newConnectListCommand creates the `connect list` sub-command.
+func newConnectListCommand() *cobra.Command {
+	o := &connectListOptions{}
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"l"},
 		Short:   lang.CmdConnectListShort,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 	return cmd
 }
 
-// Run performs the execution of 'connect list' sub-command.
-func (o *ConnectListOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *connectListOptions) run(cmd *cobra.Command, _ []string) error {
 	c, err := cluster.NewCluster()
 	if err != nil {
 		return err

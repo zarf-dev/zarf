@@ -20,10 +20,15 @@ import (
 func TestDataInjection(t *testing.T) {
 	t.Log("E2E: Data injection")
 
-	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
-	path := fmt.Sprintf("build/zarf-package-kiwix-%s-3.5.0.tar", e2e.Arch)
-
 	tmpdir := t.TempDir()
+
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/kiwix", "-o", tmpdir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
+	packageName := fmt.Sprintf("zarf-package-kiwix-%s-3.5.0.tar", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
+
 	sbomPath := filepath.Join(tmpdir, ".sbom-location")
 
 	// Repeat the injection action 3 times to ensure the data injection is idempotent and doesn't fail to perform an upgrade
@@ -34,7 +39,7 @@ func TestDataInjection(t *testing.T) {
 	// Verify the file and injection marker were created
 	runningKiwixPod, _, err := e2e.Kubectl(t, "--namespace=kiwix", "get", "pods", "--selector=app=kiwix-serve", "--field-selector=status.phase=Running", "--output=jsonpath={.items[0].metadata.name}")
 	require.NoError(t, err)
-	stdOut, stdErr, err := e2e.Kubectl(t, "--namespace=kiwix", "logs", runningKiwixPod, "--tail=5", "-c=kiwix-serve")
+	stdOut, stdErr, err = e2e.Kubectl(t, "--namespace=kiwix", "logs", runningKiwixPod, "--tail=5", "-c=kiwix-serve")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdOut, "devops.stackexchange.com_en_all_2023-05.zim")
 	require.Contains(t, stdOut, ".zarf-injection-")
@@ -56,7 +61,7 @@ func TestDataInjection(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure that the `requirements.txt` file is discovered correctly
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", path, "--sbom-out", sbomPath)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "sbom", path, "--output", sbomPath)
 	require.NoError(t, err, stdOut, stdErr)
 	require.FileExists(t, filepath.Join(sbomPath, "kiwix", "compare.html"), "A compare.html file should have been made")
 

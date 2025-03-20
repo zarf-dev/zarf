@@ -21,7 +21,7 @@ Commands useful for developing packages
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --log-format string          [beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'
+      --log-format string          [beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev', 'legacy'. The legacy option will be removed in a coming release (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable colors in output
       --no-log-file                Disable log file creation
@@ -38,6 +38,7 @@ Commands useful for developing packages
 * [zarf dev find-images](/commands/zarf_dev_find-images/)	 - Evaluates components in a Zarf file to identify images specified in their helm charts and manifests
 * [zarf dev generate](/commands/zarf_dev_generate/)	 - [alpha] Creates a zarf.yaml automatically from a given remote (git) Helm chart
 * [zarf dev generate-config](/commands/zarf_dev_generate-config/)	 - Generates a config file for Zarf
+* [zarf dev inspect](/commands/zarf_dev_inspect/)	 - Commands to get information about a Zarf package using a `zarf.yaml`
 * [zarf dev lint](/commands/zarf_dev_lint/)	 - Lints the given package for valid schema and recommended practices
 * [zarf dev patch-git](/commands/zarf_dev_patch-git/)	 - Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:
 This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook.

@@ -5,6 +5,7 @@ package layout
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"os"
@@ -23,13 +24,27 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string) (v1alpha1.ZarfPackage, error) {
+func getComponentToImportName(component v1alpha1.ZarfComponent) string {
+	if component.Import.Name != "" {
+		return component.Import.Name
+	}
+	return component.Name
+}
+
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string) (v1alpha1.ZarfPackage, error) {
+	// Zarf imports merge in the top level package objects variables and constants
+	// however, imports are defined at the component level.
+	// Two packages can both import one another as long as the importing components are on a different chains.
+	// To detect cyclic imports, the stack is checked to see if the package has already been imported on that chain.
+	// Recursive calls only include components from the imported pkg that have the name of the component to import
+	importStack = append(importStack, packagePath)
+
 	variables := pkg.Variables
 	constants := pkg.Constants
 	components := []v1alpha1.ZarfComponent{}
 
 	for _, component := range pkg.Components {
-		if !compatibleComponent(component, pkg.Metadata.Architecture, flavor) {
+		if !compatibleComponent(component, arch, flavor) {
 			continue
 		}
 
@@ -45,11 +60,28 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 
 		var importedPkg v1alpha1.ZarfPackage
 		if component.Import.Path != "" {
-			b, err := os.ReadFile(filepath.Join(packagePath, component.Import.Path, layout.ZarfYAML))
+			importPath := filepath.Join(packagePath, component.Import.Path)
+			for _, sp := range importStack {
+				if sp == importPath {
+					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(packagePath), component.Name)
+				}
+			}
+			b, err := os.ReadFile(filepath.Join(importPath, layout.ZarfYAML))
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
 			importedPkg, err = ParseZarfPackage(b)
+			if err != nil {
+				return v1alpha1.ZarfPackage{}, err
+			}
+			var relevantComponents []v1alpha1.ZarfComponent
+			for _, importedComponent := range importedPkg.Components {
+				if importedComponent.Name == getComponentToImportName(component) {
+					relevantComponents = append(relevantComponents, importedComponent)
+				}
+			}
+			importedPkg.Components = relevantComponents
+			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, importStack)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -68,10 +100,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			}
 		}
 
-		name := component.Name
-		if component.Import.Name != "" {
-			name = component.Import.Name
-		}
+		name := getComponentToImportName(component)
 		found := []v1alpha1.ZarfComponent{}
 		for _, component := range importedPkg.Components {
 			if component.Name == name && compatibleComponent(component, arch, flavor) {
@@ -79,14 +108,11 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			}
 		}
 		if len(found) == 0 {
-			return v1alpha1.ZarfPackage{}, fmt.Errorf("component %s not found", name)
+			return v1alpha1.ZarfPackage{}, fmt.Errorf("no compatible component named %s found", name)
 		} else if len(found) > 1 {
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("multiple components named %s found", name)
 		}
 		importedComponent := found[0]
-		if importedComponent.Import.Path != "" || importedComponent.Import.URL != "" {
-			return v1alpha1.ZarfPackage{}, fmt.Errorf("imported component %s has imports which is not supported", importedComponent.Name)
-		}
 
 		importPath, err := fetchOCISkeleton(ctx, component, packagePath)
 		if err != nil {
@@ -113,7 +139,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	pkg.Constants = slices.CompactFunc(constants, func(l, r v1alpha1.Constant) bool {
 		return l.Name == r.Name
 	})
-
+	importStack = importStack[0 : len(importStack)-1]
 	return pkg, nil
 }
 
@@ -179,43 +205,58 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		return "", err
 	}
 	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", name)))
+	var tarball, dir string
+	// If the descriptor for the component tarball was not found then all resources in the component are remote
+	// In this case, we represent the component with an empty directory
 	if oci.IsEmptyDescriptor(componentDesc) {
-		return "", fmt.Errorf("component %s not found", name)
-	}
+		h := sha256.New()
+		h.Write([]byte(component.Import.URL + name))
+		id := fmt.Sprintf("%x", h.Sum(nil))
 
-	store, err := ocistore.New(cache)
-	if err != nil {
-		return "", err
-	}
-	exists, err := store.Exists(ctx, componentDesc)
-	if err != nil {
-		return "", err
-	}
-	if !exists {
-		err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
+		dir = filepath.Join(cache, "dirs", id)
+	} else {
+		tarball = filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.Encoded())
+		dir = filepath.Join(cache, "dirs", componentDesc.Digest.Encoded())
+		store, err := ocistore.New(cache)
 		if err != nil {
 			return "", err
 		}
+		exists, err := store.Exists(ctx, componentDesc)
+		if err != nil {
+			return "", err
+		}
+		if !exists {
+			err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
+			if err != nil {
+				return "", err
+			}
+		}
 	}
-	dir := filepath.Join(cache, "dirs", componentDesc.Digest.Encoded())
+
 	if err := helpers.CreateDirectory(dir, helpers.ReadWriteExecuteUser); err != nil {
 		return "", err
 	}
-	tu := archiver.Tar{
-		OverwriteExisting: true,
-		// removes /<component-name>/ from the paths
-		StripComponents: 1,
-	}
-	tb := filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.Encoded())
-	err = tu.Unarchive(tb, dir)
-	if err != nil {
-		return "", err
-	}
+
 	abs, err := filepath.Abs(packagePath)
 	if err != nil {
 		return "", err
 	}
 	rel, err := filepath.Rel(abs, dir)
+	if err != nil {
+		return "", err
+	}
+
+	// If it is a remote component, there is nothing to extract
+	if oci.IsEmptyDescriptor(componentDesc) {
+		return rel, nil
+	}
+
+	tu := archiver.Tar{
+		OverwriteExisting: true,
+		// removes /<component-name>/ from the paths
+		StripComponents: 1,
+	}
+	err = tu.Unarchive(tarball, dir)
 	if err != nil {
 		return "", err
 	}
@@ -342,6 +383,9 @@ func overrideResources(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompon
 
 func makePathRelativeTo(path, relativeTo string) string {
 	if helpers.IsURL(path) {
+		return path
+	}
+	if filepath.IsAbs(path) {
 		return path
 	}
 	return filepath.Join(relativeTo, path)

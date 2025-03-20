@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,7 +27,12 @@ func TestYOLOMode(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf(t, "destroy", "--confirm", "--remove-components")
 	require.NoError(t, err, stdOut, stdErr)
 
-	path := fmt.Sprintf("build/zarf-package-yolo-%s.tar.zst", e2e.Arch)
+	tmpdir := t.TempDir()
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", "examples/yolo", "-o", tmpdir)
+	require.NoError(t, err, stdOut, stdErr)
+
+	packageName := fmt.Sprintf("zarf-package-yolo-%s.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
 
 	// Deploy the YOLO package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")

@@ -23,7 +23,6 @@ zarf package inspect [ PACKAGE_SOURCE ] [flags]
 ```
   -h, --help                        help for inspect
       --list-images                 List images in the package (prints to stdout)
-  -s, --sbom                        View SBOM contents while inspecting the package
       --sbom-out string             Specify an output directory for the SBOMs from the inspected Zarf package
       --skip-signature-validation   Skip validating the signature of the Zarf package
 ```
@@ -34,7 +33,7 @@ zarf package inspect [ PACKAGE_SOURCE ] [flags]
   -a, --architecture string        Architecture for OCI images and Zarf packages
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -k, --key string                 Path to public key file for validating signed packages
-      --log-format string          [beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'
+      --log-format string          [beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev', 'legacy'. The legacy option will be removed in a coming release (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable colors in output
       --no-log-file                Disable log file creation
@@ -48,4 +47,7 @@ zarf package inspect [ PACKAGE_SOURCE ] [flags]
 ### SEE ALSO
 
 * [zarf package](/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf package inspect definition](/commands/zarf_package_inspect_definition/)	 - Displays the 'zarf.yaml' definition for the specified package
+* [zarf package inspect images](/commands/zarf_package_inspect_images/)	 - List all container images contained in the package
+* [zarf package inspect sbom](/commands/zarf_package_inspect_sbom/)	 - Output the package SBOM (Software Bill Of Materials) to the specified directory
 

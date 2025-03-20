@@ -24,6 +24,9 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -118,8 +121,20 @@ func (p *PackageLayout) Cleanup() error {
 	return nil
 }
 
+// NoSBOMAvailableError is returned when a user tries to access a package SBOM, but it is not available
+type NoSBOMAvailableError struct {
+	pkgName string
+}
+
+func (e *NoSBOMAvailableError) Error() string {
+	return fmt.Sprintf("zarf package %s does not have an SBOM available", e.pkgName)
+}
+
 // GetSBOM outputs the SBOM data from the package to the give destination path.
 func (p *PackageLayout) GetSBOM(destPath string) (string, error) {
+	if !p.Pkg.IsSBOMAble() {
+		return "", &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
+	}
 	path := filepath.Join(destPath, p.Pkg.Metadata.Name)
 	err := archiver.Extract(filepath.Join(p.dirPath, SBOMTar), "", path)
 	if err != nil {
@@ -187,6 +202,46 @@ func (p *PackageLayout) GetImage(ref transform.Image) (registryv1.Image, error) 
 		}
 	}
 	return nil, fmt.Errorf("unable to find the image %s", ref.Reference)
+}
+
+func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
+	packageName := fmt.Sprintf("%s%s", sources.NameFromMetadata(&p.Pkg, false), sources.PkgSuffix(p.Pkg.Metadata.Uncompressed))
+	tarballPath := filepath.Join(dirPath, packageName)
+	err := os.Remove(tarballPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	message.Notef("Saving package to path %s", tarballPath)
+	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
+	files, err := os.ReadDir(p.dirPath)
+	if err != nil {
+		return err
+	}
+	var filePaths []string
+	for _, file := range files {
+		filePaths = append(filePaths, filepath.Join(p.dirPath, file.Name()))
+	}
+	err = archiver.Archive(filePaths, tarballPath)
+	if err != nil {
+		return fmt.Errorf("unable to create package: %w", err)
+	}
+	fi, err := os.Stat(tarballPath)
+	if err != nil {
+		return fmt.Errorf("unable to read the package archive: %w", err)
+	}
+	// Convert Megabytes to bytes.
+	chunkSize := maxPackageSize * 1000 * 1000
+	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
+	if maxPackageSize > 0 && fi.Size() > int64(chunkSize) {
+		if fi.Size()/int64(chunkSize) > 999 {
+			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
+		}
+		err := splitFile(ctx, tarballPath, chunkSize)
+		if err != nil {
+			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
+		}
+	}
+	return nil
 }
 
 // Files returns a map off all the files in the package.

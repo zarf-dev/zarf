@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: chart-deps
+  description: Simple example to load a chart with dependencies
+
+components:
+  - name: good
+    required: true
+    charts:
+      - name: dogs
+        localPath: parent-chart
+        version: 1.0.0
+        namespace: good

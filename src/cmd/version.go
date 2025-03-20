@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"runtime"
 	"runtime/debug"
 
@@ -17,34 +18,43 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
-// VersionOptions holds the command-line options for 'version' sub-command.
-type VersionOptions struct {
-	outputFormat string
+type versionOptions struct {
+	outputFormat outputFormat
+	outputWriter io.Writer
 }
 
-// NewVersionCommand creates the `version` sub-command.
-func NewVersionCommand() *cobra.Command {
-	o := VersionOptions{}
+func newVersionOptions() *versionOptions {
+	return &versionOptions{
+		outputFormat: "",
+		// TODO accept output writer as a parameter to the root Zarf command and pass it through here
+		outputWriter: message.OutputWriter,
+	}
+}
+
+func newVersionCommand() *cobra.Command {
+	o := newVersionOptions()
 
 	cmd := &cobra.Command{
 		Use:     "version",
 		Aliases: []string{"v"},
 		Short:   lang.CmdVersionShort,
 		Long:    lang.CmdVersionLong,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
-	cmd.Flags().StringVarP(&o.outputFormat, "output", "o", "", "Output format (yaml|json)")
+	cmd.Flags().VarP(&o.outputFormat, "output-format", "o", "Output format (yaml|json)")
+	cmd.Flags().VarP(&o.outputFormat, "output", "", "Output format (yaml|json)")
+	cmd.Flags().MarkDeprecated("output", "output is deprecated. Please use --output-format instead")
 
 	return cmd
 }
 
-// Run performs the execution of 'version' sub-command.
-func (o *VersionOptions) Run(_ *cobra.Command, _ []string) error {
+func (o *versionOptions) run(_ *cobra.Command, _ []string) error {
 	if o.outputFormat == "" {
-		fmt.Println(config.CLIVersion)
+		fmt.Fprintln(o.outputWriter, config.CLIVersion)
 		return nil
 	}
 
@@ -86,14 +96,15 @@ func (o *VersionOptions) Run(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			return fmt.Errorf("could not marshal yaml output: %w", err)
 		}
-		fmt.Println(string(b))
+		fmt.Fprintln(o.outputWriter, string(b))
 	case "json":
-		b, err := json.Marshal(output)
+		b, err := json.MarshalIndent(output, "", "  ")
 		if err != nil {
 			return fmt.Errorf("could not marshal json output: %w", err)
 		}
-		fmt.Println(string(b))
+		fmt.Fprintln(o.outputWriter, string(b))
+	default:
+		return fmt.Errorf("unsupported output format: %s", o.outputFormat)
 	}
-
 	return nil
 }

@@ -23,21 +23,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// DestroyOptions holds the command-line options for 'destroy' sub-command.
-type DestroyOptions struct {
+type destroyOptions struct {
 	confirmDestroy   bool
 	removeComponents bool
 }
 
-// NewDestroyCommand creates the `destroy` sub-command.
-func NewDestroyCommand() *cobra.Command {
-	o := DestroyOptions{}
+func newDestroyCommand() *cobra.Command {
+	o := destroyOptions{}
 	cmd := &cobra.Command{
 		Use:     "destroy --confirm",
 		Aliases: []string{"d"},
 		Short:   lang.CmdDestroyShort,
 		Long:    lang.CmdDestroyLong,
-		RunE:    o.Run,
+		RunE:    o.run,
 	}
 
 	// Still going to require a flag for destroy confirm, no viper oopsies here
@@ -48,8 +46,7 @@ func NewDestroyCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'destroy' sub-command.
-func (o *DestroyOptions) Run(cmd *cobra.Command, _ []string) error {
+func (o *destroyOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 	l := logger.From(ctx)
 

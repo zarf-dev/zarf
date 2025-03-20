@@ -51,12 +51,12 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	isPartial := false
 	switch srcType {
 	case "oci":
-		isPartial, err = pullOCI(ctx, opt.Source, tarPath, opt.Shasum, opt.Filter)
+		isPartial, tarPath, err = pullOCI(ctx, opt.Source, tmpDir, opt.Shasum, opt.Filter)
 		if err != nil {
 			return nil, err
 		}
 	case "http", "https":
-		err = pullHTTP(ctx, opt.Source, tarPath, opt.Shasum)
+		tarPath, err = pullHTTP(ctx, opt.Source, tmpDir, opt.Shasum)
 		if err != nil {
 			return nil, err
 		}
@@ -152,7 +152,7 @@ func assembleSplitTar(src, tarPath string) error {
 	return nil
 }
 
-func packageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string) (v1alpha1.ZarfPackage, error) {
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string) (v1alpha1.ZarfPackage, error) {
 	_, err := identifySource(src)
 	if err != nil {
 		if cluster == nil {
