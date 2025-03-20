@@ -105,8 +105,6 @@ When adding new tests, there are several requirements that must be followed, inc
 ```go
 func TestFooBarBaz(t *testing.T) {
     t.Log("E2E: Enter useful description here")
-    e2e.setup(t)
-    defer e2e.teardown(t)
 
     ...
 }
@@ -119,8 +117,6 @@ The end-to-end tests are run sequentially and the naming convention is set inten
 - 00-19 tests run prior to `zarf init` (cluster not initialized).
 
 :::note
-Tests 20+ should call `e2e.setupWithCluster(t)` instead of `e2e.setup(t)`.
-
 Due to resource constraints in public GitHub runners, K8s tests are only performed on Linux.
 :::
 
