@@ -23,6 +23,7 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
@@ -151,6 +152,15 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 	if registryInfo.IsInternal() {
 		// Establish a registry tunnel to send the images to the zarf registry
 		if tunnel, err = c.NewTunnel(ZarfNamespaceName, SvcResource, ZarfRegistryName, "", 0, ZarfRegistryPort); err != nil {
+			return "", tunnel, err
+		}
+	} else if dns.IsServiceURL(registryInfo.Address) {
+		namespace, name, port, err := dns.ParseServiceURL(registryInfo.Address)
+		if err != nil {
+			return "", tunnel, err
+		}
+		tunnel, err = c.NewTunnel(namespace, SvcResource, name, "", 0, port)
+		if err != nil {
 			return "", tunnel, err
 		}
 	} else {

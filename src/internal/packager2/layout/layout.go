@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package layout contains functions for inteacting the Zarf packages.
+// Package layout contains functions for interacting the Zarf packages.
 package layout
 
 import (

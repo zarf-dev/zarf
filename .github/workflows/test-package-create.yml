@@ -32,8 +32,10 @@ jobs:
         run: |
           set -e
 
+          # Any component tar files in a package will have the same permissions as the files included in them
+          # Therefore to before building a package to replace a file in hack/examples-checksums/ checksums you must run `chmod -R g-w in zarf/examples`
           for f in hack/examples-checksums/*.txt
-          do 
+          do
             NAME=$(basename $f .txt)
             CHECKSUM=$(tar Oxf build/$NAME.tar.zst checksums.txt | grep -v sboms.tar)
             EXPECTED_CHECKSUM=$(cat $f | grep -v sboms.tar)
