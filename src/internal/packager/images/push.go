@@ -16,6 +16,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote/retry"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -70,9 +71,10 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		return fmt.Errorf("failed to instantiate oci directory: %w", err)
 	}
 
+	plainHTTP := cfg.PlainHTTP || dns.IsLocalhost(registryURL)
 	pushImage := func(srcName, dstName string) error {
 		remoteRepo := &orasRemote.Repository{
-			PlainHTTP: cfg.PlainHTTP,
+			PlainHTTP: plainHTTP,
 			Client:    client,
 		}
 		remoteRepo.Reference, err = registry.ParseReference(dstName)
@@ -85,7 +87,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		}
 		if tunnel != nil {
 			return tunnel.Wrap(func() error {
-				remoteRepo.PlainHTTP = true
 				return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.Concurrency, defaultPlatform)
 			})
 		}
