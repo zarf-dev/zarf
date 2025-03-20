@@ -29,6 +29,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/internal/dns"
 	orasCache "github.com/zarf-dev/zarf/src/internal/packager/images/cache"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -95,7 +96,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	for _, image := range cfg.ImageList {
 		image := image
 		eg.Go(func() error {
-			localRepo := &orasRemote.Repository{PlainHTTP: cfg.PlainHTTP}
+			repo := &orasRemote.Repository{}
 
 			overriddenRef := image.Reference
 			for k, v := range cfg.RegistryOverrides {
@@ -104,15 +105,16 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 				}
 			}
 
-			localRepo.Reference, err = registry.ParseReference(overriddenRef)
+			repo.Reference, err = registry.ParseReference(overriddenRef)
 			if err != nil {
 				return err
 			}
+			repo.PlainHTTP = cfg.PlainHTTP || dns.IsLocalhost(repo.Reference.Registry)
 
-			localRepo.Client = client
+			repo.Client = client
 
 			fetchOpts := oras.DefaultFetchBytesOptions
-			desc, b, err := oras.FetchBytes(ectx, localRepo, overriddenRef, fetchOpts)
+			desc, b, err := oras.FetchBytes(ectx, repo, overriddenRef, fetchOpts)
 			if err != nil {
 				// TODO we could use the k8s library for backoffs here - https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apimachinery/pkg/util/wait/backoff.go
 				if strings.Contains(err.Error(), "toomanyrequests") {
@@ -142,7 +144,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 			// If it's not a manifest then we received an index and need to pull the manifest by platform
 			if !isManifest(desc.MediaType) {
 				fetchOpts.FetchOptions.TargetPlatform = platform
-				desc, b, err = oras.FetchBytes(ectx, localRepo, overriddenRef, fetchOpts)
+				desc, b, err = oras.FetchBytes(ectx, repo, overriddenRef, fetchOpts)
 				if err != nil {
 					return fmt.Errorf("failed to fetch image with architecture %s: %w", platform.Architecture, err)
 				}
@@ -355,12 +357,13 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 	for _, imageInfo := range imagesInfo {
 		var pullSrc oras.ReadOnlyTarget
 		var err error
-		remoteRepo := &orasRemote.Repository{PlainHTTP: cfg.PlainHTTP}
-		remoteRepo.Reference, err = registry.ParseReference(imageInfo.registryOverrideRef)
+		repo := &orasRemote.Repository{}
+		repo.Reference, err = registry.ParseReference(imageInfo.registryOverrideRef)
 		if err != nil {
 			return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.registryOverrideRef, err)
 		}
-		remoteRepo.Client = client
+		repo.PlainHTTP = cfg.PlainHTTP || dns.IsLocalhost(repo.Reference.Registry)
+		repo.Client = client
 
 		copyOpts := oras.DefaultCopyOptions
 		copyOpts.Concurrency = cfg.Concurrency
@@ -370,7 +373,7 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 		if err != nil {
 			return fmt.Errorf("failed to create oci formatted directory: %w", err)
 		}
-		pullSrc = orasCache.New(remoteRepo, localCache)
+		pullSrc = orasCache.New(repo, localCache)
 		desc, err := oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, dst, "", copyOpts)
 		if err != nil {
 			return fmt.Errorf("failed to copy: %w", err)
