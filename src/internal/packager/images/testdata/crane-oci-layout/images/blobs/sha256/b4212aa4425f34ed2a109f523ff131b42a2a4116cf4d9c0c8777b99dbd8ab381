@@ -1,1 +1,0 @@
-{"architecture":"amd64","config":{"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"],"Cmd":["touch","file.txt"],"WorkingDir":"/","ArgsEscaped":true},"created":null,"history":[{"created_by":"CMD [\"touch\" \"file.txt\"]","comment":"buildkit.dockerfile.v0","empty_layer":true}],"os":"linux","rootfs":{"type":"layers","diff_ids":null}}
