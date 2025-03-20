@@ -55,6 +55,8 @@ jobs:
             --components=deploy-eks-cluster \
             --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
             --set=EKS_INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} \
+            --set=PERMISSIONS_BOUNDARY_ARN=arn:aws:iam::205930641482:policy/uds_permissions_boundary
+            --set=PERMISSIONS_BOUNDARY_TAG=uds_permissions_boundary
             --confirm
 
       - name: Run tests
