@@ -34,6 +34,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
@@ -141,7 +142,19 @@ func (p *Packager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return nil
+	// Lint against schema at the end so as to not return early
+	findings, err := lint.ValidateZarfPackageSchema(p.cfg.Pkg, p.cfg.PkgOpts.SetVariables)
+	if err != nil {
+		return fmt.Errorf("unable to check schema: %w", err)
+	}
+	if len(findings) == 0 {
+		return nil
+	}
+	return &lint.LintError{
+		BaseDir:     "",
+		PackageName: p.cfg.Pkg.Metadata.Name,
+		Findings:    findings,
+	}
 }
 
 // deployComponents loops through a list of ZarfComponents and deploys them.

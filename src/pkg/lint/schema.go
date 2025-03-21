@@ -11,6 +11,7 @@ import (
 	"regexp"
 
 	"github.com/xeipuuv/gojsonschema"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -50,6 +51,19 @@ func ValidatePackageSchema(setVariables map[string]string) ([]PackageFinding, er
 		return nil, err
 	}
 	return getSchemaFindings(jsonSchema, untypedZarfPackage)
+}
+
+// ValidateZarfPackageSchema checks the zarf package object against the Zarf schema
+func ValidateZarfPackageSchema(pkg v1alpha1.ZarfPackage, setVariables map[string]string) ([]PackageFinding, error) {
+	jsonSchema, err := ZarfSchema.ReadFile("zarf.schema.json")
+	if err != nil {
+		return nil, err
+	}
+	_, err = templateZarfObj(&pkg, setVariables)
+	if err != nil {
+		return nil, err
+	}
+	return getSchemaFindings(jsonSchema, pkg)
 }
 
 func makeFieldPathYqCompat(field string) string {
