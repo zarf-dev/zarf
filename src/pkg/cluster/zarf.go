@@ -50,6 +50,7 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 			errs = append(errs, fmt.Errorf("unable to unmarshal the secret %s/%s", secret.Namespace, secret.Name))
 			continue
 		}
+		deployedPackage.Timestamp = secret.ManagedFields[0].Time.UTC().Format(time.RFC3339)
 		deployedPackages = append(deployedPackages, deployedPackage)
 	}
 

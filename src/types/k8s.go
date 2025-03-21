@@ -70,6 +70,7 @@ type ZarfState struct {
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
 	Name               string               `json:"name"`
+	Timestamp          string               `json:"timestamp"`
 	Data               v1alpha1.ZarfPackage `json:"data"`
 	CLIVersion         string               `json:"cliVersion"`
 	Generation         int                  `json:"generation"`
