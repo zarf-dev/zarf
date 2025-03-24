@@ -32,10 +32,10 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, string(b))
 	})
 
-	t.Run("zarf prepare sha256sum <local>", func(t *testing.T) {
+	t.Run("zarf dev sha256sum <local>", func(t *testing.T) {
 		t.Parallel()
 
-		// Test `zarf prepare sha256sum` for a local asset
+		// Test `zarf dev sha256sum` for a local asset
 		expectedShasum := "61b50898f982d015ed87093ba822de0fe011cec6dd67db39f99d8c56391a6109\n"
 		shasumTestFilePath := "shasum-test-file"
 
