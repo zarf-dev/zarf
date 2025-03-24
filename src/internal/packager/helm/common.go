@@ -31,7 +31,6 @@ type Helm struct {
 	chartPath  string
 	valuesPath string
 
-	cfg     *types.PackagerConfig
 	cluster *cluster.Cluster
 	timeout time.Duration
 	retries int
@@ -69,7 +68,6 @@ func New(chart v1alpha1.ZarfChart, chartPath string, valuesPath string, mods ...
 // NewClusterOnly returns a new Helm config struct geared toward interacting with the cluster (not packages)
 func NewClusterOnly(cfg *types.PackagerConfig, variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster) *Helm {
 	return &Helm{
-		cfg:            cfg,
 		variableConfig: variableConfig,
 		state:          state,
 		cluster:        cluster,
@@ -140,7 +138,6 @@ func NewFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageNa
 // WithDeployInfo adds the necessary information to deploy a given chart
 func WithDeployInfo(cfg *types.PackagerConfig, variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration, retries int) Modifier {
 	return func(h *Helm) {
-		h.cfg = cfg
 		h.variableConfig = variableConfig
 		h.state = state
 		h.cluster = cluster

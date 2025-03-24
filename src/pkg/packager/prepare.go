@@ -160,14 +160,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 		maybeImages := map[string]bool{}
 		for _, chart := range component.Charts {
 			// Generate helm templates for this chart
-			helmCfg := helm.New(
-				chart,
-				componentPaths.Charts,
-				componentPaths.Values,
-				helm.WithKubeVersion(p.cfg.FindImagesOpts.KubeVersionOverride),
-				helm.WithVariableConfig(p.variableConfig),
-			)
-			err = helmCfg.PackageChart(ctx, component.DeprecatedCosignKeyPath)
+			err = helm.PackageChart(ctx, chart, componentPaths.Charts, componentPaths.Values)
 			if err != nil {
 				return nil, fmt.Errorf("unable to package the chart %s: %w", chart.Name, err)
 			}
@@ -184,7 +177,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 				}
 			}
 
-			chartTemplate, chartValues, err := helmCfg.TemplateChart(ctx)
+			chartTemplate, chartValues, err := helm.TemplateChart(ctx, chart, p.cfg.FindImagesOpts.KubeVersionOverride, componentPaths.Charts, p.variableConfig)
 			if err != nil {
 				return nil, fmt.Errorf("could not render the Helm template for chart %s: %w", chart.Name, err)
 			}

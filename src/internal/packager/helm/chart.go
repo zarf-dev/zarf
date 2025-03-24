@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/Masterminds/semver/v3"
@@ -28,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
@@ -160,74 +160,6 @@ func (h *Helm) InstallOrUpgradeChart(ctx context.Context) (types.ConnectStrings,
 	return postRender.connectStrings, h.chart.ReleaseName, nil
 }
 
-// TemplateChart generates a helm template from a given chart.
-func (h *Helm) TemplateChart(ctx context.Context) (manifest string, chartValues chartutil.Values, err error) {
-	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Templating helm chart %s", h.chart.Name)
-	defer spinner.Stop()
-	l.Debug("templating helm chart", "name", h.chart.Name)
-
-	err = h.createActionConfig(ctx, h.chart.Namespace, spinner)
-
-	// Setup K8s connection.
-	if err != nil {
-		return "", nil, fmt.Errorf("unable to initialize the K8s client: %w", err)
-	}
-
-	// Bind the helm action.
-	client := action.NewInstall(h.actionConfig)
-
-	client.DryRun = true
-	client.Replace = true // Skip the name check.
-	client.ClientOnly = true
-	client.IncludeCRDs = true
-	// TODO: Further research this with regular/OCI charts
-	client.Verify = false
-	client.InsecureSkipTLSverify = config.CommonOptions.InsecureSkipTLSVerify
-	if h.kubeVersion != "" {
-		parsedKubeVersion, err := chartutil.ParseKubeVersion(h.kubeVersion)
-		if err != nil {
-			return "", nil, fmt.Errorf("invalid kube version %s: %w", h.kubeVersion, err)
-		}
-		client.KubeVersion = parsedKubeVersion
-	}
-	client.ReleaseName = h.chart.ReleaseName
-
-	// If no release name is specified, use the chart name.
-	if client.ReleaseName == "" {
-		client.ReleaseName = h.chart.Name
-	}
-
-	// Namespace must be specified.
-	client.Namespace = h.chart.Namespace
-
-	loadedChart, chartValues, err := h.loadChartData()
-	if err != nil {
-		return "", nil, fmt.Errorf("unable to load chart data: %w", err)
-	}
-
-	client.PostRenderer, err = h.newRenderer(ctx)
-	if err != nil {
-		return "", nil, fmt.Errorf("unable to create helm renderer: %w", err)
-	}
-
-	// Perform the loadedChart installation.
-	templatedChart, err := client.RunWithContext(ctx, loadedChart, chartValues)
-	if err != nil {
-		return "", nil, fmt.Errorf("error generating helm chart template: %w", err)
-	}
-
-	manifest = templatedChart.Manifest
-
-	for _, hook := range templatedChart.Hooks {
-		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest)
-	}
-
-	spinner.Success()
-
-	return manifest, chartValues, nil
-}
-
 // RemoveChart removes a chart from the cluster.
 func (h *Helm) RemoveChart(ctx context.Context, namespace string, name string, spinner *message.Spinner) error {
 	// Establish a new actionConfig for the namespace.
@@ -321,7 +253,7 @@ func (h *Helm) installChart(ctx context.Context, postRender *renderer) (*release
 	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 	client.PostRenderer = postRender
 
-	loadedChart, chartValues, err := h.loadChartData()
+	loadedChart, chartValues, err := loadChartData(h.chart, h.chartPath, h.valuesOverrides, h.chartOverride)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load chart data: %w", err)
 	}
@@ -358,7 +290,7 @@ func (h *Helm) upgradeChart(ctx context.Context, lastRelease *release.Release, p
 
 	client.MaxHistory = maxHelmHistory
 
-	loadedChart, chartValues, err := h.loadChartData()
+	loadedChart, chartValues, err := loadChartData(h.chart, h.chartPath, h.valuesOverrides, h.chartOverride)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load chart data: %w", err)
 	}
@@ -386,28 +318,29 @@ func (h *Helm) uninstallChart(name string) (*release.UninstallReleaseResponse, e
 	return client.Run(name)
 }
 
-func (h *Helm) loadChartData() (*chart.Chart, chartutil.Values, error) {
+// FIXME what is a chartoverride
+func loadChartData(zarfChart v1alpha1.ZarfChart, chartPath string, valuesOverrides map[string]any, chartOverride *chart.Chart) (*chart.Chart, chartutil.Values, error) {
 	var (
 		loadedChart *chart.Chart
 		chartValues chartutil.Values
 		err         error
 	)
 
-	if h.chartOverride == nil {
+	if chartOverride == nil {
 		// If there is no override, get the chart and values info.
-		loadedChart, err = h.loadChartFromTarball()
+		loadedChart, err = loadChartFromTarball(zarfChart, chartPath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to load chart tarball: %w", err)
 		}
 
-		chartValues, err = h.parseChartValues()
+		chartValues, err = parseChartValues(zarfChart, chartPath, valuesOverrides)
 		if err != nil {
 			return loadedChart, nil, fmt.Errorf("unable to parse chart values: %w", err)
 		}
 	} else {
 		// Otherwise, use the overrides instead.
-		loadedChart = h.chartOverride
-		chartValues = h.valuesOverrides
+		loadedChart = chartOverride
+		chartValues = valuesOverrides
 	}
 
 	return loadedChart, chartValues, nil

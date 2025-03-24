@@ -13,12 +13,15 @@ import (
 	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/types"
+	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
@@ -32,14 +35,77 @@ import (
 )
 
 type renderer struct {
-	*Helm
-	connectStrings types.ConnectStrings
-	namespaces     map[string]*corev1.Namespace
+	// *Helm
+	chartPath              string
+	adoptExistingResources bool
+	chart                  v1alpha1.ZarfChart
+	cluster                *cluster.Cluster
+	airgap                 bool
+	state                  *types.ZarfState
+	actionConfig           *action.Configuration
+	variableConfig         *variables.VariableConfig
+	connectStrings         types.ConnectStrings
+	namespaces             map[string]*corev1.Namespace
+}
+
+type templateRenderer struct {
+	chartPath      string
+	actionConfig   *action.Configuration
+	variableConfig *variables.VariableConfig
+}
+
+func newTemplateRenderer(chartPath string, actionConfig *action.Configuration, vc *variables.VariableConfig) (*templateRenderer, error) {
+	rend := &templateRenderer{
+		chartPath: chartPath,
+		actionConfig: actionConfig,
+		variableConfig: vc,
+	}
+	return rend, nil
+}
+
+func (r *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
+	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
+	tempDir, err := utils.MakeTempDir(r.chartPath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create tmpdir:  %w", err)
+	}
+	path := filepath.Join(tempDir, "chart.yaml")
+
+	if err := os.WriteFile(path, renderedManifests.Bytes(), helpers.ReadWriteUser); err != nil {
+		return nil, fmt.Errorf("unable to write the post-render file for the helm chart")
+	}
+
+	// Run the template engine against the chart output
+	if err := r.variableConfig.ReplaceTextTemplate(path); err != nil {
+		return nil, fmt.Errorf("error templating the helm chart: %w", err)
+	}
+
+	// Read back the templated file contents
+	buff, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("error reading temporary post-rendered helm chart: %w", err)
+	}
+
+	// Use helm to re-split the manifest byte (same call used by helm to pass this data to postRender)
+	_, resources, err := releaseutil.SortManifests(map[string]string{path: string(buff)},
+		r.actionConfig.Capabilities.APIVersions,
+		releaseutil.InstallOrder,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error re-rendering helm output: %w", err)
+	}
+
+	finalManifestsOutput := bytes.NewBuffer(nil)
+
+	for _, resource := range resources {
+		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
+	}
+
+	return finalManifestsOutput, nil
 }
 
 func (h *Helm) newRenderer(ctx context.Context) (*renderer, error) {
 	rend := &renderer{
-		Helm:           h,
 		connectStrings: types.ConnectStrings{},
 		namespaces:     map[string]*corev1.Namespace{},
 	}
@@ -53,7 +119,7 @@ func (h *Helm) newRenderer(ctx context.Context) (*renderer, error) {
 	}
 	if kerrors.IsNotFound(err) {
 		rend.namespaces[h.chart.Namespace] = cluster.NewZarfManagedNamespace(h.chart.Namespace)
-	} else if h.cfg.DeployOpts.AdoptExistingResources {
+	} else if rend.adoptExistingResources {
 		namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
 		rend.namespaces[h.chart.Namespace] = namespace
 	}
@@ -138,7 +204,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("unable to create the missing namespace %s", name)
 			}
-		} else if r.cfg.DeployOpts.AdoptExistingResources {
+		} else if r.adoptExistingResources {
 			// Refuse to adopt namespace if it is one of four initial Kubernetes namespaces.
 			// https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
 			if slices.Contains([]string{"default", "kube-node-lease", "kube-public", "kube-system"}, name) {
@@ -154,7 +220,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		}
 
 		// If the package is marked as YOLO and the state is empty, skip the secret creation for this namespace
-		if r.cfg.Pkg.Metadata.YOLO && r.state.Distro == "YOLO" {
+		if !r.airgap && r.state.Distro == "YOLO" {
 			continue
 		}
 
@@ -242,7 +308,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 		}
 
 		// If we have been asked to adopt existing resources, process those now as well
-		if r.cfg.DeployOpts.AdoptExistingResources {
+		if r.adoptExistingResources {
 			deployedNamespace := namespace
 			if deployedNamespace == "" {
 				deployedNamespace = r.chart.Namespace
