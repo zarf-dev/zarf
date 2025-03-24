@@ -24,3 +24,7 @@ jobs:
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
+
+      - name: Instruct user on how to fix
+        if: failure()
+        run: echo "Please run `make docs-and-schema` and commit the results to your pull request"
