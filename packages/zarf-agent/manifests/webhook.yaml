@@ -44,6 +44,7 @@ webhooks:
           - "v1"
         resources:
           - "pods"
+          - "pods/ephemeralcontainers"
     admissionReviewVersions:
       - "v1"
       - "v1beta1"

@@ -220,11 +220,42 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	require.Equal(t, "c09d17f612f241cdf549e5fb97c9e063a8ad18ae7a9f3af066332ed6b38556ad", shaSum)
 }
 
-func TestLoadPackageErrorWithoutCompatibleFlavor(t *testing.T) {
+func TestLoadPackageWithFlavors(t *testing.T) {
 	t.Parallel()
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
-	_, err := LoadPackage(context.Background(), filepath.Join("testdata", "package-with-flavors"), "non-existent-flavor", map[string]string{})
-	require.EqualError(t, err, fmt.Sprintf("package validation failed: %s", lint.PkgValidateErrNoComponents))
+
+	tests := []struct {
+		name        string
+		flavor      string
+		expectedErr string
+	}{
+		{
+			name:        "inputting a flavor that does not exist should error",
+			flavor:      "non-existent-flavor",
+			expectedErr: "could not find flavor non-existent-flavor in package definition",
+		},
+		{
+			name:        "when all components have a flavor, inputting no flavor should error",
+			flavor:      "",
+			expectedErr: fmt.Sprintf("package validation failed: %s", lint.PkgValidateErrNoComponents),
+		},
+		{
+			name:   "flavors work",
+			flavor: "cashew",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := LoadPackage(context.Background(), filepath.Join("testdata", "package-with-flavors"), tt.flavor, map[string]string{})
+			if tt.expectedErr != "" {
+				require.EqualError(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
 }
 
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {

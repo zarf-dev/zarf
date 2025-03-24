@@ -28,14 +28,14 @@ require (
 	github.com/fluxcd/pkg/apis/meta v1.10.0
 	github.com/fluxcd/source-controller/api v1.5.0
 	github.com/go-git/go-git/v5 v5.14.0
-	github.com/goccy/go-yaml v1.15.23
+	github.com/goccy/go-yaml v1.16.0
 	github.com/gofrs/flock v0.12.1
 	github.com/golang-cz/devslog v0.0.11
 	github.com/google/go-containerregistry v0.20.3
 	github.com/gosuri/uitable v0.0.4
 	github.com/invopop/jsonschema v0.13.0
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/opencontainers/image-spec v1.1.0
+	github.com/opencontainers/image-spec v1.1.1
 	github.com/phsym/console-slog v0.3.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.21.0
@@ -54,13 +54,13 @@ require (
 	golang.org/x/crypto v0.36.0
 	golang.org/x/sync v0.12.0
 	golang.org/x/term v0.30.0
-	helm.sh/helm/v3 v3.17.1
-	k8s.io/api v0.32.2
-	k8s.io/apimachinery v0.32.2
-	k8s.io/client-go v0.32.2
-	k8s.io/component-base v0.32.2
+	helm.sh/helm/v3 v3.17.2
+	k8s.io/api v0.32.3
+	k8s.io/apimachinery v0.32.3
+	k8s.io/client-go v0.32.3
+	k8s.io/component-base v0.32.3
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kubectl v0.32.2
+	k8s.io/kubectl v0.32.3
 	oras.land/oras-go/v2 v2.5.0
 	sigs.k8s.io/cli-utils v0.37.2
 	sigs.k8s.io/kustomize/api v0.19.0
@@ -547,7 +547,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa // indirect
 	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/oauth2 v0.25.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
@@ -568,10 +568,10 @@ require (
 	gorm.io/gorm v1.25.12 // indirect
 	k8s.io/apiextensions-apiserver v0.32.2 // indirect
 	k8s.io/apiserver v0.32.2 // indirect
-	k8s.io/cli-runtime v0.32.2 // indirect
-	k8s.io/component-helpers v0.32.2 // indirect
+	k8s.io/cli-runtime v0.32.3 // indirect
+	k8s.io/component-helpers v0.32.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20241212222426-2c72e554b1e7 // indirect
-	k8s.io/metrics v0.32.2 // indirect
+	k8s.io/metrics v0.32.3 // indirect
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
 	modernc.org/libc v1.55.3 // indirect
 	modernc.org/mathutil v1.6.0 // indirect

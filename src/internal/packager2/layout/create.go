@@ -278,16 +278,18 @@ func LoadPackage(ctx context.Context, packagePath, flavor string, setVariables m
 			return v1alpha1.ZarfPackage{}, err
 		}
 	}
-	err = validate(pkg, packagePath, setVariables)
+	err = validate(pkg, packagePath, setVariables, flavor)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
 	return pkg, nil
 }
 
-func validate(pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string) error {
-	err := lint.ValidatePackage(pkg)
-	if err != nil {
+func validate(pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string) error {
+	if err := validateFlavorExists(pkg, flavor); err != nil {
+		return err
+	}
+	if err := lint.ValidatePackage(pkg); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
 	findings, err := lint.ValidatePackageSchemaAtPath(packagePath, setVariables)
@@ -302,6 +304,18 @@ func validate(pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[str
 		PackageName: pkg.Metadata.Name,
 		Findings:    findings,
 	}
+}
+
+func validateFlavorExists(pkg v1alpha1.ZarfPackage, flavor string) error {
+	if flavor == "" {
+		return nil
+	}
+	for _, comp := range pkg.Components {
+		if comp.Only.Flavor == flavor {
+			return nil
+		}
+	}
+	return fmt.Errorf("could not find flavor %s in package definition", flavor)
 }
 
 func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
