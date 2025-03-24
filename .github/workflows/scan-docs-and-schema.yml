@@ -25,6 +25,6 @@ jobs:
         if: always()
         uses: ./.github/actions/save-logs
 
-      - name: Instruct user on how to fix
+      - name: Instruct user to fix
         if: failure()
-        run: echo "Please run `make docs-and-schema` and commit the results to your pull request"
+        run: echo "Please run 'make docs-and-schema' at the root of the repo and commit the changes to your pull request"
