@@ -58,8 +58,6 @@ var (
 	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'
 	ZarfSeedPort string
 
-	CosignPublicKey string
-
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
 	dataInjectionMarker = ".zarf-injection-%d"
