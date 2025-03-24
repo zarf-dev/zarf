@@ -572,6 +572,7 @@ func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []s
 		RegInfo:         p.state.RegistryInfo,
 		NoChecksum:      noImgChecksum,
 		Arch:            p.cfg.Pkg.Build.Architecture,
+		Concurrency:     config.CommonOptions.OCIConcurrency,
 		Retries:         p.cfg.PkgOpts.Retries,
 		PlainHTTP:       config.CommonOptions.PlainHTTP,
 	}

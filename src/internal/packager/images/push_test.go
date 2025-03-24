@@ -23,7 +23,7 @@ func TestPush(t *testing.T) {
 		expectErr       bool
 	}{
 		{
-			name:            "push local images oras",
+			name: "push local images oras",
 			// This OCI format directory was created by building the package at src/test/packages/39-crane-to-oras with the ORAS implementation
 			SourceDirectory: "testdata/oras-oci-layout/images",
 			imageNames: []string{
@@ -35,7 +35,7 @@ func TestPush(t *testing.T) {
 			},
 		},
 		{
-			name:            "push local images crane",
+			name: "push local images crane",
 			// This OCI format directory was created by building the package at src/test/packages/39-crane-to-oras with the Crane implementation (Zarf v0.49.1)
 			SourceDirectory: "testdata/crane-oci-layout/images",
 			imageNames: []string{

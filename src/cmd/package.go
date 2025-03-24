@@ -147,6 +147,7 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 		SBOMOut:                 pkgConfig.CreateOpts.SBOMOutputDir,
 		SkipSBOM:                pkgConfig.CreateOpts.SkipSBOM,
 		Output:                  pkgConfig.CreateOpts.Output,
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		DifferentialPackagePath: pkgConfig.CreateOpts.DifferentialPackagePath,
 	}
 	err := packager2.Create(cmd.Context(), pkgConfig.CreateOpts.BaseDir, opt)
@@ -323,6 +324,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		GitInfo:         pkgConfig.InitOpts.GitServer,
 		NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
 		Retries:         pkgConfig.PkgOpts.Retries,
+		OCIConcurrency:  config.CommonOptions.OCIConcurrency,
 		PlainHTTP:       config.CommonOptions.PlainHTTP,
 	}
 	err = packager2.Mirror(ctx, mirrorOpt)

@@ -37,11 +37,12 @@ type MirrorOptions struct {
 	NoImageChecksum bool
 	Retries         int
 	PlainHTTP       bool
+	OCIConcurrency  int
 }
 
 // Mirror mirrors the package contents to the given registry and git server.
 func Mirror(ctx context.Context, opt MirrorOptions) error {
-	err := pushImagesToRegistry(ctx, opt.PkgLayout, opt.Filter, opt.RegistryInfo, opt.NoImageChecksum, opt.PlainHTTP)
+	err := pushImagesToRegistry(ctx, opt.PkgLayout, opt.Filter, opt.RegistryInfo, opt.NoImageChecksum, opt.PlainHTTP, opt.OCIConcurrency)
 	if err != nil {
 		return err
 	}
@@ -52,7 +53,7 @@ func Mirror(ctx context.Context, opt MirrorOptions) error {
 	return nil
 }
 
-func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, regInfo types.RegistryInfo, noImgChecksum bool, plainHTTP bool) error {
+func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, regInfo types.RegistryInfo, noImgChecksum bool, plainHTTP bool, concurrency int) error {
 	components, err := filter.Apply(pkgLayout.Pkg)
 	if err != nil {
 		return err
@@ -71,15 +72,16 @@ func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if len(refs) == 0 {
 		return nil
 	}
-	pushCfg := images.PushConfig{
+	pushConfig := images.PushConfig{
 		PlainHTTP:       plainHTTP,
 		SourceDirectory: pkgLayout.GetImageDir(),
 		ImageList:       refs,
+		Concurrency:     concurrency,
 		NoChecksum:      noImgChecksum,
 		Arch:            pkgLayout.Pkg.Build.Architecture,
 		RegInfo:         regInfo,
 	}
-	err = images.Push(ctx, pushCfg)
+	err = images.Push(ctx, pushConfig)
 	if err != nil {
 		return fmt.Errorf("failed to mirror images: %w", err)
 	}

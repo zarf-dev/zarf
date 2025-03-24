@@ -143,7 +143,7 @@ func TestPull(t *testing.T) {
 
 			destDir := t.TempDir()
 			cacheDir := t.TempDir()
-			pullConfig := PullConfig{
+			cfg := PullConfig{
 				DestinationDirectory: destDir,
 				CacheDirectory:       cacheDir,
 				RegistryOverrides:    tc.RegistryOverrides,
@@ -151,7 +151,7 @@ func TestPull(t *testing.T) {
 				ImageList:            images,
 			}
 
-			imageManifests, err := Pull(context.Background(), pullConfig)
+			imageManifests, err := Pull(context.Background(), cfg)
 			if tc.expectErr {
 				require.Error(t, err, tc.expectErr)
 				return
@@ -201,14 +201,14 @@ func TestPullInvalidCache(t *testing.T) {
 	err = os.WriteFile(invalidLayerPath, invalidContent, 0777)
 	require.NoError(t, err)
 
-	pullConfig := PullConfig{
+	opts := PullConfig{
 		DestinationDirectory: destDir,
 		CacheDirectory:       cacheDir,
 		ImageList: []transform.Image{
 			ref,
 		},
 	}
-	_, err = Pull(context.Background(), pullConfig)
+	_, err = Pull(context.Background(), opts)
 	require.NoError(t, err)
 
 	pulledLayerPath := filepath.Join(destDir, "blobs", "sha256", correctLayerSha)

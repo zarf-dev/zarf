@@ -55,6 +55,7 @@ type CreateOptions struct {
 	SetVariables            map[string]string
 	SkipSBOM                bool
 	DifferentialPackagePath string
+	OCIConcurrency          int
 }
 
 func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (*PackageLayout, error) {
@@ -140,6 +141,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 			ImageList:            componentImages,
 			Arch:                 pkg.Metadata.Architecture,
 			RegistryOverrides:    opt.RegistryOverrides,
+			Concurrency:          opt.OCIConcurrency,
 			CacheDirectory:       filepath.Join(cachePath, ImagesDir),
 		}
 		manifests, err := images.Pull(ctx, pullCfg)

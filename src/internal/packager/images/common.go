@@ -42,9 +42,9 @@ const (
 )
 
 const (
-	DockerLayer                    = "application/vnd.docker.image.rootfs.diff.tar.gzip"
-	DockerUncompressedLayer        = "application/vnd.docker.image.rootfs.diff.tar"
-	DockerForeignLayer             = "application/vnd.docker.image.rootfs.foreign.diff.tar.gzip"
+	DockerLayer             = "application/vnd.docker.image.rootfs.diff.tar.gzip"
+	DockerUncompressedLayer = "application/vnd.docker.image.rootfs.diff.tar"
+	DockerForeignLayer      = "application/vnd.docker.image.rootfs.foreign.diff.tar.gzip"
 )
 
 func isLayer(mediaType string) bool {
