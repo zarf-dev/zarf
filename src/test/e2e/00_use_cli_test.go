@@ -52,12 +52,11 @@ func TestUseCLI(t *testing.T) {
 		require.Equal(t, expectedShasum, stdOut, "The expected SHASUM should equal the actual SHASUM")
 	})
 
-	t.Run("zarf prepare sha256sum <remote>", func(t *testing.T) {
+	t.Run("zarf dev sha256sum <remote>", func(t *testing.T) {
 		t.Parallel()
-		// Test `zarf prepare sha256sum` for a remote asset
-		expectedShasum := "b905e647e0d7876cfd5b665632cfc43ad919dc60408f7236c5b541c53277b503\n"
+		expectedShasum := "a78d66b9e2b00a22edd9b4e6432a4d934621e3757f09493b12f688c7c9baca93\n"
 
-		stdOut, stdErr, err := e2e.Zarf(t, "prepare", "sha256sum", "https://zarf-init.s3.us-east-2.amazonaws.com/injector/2024-07-22/zarf-injector-arm64")
+		stdOut, stdErr, err := e2e.Zarf(t, "prepare", "sha256sum", "https://zarf-init-resources.s3.us-east-1.amazonaws.com/injector/2025-03-24/zarf-injector-amd64")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, expectedShasum, "The expected SHASUM should equal the actual SHASUM")
 	})
