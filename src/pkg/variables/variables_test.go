@@ -111,7 +111,7 @@ func TestPopulateVariables(t *testing.T) {
 
 		gotVars := tc.vc.setVariableMap
 
-		require.Equal(t, len(gotVars), len(tc.wantVars))
+		require.Len(t, gotVars, len(tc.wantVars))
 
 		for key := range gotVars {
 			require.Equal(t, gotVars[key], tc.wantVars[key])

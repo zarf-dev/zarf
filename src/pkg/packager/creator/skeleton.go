@@ -275,7 +275,6 @@ func (sc *SkeletonCreator) addComponent(ctx context.Context, component v1alpha1.
 				spinner.Updatef("Copying manifest %s", path)
 				l.Debug("copying manifest", "path", path)
 
-
 				if err := helpers.CreatePathAndCopy(path, dst); err != nil {
 					return nil, fmt.Errorf("unable to copy manifest %s: %w", path, err)
 				}

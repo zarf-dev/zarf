@@ -172,10 +172,7 @@ func (suite *PublishCopySkeletonSuite) Test_2_FilePaths() {
 			components := pkg.Components
 			suite.NotNil(components)
 
-			isSkeleton := false
-			if strings.Contains(pkgTar, "-skeleton-") {
-				isSkeleton = true
-			}
+			isSkeleton := strings.Contains(pkgTar, "-skeleton-")
 			suite.verifyComponentPaths(unpacked, components, isSkeleton)
 		}()
 	}
