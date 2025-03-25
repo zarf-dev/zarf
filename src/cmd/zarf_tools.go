@@ -419,7 +419,7 @@ func printCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newS
 			oT := oldState.AgentTLS
 			nT := newState.AgentTLS
 			l.Info("agent certificate authority", "changed", string(oT.CA) != string(nT.CA))
-			l.Info("agent public certificate", "changed", string(oT.Cert) == string(nT.Cert))
+			l.Info("agent public certificate", "changed", string(oT.Cert) != string(nT.Cert))
 			l.Info("agent private key", "changed", string(oT.Key) != string(nT.Key))
 		}
 	}
