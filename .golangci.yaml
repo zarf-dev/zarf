@@ -71,7 +71,6 @@ linters:
     testifylint:
       enable-all: true
   exclusions:
-    generated: lax
     presets:
       - common-false-positives
       - legacy
@@ -88,7 +87,6 @@ formatters:
     - goimports
     - gofmt
   exclusions:
-    generated: lax
     paths:
       - src/cmd/helm
       - third_party$
