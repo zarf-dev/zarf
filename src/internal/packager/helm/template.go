@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 
@@ -21,6 +22,9 @@ import (
 
 // TemplateChart generates a helm template from a given chart.
 func TemplateChart(ctx context.Context, chart v1alpha1.ZarfChart, kubeVersion string, chartPath string, variableConfig *variables.VariableConfig) (manifest string, chartValues chartutil.Values, err error) {
+	if variableConfig == nil {
+		variableConfig = template.GetZarfVariableConfig(ctx)
+	}
 	l := logger.From(ctx)
 	spinner := message.NewProgressSpinner("Templating helm chart %s", chart.Name)
 	defer spinner.Stop()
