@@ -91,9 +91,6 @@ formatters:
     generated: lax
     paths:
       - src/cmd/helm
-      - src/internal/packager
-      - src/pkg/packager
-      - src/internal/packager2
       - third_party$
       - builtin$
       - examples$
