@@ -398,29 +398,29 @@ func printCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newS
 			nR := newState.RegistryInfo
 			l.Info("registry URL address", "existing", oR.Address, "replacement", nR.Address)
 			l.Info("registry push username", "existing", oR.PushUsername, "replacement", nR.PushUsername)
-			l.Info("registry push password", "changed", !(oR.PushPassword == nR.PushPassword))
+			l.Info("registry push password", "changed", oR.PushPassword != nR.PushPassword)
 			l.Info("registry pull username", "existing", oR.PullUsername, "replacement", nR.PullUsername)
-			l.Info("registry pull password", "changed", !(oR.PullPassword == nR.PullPassword))
+			l.Info("registry pull password", "changed", oR.PullPassword != nR.PullPassword)
 		case gitKey:
 			oG := oldState.GitServer
 			nG := newState.GitServer
 			l.Info("Git server URL address", "existing", oG.Address, "replacement", nG.Address)
 			l.Info("Git server push username", "existing", oG.PushUsername, "replacement", nG.PushUsername)
-			l.Info("Git server push password", "changed", !(oG.PushPassword == nG.PushPassword))
+			l.Info("Git server push password", "changed", oG.PushPassword != nG.PushPassword)
 			l.Info("Git server pull username", "existing", oG.PullUsername, "replacement", nG.PullUsername)
-			l.Info("Git server pull password", "changed", !(oG.PullPassword == nG.PullPassword))
+			l.Info("Git server pull password", "changed", oG.PullPassword != nG.PullPassword)
 		case artifactKey:
 			oA := oldState.ArtifactServer
 			nA := newState.ArtifactServer
 			l.Info("artifact server URL address", "existing", oA.Address, "replacement", nA.Address)
 			l.Info("artifact server push username", "existing", oA.PushUsername, "replacement", nA.PushUsername)
-			l.Info("artifact server push token", "changed", !(oA.PushToken == nA.PushToken))
+			l.Info("artifact server push token", "changed", oA.PushToken != nA.PushToken)
 		case agentKey:
 			oT := oldState.AgentTLS
 			nT := newState.AgentTLS
-			l.Info("agent certificate authority", "changed", !(string(oT.CA) == string(nT.CA)))
-			l.Info("agent public certificate", "changed", !(string(oT.Cert) == string(nT.Cert)))
-			l.Info("agent private key", "changed", !(string(oT.Key) == string(nT.Key)))
+			l.Info("agent certificate authority", "changed", string(oT.CA) != string(nT.CA))
+			l.Info("agent public certificate", "changed", string(oT.Cert) == string(nT.Cert))
+			l.Info("agent private key", "changed", string(oT.Key) != string(nT.Key))
 		}
 	}
 }
