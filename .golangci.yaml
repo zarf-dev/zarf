@@ -1,86 +1,94 @@
-run:
-  timeout: 10m
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
     - errcheck
-    - gosimple
+    - errorlint
+    - goheader
     - govet
     - ineffassign
-    - staticcheck
-    - unused
-    - revive
-    - goheader
-    - goimports
     - nolintlint
+    - revive
+    - staticcheck
     - testifylint
+    - unused
     - whitespace
-    - errorlint
-linters-settings:
-  govet:
-    enable-all: true
-    disable:
-      - shadow
-      - fieldalignment
-      - unusedwrite
-      - printf
-  nolintlint:
-    require-specific: true
-  goheader:
-    template: |-
-      SPDX-License-Identifier: Apache-2.0
-      SPDX-FileCopyrightText: 2021-Present The Zarf Authors
-  revive:
-    rules:
-      - name: blank-imports
-      - name: context-as-argument
-      - name: context-keys-type
-      - name: dot-imports
-      - name: error-return
-      - name: error-strings
-      - name: error-naming
-      - name: exported
-      - name: if-return
-      - name: increment-decrement
-      - name: var-naming
-      - name: var-declaration
-      - name: package-comments
-      - name: range
-      - name: receiver-naming
-      - name: time-naming
-      - name: unexported-return
-      - name: indent-error-flow
-      - name: errorf
-      - name: empty-block
-      - name: superfluous-else
-      - name: unused-parameter
-      - name: unreachable-code
-      - name: redefines-builtin-id
-  testifylint:
-    enable-all: true
-  errcheck:
-    check-blank: true
-    check-type-assertions: true
-    exclude-functions:
-      - (*github.com/spf13/cobra.Command).Help
-      - (*github.com/spf13/cobra.Command).MarkFlagRequired
-      - (*github.com/spf13/pflag.FlagSet).MarkHidden
-      - (*github.com/spf13/pflag.FlagSet).MarkDeprecated
-      - fmt.Fprintln
-      - fmt.Fprint
-  sloglint:
-    no-mixed-args: true
-    key-naming-case: camel
-issues:
-  # Revive rules that are disabled by default.
-  include:
-    - EXC0001
-    - EXC0012
-    - EXC0013
-    - EXC0014
-    - EXC0015
-  exclude-dirs:
-    - "src/cmd/helm"     # Exclude linting code copied from Helm.
-    - "src/internal/packager"
-    - "src/pkg/packager"       # TODO(mkcp): Delete packager rules once refactor is complete
-    - "src/internal/packager2" # TODO(mkcp): Delete packager rules once refactor is complete
+  settings:
+    staticcheck:
+      checks: ["all", "-QF1008"]
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+      exclude-functions:
+        - (*github.com/spf13/cobra.Command).Help
+        - (*github.com/spf13/cobra.Command).MarkFlagRequired
+        - (*github.com/spf13/pflag.FlagSet).MarkHidden
+        - (*github.com/spf13/pflag.FlagSet).MarkDeprecated
+        - fmt.Fprintln
+        - fmt.Fprint
+    goheader:
+      template: |-
+        SPDX-License-Identifier: Apache-2.0
+        SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+    govet:
+      disable:
+        - shadow
+        - fieldalignment
+        - unusedwrite
+        - printf
+      enable-all: true
+    nolintlint:
+      require-specific: true
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+    sloglint:
+      no-mixed-args: true
+      key-naming-case: camel
+    testifylint:
+      enable-all: true
+  exclusions:
+    presets:
+      - common-false-positives
+      - legacy
+    paths:
+      - src/cmd/helm
+      - src/internal/packager
+      - src/pkg/packager
+      - src/internal/packager2
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - goimports
+    - gofmt
+  exclusions:
+    paths:
+      - src/cmd/helm
+      - third_party$
+      - builtin$
+      - examples$
