@@ -41,8 +41,8 @@ jobs:
           zarf package create -o build -a arm64 examples/dos-games --signing-key=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY_ARN }} --confirm
 
           # Publish a the signed dos-games package
-          zarf package publish ./build/zarf-package-dos-games-amd64-1.1.0.tar.zst oci://ghcr.io/zarf-dev/packages --key=https://zarf.dev/cosign.pub
-          zarf package publish ./build/zarf-package-dos-games-arm64-1.1.0.tar.zst oci://ghcr.io/zarf-dev/packages --key=https://zarf.dev/cosign.pub
+          zarf package publish ./build/zarf-package-dos-games-amd64-1.2.0.tar.zst oci://ghcr.io/zarf-dev/packages --key=https://zarf.dev/cosign.pub
+          zarf package publish ./build/zarf-package-dos-games-arm64-1.2.0.tar.zst oci://ghcr.io/zarf-dev/packages --key=https://zarf.dev/cosign.pub
 
           # Publish a skeleton of the dos-games package
           zarf package publish examples/dos-games oci://ghcr.io/zarf-dev/packages
