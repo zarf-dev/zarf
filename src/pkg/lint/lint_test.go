@@ -126,7 +126,7 @@ func TestLintPackageWithImports(t *testing.T) {
 			Description:         "Image not pinned with digest",
 			Item:                "ghcr.io/zarf-dev/doom-game:0.0.1",
 			PackageNameOverride: "dos-games",
-			PackagePathOverride: "oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0",
+			PackagePathOverride: "oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0",
 			Severity:            SevWarn,
 		},
 		// Test local import lints properly
