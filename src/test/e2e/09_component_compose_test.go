@@ -69,13 +69,6 @@ func TestComposabilityExample(t *testing.T) {
     onDeploy:
       before:
       - cmd: ./zarf tools kubectl get -n dos-games deployment -o jsonpath={.items[0].metadata.creationTimestamp}
-      after:
-      - wait:
-          cluster:
-            kind: deployment
-            name: game
-            namespace: dos-games
-            condition: available
 `, rel, rel)
 	require.YAMLEq(t, expectedYaml, string(b))
 }
