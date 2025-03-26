@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -193,9 +194,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull images from docker: %w", err)
 		}
-		for k, v := range daemonImagesWithManifests {
-			imagesWithManifests[k] = v
-		}
+		maps.Copy(daemonImagesWithManifests, imagesWithManifests)
 	}
 
 	err = orasSave(ctx, imagesInfo, cfg, dst, client)
