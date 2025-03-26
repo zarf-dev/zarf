@@ -8,15 +8,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	// ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -27,9 +24,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-// TODO Freeport is not thread safe which means that for now none of the tests can be run in parallel
-
-func pullFromRemote(t *testing.T, ctx context.Context, packageRef string, architecture string) *layout2.PackageLayout {
+func pullFromRemote(t *testing.T, ctx context.Context, packageRef string, architecture string) *layout.PackageLayout {
 	t.Helper()
 
 	// Generate tmpdir and pull published package from local registry
@@ -37,7 +32,7 @@ func pullFromRemote(t *testing.T, ctx context.Context, packageRef string, archit
 	_, tarPath, err := pullOCI(context.Background(), packageRef, tmpdir, "", architecture, filters.Empty(), oci.WithPlainHTTP(true))
 	require.NoError(t, err)
 
-	layoutActual, err := layout2.LoadFromTar(ctx, tarPath, layout2.PackageLayoutOptions{})
+	layoutActual, err := layout.LoadFromTar(ctx, tarPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 
 	return layoutActual
@@ -45,7 +40,7 @@ func pullFromRemote(t *testing.T, ctx context.Context, packageRef string, archit
 
 func createRegistry(t *testing.T, ctx context.Context) registry.Reference {
 	// Setup destination registry
-	dstPort, err := freeport.GetFreePort()
+	dstPort, err := helpers.GetAvailablePort()
 	require.NoError(t, err)
 	dstRegistryURL := testutil.SetupInMemoryRegistry(ctx, t, dstPort)
 	dstRegistryRef := registry.Reference{
@@ -57,7 +52,6 @@ func createRegistry(t *testing.T, ctx context.Context) registry.Reference {
 }
 
 func TestPublishError(t *testing.T) {
-	// t.Parallel()
 	ctx := context.Background()
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
@@ -90,8 +84,6 @@ func TestPublishError(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			// TODO Make parallel
-			// t.Parallel()
 			err := PublishPackage(context.Background(), tc.path, tc.ref, tc.opts)
 			require.ErrorContains(t, err, tc.expectErr.Error())
 		})
@@ -99,7 +91,6 @@ func TestPublishError(t *testing.T) {
 }
 
 func TestPublishFromOCIValidation(t *testing.T) {
-	// t.Parallel()
 	ctx := context.Background()
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
@@ -158,7 +149,6 @@ func TestPublishFromOCIValidation(t *testing.T) {
 }
 
 func TestPublishSkeleton(t *testing.T) {
-	// t.Parallel()
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
 	tt := []struct {
@@ -203,7 +193,7 @@ func TestPublishSkeleton(t *testing.T) {
 			pkg, err := rmt.FetchZarfYAML(ctx)
 			require.NoError(t, err)
 
-			// HACK(mkcp): Match necessary fields
+			// HACK(mkcp): Match necessary fields to establish equality
 			pkg.Build = v1alpha1.ZarfBuildData{}
 			pkg.Metadata.AggregateChecksum = ""
 			expectedPkg.Metadata.Architecture = "skeleton"
@@ -233,7 +223,6 @@ func TestPublishPackage(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			// file write is happening during publish oras.PackManifest, we should replace defer remove that
 			ctx := testutil.TestContext(t)
 			registryRef := createRegistry(t, ctx)
 
@@ -242,7 +231,7 @@ func TestPublishPackage(t *testing.T) {
 			require.NoError(t, err)
 
 			// We want to pull the package and sure the content is the same as the local package
-			layoutExpected, err := layout2.LoadFromTar(ctx, tc.path, layout2.PackageLayoutOptions{})
+			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{})
 			require.NoError(t, err)
 			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
 			defer os.Remove(layoutExpected.Pkg.Metadata.Name)
@@ -257,8 +246,6 @@ func TestPublishPackage(t *testing.T) {
 }
 
 func TestPublishCopySHA(t *testing.T) {
-	// t.Parallel()
-
 	tt := []struct {
 		name             string
 		packageToPublish string
@@ -277,7 +264,6 @@ func TestPublishCopySHA(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			// file write is happening during publish oras.PackManifest, we should replace defer remove that
 			ctx := testutil.TestContext(t)
 			registryRef := createRegistry(t, ctx)
 
@@ -303,7 +289,6 @@ func TestPublishCopySHA(t *testing.T) {
 			dstRef, err := registry.ParseReference(dst)
 			require.NoError(t, err)
 
-			// TODO: test case for sha on the src but not on dst
 			opts := PublishFromOCIOpts{
 				WithPlainHTTP: tc.opts.WithPlainHTTP,
 				Architecture:  tc.opts.Architecture,
@@ -315,7 +300,7 @@ func TestPublishCopySHA(t *testing.T) {
 			require.NoError(t, err)
 
 			// We want to pull the package and sure the content is the same as the local package
-			layoutExpected, err := layout2.LoadFromTar(ctx, tc.packageToPublish, layout2.PackageLayoutOptions{})
+			layoutExpected, err := layout.LoadFromTar(ctx, tc.packageToPublish, layout.PackageLayoutOptions{})
 			require.NoError(t, err)
 			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
 			defer os.Remove(layoutExpected.Pkg.Metadata.Name)
@@ -325,16 +310,13 @@ func TestPublishCopySHA(t *testing.T) {
 
 			pkgRefsha := fmt.Sprintf("%s@%s", packageRef, indexDesc.Digest)
 
-			layoutActual := pullFromRemote(t, ctx, pkgRefsha, "amd64")
+			layoutActual := pullFromRemote(t, ctx, pkgRefsha, tc.opts.Architecture)
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})
 	}
 }
 
 func TestPublishCopyTag(t *testing.T) {
-	// FIXME(mkcp): TestPublishCopy panics when running in parallel on test count 2 or higher.
-	// t.Parallel()
-
 	tt := []struct {
 		name             string
 		packageToPublish string
@@ -353,7 +335,6 @@ func TestPublishCopyTag(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			// file write is happening during publish oras.PackManifest, we should replace defer remove that
 			ctx := testutil.TestContext(t)
 			registryRef := createRegistry(t, ctx)
 
@@ -381,7 +362,7 @@ func TestPublishCopyTag(t *testing.T) {
 			require.NoError(t, err)
 
 			// We want to pull the package and sure the content is the same as the local package
-			layoutExpected, err := layout2.LoadFromTar(ctx, tc.packageToPublish, layout2.PackageLayoutOptions{})
+			layoutExpected, err := layout.LoadFromTar(ctx, tc.packageToPublish, layout.PackageLayoutOptions{})
 			require.NoError(t, err)
 			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
 			defer os.Remove(layoutExpected.Pkg.Metadata.Name)
@@ -389,7 +370,7 @@ func TestPublishCopyTag(t *testing.T) {
 			packageRef, err := zoci.ReferenceFromMetadata(dstRegistryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
 			require.NoError(t, err)
 
-			layoutActual := pullFromRemote(t, ctx, packageRef, "amd64")
+			layoutActual := pullFromRemote(t, ctx, packageRef, tc.opts.Architecture)
 
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})

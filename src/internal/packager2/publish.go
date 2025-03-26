@@ -16,7 +16,6 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 
-	// "github.com/zarf-dev/zarf/src/pkg/layout"
 	"oras.land/oras-go/v2/registry"
 )
 
@@ -38,7 +37,7 @@ type PublishFromOCIOpts struct {
 	Architecture string
 }
 
-// TODO PublishFromOCI takes a source and dest ref and copies the package between them.
+// PublishFromOCI takes a source and destination registry reference and a PublishFromOCIOpts and copies the package from the source to the destination.
 func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Reference, opts PublishFromOCIOpts) error {
 	l := logger.From(ctx)
 	start := time.Now()
@@ -102,12 +101,9 @@ type PublishPackageOpts struct {
 	Architecture string
 }
 
-// PublishPackage takes a Path to the location of the build package, a ref to a registry, and a PublishOpts and uploads the
-// package tarball, oci reference, or skeleton package to the registry.
+// PublishPackage takes a Path to the location of the built package, a ref to a registry, and a PublishOpts and uploads to the target OCI registry.
 func PublishPackage(ctx context.Context, path string, dst registry.Reference, opts PublishPackageOpts) error {
 	l := logger.From(ctx)
-	// TODO: determine if the source is an OCI reference and a zoci.CopyPackage() is required
-	// TODO: can you copy to and from the same registry?
 
 	// Validate inputs
 	l.Debug("validating PublishOpts")
@@ -144,8 +140,7 @@ type PublishSkeletonOpts struct {
 	WithPlainHTTP bool
 }
 
-// PublishSkeleton takes a Path to the location of the build package, a ref to a registry, and a PublishOpts and uploads the
-// package tarball, oci reference, or skeleton package to the registry.
+// PublishSkeleton takes a Path to the location of the build package, a ref to a registry, and a PublishOpts and uploads the skeleton package to the target OCI registry.
 func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOpts) error {
 	l := logger.From(ctx)
 
@@ -201,8 +196,5 @@ func pushToRemote(ctx context.Context, layout *layout2.PackageLayout, ref regist
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
 
-	logger.From(ctx).Info("pushing package to remote registry",
-		"ref", ref,
-		"architecture", arch)
 	return rem.Push(ctx, layout, concurrency)
 }

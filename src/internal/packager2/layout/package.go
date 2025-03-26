@@ -44,10 +44,6 @@ type PackageLayoutOptions struct {
 	IsPartial               bool
 }
 
-func (p PackageLayout) DirPath() string {
-	return p.dirPath
-}
-
 // LoadFromTar unpacks the give compressed package and loads it.
 func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) (*PackageLayout, error) {
 	dirPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)

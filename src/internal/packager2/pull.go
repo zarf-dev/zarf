@@ -123,9 +123,7 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture strin
 	if shasum != "" {
 		src = fmt.Sprintf("%s@sha256:%s", src, shasum)
 	}
-	// TODO use layout.NewRemote and create layout.Pull
-	arch := config.GetArch()
-	platform := oci.PlatformForArch(arch)
+	platform := oci.PlatformForArch(architecture)
 	remote, err := zoci.NewRemote(ctx, src, oci.PlatformForArch(architecture), mods...)
 	if err != nil {
 		return false, "", err
