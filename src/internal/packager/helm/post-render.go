@@ -81,9 +81,7 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	finalManifestsOutput := bytes.NewBuffer(nil)
-
 	ctx := context.Background()
 	if err := r.editHelmResources(ctx, resources, finalManifestsOutput); err != nil {
 		return nil, err
@@ -91,7 +89,6 @@ func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	if err := r.adoptAndUpdateNamespaces(ctx); err != nil {
 		return nil, err
 	}
-
 	// Send the bytes back to helm
 	return finalManifestsOutput, nil
 }

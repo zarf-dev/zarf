@@ -250,7 +250,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	client.Timeout = timeout
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection).
-	client.Wait = zarfChart.NoWait
+	client.Wait = !zarfChart.NoWait
 
 	// We need to include CRDs or operator installations will fail spectacularly.
 	client.SkipCRDs = false

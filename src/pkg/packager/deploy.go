@@ -702,8 +702,8 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 			VariableConfig:         p.variableConfig,
 			State:                  p.state,
 			Cluster:                p.cluster,
-			Timeout:                p.cfg.DeployOpts.Timeout,
 			AirgapMode:             !p.cfg.Pkg.Metadata.YOLO,
+			Timeout:                p.cfg.DeployOpts.Timeout,
 			Retries:                p.cfg.PkgOpts.Retries,
 		}
 		chart, values, err := helm.LoadChartData(zarfChart, componentPaths.Charts, componentPaths.Values, valuesOverrides)

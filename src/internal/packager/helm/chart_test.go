@@ -16,6 +16,8 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/types"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/kubectl/pkg/scheme"
@@ -31,7 +33,9 @@ func TestChartInstall(t *testing.T) {
 		Name:      "simple-chart",
 		Version:   "1.0.0",
 		LocalPath: chartPath,
+		Namespace: "cool",
 	}
+
 	tmpdir := t.TempDir()
 	err := PackageChart(ctx, zarfChart, tmpdir, tmpdir)
 	require.NoError(t, err)
@@ -45,6 +49,10 @@ func TestChartInstall(t *testing.T) {
 		Clientset:     fake.NewClientset(),
 		DynamicClient: dynamicFake,
 	}
+	namespace := &v1.Namespace{}
+	namespace.Name = zarfChart.Namespace
+	_, err = c.Clientset.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
+	require.NoError(t, err)
 
 	state := &types.ZarfState{
 		GitServer: types.GitServerInfo{
