@@ -676,15 +676,15 @@ func (p *Packager) generateValuesOverrides(chart v1alpha1.ZarfChart, componentNa
 func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths *layout.ComponentPaths, component v1alpha1.ZarfComponent) ([]types.InstalledChart, error) {
 	installedCharts := []types.InstalledChart{}
 
-	for _, chart := range component.Charts {
+	for _, zarfChart := range component.Charts {
 		// Do not wait for the chart to be ready if data injections are present.
 		if len(component.DataInjections) > 0 {
-			chart.NoWait = true
+			zarfChart.NoWait = true
 		}
 
 		// zarf magic for the value file
-		for idx := range chart.ValuesFiles {
-			valueFilePath := helm.StandardValuesName(componentPaths.Values, chart, idx)
+		for idx := range zarfChart.ValuesFiles {
+			valueFilePath := helm.StandardValuesName(componentPaths.Values, zarfChart, idx)
 			if err := p.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
 				return nil, err
 			}
@@ -692,30 +692,30 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 
 		// Create a Helm values overrides map from set Zarf `variables` and DeployOpts library inputs
 		// Values overrides are to be applied in order of Helm Chart Defaults -> Zarf `valuesFiles` -> Zarf `variables` -> DeployOpts overrides
-		valuesOverrides, err := p.generateValuesOverrides(chart, component.Name)
+		valuesOverrides, err := p.generateValuesOverrides(zarfChart, component.Name)
 		if err != nil {
 			return nil, err
 		}
 
-		helmCfg := helm.New(
-			chart,
-			componentPaths.Charts,
-			componentPaths.Values,
-			helm.WithDeployInfo(
-				p.cfg,
-				p.variableConfig,
-				p.state,
-				p.cluster,
-				valuesOverrides,
-				p.cfg.DeployOpts.Timeout,
-				p.cfg.PkgOpts.Retries),
-		)
+		helmOpts := helm.InstallUpgradeOpts{
+			AdoptExistingResources: p.cfg.DeployOpts.AdoptExistingResources,
+			VariableConfig:         p.variableConfig,
+			State:                  p.state,
+			Cluster:                p.cluster,
+			AirgapMode:             !p.cfg.Pkg.Metadata.YOLO,
+			Timeout:                p.cfg.DeployOpts.Timeout,
+			Retries:                p.cfg.PkgOpts.Retries,
+		}
+		chart, values, err := helm.LoadChartData(zarfChart, componentPaths.Charts, componentPaths.Values, valuesOverrides)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load chart data: %w", err)
+		}
 
-		connectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart(ctx)
+		connectStrings, installedChartName, err := helm.InstallOrUpgradeChart(ctx, zarfChart, chart, values, helmOpts)
 		if err != nil {
 			return nil, err
 		}
-		installedCharts = append(installedCharts, types.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
+		installedCharts = append(installedCharts, types.InstalledChart{Namespace: zarfChart.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
 	}
 
 	for _, manifest := range component.Manifests {
@@ -740,26 +740,22 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 		}
 
 		// Create a chart and helm cfg from a given Zarf Manifest.
-		helmCfg, err := helm.NewFromZarfManifest(
-			manifest,
-			componentPaths.Manifests,
-			p.cfg.Pkg.Metadata.Name,
-			component.Name,
-			helm.WithDeployInfo(
-				p.cfg,
-				p.variableConfig,
-				p.state,
-				p.cluster,
-				nil,
-				p.cfg.DeployOpts.Timeout,
-				p.cfg.PkgOpts.Retries),
-		)
+		zarfChart, chartOverride, err := helm.ChartFromZarfManifest(manifest, componentPaths.Manifests, p.cfg.Pkg.Metadata.Name, component.Name)
 		if err != nil {
 			return nil, err
 		}
+		helmOpts := helm.InstallUpgradeOpts{
+			AdoptExistingResources: p.cfg.DeployOpts.AdoptExistingResources,
+			VariableConfig:         p.variableConfig,
+			State:                  p.state,
+			Cluster:                p.cluster,
+			AirgapMode:             !p.cfg.Pkg.Metadata.YOLO,
+			Timeout:                p.cfg.DeployOpts.Timeout,
+			Retries:                p.cfg.PkgOpts.Retries,
+		}
 
 		// Install the chart.
-		connectStrings, installedChartName, err := helmCfg.InstallOrUpgradeChart(ctx)
+		connectStrings, installedChartName, err := helm.InstallOrUpgradeChart(ctx, zarfChart, chartOverride, nil, helmOpts)
 		if err != nil {
 			return nil, err
 		}

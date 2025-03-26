@@ -340,7 +340,6 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 
 	// If any helm charts are defined, process them.
 	for _, chart := range component.Charts {
-		// TODO: Refactor helm builder
 		if chart.LocalPath != "" {
 			chart.LocalPath = filepath.Join(packagePath, chart.LocalPath)
 		}
@@ -350,8 +349,9 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 			valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
 		}
 		chart.ValuesFiles = valuesFiles
-		helmCfg := helm.New(chart, filepath.Join(compBuildPath, string(ChartsComponentDir)), filepath.Join(compBuildPath, string(ValuesComponentDir)))
-		if err := helmCfg.PackageChart(ctx, filepath.Join(compBuildPath, string(ChartsComponentDir))); err != nil {
+		chartPath := filepath.Join(compBuildPath, string(ChartsComponentDir))
+		valuesFilePath := filepath.Join(compBuildPath, string(ValuesComponentDir))
+		if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath); err != nil {
 			return err
 		}
 		chart.ValuesFiles = oldValuesFiles

@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -23,7 +24,9 @@ func Destroy(ctx context.Context, purgeAllZarfInstallations bool) {
 	defer spinner.Stop()
 	l.Info("removing Zarf-installed charts")
 
-	h := Helm{}
+	h := Helm{
+		timeout: config.ZarfDefaultTimeout,
+	}
 
 	// Initially load the actionConfig without a namespace
 	err := h.createActionConfig(ctx, "", spinner)

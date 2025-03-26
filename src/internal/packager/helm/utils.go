@@ -10,6 +10,7 @@ import (
 	"log/slog"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
@@ -23,9 +24,9 @@ import (
 )
 
 // loadChartFromTarball returns a helm chart from a tarball.
-func (h *Helm) loadChartFromTarball() (*chart.Chart, error) {
+func loadChartFromTarball(chart v1alpha1.ZarfChart, chartPath string) (*chart.Chart, error) {
 	// Get the path the temporary helm chart tarball
-	sourceFile := StandardName(h.chartPath, h.chart) + ".tgz"
+	sourceFile := StandardName(chartPath, chart) + ".tgz"
 
 	// Load the loadedChart tarball
 	loadedChart, err := loader.Load(sourceFile)
@@ -41,11 +42,11 @@ func (h *Helm) loadChartFromTarball() (*chart.Chart, error) {
 }
 
 // parseChartValues reads the context of the chart values into an interface if it exists.
-func (h *Helm) parseChartValues() (chartutil.Values, error) {
+func parseChartValues(chart v1alpha1.ZarfChart, valuesPath string, valuesOverrides map[string]any) (chartutil.Values, error) {
 	valueOpts := &values.Options{}
 
-	for idx := range h.chart.ValuesFiles {
-		path := StandardValuesName(h.valuesPath, h.chart, idx)
+	for idx := range chart.ValuesFiles {
+		path := StandardValuesName(valuesPath, chart, idx)
 		valueOpts.ValueFiles = append(valueOpts.ValueFiles, path)
 	}
 
@@ -60,7 +61,21 @@ func (h *Helm) parseChartValues() (chartutil.Values, error) {
 		return chartValues, err
 	}
 
-	return helpers.MergeMapRecursive(chartValues, h.valuesOverrides), nil
+	return helpers.MergeMapRecursive(chartValues, valuesOverrides), nil
+}
+
+func createActionConfig(ctx context.Context, namespace string) (*action.Configuration, error) {
+	actionConfig := new(action.Configuration)
+	// Set the settings for the helm SDK
+	settings := cli.New()
+	settings.SetNamespace(namespace)
+	l := logger.From(ctx)
+	helmLogger := slog.NewLogLogger(l.Handler(), slog.LevelDebug).Printf
+	err := actionConfig.Init(settings.RESTClientGetter(), namespace, "", helmLogger)
+	if err != nil {
+		return nil, fmt.Errorf("could not get Helm action configuration: %w", err)
+	}
+	return actionConfig, err
 }
 
 func (h *Helm) createActionConfig(ctx context.Context, namespace string, spinner *message.Spinner) error {
