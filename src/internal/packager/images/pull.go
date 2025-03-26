@@ -307,7 +307,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 			if err != nil {
 				return err
 			}
-			dockerImageSrc, err := oci.New(dockerImageOCILayoutPath)
+			dockerImageSrc, err := oci.NewWithContext(ctx, dockerImageOCILayoutPath)
 			if err != nil {
 				return fmt.Errorf("failed to create OCI store: %w", err)
 			}
