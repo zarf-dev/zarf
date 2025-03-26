@@ -18,13 +18,13 @@ func TestGHCRDeploy(t *testing.T) {
 	// shas for package published 2023-08-08T22:13:51Z
 	switch e2e.Arch {
 	case "arm64":
-		sha = "844dff9aa60345c67b597d5315db5e263cbda01b50643a8d0b7f5ec721f8a16f"
+		sha = "d4f656981241366a82ef3ed2e175802043a3c5615b72cd819dd94ada27708263"
 	case "amd64":
-		sha = "a44d17160cd6ce7b7b6d4687e7d3f75dad4fedba6670c79665af2e8665a7868e"
+		sha = "6032b1d1029d00932fd44e3a4ac93a5ee62f0732d47b022e821c8688fc6c3c55"
 	}
 
 	// Test with command from https://docs.zarf.dev/getting-started/install/
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", fmt.Sprintf("oci://ghcr.io/zarf-dev/packages/dos-games:1.1.0@sha256:%s", sha), "--key=https://zarf.dev/cosign.pub", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", fmt.Sprintf("oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0@sha256:%s", sha), "--key=https://zarf.dev/cosign.pub", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")
