@@ -329,7 +329,7 @@ func LoadChartData(zarfChart v1alpha1.ZarfChart, chartPath string, valuesPath st
 		return nil, nil, fmt.Errorf("unable to load chart tarball: %w", err)
 	}
 
-	chartValues, err := parseChartValues(zarfChart, chartPath, valuesOverrides)
+	chartValues, err := parseChartValues(zarfChart, valuesPath, valuesOverrides)
 	if err != nil {
 		return loadedChart, nil, fmt.Errorf("unable to parse chart values: %w", err)
 	}
