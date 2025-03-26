@@ -36,7 +36,6 @@ type Helm struct {
 
 	kubeVersion string
 
-	chartOverride   *chart.Chart
 	valuesOverrides map[string]any
 
 	settings       *cli.EnvSettings

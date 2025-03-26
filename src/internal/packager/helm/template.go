@@ -19,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/releaseutil"
 
@@ -27,18 +28,19 @@ import (
 )
 
 // TemplateChart generates a helm template from a given chart.
-func TemplateChart(ctx context.Context, chart v1alpha1.ZarfChart, kubeVersion string, chartPath string, variableConfig *variables.VariableConfig) (manifest string, chartValues chartutil.Values, err error) {
+func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chart.Chart, values chartutil.Values, chartPath string,
+	kubeVersion string, variableConfig *variables.VariableConfig) (string, error) {
 	if variableConfig == nil {
 		variableConfig = template.GetZarfVariableConfig(ctx)
 	}
 	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Templating helm chart %s", chart.Name)
+	spinner := message.NewProgressSpinner("Templating helm chart %s", zarfChart.Name)
 	defer spinner.Stop()
-	l.Debug("templating helm chart", "name", chart.Name)
+	l.Debug("templating helm chart", "name", zarfChart.Name)
 
-	actionCfg, err := createActionConfig(ctx, chart.Namespace)
+	actionCfg, err := createActionConfig(ctx, zarfChart.Namespace)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
 	// Bind the helm action.
@@ -54,38 +56,32 @@ func TemplateChart(ctx context.Context, chart v1alpha1.ZarfChart, kubeVersion st
 	if kubeVersion != "" {
 		parsedKubeVersion, err := chartutil.ParseKubeVersion(kubeVersion)
 		if err != nil {
-			return "", nil, fmt.Errorf("invalid kube version %s: %w", kubeVersion, err)
+			return "", fmt.Errorf("invalid kube version %s: %w", kubeVersion, err)
 		}
 		client.KubeVersion = parsedKubeVersion
 	}
-	client.ReleaseName = chart.ReleaseName
+	client.ReleaseName = zarfChart.ReleaseName
 
 	// If no release name is specified, use the chart name.
 	if client.ReleaseName == "" {
-		client.ReleaseName = chart.Name
+		client.ReleaseName = zarfChart.Name
 	}
 
 	// Namespace must be specified.
-	client.Namespace = chart.Namespace
+	client.Namespace = zarfChart.Namespace
 
-	//FIXME
-	loadedChart, chartValues, err := loadChartData(chart, chartPath, "", nil, nil)
+	client.PostRenderer, err = newTemplateRenderer(actionCfg, variableConfig)
 	if err != nil {
-		return "", nil, fmt.Errorf("unable to load chart data: %w", err)
-	}
-
-	client.PostRenderer, err = newTemplateRenderer(chartPath, actionCfg, variableConfig)
-	if err != nil {
-		return "", nil, fmt.Errorf("unable to create helm renderer: %w", err)
+		return "", fmt.Errorf("unable to create helm renderer: %w", err)
 	}
 
 	// Perform the loadedChart installation.
-	templatedChart, err := client.RunWithContext(ctx, loadedChart, chartValues)
+	templatedChart, err := client.RunWithContext(ctx, chart, values)
 	if err != nil {
-		return "", nil, fmt.Errorf("error generating helm chart template: %w", err)
+		return "", fmt.Errorf("error generating helm chart template: %w", err)
 	}
 
-	manifest = templatedChart.Manifest
+	manifest := templatedChart.Manifest
 
 	for _, hook := range templatedChart.Hooks {
 		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest)
@@ -93,18 +89,16 @@ func TemplateChart(ctx context.Context, chart v1alpha1.ZarfChart, kubeVersion st
 
 	spinner.Success()
 
-	return manifest, chartValues, nil
+	return manifest, nil
 }
 
 type templateRenderer struct {
-	chartPath      string
 	actionConfig   *action.Configuration
 	variableConfig *variables.VariableConfig
 }
 
-func newTemplateRenderer(chartPath string, actionConfig *action.Configuration, vc *variables.VariableConfig) (*templateRenderer, error) {
+func newTemplateRenderer(actionConfig *action.Configuration, vc *variables.VariableConfig) (*templateRenderer, error) {
 	rend := &templateRenderer{
-		chartPath:      chartPath,
 		actionConfig:   actionConfig,
 		variableConfig: vc,
 	}
@@ -113,7 +107,7 @@ func newTemplateRenderer(chartPath string, actionConfig *action.Configuration, v
 
 func (tr *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
-	resources, err := getTemplatedManifests(tr.chartPath, renderedManifests, tr.variableConfig, tr.actionConfig)
+	resources, err := getTemplatedManifests(renderedManifests, tr.variableConfig, tr.actionConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -127,8 +121,8 @@ func (tr *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer,
 	return finalManifestsOutput, nil
 }
 
-func getTemplatedManifests(chartPath string, renderedManifests *bytes.Buffer, variableConfig *variables.VariableConfig, actionConfig *action.Configuration) ([]releaseutil.Manifest, error) {
-	tempDir, err := utils.MakeTempDir(chartPath)
+func getTemplatedManifests(renderedManifests *bytes.Buffer, variableConfig *variables.VariableConfig, actionConfig *action.Configuration) ([]releaseutil.Manifest, error) {
+	tempDir, err := utils.MakeTempDir("")
 	if err != nil {
 		return nil, fmt.Errorf("unable to create tmpdir:  %w", err)
 	}

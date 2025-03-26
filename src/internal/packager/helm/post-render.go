@@ -31,8 +31,7 @@ import (
 )
 
 type renderer struct {
-	chartPath string
-	chart     v1alpha1.ZarfChart
+	chart v1alpha1.ZarfChart
 
 	adoptExistingResources bool
 	cluster                *cluster.Cluster
@@ -45,7 +44,7 @@ type renderer struct {
 	namespaces     map[string]*corev1.Namespace
 }
 
-func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, chartPath string, adoptExistingResources bool, c *cluster.Cluster, airgap bool, state *types.ZarfState,
+func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, airgap bool, state *types.ZarfState,
 	actionConfig *action.Configuration, variableConfig *variables.VariableConfig) (*renderer, error) {
 	if c == nil {
 		return nil, fmt.Errorf("cluster required to run post renderer")
@@ -53,7 +52,6 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, chartPath string
 	updateNamespaceSecrets := !airgap && state.Distro == "YOLO"
 	rend := &renderer{
 		chart:                  chart,
-		chartPath:              chartPath,
 		adoptExistingResources: adoptExistingResources,
 		cluster:                c,
 		updateNamespaceSecrets: updateNamespaceSecrets,
@@ -80,7 +78,7 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, chartPath string
 
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
-	resources, err := getTemplatedManifests(r.chartPath, renderedManifests, r.variableConfig, r.actionConfig)
+	resources, err := getTemplatedManifests(renderedManifests, r.variableConfig, r.actionConfig)
 	if err != nil {
 		return nil, err
 	}
