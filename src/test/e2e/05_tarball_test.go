@@ -83,7 +83,7 @@ func TestReproducibleTarballs(t *testing.T) {
 	var (
 		createPath = filepath.Join("examples", "dos-games")
 		tmp        = t.TempDir()
-		tb         = filepath.Join(tmp, fmt.Sprintf("zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch))
+		tb         = filepath.Join(tmp, fmt.Sprintf("zarf-package-dos-games-%s-1.2.0.tar.zst", e2e.Arch))
 		unpack1    = filepath.Join(tmp, "unpack1")
 		unpack2    = filepath.Join(tmp, "unpack2")
 	)

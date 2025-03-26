@@ -24,7 +24,7 @@ func TestDosGames(t *testing.T) {
 
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "-o", tmpdir, "--skip-sbom")
 	require.NoError(t, err, stdOut, stdErr)
-	packageName := fmt.Sprintf("zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch)
+	packageName := fmt.Sprintf("zarf-package-dos-games-%s-1.2.0.tar.zst", e2e.Arch)
 	path := filepath.Join(tmpdir, packageName)
 
 	// Deploy the game
