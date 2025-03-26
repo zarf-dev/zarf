@@ -12,12 +12,8 @@ import (
 	"syscall"
 
 	"github.com/zarf-dev/zarf/src/cmd"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 )
-
-//go:embed cosign.pub
-var cosignPublicKey string
 
 //go:embed zarf.schema.json
 var zarfSchema embed.FS
@@ -40,7 +36,6 @@ func main() {
 		}
 	}()
 
-	config.CosignPublicKey = cosignPublicKey
 	lint.ZarfSchema = zarfSchema
 	cmd.Execute(ctx)
 }
