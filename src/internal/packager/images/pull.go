@@ -185,7 +185,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 
 	dst, err := oci.NewWithContext(ctx, cfg.DestinationDirectory)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create oci formatted directory: %w", err)
+		return nil, fmt.Errorf("failed to create oci layout: %w", err)
 	}
 
 	if len(dockerFallBackImages) > 0 {
