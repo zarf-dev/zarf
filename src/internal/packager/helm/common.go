@@ -17,7 +17,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
@@ -76,11 +75,8 @@ func NewClusterOnly(cfg *types.PackagerConfig, variableConfig *variables.Variabl
 	}
 }
 
-// NewFromZarfManifest generates a helm chart and config from a given Zarf manifest.
-func NewFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageName, componentName string, mods ...Modifier) (h *Helm, err error) {
-	spinner := message.NewProgressSpinner("Starting helm chart generation %s", manifest.Name)
-	defer spinner.Stop()
-
+// ChartFromZarfManifest generates a helm chart and config from a given Zarf manifest.
+func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageName, componentName string) (v1alpha1.ZarfChart, *chart.Chart, error) {
 	// Generate a new chart.
 	tmpChart := new(chart.Chart)
 	tmpChart.Metadata = new(chart.Metadata)
@@ -98,11 +94,10 @@ func NewFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageNa
 
 	// Add the manifest files so helm does its thing.
 	for _, file := range manifest.Files {
-		spinner.Updatef("Processing %s", file)
 		manifest := path.Join(manifestPath, file)
 		data, err := os.ReadFile(manifest)
 		if err != nil {
-			return h, fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
+			return v1alpha1.ZarfChart{}, nil, fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
 		}
 
 		// Escape all chars and then wrap in {{ }}.
@@ -113,26 +108,16 @@ func NewFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageNa
 	}
 
 	// Generate the struct to pass to InstallOrUpgradeChart().
-	h = &Helm{
-		chart: v1alpha1.ZarfChart{
-			Name: tmpChart.Metadata.Name,
-			// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior.
-			ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
-			Version:     tmpChart.Metadata.Version,
-			Namespace:   manifest.Namespace,
-			NoWait:      manifest.NoWait,
-		},
-		chartOverride: tmpChart,
-		timeout:       config.ZarfDefaultTimeout,
+	chart := v1alpha1.ZarfChart{
+		Name: tmpChart.Metadata.Name,
+		// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior.
+		ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
+		Version:     tmpChart.Metadata.Version,
+		Namespace:   manifest.Namespace,
+		NoWait:      manifest.NoWait,
 	}
 
-	for _, mod := range mods {
-		mod(h)
-	}
-
-	spinner.Success()
-
-	return h, nil
+	return chart, tmpChart, nil
 }
 
 // WithDeployInfo adds the necessary information to deploy a given chart

@@ -8,17 +8,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"slices"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
@@ -35,93 +31,48 @@ import (
 )
 
 type renderer struct {
-	// *Helm
-	chartPath              string
+	chartPath string
+	chart     v1alpha1.ZarfChart
+
 	adoptExistingResources bool
-	chart                  v1alpha1.ZarfChart
 	cluster                *cluster.Cluster
-	airgap                 bool
+	updateNamespaceSecrets bool
 	state                  *types.ZarfState
 	actionConfig           *action.Configuration
 	variableConfig         *variables.VariableConfig
-	connectStrings         types.ConnectStrings
-	namespaces             map[string]*corev1.Namespace
+
+	connectStrings types.ConnectStrings
+	namespaces     map[string]*corev1.Namespace
 }
 
-type templateRenderer struct {
-	chartPath      string
-	actionConfig   *action.Configuration
-	variableConfig *variables.VariableConfig
-}
-
-func newTemplateRenderer(chartPath string, actionConfig *action.Configuration, vc *variables.VariableConfig) (*templateRenderer, error) {
-	rend := &templateRenderer{
-		chartPath: chartPath,
-		actionConfig: actionConfig,
-		variableConfig: vc,
+func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, chartPath string, adoptExistingResources bool, c *cluster.Cluster, airgap bool, state *types.ZarfState,
+	actionConfig *action.Configuration, variableConfig *variables.VariableConfig) (*renderer, error) {
+	if c == nil {
+		return nil, fmt.Errorf("cluster required to run post renderer")
 	}
-	return rend, nil
-}
-
-func (r *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
-	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
-	tempDir, err := utils.MakeTempDir(r.chartPath)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create tmpdir:  %w", err)
-	}
-	path := filepath.Join(tempDir, "chart.yaml")
-
-	if err := os.WriteFile(path, renderedManifests.Bytes(), helpers.ReadWriteUser); err != nil {
-		return nil, fmt.Errorf("unable to write the post-render file for the helm chart")
-	}
-
-	// Run the template engine against the chart output
-	if err := r.variableConfig.ReplaceTextTemplate(path); err != nil {
-		return nil, fmt.Errorf("error templating the helm chart: %w", err)
-	}
-
-	// Read back the templated file contents
-	buff, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading temporary post-rendered helm chart: %w", err)
-	}
-
-	// Use helm to re-split the manifest byte (same call used by helm to pass this data to postRender)
-	_, resources, err := releaseutil.SortManifests(map[string]string{path: string(buff)},
-		r.actionConfig.Capabilities.APIVersions,
-		releaseutil.InstallOrder,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error re-rendering helm output: %w", err)
-	}
-
-	finalManifestsOutput := bytes.NewBuffer(nil)
-
-	for _, resource := range resources {
-		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
-	}
-
-	return finalManifestsOutput, nil
-}
-
-func (h *Helm) newRenderer(ctx context.Context) (*renderer, error) {
+	updateNamespaceSecrets := !airgap && state.Distro == "YOLO"
 	rend := &renderer{
-		connectStrings: types.ConnectStrings{},
-		namespaces:     map[string]*corev1.Namespace{},
-	}
-	if h.cluster == nil {
-		return rend, nil
+		chart:                  chart,
+		chartPath:              chartPath,
+		adoptExistingResources: adoptExistingResources,
+		cluster:                c,
+		updateNamespaceSecrets: updateNamespaceSecrets,
+		state:                  state,
+		actionConfig:           actionConfig,
+		variableConfig:         variableConfig,
+		connectStrings:         types.ConnectStrings{},
+		namespaces:             map[string]*corev1.Namespace{},
 	}
 
-	namespace, err := h.cluster.Clientset.CoreV1().Namespaces().Get(ctx, h.chart.Namespace, metav1.GetOptions{})
+	namespace, err := rend.cluster.Clientset.CoreV1().Namespaces().Get(ctx, rend.chart.Namespace, metav1.GetOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
-		return nil, fmt.Errorf("unable to check for existing namespace %q in cluster: %w", h.chart.Namespace, err)
+		return nil, fmt.Errorf("unable to check for existing namespace %q in cluster: %w", rend.chart.Namespace, err)
 	}
 	if kerrors.IsNotFound(err) {
-		rend.namespaces[h.chart.Namespace] = cluster.NewZarfManagedNamespace(h.chart.Namespace)
+		rend.namespaces[rend.chart.Namespace] = cluster.NewZarfManagedNamespace(rend.chart.Namespace)
 	} else if rend.adoptExistingResources {
 		namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
-		rend.namespaces[h.chart.Namespace] = namespace
+		rend.namespaces[rend.chart.Namespace] = namespace
 	}
 
 	return rend, nil
@@ -129,53 +80,19 @@ func (h *Helm) newRenderer(ctx context.Context) (*renderer, error) {
 
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
-	tempDir, err := utils.MakeTempDir(r.chartPath)
+	resources, err := getTemplatedManifests(r.chartPath, renderedManifests, r.variableConfig, r.actionConfig)
 	if err != nil {
-		return nil, fmt.Errorf("unable to create tmpdir:  %w", err)
-	}
-	path := filepath.Join(tempDir, "chart.yaml")
-
-	if err := os.WriteFile(path, renderedManifests.Bytes(), helpers.ReadWriteUser); err != nil {
-		return nil, fmt.Errorf("unable to write the post-render file for the helm chart")
-	}
-
-	// Run the template engine against the chart output
-	if err := r.variableConfig.ReplaceTextTemplate(path); err != nil {
-		return nil, fmt.Errorf("error templating the helm chart: %w", err)
-	}
-
-	// Read back the templated file contents
-	buff, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading temporary post-rendered helm chart: %w", err)
-	}
-
-	// Use helm to re-split the manifest byte (same call used by helm to pass this data to postRender)
-	_, resources, err := releaseutil.SortManifests(map[string]string{path: string(buff)},
-		r.actionConfig.Capabilities.APIVersions,
-		releaseutil.InstallOrder,
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("error re-rendering helm output: %w", err)
+		return nil, err
 	}
 
 	finalManifestsOutput := bytes.NewBuffer(nil)
 
-	if r.cluster != nil {
-		ctx := context.Background()
-
-		if err := r.editHelmResources(ctx, resources, finalManifestsOutput); err != nil {
-			return nil, err
-		}
-
-		if err := r.adoptAndUpdateNamespaces(ctx); err != nil {
-			return nil, err
-		}
-	} else {
-		for _, resource := range resources {
-			fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
-		}
+	ctx := context.Background()
+	if err := r.editHelmResources(ctx, resources, finalManifestsOutput); err != nil {
+		return nil, err
+	}
+	if err := r.adoptAndUpdateNamespaces(ctx); err != nil {
+		return nil, err
 	}
 
 	// Send the bytes back to helm
@@ -220,7 +137,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		}
 
 		// If the package is marked as YOLO and the state is empty, skip the secret creation for this namespace
-		if !r.airgap && r.state.Distro == "YOLO" {
+		if !r.updateNamespaceSecrets {
 			continue
 		}
 

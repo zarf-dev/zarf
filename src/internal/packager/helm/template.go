@@ -5,16 +5,22 @@
 package helm
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/releaseutil"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -62,7 +68,8 @@ func TemplateChart(ctx context.Context, chart v1alpha1.ZarfChart, kubeVersion st
 	// Namespace must be specified.
 	client.Namespace = chart.Namespace
 
-	loadedChart, chartValues, err := loadChartData(chart, chartPath, nil, nil)
+	//FIXME
+	loadedChart, chartValues, err := loadChartData(chart, chartPath, "", nil, nil)
 	if err != nil {
 		return "", nil, fmt.Errorf("unable to load chart data: %w", err)
 	}
@@ -87,4 +94,68 @@ func TemplateChart(ctx context.Context, chart v1alpha1.ZarfChart, kubeVersion st
 	spinner.Success()
 
 	return manifest, chartValues, nil
+}
+
+type templateRenderer struct {
+	chartPath      string
+	actionConfig   *action.Configuration
+	variableConfig *variables.VariableConfig
+}
+
+func newTemplateRenderer(chartPath string, actionConfig *action.Configuration, vc *variables.VariableConfig) (*templateRenderer, error) {
+	rend := &templateRenderer{
+		chartPath:      chartPath,
+		actionConfig:   actionConfig,
+		variableConfig: vc,
+	}
+	return rend, nil
+}
+
+func (tr *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
+	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
+	resources, err := getTemplatedManifests(tr.chartPath, renderedManifests, tr.variableConfig, tr.actionConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	finalManifestsOutput := bytes.NewBuffer(nil)
+
+	for _, resource := range resources {
+		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
+	}
+
+	return finalManifestsOutput, nil
+}
+
+func getTemplatedManifests(chartPath string, renderedManifests *bytes.Buffer, variableConfig *variables.VariableConfig, actionConfig *action.Configuration) ([]releaseutil.Manifest, error) {
+	tempDir, err := utils.MakeTempDir(chartPath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create tmpdir:  %w", err)
+	}
+	path := filepath.Join(tempDir, "chart.yaml")
+
+	if err := os.WriteFile(path, renderedManifests.Bytes(), helpers.ReadWriteUser); err != nil {
+		return nil, fmt.Errorf("unable to write the post-render file for the helm chart")
+	}
+
+	// Run the template engine against the chart output
+	if err := variableConfig.ReplaceTextTemplate(path); err != nil {
+		return nil, fmt.Errorf("error templating the helm chart: %w", err)
+	}
+
+	// Read back the templated file contents
+	buff, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("error reading temporary post-rendered helm chart: %w", err)
+	}
+
+	// Use helm to re-split the manifest byte (same call used by helm to pass this data to postRender)
+	_, resources, err := releaseutil.SortManifests(map[string]string{path: string(buff)},
+		actionConfig.Capabilities.APIVersions,
+		releaseutil.InstallOrder,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error re-rendering helm output: %w", err)
+	}
+	return resources, nil
 }
