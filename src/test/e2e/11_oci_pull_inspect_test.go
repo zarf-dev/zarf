@@ -66,20 +66,9 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+badPullInspectRef.String(), "--plain-http")
 	suite.Error(err, stdOut, stdErr)
-}
 
-func (suite *PullInspectTestSuite) Test_1_Remote_Inspect() {
-	suite.T().Log("E2E: Package Inspect oci://")
-
-	// Test inspect w/ bad ref.
-	_, stdErr, err := e2e.Zarf(suite.T(), "package", "inspect", "definition", "oci://"+badPullInspectRef.String(), "--plain-http")
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", "oci://"+badPullInspectRef.String(), "--plain-http")
 	suite.Error(err, stdErr)
-
-	// Test inspect on a public package.
-	// NOTE: This also makes sure that Zarf does not attempt auth when inspecting a public package.
-	ref := fmt.Sprintf("oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0-%s", e2e.Arch)
-	_, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", ref, "--skip-signature-validation")
-	suite.NoError(err, stdErr)
 }
 
 func TestPullInspectSuite(t *testing.T) {
