@@ -94,10 +94,15 @@ func NewCluster() (*Cluster, error) {
 	if err != nil {
 		return nil, errors.Join(clusterErr, err)
 	}
+	dynamicClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
 	c := &Cluster{
-		Clientset:  clientset,
-		RestConfig: config,
-		Watcher:    watcher,
+		Clientset:     clientset,
+		RestConfig:    config,
+		DynamicClient: dynamicClient,
+		Watcher:       watcher,
 	}
 	// Dogsled the version output. We just want to ensure no errors were returned to validate cluster connection.
 	_, err = c.Clientset.Discovery().ServerVersion()
