@@ -195,7 +195,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull images from docker: %w", err)
 		}
-		maps.Copy(daemonImagesWithManifests, imagesWithManifests)
+		maps.Copy(imagesWithManifests, daemonImagesWithManifests)
 	}
 
 	err = orasSave(ctx, imagesInfo, cfg, dst, client)
