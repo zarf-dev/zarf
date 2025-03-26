@@ -7,8 +7,9 @@ package sbom
 import (
 	"context"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"path/filepath"
+
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/zarf-dev/zarf/src/pkg/message"

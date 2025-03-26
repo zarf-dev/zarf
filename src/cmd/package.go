@@ -745,7 +745,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	pkgConfig.PkgOpts.PackageSource = args[0]
 
 	if !helpers.IsOCIURL(args[1]) {
-		return errors.New("Registry must be prefixed with 'oci://'")
+		return errors.New("registry must be prefixed with 'oci://'")
 	}
 	parts := strings.Split(strings.TrimPrefix(args[1], helpers.OCIURLPrefix), "/")
 	ref := registry.Reference{

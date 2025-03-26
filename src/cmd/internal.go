@@ -182,7 +182,7 @@ func (o *internalGenCliDocsOptions) run(_ *cobra.Command, _ []string) error {
 		name = name[:len(name)-3]
 
 		// replace _ with space
-		title := strings.Replace(name, "_", " ", -1)
+		title := strings.ReplaceAll(name, "_", " ")
 
 		return fmt.Sprintf(`---
 title: %s
