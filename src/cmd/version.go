@@ -80,7 +80,7 @@ func (o *versionOptions) run(_ *cobra.Command, _ []string) error {
 	buildMap["goVersion"] = runtime.Version()
 	ver, err := semver.NewVersion(config.CLIVersion)
 	if err != nil && !errors.Is(err, semver.ErrInvalidSemVer) {
-		return fmt.Errorf("Could not parse CLI version %s: %w", config.CLIVersion, err)
+		return fmt.Errorf("could not parse CLI version %s: %w", config.CLIVersion, err)
 	}
 	if ver != nil {
 		buildMap["major"] = ver.Major()

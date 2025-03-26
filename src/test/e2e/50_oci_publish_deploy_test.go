@@ -37,7 +37,7 @@ func (suite *PublishDeploySuiteTestSuite) SetupSuite() {
 
 func (suite *PublishDeploySuiteTestSuite) TearDownSuite() {
 	local := fmt.Sprintf("zarf-package-helm-charts-%s-0.0.1.tar.zst", e2e.Arch)
-	e2e.CleanFiles(suite.Suite.T(), local)
+	e2e.CleanFiles(suite.T(), local)
 }
 
 func (suite *PublishDeploySuiteTestSuite) Test_0_Publish() {
