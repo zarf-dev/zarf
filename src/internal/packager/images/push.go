@@ -49,21 +49,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			Password: cfg.RegInfo.PushPassword,
 		}),
 	}
-	idx, err := getIndexFromOCILayout(cfg.SourceDirectory)
-	if err != nil {
-		return err
-	}
-	// Crane sets ocispec.AnnotationBaseImageName instead of ocispec.AnnotationRefName
-	// which ORAS uses to find images. We do this to be backwards compatible with packages built with Crane
-	var correctedManifests []ocispec.Descriptor
-	for _, manifest := range idx.Manifests {
-		if manifest.Annotations[ocispec.AnnotationRefName] == "" {
-			manifest.Annotations[ocispec.AnnotationRefName] = manifest.Annotations[ocispec.AnnotationBaseImageName]
-		}
-		correctedManifests = append(correctedManifests, manifest)
-	}
-	idx.Manifests = correctedManifests
-	err = saveIndexToOCILayout(cfg.SourceDirectory, idx)
+	err := addRefNameAnnotation(cfg.SourceDirectory)
 	if err != nil {
 		return err
 	}
@@ -121,6 +107,28 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		}
 	}
 
+	return nil
+}
+
+func addRefNameAnnotation(ociLayoutDirectory string) error {
+	idx, err := getIndexFromOCILayout(ociLayoutDirectory)
+	if err != nil {
+		return err
+	}
+	// Crane sets ocispec.AnnotationBaseImageName instead of ocispec.AnnotationRefName
+	// which ORAS uses to find images. We do this to be backwards compatible with packages built with Crane
+	var correctedManifests []ocispec.Descriptor
+	for _, manifest := range idx.Manifests {
+		if manifest.Annotations[ocispec.AnnotationRefName] == "" {
+			manifest.Annotations[ocispec.AnnotationRefName] = manifest.Annotations[ocispec.AnnotationBaseImageName]
+		}
+		correctedManifests = append(correctedManifests, manifest)
+	}
+	idx.Manifests = correctedManifests
+	err = saveIndexToOCILayout(ociLayoutDirectory, idx)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
