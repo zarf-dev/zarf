@@ -555,16 +555,14 @@ func (p *Packager) populatePackageVariableConfig() error {
 
 // Push all of the components images to the configured container registry.
 func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []string, noImgChecksum bool) error {
-	var combinedImageList []transform.Image
+	var imageList []transform.Image
 	for _, src := range componentImages {
 		ref, err := transform.ParseImageRef(src)
 		if err != nil {
 			return fmt.Errorf("failed to create ref for image %s: %w", src, err)
 		}
-		combinedImageList = append(combinedImageList, ref)
+		imageList = append(imageList, ref)
 	}
-
-	imageList := helpers.Unique(combinedImageList)
 
 	pushCfg := images.PushConfig{
 		SourceDirectory: p.layout.Images.Base,

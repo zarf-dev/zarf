@@ -176,7 +176,6 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 		}
 	}
 
-	imageList = helpers.Unique(imageList)
 	rs := rand.NewSource(time.Now().UnixNano())
 	rnd := rand.New(rs)
 	rnd.Shuffle(len(imageList), func(i, j int) { imageList[i], imageList[j] = imageList[j], imageList[i] })

@@ -54,6 +54,7 @@ type imageDaemonPullInfo struct {
 
 // Pull pulls all images from the given config.
 func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Manifest, error) {
+	cfg.ImageList = helpers.Unique(cfg.ImageList)
 	l := logger.From(ctx)
 	pullStart := time.Now()
 

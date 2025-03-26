@@ -15,6 +15,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -24,6 +25,7 @@ import (
 
 // Push pushes images to a registry.
 func Push(ctx context.Context, cfg PushConfig) error {
+	cfg.ImageList = helpers.Unique(cfg.ImageList)
 	l := logger.From(ctx)
 	registryURL := cfg.RegInfo.Address
 	var tunnel *cluster.Tunnel
