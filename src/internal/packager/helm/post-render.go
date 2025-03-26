@@ -34,7 +34,7 @@ type renderer struct {
 
 	adoptExistingResources bool
 	cluster                *cluster.Cluster
-	updateNamespaceSecrets bool
+	skipSecretUpdates      bool
 	state                  *types.ZarfState
 	actionConfig           *action.Configuration
 	variableConfig         *variables.VariableConfig
@@ -43,17 +43,17 @@ type renderer struct {
 	namespaces     map[string]*corev1.Namespace
 }
 
-func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, airgap bool, state *types.ZarfState,
+func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, airgapMode bool, state *types.ZarfState,
 	actionConfig *action.Configuration, variableConfig *variables.VariableConfig) (*renderer, error) {
 	if c == nil {
 		return nil, fmt.Errorf("cluster required to run post renderer")
 	}
-	updateNamespaceSecrets := !airgap && state.Distro == "YOLO"
+	skipSecretUpdates := !airgapMode && state.Distro == "YOLO"
 	rend := &renderer{
 		chart:                  chart,
 		adoptExistingResources: adoptExistingResources,
 		cluster:                c,
-		updateNamespaceSecrets: updateNamespaceSecrets,
+		skipSecretUpdates:      skipSecretUpdates,
 		state:                  state,
 		actionConfig:           actionConfig,
 		variableConfig:         variableConfig,
@@ -134,7 +134,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		}
 
 		// If the package is marked as YOLO and the state is empty, skip the secret creation for this namespace
-		if !r.updateNamespaceSecrets {
+		if r.skipSecretUpdates {
 			continue
 		}
 
