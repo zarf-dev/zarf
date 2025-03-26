@@ -72,12 +72,13 @@ func TestCheckForIndex(t *testing.T) {
 			var idx ocispec.Index
 			err = json.Unmarshal(b, &idx)
 			require.NoError(t, err)
-			tmp := t.TempDir()
+			cacheDir := t.TempDir()
+			dstDir := t.TempDir()
 			cfg := PullConfig{
 				Arch:                 tc.arch,
-				DestinationDirectory: tmp,
+				DestinationDirectory: dstDir,
 				ImageList:            []transform.Image{refInfo},
-				CacheDirectory:       tmp,
+				CacheDirectory:       cacheDir,
 			}
 			_, err = Pull(ctx, cfg)
 			if tc.expectedErr != "" {
