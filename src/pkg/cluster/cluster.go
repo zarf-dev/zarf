@@ -36,9 +36,10 @@ const (
 
 // Cluster Zarf specific cluster management functions.
 type Cluster struct {
-	Clientset  kubernetes.Interface
-	RestConfig *rest.Config
-	Watcher    watcher.StatusWatcher
+	Clientset     kubernetes.Interface
+	DynamicClient dynamic.Interface
+	RestConfig    *rest.Config
+	Watcher       watcher.StatusWatcher
 }
 
 // NewClusterWithWait creates a new Cluster instance and waits for the given timeout for the cluster to be ready.

@@ -181,7 +181,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			if err != nil {
 				return nil, fmt.Errorf("failed to load chart data: %w", err)
 			}
-			chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, p.cfg.FindImagesOpts.KubeVersionOverride, componentPaths.Charts, p.variableConfig)
+			chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, p.cfg.FindImagesOpts.KubeVersionOverride, p.variableConfig)
 			if err != nil {
 				return nil, fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
 			}

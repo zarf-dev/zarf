@@ -32,7 +32,7 @@ func TestChartTemplate(t *testing.T) {
 	vc.SetVariable("port", "8080", false, false, v1alpha1.RawVariableType)
 	chart, values, err := LoadChartData(zarfChart, tmpdir, tmpdir, nil)
 	require.NoError(t, err)
-	manifest, err := TemplateChart(ctx, zarfChart, chart, values, chartPath, kubeVersion, vc)
+	manifest, err := TemplateChart(ctx, zarfChart, chart, values, kubeVersion, vc)
 	require.NoError(t, err)
 	b, err := os.ReadFile(filepath.Join("testdata", "template", "expected", "manifest.yaml"))
 	require.NoError(t, err)
