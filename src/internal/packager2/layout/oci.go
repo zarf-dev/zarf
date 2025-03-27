@@ -57,7 +57,9 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 
 // Push pushes the given package layout to the remote registry.
 func (r *Remote) Push(ctx context.Context, pkgLayout *PackageLayout, concurrency int) (err error) {
-	logger.From(ctx).Info("pushing package to registry", "destination", r.orasRemote.Repo().Reference.String())
+	logger.From(ctx).Info("pushing package to registry",
+		"destination", r.orasRemote.Repo().Reference.String(),
+		"architecture", pkgLayout.Pkg.Metadata.Architecture)
 
 	src, err := file.New("")
 	if err != nil {
