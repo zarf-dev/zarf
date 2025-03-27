@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/mholt/archiver/v3"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -33,6 +34,7 @@ type LoadOptions struct {
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
+	Inspect                 bool
 }
 
 // LoadPackage optionally fetches and loads the package from the given source.
@@ -195,4 +197,49 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 	//nolint: errcheck // ignore
 	defer p.Cleanup()
 	return p.Pkg, nil
+}
+
+// GetSBOMFromLocalOrRemote fetches the SBOM from the given source and extracts it to the destination directory.
+func GetSBOMFromLocalOrRemote(ctx context.Context, src string, dst string, skipSignatureValidation bool, publicKeyPath string) (string, error) {
+	srcType, err := identifySource(src)
+	if err != nil {
+		return "", err
+	}
+
+	// we need a temporary directory to store the tarball
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(tmpDir)
+
+	if srcType == "oci" {
+		pkgName, err := FetchSBOM(ctx, tmpDir, FetchOptions{
+			Source:                  src,
+			Architecture:            config.GetArch(),
+			PublicKeyPath:           publicKeyPath,
+			SkipSignatureValidation: skipSignatureValidation,
+		})
+		if err != nil {
+			return "", err
+		}
+		path := filepath.Join(dst, pkgName)
+		err = archiver.Extract(filepath.Join(tmpDir, "sboms.tar"), "", path)
+		if err != nil {
+			return "", err
+		}
+		return path, nil
+	}
+	loadOpt := LoadOptions{
+		Source:                  src,
+		SkipSignatureValidation: skipSignatureValidation,
+		Architecture:            config.GetArch(),
+		Filter:                  filters.Empty(),
+		PublicKeyPath:           publicKeyPath,
+	}
+	layout, err := LoadPackage(ctx, loadOpt)
+	if err != nil {
+		return "", err
+	}
+	return layout.GetSBOM(dst)
 }
