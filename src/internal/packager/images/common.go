@@ -98,12 +98,8 @@ func buildScheme(plainHTTP bool) string {
 	return "https"
 }
 
-func buildRegistryBaseURL(plainHTTP bool, registryURL string) string {
-	return fmt.Sprintf("%s://%s/v2", buildScheme(plainHTTP), registryURL)
-}
-
 func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) error {
-	url := buildRegistryBaseURL(plainHTTP, registryURL)
+	url := fmt.Sprintf("%s://%s/v2", buildScheme(plainHTTP), registryURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
@@ -117,24 +113,28 @@ func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.
 	if resp.StatusCode == http.StatusOK {
 		return nil
 	}
-	return fmt.Errorf("could not successfully authenticate to registry %s over %s: %w", registryURL, buildScheme(plainHTTP), err)
+	return fmt.Errorf("could not authenticate to registry %s over %s: %w", registryURL, buildScheme(plainHTTP), err)
 }
 
 // This is inspired by the Crane functionality to determine the schema to be used - https://github.com/google/go-containerregistry/blob/main/pkg/v1/remote/transport/ping.go
 // Zarf relies heavily on this logic, as the internal registry communicates over HTTP
 func shouldUsePlainHTTP(ctx context.Context, plainHTTPAllowed bool, registryURL string, client *auth.Client) (bool, error) {
-	// Start out by checking if the https connection works
+	// If the https connection works use https
 	err := Ping(ctx, false, registryURL, client)
-	if err != nil && plainHTTPAllowed {
-		logger.From(ctx).Debug("failing back to plainHTTP", "registry_url", registryURL)
-		// If regular request failed  and plainHTTP is allowed check if that will work
-		err2 := Ping(ctx, true, registryURL, client)
-		if err2 != nil {
-			return false, errors.Join(err, err2)
-		}
-		return true, nil
+	if err == nil {
+		return false, nil
 	}
-	return false, nil
+	if !plainHTTPAllowed {
+		return false, fmt.Errorf("failed to connect to https server. Use `--plain-http` to connect over http: %w", err)
+	}
+	logger.From(ctx).Debug("failing back to plainHTTP connection", "registry_url", registryURL)
+	// If https regular request failed and plainHTTP is allowed check again over plainHTTP
+	err2 := Ping(ctx, true, registryURL, client)
+	if err2 != nil {
+		return false, errors.Join(err, err2)
+	}
+	return true, nil
+
 }
 
 func isManifest(mediaType string) bool {
