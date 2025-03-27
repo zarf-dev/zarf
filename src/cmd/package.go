@@ -125,7 +125,7 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 	pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
 
-	var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
+	isCleanPathRegex := regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 	if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
 		// TODO(mkcp): Remove message on logger release
 		message.Warnf(lang.CmdPackageCreateCleanPathErr, config.ZarfDefaultCachePath)
@@ -601,6 +601,7 @@ func (o *packageListOptions) complete(ctx context.Context) error {
 
 // packageListInfo represents the package information for output.
 type packageListInfo struct {
+	Created    string   `json:"created_at"`
 	Package    string   `json:"package"`
 	Version    string   `json:"version"`
 	Components []string `json:"components"`
@@ -611,7 +612,6 @@ func (o *packageListOptions) run(ctx context.Context) error {
 	if err != nil && len(deployedZarfPackages) == 0 {
 		return fmt.Errorf("unable to get the packages deployed to the cluster: %w", err)
 	}
-
 	var packageList []packageListInfo
 	for _, pkg := range deployedZarfPackages {
 		var components []string
@@ -619,6 +619,7 @@ func (o *packageListOptions) run(ctx context.Context) error {
 			components = append(components, component.Name)
 		}
 		packageList = append(packageList, packageListInfo{
+			Created:    pkg.Timestamp,
 			Package:    pkg.Name,
 			Version:    pkg.Data.Metadata.Version,
 			Components: components,
@@ -639,11 +640,11 @@ func (o *packageListOptions) run(ctx context.Context) error {
 		}
 		fmt.Fprint(o.outputWriter, string(output))
 	case outputTable:
-		header := []string{"Package", "Version", "Components"}
+		header := []string{"Created", "Package", "Version", "Components"}
 		var packageData [][]string
 		for _, info := range packageList {
 			packageData = append(packageData, []string{
-				info.Package, info.Version, fmt.Sprintf("%v", info.Components),
+				info.Created, info.Package, info.Version, fmt.Sprintf("%v", info.Components),
 			})
 		}
 		message.TableWithWriter(o.outputWriter, header, packageData)
