@@ -99,7 +99,7 @@ func buildScheme(plainHTTP bool) string {
 }
 
 func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) error {
-	url := fmt.Sprintf("%s://%s/v2", buildScheme(plainHTTP), registryURL)
+	url := fmt.Sprintf("%s://%s/v2/", buildScheme(plainHTTP), registryURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
@@ -110,10 +110,11 @@ func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusOK {
+	switch resp.StatusCode {
+	case http.StatusOK, http.StatusUnauthorized, http.StatusForbidden:
 		return nil
 	}
-	return fmt.Errorf("could not authenticate to registry %s over %s: %w", registryURL, buildScheme(plainHTTP), err)
+	return fmt.Errorf("could not connect to registry %s over %s. status code: %d", registryURL, buildScheme(plainHTTP), resp.StatusCode)
 }
 
 // This is inspired by the Crane functionality to determine the schema to be used - https://github.com/google/go-containerregistry/blob/main/pkg/v1/remote/transport/ping.go
@@ -125,7 +126,7 @@ func shouldUsePlainHTTP(ctx context.Context, plainHTTPAllowed bool, registryURL 
 		return false, nil
 	}
 	if !plainHTTPAllowed {
-		return false, fmt.Errorf("failed to connect to https server. Use `--plain-http` to connect over http: %w", err)
+		return false, fmt.Errorf("failed to connect to https registry %s: %w", registryURL, err)
 	}
 	logger.From(ctx).Debug("failing back to plainHTTP connection", "registry_url", registryURL)
 	// If https regular request failed and plainHTTP is allowed check again over plainHTTP
