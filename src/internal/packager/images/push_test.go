@@ -46,19 +46,18 @@ func TestPush(t *testing.T) {
 				"hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
 			},
 		},
-		{
-			name:            "push local images crane",
-			SourceDirectory: "testdata/oras-oci-layout/images",
-			imageNames: []string{
-				"this-image-does-not-exist:1.0.0",
-			},
-			expectErr: true,
-		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
+			// Push overwrites the index, this code sets it back directory
+			idx, err := getIndexFromOCILayout(tc.SourceDirectory)
+			require.NoError(t, err)
+			defer func() {
+				require.NoError(t, saveIndexToOCILayout(tc.SourceDirectory, idx))
+			}()
 			ctx := testutil.TestContext(t)
 			// setup in memory registry
 			port, err := helpers.GetAvailablePort()

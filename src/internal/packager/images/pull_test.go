@@ -5,7 +5,6 @@
 package images
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -16,6 +15,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 )
@@ -62,7 +62,7 @@ func TestCheckForIndex(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			ctx := context.Background()
+			ctx := testutil.TestContext(t)
 			refInfo, err := transform.ParseImageRef(tc.ref)
 			require.NoError(t, err)
 			repo, err := orasRemote.NewRepository(refInfo.Reference)
@@ -135,6 +135,7 @@ func TestPull(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+			ctx := testutil.TestContext(t)
 			var images []transform.Image
 			for _, ref := range tc.refs {
 				image, err := transform.ParseImageRef(ref)
@@ -152,7 +153,7 @@ func TestPull(t *testing.T) {
 				ImageList:            images,
 			}
 
-			imageManifests, err := Pull(context.Background(), cfg)
+			imageManifests, err := Pull(ctx, cfg)
 			if tc.expectErr {
 				require.Error(t, err, tc.expectErr)
 				return
@@ -189,6 +190,7 @@ func TestPull(t *testing.T) {
 func TestPullInvalidCache(t *testing.T) {
 	// pulling an image with an invalid layer in the cache should still pull the image
 	t.Parallel()
+	ctx := testutil.TestContext(t)
 	ref, err := transform.ParseImageRef("ghcr.io/fluxcd/image-automation-controller@sha256:48a89734dc82c3a2d4138554b3ad4acf93230f770b3a582f7f48be38436d031c")
 	require.NoError(t, err)
 	destDir := t.TempDir()
@@ -209,7 +211,7 @@ func TestPullInvalidCache(t *testing.T) {
 			ref,
 		},
 	}
-	_, err = Pull(context.Background(), opts)
+	_, err = Pull(ctx, opts)
 	require.NoError(t, err)
 
 	pulledLayerPath := filepath.Join(destDir, "blobs", "sha256", correctLayerSha)
