@@ -191,7 +191,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	}
 
 	if len(dockerFallBackImages) > 0 {
-		daemonImagesWithManifests, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, cfg.Arch, cfg.Concurrency)
+		daemonImagesWithManifests, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, cfg.Arch, cfg.OCIConcurrency)
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull images from docker: %w", err)
 		}
@@ -367,7 +367,7 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 		repo.Client = client
 
 		copyOpts := oras.DefaultCopyOptions
-		copyOpts.Concurrency = cfg.Concurrency
+		copyOpts.Concurrency = cfg.OCIConcurrency
 		copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
 		l.Info("saving image", "name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
 		localCache, err := oci.NewWithContext(ctx, cfg.CacheDirectory)

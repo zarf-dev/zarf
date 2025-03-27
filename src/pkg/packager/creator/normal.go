@@ -195,7 +195,7 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 			DestinationDirectory: dst.Images.Base,
 			ImageList:            imageList,
 			Arch:                 arch,
-			Concurrency:          config.CommonOptions.OCIConcurrency,
+			OCIConcurrency:       config.CommonOptions.OCIConcurrency,
 			RegistryOverrides:    pc.createOpts.RegistryOverrides,
 			CacheDirectory:       filepath.Join(cachePath, layout.ImagesDir),
 		}

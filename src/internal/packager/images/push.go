@@ -75,10 +75,10 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		}
 		if tunnel != nil {
 			return tunnel.Wrap(func() error {
-				return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.Concurrency, defaultPlatform)
+				return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
 			})
 		}
-		return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.Concurrency, defaultPlatform)
+		return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
 	}
 
 	for _, img := range cfg.ImageList {

@@ -141,7 +141,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 			ImageList:            componentImages,
 			Arch:                 pkg.Metadata.Architecture,
 			RegistryOverrides:    opt.RegistryOverrides,
-			Concurrency:          opt.OCIConcurrency,
+			OCIConcurrency:       opt.OCIConcurrency,
 			CacheDirectory:       filepath.Join(cachePath, ImagesDir),
 		}
 		manifests, err := images.Pull(ctx, pullCfg)

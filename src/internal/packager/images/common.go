@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -21,7 +22,7 @@ import (
 
 // PullConfig is the configuration for pulling images.
 type PullConfig struct {
-	Concurrency int
+	OCIConcurrency int
 
 	DestinationDirectory string
 
@@ -32,6 +33,25 @@ type PullConfig struct {
 	RegistryOverrides map[string]string
 
 	CacheDirectory string
+
+	PlainHTTP bool
+}
+
+// PushConfig is the configuration for pushing images.
+type PushConfig struct {
+	OCIConcurrency int
+
+	SourceDirectory string
+
+	ImageList []transform.Image
+
+	RegInfo types.RegistryInfo
+
+	NoChecksum bool
+
+	Arch string
+
+	Retries int
 
 	PlainHTTP bool
 }
@@ -100,30 +120,11 @@ func saveIndexToOCILayout(dir string, idx ocispec.Index) error {
 	if err != nil {
 		return fmt.Errorf("unable to marshal index.json: %w", err)
 	}
-	err = os.WriteFile(idxPath, b, 0o644)
+	err = os.WriteFile(idxPath, b, helpers.ReadAllWriteUser)
 	if err != nil {
 		return fmt.Errorf("failed to save changes to index.json: %w", err)
 	}
 	return nil
-}
-
-// PushConfig is the configuration for pushing images.
-type PushConfig struct {
-	Concurrency int
-
-	SourceDirectory string
-
-	ImageList []transform.Image
-
-	RegInfo types.RegistryInfo
-
-	NoChecksum bool
-
-	Arch string
-
-	Retries int
-
-	PlainHTTP bool
 }
 
 // NoopOpt is a no-op option for crane.
