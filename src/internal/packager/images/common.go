@@ -5,8 +5,11 @@
 package images
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -16,8 +19,10 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
+	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 // PullConfig is the configuration for pulling images.
@@ -84,6 +89,52 @@ func OnlyHasImageLayers(manifest ocispec.Manifest) bool {
 		}
 	}
 	return true
+}
+
+func buildScheme(plainHTTP bool) string {
+	if plainHTTP {
+		return "http"
+	}
+	return "https"
+}
+
+func buildRegistryBaseURL(plainHTTP bool, registryURL string) string {
+	return fmt.Sprintf("%s://%s/v2", buildScheme(plainHTTP), registryURL)
+}
+
+func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) error {
+	url := buildRegistryBaseURL(plainHTTP, registryURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		return nil
+	}
+	return fmt.Errorf("could not successfully authenticate to registry %s over %s: %w", registryURL, buildScheme(plainHTTP), err)
+}
+
+// This is inspired by the Crane functionality to determine the schema to be used - https://github.com/google/go-containerregistry/blob/main/pkg/v1/remote/transport/ping.go
+// Zarf relies heavily on this logic, as the internal registry communicates over HTTP
+func shouldUsePlainHTTP(ctx context.Context, plainHTTPAllowed bool, registryURL string, client *auth.Client) (bool, error) {
+	// Start out by checking if the https connection works
+	err := Ping(ctx, false, registryURL, client)
+	if err != nil && plainHTTPAllowed {
+		logger.From(ctx).Debug("failing back to plainHTTP", "registry_url", registryURL)
+		// If regular request failed  and plainHTTP is allowed check if that will work
+		err2 := Ping(ctx, false, registryURL, client)
+		if err2 != nil {
+			return false, errors.Join(err, err2)
+		}
+		return true, nil
+	}
+	return false, nil
 }
 
 func isManifest(mediaType string) bool {

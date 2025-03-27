@@ -40,7 +40,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			defer tunnel.Close()
 		}
 	}
-
 	client := &auth.Client{
 		Client: retry.DefaultClient,
 		Cache:  auth.NewCache(),
@@ -49,7 +48,13 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			Password: cfg.RegInfo.PushPassword,
 		}),
 	}
-	err := addRefNameAnnotation(cfg.SourceDirectory)
+
+	plainHTTPAllowed := cfg.PlainHTTP || dns.IsLocalhost(registryURL)
+	plainHTTP, err := shouldUsePlainHTTP(ctx, plainHTTPAllowed, registryURL, client)
+	if err != nil {
+		return err
+	}
+	err = addRefNameAnnotation(cfg.SourceDirectory)
 	if err != nil {
 		return err
 	}
@@ -59,7 +64,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		return fmt.Errorf("failed to instantiate oci directory: %w", err)
 	}
 
-	plainHTTP := cfg.PlainHTTP || dns.IsLocalhost(registryURL)
 	pushImage := func(srcName, dstName string) error {
 		remoteRepo := &orasRemote.Repository{
 			PlainHTTP: plainHTTP,
@@ -75,6 +79,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		}
 		if tunnel != nil {
 			return tunnel.Wrap(func() error {
+				plainHTTP = true
 				return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
 			})
 		}

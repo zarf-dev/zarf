@@ -143,6 +143,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 			RegistryOverrides:    opt.RegistryOverrides,
 			OCIConcurrency:       opt.OCIConcurrency,
 			CacheDirectory:       filepath.Join(cachePath, ImagesDir),
+			PlainHTTP:            config.CommonOptions.PlainHTTP,
 		}
 		manifests, err := images.Pull(ctx, pullCfg)
 		if err != nil {

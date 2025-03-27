@@ -198,6 +198,7 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 			OCIConcurrency:       config.CommonOptions.OCIConcurrency,
 			RegistryOverrides:    pc.createOpts.RegistryOverrides,
 			CacheDirectory:       filepath.Join(cachePath, layout.ImagesDir),
+			PlainHTTP:            config.CommonOptions.PlainHTTP,
 		}
 
 		_, err = images.Pull(ctx, pullCfg)
