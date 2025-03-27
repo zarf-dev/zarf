@@ -154,8 +154,8 @@ func assembleSplitTar(src, tarPath string) error {
 	return nil
 }
 
-func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string) (v1alpha1.ZarfPackage, error) {
-	_, err := identifySource(src)
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string, inspect bool) (v1alpha1.ZarfPackage, error) {
+	srcType, err := identifySource(src)
 	if err != nil {
 		if cluster == nil {
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
@@ -165,6 +165,20 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 			return v1alpha1.ZarfPackage{}, err
 		}
 		return depPkg.Data, nil
+	}
+
+	// If we are targeting OCI and only want to inspect - we want to fetch the individual files as opposed to the full package
+	if srcType == "oci" && inspect {
+		pkg, err := FetchZarfYAML(ctx, FetchOptions{
+			Source:                  src,
+			Architecture:            config.GetArch(),
+			PublicKeyPath:           publicKeyPath,
+			SkipSignatureValidation: skipSignatureValidation,
+		})
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, err
+		}
+		return pkg, nil
 	}
 
 	loadOpt := LoadOptions{

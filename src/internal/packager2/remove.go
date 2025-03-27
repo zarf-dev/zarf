@@ -36,7 +36,7 @@ type RemoveOptions struct {
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
 func Remove(ctx context.Context, opt RemoveOptions) error {
 	l := logger.From(ctx)
-	pkg, err := GetPackageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath, false)
 	if err != nil {
 		return err
 	}
