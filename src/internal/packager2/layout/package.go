@@ -42,6 +42,7 @@ type PackageLayoutOptions struct {
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	IsPartial               bool
+	Inspect                 bool
 }
 
 // LoadFromTar unpacks the give compressed package and loads it.
@@ -101,10 +102,14 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 		dirPath: dirPath,
 		Pkg:     pkg,
 	}
-	err = validatePackageIntegrity(pkgLayout, opt.IsPartial)
-	if err != nil {
-		return nil, err
+	// do not validate integrity if inspecting, as all files may not be available.
+	if !opt.Inspect {
+		err = validatePackageIntegrity(pkgLayout, opt.IsPartial)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	err = validatePackageSignature(ctx, pkgLayout, opt.PublicKeyPath, opt.SkipSignatureValidation)
 	if err != nil {
 		return nil, err

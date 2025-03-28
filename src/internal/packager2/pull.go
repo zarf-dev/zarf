@@ -174,6 +174,27 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture strin
 	return isPartial, tarPath, nil
 }
 
+func pullOCIMetadata(ctx context.Context, src, dst, shasum, architecture string, mods ...oci.Modifier) (string, error) {
+	if shasum != "" {
+		src = fmt.Sprintf("%s@sha256:%s", src, shasum)
+	}
+	platform := oci.PlatformForArch(architecture)
+	remote, err := zoci.NewRemote(ctx, src, platform, mods...)
+	if err != nil {
+		return "", err
+	}
+	// desc, err := remote.ResolveRoot(ctx)
+	// if err != nil {
+	// 	return "", fmt.Errorf("could not find package %s with architecture %s: %w", src, platform.Architecture, err)
+	// }
+	_, err = remote.PullAllPackageMetadata(ctx, dst)
+	if err != nil {
+		return "", err
+	}
+
+	return dst, nil
+}
+
 func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 	if shasum == "" {
 		return "", errors.New("shasum cannot be empty")

@@ -55,6 +55,24 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	isPartial := false
 	switch srcType {
 	case "oci":
+		// this is a special case during inspect. do not pull the full package as it may be very large
+		if opt.Inspect {
+			path, err := pullOCIMetadata(ctx, opt.Source, tmpDir, opt.Shasum, architecture)
+			if err != nil {
+				return nil, err
+			}
+			layoutOpt := layout.PackageLayoutOptions{
+				PublicKeyPath:           opt.PublicKeyPath,
+				SkipSignatureValidation: opt.SkipSignatureValidation,
+				IsPartial:               isPartial,
+				Inspect:                 true,
+			}
+			pkgLayout, err := layout.LoadFromDir(ctx, path, layoutOpt)
+			if err != nil {
+				return nil, err
+			}
+			return pkgLayout, nil
+		}
 		isPartial, tarPath, err = pullOCI(ctx, opt.Source, tmpDir, opt.Shasum, architecture, opt.Filter)
 		if err != nil {
 			return nil, err
@@ -157,7 +175,7 @@ func assembleSplitTar(src, tarPath string) error {
 }
 
 func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string, inspect bool) (v1alpha1.ZarfPackage, error) {
-	srcType, err := identifySource(src)
+	_, err := identifySource(src)
 	if err != nil {
 		if cluster == nil {
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
@@ -169,26 +187,13 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 		return depPkg.Data, nil
 	}
 
-	// If we are targeting OCI and only want to inspect - we want to fetch the individual files as opposed to the full package
-	if srcType == "oci" && inspect {
-		pkg, err := FetchZarfYAML(ctx, FetchOptions{
-			Source:                  src,
-			Architecture:            config.GetArch(),
-			PublicKeyPath:           publicKeyPath,
-			SkipSignatureValidation: skipSignatureValidation,
-		})
-		if err != nil {
-			return v1alpha1.ZarfPackage{}, err
-		}
-		return pkg, nil
-	}
-
 	loadOpt := LoadOptions{
 		Source:                  src,
 		SkipSignatureValidation: skipSignatureValidation,
 		Architecture:            config.GetArch(),
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           publicKeyPath,
+		Inspect:                 inspect,
 	}
 	p, err := LoadPackage(ctx, loadOpt)
 	if err != nil {
@@ -200,19 +205,23 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 }
 
 // GetSBOMFromLocalOrRemote fetches the SBOM from the given source and extracts it to the destination directory.
+// This function will handle both local and remote sources, including OCI registries.
+// Returns the path to the extracted SBOM files or an error if the operation fails.
 func GetSBOMFromLocalOrRemote(ctx context.Context, src string, dst string, skipSignatureValidation bool, publicKeyPath string) (string, error) {
 	srcType, err := identifySource(src)
 	if err != nil {
 		return "", err
 	}
 
-	// we need a temporary directory to store the tarball
+	// we need a temporary directory to store the sbom tarball
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return "", err
 	}
 	defer os.Remove(tmpDir)
 
+	// If the source is OCI - we want to prevent pulling the full package
+	// Instead we will fetch the SBOM directly from the OCI registry
 	if srcType == "oci" {
 		pkgName, err := FetchSBOM(ctx, tmpDir, FetchOptions{
 			Source:                  src,
