@@ -83,7 +83,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		}
 		if tunnel != nil {
 			return tunnel.Wrap(func() error {
-				plainHTTP = true
 				return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
 			})
 		}
