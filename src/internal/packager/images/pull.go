@@ -281,7 +281,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 			if err != nil {
 				return err
 			}
-			defer os.RemoveAll(tmpDir)
+			// defer os.RemoveAll(tmpDir)
 			// Note: ImageSave accepts a ocispec.Platform, but the effects it would have on users without client API version 1.48,
 			// which was released in Feb 2025, is unclear. This could make the code more efficient in some cases, but we are
 			// avoiding this for now to give users more time to update.
