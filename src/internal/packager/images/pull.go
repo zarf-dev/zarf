@@ -115,7 +115,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 			repo.PlainHTTP = cfg.PlainHTTP
 			repo.Client = client
 
-			if dns.IsLocalhost(repo.Reference.Host()) {
+			if dns.IsLocalhost(repo.Reference.Host()) && !cfg.PlainHTTP {
 				var err error
 				repo.PlainHTTP, err = shouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 				// If the pings to localhost fail, it could be an image on the daemon
