@@ -58,7 +58,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			return err
 		}
 	}
-	err := addRefNameAnnotation(cfg.SourceDirectory)
+	err := addRefNameAnnotationToImages(cfg.SourceDirectory)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	return nil
 }
 
-func addRefNameAnnotation(ociLayoutDirectory string) error {
+func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 	idx, err := getIndexFromOCILayout(ociLayoutDirectory)
 	if err != nil {
 		return err
