@@ -27,6 +27,7 @@ type CreateOptions struct {
 	SkipSBOM                bool
 	Output                  string
 	DifferentialPackagePath string
+	OCIConcurrency          int
 }
 
 func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
@@ -41,6 +42,7 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 		SigningKeyPassword:      opt.SigningKeyPassword,
 		SetVariables:            opt.SetVariables,
 		SkipSBOM:                opt.SkipSBOM,
+		OCIConcurrency:          opt.OCIConcurrency,
 		DifferentialPackagePath: opt.DifferentialPackagePath,
 	}
 	pkgLayout, err := layout2.CreatePackage(ctx, packagePath, createOpt)

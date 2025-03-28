@@ -8,7 +8,9 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"regexp"
 	"runtime"
@@ -67,6 +69,46 @@ func GetCLIName() string {
 	return binaryName
 }
 
+// GetZarfAtVersion pulls Zarf at a given version for the specific OS and architecture
+func (e2e *ZarfE2ETest) GetZarfAtVersion(t *testing.T, version string) string {
+	t.Helper()
+	var url string
+	switch {
+	case runtime.GOOS == "linux" && runtime.GOARCH == "amd64":
+		url = fmt.Sprintf("https://github.com/zarf-dev/zarf/releases/download/%s/zarf_%s_Linux_amd64", version, version)
+	case runtime.GOOS == "linux" && runtime.GOARCH == "arm64":
+		url = fmt.Sprintf("https://github.com/zarf-dev/zarf/releases/download/%s/zarf_%s_Linux_arm64", version, version)
+	case runtime.GOOS == "darwin" && runtime.GOARCH == "amd64":
+		url = fmt.Sprintf("https://github.com/zarf-dev/zarf/releases/download/%s/zarf_%s_Darwin_amd64", version, version)
+	case runtime.GOOS == "darwin" && runtime.GOARCH == "arm64":
+		url = fmt.Sprintf("https://github.com/zarf-dev/zarf/releases/download/%s/zarf_%s_Darwin_arm64", version, version)
+	default:
+		t.Fatalf("unsupported platform: %s_%s", runtime.GOOS, runtime.GOARCH)
+	}
+
+	resp, err := http.Get(url)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, resp.Body.Close())
+	}()
+
+	tmpFile, err := os.CreateTemp(t.TempDir(), "zarf-*")
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, tmpFile.Close())
+	}()
+
+	if _, err = io.Copy(tmpFile, resp.Body); err != nil {
+		require.NoError(t, err)
+	}
+
+	if err = os.Chmod(tmpFile.Name(), 0755); err != nil {
+		require.NoError(t, err)
+	}
+
+	return tmpFile.Name()
+}
+
 // Zarf executes a Zarf command.
 func (e2e *ZarfE2ETest) Zarf(t *testing.T, args ...string) (_ string, _ string, err error) {
 	return e2e.ZarfInDir(t, "", args...)
@@ -88,7 +130,7 @@ func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ s
 		}(tmpdir)
 		args = append(args, "--tmpdir", tmpdir)
 	}
-	if !slices.Contains(args, "--zarf-cache") && !slices.Contains(args, "tools") && os.Getenv("CI") == "true" {
+	if !slices.Contains(args, "--zarf-cache") && !slices.Contains(args, "tools") && os.Getenv("CI") == "true" && runtime.GOOS == "windows" {
 		// We make the cache dir relative to the working directory to make it work on the Windows Runners
 		// - they use two drives which filepath.Rel cannot cope with.
 		cwd, err := os.Getwd()

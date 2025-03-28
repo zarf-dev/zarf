@@ -48,7 +48,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 -a skeleton
       --no-color                   Disable colors in output
       --no-log-file                Disable log file creation
       --no-progress                Disable fancy UI progress bars, spinners, logos, etc
-      --oci-concurrency int        Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
+      --oci-concurrency int        Number of concurrent layer operations to perform when interacting with a remote package. (default 6)
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
       --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")

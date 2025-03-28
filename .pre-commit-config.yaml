@@ -11,7 +11,11 @@ repos:
       - id: detect-private-key
         exclude: "src/test/e2e/29_config_file_test.go"
       - id: end-of-file-fixer
-        exclude: site/src/content/docs/commands/.*
+        exclude: |
+            (?x)^(
+                src/internal/packager/images/testdata/.*|
+                site/src/content/docs/commands/.*
+            )$
       - id: fix-byte-order-marker
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
