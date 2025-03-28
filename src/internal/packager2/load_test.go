@@ -140,10 +140,10 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 
-	_, err := GetPackageFromSourceOrCluster(ctx, nil, "test", false, "")
+	_, err := GetPackageFromSourceOrCluster(ctx, nil, "test", false, "", false)
 	require.EqualError(t, err, "cannot get Zarf package from Kubernetes without configuration")
 
-	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, "./testdata/zarf-package-test-amd64-0.0.1.tar.zst", false, "")
+	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, "./testdata/zarf-package-test-amd64-0.0.1.tar.zst", false, "", false)
 	require.NoError(t, err)
 	require.Equal(t, "test", pkg.Metadata.Name)
 
@@ -152,7 +152,7 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	}
 	_, err = c.RecordPackageDeployment(ctx, pkg, nil, 1)
 	require.NoError(t, err)
-	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", false, "")
+	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", false, "", false)
 	require.NoError(t, err)
 	require.Equal(t, "test", pkg.Metadata.Name)
 }
