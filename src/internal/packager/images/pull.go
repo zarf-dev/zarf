@@ -281,8 +281,8 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 	for _, pullInfo := range daemonPullInfo {
 		err := func() error {
 			// Pull the image into a Crane directory as the logic for extracting the earlier Docker formats is quite complex
-			// Docker starting saving images to the OCI format in Feb 2024 in engine version 25
-			// Once we feel the user base has updated we can remove Crane here by saving the image to an oci format and copying it over
+			// Docker starting saving images to the OCI layout format in Feb 2024 in engine version 25
+			// Once we feel the user base has updated we can remove Crane here by pulling from the daemon directly then calling oras.Copy
 			tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 			if err != nil {
 				return fmt.Errorf("failed to make temp directory: %w", err)
@@ -317,7 +317,10 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 				OS:           platform.OS,
 				Architecture: platform.Architecture,
 			}
-			cranePath.AppendImage(img, clayout.WithAnnotations(annotations), clayout.WithPlatform(cranePlatform))
+			err = cranePath.AppendImage(img, clayout.WithAnnotations(annotations), clayout.WithPlatform(cranePlatform))
+			if err != nil {
+				return fmt.Errorf("failed to write image: %w", err)
+			}
 
 			// Needed because when pulling from the local docker daemon, while using the docker containerd runtime
 			// Crane incorrectly names the blob of the docker image config to a sha that does not match the contents
@@ -348,7 +351,6 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 			}
 			fetchBytesOpts := oras.DefaultFetchBytesOptions
 			fetchBytesOpts.TargetPlatform = platform
-			fmt.Println("reference is", pullInfo.image.Reference)
 			desc, b, err := oras.FetchBytes(ctx, dockerImageSrc, pullInfo.image.Reference, fetchBytesOpts)
 			if err != nil {
 				return fmt.Errorf("failed to get manifest from docker image source: %w", err)
