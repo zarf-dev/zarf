@@ -23,6 +23,8 @@ import (
 var (
 	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
 	PackageAlwaysPull = []string{layout.ZarfYAML, layout.Checksums, layout.Signature}
+	// PackageInspectPull is a list of paths that will be pulled when inspecting a package.
+	PackageInspectPull = []string{layout.ZarfYAML, layout.Checksums, layout.Signature, layout.SBOMTar}
 )
 
 // PullPackage pulls the package from the remote repository and saves it to the given path.
@@ -163,7 +165,7 @@ func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 
 // PullAllPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
 func (r *Remote) PullAllPackageMetadata(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
-	return r.PullPaths(ctx, destinationDir, PackageAlwaysPull)
+	return r.PullPaths(ctx, destinationDir, PackageInspectPull)
 }
 
 // PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.

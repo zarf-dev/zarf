@@ -183,10 +183,6 @@ func pullOCIMetadata(ctx context.Context, src, dst, shasum, architecture string,
 	if err != nil {
 		return "", err
 	}
-	// desc, err := remote.ResolveRoot(ctx)
-	// if err != nil {
-	// 	return "", fmt.Errorf("could not find package %s with architecture %s: %w", src, platform.Architecture, err)
-	// }
 	_, err = remote.PullAllPackageMetadata(ctx, dst)
 	if err != nil {
 		return "", err

@@ -15,7 +15,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/mholt/archiver/v3"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -56,6 +55,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	switch srcType {
 	case "oci":
 		// this is a special case during inspect. do not pull the full package as it may be very large
+		// default to pulling the sbom for simplicity
 		if opt.Inspect {
 			path, err := pullOCIMetadata(ctx, opt.Source, tmpDir, opt.Shasum, architecture)
 			if err != nil {
@@ -207,44 +207,15 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 // GetSBOMFromLocalOrRemote fetches the SBOM from the given source and extracts it to the destination directory.
 // This function will handle both local and remote sources, including OCI registries.
 // Returns the path to the extracted SBOM files or an error if the operation fails.
+// There is no support for storing or retrieving SBOMs from the cluster currently.
 func GetSBOMFromLocalOrRemote(ctx context.Context, src string, dst string, skipSignatureValidation bool, publicKeyPath string) (string, error) {
-	srcType, err := identifySource(src)
-	if err != nil {
-		return "", err
-	}
-
-	// we need a temporary directory to store the sbom tarball
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return "", err
-	}
-	defer os.Remove(tmpDir)
-
-	// If the source is OCI - we want to prevent pulling the full package
-	// Instead we will fetch the SBOM directly from the OCI registry
-	if srcType == "oci" {
-		pkgName, err := FetchSBOM(ctx, tmpDir, FetchOptions{
-			Source:                  src,
-			Architecture:            config.GetArch(),
-			PublicKeyPath:           publicKeyPath,
-			SkipSignatureValidation: skipSignatureValidation,
-		})
-		if err != nil {
-			return "", err
-		}
-		path := filepath.Join(dst, pkgName)
-		err = archiver.Extract(filepath.Join(tmpDir, "sboms.tar"), "", path)
-		if err != nil {
-			return "", err
-		}
-		return path, nil
-	}
 	loadOpt := LoadOptions{
 		Source:                  src,
 		SkipSignatureValidation: skipSignatureValidation,
 		Architecture:            config.GetArch(),
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           publicKeyPath,
+		Inspect:                 true,
 	}
 	layout, err := LoadPackage(ctx, loadOpt)
 	if err != nil {
