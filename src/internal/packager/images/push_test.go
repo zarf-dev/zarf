@@ -28,6 +28,7 @@ func TestPush(t *testing.T) {
 			SourceDirectory: "testdata/oras-oci-layout/images",
 			imageNames: []string{
 				"local-test:1.0.0",
+				"localhost:9999/local-test:1.0.0",
 				"ghcr.io/zarf-dev/images/hello-world:latest",
 				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
 				"ghcr.io/stefanprodan/charts/podinfo:6.4.0",
@@ -40,6 +41,7 @@ func TestPush(t *testing.T) {
 			SourceDirectory: "testdata/crane-oci-layout/images",
 			imageNames: []string{
 				"local-test:1.0.0",
+				"localhost:9999/local-test:1.0.0",
 				"ghcr.io/zarf-dev/images/hello-world:latest",
 				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
 				"ghcr.io/stefanprodan/charts/podinfo:6.4.0",
