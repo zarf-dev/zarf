@@ -112,9 +112,23 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 			if err != nil {
 				return err
 			}
-			repo.PlainHTTP = cfg.PlainHTTP || dns.IsLocalhost(repo.Reference.Registry)
-
+			repo.PlainHTTP = cfg.PlainHTTP
 			repo.Client = client
+
+			if dns.IsLocalhost(repo.Reference.Host()) {
+				var err error
+				repo.PlainHTTP, err = shouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
+				// If the pings to localhost fail, it could be an image on the daemon
+				if err != nil {
+					imageListLock.Lock()
+					defer imageListLock.Unlock()
+					dockerFallBackImages = append(dockerFallBackImages, imageDaemonPullInfo{
+						image:               image,
+						registryOverrideRef: overriddenRef,
+					})
+					return nil
+				}
+			}
 
 			fetchOpts := oras.DefaultFetchBytesOptions
 			desc, b, err := oras.FetchBytes(ectx, repo, overriddenRef, fetchOpts)
@@ -123,7 +137,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 				if strings.Contains(err.Error(), "toomanyrequests") {
 					return fmt.Errorf("rate limited by registry: %w", err)
 				}
-				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", overriddenRef, "err", err)
 				imageListLock.Lock()
 				defer imageListLock.Unlock()
 				dockerFallBackImages = append(dockerFallBackImages, imageDaemonPullInfo{
@@ -262,6 +275,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 	cli.NegotiateAPIVersion(ctx)
 	for _, pullInfo := range daemonPullInfo {
 		err := func() error {
+			l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", pullInfo.registryOverrideRef, "err", err)
 			tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 			if err != nil {
 				return err
