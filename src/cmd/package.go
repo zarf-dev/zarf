@@ -428,9 +428,20 @@ func (o *PackageInspectSBOMOptions) Run(cmd *cobra.Command, args []string) error
 	if err != nil {
 		return err
 	}
-	outputPath, err := packager2.GetSBOMFromLocalOrRemote(ctx, src, o.outputDir, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
+	loadOpt := packager2.LoadOptions{
+		Source:                  src,
+		SkipSignatureValidation: o.skipSignatureValidation,
+		Filter:                  filters.Empty(),
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		Inspect:                 true,
+	}
+	layout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {
 		return err
+	}
+	outputPath, err := layout.GetSBOM(o.outputDir)
+	if err != nil {
+		return fmt.Errorf("could not get SBOM: %w", err)
 	}
 	outputPath, err = filepath.Abs(outputPath)
 	if err != nil {

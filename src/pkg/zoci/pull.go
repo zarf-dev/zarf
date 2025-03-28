@@ -169,8 +169,8 @@ func (r *Remote) PullAllPackageMetadata(ctx context.Context, destinationDir stri
 }
 
 // PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
-func (r *Remote) PullPackageMetadata(ctx context.Context, destinationDir string, metadata []string) ([]ocispec.Descriptor, error) {
-	return r.PullPaths(ctx, destinationDir, metadata)
+func (r *Remote) PullPackageMetadata(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
+	return r.PullPaths(ctx, destinationDir, PackageAlwaysPull)
 }
 
 // PullPackageSBOM pulls the package's sboms.tar from the remote repository and saves it to `destinationDir`.

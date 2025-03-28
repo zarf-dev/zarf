@@ -203,23 +203,3 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 	defer p.Cleanup()
 	return p.Pkg, nil
 }
-
-// GetSBOMFromLocalOrRemote fetches the SBOM from the given source and extracts it to the destination directory.
-// This function will handle both local and remote sources, including OCI registries.
-// Returns the path to the extracted SBOM files or an error if the operation fails.
-// There is no support for storing or retrieving SBOMs from the cluster currently.
-func GetSBOMFromLocalOrRemote(ctx context.Context, src string, dst string, skipSignatureValidation bool, publicKeyPath string) (string, error) {
-	loadOpt := LoadOptions{
-		Source:                  src,
-		SkipSignatureValidation: skipSignatureValidation,
-		Architecture:            config.GetArch(),
-		Filter:                  filters.Empty(),
-		PublicKeyPath:           publicKeyPath,
-		Inspect:                 true,
-	}
-	layout, err := LoadPackage(ctx, loadOpt)
-	if err != nil {
-		return "", err
-	}
-	return layout.GetSBOM(dst)
-}

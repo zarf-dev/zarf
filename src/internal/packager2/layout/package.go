@@ -109,7 +109,6 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 			return nil, err
 		}
 	}
-
 	err = validatePackageSignature(ctx, pkgLayout, opt.PublicKeyPath, opt.SkipSignatureValidation)
 	if err != nil {
 		return nil, err
