@@ -49,12 +49,16 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		}),
 	}
 
-	plainHTTPAllowed := cfg.PlainHTTP || dns.IsLocalhost(registryURL)
-	plainHTTP, err := shouldUsePlainHTTP(ctx, plainHTTPAllowed, registryURL, client)
-	if err != nil {
-		return err
+	plainHTTP := cfg.PlainHTTP
+
+	if dns.IsLocalhost(registryURL) {
+		var err error
+		plainHTTP, err = shouldUsePlainHTTP(ctx, registryURL, client)
+		if err != nil {
+			return err
+		}
 	}
-	err = addRefNameAnnotation(cfg.SourceDirectory)
+	err := addRefNameAnnotation(cfg.SourceDirectory)
 	if err != nil {
 		return err
 	}
