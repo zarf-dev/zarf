@@ -25,13 +25,19 @@ func fixPaths(child *v1alpha1.ZarfComponent, relativeToHead string) {
 		child.Files[fileIdx].Source = composed
 	}
 
+	// Fix chart paths.
 	for chartIdx, chart := range child.Charts {
 		for valuesIdx, valuesFile := range chart.ValuesFiles {
 			composed := makePathRelativeTo(valuesFile, relativeToHead)
 			child.Charts[chartIdx].ValuesFiles[valuesIdx] = composed
 		}
 		if child.Charts[chartIdx].LocalPath != "" {
-			composed := makePathRelativeTo(chart.LocalPath, relativeToHead)
+			// When importing multiple charts, update the path from "chart" to "charts"
+			localPath := chart.LocalPath
+			if len(child.Charts) > 1 && localPath == "chart" {
+				localPath = "charts"
+			}
+			composed := makePathRelativeTo(localPath, relativeToHead)
 			child.Charts[chartIdx].LocalPath = composed
 		}
 	}
