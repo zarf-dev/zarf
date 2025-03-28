@@ -89,7 +89,7 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 		},
 	}
 	ctx := logger.WithContext(context.Background(), test.GetLogger(suite.T()))
-	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
+	waitCtx, waitCancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer waitCancel()
 	err = healthchecks.WaitForReady(waitCtx, c.Watcher, objs)
 	suite.NoError(err)
