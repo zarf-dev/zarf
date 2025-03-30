@@ -25,7 +25,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
@@ -229,7 +228,10 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-type packageMirrorResourcesOptions struct{}
+type packageMirrorResourcesOptions struct {
+	imagesOnly bool
+	reposOnly  bool
+}
 
 func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 	o := &packageMirrorResourcesOptions{}
@@ -270,6 +272,11 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
 
+	// Flags for specifying which resources to mirror
+	cmd.Flags().BoolVar(&o.imagesOnly, "images", false, "mirror only the images")
+	cmd.Flags().BoolVar(&o.reposOnly, "repos", false, "mirror only the git repositories")
+	cmd.MarkFlagsMutuallyExclusive("images", "repos")
+
 	return cmd
 }
 
@@ -278,18 +285,17 @@ func (o *packageMirrorResourcesOptions) preRun(_ *cobra.Command, _ []string) {
 	if config.CommonOptions.Insecure {
 		pkgConfig.PkgOpts.SkipSignatureValidation = true
 	}
+
+	// post flag validation - perform both if neither were set
+	if !o.imagesOnly && !o.reposOnly {
+		o.imagesOnly = true
+		o.reposOnly = true
+	}
 }
 
 func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
-	var c *cluster.Cluster
-	if dns.IsServiceURL(pkgConfig.InitOpts.RegistryInfo.Address) || dns.IsServiceURL(pkgConfig.InitOpts.GitServer.Address) {
-		var err error
-		c, err = cluster.NewCluster()
-		if err != nil {
-			return err
-		}
-	}
+
 	src, err := choosePackage(ctx, args)
 	if err != nil {
 		return err
@@ -315,21 +321,76 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	mirrorOpt := packager2.MirrorOptions{
-		Cluster:         c,
-		PkgLayout:       pkgLayout,
-		Filter:          filter,
-		RegistryInfo:    pkgConfig.InitOpts.RegistryInfo,
-		GitInfo:         pkgConfig.InitOpts.GitServer,
-		NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
-		Retries:         pkgConfig.PkgOpts.Retries,
+	// The user may be mirroring to an internal or external location
+	// since we don't know we don't check this error
+	c, _ := cluster.NewCluster() //nolint:errcheck
+
+	// there should be an eventual utility to this command that allows images or repos independent of what resources are in the package
+	// in theory we can split mirror into to separate public functions
+	// Mirror images & mirror repos (Essentially already done)
+	// The Client logic would need to determine UX around flags or state
+	// The mirror logic would perform the action of mirroring and allow further SDK use
+	if pkgConfig.InitOpts.RegistryInfo.Address == "" {
+		// if empty flag & zarf state available - execute
+		// otherwise return error
+		state, err := c.LoadZarfState(ctx)
+		if err != nil {
+			// TODO: more verbose
+			// No flag and no state - nowhere to go
+			return err
+		}
+		//
+		state.RegistryInfo.Address = "http://zarf-docker-registry.zarf.svc.cluster.local:5000"
+		pkgConfig.InitOpts.RegistryInfo = state.RegistryInfo
 	}
-	err = packager2.Mirror(ctx, mirrorOpt)
-	if err != nil {
-		return err
+
+	if pkgConfig.InitOpts.GitServer.Address == "" {
+		state, err := c.LoadZarfState(ctx)
+		if err != nil {
+			// TODO: more verbose
+			// No flag and no state - nowhere to go
+			return err
+		}
+		state.GitServer.Address = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
+		pkgConfig.InitOpts.GitServer = state.GitServer
 	}
+
+	if o.imagesOnly {
+		mirrorOpt := packager2.MirrorOptions{
+			Cluster:         c,
+			PkgLayout:       pkgLayout,
+			Filter:          filter,
+			RegistryInfo:    pkgConfig.InitOpts.RegistryInfo,
+			NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
+			Retries:         pkgConfig.PkgOpts.Retries,
+		}
+		err = packager2.MirrorImages(ctx, mirrorOpt)
+		if err != nil {
+			return err
+		}
+	}
+
+	if o.reposOnly {
+		mirrorOpt := packager2.MirrorOptions{
+			Cluster:         c,
+			PkgLayout:       pkgLayout,
+			Filter:          filter,
+			GitInfo:         pkgConfig.InitOpts.GitServer,
+			NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
+			Retries:         pkgConfig.PkgOpts.Retries,
+		}
+		err = packager2.MirrorRepos(ctx, mirrorOpt)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
+
+// func validateMirrorFlags() {
+// // copy the init flags validation
+// }
 
 type packageInspectOptions struct{}
 

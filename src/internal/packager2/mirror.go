@@ -55,6 +55,22 @@ func Mirror(ctx context.Context, opt MirrorOptions) error {
 	return nil
 }
 
+func MirrorImages(ctx context.Context, opt MirrorOptions) error {
+	err := pushImagesToRegistry(ctx, opt.Cluster, opt.PkgLayout, opt.Filter, opt.RegistryInfo, opt.NoImageChecksum, opt.Retries)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func MirrorRepos(ctx context.Context, opt MirrorOptions) error {
+	err := pushReposToRepository(ctx, opt.Cluster, opt.PkgLayout, opt.Filter, opt.GitInfo, opt.Retries)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func pushImagesToRegistry(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, regInfo types.RegistryInfo, noImgChecksum bool, retries int) error {
 	l := logger.From(ctx)
 
