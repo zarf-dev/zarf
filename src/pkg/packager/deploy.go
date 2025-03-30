@@ -58,7 +58,7 @@ func (p *Packager) resetRegistryHPA(ctx context.Context) {
 }
 
 // Deploy attempts to deploy the given PackageConfig.
-func (p *Packager) Deploy(ctx context.Context) error {
+func (p *Packager) Deploy(ctx context.Context, onPackageLoad func(pkg *types.PackagerConfig) error) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	isInteractive := !config.CommonOptions.Confirm
@@ -87,6 +87,11 @@ func (p *Packager) Deploy(ctx context.Context) error {
 		if err := p.populatePackageVariableConfig(); err != nil {
 			return fmt.Errorf("unable to set the active variables: %w", err)
 		}
+	}
+
+	err := onPackageLoad(p.cfg)
+	if err != nil {
+		return err
 	}
 
 	validateWarnings, err := validateLastNonBreakingVersion(config.CLIVersion, p.cfg.Pkg.Build.LastNonBreakingVersion)
