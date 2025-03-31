@@ -211,17 +211,10 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 			}
 		}
 		for _, manifest := range component.Manifests {
-
-			for idx, path := range manifest.Files {
-				if helpers.IsURL(path) {
-					continue
-				}
-				manifest.Files[idx] = filepath.Join(packagePath, path)
-			}
-
-			for kIdx, path := range manifest.Kustomizations {
+			manifestPaths := []string{}
+			for idx, path := range manifest.Kustomizations {
 				//FIXME a user could name their file kustomization-manifest.Name.yaml and break this
-				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kIdx)
+				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
 				rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
 				dst := filepath.Join(compBuildPath, rel)
 				if !helpers.IsURL(path) {
@@ -231,7 +224,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
 					return nil, fmt.Errorf("unable to build the kustomization for %s: %w", path, err)
 				}
-				manifest.Files = append(manifest.Files, dst)
+				manifestPaths = append(manifestPaths, dst)
 			}
 			// Get all manifest files
 			for idx, f := range manifest.Files {
@@ -242,12 +235,14 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 					}
 				} else {
-					if err := helpers.CreatePathAndCopy(f, dst); err != nil {
+					if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, f), dst); err != nil {
 						return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
 					}
 				}
-				f = dst
+				manifestPaths = append(manifestPaths, dst)
+			}
 
+			for _, f := range manifestPaths {
 				if err := variableConfig.ReplaceTextTemplate(f); err != nil {
 					return nil, err
 				}
@@ -283,8 +278,6 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 				return nil, fmt.Errorf("could not process the Kubernetes resource %s: %w", resource.GetName(), err)
 			}
 		}
-
-		l.Info("found images in component", "name", component.Name, "resourcesCount", len(resources))
 
 		sortedMatchedImages, sortedExpectedImages := getSortedImages(matchedImages, maybeImages)
 
