@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/packager2"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -423,7 +424,7 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
+	baseDir := setBaseDirectory(args)
 
 	v := getViper()
 
@@ -431,13 +432,18 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
-	pkgClient, err := packager.New(&pkgConfig, packager.WithContext(cmd.Context()))
-	if err != nil {
-		return err
-	}
-	defer pkgClient.ClearTempPaths()
 
-	_, err = pkgClient.FindImages(ctx)
+	findImagesOptions := packager2.FindImagesOptions{
+		RepoHelmChartPath:   pkgConfig.FindImagesOpts.RepoHelmChartPath,
+		RegistryURL:         pkgConfig.FindImagesOpts.RegistryURL,
+		KubeVersionOverride: pkgConfig.FindImagesOpts.KubeVersionOverride,
+		CreateSetVariables:  pkgConfig.CreateOpts.SetVariables,
+		DeploySetVariables:  pkgConfig.PkgOpts.SetVariables,
+		Flavor:              pkgConfig.CreateOpts.Flavor,
+		Why:                 pkgConfig.FindImagesOpts.Why,
+		SkipCosign:          pkgConfig.FindImagesOpts.SkipCosign,
+	}
+	_, err := packager2.FindImages(ctx, baseDir, findImagesOptions)
 
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
