@@ -740,7 +740,7 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 		}
 
 		// Create a chart and helm cfg from a given Zarf Manifest.
-		zarfChart, chartOverride, err := helm.ChartFromZarfManifest(manifest, componentPaths.Manifests, p.cfg.Pkg.Metadata.Name, component.Name)
+		zarfChart, chart, err := helm.ChartFromZarfManifest(manifest, componentPaths.Manifests, p.cfg.Pkg.Metadata.Name, component.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -755,7 +755,7 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 		}
 
 		// Install the chart.
-		connectStrings, installedChartName, err := helm.InstallOrUpgradeChart(ctx, zarfChart, chartOverride, nil, helmOpts)
+		connectStrings, installedChartName, err := helm.InstallOrUpgradeChart(ctx, zarfChart, chart, nil, helmOpts)
 		if err != nil {
 			return nil, err
 		}
