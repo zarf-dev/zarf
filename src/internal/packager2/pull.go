@@ -32,8 +32,9 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
+// TODO: Add options struct
 // Pull fetches the Zarf package from the given sources.
-func Pull(ctx context.Context, src, dir, shasum string, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) error {
+func Pull(ctx context.Context, src, dir, shasum, architecture string, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	u, err := url.Parse(src)
@@ -46,6 +47,8 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 	if u.Host == "" {
 		return errors.New("host cannot be empty")
 	}
+	// ensure architecture is set
+	architecture = config.GetArch(architecture)
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -58,7 +61,7 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 	switch u.Scheme {
 	case "oci":
 		l.Info("starting pull from oci source", "src", src, "digest", shasum)
-		isPartial, tmpPath, err = pullOCI(ctx, src, tmpDir, shasum, filter)
+		isPartial, tmpPath, err = pullOCI(ctx, src, tmpDir, shasum, architecture, filter)
 		if err != nil {
 			return err
 		}
@@ -111,7 +114,7 @@ func Pull(ctx context.Context, src, dir, shasum string, filter filters.Component
 	return nil
 }
 
-func pullOCI(ctx context.Context, src, tarDir, shasum string, filter filters.ComponentFilterStrategy) (bool, string, error) {
+func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture string, filter filters.ComponentFilterStrategy, mods ...oci.Modifier) (bool, string, error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return false, "", err
@@ -120,9 +123,8 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, filter filters.Com
 	if shasum != "" {
 		src = fmt.Sprintf("%s@sha256:%s", src, shasum)
 	}
-	arch := config.GetArch()
-	platform := oci.PlatformForArch(arch)
-	remote, err := zoci.NewRemote(ctx, src, platform)
+	platform := oci.PlatformForArch(architecture)
+	remote, err := zoci.NewRemote(ctx, src, oci.PlatformForArch(architecture), mods...)
 	if err != nil {
 		return false, "", err
 	}

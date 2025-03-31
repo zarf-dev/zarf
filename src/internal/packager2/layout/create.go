@@ -536,6 +536,16 @@ func assembleSkeletonComponent(component v1alpha1.ZarfComponent, packagePath, bu
 		return err
 	}
 
+	// Update component DeprecatedCosignKeyPath with cosign.pub if a path exists
+	if component.DeprecatedCosignKeyPath != "" {
+		dst := filepath.Join(compBuildPath, "cosign.pub")
+		err = helpers.CreatePathAndCopy(filepath.Join(packagePath, component.DeprecatedCosignKeyPath), dst)
+		if err != nil {
+			return err
+		}
+		component.DeprecatedCosignKeyPath = "cosign.pub"
+	}
+
 	for chartIdx, chart := range component.Charts {
 		if chart.LocalPath != "" {
 			rel := filepath.Join(string(ChartsComponentDir), fmt.Sprintf("%s-%d", chart.Name, chartIdx))
