@@ -36,10 +36,9 @@ const (
 
 // Cluster Zarf specific cluster management functions.
 type Cluster struct {
-	Clientset     kubernetes.Interface
-	DynamicClient dynamic.Interface
-	RestConfig    *rest.Config
-	Watcher       watcher.StatusWatcher
+	Clientset  kubernetes.Interface
+	RestConfig *rest.Config
+	Watcher    watcher.StatusWatcher
 }
 
 // NewClusterWithWait creates a new Cluster instance and waits for the given timeout for the cluster to be ready.
@@ -94,15 +93,10 @@ func NewCluster() (*Cluster, error) {
 	if err != nil {
 		return nil, errors.Join(clusterErr, err)
 	}
-	dynamicClient, err := dynamic.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
 	c := &Cluster{
-		Clientset:     clientset,
-		RestConfig:    config,
-		DynamicClient: dynamicClient,
-		Watcher:       watcher,
+		Clientset:  clientset,
+		RestConfig: config,
+		Watcher:    watcher,
 	}
 	// Dogsled the version output. We just want to ensure no errors were returned to validate cluster connection.
 	_, err = c.Clientset.Discovery().ServerVersion()
