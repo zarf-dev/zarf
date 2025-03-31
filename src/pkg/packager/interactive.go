@@ -20,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
+// TODO(mkcp): Implementation is heavily dependent on Message
 func (p *Packager) confirmAction(ctx context.Context, stage string, warnings []string, sbomViewFiles []string) bool {
 	pterm.Println()
 	message.HeaderInfof("📦 PACKAGE DEFINITION")

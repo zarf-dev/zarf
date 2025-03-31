@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -29,7 +28,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
@@ -312,10 +310,6 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		if config.CommonOptions.InsecureSkipTLSVerify {
 			flags = append(flags, "--insecure-skip-tls-verify")
 		}
-		message.Title("To inspect/deploy/pull:", "")
-		message.ZarfCommand("package inspect %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), strings.Join(flags, " "))
-		message.ZarfCommand("package deploy %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), strings.Join(flags, " "))
-		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), strings.Join(flags, " "))
 	} else {
 		// Use the output path if the user specified it.
 		packageName := fmt.Sprintf("%s%s", sources.NameFromMetadata(pkg, pc.createOpts.IsSkeleton), sources.PkgSuffix(pkg.Metadata.Uncompressed))
@@ -490,7 +484,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 			manifestCount += len(manifest.Kustomizations)
 		}
 
-		// TODO(mkcp): Remove message on logger release
 		l.Info("processing k8s manifests", "component", component.Name, "manifests", manifestCount)
 
 		// Iterate over all manifests.

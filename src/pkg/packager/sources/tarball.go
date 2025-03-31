@@ -19,7 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -101,15 +100,12 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 	}
 
 	if !dst.IsLegacyLayout() {
-		spinner := message.NewProgressSpinner("Validating full package checksums")
-		defer spinner.Stop()
 		l.Info("validating package checksums", "source", s.PackageSource)
 
 		if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, false); err != nil {
 			return pkg, nil, err
 		}
 
-		spinner.Success()
 		l.Debug("done validating package checksums", "source", s.PackageSource)
 
 		if !s.SkipSignatureValidation {
@@ -182,20 +178,14 @@ func (s *TarballSource) LoadPackageMetadata(ctx context.Context, dst *layout.Pac
 
 	if !dst.IsLegacyLayout() {
 		if wantSBOM {
-			spinner := message.NewProgressSpinner("Validating SBOM checksums")
-			defer spinner.Stop()
-
 			if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, true); err != nil {
 				return pkg, nil, err
 			}
-
-			spinner.Success()
 		}
 
 		if !s.SkipSignatureValidation {
 			if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
 				if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
-					message.Warn("The package was signed but no public key was provided, skipping signature validation")
 					logger.From(ctx).Warn("the package was signed but no public key was provided, skipping signature validation")
 				} else {
 					return pkg, nil, err

@@ -249,12 +249,10 @@ func (o *devPatchGitOptions) run(_ *cobra.Command, args []string) error {
 	// Perform git url transformation via regex
 	text := string(content)
 
-	// FIXME(mkcp): Currently uses message for its log fn. Migrate to ctx and slog
 	l := logger.Default()
 	processedText := transform.MutateGitURLsInText(l.Warn, gitServer.Address, text, gitServer.PushUsername)
 
 	// Print the differences
-	// TODO(mkcp): Uses pterm to print text diffs. Decouple from pterm after we release logger.
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(text, processedText, true)
 	diffs = dmp.DiffCleanupSemantic(diffs)
