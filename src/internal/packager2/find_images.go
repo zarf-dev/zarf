@@ -213,7 +213,6 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		for _, manifest := range component.Manifests {
 			manifestPaths := []string{}
 			for idx, path := range manifest.Kustomizations {
-				//FIXME a user could name their file kustomization-manifest.Name.yaml and break this
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
 				rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
 				dst := filepath.Join(compBuildPath, rel)
