@@ -358,16 +358,17 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
 	}
 
-	// Update Zarf 'init' component Helm releases if present
 	helmOpts := helm.InstallUpgradeOpts{
-		VariableConfig: template.GetZarfVariableConfig(cmd.Context()),
-		State:          newState,
-		Cluster:        c,
-		AirgapMode:     true,
-		Timeout:        config.ZarfDefaultTimeout,
-		Retries:        config.ZarfDefaultRetries,
+		AdoptExistingResources: false,
+		VariableConfig:         template.GetZarfVariableConfig(cmd.Context()),
+		State:                  newState,
+		Cluster:                c,
+		AirgapMode:             true,
+		Timeout:                config.ZarfDefaultTimeout,
+		Retries:                config.ZarfDefaultRetries,
 	}
 
+	// Update Zarf 'init' component Helm releases if present
 	if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.IsInternal() {
 		err = helm.UpdateZarfRegistryValues(ctx, helmOpts)
 		if err != nil {
