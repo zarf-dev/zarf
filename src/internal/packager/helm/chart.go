@@ -333,7 +333,6 @@ func uninstallChart(name string, actionConfig *action.Configuration, timeout tim
 }
 
 func LoadChartData(zarfChart v1alpha1.ZarfChart, chartPath string, valuesPath string, valuesOverrides map[string]any) (*chart.Chart, chartutil.Values, error) {
-	// If there is no override, get the chart and values info.
 	loadedChart, err := loadChartFromTarball(zarfChart, chartPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to load chart tarball: %w", err)
