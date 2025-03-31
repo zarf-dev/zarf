@@ -30,7 +30,6 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 const (
@@ -129,11 +128,11 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 
 	for _, sig := range sp {
 		if cert, err := sig.Cert(); err == nil && cert != nil {
-			message.Debugf("Certificate subject: %s", cert.Subject)
+			l.Debug("utils.Sget", "subject", cert.Subject)
 
 			ce := cosign.CertExtensions{Cert: cert}
 			if issuerURL := ce.GetIssuer(); issuerURL != "" {
-				message.Debugf("Certificate issuer URL: %s", issuerURL)
+				l.Debug("utils.Sget", "issuerURL", issuerURL)
 			}
 		}
 
@@ -182,7 +181,6 @@ func CosignVerifyBlob(ctx context.Context, blobRef, sigRef, keyPath string) erro
 		return err
 	}
 
-	message.Successf("Package signature validated!")
 	logger.From(ctx).Debug("package signature validated", "key", keyPath)
 	return nil
 }
