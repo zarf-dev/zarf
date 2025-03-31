@@ -19,7 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
@@ -106,15 +105,12 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 		return err
 	}
 
-	message.HeaderInfof("📦 PACKAGE PUBLISH %s:%s", p.cfg.Pkg.Metadata.Name, ref)
-
 	// Publish the package/skeleton to the registry
 	if err := remote.PublishPackage(ctx, &p.cfg.Pkg, p.layout, config.CommonOptions.OCIConcurrency); err != nil {
 		return err
 	}
 	if p.cfg.CreateOpts.IsSkeleton {
 		l.Info("skeleton packages contain metadata and local resources to allow for remote component imports")
-		message.Title("How to import components from this skeleton:", "")
 		ex := []v1alpha1.ZarfComponent{}
 		for _, c := range p.cfg.Pkg.Components {
 			ex = append(ex, v1alpha1.ZarfComponent{
