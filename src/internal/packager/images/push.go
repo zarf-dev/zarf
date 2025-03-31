@@ -27,12 +27,12 @@ import (
 func Push(ctx context.Context, cfg PushConfig) error {
 	cfg.ImageList = helpers.Unique(cfg.ImageList)
 	l := logger.From(ctx)
-	registryURL := cfg.RegInfo.Address
+	registryURL := cfg.RegistryInfo.Address
 	var tunnel *cluster.Tunnel
 	c, _ := cluster.NewCluster()
 	if c != nil {
 		var err error
-		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegInfo)
+		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegistryInfo)
 		if err != nil {
 			return err
 		}
@@ -44,8 +44,8 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		Client: retry.DefaultClient,
 		Cache:  auth.NewCache(),
 		Credential: auth.StaticCredential(registryURL, auth.Credential{
-			Username: cfg.RegInfo.PushUsername,
-			Password: cfg.RegInfo.PushPassword,
+			Username: cfg.RegistryInfo.PushUsername,
+			Password: cfg.RegistryInfo.PushPassword,
 		}),
 	}
 

@@ -53,7 +53,7 @@ func Mirror(ctx context.Context, opt MirrorOptions) error {
 	return nil
 }
 
-func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, regInfo types.RegistryInfo, noImgChecksum bool, plainHTTP bool, concurrency int) error {
+func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, registryInfo types.RegistryInfo, noImgChecksum bool, plainHTTP bool, concurrency int) error {
 	components, err := filter.Apply(pkgLayout.Pkg)
 	if err != nil {
 		return err
@@ -73,13 +73,13 @@ func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		return nil
 	}
 	pushConfig := images.PushConfig{
-		PlainHTTP:       plainHTTP,
-		SourceDirectory: pkgLayout.GetImageDir(),
-		ImageList:       refs,
 		OCIConcurrency:  concurrency,
+		SourceDirectory: pkgLayout.GetImageDir(),
+		RegistryInfo:    registryInfo,
+		ImageList:       refs,
+		PlainHTTP:       plainHTTP,
 		NoChecksum:      noImgChecksum,
 		Arch:            pkgLayout.Pkg.Build.Architecture,
-		RegInfo:         regInfo,
 	}
 	err = images.Push(ctx, pushConfig)
 	if err != nil {

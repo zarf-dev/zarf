@@ -192,10 +192,10 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 			return err
 		}
 		pullCfg := images.PullConfig{
+			OCIConcurrency:       config.CommonOptions.OCIConcurrency,
 			DestinationDirectory: dst.Images.Base,
 			ImageList:            imageList,
 			Arch:                 arch,
-			OCIConcurrency:       config.CommonOptions.OCIConcurrency,
 			RegistryOverrides:    pc.createOpts.RegistryOverrides,
 			CacheDirectory:       filepath.Join(cachePath, layout.ImagesDir),
 			PlainHTTP:            config.CommonOptions.PlainHTTP,

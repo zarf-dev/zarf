@@ -80,7 +80,7 @@ func TestPush(t *testing.T) {
 			// push images to registry
 			cfg := PushConfig{
 				SourceDirectory: tc.SourceDirectory,
-				RegInfo:         regInfo,
+				RegistryInfo:    regInfo,
 				PlainHTTP:       true,
 				Arch:            "amd64",
 				ImageList:       imageList,

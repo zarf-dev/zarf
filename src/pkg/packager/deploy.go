@@ -565,12 +565,12 @@ func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []s
 	}
 
 	pushCfg := images.PushConfig{
+		OCIConcurrency:  config.CommonOptions.OCIConcurrency,
 		SourceDirectory: p.layout.Images.Base,
 		ImageList:       imageList,
-		RegInfo:         p.state.RegistryInfo,
+		RegistryInfo:    p.state.RegistryInfo,
 		NoChecksum:      noImgChecksum,
 		Arch:            p.cfg.Pkg.Build.Architecture,
-		OCIConcurrency:  config.CommonOptions.OCIConcurrency,
 		Retries:         p.cfg.PkgOpts.Retries,
 		PlainHTTP:       config.CommonOptions.PlainHTTP,
 	}
