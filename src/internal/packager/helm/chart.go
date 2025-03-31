@@ -173,11 +173,14 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 }
 
 // RemoveChart removes a chart from the cluster.
-func (h *Helm) RemoveChart(ctx context.Context, namespace string, name string, spinner *message.Spinner) error {
+func RemoveChart(ctx context.Context, namespace string, name string, timeout time.Duration) error {
 	// Establish a new actionConfig for the namespace.
-	_ = h.createActionConfig(ctx, namespace, spinner)
+	actionConfig, err := createActionConfig(ctx, namespace)
+	if err != nil {
+		return fmt.Errorf("unable to initialize the K8s client: %w", err)
+	}
 	// Perform the uninstall.
-	response, err := h.uninstallChart(name)
+	response, err := uninstallChart(name, actionConfig, timeout)
 	message.Debug(response)
 	logger.From(ctx).Debug("chart uninstalled", "response", response)
 	return err
@@ -314,11 +317,11 @@ func rollbackChart(name string, version int, actionConfig *action.Configuration,
 	return client.Run(name)
 }
 
-func (h *Helm) uninstallChart(name string) (*release.UninstallReleaseResponse, error) {
-	client := action.NewUninstall(h.actionConfig)
+func uninstallChart(name string, actionConfig *action.Configuration, timeout time.Duration) (*release.UninstallReleaseResponse, error) {
+	client := action.NewUninstall(actionConfig)
 	client.KeepHistory = false
 	client.Wait = true
-	client.Timeout = h.timeout
+	client.Timeout = timeout
 	return client.Run(name)
 }
 
