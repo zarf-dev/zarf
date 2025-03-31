@@ -5,6 +5,7 @@
 package layout
 
 import (
+	"context"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -102,7 +103,7 @@ func TestPackageFiles(t *testing.T) {
 
 	t.Run("Verify Files() with paths mapped to package paths", func(t *testing.T) {
 		t.Parallel()
-		ctx := t.Context()
+		ctx := context.Background()
 
 		pp := New("test")
 
@@ -134,7 +135,7 @@ func TestPackageFiles(t *testing.T) {
 
 	t.Run("Verify Files() with image layers mapped to package paths", func(t *testing.T) {
 		t.Parallel()
-		ctx := t.Context()
+		ctx := context.Background()
 
 		pp := New("test")
 
