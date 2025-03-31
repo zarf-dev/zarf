@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -67,6 +68,9 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 	// If no release name is specified, use the chart name.
 	if zarfChart.ReleaseName == "" {
 		zarfChart.ReleaseName = zarfChart.Name
+	}
+	if opts.VariableConfig == nil {
+		opts.VariableConfig = template.GetZarfVariableConfig(ctx)
 	}
 
 	// Setup K8s connection.
@@ -197,6 +201,9 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 	actionConfig, err := createActionConfig(ctx, chart.Namespace)
 	if err != nil {
 		return fmt.Errorf("unable to initialize the K8s client: %w", err)
+	}
+	if opts.VariableConfig == nil {
+		opts.VariableConfig = template.GetZarfVariableConfig(ctx)
 	}
 
 	postRender, err := newRenderer(ctx, chart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig)

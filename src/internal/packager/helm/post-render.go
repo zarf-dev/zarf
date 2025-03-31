@@ -48,6 +48,12 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 	if c == nil {
 		return nil, fmt.Errorf("cluster required to run post renderer")
 	}
+	if actionConfig == nil {
+		return nil, fmt.Errorf("action configuration required to run post renderer")
+	}
+	if variableConfig == nil {
+		return nil, fmt.Errorf("variable configuration required to run post renderer")
+	}
 	skipSecretUpdates := !airgapMode && state.Distro == "YOLO"
 	rend := &renderer{
 		chart:                  chart,
