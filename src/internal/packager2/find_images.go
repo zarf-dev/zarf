@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying Zarf packages.
-package packager
+package packager2
 
 import (
 	"context"
@@ -15,119 +14,109 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/pkg/logger"
-
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
-	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
-var imageCheck = regexp.MustCompile(`(?mi)"image":"((([a-z0-9._-]+)/)?([a-z0-9._-]+)(:([a-z0-9._-]+))?)"`)
-var imageFuzzyCheck = regexp.MustCompile(`(?mi)["|=]([a-z0-9\-.\/:]+:[\w.\-]*[a-z\.\-][\w.\-]*)"`)
+var (
+	imageCheck      = regexp.MustCompile(`(?mi)"image":"((([a-z0-9._-]+)/)?([a-z0-9._-]+)(:([a-z0-9._-]+))?)"`)
+	imageFuzzyCheck = regexp.MustCompile(`(?mi)["|=]([a-z0-9\-.\/:]+:[\w.\-]*[a-z\.\-][\w.\-]*)"`)
+)
 
-// FindImages iterates over a Zarf.yaml and attempts to parse any images.
-func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) {
-	l := logger.From(ctx)
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		// Return to the original working directory
-		if err := os.Chdir(cwd); err != nil {
-			message.Warnf("Unable to return to the original working directory: %s", err.Error())
-			l.Warn("unable to return to the original working directory", "error", err)
-		}
-	}()
-	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return nil, fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
-	}
-	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
-	l.Info("using build directory", "path", p.cfg.CreateOpts.BaseDir)
-
-	c := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
-
-	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
-		return nil, err
-	}
-
-	pkg, warnings, err := c.LoadPackageDefinition(ctx, p.layout)
-	if err != nil {
-		return nil, err
-	}
-	for _, warning := range warnings {
-		message.Warn(warning)
-		l.Warn(warning)
-	}
-	p.cfg.Pkg = pkg
-
-	return p.findImages(ctx)
+// FindImagesOptions declares the parameters to find images.
+type FindImagesOptions struct {
+	// RepoHelmChartPath specifies the path to helm charts in git repos
+	RepoHelmChartPath string
+	// RegistryURL specifies the URL of the registry to use
+	RegistryURL string
+	// KubeVersionOverride specifies the kubernetes version to use for templating
+	KubeVersionOverride string
+	// CreateSetVariables specifies the package templates
+	CreateSetVariables map[string]string
+	// DeploySetVariables specifies the package templates
+	DeploySetVariables map[string]string
+	// Flavor specifies the flavor to use
+	Flavor string
+	// Why specifies the image to look for so we can print the containing manifest
+	Why string
+	// SkipCosign specifies whether to skip cosign artifact lookups
+	SkipCosign bool
 }
 
-// TODO: Refactor to return output string instead of printing inside of function.
-func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) {
+// FindImages finds images in the package
+func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (map[string][]string, error) {
 	l := logger.From(ctx)
-	for _, component := range p.cfg.Pkg.Components {
-		if len(component.Repos) > 0 && p.cfg.FindImagesOpts.RepoHelmChartPath == "" {
-			msg := "This Zarf package contains git repositories, " +
-				"if any repos contain helm charts you want to template and " +
-				"search for images, make sure to specify the helm chart path " +
-				"via the --repo-chart-path flag"
-			message.Note(msg)
-			l.Info(msg)
-			break
-		}
-	}
-
-	if err := p.populatePackageVariableConfig(); err != nil {
-		return nil, fmt.Errorf("unable to set the active variables: %w", err)
-	}
-
-	// Set default builtin values so they exist in case any helm charts rely on them
-	registryInfo := types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}
-	err := registryInfo.FillInEmptyValues()
+	pkg, err := layout.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
 	if err != nil {
+		return nil, err
+	}
+
+	// Set default builtin values
+	registryInfo := types.RegistryInfo{Address: opts.RegistryURL}
+	if err := registryInfo.FillInEmptyValues(); err != nil {
 		return nil, err
 	}
 	gitServer := types.GitServerInfo{}
-	err = gitServer.FillInEmptyValues()
-	if err != nil {
+	if err := gitServer.FillInEmptyValues(); err != nil {
 		return nil, err
 	}
 	artifactServer := types.ArtifactServerInfo{}
 	artifactServer.FillInEmptyValues()
-	p.state = &types.ZarfState{
+	state := &types.ZarfState{
 		RegistryInfo:   registryInfo,
 		GitServer:      gitServer,
 		ArtifactServer: artifactServer,
 	}
+	variableConfig := template.GetZarfVariableConfig(ctx)
+	variableConfig.SetConstants(pkg.Constants)
+	variableConfig.PopulateVariables(pkg.Variables, opts.DeploySetVariables)
+	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(tmpBuildPath)
+
+	imagesMap := map[string][]string{}
 
 	componentDefinition := "\ncomponents:\n"
-	imagesMap := map[string][]string{}
+	//FIXME return a set of manifests from this function for the user to print out
 	whyResources := []string{}
-	for _, component := range p.cfg.Pkg.Components {
+	for _, component := range pkg.Components {
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
-			// Skip if it doesn't have what we need
+			// Skip if there are no manifests, charts, or repos
 			continue
 		}
 
-		if p.cfg.FindImagesOpts.RepoHelmChartPath != "" {
+		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, state)
+		if err != nil {
+			return nil, err
+		}
+		variableConfig.SetApplicationTemplates(applicationTemplates)
+
+		compBuildPath := filepath.Join(tmpBuildPath, component.Name)
+		err = os.MkdirAll(compBuildPath, 0o700)
+		if err != nil {
+			return nil, err
+		}
+
+		if opts.RepoHelmChartPath != "" {
 			// Also process git repos that have helm charts
 			for _, repo := range component.Repos {
 				matches := strings.Split(repo, "@")
@@ -141,18 +130,9 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 					URL:     matches[0],
 					Version: matches[1],
 					// Trim the first char to match how the packager expects it, this is messy,need to clean up better
-					GitPath: strings.TrimPrefix(p.cfg.FindImagesOpts.RepoHelmChartPath, "/"),
+					GitPath: strings.TrimPrefix(opts.RepoHelmChartPath, "/"),
 				})
 			}
-		}
-
-		componentPaths, err := p.layout.Components.Create(component)
-		if err != nil {
-			return nil, err
-		}
-		err = p.populateComponentAndStateTemplates(ctx, component.Name)
-		if err != nil {
-			return nil, err
 		}
 
 		resources := []*unstructured.Unstructured{}
@@ -160,28 +140,39 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 		maybeImages := map[string]bool{}
 		for _, zarfChart := range component.Charts {
 			// Generate helm templates for this chart
-			err = helm.PackageChart(ctx, zarfChart, componentPaths.Charts, componentPaths.Values)
-			if err != nil {
+			if zarfChart.LocalPath != "" {
+				zarfChart.LocalPath = filepath.Join(packagePath, zarfChart.LocalPath)
+			}
+			oldValuesFiles := zarfChart.ValuesFiles
+			valuesFiles := []string{}
+			for _, v := range zarfChart.ValuesFiles {
+				valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
+			}
+			zarfChart.ValuesFiles = valuesFiles
+			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
+			valuesFilePath := filepath.Join(compBuildPath, string(layout.ValuesComponentDir))
+			if err := helm.PackageChart(ctx, zarfChart, chartPath, valuesFilePath); err != nil {
 				return nil, fmt.Errorf("unable to package the chart %s: %w", zarfChart.Name, err)
 			}
+			zarfChart.ValuesFiles = oldValuesFiles
 
-			valuesFilePaths, err := helpers.RecursiveFileList(componentPaths.Values, nil, false)
+			valuesFilePaths, err := helpers.RecursiveFileList(valuesFilePath, nil, false)
 			// TODO: The values path should exist if the path is set, otherwise it should be empty.
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				return nil, err
 			}
 			for _, valueFilePath := range valuesFilePaths {
-				err := p.variableConfig.ReplaceTextTemplate(valueFilePath)
+				err := variableConfig.ReplaceTextTemplate(valueFilePath)
 				if err != nil {
 					return nil, err
 				}
 			}
 
-			chart, values, err := helm.LoadChartData(zarfChart, componentPaths.Charts, componentPaths.Values, nil)
+			chart, values, err := helm.LoadChartData(zarfChart, chartPath, valuesFilePath, nil)
 			if err != nil {
 				return nil, fmt.Errorf("failed to load chart data: %w", err)
 			}
-			chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, p.cfg.FindImagesOpts.KubeVersionOverride, p.variableConfig)
+			chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, opts.KubeVersionOverride, variableConfig)
 			if err != nil {
 				return nil, fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
 			}
@@ -193,7 +184,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			}
 			resources = append(resources, yamls...)
 
-			chartTarball := helm.StandardName(componentPaths.Charts, zarfChart) + ".tgz"
+			chartTarball := helm.StandardName(chartPath, zarfChart) + ".tgz"
 			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 			if err != nil {
 				return nil, fmt.Errorf("could not look up image annotations for chart URL %s: %w", zarfChart.URL, err)
@@ -203,8 +194,8 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			}
 
 			// Check if the --why flag is set
-			if p.cfg.FindImagesOpts.Why != "" {
-				whyResourcesChart, err := findWhyResources(yamls, p.cfg.FindImagesOpts.Why, component.Name, zarfChart.Name, true)
+			if opts.Why != "" {
+				whyResourcesChart, err := findWhyResources(yamls, opts.Why, component.Name, zarfChart.Name, true)
 				if err != nil {
 					return nil, fmt.Errorf("could not determine why resource for the chart %s: %w", zarfChart.Name, err)
 				}
@@ -212,36 +203,46 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			}
 		}
 
+		manifestDir := filepath.Join(compBuildPath, string(layout.ManifestsComponentDir))
+		if len(component.Manifests) > 0 {
+			err := os.MkdirAll(manifestDir, 0o700)
+			if err != nil {
+				return nil, err
+			}
+		}
 		for _, manifest := range component.Manifests {
-			for idx, k := range manifest.Kustomizations {
-				// Generate manifests from kustomizations and place in the package
+			manifestPaths := []string{}
+			for idx, path := range manifest.Kustomizations {
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-				// Use the temp folder because if "helpers.CreatePathAndCopy" is provided with the same path it will result in the file being empty
-				destination := filepath.Join(componentPaths.Temp, kname)
-				if err := kustomize.Build(k, destination, manifest.KustomizeAllowAnyDirectory); err != nil {
-					return nil, fmt.Errorf("unable to build the kustomization for %s: %w", k, err)
+				rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
+				dst := filepath.Join(compBuildPath, rel)
+				if !helpers.IsURL(path) {
+					path = filepath.Join(packagePath, path)
 				}
-				manifest.Files = append(manifest.Files, destination)
+				// Generate manifests from kustomizations and place in the package
+				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+					return nil, fmt.Errorf("unable to build the kustomization for %s: %w", path, err)
+				}
+				manifestPaths = append(manifestPaths, dst)
 			}
 			// Get all manifest files
 			for idx, f := range manifest.Files {
+				rel := filepath.Join(string(layout.ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, idx))
+				dst := filepath.Join(compBuildPath, rel)
 				if helpers.IsURL(f) {
-					mname := fmt.Sprintf("manifest-%s-%d.yaml", manifest.Name, idx)
-					destination := filepath.Join(componentPaths.Manifests, mname)
-					if err := utils.DownloadToFile(ctx, f, destination, component.DeprecatedCosignKeyPath); err != nil {
+					if err := utils.DownloadToFile(ctx, f, dst, component.DeprecatedCosignKeyPath); err != nil {
 						return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
 					}
-					f = destination
 				} else {
-					filename := filepath.Base(f)
-					newDestination := filepath.Join(componentPaths.Manifests, filename)
-					if err := helpers.CreatePathAndCopy(f, newDestination); err != nil {
+					if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, f), dst); err != nil {
 						return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
 					}
-					f = newDestination
 				}
+				manifestPaths = append(manifestPaths, dst)
+			}
 
-				if err := p.variableConfig.ReplaceTextTemplate(f); err != nil {
+			for _, f := range manifestPaths {
+				if err := variableConfig.ReplaceTextTemplate(f); err != nil {
 					return nil, err
 				}
 				// Read the contents of each file
@@ -258,8 +259,8 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 				resources = append(resources, yamls...)
 
 				// Check if the --why flag is set and if it is process the manifests
-				if p.cfg.FindImagesOpts.Why != "" {
-					whyResourcesManifest, err := findWhyResources(yamls, p.cfg.FindImagesOpts.Why, component.Name, manifest.Name, false)
+				if opts.Why != "" {
+					whyResourcesManifest, err := findWhyResources(yamls, opts.Why, component.Name, manifest.Name, false)
 					if err != nil {
 						return nil, fmt.Errorf("could not find why resources for manifest %s: %w", manifest.Name, err)
 					}
@@ -270,11 +271,9 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 
 		imgCompStart := time.Now()
 		l.Info("looking for images in component", "name", component.Name, "resourcesCount", len(resources))
-		spinner := message.NewProgressSpinner("Looking for images in component %q across %d resources", component.Name, len(resources))
-		defer spinner.Stop()
 
 		for _, resource := range resources {
-			if matchedImages, maybeImages, err = processUnstructuredImages(resource, matchedImages, maybeImages); err != nil {
+			if matchedImages, maybeImages, err = processUnstructuredImages(ctx, resource, matchedImages, maybeImages); err != nil {
 				return nil, fmt.Errorf("could not process the Kubernetes resource %s: %w", resource.GetName(), err)
 			}
 		}
@@ -297,18 +296,16 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			for _, image := range sortedExpectedImages {
 				if descriptor, err := crane.Head(image, images.WithGlobalInsecureFlag()...); err != nil {
 					// Test if this is a real image, if not just quiet log to debug, this is normal
-					message.Debugf("Suspected image does not appear to be valid: %#v", err)
 					l.Debug("suspected image does not appear to be valid", "error", err)
 				} else {
 					// Otherwise, add to the list of images
-					message.Debugf("Imaged digest found: %s", descriptor.Digest)
 					l.Debug("imaged digest found", "digest", descriptor.Digest)
 					validImages = append(validImages, image)
 				}
 			}
 
 			if len(validImages) > 0 {
-				componentDefinition += fmt.Sprintf("      # Possible images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
+				componentDefinition += fmt.Sprintf("      # Possible images - %s - %s\n", pkg.Metadata.Name, component.Name)
 				for _, image := range validImages {
 					imagesMap[component.Name] = append(imagesMap[component.Name], image)
 					componentDefinition += fmt.Sprintf("      - %s\n", image)
@@ -316,37 +313,32 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			}
 		}
 
-		spinner.Success()
 		l.Debug("done looking for images in component",
 			"name", component.Name,
 			"resourcesCount", len(resources),
 			"duration", time.Since(imgCompStart))
 
-		if !p.cfg.FindImagesOpts.SkipCosign {
+		if !opts.SkipCosign {
 			// Handle cosign artifact lookups
 			if len(imagesMap[component.Name]) > 0 {
 				var cosignArtifactList []string
 				imgStart := time.Now()
-				spinner := message.NewProgressSpinner("Looking up cosign artifacts for discovered images (0/%d)", len(imagesMap[component.Name]))
-				defer spinner.Stop()
 				l.Info("looking up cosign artifacts for discovered images", "count", len(imagesMap[component.Name]))
 
-				for idx, image := range imagesMap[component.Name] {
-					spinner.Updatef("Looking up cosign artifacts for discovered images (%d/%d)", idx+1, len(imagesMap[component.Name]))
+				for _, image := range imagesMap[component.Name] {
 					l.Debug("looking up cosign artifacts for image", "name", imagesMap[component.Name])
 					cosignArtifacts, err := utils.GetCosignArtifacts(image)
 					if err != nil {
-						return nil, fmt.Errorf("could not lookup the cosing artifacts for image %s: %w", image, err)
+						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}
 					cosignArtifactList = append(cosignArtifactList, cosignArtifacts...)
 				}
 
-				spinner.Success()
 				l.Debug("done looking up cosign artifacts for discovered images", "count", len(imagesMap[component.Name]), "duration", time.Since(imgStart))
 
 				if len(cosignArtifactList) > 0 {
 					imagesMap[component.Name] = append(imagesMap[component.Name], cosignArtifactList...)
-					componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s - %s\n", p.cfg.Pkg.Metadata.Name, component.Name)
+					componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s - %s\n", pkg.Metadata.Name, component.Name)
 					for _, cosignArtifact := range cosignArtifactList {
 						componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
 					}
@@ -355,9 +347,9 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 		}
 	}
 
-	if p.cfg.FindImagesOpts.Why != "" {
+	if opts.Why != "" {
 		if len(whyResources) == 0 {
-			return nil, fmt.Errorf("image %s not found in any charts or manifests", p.cfg.FindImagesOpts.Why)
+			return nil, fmt.Errorf("image %s not found in any charts or manifests", opts.Why)
 		}
 		return nil, nil
 	}
@@ -367,7 +359,9 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 	return imagesMap, nil
 }
 
-func processUnstructuredImages(resource *unstructured.Unstructured, matchedImages, maybeImages map[string]bool) (map[string]bool, map[string]bool, error) {
+// processUnstructuredImages processes a Kubernetes resource and extracts container images
+func processUnstructuredImages(ctx context.Context, resource *unstructured.Unstructured, matchedImages, maybeImages map[string]bool) (map[string]bool, map[string]bool, error) {
+	l := logger.From(ctx)
 	contents := resource.UnstructuredContent()
 	b, err := resource.MarshalJSON()
 	if err != nil {
@@ -414,19 +408,59 @@ func processUnstructuredImages(resource *unstructured.Unstructured, matchedImage
 		// Capture any custom images
 		matches := imageCheck.FindAllStringSubmatch(string(b), -1)
 		for _, group := range matches {
-			message.Debugf("Found unknown match, Kind: %s, Value: %s", resource.GetKind(), group[1])
+			l.Debug("found unknown match", "kind", resource.GetKind(), "value", group[1])
 			matchedImages[group[1]] = true
 		}
 	}
 
-	// Capture "maybe images" too for all kinds because they might be in unexpected places.... 👀
+	// Capture "maybe images" for all kinds
 	matches := imageFuzzyCheck.FindAllStringSubmatch(string(b), -1)
 	for _, group := range matches {
-		message.Debugf("Found possible fuzzy match, Kind: %s, Value: %s", resource.GetKind(), group[1])
+		l.Debug("found possible fuzzy match", "kind", resource.GetKind(), "value", group[1])
 		maybeImages[group[1]] = true
 	}
 
 	return matchedImages, maybeImages, nil
+}
+
+// appendToImageMap adds container images to the image map
+func appendToImageMap(imgMap map[string]bool, pod corev1.PodSpec) map[string]bool {
+	for _, container := range pod.InitContainers {
+		if ReferenceRegexp.MatchString(container.Image) {
+			imgMap[container.Image] = true
+		}
+	}
+	for _, container := range pod.Containers {
+		if ReferenceRegexp.MatchString(container.Image) {
+			imgMap[container.Image] = true
+		}
+	}
+	for _, container := range pod.EphemeralContainers {
+		if ReferenceRegexp.MatchString(container.Image) {
+			imgMap[container.Image] = true
+		}
+	}
+	return imgMap
+}
+
+// getSortedImages returns sorted slices of matched and maybe images
+func getSortedImages(matchedImages map[string]bool, maybeImages map[string]bool) ([]string, []string) {
+	sortedMatchedImages := sort.StringSlice{}
+	for image := range matchedImages {
+		sortedMatchedImages = append(sortedMatchedImages, image)
+	}
+	sort.Sort(sortedMatchedImages)
+
+	sortedMaybeImages := sort.StringSlice{}
+	for image := range maybeImages {
+		if matchedImages[image] {
+			continue
+		}
+		sortedMaybeImages = append(sortedMaybeImages, image)
+	}
+	sort.Sort(sortedMaybeImages)
+
+	return sortedMatchedImages, sortedMaybeImages
 }
 
 func findWhyResources(resources []*unstructured.Unstructured, whyImage, componentName, resourceName string, isChart bool) ([]string, error) {
@@ -448,42 +482,4 @@ func findWhyResources(resources []*unstructured.Unstructured, whyImage, componen
 		}
 	}
 	return foundWhyResources, nil
-}
-
-func appendToImageMap(imgMap map[string]bool, pod corev1.PodSpec) map[string]bool {
-	for _, container := range pod.InitContainers {
-		if ReferenceRegexp.MatchString(container.Image) {
-			imgMap[container.Image] = true
-		}
-	}
-	for _, container := range pod.Containers {
-		if ReferenceRegexp.MatchString(container.Image) {
-			imgMap[container.Image] = true
-		}
-	}
-	for _, container := range pod.EphemeralContainers {
-		if ReferenceRegexp.MatchString(container.Image) {
-			imgMap[container.Image] = true
-		}
-	}
-	return imgMap
-}
-
-func getSortedImages(matchedImages map[string]bool, maybeImages map[string]bool) ([]string, []string) {
-	sortedMatchedImages := sort.StringSlice{}
-	for image := range matchedImages {
-		sortedMatchedImages = append(sortedMatchedImages, image)
-	}
-	sort.Sort(sortedMatchedImages)
-
-	sortedMaybeImages := sort.StringSlice{}
-	for image := range maybeImages {
-		if matchedImages[image] {
-			continue
-		}
-		sortedMaybeImages = append(sortedMaybeImages, image)
-	}
-	sort.Sort(sortedMaybeImages)
-
-	return sortedMatchedImages, sortedMaybeImages
 }

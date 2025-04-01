@@ -1,0 +1,24 @@
+kind: ZarfPackageConfig
+metadata:
+  name: helm-chart
+  version: 1.0.0
+components:
+  - name: baseline
+    required: true
+    charts:
+      - name: with-values
+        version: 0.1.0
+        namespace: with-values
+        localPath: chart
+        valuesFiles:
+          - values.yaml
+      - name: without-values
+        version: 0.1.0
+        namespace: without-values
+        localPath: chart
+      - name: invalid-image
+        version: 0.1.0
+        namespace: invalid-image
+        localPath: chart
+        valuesFiles:
+          - values-invalid-image.yaml
