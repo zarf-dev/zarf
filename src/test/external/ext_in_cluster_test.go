@@ -50,7 +50,6 @@ type ExtInClusterTestSuite struct {
 }
 
 func (suite *ExtInClusterTestSuite) SetupSuite() {
-	fmt.Println("start: current time is ", time.Now())
 	suite.Assertions = require.New(suite.T())
 
 	// Install a gitea chart to the k8s cluster to act as the 'remote' git server
