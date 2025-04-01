@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+// Originally taken from - https://github.com/oras-project/oras/blob/main/internal/cache/target.go
+// Ideally we can merge this behavior into the oras-go library - https://github.com/oras-project/oras-go/issues/881
 /*
 Copyright The ORAS Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
