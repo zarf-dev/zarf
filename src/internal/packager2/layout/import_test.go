@@ -37,8 +37,9 @@ func TestResolveImports(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 	testCases := []struct {
-		name string
-		path string
+		name   string
+		path   string
+		flavor string
 	}{
 		{
 			name: "two zarf.yaml files import each other",
@@ -52,6 +53,11 @@ func TestResolveImports(t *testing.T) {
 			name: "two separate chains of imports importing a common file",
 			path: "./testdata/import/branch",
 		},
+		{
+			name:   "flavor is preserved when importing",
+			path:   "./testdata/import/flavor",
+			flavor: "pistachio",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -63,7 +69,7 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := ParseZarfPackage(b)
 			require.NoError(t, err)
 
-			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", "", []string{})
+			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{})
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
