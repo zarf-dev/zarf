@@ -104,7 +104,7 @@ func TestPull(t *testing.T) {
 		expectErr         bool
 	}{
 		{
-			name: "pull a container image, a cosign signature, and a Helm chart",
+			name: "pull a container image, a cosign signature, a Helm chart, and a sha'd container image",
 			refs: []string{
 				"ghcr.io/zarf-dev/doom-game:0.0.1",
 				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
@@ -123,11 +123,11 @@ func TestPull(t *testing.T) {
 		{
 			name: "test registry overrides",
 			refs: []string{
-				"ghcr.io/stefanprodan/podinfo:6.4.0",
+				"stefanprodan/podinfo:6.4.0",
 			},
 			arch: "amd64",
 			RegistryOverrides: map[string]string{
-				"ghcr.io": "docker.io",
+				"docker.io": "ghcr.io",
 			},
 		},
 	}
@@ -163,10 +163,10 @@ func TestPull(t *testing.T) {
 			idx, err := getIndexFromOCILayout(filepath.Join(destDir))
 			require.NoError(t, err)
 			var expectedImageAnnotations []map[string]string
-			for _, ref := range tc.refs {
+			for _, ref := range images {
 				expectedAnnotations := map[string]string{
-					ocispec.AnnotationRefName:       ref,
-					ocispec.AnnotationBaseImageName: ref,
+					ocispec.AnnotationRefName:       ref.Reference,
+					ocispec.AnnotationBaseImageName: ref.Reference,
 				}
 				expectedImageAnnotations = append(expectedImageAnnotations, expectedAnnotations)
 			}
