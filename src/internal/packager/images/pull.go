@@ -115,11 +115,10 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 			if err != nil {
 				return err
 			}
-			repo.PlainHTTP = cfg.PlainHTTP
 			repo.Client = client
 
+			repo.PlainHTTP = cfg.PlainHTTP
 			if dns.IsLocalhost(repo.Reference.Host()) && !cfg.PlainHTTP {
-				var err error
 				repo.PlainHTTP, err = shouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 				// If the pings to localhost fail, it could be an image on the daemon
 				if err != nil {
@@ -392,7 +391,13 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 		if err != nil {
 			return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.registryOverrideRef, err)
 		}
-		repo.PlainHTTP = cfg.PlainHTTP || dns.IsLocalhost(repo.Reference.Registry)
+		repo.PlainHTTP = cfg.PlainHTTP
+		if dns.IsLocalhost(repo.Reference.Host()) && !cfg.PlainHTTP {
+			repo.PlainHTTP, err = shouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
+			if err != nil {
+				return fmt.Errorf("unable to connect to the registry %s: %w", repo.Reference.Host(), err)
+			}
+		}
 		repo.Client = client
 
 		copyOpts := oras.DefaultCopyOptions
@@ -404,31 +409,19 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 			return fmt.Errorf("failed to create oci formatted directory: %w", err)
 		}
 		pullSrc = orasCache.New(repo, localCache)
-		desc, err := oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, dst, "", copyOpts)
+		desc, err := oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, dst, imageInfo.ref, copyOpts)
 		if err != nil {
 			return fmt.Errorf("failed to copy: %w", err)
 		}
-		err = annotateImage(ctx, dst, desc, imageInfo.registryOverrideRef, imageInfo.ref)
-		if err != nil {
-			return err
+		if desc.Annotations == nil {
+			desc.Annotations = make(map[string]string)
 		}
-	}
-	return nil
-}
-
-func annotateImage(ctx context.Context, dst *oci.Store, desc ocispec.Descriptor, oldRef string, newRef string) error {
-	if desc.Annotations == nil {
-		desc.Annotations = make(map[string]string)
-	}
-	desc.Annotations[ocispec.AnnotationRefName] = newRef
-	desc.Annotations[ocispec.AnnotationBaseImageName] = newRef
-	err := dst.Untag(ctx, oldRef)
-	if err != nil {
-		return fmt.Errorf("failed to untag image: %w", err)
-	}
-	err = dst.Tag(ctx, desc, newRef)
-	if err != nil {
-		return fmt.Errorf("failed to tag image: %w", err)
+		desc.Annotations[ocispec.AnnotationRefName] = imageInfo.ref
+		desc.Annotations[ocispec.AnnotationBaseImageName] = imageInfo.ref
+		err = dst.Tag(ctx, desc, imageInfo.ref)
+		if err != nil {
+			return fmt.Errorf("failed to tag image: %w", err)
+		}
 	}
 	return nil
 }
