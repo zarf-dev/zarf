@@ -18,7 +18,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	ocistore "oras.land/oras-go/v2/content/oci"
 )
@@ -100,12 +99,7 @@ func (ic *ImportChain) fetchOCISkeleton(ctx context.Context) error {
 		if err != nil {
 			return err
 		} else if !exists {
-			doneSaving := make(chan error)
-			successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+remote.Repo().Reference.String())
-			go utils.RenderProgressBarForLocalDirWrite(cache, componentDesc.Size, doneSaving, "Pulling", successText)
 			err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
-			doneSaving <- err
-			<-doneSaving
 			if err != nil {
 				return err
 			}
