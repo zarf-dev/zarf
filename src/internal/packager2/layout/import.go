@@ -139,7 +139,6 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	pkg.Constants = slices.CompactFunc(constants, func(l, r v1alpha1.Constant) bool {
 		return l.Name == r.Name
 	})
-	importStack = importStack[0 : len(importStack)-1]
 	return pkg, nil
 }
 
@@ -272,6 +271,11 @@ func overrideMetadata(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompone
 	// Override description if it was provided.
 	if override.Description != "" {
 		comp.Description = override.Description
+	}
+
+	// If the imported component has a flavor, mark the component with that flavor
+	if override.Only.Flavor != "" {
+		comp.Only.Flavor = override.Only.Flavor
 	}
 
 	if override.Only.LocalOS != "" {
