@@ -15,10 +15,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	registryv1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/mholt/archiver/v3"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 
@@ -27,7 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
@@ -180,28 +176,9 @@ func (p *PackageLayout) GetComponentDir(destPath, componentName string, ct Compo
 	return outPath, nil
 }
 
-// GetImage returns the image with the given reference in the package layout.
-func (p *PackageLayout) GetImage(ref transform.Image) (registryv1.Image, error) {
+func (p *PackageLayout) GetImageDir() string {
 	// Use the manifest within the index.json to load the specific image we want
-	layoutPath := layout.Path(filepath.Join(p.dirPath, ImagesDir))
-	imgIdx, err := layoutPath.ImageIndex()
-	if err != nil {
-		return nil, err
-	}
-	idxManifest, err := imgIdx.IndexManifest()
-	if err != nil {
-		return nil, err
-	}
-	// Search through all the manifests within this package until we find the annotation that matches our ref
-	for _, manifest := range idxManifest.Manifests {
-		if manifest.Annotations[ocispec.AnnotationBaseImageName] == ref.Reference ||
-			// A backwards compatibility shim for older Zarf versions that would leave docker.io off of image annotations
-			(manifest.Annotations[ocispec.AnnotationBaseImageName] == ref.Path+ref.TagOrDigest && ref.Host == "docker.io") {
-			// This is the image we are looking for, load it and then return
-			return layoutPath.Image(manifest.Digest)
-		}
-	}
-	return nil, fmt.Errorf("unable to find the image %s", ref.Reference)
+	return filepath.Join(p.dirPath, ImagesDir)
 }
 
 func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {

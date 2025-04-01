@@ -17,6 +17,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/mholt/archiver/v3"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -175,7 +176,6 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 		}
 	}
 
-	imageList = helpers.Unique(imageList)
 	rs := rand.NewSource(time.Now().UnixNano())
 	rnd := rand.New(rs)
 	rnd.Shuffle(len(imageList), func(i, j int) { imageList[i], imageList[j] = imageList[j], imageList[i] })
@@ -192,16 +192,27 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 			return err
 		}
 		pullCfg := images.PullConfig{
+			OCIConcurrency:       config.CommonOptions.OCIConcurrency,
 			DestinationDirectory: dst.Images.Base,
 			ImageList:            imageList,
 			Arch:                 arch,
 			RegistryOverrides:    pc.createOpts.RegistryOverrides,
 			CacheDirectory:       filepath.Join(cachePath, layout.ImagesDir),
+			PlainHTTP:            config.CommonOptions.PlainHTTP,
 		}
 
-		pulled, err := images.Pull(ctx, pullCfg)
+		_, err = images.Pull(ctx, pullCfg)
 		if err != nil {
 			return err
+		}
+
+		pulled := map[transform.Image]v1.Image{}
+		for _, ref := range imageList {
+			image, err := utils.LoadOCIImage(dst.Images.Base, ref)
+			if err != nil {
+				return err
+			}
+			pulled[ref] = image
 		}
 
 		for info, img := range pulled {

@@ -182,7 +182,6 @@ func TestUseCLI(t *testing.T) {
 	})
 
 	t.Run("remove cache", func(t *testing.T) {
-		t.Parallel()
 		tmpdir := t.TempDir()
 		// Test removal of cache
 		cachePath := filepath.Join(tmpdir, ".cache-location")
