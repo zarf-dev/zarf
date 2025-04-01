@@ -118,10 +118,10 @@ var (
 
 // can't define method on Destination type
 func destinationString(d Destination) string {
-	switch {
-	case d == DestinationDefault:
+	switch d {
+	case DestinationDefault:
 		return "os.Stderr"
-	case d == DestinationNone:
+	case DestinationNone:
 		return "io.Discard"
 	default:
 		return "unknown"
