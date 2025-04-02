@@ -8,6 +8,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/message"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -29,7 +31,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -222,8 +223,7 @@ func (h *Helm) DownloadPublishedChart(ctx context.Context, cosignKeyPath string)
 
 	// Set up the chart chartDownloader
 	chartDownloader := downloader.ChartDownloader{
-		// TODO(mkcp): Shouldn't rely on a global mutable var. Pass in a writer here somehow, or at least make atomic?
-		Out:            message.OutputWriter,
+		Out:            io.Discard,
 		RegistryClient: regClient,
 		// TODO: Further research this with regular/OCI charts
 		Verify:  downloader.VerifyNever,
