@@ -20,7 +20,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -158,12 +157,8 @@ func Execute(ctx context.Context) {
 		os.Exit(1)
 	}
 
-	// TODO(mkcp): Remove message on logger release
-	errParagraph := message.Paragraph(err.Error())
-	pterm.Error.Println(errParagraph)
-
-	// NOTE(mkcp): The default logger is set with user flags downstream in rootCmd's preRun func, so we don't have
-	// access to it on Execute's ctx.
+	// NOTE(mkcp): This line must be run with the unconfigured default logger because user flags are set downstream
+	// in rootCmd's preRun func.
 	logger.Default().Error(err.Error())
 	os.Exit(1)
 }
