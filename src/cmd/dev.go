@@ -234,7 +234,8 @@ func newDevPatchGitCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *devPatchGitOptions) run(_ *cobra.Command, args []string) error {
+func (o *devPatchGitOptions) run(cmd *cobra.Command, args []string) error {
+	l := logger.From(cmd.Context())
 	host, fileName := args[0], args[1]
 
 	// Read the contents of the given file
@@ -249,7 +250,6 @@ func (o *devPatchGitOptions) run(_ *cobra.Command, args []string) error {
 	// Perform git url transformation via regex
 	text := string(content)
 
-	l := logger.Default()
 	processedText := transform.MutateGitURLsInText(l.Warn, gitServer.Address, text, gitServer.PushUsername)
 
 	// Print the differences
