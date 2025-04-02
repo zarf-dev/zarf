@@ -26,7 +26,9 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, concurrency int)
 	if err != nil {
 		return err
 	}
-	l.Info("copying package", "src", src.String(), "dst", dst.String())
+	l.Info("copying package",
+		"src", src.Repo().Reference.String(),
+		"dst", dst.Repo().Reference.String())
 	if err := oci.Copy(ctx, src.OrasRemote, dst.OrasRemote, nil, concurrency, nil); err != nil {
 		return err
 	}

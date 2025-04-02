@@ -46,12 +46,6 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 	return &Remote{remote}, nil
 }
 
-// String provides a string representation of the Remote's reference.
-// REVIEW(mkcp): Does this function make sense? I use it for info logging in zoci/copier.go
-func (r *Remote) String() string {
-	return r.Repo().Reference.String()
-}
-
 // PlatformForSkeleton sets the target architecture for the remote to skeleton
 func PlatformForSkeleton() ocispec.Platform {
 	return ocispec.Platform{
