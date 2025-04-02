@@ -25,26 +25,22 @@ type versionOptions struct {
 	outputWriter io.Writer
 }
 
-func newVersionOptions(writer ...io.Writer) (*versionOptions, error) {
-	if len(writer) > 1 {
-		return nil, fmt.Errorf("received more than one writer. writer=%+v", writer)
-	}
+// newVersionOptions provides a default versionOptions with an overridable outputWriter. An empty writer defaults
+// to OutputWriter.
+func newVersionOptions(writer io.Writer) *versionOptions {
 	w := io.Writer(OutputWriter)
-	if len(writer) == 1 {
-		w = writer[0]
+	if writer != nil {
+		w = writer
 	}
 	return &versionOptions{
 		outputFormat: "",
 		outputWriter: w,
-	}, nil
+	}
 }
 
 func newVersionCommand() *cobra.Command {
 	// TODO accept output writer as a parameter to the root Zarf command and pass it through here
-	o, err := newVersionOptions()
-	if err != nil {
-		panic(err)
-	}
+	o := newVersionOptions(nil)
 
 	cmd := &cobra.Command{
 		Use:     "version",
