@@ -43,8 +43,6 @@ const (
 
 	RootCmdFlagLogLevel              = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
 	RootCmdFlagArch                  = "Architecture for OCI images and Zarf packages"
-	RootCmdFlagSkipLogFile           = "Disable log file creation"
-	RootCmdFlagNoProgress            = "Disable fancy UI progress bars, spinners, logos, etc"
 	RootCmdFlagCachePath             = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir               = "Specify the temporary directory to use for intermediate files"
 	RootCmdFlagInsecure              = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
