@@ -15,7 +15,6 @@ import (
 	"github.com/mholt/archiver/v3"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // ComponentPaths contains paths for a component.
@@ -64,8 +63,6 @@ func (c *Components) Archive(ctx context.Context, component v1alpha1.ZarfCompone
 	}
 	if size > 0 {
 		tb := fmt.Sprintf("%s.tar", base)
-		// TODO(mkcp): Remove message on logger release
-		message.Debugf("Archiving %q", name)
 		l.Debug("archiving component", "name", name)
 		if err := helpers.CreateReproducibleTarballFromDir(base, name, tb); err != nil {
 			return err
@@ -75,8 +72,6 @@ func (c *Components) Archive(ctx context.Context, component v1alpha1.ZarfCompone
 		}
 		c.Tarballs[name] = tb
 	} else {
-		// TODO(mkcp): Remove message on logger release
-		message.Debugf("Component %q is empty, skipping archiving", name)
 		l.Debug("component is empty, skipping archiving", "name", name)
 	}
 
@@ -85,7 +80,8 @@ func (c *Components) Archive(ctx context.Context, component v1alpha1.ZarfCompone
 }
 
 // Unarchive unarchives a component.
-func (c *Components) Unarchive(component v1alpha1.ZarfComponent) error {
+func (c *Components) Unarchive(ctx context.Context, component v1alpha1.ZarfComponent) error {
+	l := logger.From(ctx)
 	name := component.Name
 	tb, ok := c.Tarballs[name]
 	if !ok {
@@ -136,11 +132,12 @@ func (c *Components) Unarchive(component v1alpha1.ZarfComponent) error {
 
 	// if the component is already unarchived, skip
 	if !helpers.InvalidPath(cs.Base) {
-		message.Debugf("Component %q already unarchived", name)
+		l.Debug("component already unarchived", "component", name)
 		return nil
 	}
 
-	message.Debugf("Unarchiving %q", filepath.Base(tb))
+	// TODO(mkcp): Bring in context and port to logger
+	l.Debug("unarchiving", "component", filepath.Base(tb))
 	if err := archiver.Unarchive(tb, c.Base); err != nil {
 		return err
 	}
