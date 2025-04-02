@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"maps"
 	"strings"
 
@@ -21,7 +20,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 const (
@@ -38,10 +36,7 @@ type Remote struct {
 
 // NewRemote returns an oras remote repository client and context for the given url with zarf opination embedded.
 func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {
-	l := slog.New(message.ZarfHandler{})
-	if logger.Enabled(ctx) {
-		l = logger.From(ctx)
-	}
+	l := logger.From(ctx)
 	modifiers := append([]oci.Modifier{
 		oci.WithPlainHTTP(config.CommonOptions.PlainHTTP),
 		oci.WithInsecureSkipVerify(config.CommonOptions.InsecureSkipTLSVerify),

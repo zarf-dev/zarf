@@ -11,7 +11,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -63,7 +62,7 @@ func (h *Helm) parseChartValues() (chartutil.Values, error) {
 	return helpers.MergeMapRecursive(chartValues, h.valuesOverrides), nil
 }
 
-func (h *Helm) createActionConfig(ctx context.Context, namespace string, spinner *message.Spinner) error {
+func (h *Helm) createActionConfig(ctx context.Context, namespace string) error {
 	// Initialize helm SDK
 	actionConfig := new(action.Configuration)
 	// Set the settings for the helm SDK
@@ -73,11 +72,8 @@ func (h *Helm) createActionConfig(ctx context.Context, namespace string, spinner
 	h.settings.SetNamespace(namespace)
 
 	// Setup K8s connection
-	helmLogger := spinner.Updatef
-	if logger.Enabled(ctx) {
-		l := logger.From(ctx)
-		helmLogger = slog.NewLogLogger(l.Handler(), slog.LevelDebug).Printf
-	}
+	l := logger.From(ctx)
+	helmLogger := slog.NewLogLogger(l.Handler(), slog.LevelDebug).Printf
 	err := actionConfig.Init(h.settings.RESTClientGetter(), namespace, "", helmLogger)
 
 	// Set the actionConfig is the received Helm pointer

@@ -5,6 +5,7 @@
 package layout
 
 import (
+	"context"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -35,7 +36,6 @@ func TestPackageFiles(t *testing.T) {
 
 	t.Run("Verify Files()", func(t *testing.T) {
 		t.Parallel()
-
 		pp := New("test")
 
 		files := pp.Files()
@@ -103,6 +103,7 @@ func TestPackageFiles(t *testing.T) {
 
 	t.Run("Verify Files() with paths mapped to package paths", func(t *testing.T) {
 		t.Parallel()
+		ctx := context.Background()
 
 		pp := New("test")
 
@@ -115,7 +116,7 @@ func TestPackageFiles(t *testing.T) {
 			normalizePath("images/oci-layout"),
 			normalizePath("images/blobs/sha256/" + strings.Repeat("1", 64)),
 		}
-		pp.SetFromPaths(paths)
+		pp.SetFromPaths(ctx, paths)
 
 		files := pp.Files()
 		expected := map[string]string{
@@ -134,6 +135,7 @@ func TestPackageFiles(t *testing.T) {
 
 	t.Run("Verify Files() with image layers mapped to package paths", func(t *testing.T) {
 		t.Parallel()
+		ctx := context.Background()
 
 		pp := New("test")
 
@@ -150,7 +152,7 @@ func TestPackageFiles(t *testing.T) {
 			},
 		}
 		pp.AddImages()
-		pp.SetFromLayers(descs)
+		pp.SetFromLayers(ctx, descs)
 
 		files := pp.Files()
 		expected := map[string]string{

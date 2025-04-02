@@ -13,7 +13,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -38,8 +37,6 @@ func (p *Packager) Create(ctx context.Context) error {
 	if err := os.Chdir(baseDir); err != nil {
 		return fmt.Errorf("unable to access directory %q: %w", baseDir, err)
 	}
-	// TODO(mkcp): Remove message on logger release
-	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 	l.Info("using build directory", "baseDir", baseDir)
 
 	// Setup package creator
@@ -62,7 +59,6 @@ func (p *Packager) Create(ctx context.Context) error {
 		"description", pkg.Metadata.Description,
 	)
 
-	// TODO(mkcp): Remove interactive on logger release
 	if !p.confirmAction(ctx, config.ZarfCreateStage, warnings, nil) {
 		return fmt.Errorf("package creation canceled")
 	}

@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -29,7 +28,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
@@ -139,8 +137,6 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 
 		onFailure := func() {
 			if err := actions.Run(ctx, onCreate.Defaults, onCreate.OnFailure, nil); err != nil {
-				// TODO(mkcp): Remove message on logger release
-				message.Debugf("unable to run component failure action: %s", err.Error())
 				l.Debug("unable to run component failure action", "error", err.Error())
 			}
 		}
@@ -183,8 +179,6 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 
 	// Images are handled separately from other component assets.
 	if len(imageList) > 0 {
-		// TODO(mkcp): Remove message on logger release
-		message.HeaderInfof("📦 PACKAGE IMAGES")
 		dst.AddImages()
 
 		cachePath, err := config.GetAbsCachePath()
@@ -237,8 +231,6 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 
 	// Ignore SBOM creation if the flag is set.
 	if skipSBOMFlagUsed {
-		// TODO(mkcp): Remove message on logger release
-		message.Debug("Skipping image SBOM processing per --skip-sbom flag")
 		l.Debug("skipping image SBOM processing per --skip-sbom flag")
 		return nil
 	}
@@ -311,7 +303,6 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		if err != nil {
 			return fmt.Errorf("unable to publish package: %w", err)
 		}
-		message.HorizontalRule()
 		flags := []string{}
 		if config.CommonOptions.PlainHTTP {
 			flags = append(flags, "--plain-http")
@@ -319,11 +310,6 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 		if config.CommonOptions.InsecureSkipTLSVerify {
 			flags = append(flags, "--insecure-skip-tls-verify")
 		}
-		// TODO(mkcp): Remove message on logger release
-		message.Title("To inspect/deploy/pull:", "")
-		message.ZarfCommand("package inspect %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), strings.Join(flags, " "))
-		message.ZarfCommand("package deploy %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), strings.Join(flags, " "))
-		message.ZarfCommand("package pull %s %s", helpers.OCIURLPrefix+remote.Repo().Reference.String(), strings.Join(flags, " "))
 	} else {
 		// Use the output path if the user specified it.
 		packageName := fmt.Sprintf("%s%s", sources.NameFromMetadata(pkg, pc.createOpts.IsSkeleton), sources.PkgSuffix(pkg.Metadata.Uncompressed))
@@ -374,8 +360,6 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 // if/elses that can be de-nested.
 func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.ZarfComponent, dst *layout.PackagePaths) error {
 	l := logger.From(ctx)
-	// TODO(mkcp): Remove message on logger release
-	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 	l.Info("adding component", "name", component.Name)
 	start := time.Now()
 
@@ -466,14 +450,10 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 	injectionsCount := len(component.DataInjections)
 	if injectionsCount > 0 {
 		injectStart := time.Now()
-		// TODO(mkcp): Remove message on logger release
-		spinner := message.NewProgressSpinner("Loading data injections")
-		defer spinner.Stop()
 		l.Info("data injections found, running", "injections", injectionsCount)
 
 		for dataIdx, data := range component.DataInjections {
 			target := data.Target
-			spinner.Updatef("Copying data injection %s for %s", target.Path, target.Selector)
 			l.Info("copying data injection", "path", target.Path, "selector", target.Selector)
 
 			rel := filepath.Join(layout.DataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(target.Path))
@@ -490,7 +470,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 				}
 			}
 		}
-		spinner.Success()
 		l.Debug("done loading data injections", "duration", time.Since(injectStart))
 	}
 
@@ -505,9 +484,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 			manifestCount += len(manifest.Kustomizations)
 		}
 
-		// TODO(mkcp): Remove message on logger release
-		spinner := message.NewProgressSpinner("Loading %d K8s manifests", manifestCount)
-		defer spinner.Stop()
 		l.Info("processing k8s manifests", "component", component.Name, "manifests", manifestCount)
 
 		// Iterate over all manifests.
@@ -517,8 +493,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 				dst := filepath.Join(componentPaths.Base, rel)
 
 				// Copy manifests without any processing.
-				// TODO(mkcp): Remove message on logger release
-				spinner.Updatef("Copying manifest %s", path)
 				l.Info("copying manifest", "path", path)
 				if helpers.IsURL(path) {
 					if err := utils.DownloadToFile(ctx, path, dst, component.DeprecatedCosignKeyPath); err != nil {
@@ -533,8 +507,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 
 			for kustomizeIdx, path := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package.
-				// TODO(mkcp): Remove message on logger release
-				spinner.Updatef("Building kustomization for %s", path)
 				l.Info("building kustomization", "path", path)
 
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
@@ -546,7 +518,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 				}
 			}
 		}
-		spinner.Success()
 		l.Debug("done processing k8s manifests",
 			"component", component.Name,
 			"duration", time.Since(manifestStart))
@@ -556,9 +527,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 	reposCount := len(component.Repos)
 	if reposCount > 0 {
 		reposStart := time.Now()
-		// TODO(mkcp): Remove message on logger release
-		spinner := message.NewProgressSpinner("Loading %d git repos", len(component.Repos))
-		defer spinner.Stop()
 		l.Info("loading git repos", "component", component.Name, "repos", reposCount)
 
 		for _, url := range component.Repos {
@@ -568,7 +536,6 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 				return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 			}
 		}
-		spinner.Success()
 		l.Debug("done loading git repos", "component", component.Name, "duration", time.Since(reposStart))
 	}
 

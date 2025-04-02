@@ -22,7 +22,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -188,7 +187,6 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	message.Notef("Saving package to path %s", tarballPath)
 	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
 	files, err := os.ReadDir(p.dirPath)
 	if err != nil {

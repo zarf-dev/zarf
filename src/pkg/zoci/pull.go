@@ -55,12 +55,6 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	// TODO (@austinabro321) change this and other r.Log() calls to the proper slog format
 	r.Log().Info(fmt.Sprintf("Pulling %s, size: %s", r.Repo().Reference, utils.ByteFormat(float64(layerSize), 2)))
 
-	// Create a thread to update a progress bar as we save the package to disk
-	doneSaving := make(chan error)
-	successText := fmt.Sprintf("Pulling %q", helpers.OCIURLPrefix+r.Repo().Reference.String())
-
-	go utils.RenderProgressBarForLocalDirWrite(destinationDir, layerSize, doneSaving, "Pulling", successText)
-
 	dst, err := file.New(destinationDir)
 	if err != nil {
 		return nil, err
@@ -74,8 +68,6 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	copyOpts.Concurrency = concurrency
 
 	err = r.CopyToTarget(ctx, layersToPull, dst, copyOpts)
-	doneSaving <- err
-	<-doneSaving
 	if err != nil {
 		return nil, err
 	}
