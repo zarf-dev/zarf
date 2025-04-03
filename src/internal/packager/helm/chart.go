@@ -40,13 +40,19 @@ import (
 const maxHelmHistory = 10
 
 type InstallUpgradeOpts struct {
+	// AdoptExistingResources is true if the chart should adopt existing namespaces
 	AdoptExistingResources bool
-	VariableConfig         *variables.VariableConfig
-	State                  *types.ZarfState
-	Cluster                *cluster.Cluster
-	AirgapMode             bool
-	Timeout                time.Duration
-	Retries                int
+	// VariableConfig is used to template the variables in the chart
+	VariableConfig *variables.VariableConfig
+	// State is used to update the registry / git server secrets
+	State   *types.ZarfState
+	Cluster *cluster.Cluster
+	// AirgapMode is true if the package being installed is not a YOLO package and it helps determine if Zarf state secrets should be updated
+	AirgapMode bool
+	// Timeout for the helm install/upgrade
+	Timeout time.Duration
+	// Retries for the helm install/upgrade
+	Retries int
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
