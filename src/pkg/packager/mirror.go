@@ -8,11 +8,10 @@ import (
 	"context"
 	"fmt"
 	"runtime"
-	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -58,8 +57,7 @@ func (p *Packager) Mirror(ctx context.Context) error {
 func (p *Packager) mirrorComponent(ctx context.Context, component v1alpha1.ZarfComponent) error {
 	componentPaths := p.layout.Components.Dirs[component.Name]
 
-	// All components now require a name
-	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
+	logger.From(ctx).Info("mirroring component", "component", component.Name)
 
 	hasImages := len(component.Images) > 0
 	hasRepos := len(component.Repos) > 0

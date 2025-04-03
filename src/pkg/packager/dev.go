@@ -15,7 +15,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/types"
@@ -77,7 +76,6 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 		return err
 	}
 
-	message.HeaderInfof("📦 PACKAGE DEPLOY %s", p.cfg.Pkg.Metadata.Name)
 	l.Info("starting package deploy", "name", p.cfg.Pkg.Metadata.Name)
 
 	if !p.cfg.CreateOpts.NoYOLO {
@@ -112,18 +110,12 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 		return err
 	}
 	if len(deployedComponents) == 0 {
-		message.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
 		l.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
 	}
 
 	// Notify all the things about the successful deployment
-	message.Successf("Zarf dev deployment complete")
 	l.Debug("dev deployment complete", "package", p.cfg.Pkg.Metadata.Name, "duration", time.Since(start))
-
-	message.HorizontalRule()
-	message.Title("Next steps:", "")
-
-	message.ZarfCommand("package inspect %s", p.cfg.Pkg.Metadata.Name)
+	l.Info("consider `zarf package inspect PACKAGE`", "package", p.cfg.Pkg.Metadata.Name)
 
 	// cd back
 	return os.Chdir(cwd)

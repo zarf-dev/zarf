@@ -25,7 +25,6 @@ import (
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -235,7 +234,8 @@ func newDevPatchGitCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *devPatchGitOptions) run(_ *cobra.Command, args []string) error {
+func (o *devPatchGitOptions) run(cmd *cobra.Command, args []string) error {
+	l := logger.From(cmd.Context())
 	host, fileName := args[0], args[1]
 
 	// Read the contents of the given file
@@ -250,11 +250,9 @@ func (o *devPatchGitOptions) run(_ *cobra.Command, args []string) error {
 	// Perform git url transformation via regex
 	text := string(content)
 
-	// TODO(mkcp): Currently uses message for its log fn. Migrate to ctx and slog
-	processedText := transform.MutateGitURLsInText(message.Warnf, gitServer.Address, text, gitServer.PushUsername)
+	processedText := transform.MutateGitURLsInText(l.Warn, gitServer.Address, text, gitServer.PushUsername)
 
 	// Print the differences
-	// TODO(mkcp): Uses pterm to print text diffs. Decouple from pterm after we release logger.
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(text, processedText, true)
 	diffs = dmp.DiffCleanupSemantic(diffs)
@@ -309,7 +307,6 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 	var data io.ReadCloser
 
 	if helpers.IsURL(fileName) {
-		message.Warn(lang.CmdDevSha256sumRemoteWarning)
 		logger.From(cmd.Context()).Warn("this is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link")
 
 		fileBase, err := helpers.ExtractBasePathFromURL(fileName)

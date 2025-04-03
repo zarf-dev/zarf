@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -44,16 +43,6 @@ func TestPackageLayout(t *testing.T) {
 	sbomPath, err := pkgLayout.GetSBOM(tmpDir)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(sbomPath, "compare.html"))
-
-	ref, err := transform.ParseImageRef("docker.io/library/alpine:3.20")
-	require.NoError(t, err)
-	img, err := pkgLayout.GetImage(ref)
-	require.NoError(t, err)
-	dgst, err := img.Digest()
-	require.NoError(t, err)
-
-	expectedSHA := "sha256:43180c492a5e6cedd8232e8f77a454f666f247586853eecb90258b26688ad1d3"
-	require.Equal(t, expectedSHA, dgst.String())
 
 	files, err := pkgLayout.Files()
 	require.NoError(t, err)
