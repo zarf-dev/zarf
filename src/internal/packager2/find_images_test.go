@@ -25,15 +25,20 @@ func TestFindImages(t *testing.T) {
 		packagePath    string
 		opts           FindImagesOptions
 		expectedErr    string
-		expectedImages map[string][]string
+		expectedImages []ImageFindings
 	}{
 		{
 			name:        "agent deployment",
 			packagePath: "./testdata/find-images/agent",
-			expectedImages: map[string][]string{
-				"baseline": {
-					"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
-					"ghcr.io/zarf-dev/zarf/agent:sha256-f8b1c2f99349516ae1bd0711a19697abcc41555076b0ae90f1a70ca6b50dcbd8.sig",
+			expectedImages: []ImageFindings{
+				{
+					ComponentName: "baseline",
+					MatchedImages: []string{
+						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
+					},
+					CosignArtifacts: []string{
+						"ghcr.io/zarf-dev/zarf/agent:sha256-f8b1c2f99349516ae1bd0711a19697abcc41555076b0ae90f1a70ca6b50dcbd8.sig",
+					},
 				},
 			},
 		},
@@ -43,10 +48,13 @@ func TestFindImages(t *testing.T) {
 			opts: FindImagesOptions{
 				SkipCosign: true,
 			},
-			expectedImages: map[string][]string{
-				"baseline": {
-					"nginx:1.16.0",
-					"busybox",
+			expectedImages: []ImageFindings{
+				{
+					ComponentName: "baseline",
+					MatchedImages: []string{
+						"nginx:1.16.0",
+						"busybox",
+					},
 				},
 			},
 		},
@@ -56,9 +64,12 @@ func TestFindImages(t *testing.T) {
 			opts: FindImagesOptions{
 				SkipCosign: true,
 			},
-			expectedImages: map[string][]string{
-				"baseline": {
-					"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
+			expectedImages: []ImageFindings{
+				{
+					ComponentName: "baseline",
+					MatchedImages: []string{
+						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
+					},
 				},
 			},
 		},
@@ -68,15 +79,18 @@ func TestFindImages(t *testing.T) {
 			opts: FindImagesOptions{
 				SkipCosign: true,
 			},
-			expectedImages: map[string][]string{
-				"baseline": {
-					"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
-					"10.0.0.1:443/zarf-dev/zarf/agent:v0.38.1",
-					"alpine",
-					"xn--7o8h.com/myimage:9.8.7",
-					"registry.io/foo/project--id.module--name.ver---sion--name",
-					"foo_bar:latest",
-					"foo.com:8080/bar:1.2.3",
+			expectedImages: []ImageFindings{
+				{
+					ComponentName: "baseline",
+					MatchedImages: []string{
+						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
+						"10.0.0.1:443/zarf-dev/zarf/agent:v0.38.1",
+						"alpine",
+						"xn--7o8h.com/myimage:9.8.7",
+						"registry.io/foo/project--id.module--name.ver---sion--name",
+						"foo_bar:latest",
+						"foo.com:8080/bar:1.2.3",
+					},
 				},
 			},
 		},
@@ -108,15 +122,19 @@ func TestFindImages(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			images, err := FindImages(ctx, tt.packagePath, tt.opts)
+			results, err := FindImages(ctx, tt.packagePath, tt.opts)
 			if tt.expectedErr != "" {
 				require.EqualError(t, err, tt.expectedErr)
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, len(tt.expectedImages), len(images))
-			for k, v := range tt.expectedImages {
-				require.ElementsMatch(t, v, images[k])
+			require.Equal(t, len(tt.expectedImages), len(results.ImageFindings))
+			for i, expected := range tt.expectedImages {
+				require.Equal(t, expected.ComponentName, results.ImageFindings[i].ComponentName)
+				require.ElementsMatch(t, expected.MatchedImages, results.ImageFindings[i].MatchedImages)
+				require.ElementsMatch(t, expected.MaybeImages, results.ImageFindings[i].MaybeImages)
+				require.ElementsMatch(t, expected.CosignArtifacts, results.ImageFindings[i].CosignArtifacts)
+				require.ElementsMatch(t, expected.WhyResources, results.ImageFindings[i].WhyResources)
 			}
 		})
 	}

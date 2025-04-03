@@ -443,8 +443,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		Why:                 pkgConfig.FindImagesOpts.Why,
 		SkipCosign:          pkgConfig.FindImagesOpts.SkipCosign,
 	}
-	_, err := packager2.FindImages(ctx, baseDir, findImagesOptions)
-
+	results, err := packager2.FindImages(ctx, baseDir, findImagesOptions)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -452,6 +451,44 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("unable to find images: %w", err)
 	}
+
+	if pkgConfig.FindImagesOpts.Why != "" {
+		var foundWhyResource bool
+		for _, finding := range results.ImageFindings {
+			for _, whyResource := range finding.WhyResources {
+				fmt.Printf("component: %s\n%s: %s\nresource:\n\n%s\n", finding.ComponentName,
+					whyResource.ResourceType, whyResource.Name, whyResource.Content)
+				foundWhyResource = true
+			}
+		}
+		if !foundWhyResource {
+			return fmt.Errorf("image %s not found in any charts or manifests", pkgConfig.FindImagesOpts.Why)
+		}
+		return nil
+	}
+
+	componentDefinition := "\ncomponents:\n"
+	for _, finding := range results.ImageFindings {
+		if len(finding.MatchedImages) > 0 {
+			componentDefinition += fmt.Sprintf("  - name: %s\n    images:\n", finding.ComponentName)
+			for _, image := range finding.MatchedImages {
+				componentDefinition += fmt.Sprintf("      - %s\n", image)
+			}
+		}
+		if len(finding.MaybeImages) > 0 {
+			componentDefinition += fmt.Sprintf("      # Possible images - %s\n", finding.ComponentName)
+			for _, image := range finding.MaybeImages {
+				componentDefinition += fmt.Sprintf("      - %s\n", image)
+			}
+		}
+		if len(finding.CosignArtifacts) > 0 {
+			componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s\n", finding.ComponentName)
+			for _, cosignArtifact := range finding.CosignArtifacts {
+				componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
+			}
+		}
+	}
+	fmt.Println(componentDefinition)
 	return nil
 }
 
