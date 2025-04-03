@@ -33,7 +33,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -58,11 +57,6 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 	if source == "" {
 		source = "Zarf-generated"
 	}
-	spinner := message.NewProgressSpinner("Processing helm chart %s:%s source: %s",
-		zarfChart.Name,
-		zarfChart.Version,
-		source)
-	defer spinner.Stop()
 	l.Info("processing Helm chart", "name", zarfChart.Name, "version", zarfChart.Version, "source", source)
 
 	// If no release name is specified, use the chart name.
@@ -95,18 +89,15 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 
 		releases, histErr := histClient.Run(zarfChart.ReleaseName)
 
-		spinner.Updatef("Checking for existing helm deployment")
 		l.Debug("checking for existing helm deployment")
 
 		if errors.Is(histErr, driver.ErrReleaseNotFound) {
 			// No prior release, try to install it.
-			spinner.Updatef("Attempting chart installation")
 			l.Info("performing Helm install", "chart", zarfChart.Name)
 
 			release, err = installChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender)
 		} else if histErr == nil && len(releases) > 0 {
 			// Otherwise, there is a prior release so upgrade it.
-			spinner.Updatef("Attempting chart upgrade")
 			l.Info("performing Helm upgrade", "chart", zarfChart.Name)
 
 			lastRelease := releases[len(releases)-1]
@@ -120,7 +111,6 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 			return err
 		}
 
-		spinner.Success()
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(opts.Retries)), retry.Delay(500*time.Millisecond))
 	if err != nil {
@@ -143,7 +133,6 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		}
 
 		// Attempt to rollback on a failed upgrade.
-		spinner.Updatef("Performing chart rollback")
 		l.Info("performing Helm rollback", "chart", zarfChart.Name)
 		err = rollbackChart(zarfChart.ReleaseName, previouslyDeployedVersion, actionConfig, opts.Timeout)
 		if err != nil {
@@ -163,13 +152,11 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 	}
 	if !zarfChart.NoWait {
 		// Ensure we don't go past the timeout by using a context initialized with the helm timeout
-		spinner.Updatef("Running health checks")
 		l.Info("running health checks", "chart", zarfChart.Name)
 		if err := healthchecks.WaitForReadyRuntime(helmCtx, opts.Cluster.Watcher, runtimeObjs); err != nil {
 			return nil, "", err
 		}
 	}
-	spinner.Success()
 	l.Debug("done processing Helm chart", "name", zarfChart.Name, "duration", time.Since(start))
 
 	// return any collected connect strings for zarf connect.
@@ -185,7 +172,6 @@ func RemoveChart(ctx context.Context, namespace string, name string, timeout tim
 	}
 	// Perform the uninstall.
 	response, err := uninstallChart(name, actionConfig, timeout)
-	message.Debug(response)
 	logger.From(ctx).Debug("chart uninstalled", "response", response)
 	return err
 }
@@ -194,8 +180,6 @@ func RemoveChart(ctx context.Context, namespace string, name string, timeout tim
 // (note: this only works on single-deep charts, charts with dependencies (like loki-stack) will not work)
 func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedValues map[string]interface{}, opts InstallUpgradeOpts) error {
 	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Updating values for helm release %s", chart.ReleaseName)
-	defer spinner.Stop()
 	l.Debug("updating values for helm release", "name", chart.ReleaseName)
 
 	actionConfig, err := createActionConfig(ctx, chart.Namespace)
@@ -242,8 +226,6 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		if err != nil {
 			return err
 		}
-
-		spinner.Success()
 
 		return nil
 	}
@@ -391,7 +373,6 @@ func migrateDeprecatedAPIs(ctx context.Context, c *cluster.Cluster, actionConfig
 
 	// If the release was modified in the above loop, save it back to the cluster
 	if modified {
-		message.Warnf("Zarf detected deprecated APIs for the '%s' helm release.  Attempting automatic upgrade.", latestRelease.Name)
 		logger.From(ctx).Warn("detected deprecated APIs for the helm release", "name", latestRelease.Name)
 
 		// Update current release version to be superseded (same as the helm mapkubeapis plugin)

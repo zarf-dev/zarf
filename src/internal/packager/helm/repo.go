@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -42,8 +43,6 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valu
 		// check if the chart is a git url with a ref (if an error is returned url will be empty)
 		isGitURL := strings.HasSuffix(url, ".git")
 		if err != nil {
-			// TODO(mkcp): Remove message on logger release
-			message.Debugf("unable to parse the url, continuing with %s", chart.URL)
 			logger.From(ctx).Debug("unable to parse the url, continuing", "url", chart.URL)
 		}
 
@@ -80,9 +79,6 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 		"version", chart.Version,
 		"path", chart.LocalPath,
 	)
-	// TODO(mkcp): Remove message on logger release
-	spinner := message.NewProgressSpinner("Processing helm chart %s:%s from %s", chart.Name, chart.Version, chart.LocalPath)
-	defer spinner.Stop()
 
 	// Load and validate the chart
 	cl, _, err := loadAndValidateChart(chart.LocalPath)
@@ -94,7 +90,7 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 	var saved string
 	temp := filepath.Join(chartPath, "temp")
 	if _, ok := cl.(loader.DirLoader); ok {
-		err = buildChartDependencies(chart)
+		err = buildChartDependencies(ctx, chart)
 		if err != nil {
 			return fmt.Errorf("unable to build dependencies for the chart: %w", err)
 		}
@@ -124,8 +120,6 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 		return err
 	}
 
-	spinner.Success()
-
 	l.Debug("done processing local helm chart",
 		"name", chart.Name,
 		"version", chart.Version,
@@ -138,9 +132,6 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string) error {
 	l := logger.From(ctx)
 	l.Info("processing Helm chart", "name", chart.Name)
-	// TODO(mkcp): Remove message on logger release
-	spinner := message.NewProgressSpinner("Processing Helm chart %s", chart.Name)
-	defer spinner.Stop()
 
 	// Retrieve the repo containing the chart
 	gitPath, err := DownloadChartFromGitToTemp(ctx, chart.URL)
@@ -161,15 +152,12 @@ func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, chartPat
 // DownloadPublishedChart loads a specific chart version from a remote repo.
 func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string) error {
 	l := logger.From(ctx)
+	start := time.Now()
 	l.Info("processing Helm chart",
 		"name", chart.Name,
 		"version", chart.Version,
 		"repo", chart.URL,
 	)
-	start := time.Now()
-	// TODO(mkcp): Remove message on logger release
-	spinner := message.NewProgressSpinner("Processing Helm chart %s:%s from repo %s", chart.Name, chart.Version, chart.URL)
-	defer spinner.Stop()
 
 	// Set up the helm pull config
 	pull := action.NewPull()
@@ -184,8 +172,6 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 
 	// Not returning the error here since the repo file is only needed if we are pulling from a repo that requires authentication
 	if err != nil {
-		// TODO(mkcp): Remove message on logger release
-		message.Debugf("Unable to load the repo file at %q: %s", pull.Settings.RepositoryConfig, err.Error())
 		l.Debug("unable to load the repo file",
 			"path", pull.Settings.RepositoryConfig,
 			"error", err.Error(),
@@ -240,7 +226,7 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 
 	// Set up the chart chartDownloader
 	chartDownloader := downloader.ChartDownloader{
-		Out:            spinner,
+		Out:            io.Discard,
 		RegistryClient: regClient,
 		// TODO: Further research this with regular/OCI charts
 		Verify:  downloader.VerifyNever,
@@ -280,7 +266,6 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		return err
 	}
 
-	spinner.Success()
 	l.Debug("done downloading helm chart",
 		"name", chart.Name,
 		"version", chart.Version,
@@ -337,7 +322,8 @@ func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, valuesPath str
 }
 
 // buildChartDependencies builds the helm chart dependencies
-func buildChartDependencies(chart v1alpha1.ZarfChart) error {
+func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart) error {
+	l := logger.From(ctx)
 	// Download and build the specified dependencies
 	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
 	if err != nil {
@@ -347,6 +333,7 @@ func buildChartDependencies(chart v1alpha1.ZarfChart) error {
 	settings := cli.New()
 
 	man := &downloader.Manager{
+		// TODO(mkcp): Shouldn't rely on a global mutable var. Pass in a writer here somehow, or at least make atomic?
 		Out:            &message.DebugWriter{},
 		ChartPath:      chart.LocalPath,
 		Getters:        getter.All(settings),
@@ -363,18 +350,16 @@ func buildChartDependencies(chart v1alpha1.ZarfChart) error {
 	var notFoundErr *downloader.ErrRepoNotFound
 	if errors.As(err, &notFoundErr) {
 		// If we encounter a repo not found error point the user to `zarf tools helm repo add`
-		// TODO(mkcp): Remove message on logger release
-		message.Warnf("%s. Please add the missing repo(s) via the following:", notFoundErr.Error())
+		l.Warn("Error occurred", "error", notFoundErr.Error())
+		l.Warn("Please add the missing repo(s) via the following:")
 		for _, repository := range notFoundErr.Repos {
-			// TODO(mkcp): Remove message on logger release
-			message.ZarfCommand(fmt.Sprintf("tools helm repo add <your-repo-name> %s", repository))
+			l.Warn("$zarf tools helm repo add <your-repo-name>", "repository", repository)
 		}
 		return err
 	}
 	if err != nil {
-		// TODO(mkcp): Remove message on logger release
-		message.ZarfCommand("tools helm dependency build --verify")
-		message.Warnf("Unable to perform a rebuild of Helm dependencies: %s", err.Error())
+		l.Info("$zarf tools helm dependency build --verify")
+		l.Warn("unable to perform a rebuild of Helm dependencies", "error", err.Error())
 		return err
 	}
 	return nil

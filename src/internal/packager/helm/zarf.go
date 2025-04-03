@@ -20,7 +20,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -72,8 +71,6 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOpts) erro
 // UpdateZarfAgentValues updates the Zarf agent deployment with the new state values
 func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOpts) error {
 	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Gathering information to update Zarf Agent TLS")
-	defer spinner.Stop()
 
 	deployment, err := opts.Cluster.Clientset.AppsV1().Deployments(cluster.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
 	if err != nil {
@@ -95,7 +92,6 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOpts) error {
 	if err != nil {
 		return fmt.Errorf("unable to list helm releases: %w", err)
 	}
-	spinner.Success()
 
 	for _, release := range releases {
 		// Update the Zarf Agent release with the new values
@@ -129,8 +125,6 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOpts) error {
 
 	// Trigger a rolling update for the TLS secret update to take effect.
 	// https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment
-	spinner = message.NewProgressSpinner("Performing a rolling update for the Zarf Agent deployment")
-	defer spinner.Stop()
 	l.Info("performing a rolling update for the Zarf Agent deployment")
 
 	// Re-fetch the agent deployment before we update since the resourceVersion has changed after updating the Helm release values.
@@ -164,7 +158,5 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOpts) error {
 	if err != nil {
 		return err
 	}
-
-	spinner.Success()
 	return nil
 }
