@@ -33,6 +33,7 @@ type LoadOptions struct {
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
+	Inspect                 bool
 }
 
 // LoadPackage optionally fetches and loads the package from the given source.
@@ -53,6 +54,25 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	isPartial := false
 	switch srcType {
 	case "oci":
+		// this is a special case during inspect. do not pull the full package as it may be very large
+		// default to pulling the sbom for simplicity
+		if opt.Inspect {
+			path, err := pullOCIMetadata(ctx, opt.Source, tmpDir, opt.Shasum, architecture)
+			if err != nil {
+				return nil, err
+			}
+			layoutOpt := layout.PackageLayoutOptions{
+				PublicKeyPath:           opt.PublicKeyPath,
+				SkipSignatureValidation: opt.SkipSignatureValidation,
+				IsPartial:               isPartial,
+				Inspect:                 true,
+			}
+			pkgLayout, err := layout.LoadFromDir(ctx, path, layoutOpt)
+			if err != nil {
+				return nil, err
+			}
+			return pkgLayout, nil
+		}
 		isPartial, tarPath, err = pullOCI(ctx, opt.Source, tmpDir, opt.Shasum, architecture, opt.Filter)
 		if err != nil {
 			return nil, err
@@ -154,7 +174,7 @@ func assembleSplitTar(src, tarPath string) error {
 	return nil
 }
 
-func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string) (v1alpha1.ZarfPackage, error) {
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string, inspect bool) (v1alpha1.ZarfPackage, error) {
 	_, err := identifySource(src)
 	if err != nil {
 		if cluster == nil {
@@ -173,6 +193,7 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 		Architecture:            config.GetArch(),
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           publicKeyPath,
+		Inspect:                 inspect,
 	}
 	p, err := LoadPackage(ctx, loadOpt)
 	if err != nil {
