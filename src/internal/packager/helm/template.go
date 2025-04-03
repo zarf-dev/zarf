@@ -100,6 +100,7 @@ func newTemplateRenderer(actionConfig *action.Configuration, vc *variables.Varia
 	return rend, nil
 }
 
+// Run satisfies the Helm post-renderer interface and templates the Zarf vars in the rendered manifests.
 func (tr *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
 	resources, err := getTemplatedManifests(renderedManifests, tr.variableConfig, tr.actionConfig)
