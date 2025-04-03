@@ -1,0 +1,10 @@
+eb841eedfda1dd3bbfb91575715adf9e1213b769:src/test/external-test/secret.yaml:generic-api-key:10
+eb841eedfda1dd3bbfb91575715adf9e1213b769:src/test/external-test/secret.yaml:kubernetes-secret-yaml:2 
+dbccfe3fa5a9b5d5a1bfbd9e0fb66f2e5bb533c1:src/test/external-git/secret.yaml:generic-api-key:9
+80c4ed1986b3d40f587e8f915a1e9bba5931d7e2:examples/istio-with-separate-cert/files/bigbangdev.key:private-key:1
+11f6173b69678399abce87c0a43abaacb22f516a:examples/software-factory/template/bigbang/values.yaml:private-key:59
+1583ead449c4598fa00d4902e6f02ca38b0ed6fd:examples/big-bang-umbrella/template/bigbang/values.yaml:private-key:65
+b62f60c9d7e2ac02e2161ea309b855189b0a50fc:examples/big-bang/template/bigbang/values.yaml:private-key:141
+dbccfe3fa5a9b5d5a1bfbd9e0fb66f2e5bb533c1:src/test/external-git/secret.yaml:kubernetes-secret-yaml:2
+11f6173b69678399abce87c0a43abaacb22f516a:examples/software-factory/template/bigbang/values.yaml:private-key:599
+49f5acb30aeec1a7de6201dfa0843a6a5639fab8:examples/big-bang/template/bigbang/values.yaml:private-key:141
