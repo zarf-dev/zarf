@@ -375,8 +375,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 
 	// If any helm charts are defined, process them.
 	for _, chart := range component.Charts {
-		helmCfg := helm.New(chart, componentPaths.Charts, componentPaths.Values)
-		if err := helmCfg.PackageChart(ctx, componentPaths.Charts); err != nil {
+		if err := helm.PackageChart(ctx, chart, componentPaths.Charts, componentPaths.Values); err != nil {
 			return err
 		}
 	}

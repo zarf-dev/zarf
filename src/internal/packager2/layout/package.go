@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -301,11 +303,7 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 	}
 
 	if len(packageFiles) > 0 {
-		// TODO (phillebaba): Replace with maps.Keys after upgrading to Go 1.23.
-		filePaths := []string{}
-		for k := range packageFiles {
-			filePaths = append(filePaths, k)
-		}
+		filePaths := slices.Collect(maps.Keys(packageFiles))
 		return fmt.Errorf("package contains additional files not present in the checksum %s", strings.Join(filePaths, ", "))
 	}
 
