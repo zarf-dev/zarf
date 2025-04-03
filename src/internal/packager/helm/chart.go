@@ -334,6 +334,8 @@ func LoadChartData(zarfChart v1alpha1.ZarfChart, chartPath string, valuesPath st
 	return loadedChart, chartValues, nil
 }
 
+// migrateDeprecatedAPIs searches through all the objects from the latest release and migrates any deprecated APIs to the latest version.
+// If any deprecated fields are found, the release will be updated and saved back to the cluster.
 func migrateDeprecatedAPIs(ctx context.Context, c *cluster.Cluster, actionConfig *action.Configuration, latestRelease *release.Release) error {
 	// Get the Kubernetes version from the current cluster
 	kubeVersion, err := c.Clientset.Discovery().ServerVersion()
