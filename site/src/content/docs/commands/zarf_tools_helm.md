@@ -12,7 +12,7 @@ Subset of the Helm CLI included with Zarf to help manage helm charts.
 
 ### Synopsis
 
-Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the air gap.
+Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the airgap.
 
 ### Options
 

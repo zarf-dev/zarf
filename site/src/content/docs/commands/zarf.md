@@ -12,7 +12,7 @@ DevSecOps for Airgap
 
 ### Synopsis
 
-Zarf eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud native workloads
+Zarf eliminates the complexity of airgap software delivery for Kubernetes clusters and cloud native workloads
 using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments.
 
 ```
