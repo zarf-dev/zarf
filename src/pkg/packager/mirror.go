@@ -15,7 +15,7 @@ import (
 	"runtime"
 )
 
-// Mirror pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the air gap without deploying them
+// Mirror pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the airgap without deploying them
 func (p *Packager) Mirror(ctx context.Context) error {
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
