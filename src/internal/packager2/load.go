@@ -28,20 +28,16 @@ import (
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
 	Source                  string
+	SourceType              string
 	Shasum                  string
 	Architecture            string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
-	Inspect                 bool
 }
 
 // LoadPackage optionally fetches and loads the package from the given source.
 func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, error) {
-	srcType, err := identifySource(opt.Source)
-	if err != nil {
-		return nil, err
-	}
 	architecture := config.GetArch(opt.Architecture)
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -52,27 +48,8 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	tarPath := filepath.Join(tmpDir, "data.tar.zst")
 
 	isPartial := false
-	switch srcType {
+	switch opt.SourceType {
 	case "oci":
-		// this is a special case during inspect. do not pull the full package as it may be very large
-		// default to pulling the sbom for simplicity
-		if opt.Inspect {
-			path, err := pullOCIMetadata(ctx, opt.Source, tmpDir, opt.Shasum, architecture)
-			if err != nil {
-				return nil, err
-			}
-			layoutOpt := layout.PackageLayoutOptions{
-				PublicKeyPath:           opt.PublicKeyPath,
-				SkipSignatureValidation: opt.SkipSignatureValidation,
-				IsPartial:               isPartial,
-				Inspect:                 true,
-			}
-			pkgLayout, err := layout.LoadFromDir(ctx, path, layoutOpt)
-			if err != nil {
-				return nil, err
-			}
-			return pkgLayout, nil
-		}
 		isPartial, tarPath, err = pullOCI(ctx, opt.Source, tmpDir, opt.Shasum, architecture, opt.Filter)
 		if err != nil {
 			return nil, err
@@ -92,7 +69,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	default:
 		return nil, fmt.Errorf("unknown source type: %s", opt.Source)
 	}
-	if srcType != "oci" && opt.Shasum != "" {
+	if opt.SourceType != "oci" && opt.Shasum != "" {
 		err := helpers.SHAsMatch(tarPath, opt.Shasum)
 		if err != nil {
 			return nil, err
@@ -174,8 +151,8 @@ func assembleSplitTar(src, tarPath string) error {
 	return nil
 }
 
-func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string, inspect bool) (v1alpha1.ZarfPackage, error) {
-	_, err := identifySource(src)
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string) (v1alpha1.ZarfPackage, error) {
+	srcType, err := identifySource(src)
 	if err != nil {
 		if cluster == nil {
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
@@ -189,11 +166,11 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 
 	loadOpt := LoadOptions{
 		Source:                  src,
+		SourceType:              srcType,
 		SkipSignatureValidation: skipSignatureValidation,
 		Architecture:            config.GetArch(),
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           publicKeyPath,
-		Inspect:                 inspect,
 	}
 	p, err := LoadPackage(ctx, loadOpt)
 	if err != nil {
