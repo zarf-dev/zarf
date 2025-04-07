@@ -8,9 +8,11 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"os"
 	"path/filepath"
 	"slices"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -32,12 +34,23 @@ func getComponentToImportName(component v1alpha1.ZarfComponent) string {
 }
 
 func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string) (v1alpha1.ZarfPackage, error) {
+	l := logger.From(ctx)
+	start := time.Now()
+
 	// Zarf imports merge in the top level package objects variables and constants
 	// however, imports are defined at the component level.
 	// Two packages can both import one another as long as the importing components are on a different chains.
 	// To detect cyclic imports, the stack is checked to see if the package has already been imported on that chain.
 	// Recursive calls only include components from the imported pkg that have the name of the component to import
 	importStack = append(importStack, packagePath)
+
+	l.Debug("start layout.ResolveImports",
+		"pkg", pkg.Metadata.Name,
+		"path", packagePath,
+		"arch", arch,
+		"flavor", flavor,
+		"importStack", len(importStack),
+	)
 
 	variables := pkg.Variables
 	constants := pkg.Constants
@@ -139,6 +152,11 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	pkg.Constants = slices.CompactFunc(constants, func(l, r v1alpha1.Constant) bool {
 		return l.Name == r.Name
 	})
+	l.Debug("done layout.ResolveImports",
+		"pkg", pkg.Metadata.Name,
+		"components", len(pkg.Components),
+		"duration", time.Since(start),
+	)
 	return pkg, nil
 }
 

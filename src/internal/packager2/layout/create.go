@@ -261,6 +261,14 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) 
 
 // LoadPackage returns a validated package definition after flavors, imports, and variables are applied.
 func LoadPackage(ctx context.Context, packagePath, flavor string, setVariables map[string]string) (v1alpha1.ZarfPackage, error) {
+	l := logger.From(ctx)
+	start := time.Now()
+	l.Debug("start layout.LoadPackage",
+		"path", packagePath,
+		"flavor", flavor,
+		"setVariables", setVariables)
+
+	// Load PackageConfig from disk
 	b, err := os.ReadFile(filepath.Join(packagePath, ZarfYAML))
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
@@ -280,14 +288,24 @@ func LoadPackage(ctx context.Context, packagePath, flavor string, setVariables m
 			return v1alpha1.ZarfPackage{}, err
 		}
 	}
-	err = validate(pkg, packagePath, setVariables, flavor)
+	err = validate(ctx, pkg, packagePath, setVariables, flavor)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
+	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
 	return pkg, nil
 }
 
-func validate(pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string) error {
+func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string) error {
+	l := logger.From(ctx)
+	start := time.Now()
+	l.Debug("start layout.Validate",
+		"pkg", pkg.Metadata.Name,
+		"packagePath", packagePath,
+		"flavor", flavor,
+		"setVariables", setVariables,
+	)
+
 	if err := validateFlavorExists(pkg, flavor); err != nil {
 		return err
 	}
@@ -298,14 +316,22 @@ func validate(pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[str
 	if err != nil {
 		return fmt.Errorf("unable to check schema: %w", err)
 	}
-	if len(findings) == 0 {
-		return nil
+	if len(findings) != 0 {
+		return &lint.LintError{
+			BaseDir:     packagePath,
+			PackageName: pkg.Metadata.Name,
+			Findings:    findings,
+		}
 	}
-	return &lint.LintError{
-		BaseDir:     packagePath,
-		PackageName: pkg.Metadata.Name,
-		Findings:    findings,
-	}
+
+	l.Debug("done layout.Validate",
+		"pkg", pkg.Metadata.Name,
+		"path", packagePath,
+		"findings", findings,
+		"duration", time.Since(start),
+	)
+
+	return nil
 }
 
 func validateFlavorExists(pkg v1alpha1.ZarfPackage, flavor string) error {
@@ -317,7 +343,7 @@ func validateFlavorExists(pkg v1alpha1.ZarfPackage, flavor string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("could not find flavor %s in package definition", flavor)
+	return fmt.Errorf("could not find flavor %s in package definition %s", flavor, pkg.Metadata.Name)
 }
 
 func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
