@@ -5,80 +5,31 @@
 package helm
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
 	"strconv"
-	"time"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli"
+	"helm.sh/helm/v3/pkg/cli/values"
+	"helm.sh/helm/v3/pkg/getter"
 )
 
-// Helm is a config object for working with helm charts.
-type Helm struct {
-	chart      v1alpha1.ZarfChart
-	chartPath  string
-	valuesPath string
-
-	cfg     *types.PackagerConfig
-	cluster *cluster.Cluster
-	timeout time.Duration
-	retries int
-
-	kubeVersion string
-
-	chartOverride   *chart.Chart
-	valuesOverrides map[string]any
-
-	settings       *cli.EnvSettings
-	actionConfig   *action.Configuration
-	variableConfig *variables.VariableConfig
-	state          *types.ZarfState
-}
-
-// Modifier is a function that modifies the Helm config.
-type Modifier func(*Helm)
-
-// New returns a new Helm config struct.
-func New(chart v1alpha1.ZarfChart, chartPath string, valuesPath string, mods ...Modifier) *Helm {
-	h := &Helm{
-		chart:      chart,
-		chartPath:  chartPath,
-		valuesPath: valuesPath,
-		timeout:    config.ZarfDefaultTimeout,
-	}
-
-	for _, mod := range mods {
-		mod(h)
-	}
-
-	return h
-}
-
-// NewClusterOnly returns a new Helm config struct geared toward interacting with the cluster (not packages)
-func NewClusterOnly(cfg *types.PackagerConfig, variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster) *Helm {
-	return &Helm{
-		cfg:            cfg,
-		variableConfig: variableConfig,
-		state:          state,
-		cluster:        cluster,
-		timeout:        config.ZarfDefaultTimeout,
-		retries:        config.ZarfDefaultRetries,
-	}
-}
-
-// NewFromZarfManifest generates a helm chart and config from a given Zarf manifest.
-func NewFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageName, componentName string, mods ...Modifier) (h *Helm, err error) {
+// ChartFromZarfManifest generates a helm chart and config from a given Zarf manifest.
+func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageName, componentName string) (v1alpha1.ZarfChart, *chart.Chart, error) {
 	// Generate a new chart.
 	tmpChart := new(chart.Chart)
 	tmpChart.Metadata = new(chart.Metadata)
@@ -99,7 +50,7 @@ func NewFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageNa
 		manifest := path.Join(manifestPath, file)
 		data, err := os.ReadFile(manifest)
 		if err != nil {
-			return h, fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
+			return v1alpha1.ZarfChart{}, nil, fmt.Errorf("unable to read manifest file %s: %w", manifest, err)
 		}
 
 		// Escape all chars and then wrap in {{ }}.
@@ -110,51 +61,16 @@ func NewFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageNa
 	}
 
 	// Generate the struct to pass to InstallOrUpgradeChart().
-	h = &Helm{
-		chart: v1alpha1.ZarfChart{
-			Name: tmpChart.Metadata.Name,
-			// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior.
-			ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
-			Version:     tmpChart.Metadata.Version,
-			Namespace:   manifest.Namespace,
-			NoWait:      manifest.NoWait,
-		},
-		chartOverride: tmpChart,
-		timeout:       config.ZarfDefaultTimeout,
+	chart := v1alpha1.ZarfChart{
+		Name: tmpChart.Metadata.Name,
+		// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior.
+		ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
+		Version:     tmpChart.Metadata.Version,
+		Namespace:   manifest.Namespace,
+		NoWait:      manifest.NoWait,
 	}
 
-	for _, mod := range mods {
-		mod(h)
-	}
-
-	return h, nil
-}
-
-// WithDeployInfo adds the necessary information to deploy a given chart
-func WithDeployInfo(cfg *types.PackagerConfig, variableConfig *variables.VariableConfig, state *types.ZarfState, cluster *cluster.Cluster, valuesOverrides map[string]any, timeout time.Duration, retries int) Modifier {
-	return func(h *Helm) {
-		h.cfg = cfg
-		h.variableConfig = variableConfig
-		h.state = state
-		h.cluster = cluster
-		h.valuesOverrides = valuesOverrides
-		h.timeout = timeout
-		h.retries = retries
-	}
-}
-
-// WithKubeVersion sets the Kube version for templating the chart
-func WithKubeVersion(kubeVersion string) Modifier {
-	return func(h *Helm) {
-		h.kubeVersion = kubeVersion
-	}
-}
-
-// WithVariableConfig sets the variable config for the chart
-func WithVariableConfig(variableConfig *variables.VariableConfig) Modifier {
-	return func(h *Helm) {
-		h.variableConfig = variableConfig
-	}
+	return chart, tmpChart, nil
 }
 
 // StandardName generates a predictable full path for a helm chart for Zarf.
@@ -165,4 +81,59 @@ func StandardName(destination string, chart v1alpha1.ZarfChart) string {
 // StandardValuesName generates a predictable full path for the values file for a helm chart for zarf
 func StandardValuesName(destination string, chart v1alpha1.ZarfChart, idx int) string {
 	return fmt.Sprintf("%s-%d", StandardName(destination, chart), idx)
+}
+
+// loadChartFromTarball returns a helm chart from a tarball.
+func loadChartFromTarball(chart v1alpha1.ZarfChart, chartPath string) (*chart.Chart, error) {
+	// Get the path the temporary helm chart tarball
+	sourceFile := StandardName(chartPath, chart) + ".tgz"
+
+	// Load the loadedChart tarball
+	loadedChart, err := loader.Load(sourceFile)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load helm chart archive: %w", err)
+	}
+
+	if err = loadedChart.Validate(); err != nil {
+		return nil, fmt.Errorf("unable to validate loaded helm chart: %w", err)
+	}
+
+	return loadedChart, nil
+}
+
+// parseChartValues reads the context of the chart values into an interface if it exists.
+func parseChartValues(chart v1alpha1.ZarfChart, valuesPath string, valuesOverrides map[string]any) (chartutil.Values, error) {
+	valueOpts := &values.Options{}
+
+	for idx := range chart.ValuesFiles {
+		path := StandardValuesName(valuesPath, chart, idx)
+		valueOpts.ValueFiles = append(valueOpts.ValueFiles, path)
+	}
+
+	httpProvider := getter.Provider{
+		Schemes: []string{"http", "https"},
+		New:     getter.NewHTTPGetter,
+	}
+
+	providers := getter.Providers{httpProvider}
+	chartValues, err := valueOpts.MergeValues(providers)
+	if err != nil {
+		return chartValues, err
+	}
+
+	return helpers.MergeMapRecursive(chartValues, valuesOverrides), nil
+}
+
+func createActionConfig(ctx context.Context, namespace string) (*action.Configuration, error) {
+	actionConfig := new(action.Configuration)
+	// Set the settings for the helm SDK
+	settings := cli.New()
+	settings.SetNamespace(namespace)
+	l := logger.From(ctx)
+	helmLogger := slog.NewLogLogger(l.Handler(), slog.LevelDebug).Printf
+	err := actionConfig.Init(settings.RESTClientGetter(), namespace, "", helmLogger)
+	if err != nil {
+		return nil, fmt.Errorf("could not get Helm action configuration: %w", err)
+	}
+	return actionConfig, err
 }

@@ -153,18 +153,11 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 		resources := []*unstructured.Unstructured{}
 		matchedImages := map[string]bool{}
 		maybeImages := map[string]bool{}
-		for _, chart := range component.Charts {
+		for _, zarfChart := range component.Charts {
 			// Generate helm templates for this chart
-			helmCfg := helm.New(
-				chart,
-				componentPaths.Charts,
-				componentPaths.Values,
-				helm.WithKubeVersion(p.cfg.FindImagesOpts.KubeVersionOverride),
-				helm.WithVariableConfig(p.variableConfig),
-			)
-			err = helmCfg.PackageChart(ctx, component.DeprecatedCosignKeyPath)
+			err = helm.PackageChart(ctx, zarfChart, componentPaths.Charts, componentPaths.Values)
 			if err != nil {
-				return nil, fmt.Errorf("unable to package the chart %s: %w", chart.Name, err)
+				return nil, fmt.Errorf("unable to package the chart %s: %w", zarfChart.Name, err)
 			}
 
 			valuesFilePaths, err := helpers.RecursiveFileList(componentPaths.Values, nil, false)
@@ -179,9 +172,13 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 				}
 			}
 
-			chartTemplate, chartValues, err := helmCfg.TemplateChart(ctx)
+			chart, values, err := helm.LoadChartData(zarfChart, componentPaths.Charts, componentPaths.Values, nil)
 			if err != nil {
-				return nil, fmt.Errorf("could not render the Helm template for chart %s: %w", chart.Name, err)
+				return nil, fmt.Errorf("failed to load chart data: %w", err)
+			}
+			chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, p.cfg.FindImagesOpts.KubeVersionOverride, p.variableConfig)
+			if err != nil {
+				return nil, fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
 			}
 
 			// Break the template into separate resources
@@ -191,10 +188,10 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			}
 			resources = append(resources, yamls...)
 
-			chartTarball := helm.StandardName(componentPaths.Charts, chart) + ".tgz"
-			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, chartValues)
+			chartTarball := helm.StandardName(componentPaths.Charts, zarfChart) + ".tgz"
+			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 			if err != nil {
-				return nil, fmt.Errorf("could not look up image annotations for chart URL %s: %w", chart.URL, err)
+				return nil, fmt.Errorf("could not look up image annotations for chart URL %s: %w", zarfChart.URL, err)
 			}
 			for _, image := range annotatedImages {
 				matchedImages[image] = true
@@ -202,9 +199,9 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 
 			// Check if the --why flag is set
 			if p.cfg.FindImagesOpts.Why != "" {
-				whyResourcesChart, err := findWhyResources(yamls, p.cfg.FindImagesOpts.Why, component.Name, chart.Name, true)
+				whyResourcesChart, err := findWhyResources(yamls, p.cfg.FindImagesOpts.Why, component.Name, zarfChart.Name, true)
 				if err != nil {
-					return nil, fmt.Errorf("could not determine why resource for the chart %s: %w", chart.Name, err)
+					return nil, fmt.Errorf("could not determine why resource for the chart %s: %w", zarfChart.Name, err)
 				}
 				whyResources = append(whyResources, whyResourcesChart...)
 			}
