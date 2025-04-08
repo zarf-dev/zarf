@@ -25,12 +25,12 @@ import (
 )
 
 // UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
-func (h *Helm) UpdateZarfRegistryValues(ctx context.Context) error {
-	pushUser, err := utils.GetHtpasswdString(h.state.RegistryInfo.PushUsername, h.state.RegistryInfo.PushPassword)
+func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOpts) error {
+	pushUser, err := utils.GetHtpasswdString(opts.State.RegistryInfo.PushUsername, opts.State.RegistryInfo.PushPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
 	}
-	pullUser, err := utils.GetHtpasswdString(h.state.RegistryInfo.PullUsername, h.state.RegistryInfo.PullPassword)
+	pullUser, err := utils.GetHtpasswdString(opts.State.RegistryInfo.PullUsername, opts.State.RegistryInfo.PullPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
 	}
@@ -39,11 +39,12 @@ func (h *Helm) UpdateZarfRegistryValues(ctx context.Context) error {
 			"htpasswd": fmt.Sprintf("%s\n%s", pushUser, pullUser),
 		},
 	}
-	h.chart = v1alpha1.ZarfChart{
+	chart := v1alpha1.ZarfChart{
 		Namespace:   "zarf",
 		ReleaseName: "zarf-docker-registry",
 	}
-	err = h.UpdateReleaseValues(ctx, registryValues)
+
+	err = UpdateReleaseValues(ctx, chart, registryValues, opts)
 	if err != nil {
 		return fmt.Errorf("error updating the release values: %w", err)
 	}
@@ -60,7 +61,7 @@ func (h *Helm) UpdateZarfRegistryValues(ctx context.Context) error {
 	}
 	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
 	defer waitCancel()
-	err = healthchecks.WaitForReady(waitCtx, h.cluster.Watcher, objs)
+	err = healthchecks.WaitForReady(waitCtx, opts.Cluster.Watcher, objs)
 	if err != nil {
 		return err
 	}
@@ -68,10 +69,10 @@ func (h *Helm) UpdateZarfRegistryValues(ctx context.Context) error {
 }
 
 // UpdateZarfAgentValues updates the Zarf agent deployment with the new state values
-func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
+func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOpts) error {
 	l := logger.From(ctx)
 
-	deployment, err := h.cluster.Clientset.AppsV1().Deployments(cluster.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
+	deployment, err := opts.Cluster.Clientset.AppsV1().Deployments(cluster.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -80,13 +81,13 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 		return err
 	}
 
-	err = h.createActionConfig(ctx, cluster.ZarfNamespaceName)
+	actionConfig, err := createActionConfig(ctx, cluster.ZarfNamespaceName)
 	if err != nil {
 		return err
 	}
 
 	// List the releases to find the current agent release name.
-	listClient := action.NewList(h.actionConfig)
+	listClient := action.NewList(actionConfig)
 	releases, err := listClient.Run()
 	if err != nil {
 		return fmt.Errorf("unable to list helm releases: %w", err)
@@ -95,11 +96,11 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 	for _, release := range releases {
 		// Update the Zarf Agent release with the new values
 		if release.Chart.Name() == "raw-init-zarf-agent-zarf-agent" {
-			h.chart = v1alpha1.ZarfChart{
+			chart := v1alpha1.ZarfChart{
 				Namespace:   "zarf",
 				ReleaseName: release.Name,
 			}
-			h.variableConfig.SetConstants([]v1alpha1.Constant{
+			opts.VariableConfig.SetConstants([]v1alpha1.Constant{
 				{
 					Name:  "AGENT_IMAGE",
 					Value: agentImage.Path,
@@ -109,13 +110,13 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 					Value: agentImage.Tag,
 				},
 			})
-			applicationTemplates, err := template.GetZarfTemplates(ctx, "zarf-agent", h.state)
+			applicationTemplates, err := template.GetZarfTemplates(ctx, "zarf-agent", opts.State)
 			if err != nil {
 				return fmt.Errorf("error setting up the templates: %w", err)
 			}
-			h.variableConfig.SetApplicationTemplates(applicationTemplates)
+			opts.VariableConfig.SetApplicationTemplates(applicationTemplates)
 
-			err = h.UpdateReleaseValues(ctx, map[string]interface{}{})
+			err = UpdateReleaseValues(ctx, chart, map[string]interface{}{}, opts)
 			if err != nil {
 				return fmt.Errorf("error updating the release values: %w", err)
 			}
@@ -128,7 +129,7 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 
 	// Re-fetch the agent deployment before we update since the resourceVersion has changed after updating the Helm release values.
 	// Avoids this error: https://github.com/kubernetes/kubernetes/issues/28149
-	deployment, err = h.cluster.Clientset.AppsV1().Deployments(cluster.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
+	deployment, err = opts.Cluster.Clientset.AppsV1().Deployments(cluster.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -136,7 +137,7 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 		deployment.Spec.Template.Annotations = map[string]string{}
 	}
 	deployment.Spec.Template.Annotations["zarf.dev/restartedAt"] = time.Now().UTC().Format(time.RFC3339)
-	_, err = h.cluster.Clientset.AppsV1().Deployments(cluster.ZarfNamespaceName).Update(ctx, deployment, metav1.UpdateOptions{})
+	_, err = opts.Cluster.Clientset.AppsV1().Deployments(cluster.ZarfNamespaceName).Update(ctx, deployment, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -153,10 +154,9 @@ func (h *Helm) UpdateZarfAgentValues(ctx context.Context) error {
 	}
 	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
 	defer waitCancel()
-	err = healthchecks.WaitForReady(waitCtx, h.cluster.Watcher, objs)
+	err = healthchecks.WaitForReady(waitCtx, opts.Cluster.Watcher, objs)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
