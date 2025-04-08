@@ -24,7 +24,6 @@ import (
 	"helm.sh/helm/v3/pkg/releaseutil"
 
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // TemplateChart generates a helm template from a given chart.
@@ -34,8 +33,6 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 		variableConfig = template.GetZarfVariableConfig(ctx)
 	}
 	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Templating helm chart %s", zarfChart.Name)
-	defer spinner.Stop()
 	l.Debug("templating helm chart", "name", zarfChart.Name)
 
 	actionCfg, err := createActionConfig(ctx, zarfChart.Namespace)
@@ -87,8 +84,6 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest)
 	}
 
-	spinner.Success()
-
 	return manifest, nil
 }
 
@@ -105,6 +100,7 @@ func newTemplateRenderer(actionConfig *action.Configuration, vc *variables.Varia
 	return rend, nil
 }
 
+// Run satisfies the Helm post-renderer interface and templates the Zarf vars in the rendered manifests.
 func (tr *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
 	resources, err := getTemplatedManifests(renderedManifests, tr.variableConfig, tr.actionConfig)

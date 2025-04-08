@@ -14,7 +14,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
@@ -82,6 +81,7 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 	return rend, nil
 }
 
+// Run satisfies the Helm post-renderer interface. It templates the Zarf variables, finds connect strings, adopts namespaces, and applies Zarf state secrets
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
 	resources, err := getTemplatedManifests(renderedManifests, r.variableConfig, r.actionConfig)
@@ -126,7 +126,6 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			// Refuse to adopt namespace if it is one of four initial Kubernetes namespaces.
 			// https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
 			if slices.Contains([]string{"default", "kube-node-lease", "kube-public", "kube-system"}, name) {
-				message.Warnf("Refusing to adopt the initial namespace: %s", name)
 				l.Warn("refusing to adopt initial namespace", "name", name)
 			} else {
 				// This is an existing namespace to adopt
@@ -184,10 +183,8 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			namespace := &corev1.Namespace{}
 			// parse the namespace resource so it can be applied out-of-band by zarf instead of helm to avoid helm ns shenanigans
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(rawData.UnstructuredContent(), namespace); err != nil {
-				message.WarnErrf(err, "could not parse namespace %s", rawData.GetName())
 				l.Warn("failed to parse namespace", "name", rawData.GetName(), "error", err)
 			} else {
-				message.Debugf("Matched helm namespace %s for zarf annotation", namespace.Name)
 				l.Debug("matched helm namespace for zarf annotation", "name", namespace.Name)
 				namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
 				// Add it to the stack
@@ -208,7 +205,6 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			}
 			if key, keyExists := labels[cluster.ZarfConnectLabelName]; keyExists {
 				// If there is a zarf-connect label
-				message.Debugf("Match helm service %s for zarf connection %s", rawData.GetName(), key)
 				l.Debug("match helm service for zarf connection", "service", rawData.GetName(), "connection-key", key)
 
 				// Add the connectString for processing later in the deployment
