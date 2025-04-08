@@ -111,6 +111,26 @@ func TestFindImages(t *testing.T) {
 			expectedErr: "cannot convert the Git repository https://github.com/zarf-dev/zarf-public-test.git to a Helm chart without a version tag",
 		},
 		{
+			name:        "validate repo Helm Chart ",
+			packagePath: "./testdata/find-images/repo-chart-path",
+			opts: FindImagesOptions{
+				RepoHelmChartPath:   "charts/podinfo",
+				KubeVersionOverride: "1.24.0-0",
+				SkipCosign:          true,
+			},
+			expectedImages: []ImageFindings{
+				{
+					ComponentName: "baseline",
+					MatchedImages: []string{
+						"curlimages/curl:7.69.0",
+						"giantswarm/tiny-tools",
+						"stefanprodan/grpc_health_probe:v0.3.0",
+						"ghcr.io/stefanprodan/podinfo:6.4.0",
+					},
+				},
+			},
+		},
+		{
 			name:        "invalid manifest yaml",
 			packagePath: "./testdata/find-images/invalid-manifest-yaml",
 			opts: FindImagesOptions{

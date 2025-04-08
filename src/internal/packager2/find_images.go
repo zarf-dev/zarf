@@ -142,15 +142,14 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 
 		if opts.RepoHelmChartPath != "" {
 			// Also process git repos that have helm charts
-			for _, repo := range component.Repos {
+			for idx, repo := range component.Repos {
 				matches := strings.Split(repo, "@")
 				if len(matches) < 2 {
 					return FindImagesResult{}, fmt.Errorf("cannot convert the Git repository %s to a Helm chart without a version tag", repo)
 				}
-
 				// If a repo helm chart path is specified,
 				component.Charts = append(component.Charts, v1alpha1.ZarfChart{
-					Name:    repo,
+					Name:    fmt.Sprintf("temp-git-chart-%d", idx),
 					URL:     matches[0],
 					Version: matches[1],
 					// Trim the first char to match how the packager expects it, this is messy,need to clean up better
