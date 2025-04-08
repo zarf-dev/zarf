@@ -28,6 +28,7 @@ import (
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
 	Source                  string
+	SourceType              string
 	Shasum                  string
 	Architecture            string
 	PublicKeyPath           string
@@ -37,10 +38,6 @@ type LoadOptions struct {
 
 // LoadPackage optionally fetches and loads the package from the given source.
 func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, error) {
-	srcType, err := identifySource(opt.Source)
-	if err != nil {
-		return nil, err
-	}
 	architecture := config.GetArch(opt.Architecture)
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -51,7 +48,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	tarPath := filepath.Join(tmpDir, "data.tar.zst")
 
 	isPartial := false
-	switch srcType {
+	switch opt.SourceType {
 	case "oci":
 		isPartial, tarPath, err = pullOCI(ctx, opt.Source, tmpDir, opt.Shasum, architecture, opt.Filter)
 		if err != nil {
@@ -72,7 +69,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	default:
 		return nil, fmt.Errorf("unknown source type: %s", opt.Source)
 	}
-	if srcType != "oci" && opt.Shasum != "" {
+	if opt.SourceType != "oci" && opt.Shasum != "" {
 		err := helpers.SHAsMatch(tarPath, opt.Shasum)
 		if err != nil {
 			return nil, err
@@ -155,7 +152,7 @@ func assembleSplitTar(src, tarPath string) error {
 }
 
 func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string) (v1alpha1.ZarfPackage, error) {
-	_, err := identifySource(src)
+	srcType, err := identifySource(src)
 	if err != nil {
 		if cluster == nil {
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
@@ -169,6 +166,7 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 
 	loadOpt := LoadOptions{
 		Source:                  src,
+		SourceType:              srcType,
 		SkipSignatureValidation: skipSignatureValidation,
 		Architecture:            config.GetArch(),
 		Filter:                  filters.Empty(),

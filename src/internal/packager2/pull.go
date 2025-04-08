@@ -174,6 +174,25 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture strin
 	return isPartial, tarPath, nil
 }
 
+// pullOCIMetadata pulls the package metadata from an OCI source and saves it to a specified directory.
+// This function is used to fetch package metadata when inspecting a package or for other purposes
+func pullOCIMetadata(ctx context.Context, src, dst, shasum, architecture string, mods ...oci.Modifier) (string, error) {
+	if shasum != "" {
+		src = fmt.Sprintf("%s@sha256:%s", src, shasum)
+	}
+	platform := oci.PlatformForArch(architecture)
+	remote, err := zoci.NewRemote(ctx, src, platform, mods...)
+	if err != nil {
+		return "", err
+	}
+	_, err = remote.PullAllPackageMetadata(ctx, dst)
+	if err != nil {
+		return "", err
+	}
+
+	return dst, nil
+}
+
 func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 	if shasum == "" {
 		return "", errors.New("shasum cannot be empty")

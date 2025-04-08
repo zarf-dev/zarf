@@ -434,6 +434,7 @@ func (o *PackageInspectSBOMOptions) Run(cmd *cobra.Command, args []string) error
 		SkipSignatureValidation: o.skipSignatureValidation,
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		Inspect:                 true,
 	}
 	layout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {
@@ -488,7 +489,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 	// since we don't know we don't check this error
 	cluster, _ := cluster.NewCluster() //nolint:errcheck
 
-	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
+	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath, true)
 	if err != nil {
 		return err
 	}
@@ -542,7 +543,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 	// since we don't know we don't check this error
 	cluster, _ := cluster.NewCluster() //nolint:errcheck
 
-	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
+	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath, true)
 	if err != nil {
 		return err
 	}
