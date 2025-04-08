@@ -358,11 +358,18 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
 	}
 
-	// Update Zarf 'init' component Helm releases if present
-	h := helm.NewClusterOnly(&types.PackagerConfig{}, template.GetZarfVariableConfig(cmd.Context()), newState, c)
+	helmOpts := helm.InstallUpgradeOpts{
+		VariableConfig: template.GetZarfVariableConfig(cmd.Context()),
+		State:          newState,
+		Cluster:        c,
+		AirgapMode:     true,
+		Timeout:        config.ZarfDefaultTimeout,
+		Retries:        config.ZarfDefaultRetries,
+	}
 
+	// Update Zarf 'init' component Helm releases if present
 	if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.IsInternal() {
-		err = h.UpdateZarfRegistryValues(ctx)
+		err = helm.UpdateZarfRegistryValues(ctx, helmOpts)
 		if err != nil {
 			// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
 			message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
@@ -376,7 +383,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if slices.Contains(args, message.AgentKey) {
-		err = h.UpdateZarfAgentValues(ctx)
+		err = helm.UpdateZarfAgentValues(ctx, helmOpts)
 		if err != nil {
 			// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
 			message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateAgent, err.Error())
