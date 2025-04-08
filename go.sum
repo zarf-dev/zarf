@@ -658,8 +658,8 @@ github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6 h1:gw
 github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6/go.mod h1:StKLYMmPj1R5yIs6CK49EkcW1TvUYuw5Vri+LRk7Dy8=
 github.com/defenseunicorns/pkg/helpers/v2 v2.0.1 h1:j08rz9vhyD9Bs+yKiyQMY2tSSejXRMxTqEObZ5M1Wbk=
 github.com/defenseunicorns/pkg/helpers/v2 v2.0.1/go.mod h1:u1PAqOICZyiGIVA2v28g55bQH1GiAt0Bc4U9/rnWQvQ=
-github.com/defenseunicorns/pkg/oci v1.0.2 h1:JRdFbKnJQiGVsMUWmcmm0ZS8aBmmAORXLGSAGkIGhBQ=
-github.com/defenseunicorns/pkg/oci v1.0.2/go.mod h1:z11UFenAd4HQRucaEp0uhoccor/6zbQiXEQq+Z7vtI0=
+github.com/defenseunicorns/pkg/oci v1.0.3 h1:TAtqsuEqMnM0b867W7X0FS9uO0h/bzUdgq5tlyFyZBE=
+github.com/defenseunicorns/pkg/oci v1.0.3/go.mod h1:UJd95qqpU27QpqzZ3HMUZgR7qAp1eYmC58XvUkfXI2Y=
 github.com/deitch/magic v0.0.0-20230404182410-1ff89d7342da h1:ZOjWpVsFZ06eIhnh4mkaceTiVoktdU67+M7KDHJ268M=
 github.com/deitch/magic v0.0.0-20230404182410-1ff89d7342da/go.mod h1:B3tI9iGHi4imdLi4Asdha1Sc6feLMTfPLXh9IUYmysk=
 github.com/denisenkom/go-mssqldb v0.0.0-20191128021309-1d7a30a10f73/go.mod h1:xbL0rPBG9cCiLr28tMa8zpbdarY27NDyej4t/EjAShU=
