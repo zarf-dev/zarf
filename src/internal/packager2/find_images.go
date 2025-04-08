@@ -60,6 +60,7 @@ type FindImagesOptions struct {
 	SkipCosign bool
 }
 
+// FindImagesResult contains the results of FindImages for a package
 type FindImagesResult struct {
 	ImageFindings []ImageFindings
 }
