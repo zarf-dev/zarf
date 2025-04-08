@@ -45,7 +45,7 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
-      --oci-concurrency int        Number of concurrent layer operations to perform when interacting with a remote package. (default 6)
+      --oci-concurrency int        Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
       --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
