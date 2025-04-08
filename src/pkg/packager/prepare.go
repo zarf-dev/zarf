@@ -362,6 +362,27 @@ func processUnstructuredImages(ctx context.Context, resource *unstructured.Unstr
 	}
 
 	switch resource.GetKind() {
+	case "Pod":
+		var pod corev1.Pod
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &pod); err != nil {
+			return nil, nil, fmt.Errorf("could not parse pod: %w", err)
+		}
+		matchedImages = appendToImageMap(matchedImages, pod.Spec)
+
+	case "CronJob":
+		var cronJob batchv1.CronJob
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &cronJob); err != nil {
+			return nil, nil, fmt.Errorf("could not parse cronjob: %w", err)
+		}
+		matchedImages = appendToImageMap(matchedImages, cronJob.Spec.JobTemplate.Spec.Template.Spec)
+
+	case "ReplicationController":
+		var rc corev1.ReplicationController
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &rc); err != nil {
+			return nil, nil, fmt.Errorf("could not parse replicationcontroller: %w", err)
+		}
+		matchedImages = appendToImageMap(matchedImages, rc.Spec.Template.Spec)
+
 	case "Deployment":
 		var deployment v1.Deployment
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &deployment); err != nil {
