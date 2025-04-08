@@ -42,15 +42,15 @@ var (
 
 // FindImagesOptions declares the parameters to find images.
 type FindImagesOptions struct {
-	// RepoHelmChartPath specifies the path to helm charts in git repos
+	// RepoHelmChartPath specifies the path to helm charts in git repos defined in the zarf.yaml
 	RepoHelmChartPath string
-	// RegistryURL specifies the URL of the registry to use
+	// RegistryURL specifies the value of the ###ZARF_REGISTRY### variable during templating
 	RegistryURL string
-	// KubeVersionOverride specifies the kubernetes version to use for templating
+	// KubeVersionOverride specifies the kubernetes version to provide the Helm chart
 	KubeVersionOverride string
-	// CreateSetVariables specifies the package templates
+	// CreateSetVariables specifies the package create templates
 	CreateSetVariables map[string]string
-	// DeploySetVariables specifies the package templates
+	// DeploySetVariables specifies the package deploy variables
 	DeploySetVariables map[string]string
 	// Flavor specifies the flavor to use
 	Flavor string
@@ -64,15 +64,15 @@ type FindImagesResult struct {
 	ImageFindings []ImageFindings
 }
 
-// ImageFindings contains the results of finding images in a component.
+// ImageFindings contains the results of FindImages for a component
 type ImageFindings struct {
 	// ComponentName is the name of the component where the images were found
 	ComponentName string
 	// MatchedImages contains definitively identified container images
 	MatchedImages []string
-	// MaybeImages contains potential container images that need verification
+	// MaybeImages contains potential container images
 	MaybeImages []string
-	// CosignArtifacts contains container images that need verification
+	// CosignArtifacts contains found cosign artifacts for images
 	CosignArtifacts []string
 	// WhyResources contains the resources where specific images were found (when Why option is used)
 	WhyResources []WhyResource
