@@ -38,7 +38,7 @@ const (
 const (
 	// root zarf command
 	RootCmdShort = "DevSecOps for Airgap"
-	RootCmdLong  = "Zarf eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud native workloads\n" +
+	RootCmdLong  = "Zarf eliminates the complexity of airgap software delivery for Kubernetes clusters and cloud native workloads\n" +
 		"using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments."
 
 	RootCmdFlagLogLevel              = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
@@ -206,7 +206,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 
 	// zarf package
 	CmdPackageShort                       = "Zarf package commands for creating, deploying, and inspecting packages"
-	CmdPackageFlagConcurrency             = "Number of concurrent layer operations to perform when interacting with a remote package."
+	CmdPackageFlagConcurrency             = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
 	CmdPackageFlagFlagPublicKey           = "Path to public key file for validating signed packages"
 	CmdPackageFlagSkipSignatureValidation = "Skip validating the signature of the Zarf package"
 	CmdPackageFlagRetries                 = "Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs"
@@ -477,7 +477,7 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
 
 	CmdToolsHelmShort = "Subset of the Helm CLI included with Zarf to help manage helm charts."
-	CmdToolsHelmLong  = "Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the air gap."
+	CmdToolsHelmLong  = "Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the airgap."
 
 	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory"
 	CmdToolsClearCacheDir           = "Cache directory set to: %s"
