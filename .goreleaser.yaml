@@ -88,7 +88,7 @@ brews:
 
     commit_msg_template: "build(release): upgrade {{ .ProjectName }} to {{ .Tag }}"
     homepage: "https://zarf.dev/"
-    description: "DevSecOps for Air Gap"
+    description: "DevSecOps for Airgap"
 
   # NOTE: We are using .Version instead of .Tag because homebrew has weird semver parsing rules and won't be able to
   #       install versioned releases that has a `v` character before the version number.
@@ -106,4 +106,4 @@ brews:
           name: homebrew-tap
     commit_msg_template: "build(release): {{ .ProjectName }}@{{ .Tag }}"
     homepage: "https://zarf.dev/"
-    description: "DevSecOps for Air Gap"
+    description: "DevSecOps for Airgap"
