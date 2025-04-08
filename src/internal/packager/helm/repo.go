@@ -8,13 +8,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/zarf-dev/zarf/src/pkg/message"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
