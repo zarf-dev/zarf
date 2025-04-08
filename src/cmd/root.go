@@ -6,14 +6,11 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
@@ -23,7 +20,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -34,10 +30,8 @@ var (
 	LogLevelCLI string
 	// LogFormat holds the log format as input from a command
 	LogFormat string
-	// SkipLogFile is a flag to skip logging to a file
-	SkipLogFile bool
-	// NoColor is a flag to disable colors in output
-	NoColor bool
+	// IsColorDisabled corresponds to the --no-color flag. It disables color codes in terminal output
+	IsColorDisabled bool
 	// OutputWriter provides a default writer to Stdout for user-facing command output
 	OutputWriter = os.Stdout
 )
@@ -85,47 +79,17 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	// Setup message
-	skipLogFile := SkipLogFile
-
-	// Don't write tool commands to file.
-	comps := strings.Split(cmd.CommandPath(), " ")
-	if len(comps) > 1 && comps[1] == "tools" {
-		skipLogFile = true
-	}
-	if len(comps) > 1 && comps[1] == "version" {
-		skipLogFile = true
-	}
-
-	// Dont write help command to file.
-	if cmd.Parent() == nil {
-		skipLogFile = true
-	}
-
-	// Configure logger and add it to cmd context.
-	l, err := setupLogger(LogLevelCLI, LogFormat, !NoColor)
+	// Configure logger and add it to cmd context. We flip NoColor because setLogger wants "isColor"
+	l, err := setupLogger(LogLevelCLI, LogFormat, !IsColorDisabled)
 	if err != nil {
 		return err
 	}
 	ctx := logger.WithContext(cmd.Context(), l)
 	cmd.SetContext(ctx)
 
-	// Configure the global message instance.
-	var disableMessage bool
-	if LogFormat != string(logger.FormatLegacy) {
-		disableMessage = true
-		skipLogFile = true
-		ctx := logger.WithLoggingEnabled(ctx, true)
-		cmd.SetContext(ctx)
-	}
-	err = SetupMessage(MessageCfg{
-		Level:           LogLevelCLI,
-		SkipLogFile:     skipLogFile,
-		NoColor:         NoColor,
-		FeatureDisabled: disableMessage,
-	})
-	if err != nil {
-		return err
+	// if --no-color is set, disable PTerm color in message prints
+	if IsColorDisabled {
+		pterm.DisableColor()
 	}
 
 	// Print out config location
@@ -193,44 +157,42 @@ func Execute(ctx context.Context) {
 		os.Exit(1)
 	}
 
-	// TODO(mkcp): Remove message on logger release
-	errParagraph := message.Paragraph(err.Error())
-	pterm.Error.Println(errParagraph)
-
-	// NOTE(mkcp): The default logger is set with user flags downstream in rootCmd's preRun func, so we don't have
-	// access to it on Execute's ctx.
+	// NOTE(mkcp): This line must be run with the unconfigured default logger because user flags are set downstream
+	// in rootCmd's preRun func.
 	logger.Default().Error(err.Error())
 	os.Exit(1)
 }
 
 func init() {
+	var showNoProgressDeprecation bool
 	// Skip for vendor-only commands
 	if checkVendorOnlyFromArgs() {
 		return
 	}
 
-	v := getViper()
+	vpr := getViper()
 
 	// Logs
-	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
-	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", v.GetString(VLogFormat), "[beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev', 'legacy'. The legacy option will be removed in a coming release")
-	rootCmd.PersistentFlags().BoolVar(&SkipLogFile, "no-log-file", v.GetBool(VNoLogFile), lang.RootCmdFlagSkipLogFile)
-	rootCmd.PersistentFlags().BoolVar(&message.NoProgress, "no-progress", v.GetBool(VNoProgress), lang.RootCmdFlagNoProgress)
-	rootCmd.PersistentFlags().BoolVar(&NoColor, "no-color", v.GetBool(VNoColor), lang.RootCmdFlagNoColor)
+	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", vpr.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
+	rootCmd.PersistentFlags().StringVar(&LogFormat, "log-format", vpr.GetString(VLogFormat), "Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'.")
+	rootCmd.PersistentFlags().BoolVar(&IsColorDisabled, "no-color", vpr.GetBool(VNoColor), "Disable terminal color codes in logging and stdout prints.")
+	rootCmd.PersistentFlags().BoolVar(&showNoProgressDeprecation, "no-progress", v.GetBool("no_progress"), "Disable fancy UI progress bars, spinners, logos, etc")
+	_ = rootCmd.PersistentFlags().MarkDeprecated("no-progress", "Progress bars and spinners were removed with --log-format=legacy, this flag will be removed in a future version of Zarf.")
 
-	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", v.GetString(VArchitecture), lang.RootCmdFlagArch)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", v.GetString(VZarfCache), lang.RootCmdFlagCachePath)
-	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", v.GetString(VTmpDir), lang.RootCmdFlagTempDir)
+	// Core functionality
+	rootCmd.PersistentFlags().StringVarP(&config.CLIArch, "architecture", "a", vpr.GetString(VArchitecture), lang.RootCmdFlagArch)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", vpr.GetString(VZarfCache), lang.RootCmdFlagCachePath)
+	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", vpr.GetString(VTmpDir), lang.RootCmdFlagTempDir)
 
 	// Security
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", v.GetBool(VInsecure), lang.RootCmdFlagInsecure)
-	rootCmd.PersistentFlags().MarkDeprecated("insecure", "please use --plain-http, --insecure-skip-tls-verify, or --skip-signature-validation instead.")
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.PlainHTTP, "plain-http", v.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", v.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
+	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", vpr.GetBool(VInsecure), lang.RootCmdFlagInsecure)
+	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.PlainHTTP, "plain-http", vpr.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
+	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", vpr.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
+	_ = rootCmd.PersistentFlags().MarkDeprecated("insecure", "please use --plain-http, --insecure-skip-tls-verify, or --skip-signature-validation instead.")
 }
 
-// setup Logger handles creating a logger and setting it as the global default.
-func setupLogger(level, format string, color bool) (*slog.Logger, error) {
+// setupLogger handles creating a logger and setting it as the global default.
+func setupLogger(level, format string, isColor bool) (*slog.Logger, error) {
 	// If we didn't get a level from config, fallback to "info"
 	if level == "" {
 		level = "info"
@@ -243,81 +205,13 @@ func setupLogger(level, format string, color bool) (*slog.Logger, error) {
 		Level:       sLevel,
 		Format:      logger.Format(format),
 		Destination: logger.DestinationDefault,
-		Color:       logger.Color(color),
+		Color:       logger.Color(isColor),
 	}
 	l, err := logger.New(cfg)
 	if err != nil {
 		return nil, err
 	}
-	if !color {
-		pterm.DisableColor()
-	}
 	logger.SetDefault(l)
 	l.Debug("logger successfully initialized", "cfg", cfg)
 	return l, nil
-}
-
-// MessageCfg is used to configure the Message package output options.
-type MessageCfg struct {
-	Level       string
-	SkipLogFile bool
-	NoColor     bool
-	// FeatureDisabled is a feature flag that disables it
-	FeatureDisabled bool
-}
-
-// SetupMessage configures message while we migrate over to logger.
-func SetupMessage(cfg MessageCfg) error {
-	// HACK(mkcp): Discard message logs if feature is disabled. message calls InitializePTerm once in its init() fn so
-	//             this ends up being a messy solution.
-	if cfg.FeatureDisabled {
-		// Discard all* PTerm messages. *see below
-		message.InitializePTerm(io.Discard)
-		// Disable all progress bars and spinners
-		message.NoProgress = true
-		return nil
-	}
-
-	if cfg.NoColor {
-		message.DisableColor()
-	}
-
-	level := cfg.Level
-	if cfg.Level != "" {
-		match := map[string]message.LogLevel{
-			// NOTE(mkcp): Add error for forwards compatibility with logger
-			"error": message.WarnLevel,
-			"warn":  message.WarnLevel,
-			"info":  message.InfoLevel,
-			"debug": message.DebugLevel,
-			"trace": message.TraceLevel,
-		}
-		lvl, ok := match[level]
-		if !ok {
-			return errors.New("invalid log level, valid options are warn, info, debug, error, and trace")
-		}
-		message.SetLogLevel(lvl)
-		message.Debug("Log level set to " + level)
-	}
-
-	// Disable progress bars for CI envs
-	if os.Getenv("CI") == "true" {
-		message.Debug("CI environment detected, disabling progress bars")
-		message.NoProgress = true
-	}
-
-	if !cfg.SkipLogFile {
-		ts := time.Now().Format("2006-01-02-15-04-05")
-		f, err := os.CreateTemp("", fmt.Sprintf("zarf-%s-*.log", ts))
-		if err != nil {
-			return fmt.Errorf("could not create a log file in a the temporary directory: %w", err)
-		}
-		logFile, err := message.UseLogFile(f)
-		if err != nil {
-			return fmt.Errorf("could not save a log file to the temporary directory: %w", err)
-		}
-		pterm.SetDefaultOutput(io.MultiWriter(os.Stderr, logFile))
-		message.Notef("Saving log file to %s", f.Name())
-	}
-	return nil
 }

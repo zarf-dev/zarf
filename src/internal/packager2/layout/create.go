@@ -39,7 +39,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -55,6 +54,7 @@ type CreateOptions struct {
 	SetVariables            map[string]string
 	SkipSBOM                bool
 	DifferentialPackagePath string
+	OCIConcurrency          int
 }
 
 func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (*PackageLayout, error) {
@@ -136,23 +136,22 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 			return nil, err
 		}
 		pullCfg := images.PullConfig{
+			OCIConcurrency:       opt.OCIConcurrency,
 			DestinationDirectory: filepath.Join(buildPath, ImagesDir),
 			ImageList:            componentImages,
 			Arch:                 pkg.Metadata.Architecture,
 			RegistryOverrides:    opt.RegistryOverrides,
 			CacheDirectory:       filepath.Join(cachePath, ImagesDir),
+			PlainHTTP:            config.CommonOptions.PlainHTTP,
 		}
-		pulled, err := images.Pull(ctx, pullCfg)
+		manifests, err := images.Pull(ctx, pullCfg)
 		if err != nil {
 			return nil, err
 		}
-		for info, img := range pulled {
-			ok, err := utils.OnlyHasImageLayers(img)
-			if err != nil {
-				return nil, fmt.Errorf("failed to validate %s is an image and not an artifact: %w", info, err)
-			}
+		for image, manifest := range manifests {
+			ok := images.OnlyHasImageLayers(manifest)
 			if ok {
-				sbomImageList = append(sbomImageList, info)
+				sbomImageList = append(sbomImageList, image)
 			}
 		}
 
@@ -169,7 +168,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 		l.Info("generating SBOM")
 		err = generateSBOM(ctx, pkg, buildPath, sbomImageList)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
 		}
 	}
 
@@ -262,6 +261,14 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) 
 
 // LoadPackageDefinition returns a validated package definition after flavors, imports, and variables are applied.
 func LoadPackageDefinition(ctx context.Context, packagePath, flavor string, setVariables map[string]string) (v1alpha1.ZarfPackage, error) {
+	l := logger.From(ctx)
+	start := time.Now()
+	l.Debug("start layout.LoadPackage",
+		"path", packagePath,
+		"flavor", flavor,
+		"setVariables", setVariables)
+
+	// Load PackageConfig from disk
 	b, err := os.ReadFile(filepath.Join(packagePath, ZarfYAML))
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
@@ -281,14 +288,24 @@ func LoadPackageDefinition(ctx context.Context, packagePath, flavor string, setV
 			return v1alpha1.ZarfPackage{}, err
 		}
 	}
-	err = validate(pkg, packagePath, setVariables, flavor)
+	err = validate(ctx, pkg, packagePath, setVariables, flavor)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
+	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
 	return pkg, nil
 }
 
-func validate(pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string) error {
+func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string) error {
+	l := logger.From(ctx)
+	start := time.Now()
+	l.Debug("start layout.Validate",
+		"pkg", pkg.Metadata.Name,
+		"packagePath", packagePath,
+		"flavor", flavor,
+		"setVariables", setVariables,
+	)
+
 	if err := validateFlavorExists(pkg, flavor); err != nil {
 		return err
 	}
@@ -299,14 +316,22 @@ func validate(pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[str
 	if err != nil {
 		return fmt.Errorf("unable to check schema: %w", err)
 	}
-	if len(findings) == 0 {
-		return nil
+	if len(findings) != 0 {
+		return &lint.LintError{
+			BaseDir:     packagePath,
+			PackageName: pkg.Metadata.Name,
+			Findings:    findings,
+		}
 	}
-	return &lint.LintError{
-		BaseDir:     packagePath,
-		PackageName: pkg.Metadata.Name,
-		Findings:    findings,
-	}
+
+	l.Debug("done layout.Validate",
+		"pkg", pkg.Metadata.Name,
+		"path", packagePath,
+		"findings", findings,
+		"duration", time.Since(start),
+	)
+
+	return nil
 }
 
 func validateFlavorExists(pkg v1alpha1.ZarfPackage, flavor string) error {
@@ -318,7 +343,7 @@ func validateFlavorExists(pkg v1alpha1.ZarfPackage, flavor string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("could not find flavor %s in package definition", flavor)
+	return fmt.Errorf("could not find flavor %s in package definition %s", flavor, pkg.Metadata.Name)
 }
 
 func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
@@ -982,13 +1007,6 @@ func splitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 		return err
 	}
 
-	title := fmt.Sprintf("[0/%d] MB bytes written", fi.Size()/1000/1000)
-	progressBar := message.NewProgressBar(fi.Size(), title)
-	defer func(progressBar *message.ProgressBar) {
-		err2 := progressBar.Close()
-		err = errors.Join(err, err2)
-	}(progressBar)
-
 	hash := sha256.New()
 	fileCount := 0
 	// TODO(mkcp): The inside of this loop should be wrapped in a closure so we can close the destination file each
@@ -1011,9 +1029,6 @@ func splitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 		if copyErr != nil && !errors.Is(copyErr, io.EOF) {
 			return err
 		}
-		progressBar.Add(int(written))
-		title := fmt.Sprintf("[%d/%d] MB bytes written", progressBar.GetCurrent()/1000/1000, fi.Size()/1000/1000)
-		progressBar.Updatef(title)
 
 		_, err = dstFile.Seek(0, io.SeekStart)
 		if err != nil {
@@ -1069,7 +1084,6 @@ func splitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 	if err := os.WriteFile(path, b, 0644); err != nil {
 		return fmt.Errorf("unable to write the file %s: %w", path, err)
 	}
-	progressBar.Successf("Package split across %d files", fileCount+1)
 	logger.From(ctx).Info("package split across files", "count", fileCount+1)
 	return nil
 }

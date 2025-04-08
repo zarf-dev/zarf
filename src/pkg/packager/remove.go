@@ -12,17 +12,17 @@ import (
 	"runtime"
 	"slices"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
@@ -35,8 +35,6 @@ func (p *Packager) Remove(ctx context.Context) error {
 	if isClusterSource {
 		p.cluster = p.source.(*sources.ClusterSource).Cluster
 	}
-	spinner := message.NewProgressSpinner("Removing Zarf package %s", p.cfg.PkgOpts.PackageSource)
-	defer spinner.Stop()
 
 	// we do not want to allow removal of signed packages without a signature if there are remove actions
 	// as this is arbitrary code execution from an untrusted source
@@ -98,7 +96,7 @@ func (p *Packager) Remove(ctx context.Context) error {
 			continue
 		}
 
-		if deployedPackage, err = p.removeComponent(ctx, deployedPackage, dc, spinner); err != nil {
+		if deployedPackage, err = p.removeComponent(ctx, deployedPackage, dc); err != nil {
 			return fmt.Errorf("unable to remove the component '%s': %w", dc.Name, err)
 		}
 	}
@@ -107,6 +105,7 @@ func (p *Packager) Remove(ctx context.Context) error {
 }
 
 func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage types.DeployedPackage) error {
+	l := logger.From(ctx)
 	// Only attempt to update the package secret if we are actually connected to a cluster
 	if p.cluster != nil {
 		newPackageSecretData, err := json.Marshal(deployedPackage)
@@ -129,13 +128,14 @@ func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage type
 		_, err = p.cluster.Clientset.CoreV1().Secrets(*newPackageSecret.Namespace).Apply(ctx, newPackageSecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
-			message.Warnf("Unable to apply the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
+			l.Warn("Unable to apply the package secret (this may be normal if the cluster was removed)", "secretName", secretName, "error", err.Error())
 		}
 	}
 	return nil
 }
 
-func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.DeployedPackage, deployedComponent types.DeployedComponent, spinner *message.Spinner) (*types.DeployedPackage, error) {
+func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.DeployedPackage, deployedComponent types.DeployedComponent) (*types.DeployedPackage, error) {
+	l := logger.From(ctx)
 	components := deployedPackage.Data.Components
 
 	c := helpers.Find(components, func(t v1alpha1.ZarfComponent) bool {
@@ -145,7 +145,7 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 	onRemove := c.Actions.OnRemove
 	onFailure := func() {
 		if err := actions.Run(ctx, onRemove.Defaults, onRemove.OnFailure, nil); err != nil {
-			message.Debugf("Unable to run the failure action: %s", err)
+			l.Debug("unable to run the failure action", "error", err)
 		}
 	}
 
@@ -155,16 +155,14 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 	}
 
 	for _, chart := range helpers.Reverse(deployedComponent.InstalledCharts) {
-		spinner.Updatef("Uninstalling chart '%s' from the '%s' component", chart.ChartName, deployedComponent.Name)
-
 		if err := helm.RemoveChart(ctx, chart.Namespace, chart.ChartName, config.ZarfDefaultTimeout); err != nil {
 			if !errors.Is(err, driver.ErrReleaseNotFound) {
 				onFailure()
 				return deployedPackage, fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w",
 					chart.ChartName, chart.Namespace, err)
 			}
-			message.Warnf("Helm release for helm chart '%s' in the namespace '%s' was not found.  Was it already removed?",
-				chart.ChartName, chart.Namespace)
+			l.Warn("helm release for chart in the namespace was not found",
+				"chart", chart.ChartName, "namespace", chart.Namespace)
 		}
 
 		// Remove the uninstalled chart from the list of installed charts
@@ -203,11 +201,13 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {
-			message.Warnf("Unable to delete the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
+			l.Warn("unable to delete package secret (this may be normal if the cluster was removed)",
+				"secretName", secretName, "error", err.Error())
 		} else {
 			err = p.cluster.Clientset.CoreV1().Secrets(packageSecret.Namespace).Delete(ctx, packageSecret.Name, metav1.DeleteOptions{})
 			if err != nil {
-				message.Warnf("Unable to delete the '%s' package secret: '%s' (this may be normal if the cluster was removed)", secretName, err.Error())
+				l.Warn("unable to delete package secret (this may be normal if the cluster was removed)",
+					"secretName", secretName, "error", err.Error())
 			}
 		}
 	} else {

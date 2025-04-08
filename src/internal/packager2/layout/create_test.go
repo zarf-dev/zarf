@@ -250,7 +250,7 @@ func TestLoadPackageWithFlavors(t *testing.T) {
 			t.Parallel()
 			_, err := LoadPackageDefinition(context.Background(), filepath.Join("testdata", "package-with-flavors"), tt.flavor, map[string]string{})
 			if tt.expectedErr != "" {
-				require.EqualError(t, err, tt.expectedErr)
+				require.ErrorContains(t, err, tt.expectedErr)
 				return
 			}
 			require.NoError(t, err)

@@ -127,8 +127,6 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 
 	var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 	if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
-		// TODO(mkcp): Remove message on logger release
-		message.Warnf(lang.CmdPackageCreateCleanPathErr, config.ZarfDefaultCachePath)
 		l.Warn("invalid characters in Zarf cache path, using default", "cfg", config.ZarfDefaultCachePath, "default", config.ZarfDefaultCachePath)
 		config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 	}
@@ -147,6 +145,7 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 		SBOMOut:                 pkgConfig.CreateOpts.SBOMOutputDir,
 		SkipSBOM:                pkgConfig.CreateOpts.SkipSBOM,
 		Output:                  pkgConfig.CreateOpts.Output,
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		DifferentialPackagePath: pkgConfig.CreateOpts.DifferentialPackagePath,
 	}
 	err := packager2.Create(cmd.Context(), pkgConfig.CreateOpts.BaseDir, opt)
@@ -323,6 +322,8 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		GitInfo:         pkgConfig.InitOpts.GitServer,
 		NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
 		Retries:         pkgConfig.PkgOpts.Retries,
+		OCIConcurrency:  config.CommonOptions.OCIConcurrency,
+		PlainHTTP:       config.CommonOptions.PlainHTTP,
 	}
 	err = packager2.Mirror(ctx, mirrorOpt)
 	if err != nil {
@@ -898,7 +899,6 @@ func getPackageCompletionArgs(cmd *cobra.Command, _ []string, _ string) ([]strin
 
 	deployedZarfPackages, err := c.GetDeployedZarfPackages(ctx)
 	if err != nil {
-		message.Debug("Unable to get deployed zarf packages for package completion args", "error", err)
 		logger.From(cmd.Context()).Debug("unable to get deployed zarf packages for package completion args", "error", err)
 	}
 	// Populate list of package names

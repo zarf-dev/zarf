@@ -15,7 +15,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -39,13 +38,6 @@ func splitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 		return err
 	}
 
-	title := fmt.Sprintf("[0/%d] MB bytes written", fi.Size()/1000/1000)
-	progressBar := message.NewProgressBar(fi.Size(), title)
-	defer func(progressBar *message.ProgressBar) {
-		err2 := progressBar.Close()
-		err = errors.Join(err, err2)
-	}(progressBar)
-
 	hash := sha256.New()
 	fileCount := 0
 	// TODO(mkcp): The inside of this loop should be wrapped in a closure so we can close the destination file each
@@ -68,9 +60,6 @@ func splitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 		if copyErr != nil && !errors.Is(copyErr, io.EOF) {
 			return err
 		}
-		progressBar.Add(int(written))
-		title := fmt.Sprintf("[%d/%d] MB bytes written", progressBar.GetCurrent()/1000/1000, fi.Size()/1000/1000)
-		progressBar.Updatef(title)
 
 		_, err = dstFile.Seek(0, io.SeekStart)
 		if err != nil {
@@ -126,7 +115,6 @@ func splitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 	if err := os.WriteFile(path, b, helpers.ReadAllWriteUser); err != nil {
 		return fmt.Errorf("unable to write the file %s: %w", path, err)
 	}
-	progressBar.Successf("Package split across %d files", fileCount+1)
 	logger.From(ctx).Info("package split across multiple files", "count", fileCount+1)
 	return nil
 }

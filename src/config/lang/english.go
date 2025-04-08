@@ -43,9 +43,6 @@ const (
 
 	RootCmdFlagLogLevel              = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
 	RootCmdFlagArch                  = "Architecture for OCI images and Zarf packages"
-	RootCmdFlagSkipLogFile           = "Disable log file creation"
-	RootCmdFlagNoProgress            = "Disable fancy UI progress bars, spinners, logos, etc"
-	RootCmdFlagNoColor               = "Disable colors in output"
 	RootCmdFlagCachePath             = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir               = "Specify the temporary directory to use for intermediate files"
 	RootCmdFlagInsecure              = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
@@ -614,9 +611,4 @@ var (
 	ErrInitNotFound        = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
 	ErrUnableToCheckArch   = errors.New("unable to get the configured cluster's architecture")
 	ErrUnableToGetPackages = errors.New("unable to load the Zarf Package data from the cluster")
-)
-
-// Collection of reusable warn messages.
-var (
-	WarnSGetDeprecation = "Using sget to download resources is being deprecated and will removed in the v1.0.0 release of Zarf. Please publish the packages as OCI artifacts instead."
 )

@@ -20,7 +20,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 func newInternalCommand(rootCmd *cobra.Command) *cobra.Command {
@@ -358,7 +357,6 @@ func (o *internalUpdateGiteaPVCOptions) run(cmd *cobra.Command, _ []string) erro
 	// There is a possibility that the pvc does not yet exist and Gitea helm chart should create it
 	helmShouldCreate, err := c.UpdateGiteaPVC(ctx, pvcName, o.rollback)
 	if err != nil {
-		message.WarnErr(err, lang.CmdInternalUpdateGiteaPVCErr)
 		logger.From(ctx).Warn("Unable to update the existing Gitea persistent volume claim", "error", err.Error())
 	}
 	fmt.Print(helmShouldCreate)

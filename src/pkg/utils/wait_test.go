@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 type TestIsJSONPathWaitTypeSuite struct {
@@ -49,6 +48,5 @@ func (suite *TestIsJSONPathWaitTypeSuite) Test_0_IsJSONPathWaitType() {
 }
 
 func TestIsJSONPathWaitType(t *testing.T) {
-	message.SetLogLevel(message.DebugLevel)
 	suite.Run(t, new(TestIsJSONPathWaitTypeSuite))
 }

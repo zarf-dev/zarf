@@ -7,9 +7,7 @@ package template
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"log/slog"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -19,7 +17,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
@@ -37,10 +34,7 @@ func GetZarfVariableConfig(ctx context.Context) *variables.VariableConfig {
 		return interactive.PromptVariable(ctx, variable)
 	}
 
-	if logger.Enabled(ctx) {
-		return variables.New("zarf", prompt, logger.From(ctx))
-	}
-	return variables.New("zarf", prompt, slog.New(message.ZarfHandler{}))
+	return variables.New("zarf", prompt, logger.From(ctx))
 }
 
 // GetZarfTemplates returns the template keys and values to be used for templating.
@@ -133,13 +127,6 @@ func generateHtpasswd(regInfo *types.RegistryInfo) (string, error) {
 
 func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) error {
 	sanitizedMap := getSanitizedTemplateMap(templateMap)
-
-	b, err := json.MarshalIndent(sanitizedMap, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	message.Debug(fmt.Sprintf("templateMap = %s", string(b)))
 	logger.From(ctx).Debug("cluster.debugPrintTemplateMap", "templateMap", sanitizedMap)
 	return nil
 }

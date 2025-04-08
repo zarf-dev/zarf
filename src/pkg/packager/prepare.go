@@ -32,7 +32,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
@@ -51,14 +50,12 @@ func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) 
 	defer func() {
 		// Return to the original working directory
 		if err := os.Chdir(cwd); err != nil {
-			message.Warnf("Unable to return to the original working directory: %s", err.Error())
 			l.Warn("unable to return to the original working directory", "error", err)
 		}
 	}()
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return nil, fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
-	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 	l.Info("using build directory", "path", p.cfg.CreateOpts.BaseDir)
 
 	c := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
@@ -72,7 +69,6 @@ func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) 
 		return nil, err
 	}
 	for _, warning := range warnings {
-		message.Warn(warning)
 		l.Warn(warning)
 	}
 	p.cfg.Pkg = pkg
@@ -89,7 +85,6 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 				"if any repos contain helm charts you want to template and " +
 				"search for images, make sure to specify the helm chart path " +
 				"via the --repo-chart-path flag"
-			message.Note(msg)
 			l.Info(msg)
 			break
 		}
@@ -270,11 +265,9 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 
 		imgCompStart := time.Now()
 		l.Info("looking for images in component", "name", component.Name, "resourcesCount", len(resources))
-		spinner := message.NewProgressSpinner("Looking for images in component %q across %d resources", component.Name, len(resources))
-		defer spinner.Stop()
 
 		for _, resource := range resources {
-			if matchedImages, maybeImages, err = processUnstructuredImages(resource, matchedImages, maybeImages); err != nil {
+			if matchedImages, maybeImages, err = processUnstructuredImages(ctx, resource, matchedImages, maybeImages); err != nil {
 				return nil, fmt.Errorf("could not process the Kubernetes resource %s: %w", resource.GetName(), err)
 			}
 		}
@@ -297,11 +290,9 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			for _, image := range sortedExpectedImages {
 				if descriptor, err := crane.Head(image, images.WithGlobalInsecureFlag()...); err != nil {
 					// Test if this is a real image, if not just quiet log to debug, this is normal
-					message.Debugf("Suspected image does not appear to be valid: %#v", err)
 					l.Debug("suspected image does not appear to be valid", "error", err)
 				} else {
 					// Otherwise, add to the list of images
-					message.Debugf("Imaged digest found: %s", descriptor.Digest)
 					l.Debug("imaged digest found", "digest", descriptor.Digest)
 					validImages = append(validImages, image)
 				}
@@ -316,7 +307,6 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			}
 		}
 
-		spinner.Success()
 		l.Debug("done looking for images in component",
 			"name", component.Name,
 			"resourcesCount", len(resources),
@@ -327,12 +317,9 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			if len(imagesMap[component.Name]) > 0 {
 				var cosignArtifactList []string
 				imgStart := time.Now()
-				spinner := message.NewProgressSpinner("Looking up cosign artifacts for discovered images (0/%d)", len(imagesMap[component.Name]))
-				defer spinner.Stop()
 				l.Info("looking up cosign artifacts for discovered images", "count", len(imagesMap[component.Name]))
 
-				for idx, image := range imagesMap[component.Name] {
-					spinner.Updatef("Looking up cosign artifacts for discovered images (%d/%d)", idx+1, len(imagesMap[component.Name]))
+				for _, image := range imagesMap[component.Name] {
 					l.Debug("looking up cosign artifacts for image", "name", imagesMap[component.Name])
 					cosignArtifacts, err := utils.GetCosignArtifacts(image)
 					if err != nil {
@@ -341,7 +328,6 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 					cosignArtifactList = append(cosignArtifactList, cosignArtifacts...)
 				}
 
-				spinner.Success()
 				l.Debug("done looking up cosign artifacts for discovered images", "count", len(imagesMap[component.Name]), "duration", time.Since(imgStart))
 
 				if len(cosignArtifactList) > 0 {
@@ -367,7 +353,8 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 	return imagesMap, nil
 }
 
-func processUnstructuredImages(resource *unstructured.Unstructured, matchedImages, maybeImages map[string]bool) (map[string]bool, map[string]bool, error) {
+func processUnstructuredImages(ctx context.Context, resource *unstructured.Unstructured, matchedImages, maybeImages map[string]bool) (map[string]bool, map[string]bool, error) {
+	l := logger.From(ctx)
 	contents := resource.UnstructuredContent()
 	b, err := resource.MarshalJSON()
 	if err != nil {
@@ -414,7 +401,7 @@ func processUnstructuredImages(resource *unstructured.Unstructured, matchedImage
 		// Capture any custom images
 		matches := imageCheck.FindAllStringSubmatch(string(b), -1)
 		for _, group := range matches {
-			message.Debugf("Found unknown match, Kind: %s, Value: %s", resource.GetKind(), group[1])
+			l.Debug("found unknown match", "kind", resource.GetKind(), "value", group[1])
 			matchedImages[group[1]] = true
 		}
 	}
@@ -422,7 +409,7 @@ func processUnstructuredImages(resource *unstructured.Unstructured, matchedImage
 	// Capture "maybe images" too for all kinds because they might be in unexpected places.... 👀
 	matches := imageFuzzyCheck.FindAllStringSubmatch(string(b), -1)
 	for _, group := range matches {
-		message.Debugf("Found possible fuzzy match, Kind: %s, Value: %s", resource.GetKind(), group[1])
+		l.Debug("found possible fuzzy match", "kind", resource.GetKind(), "value", group[1])
 		maybeImages[group[1]] = true
 	}
 
