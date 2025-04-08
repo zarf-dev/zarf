@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/distribution/reference"
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -444,17 +445,17 @@ func processUnstructuredImages(ctx context.Context, resource *unstructured.Unstr
 // appendToImageMap adds container images to the image map
 func appendToImageMap(imgMap map[string]bool, pod corev1.PodSpec) map[string]bool {
 	for _, container := range pod.InitContainers {
-		if ReferenceRegexp.MatchString(container.Image) {
+		if reference.ReferenceRegexp.MatchString(container.Image) {
 			imgMap[container.Image] = true
 		}
 	}
 	for _, container := range pod.Containers {
-		if ReferenceRegexp.MatchString(container.Image) {
+		if reference.ReferenceRegexp.MatchString(container.Image) {
 			imgMap[container.Image] = true
 		}
 	}
 	for _, container := range pod.EphemeralContainers {
-		if ReferenceRegexp.MatchString(container.Image) {
+		if reference.ReferenceRegexp.MatchString(container.Image) {
 			imgMap[container.Image] = true
 		}
 	}
