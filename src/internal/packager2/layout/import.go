@@ -8,11 +8,12 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"os"
 	"path/filepath"
 	"slices"
 	"time"
+
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
