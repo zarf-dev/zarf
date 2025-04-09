@@ -47,7 +47,7 @@ jobs:
           curl -H "Authorization: Bearer ${{ github.token }}" https://ghcr.io/v2/
 
       - name: Login to the GHCR Registry
-        run: ./build/zarf tools registry login --username dummy --password ${{ github.token }} ghcr.io
+        run: docker login --username dummy --password ${{ github.token }} ghcr.io
 
       - name: Test publishing and pulling to ECR
         run: go test ./src/test/nightly/ecr_publish_test.go
