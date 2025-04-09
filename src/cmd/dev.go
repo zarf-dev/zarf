@@ -451,9 +451,9 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 
 	if pkgConfig.FindImagesOpts.Why != "" {
 		var foundWhyResource bool
-		for _, finding := range results.ComponentImageScans {
-			for _, whyResource := range finding.WhyResources {
-				fmt.Printf("component: %s\n%s: %s\nresource:\n\n%s\n", finding.ComponentName,
+		for _, scan := range results.ComponentImageScans {
+			for _, whyResource := range scan.WhyResources {
+				fmt.Printf("component: %s\n%s: %s\nresource:\n\n%s\n", scan.ComponentName,
 					whyResource.ResourceType, whyResource.Name, whyResource.Content)
 				foundWhyResource = true
 			}
