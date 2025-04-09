@@ -20,8 +20,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
@@ -31,7 +29,6 @@ import (
 type MirrorOptions struct {
 	Cluster         *cluster.Cluster
 	PkgLayout       *layout.PackageLayout
-	Filter          filters.ComponentFilterStrategy
 	RegistryInfo    types.RegistryInfo
 	GitInfo         types.GitServerInfo
 	NoImageChecksum bool
@@ -42,25 +39,20 @@ type MirrorOptions struct {
 
 // Mirror mirrors the package contents to the given registry and git server.
 func Mirror(ctx context.Context, opt MirrorOptions) error {
-	err := pushImagesToRegistry(ctx, opt.PkgLayout, opt.Filter, opt.RegistryInfo, opt.NoImageChecksum, opt.PlainHTTP, opt.OCIConcurrency)
+	err := pushImagesToRegistry(ctx, opt.PkgLayout, opt.RegistryInfo, opt.NoImageChecksum, opt.PlainHTTP, opt.OCIConcurrency)
 	if err != nil {
 		return err
 	}
-	err = pushReposToRepository(ctx, opt.Cluster, opt.PkgLayout, opt.Filter, opt.GitInfo, opt.Retries)
+	err = pushReposToRepository(ctx, opt.Cluster, opt.PkgLayout, opt.GitInfo, opt.Retries)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, registryInfo types.RegistryInfo, noImgChecksum bool, plainHTTP bool, concurrency int) error {
-	components, err := filter.Apply(pkgLayout.Pkg)
-	if err != nil {
-		return err
-	}
-
+func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, registryInfo types.RegistryInfo, noImgChecksum bool, plainHTTP bool, concurrency int) error {
 	refs := []transform.Image{}
-	for _, component := range components {
+	for _, component := range pkgLayout.Pkg.Components {
 		for _, img := range component.Images {
 			ref, err := transform.ParseImageRef(img)
 			if err != nil {
@@ -81,20 +73,16 @@ func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		NoChecksum:      noImgChecksum,
 		Arch:            pkgLayout.Pkg.Build.Architecture,
 	}
-	err = images.Push(ctx, pushConfig)
+	err := images.Push(ctx, pushConfig)
 	if err != nil {
 		return fmt.Errorf("failed to mirror images: %w", err)
 	}
 	return nil
 }
 
-func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, filter filters.ComponentFilterStrategy, gitInfo types.GitServerInfo, retries int) error {
+func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, gitInfo types.GitServerInfo, retries int) error {
 	l := logger.From(ctx)
-	components, err := filter.Apply(pkgLayout.Pkg)
-	if err != nil {
-		return err
-	}
-	for _, component := range components {
+	for _, component := range pkgLayout.Pkg.Components {
 		for _, repoURL := range component.Repos {
 			tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 			if err != nil {
@@ -111,7 +99,6 @@ func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *l
 			}
 			err = retry.Do(func() error {
 				if !dns.IsServiceURL(gitInfo.Address) {
-					message.Infof("Pushing repository %s to server %s", repoURL, gitInfo.Address)
 					l.Info("pushing repository to server", "repo", repoURL, "server", gitInfo.Address)
 					err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword)
 					if err != nil {
@@ -141,7 +128,6 @@ func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *l
 					return err
 				}
 				return tunnel.Wrap(func() error {
-					message.Infof("Pushing repository %s to server %s", repoURL, tunnel.HTTPEndpoint())
 					l.Info("pushing repository to server", "repo", repoURL, "server", tunnel.HTTPEndpoint())
 					err = repository.Push(ctx, tunnel.HTTPEndpoint(), gitInfo.PushUsername, gitInfo.PushPassword)
 					if err != nil {

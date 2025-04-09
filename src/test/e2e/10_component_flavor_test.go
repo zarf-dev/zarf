@@ -13,34 +13,47 @@ import (
 	"github.com/stretchr/testify/require"
 
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 )
 
 func TestFlavorArchFiltering(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
+		name        string
 		arch        string
 		flavor      string
 		expectedIDs []string
+		Filter      filters.ComponentFilterStrategy
 	}{
 		{
+			name:        "amd64 vanilla",
 			arch:        "amd64",
 			flavor:      "vanilla",
 			expectedIDs: []string{"combined-vanilla-amd", "via-import-vanilla-amd"},
 		},
 		{
+			name:        "amd64 chocolate",
 			arch:        "amd64",
 			flavor:      "chocolate",
 			expectedIDs: []string{"combined-chocolate-amd", "via-import-chocolate-amd"},
 		},
 		{
+			name:        "arm64 chocolate",
 			arch:        "arm64",
 			flavor:      "chocolate",
 			expectedIDs: []string{"combined-chocolate-arm", "via-import-chocolate-arm"},
 		},
+		{
+			name:        "arm64 chocolate with filter",
+			arch:        "arm64",
+			flavor:      "chocolate",
+			expectedIDs: []string{"combined-chocolate-arm"},
+			Filter:      filters.BySelectState("combined"),
+		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.arch+"-"+tt.flavor, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
 			tmpDir := t.TempDir()
@@ -49,7 +62,7 @@ func TestFlavorArchFiltering(t *testing.T) {
 			require.NoError(t, err)
 
 			tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-test-package-flavors-%s.tar.zst", tt.arch))
-			pkgLayout, err := layout2.LoadFromTar(context.Background(), tarPath, layout2.PackageLayoutOptions{})
+			pkgLayout, err := layout2.LoadFromTar(context.Background(), tarPath, layout2.PackageLayoutOptions{Filter: tt.Filter})
 			require.NoError(t, err)
 			compIDs := []string{}
 			for _, comp := range pkgLayout.Pkg.Components {
