@@ -66,7 +66,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 		return nil, err
 	}
 
-	pkg, err := LoadPackage(ctx, packagePath, opt.Flavor, opt.SetVariables)
+	pkg, err := LoadPackageDefinition(ctx, packagePath, opt.Flavor, opt.SetVariables)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 
 // CreateSkeleton creates a skeleton package and returns the path to the created package.
 func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) (string, error) {
-	pkg, err := LoadPackage(ctx, packagePath, opt.Flavor, nil)
+	pkg, err := LoadPackageDefinition(ctx, packagePath, opt.Flavor, nil)
 	if err != nil {
 		return "", err
 	}
@@ -259,8 +259,8 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) 
 	return buildPath, nil
 }
 
-// LoadPackage returns a validated package definition after flavors, imports, and variables are applied.
-func LoadPackage(ctx context.Context, packagePath, flavor string, setVariables map[string]string) (v1alpha1.ZarfPackage, error) {
+// LoadPackageDefinition returns a validated package definition after flavors, imports, and variables are applied.
+func LoadPackageDefinition(ctx context.Context, packagePath, flavor string, setVariables map[string]string) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.LoadPackage",
