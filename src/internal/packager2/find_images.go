@@ -77,11 +77,11 @@ type ComponentImageScan struct {
 	// CosignArtifacts contains found cosign artifacts for images
 	CosignArtifacts []string
 	// WhyResources contains the resources where specific images were found (when Why option is used)
-	WhyResources []WhyResource
+	WhyResources []Resource
 }
 
-// WhyResource contains the resources where specific images were found (when Why option is used)
-type WhyResource struct {
+// Resource contains a Kubernetes Manifest or Chart
+type Resource struct {
 	Content      string
 	Name         string
 	ResourceType string
@@ -502,8 +502,8 @@ func getSortedImages(matchedImages map[string]bool, maybeImages map[string]bool)
 	return sortedMatchedImages, sortedMaybeImages
 }
 
-func findWhyResources(resources []*unstructured.Unstructured, whyImage, resourceName string) ([]WhyResource, error) {
-	var whyResources []WhyResource
+func findWhyResources(resources []*unstructured.Unstructured, whyImage, resourceName string) ([]Resource, error) {
+	var whyResources []Resource
 	for _, resource := range resources {
 		b, err := yaml.Marshal(resource.Object)
 		if err != nil {
@@ -511,7 +511,7 @@ func findWhyResources(resources []*unstructured.Unstructured, whyImage, resource
 		}
 		yaml := string(b)
 		if strings.Contains(yaml, whyImage) {
-			why := WhyResource{
+			why := Resource{
 				Content: yaml,
 				Name:    resourceName,
 			}

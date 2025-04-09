@@ -348,6 +348,7 @@ func newPackageInspectCommand() *cobra.Command {
 
 	cmd.AddCommand(newPackageInspectSBOMCommand())
 	cmd.AddCommand(newPackageInspectImagesCommand())
+	cmd.AddCommand(newPackageInspectShowManifestsCommand())
 	cmd.AddCommand(newPackageInspectDefinitionCommand())
 
 	cmd.Flags().StringVar(&pkgConfig.InspectOpts.SBOMOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
@@ -391,6 +392,59 @@ func (o *packageInspectOptions) run(cmd *cobra.Command, args []string) error {
 		skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 	}
 	return definitionOpts.run(cmd, args)
+}
+
+type packageInspectShowManifestsOpts struct {
+	skipSignatureValidation bool
+	components              string
+}
+
+func newPackageInspectShowManifestsOptions() *packageInspectShowManifestsOpts {
+	return &packageInspectShowManifestsOpts{
+		skipSignatureValidation: false,
+	}
+}
+
+func newPackageInspectShowManifestsCommand() *cobra.Command {
+	o := newPackageInspectShowManifestsOptions()
+	cmd := &cobra.Command{
+		Use:   "manifests [ PACKAGE ]",
+		Short: "Template and output all manifests and charts in a package",
+		Args:  cobra.MaximumNArgs(1),
+		RunE:  o.Run,
+	}
+
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show manifests for")
+
+	return cmd
+}
+
+// Run performs the execution of 'package inspect manifests' sub-command.
+func (o *packageInspectShowManifestsOpts) Run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	src, err := choosePackage(ctx, args)
+	if err != nil {
+		return err
+	}
+	loadOpt := packager2.LoadOptions{
+		Source:                  src,
+		SkipSignatureValidation: o.skipSignatureValidation,
+		Filter:                  filters.BySelectState(o.components),
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+	}
+	layout, err := packager2.LoadPackage(ctx, loadOpt)
+	if err != nil {
+		return err
+	}
+	resources, err := packager2.PackageInspectManifests(ctx, layout, packager2.InspectManifestsOptions{})
+	if err != nil {
+		return err
+	}
+	for _, resource := range resources {
+		fmt.Printf("%s: %s\nresource:\n%s---\n", resource.ResourceType, resource.Name, resource.Content)
+	}
+	return nil
 }
 
 // PackageInspectSBOMOptions holds the command-line options for 'package inspect sbom' sub-command.
