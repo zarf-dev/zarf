@@ -37,6 +37,9 @@ type LoadOptions struct {
 
 // LoadPackage optionally fetches and loads the package from the given source.
 func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, error) {
+	if opt.Filter == nil {
+		opt.Filter = filters.Empty()
+	}
 	srcType, err := identifySource(opt.Source)
 	if err != nil {
 		return nil, err
@@ -83,6 +86,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 		PublicKeyPath:           opt.PublicKeyPath,
 		SkipSignatureValidation: opt.SkipSignatureValidation,
 		IsPartial:               isPartial,
+		Filter:                  opt.Filter,
 	}
 	pkgLayout, err := layout.LoadFromTar(ctx, tarPath, layoutOpt)
 	if err != nil {
