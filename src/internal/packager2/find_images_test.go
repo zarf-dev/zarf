@@ -25,15 +25,15 @@ func TestFindImages(t *testing.T) {
 		packagePath    string
 		opts           FindImagesOptions
 		expectedErr    string
-		expectedImages []ImageFindings
+		expectedImages []ComponentImageScan
 	}{
 		{
 			name:        "agent deployment",
 			packagePath: "./testdata/find-images/agent",
-			expectedImages: []ImageFindings{
+			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					MatchedImages: []string{
+					Matches: []string{
 						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
 					},
 					CosignArtifacts: []string{
@@ -48,10 +48,10 @@ func TestFindImages(t *testing.T) {
 			opts: FindImagesOptions{
 				SkipCosign: true,
 			},
-			expectedImages: []ImageFindings{
+			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					MatchedImages: []string{
+					Matches: []string{
 						"nginx:1.16.0",
 						"busybox",
 					},
@@ -64,10 +64,10 @@ func TestFindImages(t *testing.T) {
 			opts: FindImagesOptions{
 				SkipCosign: true,
 			},
-			expectedImages: []ImageFindings{
+			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					MatchedImages: []string{
+					Matches: []string{
 						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
 					},
 				},
@@ -79,10 +79,10 @@ func TestFindImages(t *testing.T) {
 			opts: FindImagesOptions{
 				SkipCosign: true,
 			},
-			expectedImages: []ImageFindings{
+			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					MatchedImages: []string{
+					Matches: []string{
 						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
 						"10.0.0.1:443/zarf-dev/zarf/agent:v0.38.1",
 						"alpine",
@@ -118,10 +118,10 @@ func TestFindImages(t *testing.T) {
 				KubeVersionOverride: "1.24.0-0",
 				SkipCosign:          true,
 			},
-			expectedImages: []ImageFindings{
+			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					MatchedImages: []string{
+					Matches: []string{
 						"curlimages/curl:7.69.0",
 						"giantswarm/tiny-tools",
 						"stefanprodan/grpc_health_probe:v0.3.0",
@@ -148,13 +148,13 @@ func TestFindImages(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, len(tt.expectedImages), len(results.ImageFindings))
+			require.Equal(t, len(tt.expectedImages), len(results.ComponentImageScans))
 			for i, expected := range tt.expectedImages {
-				require.Equal(t, expected.ComponentName, results.ImageFindings[i].ComponentName)
-				require.ElementsMatch(t, expected.MatchedImages, results.ImageFindings[i].MatchedImages)
-				require.ElementsMatch(t, expected.MaybeImages, results.ImageFindings[i].MaybeImages)
-				require.ElementsMatch(t, expected.CosignArtifacts, results.ImageFindings[i].CosignArtifacts)
-				require.ElementsMatch(t, expected.WhyResources, results.ImageFindings[i].WhyResources)
+				require.Equal(t, expected.ComponentName, results.ComponentImageScans[i].ComponentName)
+				require.ElementsMatch(t, expected.Matches, results.ComponentImageScans[i].Matches)
+				require.ElementsMatch(t, expected.PotentialMatches, results.ComponentImageScans[i].PotentialMatches)
+				require.ElementsMatch(t, expected.CosignArtifacts, results.ComponentImageScans[i].CosignArtifacts)
+				require.ElementsMatch(t, expected.WhyResources, results.ComponentImageScans[i].WhyResources)
 			}
 		})
 	}

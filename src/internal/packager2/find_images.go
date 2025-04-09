@@ -63,17 +63,17 @@ type FindImagesOptions struct {
 
 // FindImagesResult contains the results of FindImages for a package
 type FindImagesResult struct {
-	ImageFindings []ImageFindings
+	ComponentImageScans []ComponentImageScan
 }
 
-// ImageFindings contains the results of FindImages for a component
-type ImageFindings struct {
+// ComponentImageScan contains the results of FindImages for a component
+type ComponentImageScan struct {
 	// ComponentName is the name of the component where the images were found
 	ComponentName string
-	// MatchedImages contains definitively identified container images
-	MatchedImages []string
-	// MaybeImages contains potential container images
-	MaybeImages []string
+	// Matches contains definitively identified container images, such as those in an image: field
+	Matches []string
+	// PotentialMatches contains potential container images found by a regex
+	PotentialMatches []string
 	// CosignArtifacts contains found cosign artifacts for images
 	CosignArtifacts []string
 	// WhyResources contains the resources where specific images were found (when Why option is used)
@@ -120,13 +120,13 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	}
 	defer os.RemoveAll(tmpBuildPath)
 
-	imageFindings := []ImageFindings{}
+	componentImageScans := []ComponentImageScan{}
 	for _, component := range pkg.Components {
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
 			// Skip if there are no manifests, charts, or repos
 			continue
 		}
-		imageFinding := ImageFindings{ComponentName: component.Name}
+		scan := ComponentImageScan{ComponentName: component.Name}
 
 		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, state)
 		if err != nil {
@@ -225,7 +225,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 				}
 				for _, w := range whyResources {
 					w.ResourceType = "chart"
-					imageFinding.WhyResources = append(imageFinding.WhyResources, w)
+					scan.WhyResources = append(scan.WhyResources, w)
 				}
 			}
 		}
@@ -293,7 +293,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 					}
 					for _, w := range whyResources {
 						w.ResourceType = "manifest"
-						imageFinding.WhyResources = append(imageFinding.WhyResources, w)
+						scan.WhyResources = append(scan.WhyResources, w)
 					}
 				}
 			}
@@ -309,7 +309,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		}
 
 		sortedMatchedImages, sortedExpectedImages := getSortedImages(matchedImages, maybeImages)
-		imageFinding.MatchedImages = sortedMatchedImages
+		scan.Matches = sortedMatchedImages
 
 		// Handle the "maybes"
 		var validMaybeImages []string
@@ -325,7 +325,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 				}
 			}
 		}
-		imageFinding.MaybeImages = validMaybeImages
+		scan.PotentialMatches = validMaybeImages
 
 		l.Debug("done looking for images in component",
 			"name", component.Name,
@@ -334,38 +334,38 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 
 		if !opts.SkipCosign {
 			// Handle cosign artifact lookups
-			if len(imageFinding.MatchedImages) > 0 || len(imageFinding.MaybeImages) > 0 {
+			if len(scan.Matches) > 0 || len(scan.PotentialMatches) > 0 {
 				imgStart := time.Now()
-				l.Info("looking up cosign artifacts for discovered images", "count", len(imageFinding.MatchedImages)+len(imageFinding.MaybeImages))
+				l.Info("looking up cosign artifacts for discovered images", "count", len(scan.Matches)+len(scan.PotentialMatches))
 
-				for _, image := range imageFinding.MatchedImages {
+				for _, image := range scan.Matches {
 					l.Debug("looking up cosign artifacts for image", "name", image)
 					cosignArtifacts, err := utils.GetCosignArtifacts(image)
 					if err != nil {
 						return FindImagesResult{}, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}
-					imageFinding.CosignArtifacts = append(imageFinding.CosignArtifacts, cosignArtifacts...)
+					scan.CosignArtifacts = append(scan.CosignArtifacts, cosignArtifacts...)
 				}
 
-				for _, image := range imageFinding.MaybeImages {
+				for _, image := range scan.PotentialMatches {
 					l.Debug("looking up cosign artifacts for image", "name", image)
 					cosignArtifacts, err := utils.GetCosignArtifacts(image)
 					if err != nil {
 						return FindImagesResult{}, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}
-					imageFinding.CosignArtifacts = append(imageFinding.CosignArtifacts, cosignArtifacts...)
+					scan.CosignArtifacts = append(scan.CosignArtifacts, cosignArtifacts...)
 				}
 				l.Debug("done looking up cosign artifacts for discovered images", "duration", time.Since(imgStart))
 			}
 		}
 
-		imageFindings = append(imageFindings, imageFinding)
+		componentImageScans = append(componentImageScans, scan)
 	}
 
 	if opts.Why != "" {
 		var foundWhyResource bool
-		for _, imageFinding := range imageFindings {
-			if len(imageFinding.WhyResources) > 0 {
+		for _, componentImageScan := range componentImageScans {
+			if len(componentImageScan.WhyResources) > 0 {
 				foundWhyResource = true
 			}
 		}
@@ -374,7 +374,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		}
 	}
 
-	return FindImagesResult{ImageFindings: imageFindings}, nil
+	return FindImagesResult{ComponentImageScans: componentImageScans}, nil
 }
 
 // processUnstructuredImages processes a Kubernetes resource and extracts container images

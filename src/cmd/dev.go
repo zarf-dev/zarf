@@ -451,7 +451,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 
 	if pkgConfig.FindImagesOpts.Why != "" {
 		var foundWhyResource bool
-		for _, finding := range results.ImageFindings {
+		for _, finding := range results.ComponentImageScans {
 			for _, whyResource := range finding.WhyResources {
 				fmt.Printf("component: %s\n%s: %s\nresource:\n\n%s\n", finding.ComponentName,
 					whyResource.ResourceType, whyResource.Name, whyResource.Content)
@@ -465,16 +465,16 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	componentDefinition := "\ncomponents:\n"
-	for _, finding := range results.ImageFindings {
-		if len(finding.MatchedImages) > 0 {
+	for _, finding := range results.ComponentImageScans {
+		if len(finding.Matches) > 0 {
 			componentDefinition += fmt.Sprintf("  - name: %s\n    images:\n", finding.ComponentName)
-			for _, image := range finding.MatchedImages {
+			for _, image := range finding.Matches {
 				componentDefinition += fmt.Sprintf("      - %s\n", image)
 			}
 		}
-		if len(finding.MaybeImages) > 0 {
+		if len(finding.PotentialMatches) > 0 {
 			componentDefinition += fmt.Sprintf("      # Possible images - %s\n", finding.ComponentName)
-			for _, image := range finding.MaybeImages {
+			for _, image := range finding.PotentialMatches {
 				componentDefinition += fmt.Sprintf("      - %s\n", image)
 			}
 		}
