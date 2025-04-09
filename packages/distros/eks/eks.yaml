@@ -35,7 +35,6 @@ managedNodeGroups:
   maxSize: 6
   spot: true
   availabilityZones:
-    - "###ZARF_VAR_EKS_CLUSTER_REGION###a"
     - "###ZARF_VAR_EKS_CLUSTER_REGION###b"
     - "###ZARF_VAR_EKS_CLUSTER_REGION###c"
   tags:
