@@ -11,13 +11,14 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write
-  id-token: write
 
 jobs:
   ecr-nightly-test:
     if: ${{ github.repository == 'zarf-dev/zarf' }}
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
