@@ -43,7 +43,8 @@ jobs:
         run: aws ecr-public get-login-password --region us-east-1 | ./build/zarf tools registry login --username AWS --password-stdin public.ecr.aws
 
       - name: Debug GITHUB_TOKEN permissions
-        run: curl -H "Authorization: Bearer ${{ github.token }}" https://ghcr.io/v2/
+        run: |
+          curl -H "Authorization: Bearer ${{ github.token }}" https://ghcr.io/v2/
 
       - name: Login to the GHCR Registry
         run: ./build/zarf tools registry login --username dummy --password ${{ github.token }} ghcr.io
