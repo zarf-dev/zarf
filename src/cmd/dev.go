@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/packager2"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -91,7 +92,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
-	pkg, err := layout2.LoadPackage(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
+	pkg, err := layout2.LoadPackageDefinition(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
 	if err != nil {
 		return err
 	}
@@ -420,7 +421,7 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
+	baseDir := setBaseDirectory(args)
 
 	v := getViper()
 
@@ -428,14 +429,18 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
-	pkgClient, err := packager.New(&pkgConfig, packager.WithContext(cmd.Context()))
-	if err != nil {
-		return err
+
+	findImagesOptions := packager2.FindImagesOptions{
+		RepoHelmChartPath:   pkgConfig.FindImagesOpts.RepoHelmChartPath,
+		RegistryURL:         pkgConfig.FindImagesOpts.RegistryURL,
+		KubeVersionOverride: pkgConfig.FindImagesOpts.KubeVersionOverride,
+		CreateSetVariables:  pkgConfig.CreateOpts.SetVariables,
+		DeploySetVariables:  pkgConfig.PkgOpts.SetVariables,
+		Flavor:              pkgConfig.CreateOpts.Flavor,
+		Why:                 pkgConfig.FindImagesOpts.Why,
+		SkipCosign:          pkgConfig.FindImagesOpts.SkipCosign,
 	}
-	defer pkgClient.ClearTempPaths()
-
-	_, err = pkgClient.FindImages(ctx)
-
+	results, err := packager2.FindImages(ctx, baseDir, findImagesOptions)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -443,6 +448,44 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("unable to find images: %w", err)
 	}
+
+	if pkgConfig.FindImagesOpts.Why != "" {
+		var foundWhyResource bool
+		for _, scan := range results.ComponentImageScans {
+			for _, whyResource := range scan.WhyResources {
+				fmt.Printf("component: %s\n%s: %s\nresource:\n\n%s\n", scan.ComponentName,
+					whyResource.ResourceType, whyResource.Name, whyResource.Content)
+				foundWhyResource = true
+			}
+		}
+		if !foundWhyResource {
+			return fmt.Errorf("image %s not found in any charts or manifests", pkgConfig.FindImagesOpts.Why)
+		}
+		return nil
+	}
+
+	componentDefinition := "\ncomponents:\n"
+	for _, finding := range results.ComponentImageScans {
+		if len(finding.Matches) > 0 {
+			componentDefinition += fmt.Sprintf("  - name: %s\n    images:\n", finding.ComponentName)
+			for _, image := range finding.Matches {
+				componentDefinition += fmt.Sprintf("      - %s\n", image)
+			}
+		}
+		if len(finding.PotentialMatches) > 0 {
+			componentDefinition += fmt.Sprintf("      # Possible images - %s\n", finding.ComponentName)
+			for _, image := range finding.PotentialMatches {
+				componentDefinition += fmt.Sprintf("      - %s\n", image)
+			}
+		}
+		if len(finding.CosignArtifacts) > 0 {
+			componentDefinition += fmt.Sprintf("      # Cosign artifacts for images - %s\n", finding.ComponentName)
+			for _, cosignArtifact := range finding.CosignArtifacts {
+				componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
+			}
+		}
+	}
+	fmt.Println(componentDefinition)
 	return nil
 }
 

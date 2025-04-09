@@ -1,0 +1,12 @@
+kind: ZarfPackageConfig
+metadata:
+  name: agent
+  version: 1.0.0
+components:
+  - name: baseline
+    required: true
+    manifests:
+      - name: agent
+        namespace: default
+        kustomizations:
+          - ./.

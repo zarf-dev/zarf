@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent
+spec:
+  selector:
+    matchLabels:
+      app: agent
+  template:
+    metadata:
+asdasd
+            labels:
+        app: agent
+    spec:
+      containers:
+        - name: agent
+          image: ghcr.io/zarf-dev/zarf/agent:v0.38.1

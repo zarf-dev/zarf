@@ -1,0 +1,9 @@
+kind: ZarfPackageConfig
+metadata:
+  name: invalid-helm-repo
+  version: 1.0.0
+components:
+  - name: baseline
+    required: true
+    repos:
+      - https://github.com/zarf-dev/zarf-public-test.git
