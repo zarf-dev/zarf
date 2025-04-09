@@ -1,6 +1,6 @@
 module github.com/zarf-dev/zarf/hack/schema
 
-go 1.23.3
+go 1.24.2
 
 replace github.com/zarf-dev/zarf => ../..
 

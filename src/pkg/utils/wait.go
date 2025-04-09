@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -15,9 +16,8 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
-
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // isJSONPathWaitType checks if the condition is a JSONPath or condition.
@@ -30,11 +30,12 @@ func isJSONPathWaitType(condition string) bool {
 }
 
 // ExecuteWait executes the wait-for command.
-func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string, timeout time.Duration) error {
+func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kind, identifier string, timeout time.Duration) error {
+	l := logger.From(ctx)
 	// Handle network endpoints.
 	switch kind {
 	case "http", "https", "tcp":
-		return waitForNetworkEndpoint(kind, identifier, condition, timeout)
+		return waitForNetworkEndpoint(ctx, kind, identifier, condition, timeout)
 	}
 
 	// Type of wait, condition or JSONPath
@@ -75,12 +76,9 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 	// Setup the spinner messages.
 	conditionMsg := fmt.Sprintf("Waiting for %s%s%s to be %s.", kind, identifierMsg, namespaceMsg, condition)
 	existMsg := fmt.Sprintf("Waiting for %s%s to exist.", path.Join(kind, identifierMsg), namespaceMsg)
-	spinner := message.NewProgressSpinner(existMsg)
 
 	// Get the OS shell to execute commands in
 	shell, shellArgs := exec.GetOSShell(v1alpha1.Shell{Windows: "cmd"})
-
-	defer spinner.Stop()
 
 	for {
 		// Delay the check for 1 second
@@ -91,48 +89,48 @@ func ExecuteWait(waitTimeout, waitNamespace, condition, kind, identifier string,
 			return errors.New("wait timed out")
 
 		default:
-			spinner.Updatef(existMsg)
+			l.Info(existMsg)
 			// Check if the resource exists.
 			zarfKubectlGet := fmt.Sprintf("%s tools kubectl get %s %s %s", zarfCommand, namespaceFlag, kind, identifier)
-			stdout, stderr, err := exec.Cmd(shell, append(shellArgs, zarfKubectlGet)...)
+			_, stderr, err := exec.Cmd(shell, append(shellArgs, zarfKubectlGet)...)
 			if err != nil {
-				message.Debug(stdout, stderr, err)
+				l.Debug("resource error", "error", err)
 				continue
 			}
 
 			resourceNotFound := strings.Contains(stderr, "No resources found") && identifier == ""
 			if resourceNotFound {
-				message.Debug(stdout, stderr, err)
+				l.Debug("resource not found", "error", err)
 				continue
 			}
 
 			// If only checking for existence, exit here.
 			switch condition {
 			case "", "exist", "exists":
-				spinner.Success()
 				return nil
 			}
 
-			spinner.Updatef(conditionMsg)
+			l.Info(conditionMsg)
 			// Wait for the resource to meet the given condition.
 			zarfKubectlWait := fmt.Sprintf("%s tools kubectl wait %s %s %s --for %s%s --timeout=%s",
 				zarfCommand, namespaceFlag, kind, identifier, waitType, condition, waitTimeout)
 
 			// If there is an error, log it and try again.
-			if stdout, stderr, err := exec.Cmd(shell, append(shellArgs, zarfKubectlWait)...); err != nil {
-				message.Debug(stdout, stderr, err)
+			if _, _, err := exec.Cmd(shell, append(shellArgs, zarfKubectlWait)...); err != nil {
+				l.Debug("wait error", "error", err)
 				continue
 			}
 
 			// And just like that, success!
-			spinner.Successf(conditionMsg)
+			l.Info(conditionMsg)
 			return nil
 		}
 	}
 }
 
 // waitForNetworkEndpoint waits for a network endpoint to respond.
-func waitForNetworkEndpoint(resource, name, condition string, timeout time.Duration) error {
+func waitForNetworkEndpoint(ctx context.Context, resource, name, condition string, timeout time.Duration) error {
+	l := logger.From(ctx)
 	// Set the timeout for the wait-for command.
 	expired := time.After(timeout)
 
@@ -141,8 +139,6 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 	if condition == "" {
 		condition = "success"
 	}
-	spinner := message.NewProgressSpinner("Waiting for network endpoint %s://%s to respond %s.", resource, name, condition)
-	defer spinner.Stop()
 
 	delay := 100 * time.Millisecond
 
@@ -167,7 +163,7 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 
 					// If the status code is not in the 2xx range, try again.
 					if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
-						message.Debug(err)
+						l.Debug(err.Error())
 						continue
 					}
 
@@ -187,25 +183,24 @@ func waitForNetworkEndpoint(resource, name, condition string, timeout time.Durat
 				// Try to get the URL and check the status code.
 				resp, err := http.Get(url)
 				if err != nil || resp.StatusCode != code {
-					message.Debug(err)
+					l.Debug(err.Error())
 					continue
 				}
 			default:
 				// Fallback to any generic protocol using net.Dial
 				conn, err := net.Dial(resource, name)
 				if err != nil {
-					message.Debug(err)
+					l.Debug(err.Error())
 					continue
 				}
 				err = conn.Close()
 				if err != nil {
-					message.Debug(err)
+					l.Debug(err.Error())
 					continue
 				}
 			}
 
 			// Yay, we made it!
-			spinner.Success()
 			return nil
 		}
 	}

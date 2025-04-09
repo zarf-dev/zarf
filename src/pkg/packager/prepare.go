@@ -8,13 +8,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/goccy/go-yaml"
@@ -31,13 +32,12 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-var imageCheck = regexp.MustCompile(`(?mi)"image":"([^"]+)"`)
+var imageCheck = regexp.MustCompile(`(?mi)"image":"((([a-z0-9._-]+)/)?([a-z0-9._-]+)(:([a-z0-9._-]+))?)"`)
 var imageFuzzyCheck = regexp.MustCompile(`(?mi)["|=]([a-z0-9\-.\/:]+:[\w.\-]*[a-z\.\-][\w.\-]*)"`)
 
 // FindImages iterates over a Zarf.yaml and attempts to parse any images.
@@ -50,14 +50,12 @@ func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) 
 	defer func() {
 		// Return to the original working directory
 		if err := os.Chdir(cwd); err != nil {
-			message.Warnf("Unable to return to the original working directory: %s", err.Error())
 			l.Warn("unable to return to the original working directory", "error", err)
 		}
 	}()
 	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
 		return nil, fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
 	}
-	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
 	l.Info("using build directory", "path", p.cfg.CreateOpts.BaseDir)
 
 	c := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
@@ -71,7 +69,6 @@ func (p *Packager) FindImages(ctx context.Context) (map[string][]string, error) 
 		return nil, err
 	}
 	for _, warning := range warnings {
-		message.Warn(warning)
 		l.Warn(warning)
 	}
 	p.cfg.Pkg = pkg
@@ -88,7 +85,6 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 				"if any repos contain helm charts you want to template and " +
 				"search for images, make sure to specify the helm chart path " +
 				"via the --repo-chart-path flag"
-			message.Note(msg)
 			l.Info(msg)
 			break
 		}
@@ -157,18 +153,11 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 		resources := []*unstructured.Unstructured{}
 		matchedImages := map[string]bool{}
 		maybeImages := map[string]bool{}
-		for _, chart := range component.Charts {
+		for _, zarfChart := range component.Charts {
 			// Generate helm templates for this chart
-			helmCfg := helm.New(
-				chart,
-				componentPaths.Charts,
-				componentPaths.Values,
-				helm.WithKubeVersion(p.cfg.FindImagesOpts.KubeVersionOverride),
-				helm.WithVariableConfig(p.variableConfig),
-			)
-			err = helmCfg.PackageChart(ctx, component.DeprecatedCosignKeyPath)
+			err = helm.PackageChart(ctx, zarfChart, componentPaths.Charts, componentPaths.Values)
 			if err != nil {
-				return nil, fmt.Errorf("unable to package the chart %s: %w", chart.Name, err)
+				return nil, fmt.Errorf("unable to package the chart %s: %w", zarfChart.Name, err)
 			}
 
 			valuesFilePaths, err := helpers.RecursiveFileList(componentPaths.Values, nil, false)
@@ -183,9 +172,13 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 				}
 			}
 
-			chartTemplate, chartValues, err := helmCfg.TemplateChart(ctx)
+			chart, values, err := helm.LoadChartData(zarfChart, componentPaths.Charts, componentPaths.Values, nil)
 			if err != nil {
-				return nil, fmt.Errorf("could not render the Helm template for chart %s: %w", chart.Name, err)
+				return nil, fmt.Errorf("failed to load chart data: %w", err)
+			}
+			chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, p.cfg.FindImagesOpts.KubeVersionOverride, p.variableConfig)
+			if err != nil {
+				return nil, fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
 			}
 
 			// Break the template into separate resources
@@ -195,10 +188,10 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			}
 			resources = append(resources, yamls...)
 
-			chartTarball := helm.StandardName(componentPaths.Charts, chart) + ".tgz"
-			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, chartValues)
+			chartTarball := helm.StandardName(componentPaths.Charts, zarfChart) + ".tgz"
+			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 			if err != nil {
-				return nil, fmt.Errorf("could not look up image annotations for chart URL %s: %w", chart.URL, err)
+				return nil, fmt.Errorf("could not look up image annotations for chart URL %s: %w", zarfChart.URL, err)
 			}
 			for _, image := range annotatedImages {
 				matchedImages[image] = true
@@ -206,9 +199,9 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 
 			// Check if the --why flag is set
 			if p.cfg.FindImagesOpts.Why != "" {
-				whyResourcesChart, err := findWhyResources(yamls, p.cfg.FindImagesOpts.Why, component.Name, chart.Name, true)
+				whyResourcesChart, err := findWhyResources(yamls, p.cfg.FindImagesOpts.Why, component.Name, zarfChart.Name, true)
 				if err != nil {
-					return nil, fmt.Errorf("could not determine why resource for the chart %s: %w", chart.Name, err)
+					return nil, fmt.Errorf("could not determine why resource for the chart %s: %w", zarfChart.Name, err)
 				}
 				whyResources = append(whyResources, whyResourcesChart...)
 			}
@@ -272,11 +265,9 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 
 		imgCompStart := time.Now()
 		l.Info("looking for images in component", "name", component.Name, "resourcesCount", len(resources))
-		spinner := message.NewProgressSpinner("Looking for images in component %q across %d resources", component.Name, len(resources))
-		defer spinner.Stop()
 
 		for _, resource := range resources {
-			if matchedImages, maybeImages, err = processUnstructuredImages(resource, matchedImages, maybeImages); err != nil {
+			if matchedImages, maybeImages, err = processUnstructuredImages(ctx, resource, matchedImages, maybeImages); err != nil {
 				return nil, fmt.Errorf("could not process the Kubernetes resource %s: %w", resource.GetName(), err)
 			}
 		}
@@ -299,11 +290,9 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			for _, image := range sortedExpectedImages {
 				if descriptor, err := crane.Head(image, images.WithGlobalInsecureFlag()...); err != nil {
 					// Test if this is a real image, if not just quiet log to debug, this is normal
-					message.Debugf("Suspected image does not appear to be valid: %#v", err)
 					l.Debug("suspected image does not appear to be valid", "error", err)
 				} else {
 					// Otherwise, add to the list of images
-					message.Debugf("Imaged digest found: %s", descriptor.Digest)
 					l.Debug("imaged digest found", "digest", descriptor.Digest)
 					validImages = append(validImages, image)
 				}
@@ -318,7 +307,6 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			}
 		}
 
-		spinner.Success()
 		l.Debug("done looking for images in component",
 			"name", component.Name,
 			"resourcesCount", len(resources),
@@ -329,12 +317,9 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 			if len(imagesMap[component.Name]) > 0 {
 				var cosignArtifactList []string
 				imgStart := time.Now()
-				spinner := message.NewProgressSpinner("Looking up cosign artifacts for discovered images (0/%d)", len(imagesMap[component.Name]))
-				defer spinner.Stop()
 				l.Info("looking up cosign artifacts for discovered images", "count", len(imagesMap[component.Name]))
 
-				for idx, image := range imagesMap[component.Name] {
-					spinner.Updatef("Looking up cosign artifacts for discovered images (%d/%d)", idx+1, len(imagesMap[component.Name]))
+				for _, image := range imagesMap[component.Name] {
 					l.Debug("looking up cosign artifacts for image", "name", imagesMap[component.Name])
 					cosignArtifacts, err := utils.GetCosignArtifacts(image)
 					if err != nil {
@@ -343,7 +328,6 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 					cosignArtifactList = append(cosignArtifactList, cosignArtifacts...)
 				}
 
-				spinner.Success()
 				l.Debug("done looking up cosign artifacts for discovered images", "count", len(imagesMap[component.Name]), "duration", time.Since(imgStart))
 
 				if len(cosignArtifactList) > 0 {
@@ -369,7 +353,8 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 	return imagesMap, nil
 }
 
-func processUnstructuredImages(resource *unstructured.Unstructured, matchedImages, maybeImages map[string]bool) (map[string]bool, map[string]bool, error) {
+func processUnstructuredImages(ctx context.Context, resource *unstructured.Unstructured, matchedImages, maybeImages map[string]bool) (map[string]bool, map[string]bool, error) {
+	l := logger.From(ctx)
 	contents := resource.UnstructuredContent()
 	b, err := resource.MarshalJSON()
 	if err != nil {
@@ -377,6 +362,27 @@ func processUnstructuredImages(resource *unstructured.Unstructured, matchedImage
 	}
 
 	switch resource.GetKind() {
+	case "Pod":
+		var pod corev1.Pod
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &pod); err != nil {
+			return nil, nil, fmt.Errorf("could not parse pod: %w", err)
+		}
+		matchedImages = appendToImageMap(matchedImages, pod.Spec)
+
+	case "CronJob":
+		var cronJob batchv1.CronJob
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &cronJob); err != nil {
+			return nil, nil, fmt.Errorf("could not parse cronjob: %w", err)
+		}
+		matchedImages = appendToImageMap(matchedImages, cronJob.Spec.JobTemplate.Spec.Template.Spec)
+
+	case "ReplicationController":
+		var rc corev1.ReplicationController
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &rc); err != nil {
+			return nil, nil, fmt.Errorf("could not parse replicationcontroller: %w", err)
+		}
+		matchedImages = appendToImageMap(matchedImages, rc.Spec.Template.Spec)
+
 	case "Deployment":
 		var deployment v1.Deployment
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &deployment); err != nil {
@@ -416,7 +422,7 @@ func processUnstructuredImages(resource *unstructured.Unstructured, matchedImage
 		// Capture any custom images
 		matches := imageCheck.FindAllStringSubmatch(string(b), -1)
 		for _, group := range matches {
-			message.Debugf("Found unknown match, Kind: %s, Value: %s", resource.GetKind(), group[1])
+			l.Debug("found unknown match", "kind", resource.GetKind(), "value", group[1])
 			matchedImages[group[1]] = true
 		}
 	}
@@ -424,7 +430,7 @@ func processUnstructuredImages(resource *unstructured.Unstructured, matchedImage
 	// Capture "maybe images" too for all kinds because they might be in unexpected places.... 👀
 	matches := imageFuzzyCheck.FindAllStringSubmatch(string(b), -1)
 	for _, group := range matches {
-		message.Debugf("Found possible fuzzy match, Kind: %s, Value: %s", resource.GetKind(), group[1])
+		l.Debug("found possible fuzzy match", "kind", resource.GetKind(), "value", group[1])
 		maybeImages[group[1]] = true
 	}
 
@@ -454,13 +460,19 @@ func findWhyResources(resources []*unstructured.Unstructured, whyImage, componen
 
 func appendToImageMap(imgMap map[string]bool, pod corev1.PodSpec) map[string]bool {
 	for _, container := range pod.InitContainers {
-		imgMap[container.Image] = true
+		if ReferenceRegexp.MatchString(container.Image) {
+			imgMap[container.Image] = true
+		}
 	}
 	for _, container := range pod.Containers {
-		imgMap[container.Image] = true
+		if ReferenceRegexp.MatchString(container.Image) {
+			imgMap[container.Image] = true
+		}
 	}
 	for _, container := range pod.EphemeralContainers {
-		imgMap[container.Image] = true
+		if ReferenceRegexp.MatchString(container.Image) {
+			imgMap[container.Image] = true
+		}
 	}
 	return imgMap
 }

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
@@ -39,12 +40,9 @@ const (
 // InitZarfState initializes the Zarf state with the given temporary directory and init configs.
 func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitOptions) error {
 	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Gathering cluster state information")
-	defer spinner.Stop()
 
 	// Attempt to load an existing state prior to init.
 	// NOTE: We are ignoring the error here because we don't really expect a state to exist yet.
-	spinner.Updatef("Checking cluster for existing Zarf deployment")
 	l.Debug("checking cluster for existing Zarf deployment")
 	state, err := c.LoadZarfState(ctx)
 	if err != nil && !kerrors.IsNotFound(err) {
@@ -54,7 +52,6 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 	// If state is nil, this is a new cluster.
 	if state == nil {
 		state = &types.ZarfState{}
-		spinner.Updatef("New cluster, no prior Zarf deployments found")
 		l.Debug("new cluster, no prior Zarf deployments found")
 		if initOptions.ApplianceMode {
 			// If the K3s component is being deployed, skip distro detection.
@@ -77,7 +74,6 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		}
 
 		if state.Distro != DistroIsUnknown {
-			spinner.Updatef("Detected K8s distro %s", state.Distro)
 			l.Debug("Detected K8s distro", "name", state.Distro)
 		}
 
@@ -113,7 +109,6 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 		}
 
 		// Try to create the zarf namespace.
-		spinner.Updatef("Creating the Zarf namespace")
 		l.Debug("creating the Zarf namespace")
 		zarfNamespace := NewZarfManagedApplyNamespace(ZarfNamespaceName)
 		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
@@ -152,18 +147,12 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 	} else {
 		// TODO (@austinabro321) validate immediately in `zarf init` if these are set and not equal and error out if so
 		if helpers.IsNotZeroAndNotEqual(initOptions.GitServer, state.GitServer) {
-			message.Warn("Detected a change in Git Server init options on a re-init. Ignoring... To update run:")
-			message.ZarfCommand("tools update-creds git")
 			l.Warn("ignoring change in git sever init options on re-init, to update run `zarf tools update-creds git`")
 		}
 		if helpers.IsNotZeroAndNotEqual(initOptions.RegistryInfo, state.RegistryInfo) {
-			message.Warn("Detected a change in Image Registry init options on a re-init. Ignoring... To update run:")
-			message.ZarfCommand("tools update-creds registry")
 			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
 		}
 		if helpers.IsNotZeroAndNotEqual(initOptions.ArtifactServer, state.ArtifactServer) {
-			message.Warn("Detected a change in Artifact Server init options on a re-init. Ignoring... To update run:")
-			message.ZarfCommand("tools update-creds artifact")
 			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
 		}
 	}
@@ -182,8 +171,6 @@ func (c *Cluster) InitZarfState(ctx context.Context, initOptions types.ZarfInitO
 	if initOptions.StorageClass != "" {
 		state.StorageClass = initOptions.StorageClass
 	}
-
-	spinner.Success()
 
 	// Save the state back to K8s
 	if err := c.SaveZarfState(ctx, state); err != nil {
@@ -238,11 +225,6 @@ func (c *Cluster) debugPrintZarfState(ctx context.Context, state *types.ZarfStat
 	// this is a shallow copy, nested pointers WILL NOT be copied
 	oldState := *state
 	sanitized := c.sanitizeZarfState(&oldState)
-	b, err := json.MarshalIndent(sanitized, "", "  ")
-	if err != nil {
-		return
-	}
-	message.Debugf("ZarfState - %s", string(b))
 	logger.From(ctx).Debug("cluster.debugPrintZarfState", "state", sanitized)
 }
 

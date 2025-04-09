@@ -17,8 +17,8 @@ import (
 )
 
 type connectOptions struct {
-	cliOnly bool
-	zt      cluster.TunnelInfo
+	open bool
+	zt   cluster.TunnelInfo
 }
 
 func newConnectCommand() *cobra.Command {
@@ -37,7 +37,7 @@ func newConnectCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.zt.ResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
 	cmd.Flags().IntVar(&o.zt.LocalPort, "local-port", 0, lang.CmdConnectFlagLocalPort)
 	cmd.Flags().IntVar(&o.zt.RemotePort, "remote-port", 0, lang.CmdConnectFlagRemotePort)
-	cmd.Flags().BoolVar(&o.cliOnly, "cli-only", false, lang.CmdConnectFlagCliOnly)
+	cmd.Flags().BoolVar(&o.open, "open", false, lang.CmdConnectFlagOpen)
 
 	// TODO(soltysh): consider splitting sub-commands into separate files
 	cmd.AddCommand(newConnectListCommand())
@@ -49,12 +49,10 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	l := logger.From(ctx)
 	target := ""
+	// TODO: this leaves room for ignoring potential misuse
 	if len(args) > 0 {
 		target = args[0]
 	}
-
-	spinner := message.NewProgressSpinner(lang.CmdConnectPreparingTunnel, target)
-	defer spinner.Stop()
 
 	c, err := cluster.NewCluster()
 	if err != nil {
@@ -82,21 +80,18 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 
 	defer tunnel.Close()
 
-	if o.cliOnly {
-		spinner.Updatef(lang.CmdConnectEstablishedCLI, tunnel.FullURL())
-		l.Info("Tunnel established, waiting for user to interrupt (ctrl-c to end)", "url", tunnel.FullURL())
-	} else {
-		spinner.Updatef(lang.CmdConnectEstablishedWeb, tunnel.FullURL())
+	if o.open {
 		l.Info("Tunnel established, opening your default web browser (ctrl-c to end)", "url", tunnel.FullURL())
 		if err := exec.LaunchURL(tunnel.FullURL()); err != nil {
 			return err
 		}
+	} else {
+		l.Info("Tunnel established, waiting for user to interrupt (ctrl-c to end)", "url", tunnel.FullURL())
 	}
 
 	// Wait for the interrupt signal or an error.
 	select {
 	case <-ctx.Done():
-		spinner.Successf(lang.CmdConnectTunnelClosed, tunnel.FullURL())
 		return nil
 	case err = <-tunnel.ErrChan():
 		return fmt.Errorf("lost connection to the service: %w", err)

@@ -123,7 +123,7 @@ func (p *Spinner) Stop() {
 
 // Success prints a success message and stops the spinner.
 func (p *Spinner) Success() {
-	p.Successf(p.startText)
+	p.Successf("%s", p.startText)
 }
 
 // Successf prints a success message with the spinner and stops it.

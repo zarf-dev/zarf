@@ -1,7 +1,7 @@
 name: Test EKS Cluster
 on:
   schedule:
-   - cron: '0 7 * * *' ## Every day at 0700 UTC
+    - cron: "0 7 * * *" ## Every day at 0700 UTC
   workflow_dispatch: ## Give us the ability to run this manually
     inputs:
       cluster_name:
@@ -31,7 +31,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup golang
-        uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34 # v5.3.0
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
         with:
           go-version-file: go.mod
 
@@ -39,9 +39,9 @@ jobs:
         uses: ./.github/actions/packages
 
       - name: Auth with AWS
-        uses: aws-actions/configure-aws-credentials@4fc4975a852c8cd99761e2de1f4ba73402e44dd9 # v4.0.3
+        uses: aws-actions/configure-aws-credentials@ececac1a45f3b08a01d2dd070d28d111c5fe6722 # v4.1.0
         with:
-          role-to-assume: ${{ secrets.AWS_NIGHTLY_ROLE }}
+          role-to-assume: ${{ secrets.AWS_NIGHTLY_EKS_ROLE_ARN }}
           role-session-name: ${{ github.job || github.event.client_payload.pull_request.head.sha || github.sha }}
           aws-region: us-east-1
           role-duration-seconds: 7200
@@ -55,6 +55,8 @@ jobs:
             --components=deploy-eks-cluster \
             --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
             --set=EKS_INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} \
+            --set=PERMISSIONS_BOUNDARY_ARN=arn:aws:iam::205930641482:policy/uds_permissions_boundary \
+            --set=PERMISSIONS_BOUNDARY_TAG=uds_permissions_boundary \
             --confirm
 
       - name: Run tests

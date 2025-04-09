@@ -22,7 +22,7 @@ func TestCreateSBOM(t *testing.T) {
 
 	outSbomPath := filepath.Join(t.TempDir(), ".sbom-location")
 	buildPath := t.TempDir()
-	tarPath := filepath.Join(buildPath, fmt.Sprintf("zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch))
+	tarPath := filepath.Join(buildPath, fmt.Sprintf("zarf-package-dos-games-%s-1.2.0.tar.zst", e2e.Arch))
 
 	expectedFiles := []string{
 		"sbom-viewer-ghcr.io_zarf-dev_doom-game_0.0.1.html",

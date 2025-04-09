@@ -12,8 +12,10 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -218,9 +220,177 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	require.Equal(t, "c09d17f612f241cdf549e5fb97c9e063a8ad18ae7a9f3af066332ed6b38556ad", shaSum)
 }
 
-func TestLoadPackageErrorWithoutCompatibleFlavor(t *testing.T) {
+func TestLoadPackageWithFlavors(t *testing.T) {
 	t.Parallel()
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
-	_, err := LoadPackage(context.Background(), filepath.Join("testdata", "package-with-flavors"), "non-existent-flavor", map[string]string{})
-	require.EqualError(t, err, fmt.Sprintf("package validation failed: %s", lint.PkgValidateErrNoComponents))
+
+	tests := []struct {
+		name        string
+		flavor      string
+		expectedErr string
+	}{
+		{
+			name:        "inputting a flavor that does not exist should error",
+			flavor:      "non-existent-flavor",
+			expectedErr: "could not find flavor non-existent-flavor in package definition",
+		},
+		{
+			name:        "when all components have a flavor, inputting no flavor should error",
+			flavor:      "",
+			expectedErr: fmt.Sprintf("package validation failed: %s", lint.PkgValidateErrNoComponents),
+		},
+		{
+			name:   "flavors work",
+			flavor: "cashew",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := LoadPackage(context.Background(), filepath.Join("testdata", "package-with-flavors"), tt.flavor, map[string]string{})
+			if tt.expectedErr != "" {
+				require.ErrorContains(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
+	t.Helper()
+	b, err := goyaml.Marshal(pkg)
+	require.NoError(t, err)
+	path := filepath.Join(dir, ZarfYAML)
+	err = os.WriteFile(path, b, 0700)
+	require.NoError(t, err)
+}
+
+func TestGetSBOM(t *testing.T) {
+	t.Parallel()
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+
+	tmpdir := t.TempDir()
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
+			Name: "test-sbom",
+		},
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Name: "do-nothing",
+			},
+		},
+	}
+	writePackageToDisk(t, pkg, tmpdir)
+
+	pkgLayout, err := CreatePackage(context.Background(), tmpdir, CreateOptions{})
+	require.NoError(t, err)
+
+	// Ensure the SBOM does not exist
+	require.NoFileExists(t, filepath.Join(pkgLayout.dirPath, SBOMTar))
+	// Ensure Zarf errors correctly
+	_, err = pkgLayout.GetSBOM(tmpdir)
+	var noSBOMErr *NoSBOMAvailableError
+	require.ErrorAs(t, err, &noSBOMErr)
+}
+
+func TestCreateAbsolutePathFileSource(t *testing.T) {
+	t.Parallel()
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+
+	createFileToImport := func(t *testing.T, dir string) string {
+		t.Helper()
+		absoluteFilePath, err := filepath.Abs(filepath.Join(dir, "file.txt"))
+		require.NoError(t, err)
+		_, err = os.Create(absoluteFilePath)
+		require.NoError(t, err)
+		return absoluteFilePath
+	}
+
+	t.Run("test a standard package can use absolute file paths", func(t *testing.T) {
+		t.Parallel()
+		tmpdir := t.TempDir()
+		absoluteFilePath := createFileToImport(t, tmpdir)
+		pkg := v1alpha1.ZarfPackage{
+			Kind: v1alpha1.ZarfPackageConfig,
+			Metadata: v1alpha1.ZarfMetadata{
+				Name: "standard",
+			},
+			Components: []v1alpha1.ZarfComponent{
+				{
+					Name: "file",
+					Files: []v1alpha1.ZarfFile{
+						{
+							Source: absoluteFilePath,
+							Target: "file.txt",
+						},
+					},
+				},
+			},
+		}
+		// Create the zarf.yaml file in the tmpdir
+		writePackageToDisk(t, pkg, tmpdir)
+
+		pkgLayout, err := CreatePackage(context.Background(), tmpdir, CreateOptions{})
+		require.NoError(t, err)
+
+		// Ensure the components have the correct file
+		fileComponent, err := pkgLayout.GetComponentDir(tmpdir, "file", FilesComponentDir)
+		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(fileComponent, "0", "file.txt"))
+	})
+
+	t.Run("test that imports handle absolute paths properly", func(t *testing.T) {
+		t.Parallel()
+		tmpdir := t.TempDir()
+		absoluteFilePath := createFileToImport(t, tmpdir)
+		parentPkg := v1alpha1.ZarfPackage{
+			Kind: v1alpha1.ZarfPackageConfig,
+			Metadata: v1alpha1.ZarfMetadata{
+				Name: "parent",
+			},
+			Components: []v1alpha1.ZarfComponent{
+				{
+					Name: "file-import",
+					Import: v1alpha1.ZarfComponentImport{
+						Path: "child",
+					},
+				},
+			},
+		}
+		// Create package using absolute file path set to be import
+		childPkg := v1alpha1.ZarfPackage{
+			Kind: v1alpha1.ZarfPackageConfig,
+			Metadata: v1alpha1.ZarfMetadata{
+				Name: "child",
+			},
+			Components: []v1alpha1.ZarfComponent{
+				{
+					Name: "file-import",
+					Files: []v1alpha1.ZarfFile{
+						{
+							Source: absoluteFilePath,
+							Target: "file.txt",
+						},
+					},
+				},
+			},
+		}
+		// Create zarf.yaml files in the tempdir
+		writePackageToDisk(t, parentPkg, tmpdir)
+		childDir := filepath.Join(tmpdir, "child")
+		err := os.Mkdir(childDir, 0700)
+		require.NoError(t, err)
+		writePackageToDisk(t, childPkg, childDir)
+		// create the package
+		pkgLayout, err := CreatePackage(context.Background(), tmpdir, CreateOptions{})
+		require.NoError(t, err)
+
+		// Ensure the component has the correct file
+		importedFileComponent, err := pkgLayout.GetComponentDir(tmpdir, "file-import", FilesComponentDir)
+		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(importedFileComponent, "0", "file.txt"))
+	})
 }

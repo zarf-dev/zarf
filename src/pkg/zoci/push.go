@@ -10,12 +10,9 @@ import (
 	"fmt"
 	"maps"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
 )
@@ -32,14 +29,10 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *v1alpha1.ZarfPackage, 
 	}(src)
 
 	r.Log().Info(fmt.Sprintf("Publishing package to %s", r.Repo().Reference))
-	spinner := message.NewProgressSpinner("")
-	defer spinner.Stop()
 
-	// Get all of the layers in the package
+	// Get all the layers in the package
 	var descs []ocispec.Descriptor
 	for name, path := range paths.Files() {
-		spinner.Updatef("Preparing layer %s", helpers.First30Last30(name))
-
 		mediaType := ZarfLayerMediaTypeBlob
 
 		desc, err := src.Add(ctx, name, mediaType, path)
@@ -48,11 +41,9 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *v1alpha1.ZarfPackage, 
 		}
 		descs = append(descs, desc)
 	}
-	spinner.Successf("Prepared all layers")
 
 	copyOpts := r.GetDefaultCopyOpts()
 	copyOpts.Concurrency = concurrency
-	total := oci.SumDescsSize(descs)
 
 	annotations := annotationsFromMetadata(&pkg.Metadata)
 
@@ -73,27 +64,12 @@ func (r *Remote) PublishPackage(ctx context.Context, pkg *v1alpha1.ZarfPackage, 
 		return err
 	}
 
-	total += manifestConfigDesc.Size
-
-	progressBar := message.NewProgressBar(total, fmt.Sprintf("Publishing %s:%s", r.Repo().Reference.Repository, r.Repo().Reference.Reference))
-	defer func(progressBar *message.ProgressBar) {
-		err2 := progressBar.Close()
-		err = errors.Join(err, err2)
-	}(progressBar)
-	r.SetProgressWriter(progressBar)
-	defer r.ClearProgressWriter()
-
 	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), r.Repo(), "", copyOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to copy: %w", err)
 	}
 
-	if err := r.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc); err != nil {
-		return err
-	}
-
-	progressBar.Successf("Published %s [%s]", r.Repo().Reference, ZarfLayerMediaTypeBlob)
-	return nil
+	return r.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc)
 }
 
 func annotationsFromMetadata(metadata *v1alpha1.ZarfMetadata) map[string]string {

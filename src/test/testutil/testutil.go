@@ -7,6 +7,9 @@ package testutil
 import (
 	"context"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // TestContext takes a testing.T and returns a context that is
@@ -16,5 +19,8 @@ func TestContext(t *testing.T) context.Context {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
+	l, err := logger.New(logger.ConfigDefault())
+	require.NoError(t, err)
+	ctx = logger.WithContext(ctx, l)
 	return ctx
 }

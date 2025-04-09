@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/mholt/archiver/v3"
@@ -21,7 +20,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -45,6 +43,7 @@ func NewSkeletonCreator(createOpts types.ZarfCreateOptions, publishOpts types.Za
 
 // LoadPackageDefinition loads and configure a zarf.yaml file when creating and publishing a skeleton package.
 func (sc *SkeletonCreator) LoadPackageDefinition(ctx context.Context, src *layout.PackagePaths) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
+	l := logger.From(ctx)
 	pkg, warnings, err = src.ReadZarfYAML()
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, nil, err
@@ -63,7 +62,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(ctx context.Context, src *layou
 	warnings = append(warnings, composeWarnings...)
 
 	for _, warning := range warnings {
-		message.Warn(warning)
+		l.Warn(warning)
 	}
 
 	if err := Validate(pkg, sc.createOpts.BaseDir, sc.createOpts.SetVariables); err != nil {
@@ -123,7 +122,6 @@ func (sc *SkeletonCreator) Output(ctx context.Context, dst *layout.PackagePaths,
 
 func (sc *SkeletonCreator) addComponent(ctx context.Context, component v1alpha1.ZarfComponent, dst *layout.PackagePaths) (updatedComponent *v1alpha1.ZarfComponent, err error) {
 	l := logger.From(ctx)
-	message.HeaderInfof("📦 %s COMPONENT", strings.ToUpper(component.Name))
 	logger.From(ctx).Info("processing component", "name", component.Name)
 
 	updatedComponent = &component
@@ -233,11 +231,7 @@ func (sc *SkeletonCreator) addComponent(ctx context.Context, component v1alpha1.
 	}
 
 	if len(component.DataInjections) > 0 {
-		spinner := message.NewProgressSpinner("Loading data injections")
-		defer spinner.Stop()
-
 		for dataIdx, data := range component.DataInjections {
-			spinner.Updatef("Copying data injection %s for %s", data.Target.Path, data.Target.Selector)
 			l.Debug("copying data injection", "source", data.Source, "target", data.Target.Path)
 
 			rel := filepath.Join(layout.DataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
@@ -250,7 +244,6 @@ func (sc *SkeletonCreator) addComponent(ctx context.Context, component v1alpha1.
 			updatedComponent.DataInjections[dataIdx].Source = rel
 		}
 
-		spinner.Success()
 	}
 
 	if len(component.Manifests) > 0 {
@@ -262,9 +255,6 @@ func (sc *SkeletonCreator) addComponent(ctx context.Context, component v1alpha1.
 			manifestCount += len(manifest.Kustomizations)
 		}
 
-		spinner := message.NewProgressSpinner("Loading %d K8s manifests", manifestCount)
-		defer spinner.Stop()
-
 		// Iterate over all manifests.
 		for manifestIdx, manifest := range component.Manifests {
 			for fileIdx, path := range manifest.Files {
@@ -272,9 +262,7 @@ func (sc *SkeletonCreator) addComponent(ctx context.Context, component v1alpha1.
 				dst := filepath.Join(componentPaths.Base, rel)
 
 				// Copy manifests without any processing.
-				spinner.Updatef("Copying manifest %s", path)
 				l.Debug("copying manifest", "path", path)
-
 
 				if err := helpers.CreatePathAndCopy(path, dst); err != nil {
 					return nil, fmt.Errorf("unable to copy manifest %s: %w", path, err)
@@ -285,7 +273,6 @@ func (sc *SkeletonCreator) addComponent(ctx context.Context, component v1alpha1.
 
 			for kustomizeIdx, path := range manifest.Kustomizations {
 				// Generate manifests from kustomizations and place in the package.
-				spinner.Updatef("Building kustomization for %s", path)
 				l.Debug("building kustomization", "path", path)
 
 				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
@@ -300,8 +287,6 @@ func (sc *SkeletonCreator) addComponent(ctx context.Context, component v1alpha1.
 			// remove kustomizations
 			updatedComponent.Manifests[manifestIdx].Kustomizations = nil
 		}
-
-		spinner.Success()
 	}
 
 	return updatedComponent, nil

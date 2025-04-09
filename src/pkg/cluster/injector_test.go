@@ -112,7 +112,7 @@ func TestInjector(t *testing.T) {
 		podList, err := cs.CoreV1().Pods(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, podList.Items, 1)
-		require.Equal(t, "injector", podList.Items[0].ObjectMeta.Name)
+		require.Equal(t, "injector", podList.Items[0].Name)
 
 		svcList, err := cs.CoreV1().Services(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
@@ -252,7 +252,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 				Namespace: "default",
 			},
 			Spec: corev1.PodSpec{
-				NodeName: node.ObjectMeta.Name,
+				NodeName: node.Name,
 				InitContainers: []corev1.Container{
 					{
 						Image: podName + "-init",

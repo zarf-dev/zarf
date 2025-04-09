@@ -18,7 +18,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -105,7 +104,6 @@ func (s *SplitTarballSource) Collect(ctx context.Context, dir string) (string, e
 		_ = os.Remove(file)
 	}
 
-	message.Infof("Reassembled package to: %q", reassembled)
 	logger.From(ctx).Info("Reassembled package", "path", reassembled)
 
 	return reassembled, nil

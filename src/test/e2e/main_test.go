@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/test"
 )
 
@@ -42,8 +41,6 @@ func TestMain(m *testing.M) {
 	e2e.ZarfBinPath = zarfBinPath
 	e2e.ApplianceMode = os.Getenv(applianceModeEnvVar) == "true"
 	e2e.ApplianceModeKeep = os.Getenv(applianceModeKeepEnvVar) == "true"
-
-	message.SetLogLevel(message.TraceLevel)
 
 	if _, err := os.Stat(e2e.ZarfBinPath); err != nil {
 		log.Fatalf("zarf binary %s not found: %v", e2e.ZarfBinPath, err)

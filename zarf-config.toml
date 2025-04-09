@@ -5,15 +5,15 @@ agent_image = 'zarf-dev/zarf/agent'
 agent_image_tag = 'local'
 
 # Tag for the zarf injector binary to use
-injector_version = '2024-07-22'
-injector_amd64_shasum = '8463bfd66930a4b26c665b51f25e8a32ed5948068bae49987013c89173394478'
-injector_arm64_shasum = 'b905e647e0d7876cfd5b665632cfc43ad919dc60408f7236c5b541c53277b503'
+injector_version = '2025-03-24'
+injector_amd64_shasum = 'a78d66b9e2b00a22edd9b4e6432a4d934621e3757f09493b12f688c7c9baca93'
+injector_arm64_shasum = 'f68cf097ace34bdd04f6b1571a8d8ab4e04a27614dd7e752199ff09e21f4089b'
 
 
 # The image reference to use for the registry that Zarf deploys into the cluster
 registry_image_domain = ''
 registry_image = 'library/registry'
-registry_image_tag = '2.8.3'
+registry_image_tag = '3.0.0'
 
 # The image reference to use for the optional git-server Zarf deploys
 gitea_image = 'gitea/gitea:1.21.5-rootless'

@@ -28,7 +28,7 @@ func TestLoadPackage(t *testing.T) {
 		{
 			name:   "tarball",
 			source: "./testdata/zarf-package-test-amd64-0.0.1.tar.zst",
-			shasum: "bef73d652f004d214d5cf9e00195293f7ae8390b8ff6ed45e39c2c9eb622b873",
+			shasum: "f9b15b1bc0f760a87bad68196b339a8ce8330e3a0241191a826a8962a88061f1",
 		},
 		{
 			name:   "split",
@@ -150,7 +150,7 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	c := &cluster.Cluster{
 		Clientset: fake.NewClientset(),
 	}
-	_, err = c.RecordPackageDeployment(ctx, pkg, nil)
+	_, err = c.RecordPackageDeployment(ctx, pkg, nil, 1)
 	require.NoError(t, err)
 	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", false, "")
 	require.NoError(t, err)

@@ -17,7 +17,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
@@ -79,17 +78,12 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 		cmdEscaped = helpers.Truncate(cmd, 60, false)
 	}
 
-	// TODO(mkcp): Remove message on logger release
-	spinner := message.NewProgressSpinner("Running \"%s\"", cmdEscaped)
-	// Persist the spinner output so it doesn't get overwritten by the command output.
-	spinner.EnablePreserveWrites()
 	l.Info("running command", "cmd", cmdEscaped)
 
 	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates())
 	actionDefaults.Dir = filepath.Join(basePath, actionDefaults.Dir)
 
 	if cmd, err = actionCmdMutation(ctx, cmd, actionDefaults.Shell); err != nil {
-		spinner.Errorf(err, "Error mutating command: %s", cmdEscaped)
 		l.Error("error mutating command", "cmd", cmdEscaped, "err", err.Error())
 	}
 
@@ -103,7 +97,7 @@ retryCmd:
 		// Perform the action run.
 		tryCmd := func(ctx context.Context) error {
 			// Try running the command and continue the retry loop if it fails.
-			stdout, stderr, err := actionRun(ctx, actionDefaults, cmd, spinner)
+			stdout, stderr, err := actionRun(ctx, actionDefaults, cmd)
 			if err != nil {
 				if !actionDefaults.Mute {
 					l.Warn("action failed", "cmd", cmdEscaped, "stdout", stdout, "stderr", stderr)
@@ -124,14 +118,11 @@ retryCmd:
 				}
 			}
 
-			// If the action has a wait, change the spinner message to reflect that on success.
 			if action.Wait != nil {
-				spinner.Successf("Wait for \"%s\" succeeded", cmdEscaped)
 				l.Debug("wait for action succeeded", "cmd", cmdEscaped, "duration", time.Since(start))
 				return nil
 			}
 
-			spinner.Successf("Completed \"%s\"", cmdEscaped)
 			l.Debug("completed action", "cmd", cmdEscaped, "duration", time.Since(start))
 
 			// If the command ran successfully, continue to the next action.
@@ -140,7 +131,6 @@ retryCmd:
 
 		// If no timeout is set, run the command and return or continue retrying.
 		if actionDefaults.MaxTotalSeconds < 1 {
-			spinner.Updatef("Waiting for \"%s\" (no timeout)", cmdEscaped)
 			l.Info("waiting for action (no timeout)", "cmd", cmdEscaped)
 			if err := tryCmd(ctx); err != nil {
 				continue retryCmd
@@ -150,7 +140,6 @@ retryCmd:
 		}
 
 		// Run the command on repeat until success or timeout.
-		spinner.Updatef("Waiting for \"%s\" (timeout: %ds)", cmdEscaped, actionDefaults.MaxTotalSeconds)
 		l.Info("waiting for action", "cmd", cmdEscaped, "timeout", actionDefaults.MaxTotalSeconds)
 		select {
 		// On timeout break the loop to abort.
@@ -242,8 +231,6 @@ func actionCmdMutation(ctx context.Context, cmd string, shellPref v1alpha1.Shell
 		get, err := helpers.MatchRegex(envVarRegex, cmd)
 		if err == nil {
 			newCmd := strings.ReplaceAll(cmd, get("envIndicator"), fmt.Sprintf("$Env:%s", get("varName")))
-			// TODO(mkcp): Remove message on logger release
-			message.Debugf("Converted command \"%s\" to \"%s\" t", cmd, newCmd)
 			logger.From(ctx).Debug("converted command", "cmd", cmd, "newCmd", newCmd)
 			cmd = newCmd
 		}
@@ -292,12 +279,11 @@ func actionGetCfg(_ context.Context, cfg v1alpha1.ZarfComponentActionDefaults, a
 	return cfg
 }
 
-func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cmd string, spinner *message.Spinner) (string, string, error) {
+func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cmd string) (string, string, error) {
 	l := logger.From(ctx)
+	start := time.Now()
 	shell, shellArgs := exec.GetOSShell(cfg.Shell)
 
-	// TODO(mkcp): Remove message on logger release
-	message.Debugf("Running command in %s: %s", shell, cmd)
 	l.Debug("running command", "shell", shell, "cmd", cmd)
 
 	execCfg := exec.Config{
@@ -305,16 +291,10 @@ func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cm
 		Dir: cfg.Dir,
 	}
 
-	if !cfg.Mute {
-		execCfg.Stdout = spinner
-		execCfg.Stderr = spinner
-	}
-
 	stdout, stderr, err := exec.CmdWithContext(ctx, execCfg, shell, append(shellArgs, cmd)...)
 	// Dump final complete output (respect mute to prevent sensitive values from hitting the logs).
 	if !cfg.Mute {
-		// TODO(mkcp): Remove message on logger release
-		message.Debug(cmd, stdout, stderr)
+		l.Debug("command complete", "stdout", stdout, "stderr", stderr, "duration", time.Since(start))
 	}
 	return stdout, stderr, err
 }

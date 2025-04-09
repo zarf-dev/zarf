@@ -29,8 +29,6 @@ func TestConfigFileCreate(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "This is a zebra and they have stripes", pkgLayout.Pkg.Components[1].Description)
 	require.Equal(t, "This is a leopard and they have spots", pkgLayout.Pkg.Components[2].Description)
-	_, err = pkgLayout.GetSBOM(t.TempDir())
-	require.NoError(t, err)
 
 	_, _, err = e2e.Zarf(t, "package", "deploy", tarPath, "--confirm")
 	require.NoError(t, err)
@@ -79,8 +77,6 @@ func TestConfigFileDefault(t *testing.T) {
 	globalFlags := []string{
 		"architecture: 509a38f0",
 		"log_level: 6a845a41",
-		"Disable log file creation (default true)",
-		"Disable fancy UI progress bars, spinners, logos, etc (default true)",
 		"zarf_cache: 978499a5",
 		"Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.",
 		"Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.",

@@ -28,7 +28,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
@@ -44,8 +43,6 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return err
 	}
 
-	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
-	defer spinner.Stop()
 	l.Info("creating Zarf injector resources")
 
 	resReq := v1ac.ResourceRequirements().
@@ -62,7 +59,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return err
 	}
 
-	payloadCmNames, shasum, err := c.createPayloadConfigMaps(ctx, spinner, tmpDir, imagesDir, injectorSeedSrcs)
+	payloadCmNames, shasum, err := c.createPayloadConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs)
 	if err != nil {
 		return fmt.Errorf("unable to generate the injector payload configmaps: %w", err)
 	}
@@ -114,7 +111,6 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return err
 	}
 
-	spinner.Success()
 	l.Debug("done with injection", "duration", time.Since(start))
 	return nil
 }
@@ -183,7 +179,7 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	return nil
 }
 
-func (c *Cluster) createPayloadConfigMaps(ctx context.Context, spinner *message.Spinner, tmpDir, imagesDir string, injectorSeedSrcs []string) ([]string, string, error) {
+func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string) ([]string, string, error) {
 	l := logger.From(ctx)
 	tarPath := filepath.Join(tmpDir, "payload.tar.gz")
 	seedImagesDir := filepath.Join(tmpDir, "seed-images")
@@ -232,8 +228,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, spinner *message.
 	l.Info("adding archived binary configmaps of registry image to the cluster")
 	for i, data := range chunks {
 		fileName := fmt.Sprintf("zarf-payload-%03d", i)
-
-		spinner.Updatef("Adding archive binary configmap %d of %d to the cluster", i+1, len(chunks))
 
 		cm := v1ac.ConfigMap(fileName, ZarfNamespaceName).
 			WithLabels(map[string]string{
