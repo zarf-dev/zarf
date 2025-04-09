@@ -23,6 +23,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -39,10 +40,14 @@ type PackageLayoutOptions struct {
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	IsPartial               bool
+	Filter                  filters.ComponentFilterStrategy
 }
 
 // LoadFromTar unpacks the give compressed package and loads it.
 func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) (*PackageLayout, error) {
+	if opt.Filter == nil {
+		opt.Filter = filters.Empty()
+	}
 	dirPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -86,11 +91,18 @@ func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) 
 
 // LoadFromDir loads and validates a package from the given directory path.
 func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) (*PackageLayout, error) {
+	if opt.Filter == nil {
+		opt.Filter = filters.Empty()
+	}
 	b, err := os.ReadFile(filepath.Join(dirPath, ZarfYAML))
 	if err != nil {
 		return nil, err
 	}
 	pkg, err := ParseZarfPackage(b)
+	if err != nil {
+		return nil, err
+	}
+	pkg.Components, err = opt.Filter.Apply(pkg)
 	if err != nil {
 		return nil, err
 	}

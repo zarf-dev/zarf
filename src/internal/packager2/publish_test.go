@@ -32,7 +32,7 @@ func pullFromRemote(t *testing.T, ctx context.Context, packageRef string, archit
 	_, tarPath, err := pullOCI(context.Background(), packageRef, tmpdir, "", architecture, filters.Empty(), oci.WithPlainHTTP(true))
 	require.NoError(t, err)
 
-	layoutActual, err := layout.LoadFromTar(ctx, tarPath, layout.PackageLayoutOptions{})
+	layoutActual, err := layout.LoadFromTar(ctx, tarPath, layout.PackageLayoutOptions{Filter: filters.Empty()})
 	require.NoError(t, err)
 
 	return layoutActual
@@ -231,7 +231,7 @@ func TestPublishPackage(t *testing.T) {
 			require.NoError(t, err)
 
 			// We want to pull the package and sure the content is the same as the local package
-			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{})
+			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{Filter: filters.Empty()})
 			require.NoError(t, err)
 			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
 			defer os.Remove(layoutExpected.Pkg.Metadata.Name)

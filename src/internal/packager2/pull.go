@@ -35,6 +35,9 @@ import (
 // TODO: Add options struct
 // Pull fetches the Zarf package from the given sources.
 func Pull(ctx context.Context, src, dir, shasum, architecture string, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) error {
+	if filter == nil {
+		filter = filters.Empty()
+	}
 	l := logger.From(ctx)
 	start := time.Now()
 	u, err := url.Parse(src)
@@ -80,6 +83,7 @@ func Pull(ctx context.Context, src, dir, shasum, architecture string, filter fil
 		PublicKeyPath:           publicKeyPath,
 		SkipSignatureValidation: skipSignatureValidation,
 		IsPartial:               isPartial,
+		Filter:                  filter,
 	}
 	_, err = layout.LoadFromTar(ctx, tmpPath, layoutOpt)
 	if err != nil {
