@@ -1,0 +1,15 @@
+kind: ZarfPackageConfig
+metadata:
+  name: component-status
+  description: Test the status of components
+
+components:
+  - name: component-status
+    required: true
+    manifests:
+      - name: first-component
+        namespace: first-component
+        files:
+          - component-status.yaml
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0

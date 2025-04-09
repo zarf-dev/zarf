@@ -50,7 +50,6 @@ type ExtInClusterTestSuite struct {
 }
 
 func (suite *ExtInClusterTestSuite) SetupSuite() {
-	fmt.Println("start: current time is ", time.Now())
 	suite.Assertions = require.New(suite.T())
 
 	// Install a gitea chart to the k8s cluster to act as the 'remote' git server
@@ -89,7 +88,7 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 		},
 	}
 	ctx := logger.WithContext(context.Background(), test.GetLogger(suite.T()))
-	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
+	waitCtx, waitCancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer waitCancel()
 	err = healthchecks.WaitForReady(waitCtx, c.Watcher, objs)
 	suite.NoError(err)
@@ -109,9 +108,13 @@ func (suite *ExtInClusterTestSuite) TearDownSuite() {
 
 func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	// Use Zarf to mirror a package to the services (do this as test 0 so that the registry is unpolluted)
-	mirrorArgs := []string{"package", "mirror-resources", "../../../build/zarf-package-argocd-amd64.tar.zst", "--confirm"}
+	t := suite.T()
+	tmpdir := t.TempDir()
+	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom")
+	suite.NoError(err)
+	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, "zarf-package-argocd-amd64.tar.zst"), "--confirm"}
 	mirrorArgs = append(mirrorArgs, inClusterMirrorCredentialArgs...)
-	err := exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
+	err = exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
 	suite.NoError(err, "unable to mirror the package with zarf")
 
 	c, err := cluster.NewCluster()

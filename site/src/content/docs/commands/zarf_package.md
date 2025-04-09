@@ -15,7 +15,7 @@ Zarf package commands for creating, deploying, and inspecting packages
 ```
   -h, --help                  help for package
   -k, --key string            Path to public key file for validating signed packages
-      --oci-concurrency int   Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
+      --oci-concurrency int   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
 ```
 
 ### Options inherited from parent commands
@@ -23,11 +23,9 @@ Zarf package commands for creating, deploying, and inspecting packages
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --log-format string          [beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev', 'legacy'. The legacy option will be removed in a coming release (default "console")
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-      --no-color                   Disable colors in output
-      --no-log-file                Disable log file creation
-      --no-progress                Disable fancy UI progress bars, spinners, logos, etc
+      --no-color                   Disable terminal color codes in logging and stdout prints.
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
       --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")

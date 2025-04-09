@@ -19,7 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -38,8 +37,6 @@ type TarballSource struct {
 // LoadPackage loads a package from a tarball.
 func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, filter filters.ComponentFilterStrategy, unarchiveAll bool) (pkg v1alpha1.ZarfPackage, warnings []string, err error) {
 	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Loading package from %q", s.PackageSource)
-	defer spinner.Stop()
 	start := time.Now()
 	l.Info("loading package", "source", s.PackageSource)
 
@@ -87,7 +84,7 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 		return pkg, nil, err
 	}
 
-	dst.SetFromPaths(pathsExtracted)
+	dst.SetFromPaths(ctx, pathsExtracted)
 
 	pkg, warnings, err = dst.ReadZarfYAML()
 	if err != nil {
@@ -98,20 +95,17 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 		return pkg, nil, err
 	}
 
-	if err := dst.MigrateLegacy(); err != nil {
+	if err := dst.MigrateLegacy(ctx); err != nil {
 		return pkg, nil, err
 	}
 
 	if !dst.IsLegacyLayout() {
-		spinner := message.NewProgressSpinner("Validating full package checksums")
-		defer spinner.Stop()
 		l.Info("validating package checksums", "source", s.PackageSource)
 
 		if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, false); err != nil {
 			return pkg, nil, err
 		}
 
-		spinner.Success()
 		l.Debug("done validating package checksums", "source", s.PackageSource)
 
 		if !s.SkipSignatureValidation {
@@ -123,7 +117,7 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 
 	if unarchiveAll {
 		for _, component := range pkg.Components {
-			if err := dst.Components.Unarchive(component); err != nil {
+			if err := dst.Components.Unarchive(ctx, component); err != nil {
 				if errors.Is(err, layout.ErrNotLoaded) {
 					_, err := dst.Components.Create(component)
 					if err != nil {
@@ -142,7 +136,6 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 		}
 	}
 
-	spinner.Success()
 	l.Debug("done loading package", "source", s.PackageSource, "duration", time.Since(start))
 
 	return pkg, warnings, nil
@@ -172,33 +165,27 @@ func (s *TarballSource) LoadPackageMetadata(ctx context.Context, dst *layout.Pac
 		}
 	}
 
-	dst.SetFromPaths(pathsExtracted)
+	dst.SetFromPaths(ctx, pathsExtracted)
 
 	pkg, warnings, err = dst.ReadZarfYAML()
 	if err != nil {
 		return pkg, nil, err
 	}
 
-	if err := dst.MigrateLegacy(); err != nil {
+	if err := dst.MigrateLegacy(ctx); err != nil {
 		return pkg, nil, err
 	}
 
 	if !dst.IsLegacyLayout() {
 		if wantSBOM {
-			spinner := message.NewProgressSpinner("Validating SBOM checksums")
-			defer spinner.Stop()
-
 			if err := ValidatePackageIntegrity(dst, pkg.Metadata.AggregateChecksum, true); err != nil {
 				return pkg, nil, err
 			}
-
-			spinner.Success()
 		}
 
 		if !s.SkipSignatureValidation {
 			if err := ValidatePackageSignature(ctx, dst, s.PublicKeyPath); err != nil {
 				if errors.Is(err, ErrPkgSigButNoKey) && skipValidation {
-					message.Warn("The package was signed but no public key was provided, skipping signature validation")
 					logger.From(ctx).Warn("the package was signed but no public key was provided, skipping signature validation")
 				} else {
 					return pkg, nil, err

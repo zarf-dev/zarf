@@ -17,7 +17,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
@@ -31,7 +30,6 @@ var (
 // ValidatePackageSignature validates the signature of a package
 func ValidatePackageSignature(ctx context.Context, paths *layout.PackagePaths, publicKeyPath string) error {
 	if publicKeyPath != "" {
-		message.Debugf("Using public key %q for signature validation", publicKeyPath)
 		logger.From(ctx).Debug("using public key for signature validation", "key", publicKeyPath)
 	}
 

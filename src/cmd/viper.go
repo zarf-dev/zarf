@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -31,11 +32,9 @@ const (
 
 	// Root config, Logging
 
-	VLogLevel   = "log_level"
-	VLogFormat  = "log_format"
-	VNoLogFile  = "no_log_file"
-	VNoProgress = "no_progress"
-	VNoColor    = "no_color"
+	VLogLevel  = "log_level"
+	VLogFormat = "log_format"
+	VNoColor   = "no_color"
 
 	// Init config keys
 
@@ -190,6 +189,17 @@ func PrintViperConfigUsed(ctx context.Context) error {
 	// Zarf skips loading the config file for version and tool commands, this avoids output in those cases
 	if cfgFile := v.ConfigFileUsed(); cfgFile != "" {
 		l.Info("using config file", "location", cfgFile)
+		ext := filepath.Ext(cfgFile)
+		switch ext {
+		case ".yml", ".yaml":
+			return nil
+		case ".toml":
+			return nil
+		default:
+			l.Warn("configuration file types other than yaml and toml are deprecated and will be removed in a future release",
+				"fileType", strings.TrimPrefix(ext, "."))
+			return nil
+		}
 	}
 	return nil
 }
@@ -201,7 +211,7 @@ func setDefaults() {
 	v.SetDefault(VLogFormat, string(logger.FormatConsole))
 
 	// Package defaults that are non-zero values
-	v.SetDefault(VPkgOCIConcurrency, 3)
+	v.SetDefault(VPkgOCIConcurrency, 6)
 	v.SetDefault(VPkgRetries, config.ZarfDefaultRetries)
 
 	// Deploy opts that are non-zero values

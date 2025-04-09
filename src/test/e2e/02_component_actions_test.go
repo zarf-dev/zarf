@@ -7,6 +7,7 @@ package test
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -14,6 +15,7 @@ import (
 
 func TestComponentActions(t *testing.T) {
 	t.Log("E2E: Testing component actions")
+	tmpdir := t.TempDir()
 
 	// Note these files will be created in the package directory, not CWD.
 	createArtifacts := []string{
@@ -31,7 +33,8 @@ func TestComponentActions(t *testing.T) {
 
 	/* Create */
 	// Try creating the package to test the onCreate actions.
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/component-actions", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/component-actions", "-o", tmpdir)
+
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "action succeeded cmd=Create a test file")
 	require.Contains(t, stdErr, "action succeeded cmd=touch test-create-after.txt")
@@ -49,7 +52,8 @@ func TestComponentActions(t *testing.T) {
 		require.NoFileExists(t, artifact)
 	}
 
-	path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.Arch)
+	packageName := fmt.Sprintf("zarf-package-component-actions-%s.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
 	t.Run("action on-deploy-and-remove", func(t *testing.T) {
 		t.Parallel()
 

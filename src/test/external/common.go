@@ -21,7 +21,6 @@ import (
 var zarfBinPath = path.Join("../../../build", test.GetCLIName())
 
 func createPodInfoPackageWithInsecureSources(t *testing.T, packageDir string) {
-	temp := t.TempDir()
 	err := copy.Copy("../../../examples/podinfo-flux", packageDir)
 	require.NoError(t, err)
 	// This is done because while .spec.insecure is auto set to true for internal registries by the agent
@@ -30,8 +29,7 @@ func createPodInfoPackageWithInsecureSources(t *testing.T, packageDir string) {
 	require.NoError(t, err, "unable to yq edit helm source")
 	err = exec.CmdWithPrint(zarfBinPath, "tools", "yq", "eval", ".spec.insecure = true", "-i", filepath.Join(packageDir, "oci", "podinfo-source.yaml"))
 	require.NoError(t, err, "unable to yq edit oci source")
-	// avoiding Zarf cache because of flake https://github.com/zarf-dev/zarf/issues/3194
-	err = exec.CmdWithPrint(zarfBinPath, "package", "create", packageDir, "--confirm", "--output", packageDir, "--zarf-cache", temp)
+	err = exec.CmdWithPrint(zarfBinPath, "package", "create", packageDir, "--confirm", "--output", packageDir, "--skip-sbom")
 	require.NoError(t, err, "unable to create package")
 }
 

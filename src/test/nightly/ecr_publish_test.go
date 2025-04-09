@@ -23,7 +23,7 @@ var (
 // TestECRPublishing tests pushing, inspecting, and pulling signed Zarf packages to/from ECR.
 /*
 This test assumes the following:
-  1. The user running the test has a current valid credential to the public.ecr.aws/t8y5r5z5/zarf-nightly repository in their docker config.json
+  1. The user running the test has a current valid credential to the public.ecr.aws/t9t5u0z8/zarf-nightly repository in their docker config.json
   2. The zarf CLI has been built and is available in the build directory
 */
 func TestECRPublishing(t *testing.T) {
@@ -45,7 +45,7 @@ func TestECRPublishing(t *testing.T) {
 	testPackageVersion := "0.0.1"
 	testPackageFileName := fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", testPackageName, e2e.Arch, testPackageVersion)
 	testPackageLocation := filepath.Join(tmpDir, testPackageFileName)
-	registryURL := "oci://public.ecr.aws/z6q5p6f7/zarf-nightly"
+	registryURL := "oci://public.ecr.aws/t9t5u0z8/zarf-nightly"
 	upstreamPackageURL := fmt.Sprintf("%s/%s:%s", registryURL, testPackageName, testPackageVersion)
 	keyFlag := fmt.Sprintf("--key=%s", "./src/test/packages/zarf-test.pub")
 

@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -35,9 +36,11 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-var subAltNames []string
-var outputDirectory string
-var updateCredsInitOpts types.ZarfInitOptions
+var (
+	subAltNames         []string
+	outputDirectory     string
+	updateCredsInitOpts types.ZarfInitOptions
+)
 
 const (
 	registryKey     = "registry"
@@ -355,11 +358,18 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
 	}
 
-	// Update Zarf 'init' component Helm releases if present
-	h := helm.NewClusterOnly(&types.PackagerConfig{}, template.GetZarfVariableConfig(cmd.Context()), newState, c)
+	helmOpts := helm.InstallUpgradeOpts{
+		VariableConfig: template.GetZarfVariableConfig(cmd.Context()),
+		State:          newState,
+		Cluster:        c,
+		AirgapMode:     true,
+		Timeout:        config.ZarfDefaultTimeout,
+		Retries:        config.ZarfDefaultRetries,
+	}
 
+	// Update Zarf 'init' component Helm releases if present
 	if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.IsInternal() {
-		err = h.UpdateZarfRegistryValues(ctx)
+		err = helm.UpdateZarfRegistryValues(ctx, helmOpts)
 		if err != nil {
 			// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
 			message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
@@ -373,7 +383,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if slices.Contains(args, message.AgentKey) {
-		err = h.UpdateZarfAgentValues(ctx)
+		err = helm.UpdateZarfAgentValues(ctx, helmOpts)
 		if err != nil {
 			// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
 			message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateAgent, err.Error())
@@ -395,29 +405,29 @@ func printCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newS
 			nR := newState.RegistryInfo
 			l.Info("registry URL address", "existing", oR.Address, "replacement", nR.Address)
 			l.Info("registry push username", "existing", oR.PushUsername, "replacement", nR.PushUsername)
-			l.Info("registry push password", "changed", !(oR.PushPassword == nR.PushPassword))
+			l.Info("registry push password", "changed", oR.PushPassword != nR.PushPassword)
 			l.Info("registry pull username", "existing", oR.PullUsername, "replacement", nR.PullUsername)
-			l.Info("registry pull password", "changed", !(oR.PullPassword == nR.PullPassword))
+			l.Info("registry pull password", "changed", oR.PullPassword != nR.PullPassword)
 		case gitKey:
 			oG := oldState.GitServer
 			nG := newState.GitServer
 			l.Info("Git server URL address", "existing", oG.Address, "replacement", nG.Address)
 			l.Info("Git server push username", "existing", oG.PushUsername, "replacement", nG.PushUsername)
-			l.Info("Git server push password", "changed", !(oG.PushPassword == nG.PushPassword))
+			l.Info("Git server push password", "changed", oG.PushPassword != nG.PushPassword)
 			l.Info("Git server pull username", "existing", oG.PullUsername, "replacement", nG.PullUsername)
-			l.Info("Git server pull password", "changed", !(oG.PullPassword == nG.PullPassword))
+			l.Info("Git server pull password", "changed", oG.PullPassword != nG.PullPassword)
 		case artifactKey:
 			oA := oldState.ArtifactServer
 			nA := newState.ArtifactServer
 			l.Info("artifact server URL address", "existing", oA.Address, "replacement", nA.Address)
 			l.Info("artifact server push username", "existing", oA.PushUsername, "replacement", nA.PushUsername)
-			l.Info("artifact server push token", "changed", !(oA.PushToken == nA.PushToken))
+			l.Info("artifact server push token", "changed", oA.PushToken != nA.PushToken)
 		case agentKey:
 			oT := oldState.AgentTLS
 			nT := newState.AgentTLS
-			l.Info("agent certificate authority", "changed", !(string(oT.CA) == string(nT.CA)))
-			l.Info("agent public certificate", "changed", !(string(oT.Cert) == string(nT.Cert)))
-			l.Info("agent private key", "changed", !(string(oT.Key) == string(nT.Key)))
+			l.Info("agent certificate authority", "changed", string(oT.CA) != string(nT.CA))
+			l.Info("agent public certificate", "changed", string(oT.Cert) != string(nT.Cert))
+			l.Info("agent private key", "changed", string(oT.Key) != string(nT.Key))
 		}
 	}
 }
@@ -455,7 +465,9 @@ func (o *clearCacheOptions) run(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-type downloadInitOptions struct{}
+type downloadInitOptions struct {
+	version string
+}
 
 func newDownloadInitCommand() *cobra.Command {
 	o := &downloadInitOptions{}
@@ -467,13 +479,24 @@ func newDownloadInitCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&outputDirectory, "output-directory", "o", "", lang.CmdToolsDownloadInitFlagOutputDirectory)
-
+	cmd.Flags().StringVarP(&o.version, "version", "v", o.version, "Specify version to download (defaults to current CLI version)")
 	return cmd
 }
 
 func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
-	url := zoci.GetInitPackageURL(config.CLIVersion)
+	var url string
+
+	if o.version == "" {
+		url = zoci.GetInitPackageURL(config.CLIVersion)
+	} else {
+		ver, err := semver.NewVersion(o.version)
+		if err != nil {
+			return fmt.Errorf("unable to parse version %s: %w", o.version, err)
+		}
+
+		url = zoci.GetInitPackageURL(fmt.Sprintf("v%s", ver.String()))
+	}
 	remote, err := zoci.NewRemote(ctx, url, oci.PlatformForArch(config.GetArch()))
 	if err != nil {
 		return fmt.Errorf("unable to download the init package: %w", err)

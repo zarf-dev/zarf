@@ -6,12 +6,11 @@ package sbom
 
 import (
 	"context"
-	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"path/filepath"
 
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
 
@@ -24,14 +23,11 @@ func ViewSBOMFiles(ctx context.Context, directory string) error {
 	}
 
 	if len(sbomViewFiles) == 0 {
-		message.Note("There were no images with software bill-of-materials (SBOM) included.")
 		l.Info("there were no images with software bill-of-materials (SBOM) included.")
 		return nil
 	}
 
 	link := sbomViewFiles[0]
-	msg := fmt.Sprintf("This package has %d images with software bill-of-materials (SBOM) included. If your browser did not open automatically you can copy and paste this file location into your browser address bar to view them: %s\n\n", len(sbomViewFiles), link)
-	message.Note(msg)
 	l.Info("this package has images with software bill-of-materials (SBOM) included. If your browser did not open automatically you can copy and paste this file location into your browser address bar to view them", "SBOMCount", len(sbomViewFiles), "link", link)
 	if err := exec.LaunchURL(link); err != nil {
 		return err

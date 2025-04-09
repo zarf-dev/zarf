@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func createPodAdmissionRequest(t *testing.T, op v1.Operation, pod *corev1.Pod) *v1.AdmissionRequest {
+func createPodAdmissionRequest(t *testing.T, op v1.Operation, pod *corev1.Pod, subResource string) *v1.AdmissionRequest {
 	t.Helper()
 	raw, err := json.Marshal(pod)
 	require.NoError(t, err)
@@ -29,6 +29,7 @@ func createPodAdmissionRequest(t *testing.T, op v1.Operation, pod *corev1.Pod) *
 		Object: runtime.RawExtension{
 			Raw: raw,
 		},
+		SubResource: subResource,
 	}
 }
 
@@ -52,16 +53,8 @@ func TestPodMutationWebhook(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers:     []corev1.Container{{Name: "nginx", Image: "nginx"}},
 					InitContainers: []corev1.Container{{Name: "different", Image: "busybox"}},
-					EphemeralContainers: []corev1.EphemeralContainer{
-						{
-							EphemeralContainerCommon: corev1.EphemeralContainerCommon{
-								Name:  "alpine",
-								Image: "alpine",
-							},
-						},
-					},
 				},
-			}),
+			}, ""),
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/imagePullSecrets",
@@ -70,10 +63,6 @@ func TestPodMutationWebhook(t *testing.T) {
 				operations.ReplacePatchOperation(
 					"/spec/initContainers/0/image",
 					"127.0.0.1:31999/library/busybox:latest-zarf-2140033595",
-				),
-				operations.ReplacePatchOperation(
-					"/spec/ephemeralContainers/0/image",
-					"127.0.0.1:31999/library/alpine:latest-zarf-1117969859",
 				),
 				operations.ReplacePatchOperation(
 					"/spec/containers/0/image",
@@ -90,7 +79,6 @@ func TestPodMutationWebhook(t *testing.T) {
 					"/metadata/annotations",
 					map[string]string{
 						"zarf.dev/original-image-nginx":     "nginx",
-						"zarf.dev/original-image-alpine":    "alpine",
 						"zarf.dev/original-image-different": "busybox",
 						"should-be":                         "mutated",
 					},
@@ -107,9 +95,47 @@ func TestPodMutationWebhook(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{Image: "nginx"}},
 				},
-			}),
+			}, ""),
 			patch: nil,
 			code:  http.StatusOK,
+		},
+		{
+			name: "ephermalcontainer update in pod with zarf-agent patched label should be mutated",
+			admissionReq: createPodAdmissionRequest(t, v1.Create, &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"zarf-agent": "patched"},
+					Annotations: map[string]string{
+						"zarf.dev/original-image-nginx":  "nginx",
+						"zarf.dev/original-image-alpine": "alpine",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "nginx", Image: "127.0.0.1:31999/library/nginx:latest-zarf-3793515731"}},
+					EphemeralContainers: []corev1.EphemeralContainer{
+						{
+							EphemeralContainerCommon: corev1.EphemeralContainerCommon{
+								Name:  "alpine",
+								Image: "alpine",
+							},
+						},
+					},
+					ImagePullSecrets: []corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}},
+				},
+			}, "ephemeralcontainers"),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/ephemeralContainers/0/image",
+					"127.0.0.1:31999/library/alpine:latest-zarf-1117969859",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/annotations",
+					map[string]string{
+						"zarf.dev/original-image-nginx":  "nginx",
+						"zarf.dev/original-image-alpine": "alpine",
+					},
+				),
+			},
+			code: http.StatusOK,
 		},
 		{
 			name: "pod with no labels should not error",
@@ -120,7 +146,7 @@ func TestPodMutationWebhook(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{Name: "nginx", Image: "nginx"}},
 				},
-			}),
+			}, ""),
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/imagePullSecrets",

@@ -127,8 +127,6 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 
 	var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 	if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
-		// TODO(mkcp): Remove message on logger release
-		message.Warnf(lang.CmdPackageCreateCleanPathErr, config.ZarfDefaultCachePath)
 		l.Warn("invalid characters in Zarf cache path, using default", "cfg", config.ZarfDefaultCachePath, "default", config.ZarfDefaultCachePath)
 		config.CommonOptions.CachePath = config.ZarfDefaultCachePath
 	}
@@ -147,6 +145,7 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 		SBOMOut:                 pkgConfig.CreateOpts.SBOMOutputDir,
 		SkipSBOM:                pkgConfig.CreateOpts.SkipSBOM,
 		Output:                  pkgConfig.CreateOpts.Output,
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		DifferentialPackagePath: pkgConfig.CreateOpts.DifferentialPackagePath,
 	}
 	err := packager2.Create(cmd.Context(), pkgConfig.CreateOpts.BaseDir, opt)
@@ -323,6 +322,8 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		GitInfo:         pkgConfig.InitOpts.GitServer,
 		NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
 		Retries:         pkgConfig.PkgOpts.Retries,
+		OCIConcurrency:  config.CommonOptions.OCIConcurrency,
+		PlainHTTP:       config.CommonOptions.PlainHTTP,
 	}
 	err = packager2.Mirror(ctx, mirrorOpt)
 	if err != nil {
@@ -440,7 +441,7 @@ func (o *PackageInspectSBOMOptions) Run(cmd *cobra.Command, args []string) error
 	}
 	outputPath, err := layout.GetSBOM(o.outputDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get SBOM: %w", err)
 	}
 	outputPath, err = filepath.Abs(outputPath)
 	if err != nil {
@@ -739,11 +740,13 @@ func (o *packagePublishOptions) preRun(_ *cobra.Command, _ []string) {
 }
 
 func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
-	pkgConfig.PkgOpts.PackageSource = args[0]
+	packageSource := args[0]
 
 	if !helpers.IsOCIURL(args[1]) {
-		return errors.New("Registry must be prefixed with 'oci://'")
+		return errors.New("registry must be prefixed with 'oci://'")
 	}
+
+	// Destination Repository
 	parts := strings.Split(strings.TrimPrefix(args[1], helpers.OCIURLPrefix), "/")
 	ref := registry.Reference{
 		Registry:   parts[0],
@@ -754,23 +757,58 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if helpers.IsDir(pkgConfig.PkgOpts.PackageSource) {
-		pkgConfig.CreateOpts.BaseDir = pkgConfig.PkgOpts.PackageSource
-		pkgConfig.CreateOpts.IsSkeleton = true
+	// Skeleton package - call PublishSkeleton
+	if helpers.IsDir(packageSource) {
+		skeletonOpts := packager2.PublishSkeletonOpts{
+			Concurrency:        config.CommonOptions.OCIConcurrency,
+			SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
+			SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
+			WithPlainHTTP:      config.CommonOptions.PlainHTTP,
+		}
+
+		return packager2.PublishSkeleton(cmd.Context(), packageSource, ref, skeletonOpts)
 	}
 
-	pkgConfig.PublishOpts.PackageDestination = ref.String()
+	if helpers.IsOCIURL(packageSource) {
+		ociOpts := packager2.PublishFromOCIOpts{
+			Concurrency:             config.CommonOptions.OCIConcurrency,
+			SigningKeyPath:          pkgConfig.PublishOpts.SigningKeyPath,
+			SigningKeyPassword:      pkgConfig.PublishOpts.SigningKeyPassword,
+			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+			WithPlainHTTP:           config.CommonOptions.PlainHTTP,
+			PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+			Architecture:            config.GetArch(),
+		}
 
-	pkgClient, err := packager.New(&pkgConfig, packager.WithContext(cmd.Context()))
-	if err != nil {
-		return err
-	}
-	defer pkgClient.ClearTempPaths()
+		// source registry reference
+		trimmed := strings.TrimPrefix(packageSource, helpers.OCIURLPrefix)
+		srcRegistry, err := registry.ParseReference(trimmed)
 
-	if err := pkgClient.Publish(cmd.Context()); err != nil {
-		return fmt.Errorf("failed to publish package: %w", err)
+		if err != nil {
+			return err
+		}
+
+		// Grab the package name and append it to the ref.repository to ensure package name and tag/digest match
+		srcParts := strings.Split(srcRegistry.Repository, "/")
+		srcPackageName := srcParts[len(srcParts)-1]
+
+		ref.Repository = fmt.Sprintf("%s/%s", ref.Repository, srcPackageName)
+		ref.Reference = srcRegistry.Reference
+
+		return packager2.PublishFromOCI(cmd.Context(), srcRegistry, ref, ociOpts)
 	}
-	return nil
+
+	publishPackageOpts := packager2.PublishPackageOpts{
+		Concurrency:             config.CommonOptions.OCIConcurrency,
+		SigningKeyPath:          pkgConfig.PublishOpts.SigningKeyPath,
+		SigningKeyPassword:      pkgConfig.PublishOpts.SigningKeyPassword,
+		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		WithPlainHTTP:           config.CommonOptions.PlainHTTP,
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		Architecture:            config.GetArch(),
+	}
+
+	return packager2.PublishPackage(cmd.Context(), packageSource, ref, publishPackageOpts)
 }
 
 type packagePullOptions struct{}
@@ -802,7 +840,7 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		}
 		outputDir = wd
 	}
-	err := packager2.Pull(cmd.Context(), args[0], outputDir, pkgConfig.PkgOpts.Shasum, filters.Empty(), pkgConfig.PkgOpts.PublicKeyPath, pkgConfig.PkgOpts.SkipSignatureValidation)
+	err := packager2.Pull(cmd.Context(), args[0], outputDir, pkgConfig.PkgOpts.Shasum, config.GetArch(), filters.Empty(), pkgConfig.PkgOpts.PublicKeyPath, pkgConfig.PkgOpts.SkipSignatureValidation)
 	if err != nil {
 		return err
 	}
@@ -861,7 +899,6 @@ func getPackageCompletionArgs(cmd *cobra.Command, _ []string, _ string) ([]strin
 
 	deployedZarfPackages, err := c.GetDeployedZarfPackages(ctx)
 	if err != nil {
-		message.Debug("Unable to get deployed zarf packages for package completion args", "error", err)
 		logger.From(cmd.Context()).Debug("unable to get deployed zarf packages for package completion args", "error", err)
 	}
 	// Populate list of package names

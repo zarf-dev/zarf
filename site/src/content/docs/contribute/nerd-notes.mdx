@@ -6,7 +6,7 @@ title: Nerd Notes
 This page is still being developed. More content will be added soon!
 :::
 
-Zarf is written entirely in [go](https://go.dev/), except for a single 868Kb binary for the injector system written in [rust](https://www.rust-lang.org/), so we can fit it in a [configmap](https://kubernetes.io/docs/concepts/configuration/configmap/). All assets are bundled together into a single [zstd](https://facebook.github.io/zstd/) tarball on each `zarf package create` operation. On the air gap / offline side, `zarf package deploy` extracts the various assets and places them on the filesystem or installs them in the cluster, depending on what the zarf package says to do. Some important ideas behind Zarf:
+Zarf is written entirely in [go](https://go.dev/), except for a single 868Kb binary for the injector system written in [rust](https://www.rust-lang.org/), so we can fit it in a [configmap](https://kubernetes.io/docs/concepts/configuration/configmap/). All assets are bundled together into a single [zstd](https://facebook.github.io/zstd/) tarball on each `zarf package create` operation. On the airgap / offline side, `zarf package deploy` extracts the various assets and places them on the filesystem or installs them in the cluster, depending on what the zarf package says to do. Some important ideas behind Zarf:
 
 - All workloads are installed in the cluster via the [Helm SDK](https://helm.sh/docs/topics/advanced/#go-sdk)
 - The OCI Registries used are both from [Docker](https://github.com/distribution/distribution)

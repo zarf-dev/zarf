@@ -38,8 +38,8 @@ func TestPull(t *testing.T) {
 	})
 
 	dir := t.TempDir()
-	shasum := "bef73d652f004d214d5cf9e00195293f7ae8390b8ff6ed45e39c2c9eb622b873"
-	err := Pull(ctx, srv.URL, dir, shasum, filters.Empty(), "", false)
+	shasum := "f9b15b1bc0f760a87bad68196b339a8ce8330e3a0241191a826a8962a88061f1"
+	err := Pull(ctx, srv.URL, dir, shasum, "amd64", filters.Empty(), "", false)
 	require.NoError(t, err)
 
 	packageData, err := os.ReadFile(packagePath)
@@ -48,6 +48,61 @@ func TestPull(t *testing.T) {
 	pulledData, err := os.ReadFile(pulledPath)
 	require.NoError(t, err)
 	require.Equal(t, packageData, pulledData)
+}
+
+func TestPullUncompressed(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	packagePath := "./testdata/uncompressed/zarf-package-test-uncompressed-amd64-0.0.1.tar"
+	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		file, err := os.Open(packagePath)
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		//nolint:errcheck // ignore
+		io.Copy(rw, file)
+	}))
+	t.Cleanup(func() {
+		srv.Close()
+	})
+
+	dir := t.TempDir()
+	shasum := "a118a4d306acc5dd4eab2c161e78fa3dfd1e08ae1e1794a4393be98c79257f5c"
+	err := Pull(ctx, srv.URL, dir, shasum, "amd64", filters.Empty(), "", false)
+	require.NoError(t, err)
+
+	packageData, err := os.ReadFile(packagePath)
+	require.NoError(t, err)
+	pulledPath := filepath.Join(dir, "zarf-package-test-uncompressed-amd64-0.0.1.tar")
+	pulledData, err := os.ReadFile(pulledPath)
+	require.NoError(t, err)
+	require.Equal(t, packageData, pulledData)
+}
+
+func TestPullUnsupported(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	packagePath := "./testdata/uncompressed/zarf.yaml"
+	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		file, err := os.Open(packagePath)
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		//nolint:errcheck // ignore
+		io.Copy(rw, file)
+	}))
+	t.Cleanup(func() {
+		srv.Close()
+	})
+
+	dir := t.TempDir()
+	shasum := "6e9dccce07ba9d3c45b7c872fae863c5415d296fd5e2fb72a2583530aa750ccd"
+	err := Pull(ctx, srv.URL, dir, shasum, "amd64", filters.Empty(), "", false)
+	require.EqualError(t, err, "unsupported file type: .txt", "unsupported file type: .txt")
 }
 
 func TestSupportsFiltering(t *testing.T) {

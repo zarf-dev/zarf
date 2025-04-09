@@ -83,7 +83,7 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 			svc := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "good-service",
-					Namespace: namespace.ObjectMeta.Name,
+					Namespace: namespace.Name,
 				},
 				Spec: corev1.ServiceSpec{
 					Type: corev1.ServiceTypeNodePort,
@@ -105,7 +105,7 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      config.ZarfImagePullSecretName,
-					Namespace: namespace.ObjectMeta.Name,
+					Namespace: namespace.Name,
 					Labels:    tt.secretLabels,
 				},
 			}
@@ -118,7 +118,7 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      config.ZarfGitServerSecretName,
-					Namespace: namespace.ObjectMeta.Name,
+					Namespace: namespace.Name,
 					Labels:    tt.secretLabels,
 				},
 			}
@@ -161,7 +161,7 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      config.ZarfImagePullSecretName,
-					Namespace: namespace.ObjectMeta.Name,
+					Namespace: namespace.Name,
 					Labels: map[string]string{
 						ZarfManagedByLabel: "zarf",
 					},
@@ -186,7 +186,7 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      config.ZarfGitServerSecretName,
-					Namespace: namespace.ObjectMeta.Name,
+					Namespace: namespace.Name,
 					Labels: map[string]string{
 						ZarfManagedByLabel: "zarf",
 					},
