@@ -1,7 +1,7 @@
 name: Test EKS Cluster
 on:
   schedule:
-   - cron: '0 7 * * *' ## Every day at 0700 UTC
+    - cron: "0 7 * * *" ## Every day at 0700 UTC
   workflow_dispatch: ## Give us the ability to run this manually
     inputs:
       cluster_name:
@@ -76,8 +76,8 @@ jobs:
         if: always()
         uses: ./.github/actions/save-logs
 
-      - name: Send trigger to Slack on workflow failure
-        if: failure()
-        uses: ./.github/actions/slack
-        with:
-          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      # - name: Send trigger to Slack on workflow failure
+      #   if: failure()
+      #   uses: ./.github/actions/slack
+      #   with:
+      #     slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
