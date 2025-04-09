@@ -17,7 +17,7 @@ require (
 	github.com/anchore/syft v1.19.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.1
-	github.com/defenseunicorns/pkg/oci v1.0.4-0.20250408201144-7afde0d3ced4
+	github.com/defenseunicorns/pkg/oci v1.0.4
 	github.com/derailed/k9s v0.40.5
 	github.com/distribution/distribution/v3 v3.0.0
 	github.com/distribution/reference v0.6.0
