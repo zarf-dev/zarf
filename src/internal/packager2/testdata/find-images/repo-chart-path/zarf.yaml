@@ -1,0 +1,7 @@
+kind: ZarfPackageConfig
+metadata:
+  name: git-helm-repo
+components:
+  - name: baseline
+    repos:
+      - https://github.com/stefanprodan/podinfo.git@6.4.0

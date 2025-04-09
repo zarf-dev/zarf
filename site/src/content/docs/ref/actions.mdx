@@ -130,7 +130,7 @@ As you may have noticed mentioned in the `before` action list of the above `Simp
 Below are the transformations that Zarf will make on an action before it is ran:
 
 - Replace `./zarf `&nbsp;with the path to the currently running Zarf executable.
-  - This allows you to run Zarf in Zarf and is designed to help you use `zarf tools` commands in the air gap.
+  - This allows you to run Zarf in Zarf and is designed to help you use `zarf tools` commands in the airgap.
 - Replace common Unix commands and shell syntax with `powershell` / `pwsh` alternatives on Windows.
   - This allows commands like `touch` to work on Windows and while not perfect enhances cross-platform capabilities.
 - Add `env` entries for all previously declared Zarf `variables`.
