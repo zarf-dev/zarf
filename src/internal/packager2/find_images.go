@@ -87,7 +87,8 @@ type WhyResource struct {
 	ResourceType string
 }
 
-// FindImages finds images in the package
+// FindImages iterates over the manifests and charts within each component to find any container images
+// It returns a FindImageResults which contains a scan result for each component
 func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (FindImagesResult, error) {
 	l := logger.From(ctx)
 	pkg, err := layout.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
