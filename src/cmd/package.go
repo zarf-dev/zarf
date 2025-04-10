@@ -63,18 +63,18 @@ func newPackageCommand() *cobra.Command {
 }
 
 type packageCreateOptions struct {
-	confirm            bool
-	output             string
-	differential       string
-	set                map[string]string
-	sbom               bool
-	sbomOutput         string
-	skipSBOM           bool
-	maxPackageSizeMB   int
-	registryOverrides  map[string]string
-	signingKeyPath     string
-	signingKeyPassword string
-	flavor             string
+	confirm                 bool
+	output                  string
+	differentialPackagePath string
+	setVariables            map[string]string
+	sbom                    bool
+	sbomOutput              string
+	skipSBOM                bool
+	maxPackageSizeMB        int
+	registryOverrides       map[string]string
+	signingKeyPath          string
+	signingKeyPassword      string
+	flavor                  string
 }
 
 func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
@@ -103,8 +103,8 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.output, "output-directory", v.GetString("package.create.output_directory"), lang.CmdPackageCreateFlagOutput)
 	cmd.Flags().StringVarP(&o.output, "output", "o", v.GetString(VPkgCreateOutput), lang.CmdPackageCreateFlagOutput)
 
-	cmd.Flags().StringVar(&o.differential, "differential", v.GetString(VPkgCreateDifferential), lang.CmdPackageCreateFlagDifferential)
-	cmd.Flags().StringToStringVar(&o.set, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringVar(&o.differentialPackagePath, "differential", v.GetString(VPkgCreateDifferential), lang.CmdPackageCreateFlagDifferential)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
 	cmd.Flags().BoolVarP(&o.sbom, "sbom", "s", v.GetBool(VPkgCreateSbom), lang.CmdPackageCreateFlagSbom)
 	cmd.Flags().StringVar(&o.sbomOutput, "sbom-out", v.GetString(VPkgCreateSbomOutput), lang.CmdPackageCreateFlagSbomOut)
 	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(VPkgCreateSkipSbom), lang.CmdPackageCreateFlagSkipSbom)
@@ -153,20 +153,20 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	}
 
 	v := getViper()
-	o.set = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.set, strings.ToUpper)
+	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
 
 	opt := packager2.CreateOptions{
 		Flavor:                  o.flavor,
 		RegistryOverrides:       o.registryOverrides,
 		SigningKeyPath:          o.signingKeyPath,
 		SigningKeyPassword:      o.signingKeyPassword,
-		SetVariables:            o.set,
+		SetVariables:            o.setVariables,
 		MaxPackageSizeMB:        o.maxPackageSizeMB,
 		SBOMOut:                 o.sbomOutput,
 		SkipSBOM:                o.skipSBOM,
 		Output:                  o.output,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
-		DifferentialPackagePath: o.differential,
+		DifferentialPackagePath: o.differentialPackagePath,
 	}
 	err := packager2.Create(ctx, baseDir, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
@@ -393,7 +393,7 @@ func (o *packageInspectOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	if pkgConfig.InspectOpts.SBOMOutputDir != "" {
-		sbomOpts := PackageInspectSBOMOptions{
+		sbomOpts := packageInspectSBOMOptions{
 			skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 			outputDir:               pkgConfig.InspectOpts.SBOMOutputDir,
 		}
@@ -467,14 +467,14 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 	defer func() {
 		err = errors.Join(err, layout.Cleanup())
 	}()
-	resources, err := packager2.PackageInspectManifests(ctx, layout, packager2.InspectManifestsOptions{
+	result, err := packager2.PackageInspectManifests(ctx, layout, packager2.InspectManifestsOptions{
 		SetVariables: o.setVariables,
 		KubeVersion:  o.kubeVersion,
 	})
 	if err != nil {
 		return err
 	}
-	for _, resource := range resources {
+	for _, resource := range result.Resources {
 		fmt.Fprintf(o.outputWriter, "#type: %s\n", resource.ResourceType)
 		// Helm charts already provide a comment on the source when templated
 		if resource.ResourceType == packager2.ManifestResource {
@@ -485,14 +485,14 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 	return nil
 }
 
-// PackageInspectSBOMOptions holds the command-line options for 'package inspect sbom' sub-command.
-type PackageInspectSBOMOptions struct {
+// packageInspectSBOMOptions holds the command-line options for 'package inspect sbom' sub-command.
+type packageInspectSBOMOptions struct {
 	skipSignatureValidation bool
 	outputDir               string
 }
 
-func newPackageInspectSBOMOptions() *PackageInspectSBOMOptions {
-	return &PackageInspectSBOMOptions{
+func newPackageInspectSBOMOptions() *packageInspectSBOMOptions {
+	return &packageInspectSBOMOptions{
 		outputDir:               "",
 		skipSignatureValidation: false,
 	}
@@ -515,7 +515,7 @@ func newPackageInspectSBOMCommand() *cobra.Command {
 }
 
 // run performs the execution of 'package inspect sbom' sub-command.
-func (o *PackageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err error) {
+func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
 	src, err := choosePackage(ctx, args)
 	if err != nil {

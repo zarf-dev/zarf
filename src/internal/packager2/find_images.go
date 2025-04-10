@@ -80,13 +80,6 @@ type ComponentImageScan struct {
 	WhyResources []Resource
 }
 
-// Resource contains a Kubernetes Manifest or Chart
-type Resource struct {
-	Content      string
-	Name         string
-	ResourceType ResourceType
-}
-
 // FindImages iterates over the manifests and charts within each component to find any container images
 // It returns a FindImageResults which contains a scan result for each component
 func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (FindImagesResult, error) {

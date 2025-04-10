@@ -5,10 +5,8 @@ metadata:
 variables:
   - name: PORT
 
-
 components:
   - name: demo-helm-charts
-    required: true
     charts:
       - name: htppd-local
         version: 1.0.0
