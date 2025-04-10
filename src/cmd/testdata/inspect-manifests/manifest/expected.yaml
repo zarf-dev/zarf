@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: httpd
-        image: httpd:alpine3.18
+        image: httpd:alpine1.0.0
         ports:
         - containerPort: 80
 ---

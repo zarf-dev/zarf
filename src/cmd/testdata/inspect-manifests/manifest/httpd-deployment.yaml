@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
       - name: httpd
-        image: httpd:alpine3.18
+        image: httpd:alpine###ZARF_CONST_HTTPD_VERSION###
         ports:
         - containerPort: 80

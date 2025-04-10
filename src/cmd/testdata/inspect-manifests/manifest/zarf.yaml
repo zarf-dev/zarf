@@ -2,6 +2,10 @@ kind: ZarfPackageConfig
 metadata:
   name: manifests
 
+constants:
+  - name: HTTPD_VERSION
+    value: "1.0.0"
+
 components:
   - name: httpd-local
     manifests:
