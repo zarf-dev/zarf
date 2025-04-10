@@ -73,6 +73,6 @@ func TestECRPublishing(t *testing.T) {
 
 	// Validate we can copy the package from one private OCI registry to another
 	GHRegistryURL := "oci://ghcr.io/zarf-dev/packages"
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "publish", upstreamPackageURL, GHRegistryURL, keyFlag)
+	stdOut, stdErr, err = e2e.Zarf(t, "--log-level=debug", "package", "publish", upstreamPackageURL, GHRegistryURL, keyFlag)
 	require.NoError(t, err, stdOut, stdErr)
 }
