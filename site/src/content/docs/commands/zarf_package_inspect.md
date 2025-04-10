@@ -47,5 +47,6 @@ zarf package inspect [ PACKAGE_SOURCE ] [flags]
 * [zarf package](/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
 * [zarf package inspect definition](/commands/zarf_package_inspect_definition/)	 - Displays the 'zarf.yaml' definition for the specified package
 * [zarf package inspect images](/commands/zarf_package_inspect_images/)	 - List all container images contained in the package
+* [zarf package inspect manifests](/commands/zarf_package_inspect_manifests/)	 - Template and output all manifests and charts in a package
 * [zarf package inspect sbom](/commands/zarf_package_inspect_sbom/)	 - Output the package SBOM (Software Bill Of Materials) to the specified directory
 

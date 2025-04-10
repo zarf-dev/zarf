@@ -476,7 +476,7 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 	}
 	for _, resource := range resources {
 		fmt.Fprintf(o.outputWriter, "#type: %s\n", resource.ResourceType)
-		// Helm charts already give a comment on the source when templated
+		// Helm charts already provide a comment on the source when templated
 		if resource.ResourceType == packager2.ManifestResource {
 			fmt.Fprintf(o.outputWriter, "#source: %s\n", resource.Name)
 		}
