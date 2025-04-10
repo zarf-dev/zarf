@@ -38,9 +38,6 @@ managedNodeGroups:
   minSize: 3
   maxSize: 6
   spot: true
-  # availabilityZones:
-  #   - "###ZARF_VAR_EKS_CLUSTER_REGION###b"
-  #   - "###ZARF_VAR_EKS_CLUSTER_REGION###c"
   tags:
     PermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_TAG###"
   iam:
