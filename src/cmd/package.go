@@ -317,7 +317,6 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	mirrorOpt := packager2.MirrorOptions{
 		Cluster:         c,
 		PkgLayout:       pkgLayout,
-		Filter:          filter,
 		RegistryInfo:    pkgConfig.InitOpts.RegistryInfo,
 		GitInfo:         pkgConfig.InitOpts.GitServer,
 		NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
