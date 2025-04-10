@@ -136,6 +136,7 @@ func TestPackageInspectManifests(t *testing.T) {
 		expectedOutput string
 		packageName    string
 		setVariables   map[string]string
+		kubeVersion    string
 	}{
 		{
 			name:           "manifest inspect",
@@ -151,6 +152,17 @@ func TestPackageInspectManifests(t *testing.T) {
 			packageName:    "kustomize",
 			definitionDir:  filepath.Join("testdata", "inspect-manifests", "kustomize"),
 			expectedOutput: filepath.Join("testdata", "inspect-manifests", "kustomize", "expected.yaml"),
+		},
+		{
+			name:           "chart inspect",
+			packageName:    "chart",
+			definitionDir:  filepath.Join("testdata", "inspect-manifests", "chart"),
+			expectedOutput: filepath.Join("testdata", "inspect-manifests", "chart", "expected.yaml"),
+			kubeVersion:    "1.25",
+			setVariables: map[string]string{
+				"REPLICAS": "2",
+				"PORT":     "8080",
+			},
 		},
 	}
 
@@ -170,6 +182,7 @@ func TestPackageInspectManifests(t *testing.T) {
 			buf := new(bytes.Buffer)
 			opts := packageInspectManifestsOpts{
 				outputWriter: buf,
+				kubeVersion:  tc.kubeVersion,
 				setVariables: tc.setVariables,
 			}
 			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
@@ -178,7 +191,7 @@ func TestPackageInspectManifests(t *testing.T) {
 
 			expected, err := os.ReadFile(tc.expectedOutput)
 			require.NoError(t, err)
-			require.Equal(t, string(expected), buf.String())
+			require.YAMLEq(t, string(expected), buf.String())
 		})
 	}
 }

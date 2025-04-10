@@ -5,6 +5,7 @@ package packager2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -81,13 +82,21 @@ func PackageInspectManifests(ctx context.Context, pkgLayout *layout2.PackageLayo
 				return nil, err
 			}
 			valuesDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout2.ValuesComponentDir)
-			if err != nil {
-				return nil, err
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return nil, fmt.Errorf("failed to get values: %w", err)
 			}
 
 			for _, chart := range component.Charts {
-				//FIX ME values overrides
-				helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, nil)
+				chartOverrides := make(map[string]any)
+				for _, variable := range chart.Variables {
+					if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
+						// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
+						if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
+							return nil, fmt.Errorf("unable to merge path and value into map: %w", err)
+						}
+					}
+				}
+				helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, chartOverrides)
 				if err != nil {
 					return nil, fmt.Errorf("failed to load chart data: %w", err)
 				}
@@ -95,7 +104,6 @@ func PackageInspectManifests(ctx context.Context, pkgLayout *layout2.PackageLayo
 				if err != nil {
 					return nil, fmt.Errorf("could not render the Helm template for chart %s: %w", chart.Name, err)
 				}
-				// FIXME add comment at the top of the chart
 				resources = append(resources, Resource{
 					Content:      chartTemplate,
 					Name:         chart.Name,

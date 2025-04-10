@@ -1,0 +1,20 @@
+kind: ZarfPackageConfig
+metadata:
+  name: chart
+
+variables:
+  - name: PORT
+
+
+components:
+  - name: demo-helm-charts
+    required: true
+    charts:
+      - name: htppd-local
+        version: 1.0.0
+        namespace: httpd
+        localPath: chart
+        variables:
+          - name: REPLICAS
+            path: replicaCount
+            description: "Override the number of pod replicas"
