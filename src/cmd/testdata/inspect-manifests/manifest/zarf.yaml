@@ -1,0 +1,11 @@
+kind: ZarfPackageConfig
+metadata:
+  name: manifests
+
+components:
+  - name: httpd-local
+    manifests:
+      - name: simple-httpd-deployment
+        namespace: httpd
+        files:
+          - httpd-deployment.yaml

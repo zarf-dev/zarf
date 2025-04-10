@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,8 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -121,4 +124,27 @@ func TestPackageList(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPackageInspectManifests(t *testing.T) {
+	t.Parallel()
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
+	tmpdir := t.TempDir()
+	createOpts := packageCreateOptions{
+		confirm: true,
+		output:  tmpdir,
+	}
+	definitionPath := filepath.Join("testdata", "inspect-manifests", "manifest")
+	err := createOpts.run(context.Background(), []string{definitionPath})
+	require.NoError(t, err)
+	buf := new(bytes.Buffer)
+	opts := packageInspectManifestsOpts{
+		outputWriter: buf,
+	}
+	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-manifests-%s.tar.zst", config.GetArch()))
+	err = opts.run(context.Background(), []string{packagePath})
+	require.NoError(t, err)
+	b, err := os.ReadFile(filepath.Join("testdata", "inspect-manifests", "manifest", "expected.yaml"))
+	require.NoError(t, err)
+	require.YAMLEq(t, string(b), buf.String())
 }

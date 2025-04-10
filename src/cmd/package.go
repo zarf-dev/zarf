@@ -62,7 +62,20 @@ func newPackageCommand() *cobra.Command {
 	return cmd
 }
 
-type packageCreateOptions struct{}
+type packageCreateOptions struct {
+	confirm            bool
+	output             string
+	differential       string
+	set                map[string]string
+	sbom               bool
+	sbomOutput         string
+	skipSBOM           bool
+	maxPackageSizeMB   int
+	registryOverrides  map[string]string
+	signingKeyPath     string
+	signingKeyPassword string
+	flavor             string
+}
 
 func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	o := &packageCreateOptions{}
@@ -73,36 +86,43 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Short:   lang.CmdPackageCreateShort,
 		Long:    lang.CmdPackageCreateLong,
-		RunE:    o.run,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			return o.run(ctx, args)
+		},
 	}
 
 	// Always require confirm flag (no viper)
-	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageCreateFlagConfirm)
+	cmd.Flags().BoolVar(&o.confirm, "confirm", false, lang.CmdPackageCreateFlagConfirm)
 
 	outputDirectory := v.GetString("package.create.output_directory")
 	output := v.GetString(VPkgCreateOutput)
 	if outputDirectory != "" && output == "" {
 		v.Set(VPkgCreateOutput, outputDirectory)
 	}
-	cmd.Flags().StringVar(&pkgConfig.CreateOpts.Output, "output-directory", v.GetString("package.create.output_directory"), lang.CmdPackageCreateFlagOutput)
-	cmd.Flags().StringVarP(&pkgConfig.CreateOpts.Output, "output", "o", v.GetString(VPkgCreateOutput), lang.CmdPackageCreateFlagOutput)
+	cmd.Flags().StringVar(&o.output, "output-directory", v.GetString("package.create.output_directory"), lang.CmdPackageCreateFlagOutput)
+	cmd.Flags().StringVarP(&o.output, "output", "o", v.GetString(VPkgCreateOutput), lang.CmdPackageCreateFlagOutput)
 
-	cmd.Flags().StringVar(&pkgConfig.CreateOpts.DifferentialPackagePath, "differential", v.GetString(VPkgCreateDifferential), lang.CmdPackageCreateFlagDifferential)
-	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
-	cmd.Flags().BoolVarP(&pkgConfig.CreateOpts.ViewSBOM, "sbom", "s", v.GetBool(VPkgCreateSbom), lang.CmdPackageCreateFlagSbom)
-	cmd.Flags().StringVar(&pkgConfig.CreateOpts.SBOMOutputDir, "sbom-out", v.GetString(VPkgCreateSbomOutput), lang.CmdPackageCreateFlagSbomOut)
-	cmd.Flags().BoolVar(&pkgConfig.CreateOpts.SkipSBOM, "skip-sbom", v.GetBool(VPkgCreateSkipSbom), lang.CmdPackageCreateFlagSkipSbom)
-	cmd.Flags().IntVarP(&pkgConfig.CreateOpts.MaxPackageSizeMB, "max-package-size", "m", v.GetInt(VPkgCreateMaxPackageSize), lang.CmdPackageCreateFlagMaxPackageSize)
-	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringMapString(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
-	cmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringVar(&o.differential, "differential", v.GetString(VPkgCreateDifferential), lang.CmdPackageCreateFlagDifferential)
+	cmd.Flags().StringToStringVar(&o.set, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().BoolVarP(&o.sbom, "sbom", "s", v.GetBool(VPkgCreateSbom), lang.CmdPackageCreateFlagSbom)
+	cmd.Flags().StringVar(&o.sbomOutput, "sbom-out", v.GetString(VPkgCreateSbomOutput), lang.CmdPackageCreateFlagSbomOut)
+	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(VPkgCreateSkipSbom), lang.CmdPackageCreateFlagSkipSbom)
+	cmd.Flags().IntVarP(&o.maxPackageSizeMB, "max-package-size", "m", v.GetInt(VPkgCreateMaxPackageSize), lang.CmdPackageCreateFlagMaxPackageSize)
+	cmd.Flags().StringToStringVar(&o.registryOverrides, "registry-override", v.GetStringMapString(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
-	cmd.Flags().StringVar(&pkgConfig.CreateOpts.SigningKeyPath, "signing-key", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
-	cmd.Flags().StringVar(&pkgConfig.CreateOpts.SigningKeyPassword, "signing-key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagSigningKeyPassword)
+	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
+	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagSigningKeyPassword)
 
-	cmd.Flags().StringVarP(&pkgConfig.CreateOpts.SigningKeyPath, "key", "k", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagDeprecatedKey)
-	cmd.Flags().StringVar(&pkgConfig.CreateOpts.SigningKeyPassword, "key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagDeprecatedKeyPassword)
+	cmd.Flags().StringVarP(&o.signingKeyPath, "key", "k", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagDeprecatedKey)
+	cmd.Flags().StringVar(&o.signingKeyPassword, "key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagDeprecatedKeyPassword)
 
 	cmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
+	err := cmd.Flags().MarkDeprecated("retries", "retries does not have any impact on package creation")
+	if err != nil {
+		logger.Default().Debug("unable to mark flag retries as deprecated", "error", err)
+	}
 
 	errOD := cmd.Flags().MarkHidden("output-directory")
 	if errOD != nil {
@@ -120,10 +140,11 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
+	// TODO pass confirm through the system rather than keeping it as a global
+	config.CommonOptions.Confirm = o.confirm
 	l := logger.From(ctx)
-	pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
+	baseDir := setBaseDirectory(args)
 
 	var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 	if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
@@ -132,23 +153,22 @@ func (o *packageCreateOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	v := getViper()
-	pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
+	o.set = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.set, strings.ToUpper)
 
 	opt := packager2.CreateOptions{
-		Flavor:                  pkgConfig.CreateOpts.Flavor,
-		RegistryOverrides:       pkgConfig.CreateOpts.RegistryOverrides,
-		SigningKeyPath:          pkgConfig.CreateOpts.SigningKeyPath,
-		SigningKeyPassword:      pkgConfig.CreateOpts.SigningKeyPassword,
-		SetVariables:            pkgConfig.CreateOpts.SetVariables,
-		MaxPackageSizeMB:        pkgConfig.CreateOpts.MaxPackageSizeMB,
-		SBOMOut:                 pkgConfig.CreateOpts.SBOMOutputDir,
-		SkipSBOM:                pkgConfig.CreateOpts.SkipSBOM,
-		Output:                  pkgConfig.CreateOpts.Output,
+		Flavor:                  o.flavor,
+		RegistryOverrides:       o.registryOverrides,
+		SigningKeyPath:          o.signingKeyPath,
+		SigningKeyPassword:      o.signingKeyPassword,
+		SetVariables:            o.set,
+		MaxPackageSizeMB:        o.maxPackageSizeMB,
+		SBOMOut:                 o.sbomOutput,
+		SkipSBOM:                o.skipSBOM,
+		Output:                  o.output,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
-		DifferentialPackagePath: pkgConfig.CreateOpts.DifferentialPackagePath,
+		DifferentialPackagePath: o.differential,
 	}
-	err := packager2.Create(cmd.Context(), pkgConfig.CreateOpts.BaseDir, opt)
+	err := packager2.Create(ctx, baseDir, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -393,38 +413,47 @@ func (o *packageInspectOptions) run(cmd *cobra.Command, args []string) error {
 	return definitionOpts.run(cmd, args)
 }
 
-type packageInspectShowManifestsOpts struct {
+type packageInspectManifestsOpts struct {
 	skipSignatureValidation bool
 	components              string
+	kubeVersion             string
+	setVariables            map[string]string
+	outputWriter            io.Writer
 }
 
-func newPackageInspectShowManifestsOptions() *packageInspectShowManifestsOpts {
-	return &packageInspectShowManifestsOpts{
-		skipSignatureValidation: false,
+func newPackageInspectManifestsOptions() *packageInspectManifestsOpts {
+	return &packageInspectManifestsOpts{
+		outputWriter: message.OutputWriter,
 	}
 }
 
 func newPackageInspectShowManifestsCommand() *cobra.Command {
-	o := newPackageInspectShowManifestsOptions()
+	o := newPackageInspectManifestsOptions()
 	cmd := &cobra.Command{
 		Use:   "manifests [ PACKAGE ]",
 		Short: "Template and output all manifests and charts in a package",
 		Args:  cobra.MaximumNArgs(1),
-		RunE:  o.run,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			return o.run(ctx, args)
+		},
 	}
 
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show manifests for")
+	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 
 	return cmd
 }
 
-func (o *packageInspectShowManifestsOpts) run(cmd *cobra.Command, args []string) (err error) {
-	ctx := cmd.Context()
+func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (err error) {
 	src, err := choosePackage(ctx, args)
 	if err != nil {
 		return err
 	}
+	v := getViper()
+	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 	loadOpt := packager2.LoadOptions{
 		Source:                  src,
 		SkipSignatureValidation: o.skipSignatureValidation,
@@ -438,17 +467,20 @@ func (o *packageInspectShowManifestsOpts) run(cmd *cobra.Command, args []string)
 	defer func() {
 		err = errors.Join(err, layout.Cleanup())
 	}()
-	resources, err := packager2.PackageInspectManifests(ctx, layout, packager2.InspectManifestsOptions{})
+	resources, err := packager2.PackageInspectManifests(ctx, layout, packager2.InspectManifestsOptions{
+		SetVariables: o.setVariables,
+		KubeVersion:  o.kubeVersion,
+	})
 	if err != nil {
 		return err
 	}
 	for _, resource := range resources {
-		fmt.Printf("#type: %s\n", resource.ResourceType)
+		fmt.Fprintf(o.outputWriter, "#type: %s\n", resource.ResourceType)
 		// Helm charts already give a comment on the source when templated
 		if resource.ResourceType == packager2.ManifestResource {
-			fmt.Printf("#source: %s\n", resource.Name)
+			fmt.Fprintf(o.outputWriter, "#source: %s\n", resource.Name)
 		}
-		fmt.Printf("%s---\n", resource.Content)
+		fmt.Fprintf(o.outputWriter, "%s---\n", resource.Content)
 	}
 	return nil
 }
