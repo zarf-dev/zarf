@@ -18,6 +18,13 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+type ResourceType string
+
+const (
+	ManifestResource ResourceType = "manifest"
+	ChartResource    ResourceType = "chart"
+)
+
 type InspectManifestsOptions struct {
 	SetVariables map[string]string
 	KubeVersion  string
@@ -92,7 +99,7 @@ func PackageInspectManifests(ctx context.Context, pkgLayout *layout2.PackageLayo
 				resources = append(resources, Resource{
 					Content:      chartTemplate,
 					Name:         chart.Name,
-					ResourceType: "chart",
+					ResourceType: ChartResource,
 				})
 			}
 		}
@@ -122,7 +129,7 @@ func PackageInspectManifests(ctx context.Context, pkgLayout *layout2.PackageLayo
 				resources = append(resources, Resource{
 					Content:      string(contents),
 					Name:         file.Name(),
-					ResourceType: "manifest",
+					ResourceType: ManifestResource,
 				})
 			}
 		}

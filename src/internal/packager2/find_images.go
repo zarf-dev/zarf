@@ -84,7 +84,7 @@ type ComponentImageScan struct {
 type Resource struct {
 	Content      string
 	Name         string
-	ResourceType string
+	ResourceType ResourceType
 }
 
 // FindImages iterates over the manifests and charts within each component to find any container images
@@ -225,7 +225,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 					return FindImagesResult{}, fmt.Errorf("could not determine why resource for the chart %s: %w", zarfChart.Name, err)
 				}
 				for _, w := range whyResources {
-					w.ResourceType = "chart"
+					w.ResourceType = ChartResource
 					scan.WhyResources = append(scan.WhyResources, w)
 				}
 			}
@@ -293,7 +293,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 						return FindImagesResult{}, fmt.Errorf("could not find why resources for manifest %s: %w", manifest.Name, err)
 					}
 					for _, w := range whyResources {
-						w.ResourceType = "manifest"
+						w.ResourceType = ManifestResource
 						scan.WhyResources = append(scan.WhyResources, w)
 					}
 				}

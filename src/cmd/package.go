@@ -444,7 +444,8 @@ func (o *packageInspectShowManifestsOpts) run(cmd *cobra.Command, args []string)
 	}
 	for _, resource := range resources {
 		fmt.Printf("#type: %s\n", resource.ResourceType)
-		if resource.ResourceType == "manifest" {
+		// Helm charts already give a comment on the source when templated
+		if resource.ResourceType == packager2.ManifestResource {
 			fmt.Printf("#source: %s\n", resource.Name)
 		}
 		fmt.Printf("%s---\n", resource.Content)
