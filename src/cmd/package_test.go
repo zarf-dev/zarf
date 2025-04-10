@@ -172,6 +172,7 @@ func TestPackageInspectManifests(t *testing.T) {
 			t.Parallel()
 			tmpdir := t.TempDir()
 
+			// Create package
 			createOpts := packageCreateOptions{
 				confirm: true,
 				output:  tmpdir,
@@ -179,6 +180,7 @@ func TestPackageInspectManifests(t *testing.T) {
 			err := createOpts.run(context.Background(), []string{tc.definitionDir})
 			require.NoError(t, err)
 
+			// Inspect manifests
 			buf := new(bytes.Buffer)
 			opts := packageInspectManifestsOpts{
 				outputWriter: buf,
@@ -189,6 +191,7 @@ func TestPackageInspectManifests(t *testing.T) {
 			err = opts.run(context.Background(), []string{packagePath})
 			require.NoError(t, err)
 
+			// validate
 			expected, err := os.ReadFile(tc.expectedOutput)
 			require.NoError(t, err)
 			require.YAMLEq(t, string(expected), buf.String())

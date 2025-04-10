@@ -44,7 +44,6 @@ type PackageInspectManifestResults struct {
 
 // PackageInspectManifests inspects the manifests and charts within each component to find any container images
 func PackageInspectManifests(ctx context.Context, pkgLayout *layout2.PackageLayout, opts InspectManifestsOptions) (PackageInspectManifestResults, error) {
-	// Set default builtin values
 	state, err := types.DefaultZarfState()
 	if err != nil {
 		return PackageInspectManifestResults{}, err
@@ -61,7 +60,6 @@ func PackageInspectManifests(ctx context.Context, pkgLayout *layout2.PackageLayo
 	var resources []Resource
 	for _, component := range pkgLayout.Pkg.Components {
 		if len(component.Charts)+len(component.Manifests) < 1 {
-			// Skip if there are no manifests or charts
 			continue
 		}
 		tmpComponentPath := filepath.Join(tmpPackagePath, component.Name)
@@ -129,7 +127,6 @@ func PackageInspectManifests(ctx context.Context, pkgLayout *layout2.PackageLayo
 				if err := variableConfig.ReplaceTextTemplate(path); err != nil {
 					return PackageInspectManifestResults{}, fmt.Errorf("error templating the manifest: %w", err)
 				}
-				// Read the contents of each file
 				contents, err := os.ReadFile(path)
 				if err != nil {
 					return PackageInspectManifestResults{}, fmt.Errorf("could not read the file %s: %w", path, err)
