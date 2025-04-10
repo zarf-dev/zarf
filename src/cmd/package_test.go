@@ -134,15 +134,23 @@ func TestPackageInspectManifests(t *testing.T) {
 		name           string
 		definitionDir  string
 		expectedOutput string
+		packageName    string
 		setVariables   map[string]string
 	}{
 		{
-			name:           "simple manifest inspection",
+			name:           "manifest inspect",
+			packageName:    "manifests",
 			definitionDir:  filepath.Join("testdata", "inspect-manifests", "manifest"),
 			expectedOutput: filepath.Join("testdata", "inspect-manifests", "manifest", "expected.yaml"),
 			setVariables: map[string]string{
 				"REPLICAS": "2",
 			},
+		},
+		{
+			name:           "kustomize inspect",
+			packageName:    "kustomize",
+			definitionDir:  filepath.Join("testdata", "inspect-manifests", "kustomize"),
+			expectedOutput: filepath.Join("testdata", "inspect-manifests", "kustomize", "expected.yaml"),
 		},
 	}
 
@@ -164,13 +172,13 @@ func TestPackageInspectManifests(t *testing.T) {
 				outputWriter: buf,
 				setVariables: tc.setVariables,
 			}
-			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-manifests-%s.tar.zst", config.GetArch()))
+			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
 			err = opts.run(context.Background(), []string{packagePath})
 			require.NoError(t, err)
 
 			expected, err := os.ReadFile(tc.expectedOutput)
 			require.NoError(t, err)
-			require.YAMLEq(t, string(expected), buf.String())
+			require.Equal(t, string(expected), buf.String())
 		})
 	}
 }
