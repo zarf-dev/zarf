@@ -377,7 +377,7 @@ func (o *packageInspectOptions) run(cmd *cobra.Command, args []string) error {
 			skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 			outputDir:               pkgConfig.InspectOpts.SBOMOutputDir,
 		}
-		return sbomOpts.Run(cmd, args)
+		return sbomOpts.run(cmd, args)
 	}
 
 	if pkgConfig.InspectOpts.ListImages {
@@ -410,7 +410,7 @@ func newPackageInspectShowManifestsCommand() *cobra.Command {
 		Use:   "manifests [ PACKAGE ]",
 		Short: "Template and output all manifests and charts in a package",
 		Args:  cobra.MaximumNArgs(1),
-		RunE:  o.Run,
+		RunE:  o.run,
 	}
 
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
@@ -419,8 +419,7 @@ func newPackageInspectShowManifestsCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'package inspect manifests' sub-command.
-func (o *packageInspectShowManifestsOpts) Run(cmd *cobra.Command, args []string) error {
+func (o *packageInspectShowManifestsOpts) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
 	src, err := choosePackage(ctx, args)
 	if err != nil {
@@ -436,12 +435,19 @@ func (o *packageInspectShowManifestsOpts) Run(cmd *cobra.Command, args []string)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err = errors.Join(err, layout.Cleanup())
+	}()
 	resources, err := packager2.PackageInspectManifests(ctx, layout, packager2.InspectManifestsOptions{})
 	if err != nil {
 		return err
 	}
 	for _, resource := range resources {
-		fmt.Printf("%s: %s\nresource:\n%s---\n", resource.ResourceType, resource.Name, resource.Content)
+		fmt.Printf("#type: %s\n", resource.ResourceType)
+		if resource.ResourceType == "manifest" {
+			fmt.Printf("#source: %s\n", resource.Name)
+		}
+		fmt.Printf("%s---\n", resource.Content)
 	}
 	return nil
 }
@@ -466,7 +472,7 @@ func newPackageInspectSBOMCommand() *cobra.Command {
 		Use:   "sbom [ PACKAGE ]",
 		Short: "Output the package SBOM (Software Bill Of Materials) to the specified directory",
 		Args:  cobra.MaximumNArgs(1),
-		RunE:  o.Run,
+		RunE:  o.run,
 	}
 
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
@@ -475,8 +481,8 @@ func newPackageInspectSBOMCommand() *cobra.Command {
 	return cmd
 }
 
-// Run performs the execution of 'package inspect sbom' sub-command.
-func (o *PackageInspectSBOMOptions) Run(cmd *cobra.Command, args []string) error {
+// run performs the execution of 'package inspect sbom' sub-command.
+func (o *PackageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
 	src, err := choosePackage(ctx, args)
 	if err != nil {
@@ -488,11 +494,14 @@ func (o *PackageInspectSBOMOptions) Run(cmd *cobra.Command, args []string) error
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 	}
-	layout, err := packager2.LoadPackage(ctx, loadOpt)
+	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {
 		return err
 	}
-	outputPath, err := layout.GetSBOM(o.outputDir)
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+	outputPath, err := pkgLayout.GetSBOM(o.outputDir)
 	if err != nil {
 		return fmt.Errorf("could not get SBOM: %w", err)
 	}
