@@ -257,6 +257,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			path: "testdata/zarf-package-test-amd64-0.0.1.tar.zst",
 			opts: PublishPackageOpts{
 				WithPlainHTTP: true,
+				Architecture:  "amd64",
 			},
 		},
 	}
@@ -280,7 +281,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			require.NoError(t, err)
 
 			// Attempt to get the digest
-			platform := oci.PlatformForArch("amd64")
+			platform := oci.PlatformForArch(tc.opts.Architecture)
 			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.WithPlainHTTP))
 			require.NoError(t, err)
 			desc, err := remote.ResolveRoot(ctx)
