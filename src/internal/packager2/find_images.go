@@ -96,22 +96,11 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		return FindImagesResult{}, err
 	}
 
-	// Set default builtin values
-	registryInfo := types.RegistryInfo{Address: opts.RegistryURL}
-	if err := registryInfo.FillInEmptyValues(); err != nil {
+	state, err := types.DefaultZarfState()
+	if err != nil {
 		return FindImagesResult{}, err
 	}
-	gitServer := types.GitServerInfo{}
-	if err := gitServer.FillInEmptyValues(); err != nil {
-		return FindImagesResult{}, err
-	}
-	artifactServer := types.ArtifactServerInfo{}
-	artifactServer.FillInEmptyValues()
-	state := &types.ZarfState{
-		RegistryInfo:   registryInfo,
-		GitServer:      gitServer,
-		ArtifactServer: artifactServer,
-	}
+	state.RegistryInfo.Address = opts.RegistryURL
 	variableConfig := template.GetZarfVariableConfig(ctx)
 	variableConfig.SetConstants(pkg.Constants)
 	variableConfig.PopulateVariables(pkg.Variables, opts.DeploySetVariables)

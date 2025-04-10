@@ -34,20 +34,9 @@ type InspectManifestsOptions struct {
 // PackageInspectManifests inspects the manifests and charts within each component to find any container images
 func PackageInspectManifests(ctx context.Context, pkgLayout *layout2.PackageLayout, opts InspectManifestsOptions) ([]Resource, error) {
 	// Set default builtin values
-	registryInfo := types.RegistryInfo{}
-	if err := registryInfo.FillInEmptyValues(); err != nil {
+	state, err := types.DefaultZarfState()
+	if err != nil {
 		return nil, err
-	}
-	gitServer := types.GitServerInfo{}
-	if err := gitServer.FillInEmptyValues(); err != nil {
-		return nil, err
-	}
-	artifactServer := types.ArtifactServerInfo{}
-	artifactServer.FillInEmptyValues()
-	state := &types.ZarfState{
-		RegistryInfo:   registryInfo,
-		GitServer:      gitServer,
-		ArtifactServer: artifactServer,
 	}
 	variableConfig := template.GetZarfVariableConfig(ctx)
 	variableConfig.SetConstants(pkgLayout.Pkg.Constants)

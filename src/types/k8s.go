@@ -66,6 +66,21 @@ type ZarfState struct {
 	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
 }
 
+// DefaultZarfState returns a default ZarfState with default values filled in for the registry, git server, and artifact server
+func DefaultZarfState() (*ZarfState, error) {
+	state := &ZarfState{}
+	err := state.GitServer.FillInEmptyValues()
+	if err != nil {
+		return nil, err
+	}
+	err = state.RegistryInfo.FillInEmptyValues()
+	if err != nil {
+		return nil, err
+	}
+	state.ArtifactServer.FillInEmptyValues()
+	return state, nil
+}
+
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
