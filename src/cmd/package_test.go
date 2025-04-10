@@ -129,22 +129,48 @@ func TestPackageList(t *testing.T) {
 func TestPackageInspectManifests(t *testing.T) {
 	t.Parallel()
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
-	tmpdir := t.TempDir()
-	createOpts := packageCreateOptions{
-		confirm: true,
-		output:  tmpdir,
+
+	tests := []struct {
+		name           string
+		definitionDir  string
+		expectedOutput string
+		setVariables   map[string]string
+	}{
+		{
+			name:           "simple manifest inspection",
+			definitionDir:  filepath.Join("testdata", "inspect-manifests", "manifest"),
+			expectedOutput: filepath.Join("testdata", "inspect-manifests", "manifest", "expected.yaml"),
+			setVariables: map[string]string{
+				"REPLICAS": "2",
+			},
+		},
 	}
-	definitionPath := filepath.Join("testdata", "inspect-manifests", "manifest")
-	err := createOpts.run(context.Background(), []string{definitionPath})
-	require.NoError(t, err)
-	buf := new(bytes.Buffer)
-	opts := packageInspectManifestsOpts{
-		outputWriter: buf,
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			tmpdir := t.TempDir()
+
+			createOpts := packageCreateOptions{
+				confirm: true,
+				output:  tmpdir,
+			}
+			err := createOpts.run(context.Background(), []string{tc.definitionDir})
+			require.NoError(t, err)
+
+			buf := new(bytes.Buffer)
+			opts := packageInspectManifestsOpts{
+				outputWriter: buf,
+				setVariables: tc.setVariables,
+			}
+			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-manifests-%s.tar.zst", config.GetArch()))
+			err = opts.run(context.Background(), []string{packagePath})
+			require.NoError(t, err)
+
+			expected, err := os.ReadFile(tc.expectedOutput)
+			require.NoError(t, err)
+			require.YAMLEq(t, string(expected), buf.String())
+		})
 	}
-	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-manifests-%s.tar.zst", config.GetArch()))
-	err = opts.run(context.Background(), []string{packagePath})
-	require.NoError(t, err)
-	b, err := os.ReadFile(filepath.Join("testdata", "inspect-manifests", "manifest", "expected.yaml"))
-	require.NoError(t, err)
-	require.YAMLEq(t, string(b), buf.String())
 }

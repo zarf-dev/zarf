@@ -6,7 +6,7 @@ spec:
   selector:
     matchLabels:
       app: httpd
-  replicas: 2 # tells deployment to run 2 pods matching the template
+  replicas: ###ZARF_VAR_REPLICAS###
   template:
     metadata:
       labels:
