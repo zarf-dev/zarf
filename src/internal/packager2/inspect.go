@@ -103,7 +103,7 @@ func PackageInspectManifests(ctx context.Context, pkgLayout *layout2.PackageLayo
 					return PackageInspectManifestResults{}, fmt.Errorf("could not render the Helm template for chart %s: %w", chart.Name, err)
 				}
 				resources = append(resources, Resource{
-					Content:      chartTemplate,
+					Content:      fmt.Sprintf("%s\n", chartTemplate),
 					Name:         chart.Name,
 					ResourceType: ChartResource,
 				})
