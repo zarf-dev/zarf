@@ -31,6 +31,8 @@ const (
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
 )
 
+const OCITimestampFormat = time.RFC3339
+
 // Remote is a wrapper around the Oras remote repository with zarf specific functions
 type Remote struct {
 	orasRemote *oci.OrasRemote
@@ -89,13 +91,13 @@ func (r *Remote) Push(ctx context.Context, pkgLayout *PackageLayout, concurrency
 
 	// Perform the conversion of the string timestamp to the appropriate format in order to maintain backwards compatibility
 
-	t, err := time.Parse(time.RFC1123Z, pkgLayout.Pkg.Build.Timestamp)
+	t, err := time.Parse(CreateTimestampFormat, pkgLayout.Pkg.Build.Timestamp)
 	if err != nil {
-		// TODO: if we change the format of the timestamp, we need to update the conversion here
+		// if we change the format of the timestamp, we need to update the conversion here
 		// and also account for an error state for mismatch with older formats
 		return fmt.Errorf("unable to parse timestamp: %w", err)
 	}
-	annotations[ocispec.AnnotationCreated] = t.Format(time.RFC3339)
+	annotations[ocispec.AnnotationCreated] = t.Format(OCITimestampFormat)
 
 	manifestConfigDesc, err := r.orasRemote.CreateAndPushManifestConfig(ctx, annotations, ZarfConfigMediaType)
 	if err != nil {
