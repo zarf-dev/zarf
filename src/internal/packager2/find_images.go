@@ -16,6 +16,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/distribution/reference"
+	sourcev1beta2 "github.com/fluxcd/source-controller/api/v1beta2"
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -425,6 +426,13 @@ func processUnstructuredImages(ctx context.Context, resource *unstructured.Unstr
 		}
 		matchedImages = appendToImageMap(matchedImages, job.Spec.Template.Spec)
 
+	case "OCIRepository":
+		var ociRepo sourcev1beta2.OCIRepository
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &ociRepo); err != nil {
+			return nil, nil, fmt.Errorf("could not parse ocirepo: %w", err)
+		}
+		matchedImages = appendToImageMapOCIRepo(ctx, matchedImages, ociRepo.Spec)
+
 	default:
 		// Capture any custom images
 		matches := imageCheck.FindAllStringSubmatch(string(b), -1)
@@ -460,6 +468,23 @@ func appendToImageMap(imgMap map[string]bool, pod corev1.PodSpec) map[string]boo
 		if reference.ReferenceRegexp.MatchString(container.Image) {
 			imgMap[container.Image] = true
 		}
+	}
+	return imgMap
+}
+
+func appendToImageMapOCIRepo(ctx context.Context, imgMap map[string]bool, repo sourcev1beta2.OCIRepositorySpec) map[string]bool {
+	var url = strings.TrimPrefix(repo.URL, "oci://")
+
+	if repo.Reference.Tag != "" {
+		url = url + ":" + repo.Reference.Tag
+	} else if repo.Reference.Digest != "" {
+		url = url + "@" + repo.Reference.Digest
+	} else if repo.Reference.SemVer != "" || repo.Reference.SemverFilter != "" {
+		logger.From(ctx).Error("can not use semver or semverFilter with OCIRepository")
+		return imgMap
+	}
+	if reference.ReferenceRegexp.MatchString(url) {
+		imgMap[url] = true
 	}
 	return imgMap
 }
