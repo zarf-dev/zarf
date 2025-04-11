@@ -508,7 +508,9 @@ func appendToImageMapOCIRepo(imgMap map[string]bool, repo sourcev1beta2.OCIRepos
 		fmt.Errorf("Can not use semver or semverFilter with OCIRepository")
 		return imgMap
 	}
-	imgMap[s.String()] = true
+	if reference.ReferenceRegexp.MatchString(s.String()) {
+		imgMap[s.String()] = true
+	}
 	return imgMap
 }
 

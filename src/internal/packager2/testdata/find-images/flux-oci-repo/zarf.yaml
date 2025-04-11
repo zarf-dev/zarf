@@ -12,3 +12,4 @@ components:
           - oci-repo-tag.yaml
           - oci-repo-digest.yaml
           - oci-repo-semver.yaml
+          - oci-repo-invalid.yaml
