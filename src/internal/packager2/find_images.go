@@ -449,7 +449,7 @@ func processUnstructuredImages(ctx context.Context, resource *unstructured.Unstr
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &ociRepo); err != nil {
 			return nil, nil, fmt.Errorf("could not parse ocirepo: %w", err)
 		}
-		matchedImages = appendToImageMapOCIRepo(matchedImages, ociRepo.Spec)
+		matchedImages = appendToImageMapOCIRepo(ctx, matchedImages, ociRepo.Spec)
 
 	default:
 		// Capture any custom images
@@ -490,26 +490,19 @@ func appendToImageMap(imgMap map[string]bool, pod corev1.PodSpec) map[string]boo
 	return imgMap
 }
 
-func appendToImageMapOCIRepo(imgMap map[string]bool, repo sourcev1beta2.OCIRepositorySpec) map[string]bool {
-	var regex = regexp.MustCompile(`oci://(.+)`)
-	var t = regex.FindStringSubmatch(repo.URL)
-
-	s := strings.Builder{}
-	// Pulls out just the url from the regex
-	s.Write([]byte(t[1]))
+func appendToImageMapOCIRepo(ctx context.Context, imgMap map[string]bool, repo sourcev1beta2.OCIRepositorySpec) map[string]bool {
+	var url = strings.TrimPrefix(repo.URL, "oci://")
 
 	if repo.Reference.Tag != "" {
-		s.WriteString(":")
-		s.WriteString(repo.Reference.Tag)
+		url = url + ":" + repo.Reference.Tag
 	} else if repo.Reference.Digest != "" {
-		s.WriteString("@")
-		s.WriteString(repo.Reference.Digest)
+		url = url + "@" + repo.Reference.Digest
 	} else if repo.Reference.SemVer != "" || repo.Reference.SemverFilter != "" {
-		fmt.Errorf("Can not use semver or semverFilter with OCIRepository")
+		logger.From(ctx).Error("can not use semver or semverFilter with OCIRepository")
 		return imgMap
 	}
-	if reference.ReferenceRegexp.MatchString(s.String()) {
-		imgMap[s.String()] = true
+	if reference.ReferenceRegexp.MatchString(url) {
+		imgMap[url] = true
 	}
 	return imgMap
 }

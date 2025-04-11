@@ -155,6 +155,19 @@ func TestFindImages(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "ocirepo-semver",
+			packagePath: "./testdata/find-images/flux-oci-repo-semver",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					Matches:       []string{},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

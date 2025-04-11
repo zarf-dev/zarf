@@ -9,6 +9,4 @@ components:
       - name: agent
         namespace: default
         files:
-          - oci-repo-digest.yaml
-          - oci-repo-invalid.yaml
-          - oci-repo-tag.yaml
+          - oci-repo-semver.yaml
