@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: distro-eks
   description: Deploy a EKS K8s cluster
-  version: 0.0.3
+  version: 0.0.4
 
 variables:
   - name: EKS_CLUSTER_NAME
@@ -29,20 +29,25 @@ components:
     files:
       - source: eks.yaml
         target: eks.yaml
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.170.0/eksctl_Darwin_amd64.tar.gz
+      - source: https://github.com/eksctl-io/eksctl/releases/download/v0.207.0/eksctl_Darwin_amd64.tar.gz
         target: binaries/eksctl_Darwin_x86_64
         executable: true
-        shasum: 88297c757fb1bc731f9ea29931c463a4575eb37f4cee27625774c88d5e8c95e2
+        shasum: ef59622a6a18d313414a490d6e202e948a7fa4d048fd541df939faf0ac196bb3
         extractPath: eksctl
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.170.0/eksctl_Darwin_arm64.tar.gz
+      - source: https://github.com/eksctl-io/eksctl/releases/download/v0.207.0/eksctl_Darwin_arm64.tar.gz
         target: binaries/eksctl_Darwin_arm64
         executable: true
-        shasum: ad97a3196dc8fcbba5c501cf386ab8637663bb6a3876e20bc991a1de07a0831e
+        shasum: 2615a10fb601e27404af14b54feb3e3d5247d8f0dca0fb5ff68f3dee64b7d25e
         extractPath: eksctl
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.170.0/eksctl_Linux_amd64.tar.gz
+      - source: https://github.com/eksctl-io/eksctl/releases/download/v0.207.0/eksctl_Linux_amd64.tar.gz
         target: binaries/eksctl_Linux_x86_64
         executable: true
-        shasum: 790b540f8931424d8c89c10dee4cb5567bff44a5e8ed018c7c3a0ac818cf2e05
+        shasum: f503e7d19879ded5786ccf63c68c7ca4991496d6d8e88c68324cb3d62013db14
+        extractPath: eksctl
+      - source: https://github.com/eksctl-io/eksctl/releases/download/v0.207.0/eksctl_Linux_arm64.tar.gz
+        target: binaries/eksctl_Linux_arm64
+        executable: true
+        shasum: b335a18cc8590a0111c889026fb65090c937fc17bebd4dc72b2d752a99d29537
         extractPath: eksctl
 
   - name: deploy-eks-cluster
