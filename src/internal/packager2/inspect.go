@@ -230,7 +230,7 @@ func DevInspectManifests(ctx context.Context, packagePath string, opts DevInspec
 				return DevInspectManifestResults{}, fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
 			}
 			resources = append(resources, Resource{
-				Content:      chartTemplate,
+				Content:      fmt.Sprintf("%s\n", chartTemplate),
 				Name:         zarfChart.Name,
 				ResourceType: ChartResource,
 			})
