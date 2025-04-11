@@ -1,0 +1,11 @@
+kind: ZarfPackageConfig
+metadata:
+  name: kustomize
+
+components:
+  - name: httpd-kustomize
+    manifests:
+      - name: httpd-deployment
+        namespace: httpd
+        kustomizations:
+          - ./.

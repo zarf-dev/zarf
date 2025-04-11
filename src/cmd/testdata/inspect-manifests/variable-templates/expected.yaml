@@ -1,0 +1,22 @@
+#type: manifest
+#source: simple-httpd-deployment-0.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd-deployment
+spec:
+  selector:
+    matchLabels:
+      app: httpd
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: httpd
+    spec:
+      containers:
+      - name: httpd
+        image: httpd:alpine1.0.0
+        ports:
+        - containerPort: 80
+---
