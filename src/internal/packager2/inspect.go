@@ -211,6 +211,16 @@ func DevInspectManifests(ctx context.Context, packagePath string, opts DevInspec
 			}
 			zarfChart.ValuesFiles = oldValuesFiles
 
+			chartOverrides := make(map[string]any)
+			for _, variable := range zarfChart.Variables {
+				if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
+					// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
+					if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
+						return DevInspectManifestResults{}, fmt.Errorf("unable to merge path and value into map: %w", err)
+					}
+				}
+			}
+
 			valuesFilePaths, err := helpers.RecursiveFileList(valuesFilePath, nil, false)
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				return DevInspectManifestResults{}, err
@@ -221,7 +231,8 @@ func DevInspectManifests(ctx context.Context, packagePath string, opts DevInspec
 					return DevInspectManifestResults{}, err
 				}
 			}
-			chart, values, err := helm.LoadChartData(zarfChart, chartPath, valuesFilePath, nil)
+
+			chart, values, err := helm.LoadChartData(zarfChart, chartPath, valuesFilePath, chartOverrides)
 			if err != nil {
 				return DevInspectManifestResults{}, fmt.Errorf("failed to load chart data: %w", err)
 			}
@@ -278,6 +289,15 @@ func DevInspectManifests(ctx context.Context, packagePath string, opts DevInspec
 				if err := variableConfig.ReplaceTextTemplate(f); err != nil {
 					return DevInspectManifestResults{}, err
 				}
+				contents, err := os.ReadFile(f)
+				if err != nil {
+					return DevInspectManifestResults{}, err
+				}
+				resources = append(resources, Resource{
+					Content:      string(contents),
+					Name:         f,
+					ResourceType: ManifestResource,
+				})
 			}
 		}
 	}

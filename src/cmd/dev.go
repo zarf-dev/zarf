@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -128,7 +129,9 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Displays the fully rendered package definition",
 		Long:  "Displays the 'zarf.yaml' definition of a Zarf after package templating, flavors, and component imports are applied",
-		RunE:  o.run,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.run(cmd.Context(), args)
+		},
 	}
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
@@ -139,14 +142,13 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *devInspectManifestsOptions) run(cmd *cobra.Command, args []string) error {
+func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) error {
 	v := getViper()
 	o.createSetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
 
-	ctx := cmd.Context()
 	opts := packager2.DevInspectManifestsOptions{
 		CreateSetVariables: o.createSetVariables,
 		DeploySetVariables: o.deploySetVariables,
