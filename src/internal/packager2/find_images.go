@@ -78,14 +78,7 @@ type ComponentImageScan struct {
 	// CosignArtifacts contains found cosign artifacts for images
 	CosignArtifacts []string
 	// WhyResources contains the resources where specific images were found (when Why option is used)
-	WhyResources []WhyResource
-}
-
-// WhyResource contains the resources where specific images were found (when Why option is used)
-type WhyResource struct {
-	Content      string
-	Name         string
-	ResourceType string
+	WhyResources []Resource
 }
 
 // FindImages iterates over the manifests and charts within each component to find any container images
@@ -97,22 +90,11 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		return FindImagesResult{}, err
 	}
 
-	// Set default builtin values
-	registryInfo := types.RegistryInfo{Address: opts.RegistryURL}
-	if err := registryInfo.FillInEmptyValues(); err != nil {
+	state, err := types.DefaultZarfState()
+	if err != nil {
 		return FindImagesResult{}, err
 	}
-	gitServer := types.GitServerInfo{}
-	if err := gitServer.FillInEmptyValues(); err != nil {
-		return FindImagesResult{}, err
-	}
-	artifactServer := types.ArtifactServerInfo{}
-	artifactServer.FillInEmptyValues()
-	state := &types.ZarfState{
-		RegistryInfo:   registryInfo,
-		GitServer:      gitServer,
-		ArtifactServer: artifactServer,
-	}
+	state.RegistryInfo.Address = opts.RegistryURL
 	variableConfig := template.GetZarfVariableConfig(ctx)
 	variableConfig.SetConstants(pkg.Constants)
 	variableConfig.PopulateVariables(pkg.Variables, opts.DeploySetVariables)
@@ -226,7 +208,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 					return FindImagesResult{}, fmt.Errorf("could not determine why resource for the chart %s: %w", zarfChart.Name, err)
 				}
 				for _, w := range whyResources {
-					w.ResourceType = "chart"
+					w.ResourceType = ChartResource
 					scan.WhyResources = append(scan.WhyResources, w)
 				}
 			}
@@ -294,7 +276,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 						return FindImagesResult{}, fmt.Errorf("could not find why resources for manifest %s: %w", manifest.Name, err)
 					}
 					for _, w := range whyResources {
-						w.ResourceType = "manifest"
+						w.ResourceType = ManifestResource
 						scan.WhyResources = append(scan.WhyResources, w)
 					}
 				}
@@ -527,8 +509,8 @@ func getSortedImages(matchedImages map[string]bool, maybeImages map[string]bool)
 	return sortedMatchedImages, sortedMaybeImages
 }
 
-func findWhyResources(resources []*unstructured.Unstructured, whyImage, resourceName string) ([]WhyResource, error) {
-	var whyResources []WhyResource
+func findWhyResources(resources []*unstructured.Unstructured, whyImage, resourceName string) ([]Resource, error) {
+	var whyResources []Resource
 	for _, resource := range resources {
 		b, err := yaml.Marshal(resource.Object)
 		if err != nil {
@@ -536,7 +518,7 @@ func findWhyResources(resources []*unstructured.Unstructured, whyImage, resource
 		}
 		yaml := string(b)
 		if strings.Contains(yaml, whyImage) {
-			why := WhyResource{
+			why := Resource{
 				Content: yaml,
 				Name:    resourceName,
 			}
