@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -103,11 +104,13 @@ func (r *Remote) Push(ctx context.Context, pkgLayout *PackageLayout, concurrency
 	if err != nil {
 		return err
 	}
-	// here is where the created annotation is added
+	// here is where the manifest is created and written to the filesystem given the file.store Push() functionality
 	root, err := r.orasRemote.PackAndTagManifest(ctx, src, descs, manifestConfigDesc, annotations)
 	if err != nil {
 		return err
 	}
+	// remove this file after the push is complete
+	defer os.Remove(pkgLayout.Pkg.Metadata.Name)
 
 	copyOpts := r.orasRemote.GetDefaultCopyOpts()
 	copyOpts.Concurrency = concurrency
