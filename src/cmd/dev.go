@@ -156,6 +156,10 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		KubeVersion:        o.kubeVersion,
 	}
 	result, err := packager2.DevInspectManifests(ctx, setBaseDirectory(args), opts)
+	var lintErr *lint.LintError
+	if errors.As(err, &lintErr) {
+		PrintFindings(ctx, lintErr)
+	}
 	if err != nil {
 		return err
 	}

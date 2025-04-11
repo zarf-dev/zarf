@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd-deployment
+spec:
+  selector:
+    matchLabels:
+      app: ###ZARF_VAR_LABEL###
+  replicas: ###ZARF_VAR_REPLICAS###
+  template:
+    metadata:
+      labels:
+        app: ###ZARF_VAR_LABEL###
+    spec:
+      containers:
+      - name: httpd
+        image: httpd:alpine###ZARF_CONST_HTTPD_VERSION###
+        ports:
+        - containerPort: 80
