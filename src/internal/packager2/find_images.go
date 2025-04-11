@@ -5,7 +5,6 @@ package packager2
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -145,42 +144,9 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		matchedImages := map[string]bool{}
 		maybeImages := map[string]bool{}
 		for _, zarfChart := range component.Charts {
-			// Generate helm templates for this chart
-			if zarfChart.LocalPath != "" {
-				zarfChart.LocalPath = filepath.Join(packagePath, zarfChart.LocalPath)
-			}
-			oldValuesFiles := zarfChart.ValuesFiles
-			valuesFiles := []string{}
-			for _, v := range zarfChart.ValuesFiles {
-				valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
-			}
-			zarfChart.ValuesFiles = valuesFiles
-			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
-			valuesFilePath := filepath.Join(compBuildPath, string(layout.ValuesComponentDir))
-			if err := helm.PackageChart(ctx, zarfChart, chartPath, valuesFilePath); err != nil {
-				return FindImagesResult{}, fmt.Errorf("unable to package the chart %s: %w", zarfChart.Name, err)
-			}
-			zarfChart.ValuesFiles = oldValuesFiles
-
-			valuesFilePaths, err := helpers.RecursiveFileList(valuesFilePath, nil, false)
-			// TODO: The values path should exist if the path is set, otherwise it should be empty.
-			if err != nil && !errors.Is(err, os.ErrNotExist) {
+			chartTemplate, values, err := templateChart(ctx, zarfChart, packagePath, compBuildPath, variableConfig, opts.KubeVersionOverride)
+			if err != nil {
 				return FindImagesResult{}, err
-			}
-			for _, valueFilePath := range valuesFilePaths {
-				err := variableConfig.ReplaceTextTemplate(valueFilePath)
-				if err != nil {
-					return FindImagesResult{}, err
-				}
-			}
-
-			chart, values, err := helm.LoadChartData(zarfChart, chartPath, valuesFilePath, nil)
-			if err != nil {
-				return FindImagesResult{}, fmt.Errorf("failed to load chart data: %w", err)
-			}
-			chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, opts.KubeVersionOverride, variableConfig)
-			if err != nil {
-				return FindImagesResult{}, fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
 			}
 
 			// Break the template into separate resources
@@ -189,7 +155,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 				return FindImagesResult{}, err
 			}
 			resources = append(resources, yamls...)
-
+			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
 			chartTarball := helm.StandardName(chartPath, zarfChart) + ".tgz"
 			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 			if err != nil {
