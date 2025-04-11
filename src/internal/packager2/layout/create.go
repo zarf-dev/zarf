@@ -45,6 +45,10 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
+// CreateTimestampFormat is the format used for the build data timestamp.
+// If this format is changed - zarf will need to handle mismatch between older formats and the new format.
+const CreateTimestampFormat = time.RFC1123Z
+
 // CreateOptions are the options for creating a skeleton package.
 type CreateOptions struct {
 	Flavor                  string
@@ -741,7 +745,7 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	pkg.Build.Version = config.CLIVersion
 
 	// Record the time of package creation.
-	pkg.Build.Timestamp = now.Format(time.RFC1123Z)
+	pkg.Build.Timestamp = now.Format(CreateTimestampFormat)
 
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
