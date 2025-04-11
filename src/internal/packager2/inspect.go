@@ -12,8 +12,11 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
@@ -33,7 +36,7 @@ type Resource struct {
 	ResourceType ResourceType
 }
 
-type InspectManifestsOptions struct {
+type PackageInspectManifestsOptions struct {
 	SetVariables map[string]string
 	KubeVersion  string
 }
@@ -43,7 +46,7 @@ type PackageInspectManifestResults struct {
 }
 
 // PackageInspectManifests inspects the manifests and charts within each component to find any container images
-func PackageInspectManifests(ctx context.Context, pkgLayout *layout2.PackageLayout, opts InspectManifestsOptions) (PackageInspectManifestResults, error) {
+func PackageInspectManifests(ctx context.Context, pkgLayout *layout2.PackageLayout, opts PackageInspectManifestsOptions) (PackageInspectManifestResults, error) {
 	state, err := types.DefaultZarfState()
 	if err != nil {
 		return PackageInspectManifestResults{}, err
@@ -141,4 +144,143 @@ func PackageInspectManifests(ctx context.Context, pkgLayout *layout2.PackageLayo
 	}
 
 	return PackageInspectManifestResults{Resources: resources}, nil
+}
+
+type DevInspectManifestsOptions struct {
+	CreateSetVariables map[string]string
+	DeploySetVariables map[string]string
+	Flavor             string
+	KubeVersion        string
+}
+
+type DevInspectManifestResults struct {
+	Resources []Resource
+}
+
+// DevInspectManifests returns manifests and Helm chart manifests after templating
+func DevInspectManifests(ctx context.Context, packagePath string, opts DevInspectManifestsOptions) (DevInspectManifestResults, error) {
+	state, err := types.DefaultZarfState()
+	if err != nil {
+		return DevInspectManifestResults{}, err
+	}
+	pkg, err := layout.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
+	if err != nil {
+		return DevInspectManifestResults{}, err
+	}
+	variableConfig := template.GetZarfVariableConfig(ctx)
+	variableConfig.SetConstants(pkg.Constants)
+	variableConfig.PopulateVariables(pkg.Variables, opts.DeploySetVariables)
+
+	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return DevInspectManifestResults{}, err
+	}
+	defer os.RemoveAll(tmpPackagePath)
+
+	var resources []Resource
+	for _, component := range pkg.Components {
+		if len(component.Charts)+len(component.Manifests) < 1 {
+			continue
+		}
+		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, state)
+		if err != nil {
+			return DevInspectManifestResults{}, err
+		}
+		variableConfig.SetApplicationTemplates(applicationTemplates)
+
+		compBuildPath := filepath.Join(tmpPackagePath, component.Name)
+		err = os.MkdirAll(compBuildPath, 0o700)
+		if err != nil {
+			return DevInspectManifestResults{}, err
+		}
+
+		for _, zarfChart := range component.Charts {
+			if zarfChart.LocalPath != "" {
+				zarfChart.LocalPath = filepath.Join(packagePath, zarfChart.LocalPath)
+			}
+			valuesFiles := []string{}
+			oldValuesFiles := zarfChart.ValuesFiles
+			for _, v := range zarfChart.ValuesFiles {
+				valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
+			}
+			zarfChart.ValuesFiles = valuesFiles
+			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
+			valuesFilePath := filepath.Join(compBuildPath, string(layout.ValuesComponentDir))
+			if err := helm.PackageChart(ctx, zarfChart, chartPath, valuesFilePath); err != nil {
+				return DevInspectManifestResults{}, fmt.Errorf("unable to package the chart %s: %w", zarfChart.Name, err)
+			}
+			zarfChart.ValuesFiles = oldValuesFiles
+
+			valuesFilePaths, err := helpers.RecursiveFileList(valuesFilePath, nil, false)
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return DevInspectManifestResults{}, err
+			}
+			for _, valueFilePath := range valuesFilePaths {
+				err := variableConfig.ReplaceTextTemplate(valueFilePath)
+				if err != nil {
+					return DevInspectManifestResults{}, err
+				}
+			}
+			chart, values, err := helm.LoadChartData(zarfChart, chartPath, valuesFilePath, nil)
+			if err != nil {
+				return DevInspectManifestResults{}, fmt.Errorf("failed to load chart data: %w", err)
+			}
+			chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, opts.KubeVersion, variableConfig)
+			if err != nil {
+				return DevInspectManifestResults{}, fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
+			}
+			resources = append(resources, Resource{
+				Content:      chartTemplate,
+				Name:         zarfChart.Name,
+				ResourceType: ChartResource,
+			})
+		}
+
+		manifestDir := filepath.Join(compBuildPath, string(layout.ManifestsComponentDir))
+		if len(component.Manifests) > 0 {
+			err := os.MkdirAll(manifestDir, 0o700)
+			if err != nil {
+				return DevInspectManifestResults{}, err
+			}
+		}
+		for _, manifest := range component.Manifests {
+			manifestPaths := []string{}
+			for idx, path := range manifest.Kustomizations {
+				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
+				rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
+				dst := filepath.Join(compBuildPath, rel)
+				if !helpers.IsURL(path) {
+					path = filepath.Join(packagePath, path)
+				}
+				// Generate manifests from kustomizations and place in the package
+				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+					return DevInspectManifestResults{}, fmt.Errorf("unable to build the kustomization for %s: %w", path, err)
+				}
+				manifestPaths = append(manifestPaths, dst)
+			}
+			// Get all manifest files
+			for idx, f := range manifest.Files {
+				rel := filepath.Join(string(layout.ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, idx))
+				dst := filepath.Join(compBuildPath, rel)
+				if helpers.IsURL(f) {
+					if err := utils.DownloadToFile(ctx, f, dst, component.DeprecatedCosignKeyPath); err != nil {
+						return DevInspectManifestResults{}, fmt.Errorf(lang.ErrDownloading, f, err.Error())
+					}
+				} else {
+					if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, f), dst); err != nil {
+						return DevInspectManifestResults{}, fmt.Errorf("unable to copy manifest %s: %w", f, err)
+					}
+				}
+				manifestPaths = append(manifestPaths, dst)
+			}
+
+			for _, f := range manifestPaths {
+				if err := variableConfig.ReplaceTextTemplate(f); err != nil {
+					return DevInspectManifestResults{}, err
+				}
+			}
+		}
+	}
+
+	return DevInspectManifestResults{Resources: resources}, nil
 }
