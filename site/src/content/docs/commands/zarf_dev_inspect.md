@@ -33,4 +33,5 @@ Commands to get information about a Zarf package using a `zarf.yaml`
 
 * [zarf dev](/commands/zarf_dev/)	 - Commands useful for developing packages
 * [zarf dev inspect definition](/commands/zarf_dev_inspect_definition/)	 - Displays the fully rendered package definition
+* [zarf dev inspect manifests](/commands/zarf_dev_inspect_manifests/)	 - Displays the fully rendered package definition
 
