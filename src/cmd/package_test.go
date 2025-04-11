@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,8 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -119,6 +122,79 @@ func TestPackageList(t *testing.T) {
 			if tt.outputFormat == outputYAML {
 				require.YAMLEq(t, string(b), buf.String())
 			}
+		})
+	}
+}
+
+func TestPackageInspectManifests(t *testing.T) {
+	t.Parallel()
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
+
+	tests := []struct {
+		name           string
+		definitionDir  string
+		expectedOutput string
+		packageName    string
+		setVariables   map[string]string
+		kubeVersion    string
+	}{
+		{
+			name:           "manifest inspect",
+			packageName:    "manifests",
+			definitionDir:  filepath.Join("testdata", "inspect-manifests", "manifest"),
+			expectedOutput: filepath.Join("testdata", "inspect-manifests", "manifest", "expected.yaml"),
+			setVariables: map[string]string{
+				"REPLICAS": "2",
+			},
+		},
+		{
+			name:           "kustomize inspect",
+			packageName:    "kustomize",
+			definitionDir:  filepath.Join("testdata", "inspect-manifests", "kustomize"),
+			expectedOutput: filepath.Join("testdata", "inspect-manifests", "kustomize", "expected.yaml"),
+		},
+		{
+			name:           "chart inspect",
+			packageName:    "chart",
+			definitionDir:  filepath.Join("testdata", "inspect-manifests", "chart"),
+			expectedOutput: filepath.Join("testdata", "inspect-manifests", "chart", "expected.yaml"),
+			kubeVersion:    "1.25",
+			setVariables: map[string]string{
+				"REPLICAS": "2",
+				"PORT":     "8080",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			tmpdir := t.TempDir()
+
+			// Create package
+			createOpts := packageCreateOptions{
+				confirm: true,
+				output:  tmpdir,
+			}
+			err := createOpts.run(context.Background(), []string{tc.definitionDir})
+			require.NoError(t, err)
+
+			// Inspect manifests
+			buf := new(bytes.Buffer)
+			opts := packageInspectManifestsOpts{
+				outputWriter: buf,
+				kubeVersion:  tc.kubeVersion,
+				setVariables: tc.setVariables,
+			}
+			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
+			err = opts.run(context.Background(), []string{packagePath})
+			require.NoError(t, err)
+
+			// validate
+			expected, err := os.ReadFile(tc.expectedOutput)
+			require.NoError(t, err)
+			require.YAMLEq(t, string(expected), buf.String())
 		})
 	}
 }

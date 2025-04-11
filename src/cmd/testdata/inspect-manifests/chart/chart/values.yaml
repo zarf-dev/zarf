@@ -1,0 +1,6 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/stefanprodan/podinfo
+  tag: 6.4.0
+  pullPolicy: IfNotPresent
