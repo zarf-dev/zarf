@@ -26,6 +26,7 @@ linters:
         - (*github.com/spf13/pflag.FlagSet).MarkDeprecated
         - fmt.Fprintln
         - fmt.Fprint
+        - fmt.Fprintf
     goheader:
       template: |-
         SPDX-License-Identifier: Apache-2.0
