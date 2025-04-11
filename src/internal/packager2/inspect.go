@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
@@ -19,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -195,50 +197,9 @@ func DevInspectManifests(ctx context.Context, packagePath string, opts DevInspec
 		}
 
 		for _, zarfChart := range component.Charts {
-			if zarfChart.LocalPath != "" {
-				zarfChart.LocalPath = filepath.Join(packagePath, zarfChart.LocalPath)
-			}
-			valuesFiles := []string{}
-			oldValuesFiles := zarfChart.ValuesFiles
-			for _, v := range zarfChart.ValuesFiles {
-				valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
-			}
-			zarfChart.ValuesFiles = valuesFiles
-			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
-			valuesFilePath := filepath.Join(compBuildPath, string(layout.ValuesComponentDir))
-			if err := helm.PackageChart(ctx, zarfChart, chartPath, valuesFilePath); err != nil {
-				return DevInspectManifestResults{}, fmt.Errorf("unable to package the chart %s: %w", zarfChart.Name, err)
-			}
-			zarfChart.ValuesFiles = oldValuesFiles
-
-			chartOverrides := make(map[string]any)
-			for _, variable := range zarfChart.Variables {
-				if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
-					// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
-					if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
-						return DevInspectManifestResults{}, fmt.Errorf("unable to merge path and value into map: %w", err)
-					}
-				}
-			}
-
-			valuesFilePaths, err := helpers.RecursiveFileList(valuesFilePath, nil, false)
-			if err != nil && !errors.Is(err, os.ErrNotExist) {
+			chartTemplate, err := templateChart(ctx, zarfChart, packagePath, compBuildPath, variableConfig, opts.KubeVersion)
+			if err != nil {
 				return DevInspectManifestResults{}, err
-			}
-			for _, valueFilePath := range valuesFilePaths {
-				err := variableConfig.ReplaceTextTemplate(valueFilePath)
-				if err != nil {
-					return DevInspectManifestResults{}, err
-				}
-			}
-
-			chart, values, err := helm.LoadChartData(zarfChart, chartPath, valuesFilePath, chartOverrides)
-			if err != nil {
-				return DevInspectManifestResults{}, fmt.Errorf("failed to load chart data: %w", err)
-			}
-			chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, opts.KubeVersion, variableConfig)
-			if err != nil {
-				return DevInspectManifestResults{}, fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
 			}
 			resources = append(resources, Resource{
 				Content:      fmt.Sprintf("%s\n", chartTemplate),
@@ -303,4 +264,54 @@ func DevInspectManifests(ctx context.Context, packagePath string, opts DevInspec
 	}
 
 	return DevInspectManifestResults{Resources: resources}, nil
+}
+
+// templateChart returns a templated chart.yaml as a string after templating
+func templateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, packagePath string, compBuildPath string, variableConfig *variables.VariableConfig, kubeVersion string) (string, error) {
+	if zarfChart.LocalPath != "" {
+		zarfChart.LocalPath = filepath.Join(packagePath, zarfChart.LocalPath)
+	}
+	valuesFiles := []string{}
+	oldValuesFiles := zarfChart.ValuesFiles
+	for _, v := range zarfChart.ValuesFiles {
+		valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
+	}
+	zarfChart.ValuesFiles = valuesFiles
+	chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
+	valuesFilePath := filepath.Join(compBuildPath, string(layout.ValuesComponentDir))
+	if err := helm.PackageChart(ctx, zarfChart, chartPath, valuesFilePath); err != nil {
+		return "", fmt.Errorf("unable to package the chart %s: %w", zarfChart.Name, err)
+	}
+	zarfChart.ValuesFiles = oldValuesFiles
+
+	chartOverrides := make(map[string]any)
+	for _, variable := range zarfChart.Variables {
+		if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
+			// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
+			if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
+				return "", fmt.Errorf("unable to merge path and value into map: %w", err)
+			}
+		}
+	}
+
+	valuesFilePaths, err := helpers.RecursiveFileList(valuesFilePath, nil, false)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("failed to list values files: %w", err)
+	}
+	for _, valueFilePath := range valuesFilePaths {
+		err := variableConfig.ReplaceTextTemplate(valueFilePath)
+		if err != nil {
+			return "", fmt.Errorf("error templating the values file: %w", err)
+		}
+	}
+
+	chart, values, err := helm.LoadChartData(zarfChart, chartPath, valuesFilePath, chartOverrides)
+	if err != nil {
+		return "", fmt.Errorf("failed to load chart data: %w", err)
+	}
+	chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, kubeVersion, variableConfig)
+	if err != nil {
+		return "", fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
+	}
+	return chartTemplate, nil
 }
