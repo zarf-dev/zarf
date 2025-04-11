@@ -245,6 +245,61 @@ func TestPublishPackage(t *testing.T) {
 	}
 }
 
+func TestPublishPackageDeterministic(t *testing.T) {
+
+	tt := []struct {
+		name string
+		path string
+		opts PublishPackageOpts
+	}{
+		{
+			name: "Publish package",
+			path: "testdata/zarf-package-test-amd64-0.0.1.tar.zst",
+			opts: PublishPackageOpts{
+				WithPlainHTTP: true,
+				Architecture:  "amd64",
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := testutil.TestContext(t)
+			registryRef := createRegistry(t, ctx)
+
+			// Publish test package
+			err := PublishPackage(ctx, tc.path, registryRef, tc.opts)
+			require.NoError(t, err)
+
+			// We want to pull the package and sure the content is the same as the local package
+			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{Filter: filters.Empty()})
+			require.NoError(t, err)
+			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
+			defer os.Remove(layoutExpected.Pkg.Metadata.Name)
+			// Format url and instantiate remote
+			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
+			require.NoError(t, err)
+
+			// Attempt to get the digest
+			platform := oci.PlatformForArch(tc.opts.Architecture)
+			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.WithPlainHTTP))
+			require.NoError(t, err)
+			desc, err := remote.ResolveRoot(ctx)
+			require.NoError(t, err)
+			expectedDigest := desc.Digest.String()
+
+			// Re-publish the package to ensure the digest does not change
+			err = PublishPackage(ctx, tc.path, registryRef, tc.opts)
+			require.NoError(t, err)
+
+			latestDesc, err := remote.ResolveRoot(ctx)
+			require.NoError(t, err)
+
+			require.Equal(t, expectedDigest, latestDesc.Digest.String(), "Original digest is not the same as the latest")
+		})
+	}
+}
+
 func TestPublishCopySHA(t *testing.T) {
 	tt := []struct {
 		name             string
