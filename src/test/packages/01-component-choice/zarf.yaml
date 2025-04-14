@@ -1,0 +1,18 @@
+kind: ZarfPackageConfig
+metadata:
+  name: component-choice
+  description: Test component to demonstrate grouping components for a user to choose from
+
+components:
+  - name: first-choice
+    group: example-choice
+    files:
+      - source: blank-file.txt
+        target: first-choice-file.txt
+
+  - name: second-choice
+    group: example-choice
+    default: true
+    files:
+      - source: blank-file.txt
+        target: second-choice-file.txt
