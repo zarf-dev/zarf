@@ -170,7 +170,7 @@ func TestUseCLI(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 		packageName := fmt.Sprintf("zarf-package-no-components-%s.tar.zst", e2e.Arch)
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", filepath.Join(tmpdir, packageName), "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
-		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
+		require.Contains(t, stdErr, tmpdir, "The tmp path should show as being created")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
