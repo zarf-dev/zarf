@@ -182,9 +182,6 @@ func DevInspectManifests(ctx context.Context, packagePath string, opts DevInspec
 
 	var resources []Resource
 	for _, component := range pkg.Components {
-		if len(component.Charts)+len(component.Manifests) < 1 {
-			continue
-		}
 		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, state)
 		if err != nil {
 			return DevInspectManifestResults{}, err
