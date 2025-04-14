@@ -184,7 +184,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifest(ctx, manifest, packagePath, compBuildPath, variableConfig)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig)
 			if err != nil {
 				return FindImagesResult{}, err
 			}

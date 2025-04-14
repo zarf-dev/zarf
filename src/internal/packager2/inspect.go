@@ -213,7 +213,7 @@ func DevInspectManifests(ctx context.Context, packagePath string, opts DevInspec
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifest(ctx, manifest, packagePath, compBuildPath, variableConfig)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig)
 			if err != nil {
 				return DevInspectManifestResults{}, err
 			}
@@ -224,7 +224,7 @@ func DevInspectManifests(ctx context.Context, packagePath string, opts DevInspec
 	return DevInspectManifestResults{Resources: resources}, nil
 }
 
-func getTemplatedManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig) ([]Resource, error) {
+func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig) ([]Resource, error) {
 	manifestPaths := []string{}
 	for idx, path := range manifest.Kustomizations {
 		kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
