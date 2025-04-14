@@ -127,8 +127,7 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "manifests [ DIRECTORY ]",
 		Args:  cobra.MaximumNArgs(1),
-		Short: "Displays the fully rendered package definition",
-		Long:  "Displays the 'zarf.yaml' definition of a Zarf after package templating, flavors, and component imports are applied",
+		Short: "Template and output all manifests and charts referenced by the package definition",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.run(cmd.Context(), args)
 		},

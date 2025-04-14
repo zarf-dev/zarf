@@ -8,11 +8,7 @@ tableOfContents: false
 
 ## zarf dev inspect manifests
 
-Displays the fully rendered package definition
-
-### Synopsis
-
-Displays the 'zarf.yaml' definition of a Zarf after package templating, flavors, and component imports are applied
+Template and output all manifests and charts referenced by the package definition
 
 ```
 zarf dev inspect manifests [ DIRECTORY ] [flags]
