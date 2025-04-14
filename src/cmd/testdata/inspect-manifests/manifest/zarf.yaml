@@ -13,3 +13,6 @@ components:
         namespace: httpd
         files:
           - httpd-deployment.yaml
+
+  - name: empty-component
+    description: "Ensures empty components are handled okay"
