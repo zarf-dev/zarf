@@ -224,6 +224,7 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 	}
 	l.Info("generating package", "name", name, "path", generatedZarfYAMLPath)
 	opts := &packager2.GenerateOptions{
+		PackageName: name,
 		Version:     o.version,
 		URL:         o.url,
 		GitPath:     o.gitPath,
