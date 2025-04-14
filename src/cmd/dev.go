@@ -223,61 +223,14 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 		}
 	}
 	l.Info("generating package", "name", name, "path", generatedZarfYAMLPath)
-
-	generatedComponent := v1alpha1.ZarfComponent{
-		Name:     name,
-		Required: helpers.BoolPtr(true),
-		Charts: []v1alpha1.ZarfChart{
-			{
-				Name:      name,
-				Version:   o.version,
-				Namespace: name,
-				URL:       o.url,
-				GitPath:   o.gitPath,
-			},
-		},
+	opts := &packager2.GenerateOptions{
+		Version:     o.version,
+		URL:         o.url,
+		GitPath:     o.gitPath,
+		KubeVersion: o.kubeVersion,
 	}
-
-	pkg := v1alpha1.ZarfPackage{
-		Kind: v1alpha1.ZarfPackageConfig,
-		Metadata: v1alpha1.ZarfMetadata{
-			Name:        name,
-			Version:     o.version,
-			Description: "auto-generated using `zarf dev generate`",
-		},
-		Components: []v1alpha1.ZarfComponent{
-			generatedComponent,
-		},
-	}
-	tmpGeneratePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	pkg, err := packager2.Generate(cmd.Context(), opts)
 	if err != nil {
-		return err
-	}
-	defer func(path string) {
-		errRemove := os.RemoveAll(path)
-		err = errors.Join(err, errRemove)
-	}(tmpGeneratePath)
-	b, err := goyaml.MarshalWithOptions(pkg)
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(filepath.Join(tmpGeneratePath, layout.ZarfYAML), b, helpers.ReadAllWriteUser); err != nil {
-		return err
-	}
-	results, err := packager2.FindImages(cmd.Context(), tmpGeneratePath, packager2.FindImagesOptions{
-		KubeVersionOverride: o.kubeVersion,
-	})
-	if err != nil {
-		// purposefully not returning error here, as we can still generate the package without images
-		l.Error("failed to find images", "error", err.Error())
-	}
-	for i, component := range results.ComponentImageScans {
-		pkg.Components[i].Images = append(pkg.Components[i].Images, component.Matches...)
-		pkg.Components[i].Images = append(pkg.Components[i].Images, component.PotentialMatches...)
-		pkg.Components[i].Images = append(pkg.Components[i].Images, component.CosignArtifacts...)
-	}
-
-	if err := lint.ValidatePackage(pkg); err != nil {
 		return err
 	}
 
@@ -285,7 +238,7 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 		return err
 	}
 
-	b, err = goyaml.MarshalWithOptions(pkg, goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
+	b, err := goyaml.MarshalWithOptions(pkg, goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
 	if err != nil {
 		return err
 	}
