@@ -320,7 +320,7 @@ func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, packag
 		return Resource{}, chartutil.Values{}, fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
 	}
 	resource := Resource{
-		Content:      chartTemplate,
+		Content:      fmt.Sprintf("%s\n", chartTemplate),
 		Name:         zarfChart.Name,
 		ResourceType: ChartResource,
 	}
