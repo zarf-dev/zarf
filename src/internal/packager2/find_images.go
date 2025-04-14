@@ -5,7 +5,6 @@ package packager2
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,16 +13,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/distribution/reference"
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
-	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -145,51 +141,18 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		matchedImages := map[string]bool{}
 		maybeImages := map[string]bool{}
 		for _, zarfChart := range component.Charts {
-			// Generate helm templates for this chart
-			if zarfChart.LocalPath != "" {
-				zarfChart.LocalPath = filepath.Join(packagePath, zarfChart.LocalPath)
-			}
-			oldValuesFiles := zarfChart.ValuesFiles
-			valuesFiles := []string{}
-			for _, v := range zarfChart.ValuesFiles {
-				valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
-			}
-			zarfChart.ValuesFiles = valuesFiles
-			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
-			valuesFilePath := filepath.Join(compBuildPath, string(layout.ValuesComponentDir))
-			if err := helm.PackageChart(ctx, zarfChart, chartPath, valuesFilePath); err != nil {
-				return FindImagesResult{}, fmt.Errorf("unable to package the chart %s: %w", zarfChart.Name, err)
-			}
-			zarfChart.ValuesFiles = oldValuesFiles
-
-			valuesFilePaths, err := helpers.RecursiveFileList(valuesFilePath, nil, false)
-			// TODO: The values path should exist if the path is set, otherwise it should be empty.
-			if err != nil && !errors.Is(err, os.ErrNotExist) {
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, packagePath, compBuildPath, variableConfig, opts.KubeVersionOverride)
+			if err != nil {
 				return FindImagesResult{}, err
-			}
-			for _, valueFilePath := range valuesFilePaths {
-				err := variableConfig.ReplaceTextTemplate(valueFilePath)
-				if err != nil {
-					return FindImagesResult{}, err
-				}
-			}
-
-			chart, values, err := helm.LoadChartData(zarfChart, chartPath, valuesFilePath, nil)
-			if err != nil {
-				return FindImagesResult{}, fmt.Errorf("failed to load chart data: %w", err)
-			}
-			chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, opts.KubeVersionOverride, variableConfig)
-			if err != nil {
-				return FindImagesResult{}, fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
 			}
 
 			// Break the template into separate resources
-			yamls, err := utils.SplitYAML([]byte(chartTemplate))
+			yamls, err := utils.SplitYAML([]byte(chartResource.Content))
 			if err != nil {
 				return FindImagesResult{}, err
 			}
 			resources = append(resources, yamls...)
-
+			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
 			chartTarball := helm.StandardName(chartPath, zarfChart) + ".tgz"
 			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 			if err != nil {
@@ -221,48 +184,13 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestPaths := []string{}
-			for idx, path := range manifest.Kustomizations {
-				kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-				rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
-				dst := filepath.Join(compBuildPath, rel)
-				if !helpers.IsURL(path) {
-					path = filepath.Join(packagePath, path)
-				}
-				// Generate manifests from kustomizations and place in the package
-				if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
-					return FindImagesResult{}, fmt.Errorf("unable to build the kustomization for %s: %w", path, err)
-				}
-				manifestPaths = append(manifestPaths, dst)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig)
+			if err != nil {
+				return FindImagesResult{}, err
 			}
-			// Get all manifest files
-			for idx, f := range manifest.Files {
-				rel := filepath.Join(string(layout.ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, idx))
-				dst := filepath.Join(compBuildPath, rel)
-				if helpers.IsURL(f) {
-					if err := utils.DownloadToFile(ctx, f, dst, component.DeprecatedCosignKeyPath); err != nil {
-						return FindImagesResult{}, fmt.Errorf(lang.ErrDownloading, f, err.Error())
-					}
-				} else {
-					if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, f), dst); err != nil {
-						return FindImagesResult{}, fmt.Errorf("unable to copy manifest %s: %w", f, err)
-					}
-				}
-				manifestPaths = append(manifestPaths, dst)
-			}
-
-			for _, f := range manifestPaths {
-				if err := variableConfig.ReplaceTextTemplate(f); err != nil {
-					return FindImagesResult{}, err
-				}
-				// Read the contents of each file
-				contents, err := os.ReadFile(f)
-				if err != nil {
-					return FindImagesResult{}, fmt.Errorf("could not read the file %s: %w", f, err)
-				}
-
-				// Break the manifest into separate resources
-				yamls, err := utils.SplitYAML(contents)
+			for _, manifestResource := range manifestResources {
+				// Break the manifest into separate objects
+				yamls, err := utils.SplitYAML([]byte(manifestResource.Content))
 				if err != nil {
 					return FindImagesResult{}, err
 				}
