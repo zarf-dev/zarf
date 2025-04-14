@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -28,6 +30,8 @@ const (
 	// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
 )
+
+const OCITimestampFormat = time.RFC3339
 
 // Remote is a wrapper around the Oras remote repository with zarf specific functions
 type Remote struct {
@@ -78,11 +82,28 @@ func (r *Remote) Push(ctx context.Context, pkgLayout *PackageLayout, concurrency
 		descs = append(descs, desc)
 	}
 
+	// Sort by Digest string
+	sort.Slice(descs, func(i, j int) bool {
+		return descs[i].Digest < descs[j].Digest
+	})
+
 	annotations := annotationsFromMetadata(pkgLayout.Pkg.Metadata)
+
+	// Perform the conversion of the string timestamp to the appropriate format in order to maintain backwards compatibility
+
+	t, err := time.Parse(CreateTimestampFormat, pkgLayout.Pkg.Build.Timestamp)
+	if err != nil {
+		// if we change the format of the timestamp, we need to update the conversion here
+		// and also account for an error state for mismatch with older formats
+		return fmt.Errorf("unable to parse timestamp: %w", err)
+	}
+	annotations[ocispec.AnnotationCreated] = t.Format(OCITimestampFormat)
+
 	manifestConfigDesc, err := r.orasRemote.CreateAndPushManifestConfig(ctx, annotations, ZarfConfigMediaType)
 	if err != nil {
 		return err
 	}
+	// here is where the created annotation is added
 	root, err := r.orasRemote.PackAndTagManifest(ctx, src, descs, manifestConfigDesc, annotations)
 	if err != nil {
 		return err
