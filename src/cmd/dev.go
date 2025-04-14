@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ import (
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -62,6 +64,7 @@ func newDevInspectCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.AddCommand(newDevInspectDefinitionCommand(v))
+	cmd.AddCommand(newDevInspectManifestsCommand(v))
 	return cmd
 }
 
@@ -100,6 +103,75 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	err = utils.ColorPrintYAML(pkg, nil, false)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+type devInspectManifestsOptions struct {
+	flavor             string
+	createSetVariables map[string]string
+	deploySetVariables map[string]string
+	kubeVersion        string
+	outputWriter       io.Writer
+}
+
+func newDevInspectManifestsOptions() devInspectManifestsOptions {
+	return devInspectManifestsOptions{
+		outputWriter: message.OutputWriter,
+	}
+}
+
+func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
+	o := newDevInspectManifestsOptions()
+
+	cmd := &cobra.Command{
+		Use:   "manifests [ DIRECTORY ]",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Template and output all manifests and charts referenced by the package definition",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.run(cmd.Context(), args)
+		},
+	}
+
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
+
+	return cmd
+}
+
+func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) error {
+	v := getViper()
+	o.createSetVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
+	o.deploySetVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
+
+	opts := packager2.InspectDefinitionManifestsOptions{
+		CreateSetVariables: o.createSetVariables,
+		DeploySetVariables: o.deploySetVariables,
+		Flavor:             o.flavor,
+		KubeVersion:        o.kubeVersion,
+	}
+	result, err := packager2.InspectDefinitionManifests(ctx, setBaseDirectory(args), opts)
+	var lintErr *lint.LintError
+	if errors.As(err, &lintErr) {
+		PrintFindings(ctx, lintErr)
+	}
+	if err != nil {
+		return err
+	}
+	if result.Resources == nil {
+		return fmt.Errorf("0 manifests found")
+	}
+	for _, resource := range result.Resources {
+		fmt.Fprintf(o.outputWriter, "#type: %s\n", resource.ResourceType)
+		// Helm charts already provide a comment on the source when templated
+		if resource.ResourceType == packager2.ManifestResource {
+			fmt.Fprintf(o.outputWriter, "#source: %s\n", resource.Name)
+		}
+		fmt.Fprintf(o.outputWriter, "%s---\n", resource.Content)
 	}
 	return nil
 }
