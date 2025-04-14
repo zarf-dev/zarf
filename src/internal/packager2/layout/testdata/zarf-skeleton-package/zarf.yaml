@@ -39,3 +39,9 @@ components:
           - deployment.yaml
         kustomizations:
           - kustomize
+  - name: kustomizations
+    required: true
+    manifests:
+      - name: namespace
+        kustomizations:
+          - ./kustomize
