@@ -197,7 +197,7 @@ func TestPackageInspectManifests(t *testing.T) {
 			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
 			err = opts.run(context.Background(), []string{packagePath})
 			if tc.expectedErr != "" {
-				require.EqualError(t, err, tc.expectedErr)
+				require.ErrorContains(t, err, tc.expectedErr)
 				return
 			}
 			require.NoError(t, err)

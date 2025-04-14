@@ -95,7 +95,7 @@ func TestDevInspectManifests(t *testing.T) {
 			}
 			err := opts.run(context.Background(), []string{tc.definitionDir})
 			if tc.expectedErr != "" {
-				require.EqualError(t, err, tc.expectedErr)
+				require.ErrorContains(t, err, tc.expectedErr)
 				return
 			}
 			require.NoError(t, err)
