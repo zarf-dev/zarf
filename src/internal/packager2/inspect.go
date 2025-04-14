@@ -65,9 +65,6 @@ func PackageInspectManifests(ctx context.Context, pkgLayout *layout2.PackageLayo
 
 	var resources []Resource
 	for _, component := range pkgLayout.Pkg.Components {
-		if len(component.Charts)+len(component.Manifests) < 1 {
-			continue
-		}
 		tmpComponentPath := filepath.Join(tmpPackagePath, component.Name)
 		err := os.MkdirAll(tmpComponentPath, helpers.ReadWriteExecuteUser)
 		if err != nil {
