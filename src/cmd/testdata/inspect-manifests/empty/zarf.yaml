@@ -1,0 +1,5 @@
+kind: ZarfPackageConfig
+metadata:
+  name: empty
+components:
+  - name: empty-component

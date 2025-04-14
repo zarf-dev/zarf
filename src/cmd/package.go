@@ -474,6 +474,9 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 	if err != nil {
 		return err
 	}
+	if result.Resources == nil {
+		return fmt.Errorf("0 manifests found")
+	}
 	for _, resource := range result.Resources {
 		fmt.Fprintf(o.outputWriter, "#type: %s\n", resource.ResourceType)
 		// Helm charts already provide a comment on the source when templated

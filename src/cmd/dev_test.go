@@ -29,6 +29,7 @@ func TestDevInspectManifests(t *testing.T) {
 		createSetVariables map[string]string
 		kubeVersion        string
 		flavor             string
+		expectedErr        string
 	}{
 		{
 			name:           "manifest inspect",
@@ -70,6 +71,12 @@ func TestDevInspectManifests(t *testing.T) {
 			},
 			flavor: "cool",
 		},
+		{
+			name:          "empty inspect",
+			packageName:   "empty",
+			definitionDir: filepath.Join("testdata", "inspect-manifests", "empty"),
+			expectedErr:   "0 manifests found",
+		},
 	}
 
 	for _, tc := range tests {
@@ -87,6 +94,10 @@ func TestDevInspectManifests(t *testing.T) {
 				flavor:             tc.flavor,
 			}
 			err := opts.run(context.Background(), []string{tc.definitionDir})
+			if tc.expectedErr != "" {
+				require.EqualError(t, err, tc.expectedErr)
+				return
+			}
 			require.NoError(t, err)
 
 			// validate
