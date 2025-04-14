@@ -148,13 +148,13 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
 
-	opts := packager2.DevInspectManifestsOptions{
+	opts := packager2.InspectDefinitionManifestsOptions{
 		CreateSetVariables: o.createSetVariables,
 		DeploySetVariables: o.deploySetVariables,
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 	}
-	result, err := packager2.DevInspectManifests(ctx, setBaseDirectory(args), opts)
+	result, err := packager2.InspectDefinitionManifests(ctx, setBaseDirectory(args), opts)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)

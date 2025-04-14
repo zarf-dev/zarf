@@ -468,7 +468,7 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 	defer func() {
 		err = errors.Join(err, layout.Cleanup())
 	}()
-	result, err := packager2.PackageInspectManifests(ctx, layout, packager2.PackageInspectManifestsOptions{
+	result, err := packager2.InspectPackageManifests(ctx, layout, packager2.InspectPackageManifestsOptions{
 		SetVariables: o.setVariables,
 		KubeVersion:  o.kubeVersion,
 	})
