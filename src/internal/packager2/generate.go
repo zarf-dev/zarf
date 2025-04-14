@@ -19,14 +19,21 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
+// GenerateOptions are the options for generating a Zarf package.
 type GenerateOptions struct {
+	// Name of the package
 	PackageName string
-	Version     string
-	URL         string
-	GitPath     string
+	// Version of the Helm chart
+	Version string
+	// URL to the Helm chart
+	URL string
+	// Path to the Helm chart in the git repository
+	GitPath string
+	// Kube version to provide to the Helm chart
 	KubeVersion string
 }
 
+// Generate a Zarf package definition using information about a Helm chart.
 func Generate(ctx context.Context, opts *GenerateOptions) (pkg v1alpha1.ZarfPackage, err error) {
 	l := logger.From(ctx)
 	generatedComponent := v1alpha1.ZarfComponent{
