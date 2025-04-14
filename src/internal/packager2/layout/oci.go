@@ -109,8 +109,13 @@ func (r *Remote) Push(ctx context.Context, pkgLayout *PackageLayout, concurrency
 	if err != nil {
 		return err
 	}
-	// remove this file after the push is complete
-	defer os.Remove(pkgLayout.Pkg.Metadata.Name)
+
+	defer func() {
+		// remove the dangling manifest file created by the PackAndTagManifest
+		// should this behavior change, we should expect this to begin producing an error
+		err2 := os.Remove(pkgLayout.Pkg.Metadata.Name)
+		err = errors.Join(err, err2)
+	}()
 
 	copyOpts := r.orasRemote.GetDefaultCopyOpts()
 	copyOpts.Concurrency = concurrency
