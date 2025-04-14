@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package v1beta1 holds the definition of the v1beta1 Zarf Package
 package v1beta1
 
 import (
