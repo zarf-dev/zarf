@@ -137,6 +137,7 @@ func TestPackageInspectManifests(t *testing.T) {
 		packageName    string
 		setVariables   map[string]string
 		kubeVersion    string
+		expectedErr    string
 	}{
 		{
 			name:           "manifest inspect",
@@ -164,6 +165,12 @@ func TestPackageInspectManifests(t *testing.T) {
 				"PORT":     "8080",
 			},
 		},
+		{
+			name:          "empty inspect",
+			packageName:   "empty",
+			definitionDir: filepath.Join("testdata", "inspect-manifests", "empty"),
+			expectedErr:   "0 manifests found",
+		},
 	}
 
 	for _, tc := range tests {
@@ -189,6 +196,10 @@ func TestPackageInspectManifests(t *testing.T) {
 			}
 			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
 			err = opts.run(context.Background(), []string{packagePath})
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, tc.expectedErr)
+				return
+			}
 			require.NoError(t, err)
 
 			// validate
