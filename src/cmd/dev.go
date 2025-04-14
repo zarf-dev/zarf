@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -208,7 +207,6 @@ func newDevGenerateCommand() *cobra.Command {
 
 func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) {
 	l := logger.From(cmd.Context())
-	start := time.Now()
 	name := args[0]
 	generatedZarfYAMLPath := filepath.Join(o.output, layout.ZarfYAML)
 
@@ -251,8 +249,6 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 	content = strings.Replace(content, "kind:\n", "\nkind:\n", 1)
 	content = strings.Replace(content, "metadata:\n", "\nmetadata:\n", 1)
 	content = strings.Replace(content, "components:\n", "\ncomponents:\n", 1)
-
-	l.Debug("generated package", "name", name, "path", generatedZarfYAMLPath, "duration", time.Since(start))
 
 	return os.WriteFile(generatedZarfYAMLPath, []byte(content), helpers.ReadAllWriteUser)
 }
