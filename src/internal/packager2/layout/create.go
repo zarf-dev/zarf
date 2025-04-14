@@ -665,8 +665,13 @@ func assembleSkeletonComponent(component v1alpha1.ZarfComponent, packagePath, bu
 
 		component.DataInjections[dataIdx].Source = rel
 	}
-
 	// Iterate over all manifests.
+	if len(component.Manifests) > 0 {
+		err := os.MkdirAll(filepath.Join(compBuildPath, string(ManifestsComponentDir)), 0o700)
+		if err != nil {
+			return err
+		}
+	}
 	for manifestIdx, manifest := range component.Manifests {
 		for fileIdx, path := range manifest.Files {
 			rel := filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
@@ -686,6 +691,7 @@ func assembleSkeletonComponent(component v1alpha1.ZarfComponent, packagePath, bu
 			rel := filepath.Join(string(ManifestsComponentDir), kname)
 			dst := filepath.Join(compBuildPath, rel)
 
+			// Build() requires the path be present - otherwise will throw an error.
 			if err := kustomize.Build(filepath.Join(packagePath, path), dst, manifest.KustomizeAllowAnyDirectory); err != nil {
 				return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 			}

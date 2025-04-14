@@ -145,11 +145,13 @@ func TestCreateSkeleton(t *testing.T) {
 	require.Empty(t, warnings)
 	b, err := os.ReadFile(filepath.Join(pkgPath.Base, "checksums.txt"))
 	require.NoError(t, err)
-	expectedChecksum := `54f657b43323e1ebecb0758835b8d01a0113b61b7bab0f4a8156f031128d00f9 components/data-injections.tar
+	expectedChecksum := `0fea7403536c0c0e2a2d9b235d4b3716e86eefd8e78e7b14412dd5a750b77474 components/kustomizations.tar
+54f657b43323e1ebecb0758835b8d01a0113b61b7bab0f4a8156f031128d00f9 components/data-injections.tar
 879bfe82d20f7bdcd60f9e876043cc4343af4177a6ee8b2660c304a5b6c70be7 components/files.tar
 c497f1a56559ea0a9664160b32e4b377df630454ded6a3787924130c02f341a6 components/manifests.tar
 fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm-charts.tar
 `
+
 	require.Equal(t, expectedChecksum, string(b))
 }
 
