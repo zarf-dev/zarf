@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -880,20 +881,19 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 
 		// source registry reference
 		trimmed := strings.TrimPrefix(packageSource, helpers.OCIURLPrefix)
-		srcRegistry, err := registry.ParseReference(trimmed)
-
+		srcRef, err := registry.ParseReference(trimmed)
 		if err != nil {
 			return err
 		}
 
 		// Grab the package name and append it to the ref.repository to ensure package name and tag/digest match
-		srcParts := strings.Split(srcRegistry.Repository, "/")
-		srcPackageName := srcParts[len(srcParts)-1]
+		srcRepoParts := strings.Split(srcRef.Repository, "/")
+		srcPackageName := srcRepoParts[len(srcRepoParts)-1]
 
-		ref.Repository = fmt.Sprintf("%s/%s", ref.Repository, srcPackageName)
-		ref.Reference = srcRegistry.Reference
+		ref.Repository = path.Join(ref.Repository, srcPackageName)
+		ref.Reference = srcRef.Reference
 
-		return packager2.PublishFromOCI(cmd.Context(), srcRegistry, ref, ociOpts)
+		return packager2.PublishFromOCI(cmd.Context(), srcRef, ref, ociOpts)
 	}
 
 	publishPackageOpts := packager2.PublishPackageOpts{
