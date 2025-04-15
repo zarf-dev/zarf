@@ -5,6 +5,7 @@
 package pki
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -16,7 +17,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // Based off of https://github.com/dmcgowan/quicktls/blob/master/main.go
@@ -25,19 +26,32 @@ import (
 const rsaBits = 2048
 const org = "Zarf Cluster"
 
+const certExpiringSoonThreshold = 30
+
 // 13 months is the max length allowed by browsers.
 const validFor = time.Hour * 24 * 375
 
+// GeneratedPKI is a struct for storing generated PKI data.
+type GeneratedPKI struct {
+	CA   []byte `json:"ca"`
+	Cert []byte `json:"cert"`
+	Key  []byte `json:"key"`
+}
+
 // GeneratePKI create a CA and signed server keypair.
-func GeneratePKI(host string, dnsNames ...string) (types.GeneratedPKI, error) {
-	results := types.GeneratedPKI{}
+func GeneratePKI(host string, dnsNames ...string) (GeneratedPKI, error) {
+	return generatePKI(host, validFor, dnsNames...)
+}
+
+func generatePKI(host string, validFor time.Duration, dnsNames ...string) (GeneratedPKI, error) {
+	results := GeneratedPKI{}
 	ca, caKey, err := generateCA(validFor)
 	if err != nil {
-		return types.GeneratedPKI{}, fmt.Errorf("unable to generate the ephemeral CA: %w", err)
+		return GeneratedPKI{}, fmt.Errorf("unable to generate the ephemeral CA: %w", err)
 	}
 	hostCert, hostKey, err := generateCert(host, ca, caKey, validFor, dnsNames...)
 	if err != nil {
-		return types.GeneratedPKI{}, fmt.Errorf("unable to generate the cert for %s: %w", host, err)
+		return GeneratedPKI{}, fmt.Errorf("unable to generate the cert for %s: %w", host, err)
 	}
 	results.CA = pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
@@ -153,4 +167,28 @@ func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, vali
 	}
 
 	return cert, privateKey, nil
+}
+
+// CheckForExpiredCert checks if the certificate is expired
+func CheckForExpiredCert(ctx context.Context, pk GeneratedPKI) error {
+	block, _ := pem.Decode(pk.Cert)
+	if block == nil {
+		return fmt.Errorf("failed to decode pem data")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("failed to parse certificate: %w", err)
+	}
+
+	if cert.NotAfter.Before(time.Now()) {
+		return fmt.Errorf("cert is expired, run `zarf tool update-creds agent`")
+	}
+
+	thresholdTime := time.Now().Add(time.Duration(certExpiringSoonThreshold) * 24 * time.Hour)
+
+	if cert.NotAfter.Before(thresholdTime) {
+		logger.From(ctx).Warn("the Zarf agent certificate is expiring soon, please run `zarf tools update-creds` to update the certificate")
+	}
+	return nil
 }

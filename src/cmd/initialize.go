@@ -17,9 +17,11 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -102,8 +104,19 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	initPackageName := sources.GetInitPackageName()
 	pkgConfig.PkgOpts.PackageSource = initPackageName
 
+	c, err := cluster.NewCluster()
+	// The user may not have a cluster, so we can't error here
+	if err == nil {
+		// The user may not yet have Zarf state, so we can't error here
+		state, err := c.LoadZarfState(ctx)
+		if err == nil {
+			if err := pki.CheckForExpiredCert(ctx, state.AgentTLS); err != nil {
+				return err
+			}
+		}
+	}
+
 	// Try to use an init-package in the executable directory if none exist in current working directory
-	var err error
 	if pkgConfig.PkgOpts.PackageSource, err = findInitPackage(cmd.Context(), initPackageName); err != nil {
 		return err
 	}
