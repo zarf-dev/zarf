@@ -14,22 +14,22 @@ import (
 func TestCheckForExpiredCert(t *testing.T) {
 	tests := []struct {
 		name        string
-		notAfter    time.Duration
+		notAfter    time.Time
 		expectedErr string
 	}{
 		{
 			name:        "Certificate expires in 30 days (should be expiring soon)",
-			notAfter:    time.Duration(30 * 24 * time.Hour),
+			notAfter:    time.Now().Add(30 * 24 * time.Hour),
 			expectedErr: "",
 		},
 		{
 			name:        "Certificate expires in 90 days (should not be expiring soon)",
-			notAfter:    time.Duration(90 * 24 * time.Hour),
+			notAfter:    time.Now().Add(90 * 24 * time.Hour),
 			expectedErr: "",
 		},
 		{
 			name:        "Certificate starts expired",
-			notAfter:    time.Duration(-10 * time.Second),
+			notAfter:    time.Now().Add(-1 * time.Second),
 			expectedErr: "cert is expired, run `zarf tool update-creds agent`",
 		},
 	}

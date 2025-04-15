@@ -40,16 +40,17 @@ type GeneratedPKI struct {
 
 // GeneratePKI create a CA and signed server keypair.
 func GeneratePKI(host string, dnsNames ...string) (GeneratedPKI, error) {
-	return generatePKI(host, validFor, dnsNames...)
+	notAfter := time.Now().Add(validFor)
+	return generatePKI(host, notAfter, dnsNames...)
 }
 
-func generatePKI(host string, validFor time.Duration, dnsNames ...string) (GeneratedPKI, error) {
+func generatePKI(host string, notAfter time.Time, dnsNames ...string) (GeneratedPKI, error) {
 	results := GeneratedPKI{}
-	ca, caKey, err := generateCA(validFor)
+	ca, caKey, err := generateCA(notAfter)
 	if err != nil {
 		return GeneratedPKI{}, fmt.Errorf("unable to generate the ephemeral CA: %w", err)
 	}
-	hostCert, hostKey, err := generateCert(host, ca, caKey, validFor, dnsNames...)
+	hostCert, hostKey, err := generateCert(host, ca, caKey, notAfter, dnsNames...)
 	if err != nil {
 		return GeneratedPKI{}, fmt.Errorf("unable to generate the cert for %s: %w", host, err)
 	}
@@ -69,14 +70,13 @@ func generatePKI(host string, validFor time.Duration, dnsNames ...string) (Gener
 }
 
 // newCertificate creates a new template.
-func newCertificate(validFor time.Duration) (*x509.Certificate, error) {
+func newCertificate(notAfter time.Time) (*x509.Certificate, error) {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate the certificate serial number: %w", err)
 	}
 	notBefore := time.Now()
-	notAfter := notBefore.Add(validFor)
 	cert := &x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
@@ -101,8 +101,8 @@ func newPrivateKey() (*rsa.PrivateKey, error) {
 // and returns the x509 certificate and crypto private key. This
 // private key should never be saved to disk, but rather used to
 // immediately generate further certificates.
-func generateCA(validFor time.Duration) (*x509.Certificate, *rsa.PrivateKey, error) {
-	template, err := newCertificate(validFor)
+func generateCA(notAfter time.Time) (*x509.Certificate, *rsa.PrivateKey, error) {
+	template, err := newCertificate(notAfter)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -133,8 +133,8 @@ func generateCA(validFor time.Duration) (*x509.Certificate, *rsa.PrivateKey, err
 // generateCert generates a new certificate for the given host using the
 // provided certificate authority. The cert and key files are stored in
 // the provided files.
-func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, validFor time.Duration, dnsNames ...string) (*x509.Certificate, *rsa.PrivateKey, error) {
-	template, err := newCertificate(validFor)
+func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, notAfter time.Time, dnsNames ...string) (*x509.Certificate, *rsa.PrivateKey, error) {
+	template, err := newCertificate(notAfter)
 	if err != nil {
 		return nil, nil, err
 	}
