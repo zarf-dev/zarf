@@ -530,6 +530,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		SkipSignatureValidation: o.skipSignatureValidation,
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		InspectTarget:           "sbom",
 	}
 	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {

@@ -63,8 +63,19 @@ func Pull(ctx context.Context, src, dir, shasum, architecture string, filter fil
 	isPartial := false
 	switch u.Scheme {
 	case "oci":
+		ociOpts := PullOCIOptions{
+			Source:                  src,
+			Directory:               tmpDir,
+			Shasum:                  shasum,
+			Architecture:            architecture,
+			PublicKeyPath:           publicKeyPath,
+			InspectTarget:           "",
+			SkipSignatureValidation: skipSignatureValidation,
+			Filter:                  filter,
+			Modifiers:               []oci.Modifier{},
+		}
 		l.Info("starting pull from oci source", "src", src, "digest", shasum)
-		isPartial, tmpPath, err = pullOCI(ctx, src, tmpDir, shasum, architecture, filter)
+		isPartial, tmpPath, err = pullOCI(ctx, ociOpts)
 		if err != nil {
 			return err
 		}
@@ -118,27 +129,40 @@ func Pull(ctx context.Context, src, dir, shasum, architecture string, filter fil
 	return nil
 }
 
-func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture string, filter filters.ComponentFilterStrategy, mods ...oci.Modifier) (bool, string, error) {
+// PullOptions are the options for PullPackage.
+type PullOCIOptions struct {
+	Source                  string
+	Directory               string
+	Shasum                  string
+	Architecture            string
+	PublicKeyPath           string
+	InspectTarget           string
+	SkipSignatureValidation bool
+	Filter                  filters.ComponentFilterStrategy
+	Modifiers               []oci.Modifier
+}
+
+func pullOCI(ctx context.Context, opts PullOCIOptions) (bool, string, error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return false, "", err
 	}
 	defer os.Remove(tmpDir)
-	if shasum != "" {
-		src = fmt.Sprintf("%s@sha256:%s", src, shasum)
+	if opts.Shasum != "" {
+		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}
-	platform := oci.PlatformForArch(architecture)
-	remote, err := zoci.NewRemote(ctx, src, oci.PlatformForArch(architecture), mods...)
+	platform := oci.PlatformForArch(opts.Architecture)
+	remote, err := zoci.NewRemote(ctx, opts.Source, oci.PlatformForArch(opts.Architecture), opts.Modifiers...)
 	if err != nil {
 		return false, "", err
 	}
 	desc, err := remote.ResolveRoot(ctx)
 	if err != nil {
-		return false, "", fmt.Errorf("could not find package %s with architecture %s: %w", src, platform.Architecture, err)
+		return false, "", fmt.Errorf("could not find package %s with architecture %s: %w", opts.Source, platform.Architecture, err)
 	}
 	layersToPull := []ocispec.Descriptor{}
 	isPartial := false
-	tarPath := filepath.Join(tarDir, "data.tar")
+	tarPath := filepath.Join(opts.Directory, "data.tar")
 	pkg, err := remote.FetchZarfYAML(ctx)
 	if err != nil {
 		return false, "", err
@@ -154,11 +178,11 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture strin
 		if len(root.Layers) != len(layersToPull) {
 			isPartial = true
 		}
-		pkg.Components, err = filter.Apply(pkg)
+		pkg.Components, err = opts.Filter.Apply(pkg)
 		if err != nil {
 			return false, "", err
 		}
-		layersToPull, err = remote.LayersFromRequestedComponents(ctx, pkg.Components)
+		layersToPull, err = remote.LayersFromRequestedComponents(ctx, pkg.Components, opts.InspectTarget)
 		if err != nil {
 			return false, "", err
 		}

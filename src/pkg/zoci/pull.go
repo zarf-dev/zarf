@@ -77,7 +77,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.
 //
 // It also retrieves the descriptors for all image layers that are required by the components.
-func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent) ([]ocispec.Descriptor, error) {
+func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, inspectTarget string) ([]ocispec.Descriptor, error) {
 	layers := make([]ocispec.Descriptor, 0)
 
 	root, err := r.FetchRoot(ctx)
@@ -107,11 +107,13 @@ func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 	// Append the sboms.tar layer if it exists
 	//
 	// Since sboms.tar is not a heavy addition 99% of the time, we'll just always pull it
-	sbomsDescriptor := root.Locate(layout.SBOMTar)
-	if !oci.IsEmptyDescriptor(sbomsDescriptor) {
-		layers = append(layers, sbomsDescriptor)
+	if inspectTarget == "" || inspectTarget == "sbom" {
+		sbomsDescriptor := root.Locate(layout.SBOMTar)
+		if !oci.IsEmptyDescriptor(sbomsDescriptor) {
+			layers = append(layers, sbomsDescriptor)
+		}
 	}
-	if len(images) > 0 {
+	if len(images) > 0 && inspectTarget == "" {
 		// Add the image index and the oci-layout layers
 		layers = append(layers, root.Locate(layout.IndexPath), root.Locate(layout.OCILayoutPath))
 		index, err := r.FetchImagesIndex(ctx)

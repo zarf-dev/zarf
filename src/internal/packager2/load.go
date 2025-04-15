@@ -31,6 +31,7 @@ type LoadOptions struct {
 	Shasum                  string
 	Architecture            string
 	PublicKeyPath           string
+	InspectTarget           string
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
 }
@@ -56,7 +57,15 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	isPartial := false
 	switch srcType {
 	case "oci":
-		isPartial, tarPath, err = pullOCI(ctx, opt.Source, tmpDir, opt.Shasum, architecture, opt.Filter)
+		ociOpts := PullOCIOptions{
+			Source:        opt.Source,
+			Directory:     tmpDir,
+			Shasum:        opt.Shasum,
+			Architecture:  architecture,
+			Filter:        opt.Filter,
+			InspectTarget: opt.InspectTarget,
+		}
+		isPartial, tarPath, err = pullOCI(ctx, ociOpts)
 		if err != nil {
 			return nil, err
 		}
