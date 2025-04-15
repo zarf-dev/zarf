@@ -12,17 +12,38 @@ import (
 )
 
 func TestCheckForExpiredCert(t *testing.T) {
-	// Test case 1: Certificate expires in 30 days (should be expiring soon).
-	notAfterSoon := time.Duration(30 * 24 * time.Hour)
-	pki, err := generatePKI("localhost", notAfterSoon)
-	require.NoError(t, err)
-	err = CheckForExpiredCert(context.Background(), pki)
-	require.NoError(t, err)
+	tests := []struct {
+		name        string
+		notAfter    time.Duration
+		expectedErr string
+	}{
+		{
+			name:        "Certificate expires in 30 days (should be expiring soon)",
+			notAfter:    time.Duration(30 * 24 * time.Hour),
+			expectedErr: "",
+		},
+		{
+			name:        "Certificate expires in 90 days (should not be expiring soon)",
+			notAfter:    time.Duration(90 * 24 * time.Hour),
+			expectedErr: "",
+		},
+		{
+			name:        "Certificate starts expired",
+			notAfter:    time.Duration(-10 * time.Second),
+			expectedErr: "cert is expired, run `zarf tool update-creds agent`",
+		},
+	}
 
-	// Test case 2: Certificate expires in 90 days (should not be expiring soon).
-	notAfterLater := time.Duration(90 * 24 * time.Hour)
-	pki, err = generatePKI("localhost", notAfterLater)
-	require.NoError(t, err)
-	err = CheckForExpiredCert(context.Background(), pki)
-	require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pki, err := generatePKI("localhost", tt.notAfter)
+			require.NoError(t, err)
+			err = CheckForExpiredCert(context.Background(), pki)
+			if tt.expectedErr != "" {
+				require.ErrorContains(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
 }
