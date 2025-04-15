@@ -105,6 +105,14 @@ func newRegistryCommand() *cobra.Command {
 func newRegistryLoginCommand() *cobra.Command {
 	cmd := craneCmd.NewCmdAuthLogin()
 	cmd.Example = ""
+	err := cmd.MarkFlagRequired("username")
+	if err != nil {
+		logger.Default().Error("failed to mark username flag required", "error", err.Error())
+	}
+	err = cmd.MarkFlagRequired("password")
+	if err != nil {
+		logger.Default().Error("failed to mark password flag required", "error", err.Error())
+	}
 	return cmd
 }
 
