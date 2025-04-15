@@ -23,10 +23,8 @@ components:
       - name: zarf-agent
         releaseName: zarf-agent
         localPath: chart
-        version: 1.0.0
+        version: 0.51.0
         namespace: zarf
-        valuesFiles:
-          - agent-values.yaml
     actions:
       onCreate:
         before:
