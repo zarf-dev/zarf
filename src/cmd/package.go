@@ -34,6 +34,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -236,6 +237,18 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) error {
 	v := getViper()
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+
+	c, err := cluster.NewCluster()
+	// The user may not have a cluster, so we can't error here
+	if err == nil {
+		// The user may not yet have Zarf state, so we can't error here
+		state, err := c.LoadZarfState(ctx)
+		if err == nil {
+			if err := pki.CheckForExpiredCert(ctx, state.AgentTLS); err != nil {
+				return err
+			}
+		}
+	}
 
 	pkgClient, err := packager.New(&pkgConfig, packager.WithContext(cmd.Context()))
 	if err != nil {
