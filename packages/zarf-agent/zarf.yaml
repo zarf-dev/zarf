@@ -19,19 +19,14 @@ components:
     required: true
     images:
       - "###ZARF_PKG_TMPL_AGENT_IMAGE_DOMAIN######ZARF_PKG_TMPL_AGENT_IMAGE###:###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###"
-    manifests:
+    charts:
       - name: zarf-agent
+        releaseName: zarf-agent
+        localPath: chart
+        version: 1.0.0
         namespace: zarf
-        files:
-          - manifests/service.yaml
-          - manifests/secret.yaml
-          - manifests/deployment.yaml
-          - manifests/webhook.yaml
-          - manifests/role.yaml
-          - manifests/rolebinding.yaml
-          - manifests/clusterrole.yaml
-          - manifests/clusterrolebinding.yaml
-          - manifests/serviceaccount.yaml
+        valuesFiles:
+          - agent-values.yaml
     actions:
       onCreate:
         before:
