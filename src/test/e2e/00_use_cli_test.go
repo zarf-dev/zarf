@@ -166,18 +166,11 @@ func TestUseCLI(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()
 		// run `zarf package deploy` with a specified tmp location
-		var (
-			firstFile  = "first-choice-file.txt"
-			secondFile = "second-choice-file.txt"
-		)
-		t.Cleanup(func() {
-			e2e.CleanFiles(t, firstFile, secondFile)
-		})
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/component-choice", "-o", tmpdir)
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-no-components", "-o", tmpdir)
 		require.NoError(t, err, stdOut, stdErr)
-		packageName := fmt.Sprintf("zarf-package-component-choice-%s.tar.zst", e2e.Arch)
+		packageName := fmt.Sprintf("zarf-package-no-components-%s.tar.zst", e2e.Arch)
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", filepath.Join(tmpdir, packageName), "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
-		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
+		require.Contains(t, stdErr, tmpdir, "The tmp path should show as being created")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
