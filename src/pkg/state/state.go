@@ -9,13 +9,13 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/types"
 	"slices"
 )
 
 // Zarf Cluster Constants.
+// TODO(mkcp): Doccomments on each exported field
 const (
 	ZarfManagedByLabel   = "app.kubernetes.io/managed-by"
 	ZarfNamespaceName    = "zarf"
@@ -24,13 +24,58 @@ const (
 	ZarfPackageInfoLabel = "package-deploy-info"
 )
 
-// Init initializes the Zarf state with the given temporary directory and init configs.
+// Credential keys
+// TODO(mkcp): Doccomments on each exported field
+const (
+	RegistryKey     = "registry"
+	RegistryReadKey = "registry-readonly"
+	GitKey          = "git"
+	GitReadKey      = "git-readonly"
+	ArtifactKey     = "artifact"
+	AgentKey        = "agent"
+)
 
-// MergeZarfState merges init options for provided services into the provided state to create a new state struct
-func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions, services []string) (*types.ZarfState, error) {
+// State is maintained as a secret in the Zarf namespace to track Zarf init data.
+type State struct {
+	// Indicates if Zarf was initialized while deploying its own k8s cluster
+	ZarfAppliance bool `json:"zarfAppliance"`
+	// K8s distribution of the cluster Zarf was deployed to
+	Distro string `json:"distro"`
+	// Machine architecture of the k8s node(s)
+	Architecture string `json:"architecture"`
+	// Default StorageClass value Zarf uses for variable templating
+	StorageClass string `json:"storageClass"`
+	// PKI certificate information for the agent pods Zarf manages
+	AgentTLS types.GeneratedPKI `json:"agentTLS"`
+
+	// Information about the repository Zarf is configured to use
+	GitServer types.GitServerInfo `json:"gitServer"`
+	// Information about the container registry Zarf is configured to use
+	RegistryInfo types.RegistryInfo `json:"registryInfo"`
+	// Information about the artifact registry Zarf is configured to use
+	ArtifactServer types.ArtifactServerInfo `json:"artifactServer"`
+}
+
+// Default returns a default State with default values filled in for the registry, git server, and artifact server
+func Default() (*State, error) {
+	state := &State{}
+	err := state.GitServer.FillInEmptyValues()
+	if err != nil {
+		return nil, err
+	}
+	err = state.RegistryInfo.FillInEmptyValues()
+	if err != nil {
+		return nil, err
+	}
+	state.ArtifactServer.FillInEmptyValues()
+	return state, nil
+}
+
+// Merge merges init options for provided services into the provided state to create a new state struct
+func Merge(oldState *State, initOptions types.ZarfInitOptions, services []string) (*State, error) {
 	newState := *oldState
 	var err error
-	if slices.Contains(services, message.RegistryKey) {
+	if slices.Contains(services, RegistryKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, initOptions.RegistryInfo)
 
@@ -46,7 +91,7 @@ func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions
 			}
 		}
 	}
-	if slices.Contains(services, message.GitKey) {
+	if slices.Contains(services, GitKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.GitServer = helpers.MergeNonZero(newState.GitServer, initOptions.GitServer)
 
@@ -62,7 +107,7 @@ func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions
 			}
 		}
 	}
-	if slices.Contains(services, message.ArtifactKey) {
+	if slices.Contains(services, ArtifactKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, initOptions.ArtifactServer)
 
@@ -71,7 +116,7 @@ func MergeZarfState(oldState *types.ZarfState, initOptions types.ZarfInitOptions
 			newState.ArtifactServer.PushToken = ""
 		}
 	}
-	if slices.Contains(services, message.AgentKey) {
+	if slices.Contains(services, AgentKey) {
 		agentTLS, err := pki.GeneratePKI(config.ZarfAgentHost)
 		if err != nil {
 			return nil, err

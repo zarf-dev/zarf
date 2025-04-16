@@ -55,7 +55,7 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 		target = args[0]
 	}
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func newConnectListCommand() *cobra.Command {
 }
 
 func (o *connectListOptions) run(cmd *cobra.Command, _ []string) error {
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(cmd.Context())
 	if err != nil {
 		return err
 	}

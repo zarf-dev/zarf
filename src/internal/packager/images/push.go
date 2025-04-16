@@ -29,7 +29,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	l := logger.From(ctx)
 	registryURL := cfg.RegistryInfo.Address
 	var tunnel *cluster.Tunnel
-	c, _ := cluster.NewCluster()
+	c, _ := cluster.NewCluster(ctx)
 	if c != nil {
 		var err error
 		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegistryInfo)

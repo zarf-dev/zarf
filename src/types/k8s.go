@@ -45,42 +45,6 @@ type GeneratedPKI struct {
 	Key  []byte `json:"key"`
 }
 
-// ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data.
-type ZarfState struct {
-	// Indicates if Zarf was initialized while deploying its own k8s cluster
-	ZarfAppliance bool `json:"zarfAppliance"`
-	// K8s distribution of the cluster Zarf was deployed to
-	Distro string `json:"distro"`
-	// Machine architecture of the k8s node(s)
-	Architecture string `json:"architecture"`
-	// Default StorageClass value Zarf uses for variable templating
-	StorageClass string `json:"storageClass"`
-	// PKI certificate information for the agent pods Zarf manages
-	AgentTLS GeneratedPKI `json:"agentTLS"`
-
-	// Information about the repository Zarf is configured to use
-	GitServer GitServerInfo `json:"gitServer"`
-	// Information about the container registry Zarf is configured to use
-	RegistryInfo RegistryInfo `json:"registryInfo"`
-	// Information about the artifact registry Zarf is configured to use
-	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
-}
-
-// DefaultZarfState returns a default ZarfState with default values filled in for the registry, git server, and artifact server
-func DefaultZarfState() (*ZarfState, error) {
-	state := &ZarfState{}
-	err := state.GitServer.FillInEmptyValues()
-	if err != nil {
-		return nil, err
-	}
-	err = state.RegistryInfo.FillInEmptyValues()
-	if err != nil {
-		return nil, err
-	}
-	state.ArtifactServer.FillInEmptyValues()
-	return state, nil
-}
-
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {

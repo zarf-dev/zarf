@@ -126,7 +126,7 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 			_, err = c.Clientset.CoreV1().Secrets(gitSecret.ObjectMeta.Namespace).Create(ctx, gitSecret, metav1.CreateOptions{})
 			require.NoError(t, err)
 
-			s := &types.ZarfState{
+			s := &state.State{
 				GitServer: types.GitServerInfo{
 					PullUsername: "pull-user",
 					PullPassword: "pull-password",
