@@ -102,8 +102,8 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	initPackageName := sources.GetInitPackageName()
 	pkgConfig.PkgOpts.PackageSource = initPackageName
 
-	var err error
 	// Try to use an init-package in the executable directory if none exist in current working directory
+	var err error
 	if pkgConfig.PkgOpts.PackageSource, err = findInitPackage(cmd.Context(), initPackageName); err != nil {
 		return err
 	}
