@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -69,7 +70,7 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 
 	secretDockerConfig := v1ac.Secret(name, namespace).
 		WithLabels(map[string]string{
-			ZarfManagedByLabel: "zarf",
+			state.ZarfManagedByLabel: "zarf",
 		}).
 		WithType(corev1.SecretTypeDockerConfigJson).
 		WithData(map[string][]byte{
@@ -83,7 +84,7 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo types.GitServerInfo) *v1ac.SecretApplyConfiguration {
 	return v1ac.Secret(name, namespace).
 		WithLabels(map[string]string{
-			ZarfManagedByLabel: "zarf",
+			state.ZarfManagedByLabel: "zarf",
 		}).WithType(corev1.SecretTypeOpaque).
 		WithStringData(map[string]string{
 			"username": gitServerInfo.PullUsername,
@@ -92,7 +93,7 @@ func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo typ
 }
 
 // UpdateZarfManagedImageSecrets updates all Zarf-managed image secrets in all namespaces based on state
-func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *types.ZarfState) error {
+func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, s *types.ZarfState) error {
 	l := logger.From(ctx)
 
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
@@ -109,10 +110,10 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 			return err
 		}
 		// Skip if namespace is skipped and secret is not managed by Zarf.
-		if currentRegistrySecret.Labels[ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
+		if currentRegistrySecret.Labels[state.ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
 			continue
 		}
-		newRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
+		newRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, namespace.Name, config.ZarfImagePullSecretName, s.RegistryInfo)
 		if err != nil {
 			return err
 		}
@@ -127,7 +128,7 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 }
 
 // UpdateZarfManagedGitSecrets updates all Zarf-managed git secrets in all namespaces based on state
-func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.ZarfState) error {
+func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, s *types.ZarfState) error {
 	l := logger.From(ctx)
 
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
@@ -143,10 +144,10 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 			continue
 		}
 		// Skip if namespace is skipped and secret is not managed by Zarf.
-		if currentGitSecret.Labels[ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
+		if currentGitSecret.Labels[state.ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
 			continue
 		}
-		newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, state.GitServer)
+		newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, s.GitServer)
 		l.Info("applying Zarf managed git secret for namespace", "name", namespace.Name)
 		_, err = c.Clientset.CoreV1().Secrets(*newGitSecret.Namespace).Apply(ctx, newGitSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {

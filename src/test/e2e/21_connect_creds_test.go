@@ -33,7 +33,7 @@ func TestConnectAndCreds(t *testing.T) {
 	c, err := cluster.NewCluster()
 	require.NoError(t, err)
 	// Init the state variable
-	oldState, err := c.LoadZarfState(ctx)
+	oldState, err := c.LoadState(ctx)
 	require.NoError(t, err)
 
 	connectToZarfServices(ctx, t)
@@ -43,7 +43,7 @@ func TestConnectAndCreds(t *testing.T) {
 
 	newAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
-	newState, err := c.LoadZarfState(ctx)
+	newState, err := c.LoadState(ctx)
 	require.NoError(t, err)
 	require.NotEqual(t, prevAgentSecretData, newAgentSecretData)
 	require.NotEqual(t, oldState.ArtifactServer.PushToken, newState.ArtifactServer.PushToken)

@@ -6,11 +6,11 @@ package helm
 
 import (
 	"context"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"regexp"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"helm.sh/helm/v3/pkg/action"
 )
@@ -48,7 +48,7 @@ func Destroy(ctx context.Context, purgeAllZarfInstallations bool) {
 
 	// Iterate over all releases
 	for _, release := range releases {
-		if !purgeAllZarfInstallations && release.Namespace != cluster.ZarfNamespaceName {
+		if !purgeAllZarfInstallations && release.Namespace != state.ZarfNamespaceName {
 			// Don't process releases outside the zarf namespace unless purge all is true
 			continue
 		}

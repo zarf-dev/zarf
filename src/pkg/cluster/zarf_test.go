@@ -7,6 +7,7 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"strings"
 	"testing"
 
@@ -40,7 +41,7 @@ func TestGetDeployedPackage(t *testing.T) {
 				Name:      strings.Join([]string{config.ZarfPackagePrefix, p.Name}, ""),
 				Namespace: "zarf",
 				Labels: map[string]string{
-					ZarfPackageInfoLabel: p.Name,
+					state.ZarfPackageInfoLabel: p.Name,
 				},
 			},
 			Data: map[string][]byte{
@@ -59,7 +60,7 @@ func TestGetDeployedPackage(t *testing.T) {
 			Name:      "hello-world",
 			Namespace: "zarf",
 			Labels: map[string]string{
-				ZarfPackageInfoLabel: "whatever",
+				state.ZarfPackageInfoLabel: "whatever",
 			},
 		},
 	}
@@ -77,7 +78,7 @@ func TestRegistryHPA(t *testing.T) {
 	hpa := autoscalingv2.HorizontalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "zarf-docker-registry",
-			Namespace: ZarfNamespaceName,
+			Namespace: state.ZarfNamespaceName,
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 			Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
@@ -113,7 +114,7 @@ func TestInternalGitServerExists(t *testing.T) {
 	}{
 		{
 			name:          "Git server exists",
-			svc:           &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ZarfGitServerName, Namespace: ZarfNamespaceName}},
+			svc:           &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ZarfGitServerName, Namespace: state.ZarfNamespaceName}},
 			expectedExist: true,
 			expectedErr:   nil,
 		},

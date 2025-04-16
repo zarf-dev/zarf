@@ -7,6 +7,7 @@ package packager
 import (
 	"context"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -249,7 +250,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.Z
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if component.RequiresCluster() && p.state == nil {
-		err := p.cluster.InitZarfState(ctx, p.cfg.InitOpts)
+		err := p.cluster.Init(ctx, p.cfg.InitOpts)
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
 		}
@@ -477,7 +478,7 @@ func (p *Packager) setupState(ctx context.Context) error {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	l.Debug("loading the Zarf State from the Kubernetes cluster")
 
-	state, err := p.cluster.LoadZarfState(ctx)
+	state, err := p.cluster.LoadState(ctx)
 	// We ignore the error if in YOLO mode because Zarf should not be initiated.
 	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
 		return err
@@ -492,7 +493,7 @@ func (p *Packager) setupState(ctx context.Context) error {
 		state.Distro = "YOLO"
 
 		l.Info("creating the Zarf namespace")
-		zarfNamespace := cluster.NewZarfManagedApplyNamespace(cluster.ZarfNamespaceName)
+		zarfNamespace := cluster.NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
 		_, err = p.cluster.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 		if err != nil {
 			return fmt.Errorf("unable to apply the Zarf namespace: %w", err)
