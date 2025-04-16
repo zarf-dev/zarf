@@ -27,6 +27,7 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
+	Cluster                 *cluster.Cluster
 	Source                  string
 	Shasum                  string
 	Architecture            string
@@ -82,6 +83,15 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	case "tarball":
 		tarPath = opt.Source
 	default:
+		if opt.Cluster != nil {
+			depPkg, err := opt.Cluster.GetDeployedPackage(ctx, opt.Source)
+			if err != nil {
+				return nil, err
+			}
+			return &layout.PackageLayout{
+				Pkg: depPkg.Data,
+			}, nil
+		}
 		return nil, fmt.Errorf("unknown source type: %s", opt.Source)
 	}
 	if srcType != "oci" && opt.Shasum != "" {

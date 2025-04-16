@@ -152,7 +152,7 @@ func pullOCI(ctx context.Context, opts PullOCIOptions) (bool, string, error) {
 		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}
 	platform := oci.PlatformForArch(opts.Architecture)
-	remote, err := zoci.NewRemote(ctx, opts.Source, oci.PlatformForArch(opts.Architecture), opts.Modifiers...)
+	remote, err := zoci.NewRemote(ctx, opts.Source, platform, opts.Modifiers...)
 	if err != nil {
 		return false, "", err
 	}

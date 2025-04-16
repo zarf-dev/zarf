@@ -588,12 +588,23 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 	// since we don't know we don't check this error
 	cluster, _ := cluster.NewCluster() //nolint:errcheck
 
-	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
+	loadOpt := packager2.LoadOptions{
+		Cluster:                 cluster,
+		Source:                  src,
+		SkipSignatureValidation: o.skipSignatureValidation,
+		Filter:                  filters.Empty(),
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		InspectTarget:           "definition",
+	}
+	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
 	var imageList []string
-	for _, component := range pkg.Components {
+	for _, component := range pkgLayout.Pkg.Components {
 		imageList = append(imageList, component.Images...)
 	}
 	if imageList == nil {
@@ -642,11 +653,22 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 	// since we don't know we don't check this error
 	cluster, _ := cluster.NewCluster() //nolint:errcheck
 
-	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
+	loadOpt := packager2.LoadOptions{
+		Cluster:                 cluster,
+		Source:                  src,
+		SkipSignatureValidation: o.skipSignatureValidation,
+		Filter:                  filters.Empty(),
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		InspectTarget:           "definition",
+	}
+	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {
 		return err
 	}
-	err = utils.ColorPrintYAML(pkg, nil, false)
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+	err = utils.ColorPrintYAML(pkgLayout.Pkg, nil, false)
 	if err != nil {
 		return err
 	}

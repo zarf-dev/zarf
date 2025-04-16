@@ -45,7 +45,7 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 		return pkg, nil, err
 	}
 
-	layersToPull, err := s.LayersFromRequestedComponents(ctx, pkg.Components)
+	layersToPull, err := s.LayersFromRequestedComponents(ctx, pkg.Components, "")
 	if err != nil {
 		return pkg, nil, fmt.Errorf("unable to get published component image layers: %s", err.Error())
 	}
