@@ -55,7 +55,7 @@ func NewWithWait(ctx context.Context) (*Cluster, error) {
 
 // New wraps NewCluster to provide a shorthand alias.
 func New(ctx context.Context) (*Cluster, error) {
-	return New(ctx)
+	return NewCluster(ctx)
 }
 
 // NewClusterWithWait creates a new Cluster instance and waits for the given timeout for the cluster to be ready.
