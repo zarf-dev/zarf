@@ -33,6 +33,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -107,7 +108,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 	}
 	artifactServer := types.ArtifactServerInfo{}
 	artifactServer.FillInEmptyValues()
-	p.state = &types.ZarfState{
+	p.state = &state.State{
 		RegistryInfo:   registryInfo,
 		GitServer:      gitServer,
 		ArtifactServer: artifactServer,

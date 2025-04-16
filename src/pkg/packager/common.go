@@ -25,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/types"
@@ -36,7 +37,7 @@ type Packager struct {
 	ctx            context.Context
 	cfg            *types.PackagerConfig
 	variableConfig *variables.VariableConfig
-	state          *types.ZarfState
+	state          *state.State
 	cluster        *cluster.Cluster
 	layout         *layout.PackagePaths
 	hpaModified    bool
@@ -154,11 +155,11 @@ func (p *Packager) connectToCluster(ctx context.Context) error {
 		return nil
 	}
 
-	cluster, err := cluster.NewClusterWithWait(ctx)
+	c, err := cluster.NewClusterWithWait(ctx)
 	if err != nil {
 		return err
 	}
-	p.cluster = cluster
+	p.cluster = c
 
 	return p.attemptClusterChecks(ctx)
 }

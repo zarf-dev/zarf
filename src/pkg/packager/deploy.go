@@ -6,6 +6,7 @@ package packager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"net/url"
@@ -472,13 +473,13 @@ func (p *Packager) processComponentFiles(ctx context.Context, component v1alpha1
 	return nil
 }
 
-// setupState fetches the current ZarfState from the k8s cluster and sets the packager to use it
+// setupState fetches the current State from the k8s cluster and sets the packager to use it
 func (p *Packager) setupState(ctx context.Context) error {
 	l := logger.From(ctx)
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	l.Debug("loading the Zarf State from the Kubernetes cluster")
 
-	state, err := p.cluster.LoadState(ctx)
+	s, err := p.cluster.LoadState(ctx)
 	// We ignore the error if in YOLO mode because Zarf should not be initiated.
 	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
 		return err
@@ -487,10 +488,10 @@ func (p *Packager) setupState(ctx context.Context) error {
 	if err != nil && !kerrors.IsNotFound(err) && p.cfg.Pkg.Metadata.YOLO {
 		return err
 	}
-	if state == nil && p.cfg.Pkg.Metadata.YOLO {
-		state = &types.ZarfState{}
+	if s == nil && p.cfg.Pkg.Metadata.YOLO {
+		s = &state.State{}
 		// YOLO mode, so minimal state needed
-		state.Distro = "YOLO"
+		s.Distro = "YOLO"
 
 		l.Info("creating the Zarf namespace")
 		zarfNamespace := cluster.NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
@@ -499,14 +500,16 @@ func (p *Packager) setupState(ctx context.Context) error {
 			return fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
 	}
-
-	if p.cfg.Pkg.Metadata.YOLO && state.Distro != "YOLO" {
+	if s == nil {
+		return errors.New("cluster state should not be nil")
+	}
+	if p.cfg.Pkg.Metadata.YOLO && s.Distro != "YOLO" {
 		l.Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
 			"This may cause issues if the package does not exclude any charts or manifests from the Zarf Agent using " +
 			"the pod or namespace label `zarf.dev/agent: ignore'.")
 	}
 
-	p.state = state
+	p.state = s
 
 	return nil
 }

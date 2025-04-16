@@ -93,7 +93,7 @@ func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo typ
 }
 
 // UpdateZarfManagedImageSecrets updates all Zarf-managed image secrets in all namespaces based on state
-func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, s *types.ZarfState) error {
+func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, s *state.State) error {
 	l := logger.From(ctx)
 
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
@@ -128,7 +128,7 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, s *types.Za
 }
 
 // UpdateZarfManagedGitSecrets updates all Zarf-managed git secrets in all namespaces based on state
-func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, s *types.ZarfState) error {
+func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, s *state.State) error {
 	l := logger.From(ctx)
 
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})

@@ -166,7 +166,7 @@ func (c *Cluster) Init(ctx context.Context, initOptions types.ZarfInitOptions) e
 
 	// If state is nil, this is a new cluster.
 	if s == nil {
-		s = &types.ZarfState{}
+		s = &state.State{}
 		l.Debug("new cluster, no prior Zarf deployments found")
 		if initOptions.ApplianceMode {
 			// If the K3s component is being deployed, skip distro detection.
@@ -295,15 +295,15 @@ func (c *Cluster) Init(ctx context.Context, initOptions types.ZarfInitOptions) e
 	return nil
 }
 
-// LoadState returns the current zarf/zarf-state secret data or an empty ZarfState.
-func (c *Cluster) LoadState(ctx context.Context) (*types.ZarfState, error) {
+// LoadState returns the current zarf/zarf-state secret data or an empty State.
+func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 	stateErr := errors.New("failed to load the Zarf State from the cluster, has Zarf been initiated")
 	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
 
-	s := &types.ZarfState{}
+	s := &state.State{}
 	err = json.Unmarshal(secret.Data[state.ZarfStateDataKey], &s)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
@@ -312,28 +312,28 @@ func (c *Cluster) LoadState(ctx context.Context) (*types.ZarfState, error) {
 	return s, nil
 }
 
-func (c *Cluster) sanitizeZarfState(state *types.ZarfState) *types.ZarfState {
+func (c *Cluster) sanitizeZarfState(s *state.State) *state.State {
 	// Overwrite the AgentTLS information
-	state.AgentTLS.CA = []byte("**sanitized**")
-	state.AgentTLS.Cert = []byte("**sanitized**")
-	state.AgentTLS.Key = []byte("**sanitized**")
+	s.AgentTLS.CA = []byte("**sanitized**")
+	s.AgentTLS.Cert = []byte("**sanitized**")
+	s.AgentTLS.Key = []byte("**sanitized**")
 
 	// Overwrite the GitServer passwords
-	state.GitServer.PushPassword = "**sanitized**"
-	state.GitServer.PullPassword = "**sanitized**"
+	s.GitServer.PushPassword = "**sanitized**"
+	s.GitServer.PullPassword = "**sanitized**"
 
 	// Overwrite the RegistryInfo passwords
-	state.RegistryInfo.PushPassword = "**sanitized**"
-	state.RegistryInfo.PullPassword = "**sanitized**"
-	state.RegistryInfo.Secret = "**sanitized**"
+	s.RegistryInfo.PushPassword = "**sanitized**"
+	s.RegistryInfo.PullPassword = "**sanitized**"
+	s.RegistryInfo.Secret = "**sanitized**"
 
 	// Overwrite the ArtifactServer secret
-	state.ArtifactServer.PushToken = "**sanitized**"
+	s.ArtifactServer.PushToken = "**sanitized**"
 
-	return state
+	return s
 }
 
-func (c *Cluster) debugPrintZarfState(ctx context.Context, state *types.ZarfState) {
+func (c *Cluster) debugPrintZarfState(ctx context.Context, state *state.State) {
 	if state == nil {
 		return
 	}
@@ -344,7 +344,7 @@ func (c *Cluster) debugPrintZarfState(ctx context.Context, state *types.ZarfStat
 }
 
 // SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.
-func (c *Cluster) SaveZarfState(ctx context.Context, s *types.ZarfState) error {
+func (c *Cluster) SaveZarfState(ctx context.Context, s *state.State) error {
 	c.debugPrintZarfState(ctx, s)
 
 	data, err := json.Marshal(&s)
