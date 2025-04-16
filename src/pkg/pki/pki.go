@@ -26,7 +26,7 @@ import (
 const rsaBits = 2048
 const org = "Zarf Cluster"
 
-const certExpiringSoonThreshold = 60
+const certExpiringSoonThreshold = time.Hour * 24 * 60
 
 // 13 months is the max length allowed by browsers.
 const validFor = time.Hour * 24 * 375
@@ -185,7 +185,7 @@ func CheckForExpiredCert(ctx context.Context, pk GeneratedPKI) error {
 		return fmt.Errorf("cert is expired, run `zarf tool update-creds agent`")
 	}
 
-	thresholdTime := time.Now().Add(time.Duration(certExpiringSoonThreshold) * 24 * time.Hour)
+	thresholdTime := time.Now().Add(certExpiringSoonThreshold)
 
 	if cert.NotAfter.Before(thresholdTime) {
 		logger.From(ctx).Warn("the Zarf agent certificate is expiring soon, please run `zarf tools update-creds` to update the certificate")
