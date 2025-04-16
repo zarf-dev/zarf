@@ -191,7 +191,7 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) error {
 
 	state, err := p.cluster.LoadZarfState(ctx)
 	// don't return the err here as state may not be already set up here
-	if err == nil && !p.cfg.Pkg.Metadata.YOLO {
+	if err == nil {
 		if err := pki.CheckForExpiredCert(ctx, state.AgentTLS); err != nil {
 			return err
 		}
