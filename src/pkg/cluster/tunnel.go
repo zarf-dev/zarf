@@ -7,6 +7,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"io"
 	"net/http"
 	"net/url"
@@ -85,7 +86,7 @@ func (c *Cluster) ListConnections(ctx context.Context) (types.ConnectStrings, er
 // NewTargetTunnelInfo returns a new TunnelInfo object for the specified target.
 func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (TunnelInfo, error) {
 	zt := TunnelInfo{
-		Namespace:    ZarfNamespaceName,
+		Namespace:    state.ZarfNamespaceName,
 		ResourceType: SvcResource,
 	}
 
@@ -150,7 +151,7 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 	var tunnel *Tunnel
 	if registryInfo.IsInternal() {
 		// Establish a registry tunnel to send the images to the zarf registry
-		if tunnel, err = c.NewTunnel(ZarfNamespaceName, SvcResource, ZarfRegistryName, "", 0, ZarfRegistryPort); err != nil {
+		if tunnel, err = c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfRegistryName, "", 0, ZarfRegistryPort); err != nil {
 			return "", tunnel, err
 		}
 	} else if dns.IsServiceURL(registryInfo.Address) {

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"os"
 	"path/filepath"
 	"testing"
@@ -75,11 +76,11 @@ func TestGetCreds(t *testing.T) {
 			require.NoError(t, err)
 			secret := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      cluster.ZarfStateSecretName,
-					Namespace: cluster.ZarfNamespaceName,
+					Name:      state.ZarfStateSecretName,
+					Namespace: state.ZarfNamespaceName,
 				},
 				Data: map[string][]byte{
-					cluster.ZarfStateDataKey: b,
+					state.ZarfStateDataKey: b,
 				},
 			}
 			_, err = c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &secret, metav1.CreateOptions{})

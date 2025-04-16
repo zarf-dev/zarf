@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -38,14 +39,14 @@ func createTestClientWithZarfState(ctx context.Context, t *testing.T, state *typ
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.ZarfStateSecretName,
-			Namespace: cluster.ZarfNamespaceName,
+			Name:      state.ZarfStateSecretName,
+			Namespace: state.ZarfNamespaceName,
 		},
 		Data: map[string][]byte{
-			cluster.ZarfStateDataKey: stateData,
+			state.ZarfStateDataKey: stateData,
 		},
 	}
-	_, err = c.Clientset.CoreV1().Secrets(cluster.ZarfNamespaceName).Create(ctx, secret, metav1.CreateOptions{})
+	_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 	return c
 }

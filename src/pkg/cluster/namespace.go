@@ -7,6 +7,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -24,7 +25,7 @@ func (c *Cluster) DeleteZarfNamespace(ctx context.Context) error {
 	l := logger.From(ctx)
 	l.Info("deleting the zarf namespace from this cluster")
 
-	err := c.Clientset.CoreV1().Namespaces().Delete(ctx, ZarfNamespaceName, metav1.DeleteOptions{})
+	err := c.Clientset.CoreV1().Namespaces().Delete(ctx, state.ZarfNamespaceName, metav1.DeleteOptions{})
 	if kerrors.IsNotFound(err) {
 		return nil
 	}
@@ -32,7 +33,7 @@ func (c *Cluster) DeleteZarfNamespace(ctx context.Context) error {
 		return err
 	}
 	err = retry.Do(func() error {
-		_, err := c.Clientset.CoreV1().Namespaces().Get(ctx, ZarfNamespaceName, metav1.GetOptions{})
+		_, err := c.Clientset.CoreV1().Namespaces().Get(ctx, state.ZarfNamespaceName, metav1.GetOptions{})
 		if kerrors.IsNotFound(err) {
 			return nil
 		}
@@ -74,6 +75,6 @@ func AdoptZarfManagedLabels(labels map[string]string) map[string]string {
 	if labels == nil {
 		labels = make(map[string]string)
 	}
-	labels[ZarfManagedByLabel] = "zarf"
+	labels[state.ZarfManagedByLabel] = "zarf"
 	return labels
 }

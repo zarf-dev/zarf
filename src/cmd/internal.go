@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"os"
 	"path/filepath"
 	"strings"
@@ -234,11 +235,11 @@ func (o *internalCreateReadOnlyGiteaUserOptions) run(cmd *cobra.Command, _ []str
 	if err != nil {
 		return err
 	}
-	state, err := c.LoadZarfState(cmd.Context())
+	state, err := c.LoadState(cmd.Context())
 	if err != nil {
 		return err
 	}
-	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 	if err != nil {
 		return err
 	}
@@ -288,14 +289,14 @@ func (o *internalCreateArtifactRegistryTokenOptions) run(cmd *cobra.Command, _ [
 		return err
 	}
 	ctx := cmd.Context()
-	state, err := c.LoadZarfState(ctx)
+	state, err := c.LoadState(ctx)
 	if err != nil {
 		return err
 	}
 
 	// If we are setup to use an internal artifact server, create the artifact registry token
 	if state.ArtifactServer.IsInternal() {
-		tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+		tunnel, err := c.NewTunnel(state.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 		if err != nil {
 			return err
 		}

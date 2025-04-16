@@ -24,7 +24,7 @@ import (
 func ProxyHandler(ctx context.Context, cluster *cluster.Cluster) http.HandlerFunc {
 	l := logger.From(ctx)
 	return func(w http.ResponseWriter, r *http.Request) {
-		state, err := cluster.LoadZarfState(r.Context())
+		state, err := cluster.LoadState(r.Context())
 		if err != nil {
 			l.Debug(err.Error())
 			w.WriteHeader(http.StatusInternalServerError)

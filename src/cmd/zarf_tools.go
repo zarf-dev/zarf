@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"io"
 	"os"
 	"slices"
@@ -102,7 +103,7 @@ func (o *getCredsOptions) complete(ctx context.Context) error {
 }
 
 func (o *getCredsOptions) run(ctx context.Context, args []string) error {
-	state, err := o.cluster.LoadZarfState(ctx)
+	state, err := o.cluster.LoadState(ctx)
 	if err != nil {
 		return err
 	}
@@ -292,7 +293,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	oldState, err := c.LoadZarfState(ctx)
+	oldState, err := c.LoadState(ctx)
 	if err != nil {
 		return err
 	}
@@ -300,7 +301,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	if oldState.Distro == "" {
 		return errors.New("zarf state secret did not load properly")
 	}
-	newState, err := cluster.MergeZarfState(oldState, updateCredsInitOpts, args)
+	newState, err := state.MergeZarfState(oldState, updateCredsInitOpts, args)
 	if err != nil {
 		return fmt.Errorf("unable to update Zarf credentials: %w", err)
 	}

@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"os"
 	"path/filepath"
 	"strings"
@@ -97,7 +98,7 @@ func TestPackageList(t *testing.T) {
 						Name:      strings.Join([]string{config.ZarfPackagePrefix, p.Name}, ""),
 						Namespace: "zarf",
 						Labels: map[string]string{
-							cluster.ZarfPackageInfoLabel: p.Name,
+							state.ZarfPackageInfoLabel: p.Name,
 						},
 					},
 					Data: map[string][]byte{

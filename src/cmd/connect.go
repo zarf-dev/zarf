@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 
 	"github.com/spf13/cobra"
 
@@ -33,7 +34,7 @@ func newConnectCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.zt.ResourceName, "name", "", lang.CmdConnectFlagName)
-	cmd.Flags().StringVar(&o.zt.Namespace, "namespace", cluster.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
+	cmd.Flags().StringVar(&o.zt.Namespace, "namespace", state.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
 	cmd.Flags().StringVar(&o.zt.ResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
 	cmd.Flags().IntVar(&o.zt.LocalPort, "local-port", 0, lang.CmdConnectFlagLocalPort)
 	cmd.Flags().IntVar(&o.zt.RemotePort, "remote-port", 0, lang.CmdConnectFlagRemotePort)
