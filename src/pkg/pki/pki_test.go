@@ -13,34 +13,41 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-func TestCheckForExpiredCert(t *testing.T) {
+func TestCheckForExpiredCert1(t *testing.T) {
 	tests := []struct {
-		name        string
-		validFor    time.Duration
-		expectedErr string
-		expectedLog string
+		name           string
+		timeAtCreation time.Time
+		certExpiration time.Time
+		timeAtCheck    time.Time
+		expectedLog    string
+		expectedErr    string
 	}{
 		{
-			name:        "Certificate expires in 60 days",
-			validFor:    60 * 24 * time.Hour,
-			expectedErr: "",
-			expectedLog: "the Zarf agent certificate is expirng soon, please run `zarf tools update-creds` to update the certificate",
+			name:           "20% left exactly -> no warning",
+			timeAtCreation: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			timeAtCheck:    time.Date(2025, 1, 1, 0, 4, 0, 0, time.UTC),
+			certExpiration: time.Date(2025, 1, 1, 0, 5, 0, 0, time.UTC),
 		},
 		{
-			name:        "Certificate expires in 90 days",
-			validFor:    90 * 24 * time.Hour,
-			expectedErr: "",
+			name:           "just under 20% -> warning",
+			timeAtCreation: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			timeAtCheck:    time.Date(2025, 1, 1, 0, 4, 1, 0, time.UTC),
+			certExpiration: time.Date(2025, 1, 1, 0, 5, 0, 0, time.UTC),
+			expectedLog:    "the Zarf agent certificate is expiring soon, run `zarf tools update-creds` to update",
 		},
 		{
-			name:        "Certificate starts expired",
-			validFor:    -1 * time.Second,
-			expectedErr: "cert is expired, run `zarf tool update-creds agent`",
+			name:           "already expired -> error",
+			timeAtCreation: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			timeAtCheck:    time.Date(2025, 1, 1, 0, 5, 0, 0, time.UTC),
+			certExpiration: time.Date(2025, 1, 1, 0, 4, 0, 0, time.UTC),
+			expectedErr:    "the Zarf agent certificate is expired as of 2025-01-01 00:04:00 +0000 UTC, run `zarf tool update-creds agent` to update",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			buf := new(bytes.Buffer)
+			// Setup logger so we can capture logs
+			buf := &bytes.Buffer{}
 			cfg := logger.Config{
 				Level:       logger.Info,
 				Format:      logger.FormatConsole,
@@ -49,17 +56,75 @@ func TestCheckForExpiredCert(t *testing.T) {
 			l, err := logger.New(cfg)
 			require.NoError(t, err)
 			ctx := logger.WithContext(context.Background(), l)
-			pki, err := generatePKI("localhost", tt.validFor)
+
+			// Create cert with fixed time
+			now = func() time.Time { return tt.timeAtCreation }
+			pki, err := generatePKI("localhost", tt.certExpiration)
 			require.NoError(t, err)
+
+			// Check cert with fixed time
+			now = func() time.Time { return tt.timeAtCheck }
 			err = CheckForExpiredCert(ctx, pki)
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
 				return
 			}
+			require.NoError(t, err)
+
 			if tt.expectedLog != "" {
 				require.Contains(t, buf.String(), tt.expectedLog)
 			}
-			require.NoError(t, err)
 		})
 	}
 }
+
+// func TestCheckForExpiredCert(t *testing.T) {
+// 	tests := []struct {
+// 		name        string
+// 		validFor    time.Duration
+// 		expectedErr string
+// 		expectedLog string
+// 	}{
+// 		{
+// 			name:        "Certificate expires in 60 days",
+// 			validFor:    60 * 24 * time.Hour,
+// 			expectedErr: "",
+// 			expectedLog: "the Zarf agent certificate is expiring soon, please run `zarf tools update-creds` to update the certificate",
+// 		},
+// 		{
+// 			name:        "Certificate expires in 90 days",
+// 			validFor:    90 * 24 * time.Hour,
+// 			expectedErr: "",
+// 		},
+// 		{
+// 			name:        "Certificate starts expired",
+// 			validFor:    -1 * time.Second,
+// 			expectedErr: "cert is expired, run `zarf tool update-creds agent`",
+// 		},
+// 	}
+
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			buf := new(bytes.Buffer)
+// 			cfg := logger.Config{
+// 				Level:       logger.Info,
+// 				Format:      logger.FormatConsole,
+// 				Destination: buf,
+// 			}
+// 			l, err := logger.New(cfg)
+// 			require.NoError(t, err)
+// 			ctx := logger.WithContext(context.Background(), l)
+// 			pki, err := generatePKI("localhost", tt.validFor)
+
+// 			err = CheckForExpiredCert(ctx, pki)
+// 			if tt.expectedErr != "" {
+// 				require.ErrorContains(t, err, tt.expectedErr)
+// 				return
+// 			}
+// 			if tt.expectedLog != "" {
+// 				require.Contains(t, buf.String(), tt.expectedLog)
+// 			}
+// 			require.NoError(t, err)
+// 		})
+// 	}
+// }

@@ -26,11 +26,11 @@ import (
 const rsaBits = 2048
 const org = "Zarf Cluster"
 
-// Consider a cert expiring soon when it has less than 20% left
-const certExpiringSoonThreshold = time.Duration(float64(validFor) * 0.2)
-
 // 13 months is the max length allowed by browsers.
 const validFor = time.Hour * 24 * 375
+
+// provides a simple way to mock time.Now() in tests
+var now = time.Now
 
 // GeneratedPKI is a struct for storing generated PKI data.
 type GeneratedPKI struct {
@@ -41,16 +41,17 @@ type GeneratedPKI struct {
 
 // GeneratePKI create a CA and signed server keypair.
 func GeneratePKI(host string, dnsNames ...string) (GeneratedPKI, error) {
-	return generatePKI(host, validFor, dnsNames...)
+	notAfter := now().Add(validFor)
+	return generatePKI(host, notAfter, dnsNames...)
 }
 
-func generatePKI(host string, validFor time.Duration, dnsNames ...string) (GeneratedPKI, error) {
+func generatePKI(host string, notAfter time.Time, dnsNames ...string) (GeneratedPKI, error) {
 	results := GeneratedPKI{}
-	ca, caKey, err := generateCA(validFor)
+	ca, caKey, err := generateCA(notAfter)
 	if err != nil {
 		return GeneratedPKI{}, fmt.Errorf("unable to generate the ephemeral CA: %w", err)
 	}
-	hostCert, hostKey, err := generateCert(host, ca, caKey, validFor, dnsNames...)
+	hostCert, hostKey, err := generateCert(host, ca, caKey, notAfter, dnsNames...)
 	if err != nil {
 		return GeneratedPKI{}, fmt.Errorf("unable to generate the cert for %s: %w", host, err)
 	}
@@ -70,14 +71,13 @@ func generatePKI(host string, validFor time.Duration, dnsNames ...string) (Gener
 }
 
 // newCertificate creates a new template.
-func newCertificate(validFor time.Duration) (*x509.Certificate, error) {
+func newCertificate(notAfter time.Time) (*x509.Certificate, error) {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate the certificate serial number: %w", err)
 	}
-	notBefore := time.Now()
-	notAfter := time.Now().Add(validFor)
+	notBefore := now()
 	cert := &x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
@@ -102,8 +102,8 @@ func newPrivateKey() (*rsa.PrivateKey, error) {
 // and returns the x509 certificate and crypto private key. This
 // private key should never be saved to disk, but rather used to
 // immediately generate further certificates.
-func generateCA(validFor time.Duration) (*x509.Certificate, *rsa.PrivateKey, error) {
-	template, err := newCertificate(validFor)
+func generateCA(notAfter time.Time) (*x509.Certificate, *rsa.PrivateKey, error) {
+	template, err := newCertificate(notAfter)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -134,8 +134,8 @@ func generateCA(validFor time.Duration) (*x509.Certificate, *rsa.PrivateKey, err
 // generateCert generates a new certificate for the given host using the
 // provided certificate authority. The cert and key files are stored in
 // the provided files.
-func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, validFor time.Duration, dnsNames ...string) (*x509.Certificate, *rsa.PrivateKey, error) {
-	template, err := newCertificate(validFor)
+func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, notAfter time.Time, dnsNames ...string) (*x509.Certificate, *rsa.PrivateKey, error) {
+	template, err := newCertificate(notAfter)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -173,7 +173,7 @@ func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, vali
 // CheckForExpiredCert checks if the certificate is expired
 func CheckForExpiredCert(ctx context.Context, pk GeneratedPKI) error {
 	block, _ := pem.Decode(pk.Cert)
-	if block == nil || block.Type != "CERTIFICATE" {
+	if block == nil {
 		return fmt.Errorf("failed to decode pem data")
 	}
 
@@ -182,14 +182,16 @@ func CheckForExpiredCert(ctx context.Context, pk GeneratedPKI) error {
 		return fmt.Errorf("failed to parse certificate: %w", err)
 	}
 
-	if cert.NotAfter.Before(time.Now()) {
-		return fmt.Errorf("the Zarf agent certificate is expired as of %s, run `zarf tool update-creds agent`", cert.NotAfter)
+	if cert.NotAfter.Before(now()) {
+		return fmt.Errorf("the Zarf agent certificate is expired as of %s, run `zarf tool update-creds agent` to update", cert.NotAfter)
 	}
 
-	thresholdTime := time.Now().Add(certExpiringSoonThreshold)
+	remainingTime := cert.NotAfter.Sub(now())
+	totalTime := cert.NotAfter.Sub(cert.NotBefore)
+	certHas20PercentRemainingTime := (float64(remainingTime) / float64(totalTime)) > 0.2
 
-	if cert.NotAfter.Before(thresholdTime) {
-		logger.From(ctx).Warn("the Zarf agent certificate is expiring soon, run `zarf tools update-creds` to update the certificate", "expiration", cert.NotAfter)
+	if !certHas20PercentRemainingTime {
+		logger.From(ctx).Warn("the Zarf agent certificate is expiring soon, run `zarf tools update-creds` to update")
 	}
 	return nil
 }
