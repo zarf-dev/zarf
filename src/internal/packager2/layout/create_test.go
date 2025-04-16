@@ -232,11 +232,6 @@ func TestLoadPackageWithFlavors(t *testing.T) {
 		expectedErr string
 	}{
 		{
-			name:        "inputting a flavor that does not exist should error",
-			flavor:      "non-existent-flavor",
-			expectedErr: "could not find flavor non-existent-flavor in package definition",
-		},
-		{
 			name:        "when all components have a flavor, inputting no flavor should error",
 			flavor:      "",
 			expectedErr: fmt.Sprintf("package validation failed: %s", lint.PkgValidateErrNoComponents),
@@ -267,6 +262,62 @@ func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 	path := filepath.Join(dir, ZarfYAML)
 	err = os.WriteFile(path, b, 0700)
 	require.NoError(t, err)
+}
+
+func TestCheckIfFlavorIsUsed(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		pkg      v1alpha1.ZarfPackage
+		flavor   string
+		expected bool
+	}{
+		{
+			name: "when flavor is not set",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "do-nothing",
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "when flavor is not used",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "do-nothing",
+					},
+				},
+			},
+			flavor:   "cashew",
+			expected: false,
+		},
+		{
+			name: "when flavor is used",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "do-nothing",
+						Only: v1alpha1.ZarfComponentOnlyTarget{
+							Flavor: "cashew",
+						},
+					},
+				},
+			},
+			flavor:   "cashew",
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, packageUsesFlavor(tt.pkg, tt.flavor))
+		})
+	}
 }
 
 func TestGetSBOM(t *testing.T) {
