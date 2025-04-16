@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -184,6 +185,14 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) error {
 		// Use the build version instead of the metadata since this will support older Zarf versions
 		err := deprecated.PrintBreakingChanges(os.Stderr, existingInitPackage.Data.Build.Version, config.CLIVersion)
 		if err != nil {
+			return err
+		}
+	}
+
+	state, err := p.cluster.LoadZarfState(ctx)
+	// don't return the err here as state may not be already set up here
+	if err == nil && !p.cfg.Pkg.Metadata.YOLO {
+		if err := pki.CheckForExpiredCert(ctx, state.AgentTLS); err != nil {
 			return err
 		}
 	}
