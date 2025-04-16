@@ -14,29 +14,29 @@ import (
 func TestCheckForExpiredCert(t *testing.T) {
 	tests := []struct {
 		name        string
-		notAfter    time.Time
+		validFor    time.Duration
 		expectedErr string
 	}{
 		{
 			name:        "Certificate expires in 30 days (should be expiring soon)",
-			notAfter:    time.Now().Add(30 * 24 * time.Hour),
+			validFor:    30 * 24 * time.Hour,
 			expectedErr: "",
 		},
 		{
 			name:        "Certificate expires in 90 days (should not be expiring soon)",
-			notAfter:    time.Now().Add(90 * 24 * time.Hour),
+			validFor:    90 * 24 * time.Hour,
 			expectedErr: "",
 		},
 		{
 			name:        "Certificate starts expired",
-			notAfter:    time.Now().Add(-1 * time.Second),
+			validFor:    -1 * time.Second,
 			expectedErr: "cert is expired, run `zarf tool update-creds agent`",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pki, err := generatePKI("localhost", tt.notAfter)
+			pki, err := generatePKI("localhost", tt.validFor)
 			require.NoError(t, err)
 			err = CheckForExpiredCert(context.Background(), pki)
 			if tt.expectedErr != "" {
