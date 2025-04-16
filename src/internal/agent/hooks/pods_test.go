@@ -6,6 +6,7 @@ package hooks
 import (
 	"context"
 	"encoding/json"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"net/http"
 	"testing"
 
@@ -38,8 +39,8 @@ func TestPodMutationWebhook(t *testing.T) {
 
 	ctx := context.Background()
 
-	state := &types.ZarfState{RegistryInfo: types.RegistryInfo{Address: "127.0.0.1:31999"}}
-	c := createTestClientWithZarfState(ctx, t, state)
+	s := &state.State{RegistryInfo: types.RegistryInfo{Address: "127.0.0.1:31999"}}
+	c := createTestClientWithZarfState(ctx, t, s)
 	handler := admission.NewHandler().Serve(ctx, NewPodMutationHook(ctx, c))
 
 	tests := []admissionTest{

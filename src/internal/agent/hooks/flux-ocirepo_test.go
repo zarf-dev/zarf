@@ -6,6 +6,7 @@ package hooks
 import (
 	"context"
 	"encoding/json"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"net/http"
 	"testing"
 
@@ -169,7 +170,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
-			name: "should not mutate URL if it has the same hostname as Zarf state",
+			name: "should not mutate URL if it has the same hostname as Zarf s",
 			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Update, &flux.OCIRepository{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "mutate-this",
@@ -204,7 +205,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
-			name: "should not mutate URL if it has the same hostname as Zarf state internal repo",
+			name: "should not mutate URL if it has the same hostname as Zarf s internal repo",
 			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Update, &flux.OCIRepository{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "mutate-this",
@@ -257,12 +258,12 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	state := &types.ZarfState{RegistryInfo: types.RegistryInfo{Address: "127.0.0.1:31999"}}
+	s := &state.State{RegistryInfo: types.RegistryInfo{Address: "127.0.0.1:31999"}}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			c := createTestClientWithZarfState(ctx, t, state)
+			c := createTestClientWithZarfState(ctx, t, s)
 			handler := admission.NewHandler().Serve(ctx, NewOCIRepositoryMutationHook(ctx, c))
 			if tt.svc != nil {
 				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})

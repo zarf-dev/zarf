@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,10 +30,10 @@ type admissionTest struct {
 	svc          *corev1.Service
 }
 
-func createTestClientWithZarfState(ctx context.Context, t *testing.T, state *types.ZarfState) *cluster.Cluster {
+func createTestClientWithZarfState(ctx context.Context, t *testing.T, s *state.State) *cluster.Cluster {
 	t.Helper()
 	c := &cluster.Cluster{Clientset: fake.NewClientset()}
-	stateData, err := json.Marshal(state)
+	stateData, err := json.Marshal(s)
 	require.NoError(t, err)
 
 	secret := &corev1.Secret{

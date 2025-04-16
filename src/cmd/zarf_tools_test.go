@@ -48,7 +48,7 @@ func TestGetCreds(t *testing.T) {
 				Clientset: fake.NewClientset(),
 			}
 
-			state := &types.ZarfState{
+			s := &state.State{
 				GitServer: types.GitServerInfo{
 					Address:      "https://git-server.com",
 					PushUsername: "push-user",
@@ -72,7 +72,7 @@ func TestGetCreds(t *testing.T) {
 				Distro: "test",
 			}
 
-			b, err := json.Marshal(state)
+			b, err := json.Marshal(s)
 			require.NoError(t, err)
 			secret := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
