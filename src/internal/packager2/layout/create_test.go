@@ -264,7 +264,7 @@ func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 	require.NoError(t, err)
 }
 
-func TestCheckIfFlavorIsUsed(t *testing.T) {
+func TestPackageUsesFlavor(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
