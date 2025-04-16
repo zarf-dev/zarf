@@ -47,7 +47,7 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		isUpdate = r.Operation == v1.Update
 	)
 
-	state, err := cluster.LoadZarfState(ctx)
+	state, err := cluster.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}

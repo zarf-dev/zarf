@@ -7,6 +7,7 @@ package helm
 import (
 	"context"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"time"
 
 	"helm.sh/helm/v3/pkg/action"
@@ -18,7 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -72,7 +72,7 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOpts) erro
 func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOpts) error {
 	l := logger.From(ctx)
 
-	deployment, err := opts.Cluster.Clientset.AppsV1().Deployments(cluster.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
+	deployment, err := opts.Cluster.Clientset.AppsV1().Deployments(state.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOpts) error {
 		return err
 	}
 
-	actionConfig, err := createActionConfig(ctx, cluster.ZarfNamespaceName)
+	actionConfig, err := createActionConfig(ctx, state.ZarfNamespaceName)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOpts) error {
 
 	// Re-fetch the agent deployment before we update since the resourceVersion has changed after updating the Helm release values.
 	// Avoids this error: https://github.com/kubernetes/kubernetes/issues/28149
-	deployment, err = opts.Cluster.Clientset.AppsV1().Deployments(cluster.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
+	deployment, err = opts.Cluster.Clientset.AppsV1().Deployments(state.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOpts) error {
 		deployment.Spec.Template.Annotations = map[string]string{}
 	}
 	deployment.Spec.Template.Annotations["zarf.dev/restartedAt"] = time.Now().UTC().Format(time.RFC3339)
-	_, err = opts.Cluster.Clientset.AppsV1().Deployments(cluster.ZarfNamespaceName).Update(ctx, deployment, metav1.UpdateOptions{})
+	_, err = opts.Cluster.Clientset.AppsV1().Deployments(state.ZarfNamespaceName).Update(ctx, deployment, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -148,7 +148,7 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOpts) error {
 				Group: "apps",
 				Kind:  "Deployment",
 			},
-			Namespace: cluster.ZarfNamespaceName,
+			Namespace: state.ZarfNamespaceName,
 			Name:      "agent-hook",
 		},
 	}

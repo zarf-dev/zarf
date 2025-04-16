@@ -53,7 +53,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	isUpdate := r.Operation == v1.Update
 	var isPatched bool
 
-	state, err := cluster.LoadZarfState(ctx)
+	state, err := cluster.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}

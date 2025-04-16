@@ -25,15 +25,15 @@ type RegistryResponse struct {
 
 func TestConnectAndCreds(t *testing.T) {
 	t.Log("E2E: Connect")
-	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
+	ctx := logger.WithContext(t.Context(), test.GetLogger(t))
 
 	prevAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	require.NoError(t, err)
 	// Init the state variable
-	oldState, err := c.LoadZarfState(ctx)
+	oldState, err := c.LoadState(ctx)
 	require.NoError(t, err)
 
 	connectToZarfServices(ctx, t)
@@ -43,7 +43,7 @@ func TestConnectAndCreds(t *testing.T) {
 
 	newAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
-	newState, err := c.LoadZarfState(ctx)
+	newState, err := c.LoadState(ctx)
 	require.NoError(t, err)
 	require.NotEqual(t, prevAgentSecretData, newAgentSecretData)
 	require.NotEqual(t, oldState.ArtifactServer.PushToken, newState.ArtifactServer.PushToken)
@@ -55,7 +55,7 @@ func TestConnectAndCreds(t *testing.T) {
 func TestMetrics(t *testing.T) {
 	t.Log("E2E: Emits metrics")
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(t.Context())
 	require.NoError(t, err)
 
 	tunnel, err := c.NewTunnel("zarf", "svc", "agent-hook", "", 8888, 8443)
@@ -117,7 +117,7 @@ func connectToZarfServices(ctx context.Context, t *testing.T) {
 	gitArtifactToken := strings.TrimSpace(stdOut)
 
 	// Connect to Gitea
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	require.NoError(t, err)
 	tunnelGit, err := c.Connect(ctx, cluster.ZarfGit)
 	require.NoError(t, err)

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"slices"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -35,7 +36,7 @@ type renderer struct {
 	adoptExistingResources bool
 	cluster                *cluster.Cluster
 	skipSecretUpdates      bool
-	state                  *types.ZarfState
+	state                  *state.State
 	actionConfig           *action.Configuration
 	variableConfig         *variables.VariableConfig
 
@@ -43,7 +44,7 @@ type renderer struct {
 	namespaces     map[string]*corev1.Namespace
 }
 
-func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, airgapMode bool, state *types.ZarfState,
+func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, airgapMode bool, s *state.State,
 	actionConfig *action.Configuration, variableConfig *variables.VariableConfig) (*renderer, error) {
 	if c == nil {
 		return nil, fmt.Errorf("cluster required to run post renderer")
@@ -54,13 +55,13 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 	if variableConfig == nil {
 		return nil, fmt.Errorf("variable configuration required to run post renderer")
 	}
-	skipSecretUpdates := !airgapMode && state.Distro == "YOLO"
+	skipSecretUpdates := !airgapMode && s.Distro == "YOLO"
 	rend := &renderer{
 		chart:                  chart,
 		adoptExistingResources: adoptExistingResources,
 		cluster:                c,
 		skipSecretUpdates:      skipSecretUpdates,
-		state:                  state,
+		state:                  s,
 		actionConfig:           actionConfig,
 		variableConfig:         variableConfig,
 		connectStrings:         types.ConnectStrings{},

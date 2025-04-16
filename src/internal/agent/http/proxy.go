@@ -16,23 +16,23 @@ import (
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ProxyHandler constructs a new httputil.ReverseProxy and returns an http handler.
 func ProxyHandler(ctx context.Context, cluster *cluster.Cluster) http.HandlerFunc {
 	l := logger.From(ctx)
 	return func(w http.ResponseWriter, r *http.Request) {
-		state, err := cluster.LoadZarfState(r.Context())
+		s, err := cluster.LoadState(r.Context())
 		if err != nil {
 			l.Debug(err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			//nolint: errcheck // ignore
-			w.Write([]byte("unable to load Zarf state, see the Zarf HTTP proxy logs for more details"))
+			w.Write([]byte("unable to load Zarf s, see the Zarf HTTP proxy logs for more details"))
 			return
 		}
-		err = proxyRequestTransform(r, state)
+		err = proxyRequestTransform(r, s)
 		if err != nil {
 			l.Debug(err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
@@ -45,7 +45,7 @@ func ProxyHandler(ctx context.Context, cluster *cluster.Cluster) http.HandlerFun
 	}
 }
 
-func proxyRequestTransform(r *http.Request, state *types.ZarfState) error {
+func proxyRequestTransform(r *http.Request, s *state.State) error {
 	// We add this so that we can use it to rewrite urls in the response if needed
 	r.Header.Add("X-Forwarded-Host", r.Host)
 
@@ -55,11 +55,11 @@ func proxyRequestTransform(r *http.Request, state *types.ZarfState) error {
 	// Setup authentication for each type of service based on User Agent
 	switch {
 	case isGitUserAgent(r.UserAgent()):
-		r.SetBasicAuth(state.GitServer.PushUsername, state.GitServer.PushPassword)
+		r.SetBasicAuth(s.GitServer.PushUsername, s.GitServer.PushPassword)
 	case isNpmUserAgent(r.UserAgent()):
-		r.Header.Set("Authorization", "Bearer "+state.ArtifactServer.PushToken)
+		r.Header.Set("Authorization", "Bearer "+s.ArtifactServer.PushToken)
 	default:
-		r.SetBasicAuth(state.ArtifactServer.PushUsername, state.ArtifactServer.PushToken)
+		r.SetBasicAuth(s.ArtifactServer.PushUsername, s.ArtifactServer.PushToken)
 	}
 
 	// Transform the URL; if we see the NoTransform prefix, strip it; otherwise, transform the URL based on User Agent
@@ -68,20 +68,20 @@ func proxyRequestTransform(r *http.Request, state *types.ZarfState) error {
 	if strings.HasPrefix(r.URL.Path, transform.NoTransform) {
 		switch {
 		case isGitUserAgent(r.UserAgent()):
-			targetURL, err = transform.NoTransformTarget(state.GitServer.Address, r.URL.Path)
+			targetURL, err = transform.NoTransformTarget(s.GitServer.Address, r.URL.Path)
 		default:
-			targetURL, err = transform.NoTransformTarget(state.ArtifactServer.Address, r.URL.Path)
+			targetURL, err = transform.NoTransformTarget(s.ArtifactServer.Address, r.URL.Path)
 		}
 	} else {
 		switch {
 		case isGitUserAgent(r.UserAgent()):
-			targetURL, err = transform.GitURL(state.GitServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), state.GitServer.PushUsername)
+			targetURL, err = transform.GitURL(s.GitServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), s.GitServer.PushUsername)
 		case isPipUserAgent(r.UserAgent()):
-			targetURL, err = transform.PipTransformURL(state.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
+			targetURL, err = transform.PipTransformURL(s.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
 		case isNpmUserAgent(r.UserAgent()):
-			targetURL, err = transform.NpmTransformURL(state.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
+			targetURL, err = transform.NpmTransformURL(s.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
 		default:
-			targetURL, err = transform.GenTransformURL(state.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
+			targetURL, err = transform.GenTransformURL(s.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
 		}
 	}
 	if err != nil {

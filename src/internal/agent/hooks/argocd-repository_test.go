@@ -7,6 +7,7 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"encoding/json"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"net/http"
 	"testing"
 
@@ -36,13 +37,13 @@ func TestArgoRepoWebhook(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	state := &types.ZarfState{GitServer: types.GitServerInfo{
+	s := &state.State{GitServer: types.GitServerInfo{
 		Address:      "https://git-server.com",
 		PushUsername: "a-push-user",
 		PullPassword: "a-pull-password",
 		PullUsername: "a-pull-user",
 	}}
-	c := createTestClientWithZarfState(ctx, t, state)
+	c := createTestClientWithZarfState(ctx, t, s)
 	handler := admission.NewHandler().Serve(ctx, NewRepositorySecretMutationHook(ctx, c))
 
 	tests := []admissionTest{
@@ -67,11 +68,11 @@ func TestArgoRepoWebhook(t *testing.T) {
 				),
 				operations.ReplacePatchOperation(
 					"/data/username",
-					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullUsername)),
+					b64.StdEncoding.EncodeToString([]byte(s.GitServer.PullUsername)),
 				),
 				operations.ReplacePatchOperation(
 					"/data/password",
-					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullPassword)),
+					b64.StdEncoding.EncodeToString([]byte(s.GitServer.PullPassword)),
 				),
 				operations.ReplacePatchOperation(
 					"/metadata/labels",
@@ -104,11 +105,11 @@ func TestArgoRepoWebhook(t *testing.T) {
 				),
 				operations.ReplacePatchOperation(
 					"/data/username",
-					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullUsername)),
+					b64.StdEncoding.EncodeToString([]byte(s.GitServer.PullUsername)),
 				),
 				operations.ReplacePatchOperation(
 					"/data/password",
-					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullPassword)),
+					b64.StdEncoding.EncodeToString([]byte(s.GitServer.PullPassword)),
 				),
 				operations.ReplacePatchOperation(
 					"/metadata/labels",

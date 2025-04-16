@@ -23,6 +23,7 @@ import (
 
 func TestGit(t *testing.T) {
 	t.Log("E2E: Git")
+	ctx := logger.WithContext(t.Context(), test.GetLogger(t))
 
 	tmpdir := t.TempDir()
 	buildPath := filepath.Join("src", "test", "packages", "22-git-data")
@@ -36,9 +37,8 @@ func TestGit(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=full-repo,specific-*", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	require.NoError(t, err)
-	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
 
 	tunnelGit, err := c.Connect(ctx, cluster.ZarfGit)
 	require.NoError(t, err)
@@ -75,7 +75,7 @@ func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 	require.NoError(t, err)
 
 	// Init the state variable
-	state, err := c.LoadZarfState(ctx)
+	state, err := c.LoadState(ctx)
 	require.NoError(t, err)
 	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
@@ -110,7 +110,7 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 	require.NoError(t, err)
 
 	// Init the state variable
-	state, err := c.LoadZarfState(ctx)
+	state, err := c.LoadState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
 	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
@@ -140,7 +140,7 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
 	cluster, err := cluster.NewClusterWithWait(ctx)
 	require.NoError(t, err)
-	zarfState, err := cluster.LoadZarfState(ctx)
+	zarfState, err := cluster.LoadState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
 	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo.Address)
 	require.NoError(t, err)

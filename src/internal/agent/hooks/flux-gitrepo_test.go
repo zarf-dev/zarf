@@ -6,6 +6,7 @@ package hooks
 import (
 	"context"
 	"encoding/json"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"net/http"
 	"testing"
 
@@ -37,11 +38,11 @@ func TestFluxMutationWebhook(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	state := &types.ZarfState{GitServer: types.GitServerInfo{
+	s := &state.State{GitServer: types.GitServerInfo{
 		Address:      "https://git-server.com",
 		PushUsername: "a-push-user",
 	}}
-	c := createTestClientWithZarfState(ctx, t, state)
+	c := createTestClientWithZarfState(ctx, t, s)
 	handler := admission.NewHandler().Serve(ctx, NewGitRepositoryMutationHook(ctx, c))
 
 	tests := []admissionTest{
