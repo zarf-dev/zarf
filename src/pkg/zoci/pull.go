@@ -155,6 +155,27 @@ func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 	return layers, nil
 }
 
+// AssembleLayers returns the layers for the given zarf package
+// This could be the primarily location for understanding how layers are assembled for a given package pull operation
+func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, inspectTarget string) ([]ocispec.Descriptor, error) {
+	layers := make([]ocispec.Descriptor, 0)
+
+	// // Get the layers from the requested components
+	// componentLayers, err := r.LayersFromRequestedComponents(ctx, requestedComponents, inspectTarget)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// layers = append(layers, componentLayers...)
+
+	// // Add the package metadata layer if it exists
+	// pkgMetadataDescriptor := r.FetchPackageMetadata(ctx)
+	// if !oci.IsEmptyDescriptor(pkgMetadataDescriptor) {
+	// 	layers = append(layers, pkgMetadataDescriptor)
+	// }
+
+	return layers, nil
+}
+
 // PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
 func (r *Remote) PullPackageMetadata(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
 	return r.PullPaths(ctx, destinationDir, PackageAlwaysPull)
