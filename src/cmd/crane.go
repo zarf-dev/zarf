@@ -109,10 +109,7 @@ func newRegistryLoginCommand() *cobra.Command {
 	if err != nil {
 		logger.Default().Error("failed to mark username flag required", "error", err.Error())
 	}
-	err = cmd.MarkFlagRequired("password")
-	if err != nil {
-		logger.Default().Error("failed to mark password flag required", "error", err.Error())
-	}
+	cmd.MarkFlagsOneRequired("password", "password-stdin")
 	return cmd
 }
 
