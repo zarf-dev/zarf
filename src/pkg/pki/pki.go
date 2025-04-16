@@ -26,7 +26,8 @@ import (
 const rsaBits = 2048
 const org = "Zarf Cluster"
 
-const certExpiringSoonThreshold = time.Hour * 24 * 60
+// Consider a cert expiring soon when it has less than 20% left
+const certExpiringSoonThreshold = time.Duration(float64(validFor) * 0.2)
 
 // 13 months is the max length allowed by browsers.
 const validFor = time.Hour * 24 * 375
@@ -172,7 +173,7 @@ func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, vali
 // CheckForExpiredCert checks if the certificate is expired
 func CheckForExpiredCert(ctx context.Context, pk GeneratedPKI) error {
 	block, _ := pem.Decode(pk.Cert)
-	if block == nil {
+	if block == nil || block.Type != "CERTIFICATE" {
 		return fmt.Errorf("failed to decode pem data")
 	}
 
@@ -182,13 +183,13 @@ func CheckForExpiredCert(ctx context.Context, pk GeneratedPKI) error {
 	}
 
 	if cert.NotAfter.Before(time.Now()) {
-		return fmt.Errorf("cert is expired, run `zarf tool update-creds agent`")
+		return fmt.Errorf("the Zarf agent certificate is expired as of %s, run `zarf tool update-creds agent`", cert.NotAfter)
 	}
 
 	thresholdTime := time.Now().Add(certExpiringSoonThreshold)
 
 	if cert.NotAfter.Before(thresholdTime) {
-		logger.From(ctx).Warn("the Zarf agent certificate is expiring soon, please run `zarf tools update-creds` to update the certificate")
+		logger.From(ctx).Warn("the Zarf agent certificate is expiring soon, run `zarf tools update-creds` to update the certificate", "expiration", cert.NotAfter)
 	}
 	return nil
 }

@@ -21,10 +21,10 @@ func TestCheckForExpiredCert(t *testing.T) {
 		expectedLog string
 	}{
 		{
-			name:        "Certificate expires in 30 days",
-			validFor:    30 * 24 * time.Hour,
+			name:        "Certificate expires in 60 days",
+			validFor:    60 * 24 * time.Hour,
 			expectedErr: "",
-			expectedLog: "the Zarf agent certificate is expiring soon, please run `zarf tools update-creds` to update the certificate",
+			expectedLog: "the Zarf agent certificate is expirng soon, please run `zarf tools update-creds` to update the certificate",
 		},
 		{
 			name:        "Certificate expires in 90 days",
