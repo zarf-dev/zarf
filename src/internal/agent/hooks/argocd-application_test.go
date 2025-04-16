@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,11 +34,11 @@ func TestArgoAppWebhook(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	state := &types.ZarfState{GitServer: types.GitServerInfo{
+	s := &state.State{GitServer: types.GitServerInfo{
 		Address:      "https://git-server.com",
 		PushUsername: "a-push-user",
 	}}
-	c := createTestClientWithZarfState(ctx, t, state)
+	c := createTestClientWithZarfState(ctx, t, s)
 	handler := admission.NewHandler().Serve(ctx, NewApplicationMutationHook(ctx, c))
 
 	tests := []admissionTest{

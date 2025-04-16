@@ -166,6 +166,7 @@ func (c *Cluster) Init(ctx context.Context, initOptions types.ZarfInitOptions) e
 
 	// If state is nil, this is a new cluster.
 	if s == nil {
+		// REVIEW(mkcp): Is it safe to use state.Default() here instead?
 		s = &state.State{}
 		l.Debug("new cluster, no prior Zarf deployments found")
 		if initOptions.ApplianceMode {
@@ -303,6 +304,7 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
 
+	// REVIEW(mkcp): state.Default() instead?
 	s := &state.State{}
 	err = json.Unmarshal(secret.Data[state.ZarfStateDataKey], &s)
 	if err != nil {

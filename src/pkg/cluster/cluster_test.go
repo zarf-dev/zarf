@@ -14,11 +14,12 @@ import (
 )
 
 func TestInit(t *testing.T) {
-	emptyState := types.ZarfState{}
-	emptyStateData, err := json.Marshal(emptyState)
+	s, err := state.Default()
+	require.NoError(t, err)
+	sData, err := json.Marshal(s)
 	require.NoError(t, err)
 
-	existingState := types.ZarfState{
+	existingState := state.State{
 		Distro: DistroIsK3d,
 		RegistryInfo: types.RegistryInfo{
 			PushUsername: "push-user",
@@ -117,7 +118,7 @@ func TestInit(t *testing.T) {
 						Name:      state.ZarfStateSecretName,
 					},
 					Data: map[string][]byte{
-						state.ZarfStateDataKey: emptyStateData,
+						state.ZarfStateDataKey: sData,
 					},
 				},
 			},
