@@ -27,10 +27,12 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
+	Cluster                 *cluster.Cluster
 	Source                  string
 	Shasum                  string
 	Architecture            string
 	PublicKeyPath           string
+	InspectTarget           string
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
 }
@@ -56,7 +58,15 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	isPartial := false
 	switch srcType {
 	case "oci":
-		isPartial, tarPath, err = pullOCI(ctx, opt.Source, tmpDir, opt.Shasum, architecture, opt.Filter)
+		ociOpts := PullOCIOptions{
+			Source:        opt.Source,
+			Directory:     tmpDir,
+			Shasum:        opt.Shasum,
+			Architecture:  architecture,
+			Filter:        opt.Filter,
+			InspectTarget: opt.InspectTarget,
+		}
+		isPartial, tarPath, err = pullOCI(ctx, ociOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -73,6 +83,15 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	case "tarball":
 		tarPath = opt.Source
 	default:
+		if opt.Cluster != nil {
+			depPkg, err := opt.Cluster.GetDeployedPackage(ctx, opt.Source)
+			if err != nil {
+				return nil, err
+			}
+			return &layout.PackageLayout{
+				Pkg: depPkg.Data,
+			}, nil
+		}
 		return nil, fmt.Errorf("unknown source type: %s", opt.Source)
 	}
 	if srcType != "oci" && opt.Shasum != "" {

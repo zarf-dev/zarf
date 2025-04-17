@@ -34,23 +34,6 @@ var (
 //   - checksums.txt
 //   - zarf.yaml.sig
 func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (_ []ocispec.Descriptor, err error) {
-	isPartialPull := len(layersToPull) > 0
-
-	manifest, err := r.FetchRoot(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if isPartialPull {
-		for _, path := range PackageAlwaysPull {
-			desc := manifest.Locate(path)
-			layersToPull = append(layersToPull, desc)
-		}
-	} else {
-		layersToPull = append(layersToPull, manifest.Layers...)
-	}
-	layersToPull = append(layersToPull, manifest.Config)
-
 	layerSize := oci.SumDescsSize(layersToPull)
 	// TODO (@austinabro321) change this and other r.Log() calls to the proper slog format
 	r.Log().Info(fmt.Sprintf("Pulling %s, size: %s", r.Repo().Reference, utils.ByteFormat(float64(layerSize), 2)))
@@ -77,7 +60,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 // LayersFromRequestedComponents returns the descriptors for the given components from the root manifest.
 //
 // It also retrieves the descriptors for all image layers that are required by the components.
-func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent) ([]ocispec.Descriptor, error) {
+func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, inspectTarget string) ([]ocispec.Descriptor, error) {
 	layers := make([]ocispec.Descriptor, 0)
 
 	root, err := r.FetchRoot(ctx)
@@ -107,11 +90,13 @@ func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 	// Append the sboms.tar layer if it exists
 	//
 	// Since sboms.tar is not a heavy addition 99% of the time, we'll just always pull it
-	sbomsDescriptor := root.Locate(layout.SBOMTar)
-	if !oci.IsEmptyDescriptor(sbomsDescriptor) {
-		layers = append(layers, sbomsDescriptor)
+	if inspectTarget == "" || inspectTarget == "sbom" {
+		sbomsDescriptor := root.Locate(layout.SBOMTar)
+		if !oci.IsEmptyDescriptor(sbomsDescriptor) {
+			layers = append(layers, sbomsDescriptor)
+		}
 	}
-	if len(images) > 0 {
+	if len(images) > 0 && inspectTarget == "" {
 		// Add the image index and the oci-layout layers
 		layers = append(layers, root.Locate(layout.IndexPath), root.Locate(layout.OCILayoutPath))
 		index, err := r.FetchImagesIndex(ctx)
@@ -148,6 +133,131 @@ func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 				layerPath := filepath.Join(layout.ImagesBlobsDir, layer.Digest.Encoded())
 				layers = append(layers, root.Locate(layerPath))
 			}
+		}
+	}
+	return layers, nil
+}
+
+// AssembleLayers returns the layers for the given zarf package to pull from OCI.
+// This could be the primarily location for understanding how layers are assembled for a given package pull operation
+func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, inspectTarget string) ([]ocispec.Descriptor, error) {
+	layers := make([]ocispec.Descriptor, 0)
+
+	// fetching the root manifest is the common denominator for all layers
+	root, err := r.FetchRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	switch inspectTarget {
+	case "":
+		if len(requestedComponents) > 0 {
+			pkg, err := r.FetchZarfYAML(ctx)
+			if err != nil {
+				return nil, err
+			}
+			componentLayers, images, err := LayersFromComponents(ctx, root, pkg, requestedComponents)
+			if err != nil {
+				return nil, err
+			}
+			index, err := r.FetchImagesIndex(ctx)
+			if err != nil {
+				return nil, err
+			}
+			imageLayers, err := r.LayersFromImages(ctx, root, index, images)
+			if err != nil {
+				return nil, err
+			}
+			layers = append(layers, componentLayers...)
+			layers = append(layers, imageLayers...)
+		} else {
+			layers = append(layers, root.Layers...)
+		}
+		layers = append(layers, root.Config)
+		return layers, nil
+	case "manifests":
+		pkg, err := r.FetchZarfYAML(ctx)
+		if err != nil {
+			return nil, err
+		}
+		componentLayers, _, err := LayersFromComponents(ctx, root, pkg, requestedComponents)
+		if err != nil {
+			return nil, err
+		}
+		layers = append(layers, componentLayers...)
+	case "sboms":
+		sbomsDescriptor := root.Locate(layout.SBOMTar)
+		if !oci.IsEmptyDescriptor(sbomsDescriptor) {
+			layers = append(layers, sbomsDescriptor)
+		}
+	case "images", "definition":
+		// This is the default for all partial pulls - implemented below
+		break
+	default:
+		return nil, fmt.Errorf("unknown inspect target %q", inspectTarget)
+	}
+
+	for _, path := range PackageAlwaysPull {
+		desc := root.Locate(path)
+		layers = append(layers, desc)
+	}
+	layers = append(layers, root.Config)
+
+	return layers, nil
+}
+
+func LayersFromComponents(ctx context.Context, root *oci.Manifest, pkg v1alpha1.ZarfPackage, requestedComponents []v1alpha1.ZarfComponent) ([]ocispec.Descriptor, map[string]bool, error) {
+	layers := make([]ocispec.Descriptor, 0)
+
+	images := map[string]bool{}
+	tarballFormat := "%s.tar"
+	for _, rc := range requestedComponents {
+		component := helpers.Find(pkg.Components, func(component v1alpha1.ZarfComponent) bool {
+			return component.Name == rc.Name
+		})
+		if component.Name == "" {
+			return nil, nil, fmt.Errorf("component %s does not exist in this package", rc.Name)
+		}
+		for _, image := range component.Images {
+			images[image] = true
+		}
+		desc := root.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf(tarballFormat, component.Name)))
+		layers = append(layers, desc)
+	}
+	return layers, images, nil
+}
+
+func (r *Remote) LayersFromImages(ctx context.Context, root *oci.Manifest, index *ocispec.Index, images map[string]bool) ([]ocispec.Descriptor, error) {
+	layers := make([]ocispec.Descriptor, 0)
+
+	for image := range images {
+		// use docker's transform lib to parse the image ref
+		// this properly mirrors the logic within create
+		refInfo, err := transform.ParseImageRef(image)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse image ref %q: %w", image, err)
+		}
+
+		manifestDescriptor := helpers.Find(index.Manifests, func(layer ocispec.Descriptor) bool {
+			return layer.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Reference ||
+				// A backwards compatibility shim for older Zarf versions that would leave docker.io off of image annotations
+				(layer.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Path+refInfo.TagOrDigest && refInfo.Host == "docker.io")
+		})
+
+		// even though these are technically image manifests, we store them as Zarf blobs
+		manifestDescriptor.MediaType = ZarfLayerMediaTypeBlob
+
+		manifest, err := r.FetchManifest(ctx, manifestDescriptor)
+		if err != nil {
+			return nil, err
+		}
+
+		layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, manifestDescriptor.Digest.Encoded())))
+		layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, manifest.Config.Digest.Encoded())))
+
+		for _, layer := range manifest.Layers {
+			layerPath := filepath.Join(layout.ImagesBlobsDir, layer.Digest.Encoded())
+			layers = append(layers, root.Locate(layerPath))
 		}
 	}
 	return layers, nil
