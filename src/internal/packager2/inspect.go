@@ -28,8 +28,9 @@ import (
 type ResourceType string
 
 const (
-	ManifestResource ResourceType = "manifest"
-	ChartResource    ResourceType = "chart"
+	ManifestResource   ResourceType = "manifest"
+	ChartResource      ResourceType = "chart"
+	ValuesFileResource ResourceType = "valuesfile"
 )
 
 // Resource contains a Kubernetes Manifest or Chart
@@ -147,6 +148,86 @@ func InspectPackageManifests(ctx context.Context, pkgLayout *layout2.PackageLayo
 	}
 
 	return InspectPackageManifestResults{Resources: resources}, nil
+}
+
+type InspectPackageValuesFilesOptions struct {
+	SetVariables map[string]string
+	KubeVersion  string
+}
+
+type InspectPackageValuesFilesResults struct {
+	Resources []Resource
+}
+
+// InspectValuesFiles templates and returns the values files in the package as they would be on deploy
+func InspectValuesFiles(ctx context.Context, pkgLayout *layout2.PackageLayout, opts InspectPackageValuesFilesOptions) (results InspectPackageValuesFilesResults, err error) {
+	state, err := types.DefaultZarfState()
+	if err != nil {
+		return InspectPackageValuesFilesResults{}, err
+	}
+	variableConfig := template.GetZarfVariableConfig(ctx)
+	variableConfig.SetConstants(pkgLayout.Pkg.Constants)
+	variableConfig.PopulateVariables(pkgLayout.Pkg.Variables, opts.SetVariables)
+	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return InspectPackageValuesFilesResults{}, err
+	}
+	defer func(path string) {
+		err = errors.Join(err, os.RemoveAll(path))
+	}(tmpPackagePath)
+
+	var resources []Resource
+	for _, component := range pkgLayout.Pkg.Components {
+		tmpComponentPath := filepath.Join(tmpPackagePath, component.Name)
+		err := os.MkdirAll(tmpComponentPath, helpers.ReadWriteExecuteUser)
+		if err != nil {
+			return InspectPackageValuesFilesResults{}, err
+		}
+
+		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, state)
+		if err != nil {
+			return InspectPackageValuesFilesResults{}, err
+		}
+		variableConfig.SetApplicationTemplates(applicationTemplates)
+
+		if len(component.Charts) > 0 {
+			chartDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout2.ChartsComponentDir)
+			if err != nil {
+				return InspectPackageValuesFilesResults{}, err
+			}
+			valuesDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout2.ValuesComponentDir)
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return InspectPackageValuesFilesResults{}, fmt.Errorf("failed to get values: %w", err)
+			}
+
+			for _, chart := range component.Charts {
+				chartOverrides := make(map[string]any)
+				for _, variable := range chart.Variables {
+					if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
+						// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
+						if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
+							return InspectPackageValuesFilesResults{}, fmt.Errorf("unable to merge path and value into map: %w", err)
+						}
+					}
+				}
+				_, values, err := helm.LoadChartData(chart, chartDir, valuesDir, chartOverrides)
+				if err != nil {
+					return InspectPackageValuesFilesResults{}, fmt.Errorf("failed to load chart data: %w", err)
+				}
+				valuesYaml, err := values.YAML()
+				if err != nil {
+					return InspectPackageValuesFilesResults{}, fmt.Errorf("failed to get values: %w", err)
+				}
+				resources = append(resources, Resource{
+					Content:      fmt.Sprintf("%s\n", valuesYaml),
+					Name:         chart.Name,
+					ResourceType: ValuesFileResource,
+				})
+			}
+		}
+	}
+
+	return InspectPackageValuesFilesResults{Resources: resources}, nil
 }
 
 type InspectDefinitionManifestsOptions struct {
