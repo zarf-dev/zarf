@@ -123,7 +123,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 	defer pkgClient.ClearTempPaths()
 
-	err = pkgClient.Deploy(ctx)
+	err = pkgClient.Deploy(ctx, func(_ *types.PackagerConfig) error { return nil })
 	if err != nil {
 		return err
 	}
