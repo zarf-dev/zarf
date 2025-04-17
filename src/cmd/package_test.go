@@ -230,8 +230,8 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 			expectedOutput: filepath.Join("testdata", "inspect-values-files", "chart", "expected.yaml"),
 			kubeVersion:    "1.25",
 			setVariables: map[string]string{
-				"REPLICAS": "2",
-				"PORT":     "8080",
+				"REPLICAS":    "2",
+				"DESCRIPTION": ".chart.variables takes priority",
 			},
 		},
 		{

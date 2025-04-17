@@ -18,3 +18,6 @@ components:
           - name: REPLICAS
             path: replicaCount
             description: "Override the number of pod replicas"
+          - name: DESCRIPTION
+            path: description
+            description: ".chart.variables takes priority"

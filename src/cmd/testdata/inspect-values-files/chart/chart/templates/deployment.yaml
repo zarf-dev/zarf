@@ -16,4 +16,4 @@ spec:
       - name: httpd
         image: httpd:alpine3.18
         ports:
-        - containerPort: ###ZARF_VAR_PORT###
+        - containerPort: 8080
