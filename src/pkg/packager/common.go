@@ -190,14 +190,11 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) error {
 	}
 
 	state, err := p.cluster.LoadZarfState(ctx)
-	// don't return the err here as state may not yet be setup
-	if err == nil {
-		if err := pki.CheckForExpiredCert(ctx, state.AgentTLS); err != nil {
-			return err
-		}
+	if err != nil {
+		// don't return the err here as state may not yet be setup
+		return nil
 	}
-
-	return nil
+	return pki.CheckForExpiredCert(ctx, state.AgentTLS)
 }
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
