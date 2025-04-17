@@ -139,6 +139,22 @@ func TestFindImages(t *testing.T) {
 			},
 			expectedErr: "failed to unmarshal manifest: error converting YAML to JSON: yaml: line 12: could not find expected ':'",
 		},
+		{
+			name:        "ocirepo",
+			packagePath: "./testdata/find-images/flux-oci-repo",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					Matches: []string{
+						"ghcr.io/stefanprodan/manifests/podinfo:6.4.1",
+						"ghcr.io/stefanprodan/manifests/podinfo@sha256:fc60d367cc05bedae04d6030e270daa89c3d82fa18b1a155314102b2fca39652",
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
