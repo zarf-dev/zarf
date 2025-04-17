@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 
 	"github.com/spf13/cobra"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
 
