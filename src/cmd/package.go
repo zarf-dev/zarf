@@ -370,6 +370,7 @@ func newPackageInspectCommand() *cobra.Command {
 	cmd.AddCommand(newPackageInspectImagesCommand())
 	cmd.AddCommand(newPackageInspectShowManifestsCommand())
 	cmd.AddCommand(newPackageInspectDefinitionCommand())
+	cmd.AddCommand(newPackageInspectValuesFilesCommand())
 
 	cmd.Flags().StringVar(&pkgConfig.InspectOpts.SBOMOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
 	cmd.Flags().BoolVar(&pkgConfig.InspectOpts.ListImages, "list-images", false, lang.CmdPackageInspectFlagListImages)
@@ -412,6 +413,76 @@ func (o *packageInspectOptions) run(cmd *cobra.Command, args []string) error {
 		skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 	}
 	return definitionOpts.run(cmd, args)
+}
+
+type packageInspectValuesFilesOpts struct {
+	skipSignatureValidation bool
+	components              string
+	kubeVersion             string
+	setVariables            map[string]string
+	outputWriter            io.Writer
+}
+
+func newPackageInspectValuesFilesOptions() *packageInspectValuesFilesOpts {
+	return &packageInspectValuesFilesOpts{
+		outputWriter: message.OutputWriter,
+	}
+}
+
+func newPackageInspectValuesFilesCommand() *cobra.Command {
+	o := newPackageInspectValuesFilesOptions()
+	cmd := &cobra.Command{
+		Use:   "values-files [ PACKAGE ]",
+		Short: "Template and output all values files in a package",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			return o.run(ctx, args)
+		},
+	}
+
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show values files for")
+	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+
+	return cmd
+}
+
+func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) (err error) {
+	src, err := choosePackage(ctx, args)
+	if err != nil {
+		return err
+	}
+	v := getViper()
+	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+	loadOpt := packager2.LoadOptions{
+		Source:                  src,
+		SkipSignatureValidation: o.skipSignatureValidation,
+		Filter:                  filters.BySelectState(o.components),
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+	}
+	layout, err := packager2.LoadPackage(ctx, loadOpt)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, layout.Cleanup())
+	}()
+	result, err := packager2.InspectPackageValuesFiles(ctx, layout, packager2.InspectPackageValuesFilesOptions{
+		SetVariables: o.setVariables,
+		KubeVersion:  o.kubeVersion,
+	})
+	if err != nil {
+		return err
+	}
+	if result.Resources == nil {
+		return fmt.Errorf("0 values files found")
+	}
+	for _, resource := range result.Resources {
+		fmt.Fprintf(o.outputWriter, "%s---\n", resource.Content)
+	}
+	return nil
 }
 
 type packageInspectManifestsOpts struct {

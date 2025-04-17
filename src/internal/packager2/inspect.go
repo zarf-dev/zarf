@@ -160,8 +160,8 @@ type InspectPackageValuesFilesResults struct {
 	Resources []Resource
 }
 
-// InspectValuesFiles templates and returns the values files in the package as they would be on deploy
-func InspectValuesFiles(ctx context.Context, pkgLayout *layout2.PackageLayout, opts InspectPackageValuesFilesOptions) (results InspectPackageValuesFilesResults, err error) {
+// InspectPackageValuesFiles templates and returns the values files in the package as they would be on deploy
+func InspectPackageValuesFiles(ctx context.Context, pkgLayout *layout2.PackageLayout, opts InspectPackageValuesFilesOptions) (results InspectPackageValuesFilesResults, err error) {
 	state, err := types.DefaultZarfState()
 	if err != nil {
 		return InspectPackageValuesFilesResults{}, err

@@ -209,3 +209,72 @@ func TestPackageInspectManifests(t *testing.T) {
 		})
 	}
 }
+
+func TestPackageInspectValuesFiles(t *testing.T) {
+	t.Parallel()
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
+
+	tests := []struct {
+		name           string
+		definitionDir  string
+		expectedOutput string
+		packageName    string
+		setVariables   map[string]string
+		kubeVersion    string
+		expectedErr    string
+	}{
+		{
+			name:           "chart inspect",
+			packageName:    "chart",
+			definitionDir:  filepath.Join("testdata", "inspect-values-files", "chart"),
+			expectedOutput: filepath.Join("testdata", "inspect-values-files", "chart", "expected.yaml"),
+			kubeVersion:    "1.25",
+			setVariables: map[string]string{
+				"REPLICAS": "2",
+				"PORT":     "8080",
+			},
+		},
+		{
+			name:          "empty inspect",
+			packageName:   "empty",
+			definitionDir: filepath.Join("testdata", "inspect-manifests", "empty"),
+			expectedErr:   "0 values files found",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			tmpdir := t.TempDir()
+
+			// Create package
+			createOpts := packageCreateOptions{
+				confirm: true,
+				output:  tmpdir,
+			}
+			err := createOpts.run(context.Background(), []string{tc.definitionDir})
+			require.NoError(t, err)
+
+			// Inspect values files
+			buf := new(bytes.Buffer)
+			opts := packageInspectValuesFilesOpts{
+				outputWriter: buf,
+				kubeVersion:  tc.kubeVersion,
+				setVariables: tc.setVariables,
+			}
+			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
+			err = opts.run(context.Background(), []string{packagePath})
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, tc.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+
+			// validate
+			expected, err := os.ReadFile(tc.expectedOutput)
+			require.NoError(t, err)
+			require.YAMLEq(t, string(expected), buf.String())
+		})
+	}
+}
