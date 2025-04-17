@@ -33,11 +33,6 @@ builds:
     goarch:
       - amd64
       - arm64
-    # HACK(mkcp): This is intended to solve a windows arm64 build taking 10+ minutes to build and potentially
-    #             overrunning the available disk space in github-hosted runners.
-    ignore:
-      - goos: windows
-        goarch: arm64
 
 # Save the built artifacts as binaries (instead of wrapping them in a tarball)
 archives:
