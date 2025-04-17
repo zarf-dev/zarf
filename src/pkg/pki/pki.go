@@ -183,7 +183,7 @@ func CheckForExpiredCert(ctx context.Context, pk GeneratedPKI) error {
 	}
 
 	if cert.NotAfter.Before(now()) {
-		return fmt.Errorf("the Zarf agent certificate is expired as of %s, run `zarf tool update-creds agent` to update", cert.NotAfter)
+		return fmt.Errorf("the Zarf agent certificate is expired as of %s, run `zarf tools update-creds agent` to update", cert.NotAfter)
 	}
 
 	remainingTime := cert.NotAfter.Sub(now())
@@ -191,7 +191,7 @@ func CheckForExpiredCert(ctx context.Context, pk GeneratedPKI) error {
 	certHas20PercentRemainingTime := (float64(remainingTime) / float64(totalTime)) > 0.2
 
 	if !certHas20PercentRemainingTime {
-		logger.From(ctx).Warn("the Zarf agent certificate is expiring soon, run `zarf tools update-creds` to update", "expiration", cert.NotAfter)
+		logger.From(ctx).Warn("the Zarf agent certificate is expiring soon, run `zarf tools update-creds agent` to update", "expiration", cert.NotAfter)
 	}
 	return nil
 }
