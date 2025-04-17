@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -188,7 +189,12 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	state, err := p.cluster.LoadZarfState(ctx)
+	if err != nil {
+		// don't return the err here as state may not yet be setup
+		return nil
+	}
+	return pki.CheckForExpiredCert(ctx, state.AgentTLS)
 }
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.
