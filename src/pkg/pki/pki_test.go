@@ -33,14 +33,14 @@ func TestCheckForExpiredCert1(t *testing.T) {
 			timeAtCreation: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 			timeAtCheck:    time.Date(2025, 1, 1, 0, 4, 1, 0, time.UTC),
 			certExpiration: time.Date(2025, 1, 1, 0, 5, 0, 0, time.UTC),
-			expectedLog:    "the Zarf agent certificate is expiring soon, run `zarf tools update-creds` to update",
+			expectedLog:    "the Zarf agent certificate is expiring soon, run `zarf tools update-creds agent` to update",
 		},
 		{
 			name:           "already expired -> error",
 			timeAtCreation: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 			timeAtCheck:    time.Date(2025, 1, 1, 0, 5, 0, 0, time.UTC),
 			certExpiration: time.Date(2025, 1, 1, 0, 4, 0, 0, time.UTC),
-			expectedErr:    "the Zarf agent certificate is expired as of 2025-01-01 00:04:00 +0000 UTC, run `zarf tool update-creds agent` to update",
+			expectedErr:    "the Zarf agent certificate is expired as of 2025-01-01 00:04:00 +0000 UTC, run `zarf tools update-creds agent` to update",
 		},
 	}
 
