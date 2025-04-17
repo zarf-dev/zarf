@@ -469,7 +469,7 @@ func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) 
 	defer func() {
 		err = errors.Join(err, layout.Cleanup())
 	}()
-	result, err := packager2.InspectPackageValuesFiles(ctx, layout, packager2.InspectPackageValuesFilesOptions{
+	result, err := packager2.InspectPackageManifests(ctx, layout, packager2.InspectPackageManifestsOptions{
 		SetVariables: o.setVariables,
 		KubeVersion:  o.kubeVersion,
 	})
@@ -480,6 +480,9 @@ func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) 
 		return fmt.Errorf("0 values files found")
 	}
 	for _, resource := range result.Resources {
+		if resource.ResourceType != packager2.ValuesFileResource {
+			continue
+		}
 		fmt.Fprintf(o.outputWriter, "%s---\n", resource.Content)
 	}
 	return nil
@@ -550,6 +553,9 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 		return fmt.Errorf("0 manifests found")
 	}
 	for _, resource := range result.Resources {
+		if resource.ResourceType == packager2.ValuesFileResource {
+			continue
+		}
 		fmt.Fprintf(o.outputWriter, "#type: %s\n", resource.ResourceType)
 		// Helm charts already provide a comment on the source when templated
 		if resource.ResourceType == packager2.ManifestResource {

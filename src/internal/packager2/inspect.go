@@ -22,7 +22,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/types"
-	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
 )
 
@@ -50,7 +49,7 @@ type InspectPackageManifestResults struct {
 	Resources []Resource
 }
 
-// InspectPackageManifests templates and returns the manifests and charts in the package as they would be on deploy
+// InspectPackageManifests templates and returns the manifests, charts, and values files in the package as they would be on deploy
 func InspectPackageManifests(ctx context.Context, pkgLayout *layout2.PackageLayout, opts InspectPackageManifestsOptions) (results InspectPackageManifestResults, err error) {
 	state, err := types.DefaultZarfState()
 	if err != nil {
@@ -115,6 +114,15 @@ func InspectPackageManifests(ctx context.Context, pkgLayout *layout2.PackageLayo
 					Name:         chart.Name,
 					ResourceType: ChartResource,
 				})
+				valuesYaml, err := values.YAML()
+				if err != nil {
+					return InspectPackageManifestResults{}, fmt.Errorf("failed to get values: %w", err)
+				}
+				resources = append(resources, Resource{
+					Content:      fmt.Sprintf("%s\n", valuesYaml),
+					Name:         chart.Name,
+					ResourceType: ValuesFileResource,
+				})
 			}
 		}
 
@@ -149,86 +157,6 @@ func InspectPackageManifests(ctx context.Context, pkgLayout *layout2.PackageLayo
 	}
 
 	return InspectPackageManifestResults{Resources: resources}, nil
-}
-
-type InspectPackageValuesFilesOptions struct {
-	SetVariables map[string]string
-	KubeVersion  string
-}
-
-type InspectPackageValuesFilesResults struct {
-	Resources []Resource
-}
-
-// InspectPackageValuesFiles templates and returns the values files in the package as they would be on deploy
-func InspectPackageValuesFiles(ctx context.Context, pkgLayout *layout2.PackageLayout, opts InspectPackageValuesFilesOptions) (results InspectPackageValuesFilesResults, err error) {
-	state, err := types.DefaultZarfState()
-	if err != nil {
-		return InspectPackageValuesFilesResults{}, err
-	}
-	variableConfig := template.GetZarfVariableConfig(ctx)
-	variableConfig.SetConstants(pkgLayout.Pkg.Constants)
-	variableConfig.PopulateVariables(pkgLayout.Pkg.Variables, opts.SetVariables)
-	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return InspectPackageValuesFilesResults{}, err
-	}
-	defer func(path string) {
-		err = errors.Join(err, os.RemoveAll(path))
-	}(tmpPackagePath)
-
-	var resources []Resource
-	for _, component := range pkgLayout.Pkg.Components {
-		tmpComponentPath := filepath.Join(tmpPackagePath, component.Name)
-		err := os.MkdirAll(tmpComponentPath, helpers.ReadWriteExecuteUser)
-		if err != nil {
-			return InspectPackageValuesFilesResults{}, err
-		}
-
-		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, state)
-		if err != nil {
-			return InspectPackageValuesFilesResults{}, err
-		}
-		variableConfig.SetApplicationTemplates(applicationTemplates)
-
-		if len(component.Charts) > 0 {
-			chartDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout2.ChartsComponentDir)
-			if err != nil {
-				return InspectPackageValuesFilesResults{}, err
-			}
-			valuesDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout2.ValuesComponentDir)
-			if err != nil && !errors.Is(err, os.ErrNotExist) {
-				return InspectPackageValuesFilesResults{}, fmt.Errorf("failed to get values: %w", err)
-			}
-
-			for _, chart := range component.Charts {
-				chartOverrides := make(map[string]any)
-				for _, variable := range chart.Variables {
-					if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
-						// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
-						if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
-							return InspectPackageValuesFilesResults{}, fmt.Errorf("unable to merge path and value into map: %w", err)
-						}
-					}
-				}
-				_, values, err := helm.LoadChartData(chart, chartDir, valuesDir, chartOverrides)
-				if err != nil {
-					return InspectPackageValuesFilesResults{}, fmt.Errorf("failed to load chart data: %w", err)
-				}
-				valuesYaml, err := values.YAML()
-				if err != nil {
-					return InspectPackageValuesFilesResults{}, fmt.Errorf("failed to get values: %w", err)
-				}
-				resources = append(resources, Resource{
-					Content:      fmt.Sprintf("%s\n", valuesYaml),
-					Name:         chart.Name,
-					ResourceType: ValuesFileResource,
-				})
-			}
-		}
-	}
-
-	return InspectPackageValuesFilesResults{Resources: resources}, nil
 }
 
 type InspectDefinitionManifestsOptions struct {
@@ -304,39 +232,6 @@ func InspectDefinitionManifests(ctx context.Context, packagePath string, opts In
 	}
 
 	return InspectDefinitionManifestResults{Resources: resources}, nil
-}
-
-func GetPackagedChart(pkgLayout *layout2.PackageLayout, component v1alpha1.ZarfComponent, tmpComponentPath string, variableConfig *variables.VariableConfig) ([]*chart.Chart, []chartutil.Values, error) {
-	charts := []*chart.Chart{}
-	values := []chartutil.Values{}
-	chartDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout2.ChartsComponentDir)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get chart directory: %w", err)
-	}
-	valuesDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout2.ValuesComponentDir)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, nil, fmt.Errorf("failed to get values: %w", err)
-	}
-
-	for _, chart := range component.Charts {
-		chartOverrides := make(map[string]any)
-		for _, variable := range chart.Variables {
-			if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
-				if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
-					return nil, nil, fmt.Errorf("unable to merge path and value into map: %w", err)
-				}
-			}
-		}
-		loadedChart, chartValues, err := helm.LoadChartData(chart, chartDir, valuesDir, chartOverrides)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to load chart data: %w", err)
-		}
-
-		charts = append(charts, loadedChart)
-		values = append(values, chartValues)
-	}
-
-	return charts, values, nil
 }
 
 func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig) ([]Resource, error) {
