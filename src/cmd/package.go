@@ -434,7 +434,8 @@ func newPackageInspectValuesFilesCommand() *cobra.Command {
 	o := newPackageInspectValuesFilesOptions()
 	cmd := &cobra.Command{
 		Use:   "values-files [ PACKAGE ]",
-		Short: "Template and output all values files in a package",
+		Short: "Creates, templates, and outputs the values-files to be sent to each chart",
+		Long:  "Creates, templates, and outputs the values-files to be sent to each chart. Does not consider values files builtin to charts",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -470,7 +471,7 @@ func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) 
 	defer func() {
 		err = errors.Join(err, layout.Cleanup())
 	}()
-	result, err := packager2.InspectPackageManifests(ctx, layout, packager2.InspectPackageManifestsOptions{
+	result, err := packager2.InspectPackageResources(ctx, layout, packager2.InspectPackageResourcesOptions{
 		SetVariables: o.setVariables,
 		KubeVersion:  o.kubeVersion,
 	})
@@ -543,7 +544,7 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 	defer func() {
 		err = errors.Join(err, layout.Cleanup())
 	}()
-	result, err := packager2.InspectPackageManifests(ctx, layout, packager2.InspectPackageManifestsOptions{
+	result, err := packager2.InspectPackageResources(ctx, layout, packager2.InspectPackageResourcesOptions{
 		SetVariables: o.setVariables,
 		KubeVersion:  o.kubeVersion,
 	})

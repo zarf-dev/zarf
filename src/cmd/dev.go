@@ -32,6 +32,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
+	"golang.org/x/exp/slices"
 )
 
 var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, types.ZarfInClusterContainerRegistryNodePort)
@@ -65,6 +66,7 @@ func newDevInspectCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.AddCommand(newDevInspectDefinitionCommand(v))
 	cmd.AddCommand(newDevInspectManifestsCommand(v))
+	cmd.AddCommand(newDevInspectValuesFilesCommand(v))
 	return cmd
 }
 
@@ -148,13 +150,13 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
 
-	opts := packager2.InspectDefinitionManifestsOptions{
+	opts := packager2.InspectDefinitionResourcesOptions{
 		CreateSetVariables: o.createSetVariables,
 		DeploySetVariables: o.deploySetVariables,
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 	}
-	result, err := packager2.InspectDefinitionManifests(ctx, setBaseDirectory(args), opts)
+	result, err := packager2.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -162,6 +164,9 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	if err != nil {
 		return err
 	}
+	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
+		return r.ResourceType == packager2.ValuesFileResource
+	})
 	if result.Resources == nil {
 		return fmt.Errorf("0 manifests found")
 	}
@@ -171,6 +176,74 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		if resource.ResourceType == packager2.ManifestResource {
 			fmt.Fprintf(o.outputWriter, "#source: %s\n", resource.Name)
 		}
+		fmt.Fprintf(o.outputWriter, "%s---\n", resource.Content)
+	}
+	return nil
+}
+
+type devInspectValuesFilesOptions struct {
+	flavor             string
+	createSetVariables map[string]string
+	deploySetVariables map[string]string
+	kubeVersion        string
+	outputWriter       io.Writer
+}
+
+func newDevInspectValuesFilesOptions() devInspectValuesFilesOptions {
+	return devInspectValuesFilesOptions{
+		outputWriter: message.OutputWriter,
+	}
+}
+
+func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
+	o := newDevInspectValuesFilesOptions()
+
+	cmd := &cobra.Command{
+		Use:   "values-files [ DIRECTORY ]",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Creates, templates, and outputs the values-files to be sent to each chart",
+		Long:  "Creates, templates, and outputs the values-files to be sent to each chart. Does not consider values files builtin to charts",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.run(cmd.Context(), args)
+		},
+	}
+
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
+
+	return cmd
+}
+
+func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) error {
+	v := getViper()
+	o.createSetVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
+	o.deploySetVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
+
+	opts := packager2.InspectDefinitionResourcesOptions{
+		CreateSetVariables: o.createSetVariables,
+		DeploySetVariables: o.deploySetVariables,
+		Flavor:             o.flavor,
+		KubeVersion:        o.kubeVersion,
+	}
+	result, err := packager2.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
+	var lintErr *lint.LintError
+	if errors.As(err, &lintErr) {
+		PrintFindings(ctx, lintErr)
+	}
+	if err != nil {
+		return err
+	}
+	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
+		return r.ResourceType != packager2.ValuesFileResource
+	})
+	if result.Resources == nil {
+		return fmt.Errorf("0 values files found")
+	}
+	for _, resource := range result.Resources {
 		fmt.Fprintf(o.outputWriter, "%s---\n", resource.Content)
 	}
 	return nil
