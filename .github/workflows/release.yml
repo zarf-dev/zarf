@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-release:
-    runs-on: ubuntu-latest
+    runs-on: large-ubuntu-zarf-release
     permissions:
       id-token: write
       packages: write
@@ -93,7 +93,7 @@ jobs:
           retention-days: 1
 
   validate-release:
-    runs-on: ubuntu-latest
+    runs-on: large-ubuntu-zarf-release
     needs: build-release
     steps:
       # Checkout the repo and setup the tooling for this job
@@ -117,10 +117,6 @@ jobs:
         run: |
           chmod +x build/zarf
 
-      # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
-      - name: Cleanup files
-        uses: ./.github/actions/cleanup-files
-
       # Build the example packages and run the tests
       - name: Build examples and run tests
         run: |
@@ -131,7 +127,7 @@ jobs:
         uses: ./.github/actions/save-logs
 
   create-release:
-    runs-on: ubuntu-latest
+    runs-on: large-ubuntu-zarf-release
     needs: validate-release
     environment: release
     permissions:
@@ -165,10 +161,6 @@ jobs:
           else
             echo "BREW_NAME=zarf" >> $GITHUB_ENV
           fi
-
-      # Before we run the release we need to aggressively cleanup files to reduce disk pressure
-      - name: Cleanup files
-        uses: ./.github/actions/cleanup-files
 
       - name: Setup release ENV vars
         run: |
