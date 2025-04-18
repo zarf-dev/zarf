@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-release:
-    runs-on: ubuntu-latest
+    runs-on: large-ubuntu-zarf-release
     permissions:
       id-token: write
       packages: write
@@ -93,7 +93,7 @@ jobs:
           retention-days: 1
 
   validate-release:
-    runs-on: ubuntu-latest
+    runs-on: large-ubuntu-zarf-release
     needs: build-release
     steps:
       # Checkout the repo and setup the tooling for this job
