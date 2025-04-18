@@ -8,7 +8,7 @@ on:
 
 jobs:
   large-test:
-    runs-on: ubuntu-latest
+    runs-on: large-ubuntu-zarf-release
     steps:
       # Checkout the repo and setup the tooling for this job
       - name: Checkout
