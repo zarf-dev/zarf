@@ -22,6 +22,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/exp/slices"
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/config"
@@ -549,13 +550,13 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 	if err != nil {
 		return err
 	}
+	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
+		return r.ResourceType == packager2.ValuesFileResource
+	})
 	if result.Resources == nil {
 		return fmt.Errorf("0 manifests found")
 	}
 	for _, resource := range result.Resources {
-		if resource.ResourceType == packager2.ValuesFileResource {
-			continue
-		}
 		fmt.Fprintf(o.outputWriter, "#type: %s\n", resource.ResourceType)
 		// Helm charts already provide a comment on the source when templated
 		if resource.ResourceType == packager2.ManifestResource {

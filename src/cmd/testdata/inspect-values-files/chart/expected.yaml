@@ -2,3 +2,5 @@ replicaCount: "2"
 image:
   pullPolicy: "IfNotPresent"
 description: ".chart.variables takes priority"
+---
+replicaCount: "2"

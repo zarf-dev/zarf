@@ -211,9 +211,7 @@ func TestPackageInspectManifests(t *testing.T) {
 			require.NoError(t, err)
 			actualYAMLs, err := utils.SplitYAMLToString(buf.Bytes())
 			require.NoError(t, err)
-			for i, v := range expectedYAMLs {
-				require.Equal(t, v, actualYAMLs[i])
-			}
+			require.Equal(t, expectedYAMLs, actualYAMLs)
 		})
 	}
 }
