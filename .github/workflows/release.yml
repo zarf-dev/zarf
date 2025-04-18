@@ -166,10 +166,6 @@ jobs:
             echo "BREW_NAME=zarf" >> $GITHUB_ENV
           fi
 
-      # Before we run the release we need to aggressively cleanup files to reduce disk pressure
-      - name: Cleanup files
-        uses: ./.github/actions/cleanup-files
-
       - name: Setup release ENV vars
         run: |
           K8S_MODULES_VER=$(go list -f '{{.Version}}' -m k8s.io/client-go | sed 's/v//; s/\./ /g')
