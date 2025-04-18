@@ -36,7 +36,7 @@ builds:
 
 # Save the built artifacts as binaries (instead of wrapping them in a tarball)
 archives:
-  - format: binary
+  - formats: [ 'binary' ]
     name_template: "{{ .ProjectName }}_{{ .Tag }}_{{- title .Os }}_{{ .Arch }}"
 
 # generate a sha256 checksum of all release artifacts
@@ -54,7 +54,7 @@ sboms:
       - "sbom_{{ .ProjectName }}_{{ .Tag }}_{{- title .Os }}_{{ .Arch }}.sbom"
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-snapshot"
+  version_template: "{{ incpatch .Version }}-snapshot"
 
 # Use the auto-generated changelog github provides
 changelog:
