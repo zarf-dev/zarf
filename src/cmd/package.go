@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -22,7 +23,6 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"golang.org/x/exp/slices"
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/config"
