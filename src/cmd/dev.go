@@ -167,7 +167,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
 		return r.ResourceType == packager2.ValuesFileResource
 	})
-	if result.Resources == nil {
+	if len(result.Resources) == 0 {
 		return fmt.Errorf("0 manifests found")
 	}
 	for _, resource := range result.Resources {

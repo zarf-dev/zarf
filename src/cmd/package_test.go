@@ -205,8 +205,8 @@ func TestPackageInspectManifests(t *testing.T) {
 
 			// validate
 			expected, err := os.ReadFile(tc.expectedOutput)
-			// Since we have multiple yamls split by the --- syntax we have to split them to accurately test
 			require.NoError(t, err)
+			// Since we have multiple yamls split by the --- syntax we have to split them to accurately test
 			expectedYAMLs, err := utils.SplitYAMLToString(expected)
 			require.NoError(t, err)
 			actualYAMLs, err := utils.SplitYAMLToString(buf.Bytes())
@@ -241,9 +241,9 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 			},
 		},
 		{
-			name:          "empty inspect",
-			packageName:   "empty",
-			definitionDir: filepath.Join("testdata", "inspect-manifests", "empty"),
+			name:          "manifest inspect -> fail with no values-files",
+			packageName:   "manifests",
+			definitionDir: filepath.Join("testdata", "inspect-manifests", "manifest"),
 			expectedErr:   "0 values files found",
 		},
 	}
@@ -279,8 +279,8 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 
 			// validate
 			expected, err := os.ReadFile(tc.expectedOutput)
-			// Since we have multiple yamls split by the --- syntax we have to split them to accurately test
 			require.NoError(t, err)
+			// Since we have multiple yamls split by the --- syntax we have to split them to accurately test
 			expectedYAMLs, err := utils.SplitYAMLToString(expected)
 			require.NoError(t, err)
 			actualYAMLs, err := utils.SplitYAMLToString(buf.Bytes())

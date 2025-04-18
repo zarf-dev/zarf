@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -103,7 +104,12 @@ func TestDevInspectManifests(t *testing.T) {
 			// validate
 			expected, err := os.ReadFile(tc.expectedOutput)
 			require.NoError(t, err)
-			require.YAMLEq(t, string(expected), buf.String())
+			// Since we have multiple yamls split by the --- syntax we have to split them to accurately test
+			expectedYAMLs, err := utils.SplitYAMLToString(expected)
+			require.NoError(t, err)
+			actualYAMLs, err := utils.SplitYAMLToString(buf.Bytes())
+			require.NoError(t, err)
+			require.Equal(t, expectedYAMLs, actualYAMLs)
 		})
 	}
 }
