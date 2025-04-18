@@ -240,7 +240,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
 		return r.ResourceType != packager2.ValuesFileResource
 	})
-	if result.Resources == nil {
+	if len(result.Resources) == 0 {
 		return fmt.Errorf("0 values files found")
 	}
 	for _, resource := range result.Resources {

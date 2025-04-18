@@ -113,3 +113,66 @@ func TestDevInspectManifests(t *testing.T) {
 		})
 	}
 }
+
+func TestDevInspectValuesFiles(t *testing.T) {
+	t.Parallel()
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
+
+	tests := []struct {
+		name           string
+		definitionDir  string
+		expectedOutput string
+		packageName    string
+		setVariables   map[string]string
+		expectedErr    string
+		components     string
+	}{
+		{
+			name:           "chart inspect",
+			packageName:    "chart",
+			definitionDir:  filepath.Join("testdata", "inspect-values-files", "chart"),
+			expectedOutput: filepath.Join("testdata", "inspect-values-files", "chart", "expected.yaml"),
+			components:     "demo-helm-charts,different-values-set",
+			setVariables: map[string]string{
+				"REPLICAS":    "2",
+				"DESCRIPTION": ".chart.variables takes priority",
+			},
+		},
+		{
+			name:          "manifest inspect -> fail with no values-files",
+			packageName:   "manifests",
+			definitionDir: filepath.Join("testdata", "inspect-manifests", "manifest"),
+			expectedErr:   "0 values files found",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Inspect manifests
+			buf := new(bytes.Buffer)
+			opts := devInspectValuesFilesOptions{
+				outputWriter:       buf,
+				deploySetVariables: tc.setVariables,
+			}
+			err := opts.run(context.Background(), []string{tc.definitionDir})
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, tc.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+
+			// validate
+			expected, err := os.ReadFile(tc.expectedOutput)
+			require.NoError(t, err)
+			// Since we have multiple yamls split by the --- syntax we have to split them to accurately test
+			expectedYAMLs, err := utils.SplitYAMLToString(expected)
+			require.NoError(t, err)
+			actualYAMLs, err := utils.SplitYAMLToString(buf.Bytes())
+			require.NoError(t, err)
+			require.Equal(t, expectedYAMLs, actualYAMLs)
+		})
+	}
+}
