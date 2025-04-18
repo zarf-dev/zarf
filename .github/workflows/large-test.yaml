@@ -6,8 +6,6 @@ permissions:
 on:
   pull_request:
 
-runs-on: large-ubuntu-zarf-release
-
 jobs:
   large-test:
     runs-on: large-ubuntu-zarf-release
