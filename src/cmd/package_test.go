@@ -19,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
@@ -204,8 +205,15 @@ func TestPackageInspectManifests(t *testing.T) {
 
 			// validate
 			expected, err := os.ReadFile(tc.expectedOutput)
+			// Since we have multiple yamls split by the --- syntax we have to split them to accurately test
 			require.NoError(t, err)
-			require.YAMLEq(t, string(expected), buf.String())
+			expectedYAMLs, err := utils.SplitYAMLToString(expected)
+			require.NoError(t, err)
+			actualYAMLs, err := utils.SplitYAMLToString(buf.Bytes())
+			require.NoError(t, err)
+			for i, v := range expectedYAMLs {
+				require.Equal(t, v, actualYAMLs[i])
+			}
 		})
 	}
 }
@@ -273,8 +281,15 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 
 			// validate
 			expected, err := os.ReadFile(tc.expectedOutput)
+			// Since we have multiple yamls split by the --- syntax we have to split them to accurately test
 			require.NoError(t, err)
-			require.YAMLEq(t, string(expected), buf.String())
+			expectedYAMLs, err := utils.SplitYAMLToString(expected)
+			require.NoError(t, err)
+			actualYAMLs, err := utils.SplitYAMLToString(buf.Bytes())
+			require.NoError(t, err)
+			for i, v := range expectedYAMLs {
+				require.Equal(t, v, actualYAMLs[i])
+			}
 		})
 	}
 }
