@@ -119,7 +119,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayo
 					return InspectPackageResourcesResults{}, fmt.Errorf("failed to get values: %w", err)
 				}
 				resources = append(resources, Resource{
-					Content:      fmt.Sprintf("%s\n", valuesYaml),
+					Content:      fmt.Sprintf("%s", valuesYaml),
 					Name:         chart.Name,
 					ResourceType: ValuesFileResource,
 				})
@@ -218,7 +218,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 				return InspectDefinitionResourcesResults{}, err
 			}
 			resources = append(resources, Resource{
-				Content:      fmt.Sprintf("%s\n", valuesYaml),
+				Content:      fmt.Sprintf("%s", valuesYaml),
 				Name:         zarfChart.Name,
 				ResourceType: ValuesFileResource,
 			})

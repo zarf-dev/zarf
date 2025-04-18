@@ -244,6 +244,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		return fmt.Errorf("0 values files found")
 	}
 	for _, resource := range result.Resources {
+		fmt.Fprintf(o.outputWriter, "# associated chart: %s\n", resource.Name)
 		fmt.Fprintf(o.outputWriter, "%s---\n", resource.Content)
 	}
 	return nil
