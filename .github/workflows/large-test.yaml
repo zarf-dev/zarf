@@ -6,6 +6,8 @@ permissions:
 on:
   pull_request:
 
+runs-on: large-ubuntu-zarf-release
+
 jobs:
   large-test:
     runs-on: large-ubuntu-zarf-release
@@ -21,6 +23,6 @@ jobs:
         with:
           go-version-file: go.mod
 
-      # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
-      - name: Cleanup files
-        uses: ./.github/actions/cleanup-files
+      - name: print space
+        run: |
+          lsblk -f
