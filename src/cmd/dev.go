@@ -15,6 +15,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/mholt/archiver/v3"
 	"github.com/pterm/pterm"
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -25,6 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
@@ -243,7 +245,13 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-type devGenerateOptions struct{}
+type devGenerateOptions struct {
+	url         string
+	version     string
+	gitPath     string
+	output      string
+	kubeVersion string
+}
 
 func newDevGenerateCommand() *cobra.Command {
 	o := &devGenerateOptions{}
@@ -257,35 +265,64 @@ func newDevGenerateCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringVar(&pkgConfig.GenerateOpts.URL, "url", "", "URL to the source git repository")
+	cmd.Flags().StringVar(&o.url, "url", "", "URL to the source git repository")
 	cmd.MarkFlagRequired("url")
-	cmd.Flags().StringVar(&pkgConfig.GenerateOpts.Version, "version", "", "The Version of the chart to use")
+	cmd.Flags().StringVar(&o.version, "version", "", "The Version of the chart to use")
 	cmd.MarkFlagRequired("version")
-	cmd.Flags().StringVar(&pkgConfig.GenerateOpts.GitPath, "gitPath", "", "Relative path to the chart in the git repository")
-	cmd.Flags().StringVar(&pkgConfig.GenerateOpts.Output, "output-directory", "", "Output directory for the generated zarf.yaml")
+	cmd.Flags().StringVar(&o.gitPath, "gitPath", "", "Relative path to the chart in the git repository")
+	cmd.Flags().StringVar(&o.output, "output-directory", "", "Output directory for the generated zarf.yaml")
 	cmd.MarkFlagRequired("output-directory")
-	cmd.Flags().StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
+	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
 }
 
-func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) error {
-	pkgConfig.GenerateOpts.Name = args[0]
+func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) {
+	l := logger.From(cmd.Context())
+	name := args[0]
+	generatedZarfYAMLPath := filepath.Join(o.output, layout.ZarfYAML)
 
-	pkgConfig.CreateOpts.BaseDir = "."
-	pkgConfig.FindImagesOpts.RepoHelmChartPath = pkgConfig.GenerateOpts.GitPath
-
-	pkgClient, err := packager.New(&pkgConfig, packager.WithContext(cmd.Context()))
+	if !helpers.InvalidPath(generatedZarfYAMLPath) {
+		prefixed := filepath.Join(o.output, fmt.Sprintf("%s-%s", name, layout.ZarfYAML))
+		l.Warn("using a prefixed name since zarf.yaml already exists in the output directory",
+			"output-directory", o.output,
+			"name", prefixed)
+		generatedZarfYAMLPath = prefixed
+		if !helpers.InvalidPath(generatedZarfYAMLPath) {
+			return fmt.Errorf("unable to generate package, %s already exists", generatedZarfYAMLPath)
+		}
+	}
+	l.Info("generating package", "name", name, "path", generatedZarfYAMLPath)
+	opts := &packager2.GenerateOptions{
+		PackageName: name,
+		Version:     o.version,
+		URL:         o.url,
+		GitPath:     o.gitPath,
+		KubeVersion: o.kubeVersion,
+	}
+	pkg, err := packager2.Generate(cmd.Context(), opts)
 	if err != nil {
 		return err
 	}
-	defer pkgClient.ClearTempPaths()
 
-	err = pkgClient.Generate(cmd.Context())
+	if err := helpers.CreateDirectory(o.output, helpers.ReadExecuteAllWriteUser); err != nil {
+		return err
+	}
+
+	b, err := goyaml.MarshalWithOptions(pkg, goyaml.IndentSequence(true), goyaml.UseSingleQuote(false))
 	if err != nil {
 		return err
 	}
-	return nil
+
+	schemaComment := fmt.Sprintf("# yaml-language-server: $schema=https://raw.githubusercontent.com/%s/%s/zarf.schema.json", config.GithubProject, config.CLIVersion)
+	content := schemaComment + "\n" + string(b)
+
+	// lets space things out a bit
+	content = strings.Replace(content, "kind:\n", "\nkind:\n", 1)
+	content = strings.Replace(content, "metadata:\n", "\nmetadata:\n", 1)
+	content = strings.Replace(content, "components:\n", "\ncomponents:\n", 1)
+
+	return os.WriteFile(generatedZarfYAMLPath, []byte(content), helpers.ReadAllWriteUser)
 }
 
 type devPatchGitOptions struct{}
