@@ -13,3 +13,10 @@ components:
         namespace: httpd
         files:
           - httpd-deployment.yaml
+
+  - name: svc
+    manifests:
+      - name: simple-svc
+        namespace: httpd
+        files:
+          - svc.yaml

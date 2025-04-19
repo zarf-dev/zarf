@@ -15,5 +15,6 @@ spec:
       containers:
       - name: httpd
         image: httpd:alpine3.18
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
         - containerPort: ###ZARF_VAR_PORT###
