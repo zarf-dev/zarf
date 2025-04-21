@@ -274,6 +274,23 @@ func TestPackageUsesFlavor(t *testing.T) {
 		expected bool
 	}{
 		{
+			name: "when flavor is not set",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "do-nothing",
+					},
+					{
+						Name: "do-nothing-flavored",
+						Only: v1alpha1.ZarfComponentOnlyTarget{
+							Flavor: "cashew",
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
 			name: "when flavor is not used",
 			pkg: v1alpha1.ZarfPackage{
 				Components: []v1alpha1.ZarfComponent{
@@ -305,7 +322,7 @@ func TestPackageUsesFlavor(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tt.expected, packageHasFlavor(tt.pkg, tt.flavor))
+			require.Equal(t, tt.expected, hasFlavoredComponent(tt.pkg, tt.flavor))
 		})
 	}
 }

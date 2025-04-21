@@ -310,7 +310,7 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 		"setVariables", setVariables,
 	)
 
-	if flavor != "" && !packageHasFlavor(pkg, flavor) {
+	if hasFlavoredComponent(pkg, flavor) {
 		l.Warn("flavor not used in package", "flavor", flavor)
 	}
 	if err := lint.ValidatePackage(pkg); err != nil {
@@ -338,7 +338,7 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	return nil
 }
 
-func packageHasFlavor(pkg v1alpha1.ZarfPackage, flavor string) bool {
+func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
 	for _, comp := range pkg.Components {
 		if comp.Only.Flavor == flavor {
 			return true
