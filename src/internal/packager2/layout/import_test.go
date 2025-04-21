@@ -52,15 +52,15 @@ func TestResolveImports(t *testing.T) {
 			name: "variables and constants are resolved correctly",
 			path: "./testdata/import/variables",
 		},
-		// {
-		// 	name: "two separate chains of imports importing a common file",
-		// 	path: "./testdata/import/branch",
-		// },
-		// {
-		// 	name:   "flavor is preserved when importing",
-		// 	path:   "./testdata/import/flavor",
-		// 	flavor: "pistachio",
-		// },
+		{
+			name: "two separate chains of imports importing a common file",
+			path: "./testdata/import/branch",
+		},
+		{
+			name:   "flavor is preserved when importing",
+			path:   "./testdata/import/flavor",
+			flavor: "pistachio",
+		},
 	}
 
 	for _, tc := range testCases {

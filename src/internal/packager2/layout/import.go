@@ -148,7 +148,6 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 
 	pkg.Components = components
 	// Keep only first occurrence of each variable
-	pkg.Variables = []v1alpha1.InteractiveVariable{}
 	for _, v := range variables {
 		if slices.IndexFunc(pkg.Variables, func(existing v1alpha1.InteractiveVariable) bool {
 			return existing.Name == v.Name
@@ -158,7 +157,6 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	}
 
 	// Keep only first occurrence of each constant
-	pkg.Constants = []v1alpha1.Constant{}
 	for _, c := range constants {
 		if slices.IndexFunc(pkg.Constants, func(existing v1alpha1.Constant) bool {
 			return existing.Name == c.Name
