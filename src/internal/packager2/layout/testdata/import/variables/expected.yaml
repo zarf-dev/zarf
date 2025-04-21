@@ -2,15 +2,21 @@ kind: ZarfPackageConfig
 metadata:
   name: parent-package
 constants:
-  - name: PARENT_CONSTANT
-    value: "value from parent"
-  - name: CHILD_CONSTANT
-    value: "value from child"
+- name: PARENT_CONSTANT
+  value: value from parent
+- name: CHILD_CONSTANT
+  value: value from child
 variables:
   - name: PARENT_VAR
-    value: "value from parent"
+    default: "default from parent"
   - name: CHILD_VAR
-    value: "value from child"
+    default: "default from child"
+  - name: SECONDARY_CHILD_VAR
+    default: "default from child in component imported later"
 components:
-  - name: component-to-test-vars
+  - name: first-imported-component
+    required: true
+  - name: same-package-imported-again
+    required: true
+  - name: component-from-different-package
     required: true
