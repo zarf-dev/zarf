@@ -26,13 +26,6 @@ var (
 )
 
 // PullPackage pulls the package from the remote repository and saves it to the given path.
-//
-// layersToPull is an optional parameter that allows the caller to specify which layers to pull.
-//
-// The following layers will ALWAYS be pulled if they exist:
-//   - zarf.yaml
-//   - checksums.txt
-//   - zarf.yaml.sig
 func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (_ []ocispec.Descriptor, err error) {
 	layerSize := oci.SumDescsSize(layersToPull)
 	// TODO (@austinabro321) change this and other r.Log() calls to the proper slog format
@@ -139,7 +132,14 @@ func (r *Remote) LayersFromRequestedComponents(ctx context.Context, requestedCom
 }
 
 // AssembleLayers returns the layers for the given zarf package to pull from OCI.
-// This could be the primarily location for understanding how layers are assembled for a given package pull operation
+//
+// A zarf package consists of the following layers:
+// - The root manifest
+// - The zarf.yaml
+// - The sboms.tar
+// - The images index
+// - The images blobs
+// - The components tarballs
 func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, inspectTarget string) ([]ocispec.Descriptor, error) {
 	layers := make([]ocispec.Descriptor, 0)
 

@@ -156,7 +156,7 @@ func pullOCI(ctx context.Context, opts PullOCIOptions) (bool, string, error) {
 	if err != nil {
 		return false, "", err
 	}
-	desc, err := remote.ResolveRoot(ctx)
+	_, err = remote.ResolveRoot(ctx)
 	if err != nil {
 		return false, "", fmt.Errorf("could not find package %s with architecture %s: %w", opts.Source, platform.Architecture, err)
 	}
@@ -170,22 +170,20 @@ func pullOCI(ctx context.Context, opts PullOCIOptions) (bool, string, error) {
 	if !pkg.Metadata.Uncompressed {
 		tarPath = fmt.Sprintf("%s.zst", tarPath)
 	}
-	if supportsFiltering(desc.Platform) {
-		root, err := remote.FetchRoot(ctx)
-		if err != nil {
-			return false, "", err
-		}
-		if len(root.Layers) != len(layersToPull) {
-			isPartial = true
-		}
-		pkg.Components, err = opts.Filter.Apply(pkg)
-		if err != nil {
-			return false, "", err
-		}
-		layersToPull, err = remote.LayersFromRequestedComponents(ctx, pkg.Components, opts.InspectTarget)
-		if err != nil {
-			return false, "", err
-		}
+	root, err := remote.FetchRoot(ctx)
+	if err != nil {
+		return false, "", err
+	}
+	if len(root.Layers) != len(layersToPull) {
+		isPartial = true
+	}
+	pkg.Components, err = opts.Filter.Apply(pkg)
+	if err != nil {
+		return false, "", err
+	}
+	layersToPull, err = remote.AssembleLayers(ctx, pkg.Components, opts.InspectTarget)
+	if err != nil {
+		return false, "", err
 	}
 	_, err = remote.PullPackage(ctx, tmpDir, config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
