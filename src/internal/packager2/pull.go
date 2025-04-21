@@ -171,13 +171,6 @@ func pullOCI(ctx context.Context, opts PullOCIOptions) (bool, string, error) {
 		tarPath = fmt.Sprintf("%s.zst", tarPath)
 	}
 	if supportsFiltering(desc.Platform) {
-		// root, err := remote.FetchRoot(ctx)
-		// if err != nil {
-		// 	return false, "", err
-		// }
-		// // if len(root.Layers) != len(layersToPull) {
-		// // 	isPartial = true
-		// // }
 		pkg.Components, err = opts.Filter.Apply(pkg)
 		if err != nil {
 			return false, "", err
@@ -192,6 +185,14 @@ func pullOCI(ctx context.Context, opts PullOCIOptions) (bool, string, error) {
 	layersToPull, err = zoci.FilterLayers(layerMap, opts.InspectTarget)
 	if err != nil {
 		return false, "", err
+	}
+
+	root, err := remote.FetchRoot(ctx)
+	if err != nil {
+		return false, "", err
+	}
+	if len(root.Layers) != len(layersToPull) {
+		isPartial = true
 	}
 
 	_, err = remote.PullPackage(ctx, tmpDir, config.CommonOptions.OCIConcurrency, layersToPull...)

@@ -50,7 +50,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	return layersToPull, nil
 }
 
-// AssembleLayers returns the layers for the given zarf package to pull from OCI.
+// AssembleLayers returns all layers for the given zarf package to pull from OCI.
 func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent) (map[string][]ocispec.Descriptor, error) {
 	layerMap := make(map[string][]ocispec.Descriptor, 0)
 
@@ -176,7 +176,7 @@ func FilterLayers(layerMap map[string][]ocispec.Descriptor, inspectTarget string
 	case "manifests":
 		layers = append(layers, layerMap[layout.MetadataLayers]...)
 		layers = append(layers, layerMap[layout.ComponentLayers]...)
-	case "sboms":
+	case "sbom":
 		layers = append(layers, layerMap[layout.MetadataLayers]...)
 		layers = append(layers, layerMap[layout.SbomLayers]...)
 	default:

@@ -595,7 +595,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		SkipSignatureValidation: o.skipSignatureValidation,
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		InspectTarget:           "definition",
+		InspectTarget:           "metadata",
 	}
 	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {
@@ -660,7 +660,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		SkipSignatureValidation: o.skipSignatureValidation,
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		InspectTarget:           "definition",
+		InspectTarget:           "metadata",
 	}
 	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {
