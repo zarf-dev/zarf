@@ -77,13 +77,13 @@ func TestResolveImports(t *testing.T) {
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
 			require.NoError(t, err)
-			// expectedPkg, err := ParseZarfPackage(b)
+			expectedPkg, err := ParseZarfPackage(b)
 			otherB, err := goyaml.Marshal(resolvedPkg)
 			require.NoError(t, err)
 			fmt.Println(string(otherB))
 
-			// require.NoError(t, err)
-			// require.Equal(t, expectedPkg, resolvedPkg)
+			require.NoError(t, err)
+			require.Equal(t, expectedPkg, resolvedPkg)
 		})
 	}
 }

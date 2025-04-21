@@ -8,11 +8,16 @@ variables:
   - name: PARENT_VAR
     default: "default from parent"
 components:
-  - name: component-to-test-vars
+  - name: first-imported-component
     required: true
     import:
       path: import
-  - name: other-component-to-test-vars
+  - name: same-package-imported-again
     required: true
     import:
       path: import
+
+  - name: component-from-different-package
+    required: true
+    import:
+      path: secondImport

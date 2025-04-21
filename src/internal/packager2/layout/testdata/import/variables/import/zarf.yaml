@@ -12,7 +12,7 @@ variables:
   - name: CHILD_VAR
     default: "default from child"
 components:
-  - name: component-to-test-vars
+  - name: first-imported-component
     required: true
-  - name: other-component-to-test-vars
+  - name: same-package-imported-again
     required: true
