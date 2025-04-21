@@ -20,3 +20,18 @@ spec:
         ports:
         - containerPort: 80
 ---
+#type: manifest
+#source: simple-svc-0.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-connect
+spec:
+  ports:
+  - port: 8080
+    name: http
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: nginx
+---
