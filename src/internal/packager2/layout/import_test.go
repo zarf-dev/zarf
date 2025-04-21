@@ -75,6 +75,7 @@ func TestResolveImports(t *testing.T) {
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
 			require.NoError(t, err)
 			expectedPkg, err := ParseZarfPackage(b)
+
 			require.NoError(t, err)
 			require.Equal(t, expectedPkg, resolvedPkg)
 		})
