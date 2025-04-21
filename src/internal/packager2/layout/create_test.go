@@ -280,9 +280,15 @@ func TestPackageUsesFlavor(t *testing.T) {
 					{
 						Name: "do-nothing",
 					},
+					{
+						Name: "do-nothing-flavored",
+						Only: v1alpha1.ZarfComponentOnlyTarget{
+							Flavor: "cashew",
+						},
+					},
 				},
 			},
-			expected: false,
+			expected: true,
 		},
 		{
 			name: "when flavor is not used",
@@ -315,7 +321,8 @@ func TestPackageUsesFlavor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expected, packageUsesFlavor(tt.pkg, tt.flavor))
+			t.Parallel()
+			require.Equal(t, tt.expected, hasFlavoredComponent(tt.pkg, tt.flavor))
 		})
 	}
 }
