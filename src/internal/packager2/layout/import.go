@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -146,27 +147,24 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	}
 
 	pkg.Components = components
-	// Grab the first occurrence of each variable
-	uniqueVars := make(map[string]v1alpha1.InteractiveVariable)
+	// Keep only first occurrence of each variable
+	pkg.Variables = []v1alpha1.InteractiveVariable{}
 	for _, v := range variables {
-		if _, exists := uniqueVars[v.Name]; !exists {
-			uniqueVars[v.Name] = v
+		if slices.IndexFunc(pkg.Variables, func(existing v1alpha1.InteractiveVariable) bool {
+			return existing.Name == v.Name
+		}) == -1 {
+			pkg.Variables = append(pkg.Variables, v)
 		}
 	}
-	pkg.Variables = make([]v1alpha1.InteractiveVariable, 0, len(uniqueVars))
-	for _, v := range uniqueVars {
-		pkg.Variables = append(pkg.Variables, v)
-	}
-	// Grab the first occurrence of each constant
-	uniqueConsts := make(map[string]v1alpha1.Constant)
+
+	// Keep only first occurrence of each constant
+	pkg.Constants = []v1alpha1.Constant{}
 	for _, c := range constants {
-		if _, exists := uniqueConsts[c.Name]; !exists {
-			uniqueConsts[c.Name] = c
+		if slices.IndexFunc(pkg.Constants, func(existing v1alpha1.Constant) bool {
+			return existing.Name == c.Name
+		}) == -1 {
+			pkg.Constants = append(pkg.Constants, c)
 		}
-	}
-	pkg.Constants = make([]v1alpha1.Constant, 0, len(uniqueConsts))
-	for _, c := range uniqueConsts {
-		pkg.Constants = append(pkg.Constants, c)
 	}
 	l.Debug("done layout.ResolveImports",
 		"pkg", pkg.Metadata.Name,

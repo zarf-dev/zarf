@@ -44,10 +44,10 @@ func TestResolveImports(t *testing.T) {
 		path   string
 		flavor string
 	}{
-		// {
-		// 	name: "two zarf.yaml files import each other",
-		// 	path: "./testdata/import/import-each-other",
-		// },
+		{
+			name: "two zarf.yaml files import each other",
+			path: "./testdata/import/import-each-other",
+		},
 		{
 			name: "variables and constants are resolved correctly",
 			path: "./testdata/import/variables",
