@@ -6,10 +6,10 @@ package message
 
 import (
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"strings"
 
 	"github.com/pterm/pterm"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 // PrintComponentCredential displays credentials for a single component
@@ -84,15 +84,15 @@ func PrintCredentialUpdates(oldState *state.State, newState *state.State, servic
 	pterm.Println()
 }
 
-func compareStrings(curent string, updated string, secret bool) string {
-	if updated == curent {
+func compareStrings(current string, updated string, secret bool) string {
+	if updated == current {
 		if secret {
 			return "**sanitized** (unchanged)"
 		}
-		return fmt.Sprintf("%s (unchanged)", curent)
+		return fmt.Sprintf("%s (unchanged)", current)
 	}
 	if secret {
 		return fmt.Sprintf("%s -> %s", pterm.FgRed.Sprint("**existing (sanitized)**"), pterm.FgGreen.Sprint("**replacement (sanitized)**"))
 	}
-	return fmt.Sprintf("%s -> %s", pterm.FgRed.Sprint(curent), pterm.FgGreen.Sprint(updated))
+	return fmt.Sprintf("%s -> %s", pterm.FgRed.Sprint(current), pterm.FgGreen.Sprint(updated))
 }

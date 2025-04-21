@@ -7,7 +7,6 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -15,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 )

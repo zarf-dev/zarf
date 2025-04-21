@@ -6,16 +6,16 @@ package state
 
 import (
 	"fmt"
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/stretchr/testify/require"
 	"testing"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
 // TODO: Change password gen method to make testing possible.
-func TestMergeZarfStateRegistry(t *testing.T) {
+func TestMergeStateRegistry(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -89,7 +89,10 @@ func TestMergeZarfStateRegistry(t *testing.T) {
 			oldState := &State{
 				RegistryInfo: tt.oldRegistry,
 			}
-			newState, err := Merge(oldState, types.ZarfInitOptions{RegistryInfo: tt.initRegistry}, []string{RegistryKey})
+			newState, err := Merge(oldState, MergeOptions{
+				RegistryInfo: tt.initRegistry,
+				Services:     []string{RegistryKey},
+			})
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedRegistry.PushUsername, newState.RegistryInfo.PushUsername)
 			require.Equal(t, tt.expectedRegistry.PullUsername, newState.RegistryInfo.PullUsername)
@@ -101,7 +104,7 @@ func TestMergeZarfStateRegistry(t *testing.T) {
 }
 
 // TODO: Change password gen method to make testing possible.
-func TestMergeZarfStateGit(t *testing.T) {
+func TestMergeStateGit(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -167,7 +170,10 @@ func TestMergeZarfStateGit(t *testing.T) {
 			oldState := &State{
 				GitServer: tt.oldGitServer,
 			}
-			newState, err := Merge(oldState, types.ZarfInitOptions{GitServer: tt.initGitServer}, []string{GitKey})
+			newState, err := Merge(oldState, MergeOptions{
+				GitServer: tt.initGitServer,
+				Services:  []string{GitKey},
+			})
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedGitServer.PushUsername, newState.GitServer.PushUsername)
 			require.Equal(t, tt.expectedGitServer.PullUsername, newState.GitServer.PullUsername)
@@ -176,7 +182,7 @@ func TestMergeZarfStateGit(t *testing.T) {
 	}
 }
 
-func TestMergeZarfStateArtifact(t *testing.T) {
+func TestMergeStateArtifact(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -254,14 +260,17 @@ func TestMergeZarfStateArtifact(t *testing.T) {
 			oldState := &State{
 				ArtifactServer: tt.oldArtifactServer,
 			}
-			newState, err := Merge(oldState, types.ZarfInitOptions{ArtifactServer: tt.initArtifactServer}, []string{ArtifactKey})
+			newState, err := Merge(oldState, MergeOptions{
+				ArtifactServer: tt.initArtifactServer,
+				Services:       []string{ArtifactKey},
+			})
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedArtifactServer, newState.ArtifactServer)
 		})
 	}
 }
 
-func TestMergeZarfStateAgent(t *testing.T) {
+func TestMergeStateAgent(t *testing.T) {
 	t.Parallel()
 
 	agentTLS, err := pki.GeneratePKI("example.com")
@@ -269,7 +278,9 @@ func TestMergeZarfStateAgent(t *testing.T) {
 	oldState := &State{
 		AgentTLS: agentTLS,
 	}
-	newState, err := Merge(oldState, types.ZarfInitOptions{}, []string{AgentKey})
+	newState, err := Merge(oldState, MergeOptions{
+		Services: []string{AgentKey},
+	})
 	require.NoError(t, err)
 	require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
 }

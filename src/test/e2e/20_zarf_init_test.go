@@ -7,13 +7,13 @@ package test
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"runtime"
 	"testing"
 
 	"encoding/json"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 func TestZarfInit(t *testing.T) {

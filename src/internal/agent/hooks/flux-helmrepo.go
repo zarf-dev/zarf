@@ -49,7 +49,7 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 		return &operations.Result{Allowed: true}, nil
 	}
 
-	zarfState, err := cluster.LoadState(ctx)
+	zarfState, err := cluster.Load(ctx)
 	if err != nil {
 		return nil, err
 	}

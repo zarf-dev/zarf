@@ -5,8 +5,8 @@ package cluster
 
 import (
 	"context"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

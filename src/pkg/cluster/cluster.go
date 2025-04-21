@@ -9,26 +9,25 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/types"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
-
-	"github.com/avast/retry-go/v4"
-
-	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
@@ -43,9 +42,12 @@ const (
 
 // Cluster Zarf specific cluster management functions.
 type Cluster struct {
-	Clientset  kubernetes.Interface
+	// Clientset implements k8s client api
+	Clientset kubernetes.Interface
+	// RestConfig holds common options for a k8s client
 	RestConfig *rest.Config
-	Watcher    watcher.StatusWatcher
+	// Watcher implements kstatus StatusWatcher
+	Watcher watcher.StatusWatcher
 }
 
 // NewWithWait wraps NewClusterWithWait to provide a shorthand alias.
@@ -97,7 +99,7 @@ func NewClusterWithWait(ctx context.Context) (*Cluster, error) {
 }
 
 // NewCluster creates a new Cluster instance and validates connection to the cluster by fetching the Kubernetes version.
-func NewCluster(ctx context.Context) (*Cluster, error) {
+func NewCluster(_ context.Context) (*Cluster, error) {
 	clusterErr := errors.New("unable to connect to the cluster")
 	clientset, cfg, err := ClientAndConfig()
 	if err != nil {
@@ -153,23 +155,39 @@ func WatcherForConfig(cfg *rest.Config) (watcher.StatusWatcher, error) {
 	return sw, nil
 }
 
-func (c *Cluster) Init(ctx context.Context, initOptions types.ZarfInitOptions) error {
+// InitOptions tracks the user-defined options during cluster initialization.
+type InitOptions struct {
+	// Indicates if Zarf was initialized while deploying its own k8s cluster
+	ApplianceMode bool
+	// Information about the repository Zarf is going to be using
+	GitServer types.GitServerInfo
+	// Information about the container registry Zarf is going to be using
+	RegistryInfo types.RegistryInfo
+	// Information about the artifact registry Zarf is going to be using
+	ArtifactServer types.ArtifactServerInfo
+	// StorageClass of the k8s cluster Zarf is initializing
+	StorageClass string
+}
+
+// Init takes initOptions and hydrates a cluster's state from InitOptions.
+func (c *Cluster) Init(ctx context.Context, opts InitOptions) error {
 	l := logger.From(ctx)
 
 	// Attempt to load an existing state prior to init.
 	// NOTE: We are ignoring the error here because we don't really expect a state to exist yet.
 	l.Debug("checking cluster for existing Zarf deployment")
-	s, err := c.LoadState(ctx)
+	s, err := c.Load(ctx)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return fmt.Errorf("failed to check for existing state: %w", err)
 	}
 
 	// If state is nil, this is a new cluster.
+	// TODO(mkcp): Simplify nesting with early returns closer to the top of the function.
 	if s == nil {
 		// REVIEW(mkcp): Is it safe to use state.Default() here instead?
 		s = &state.State{}
 		l.Debug("new cluster, no prior Zarf deployments found")
-		if initOptions.ApplianceMode {
+		if opts.ApplianceMode {
 			// If the K3s component is being deployed, skip distro detection.
 			s.Distro = DistroIsK3s
 			s.ZarfAppliance = true
@@ -248,27 +266,27 @@ func (c *Cluster) Init(ctx context.Context, initOptions types.ZarfInitOptions) e
 			return fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 
-		err = initOptions.GitServer.FillInEmptyValues()
+		err = opts.GitServer.FillInEmptyValues()
 		if err != nil {
 			return err
 		}
-		s.GitServer = initOptions.GitServer
-		err = initOptions.RegistryInfo.FillInEmptyValues()
+		s.GitServer = opts.GitServer
+		err = opts.RegistryInfo.FillInEmptyValues()
 		if err != nil {
 			return err
 		}
-		s.RegistryInfo = initOptions.RegistryInfo
-		initOptions.ArtifactServer.FillInEmptyValues()
-		s.ArtifactServer = initOptions.ArtifactServer
+		s.RegistryInfo = opts.RegistryInfo
+		opts.ArtifactServer.FillInEmptyValues()
+		s.ArtifactServer = opts.ArtifactServer
 	} else {
 		// TODO (@austinabro321) validate immediately in `zarf init` if these are set and not equal and error out if so
-		if helpers.IsNotZeroAndNotEqual(initOptions.GitServer, s.GitServer) {
+		if helpers.IsNotZeroAndNotEqual(opts.GitServer, s.GitServer) {
 			l.Warn("ignoring change in git sever init options on re-init, to update run `zarf tools update-creds git`")
 		}
-		if helpers.IsNotZeroAndNotEqual(initOptions.RegistryInfo, s.RegistryInfo) {
+		if helpers.IsNotZeroAndNotEqual(opts.RegistryInfo, s.RegistryInfo) {
 			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
 		}
-		if helpers.IsNotZeroAndNotEqual(initOptions.ArtifactServer, s.ArtifactServer) {
+		if helpers.IsNotZeroAndNotEqual(opts.ArtifactServer, s.ArtifactServer) {
 			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
 		}
 	}
@@ -284,70 +302,39 @@ func (c *Cluster) Init(ctx context.Context, initOptions types.ZarfInitOptions) e
 		s.StorageClass = "hostpath"
 	}
 
-	if initOptions.StorageClass != "" {
-		s.StorageClass = initOptions.StorageClass
+	if opts.StorageClass != "" {
+		s.StorageClass = opts.StorageClass
 	}
 
 	// Save the state back to K8s
-	if err := c.SaveZarfState(ctx, s); err != nil {
+	if err := c.Save(ctx, s); err != nil {
 		return fmt.Errorf("unable to save the Zarf state: %w", err)
 	}
 
 	return nil
 }
 
-// LoadState returns the current zarf/zarf-state secret data or an empty State.
-func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
+// Load utilizes the k8s Clientset to load and return the current state.State data or an empty state.State if no
+// cluster is found.
+func (c *Cluster) Load(ctx context.Context) (*state.State, error) {
 	stateErr := errors.New("failed to load the Zarf State from the cluster, has Zarf been initiated")
 	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
 
-	// REVIEW(mkcp): state.Default() instead?
 	s := &state.State{}
 	err = json.Unmarshal(secret.Data[state.ZarfStateDataKey], &s)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
-	c.debugPrintZarfState(ctx, s)
+	state.DebugPrint(ctx, s)
 	return s, nil
 }
 
-func (c *Cluster) sanitizeZarfState(s *state.State) *state.State {
-	// Overwrite the AgentTLS information
-	s.AgentTLS.CA = []byte("**sanitized**")
-	s.AgentTLS.Cert = []byte("**sanitized**")
-	s.AgentTLS.Key = []byte("**sanitized**")
-
-	// Overwrite the GitServer passwords
-	s.GitServer.PushPassword = "**sanitized**"
-	s.GitServer.PullPassword = "**sanitized**"
-
-	// Overwrite the RegistryInfo passwords
-	s.RegistryInfo.PushPassword = "**sanitized**"
-	s.RegistryInfo.PullPassword = "**sanitized**"
-	s.RegistryInfo.Secret = "**sanitized**"
-
-	// Overwrite the ArtifactServer secret
-	s.ArtifactServer.PushToken = "**sanitized**"
-
-	return s
-}
-
-func (c *Cluster) debugPrintZarfState(ctx context.Context, state *state.State) {
-	if state == nil {
-		return
-	}
-	// this is a shallow copy, nested pointers WILL NOT be copied
-	oldState := *state
-	sanitized := c.sanitizeZarfState(&oldState)
-	logger.From(ctx).Debug("cluster.debugPrintZarfState", "state", sanitized)
-}
-
-// SaveZarfState takes a given state and persists it to the Zarf/zarf-state secret.
-func (c *Cluster) SaveZarfState(ctx context.Context, s *state.State) error {
-	c.debugPrintZarfState(ctx, s)
+// Save takes a given state.State and persists it to k8s Cluster secrets.
+func (c *Cluster) Save(ctx context.Context, s *state.State) error {
+	state.DebugPrint(ctx, s)
 
 	data, err := json.Marshal(&s)
 	if err != nil {

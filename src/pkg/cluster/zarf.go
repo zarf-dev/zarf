@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"strings"
 	"time"
 
@@ -23,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/types"
 )
 

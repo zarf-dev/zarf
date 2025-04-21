@@ -4,7 +4,6 @@
 package cluster
 
 import (
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 

@@ -75,7 +75,7 @@ func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 	require.NoError(t, err)
 
 	// Init the state variable
-	state, err := c.LoadState(ctx)
+	state, err := c.Load(ctx)
 	require.NoError(t, err)
 	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
@@ -110,7 +110,7 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 	require.NoError(t, err)
 
 	// Init the state variable
-	state, err := c.LoadState(ctx)
+	state, err := c.Load(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
 	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, state.GitServer.PullPassword)
 	require.NoError(t, err)
@@ -140,7 +140,7 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
 	cluster, err := cluster.NewClusterWithWait(ctx)
 	require.NoError(t, err)
-	zarfState, err := cluster.LoadState(ctx)
+	zarfState, err := cluster.Load(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
 	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo.Address)
 	require.NoError(t, err)

@@ -1,16 +1,21 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package cluster contains Zarf-specific cluster management functions.
 package cluster
 
 import (
 	"context"
 	"encoding/json"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
-	"testing"
-	"time"
 )
 
 func TestInit(t *testing.T) {
@@ -35,7 +40,7 @@ func TestInit(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		initOpts    types.ZarfInitOptions
+		initOpts    InitOptions
 		nodes       []corev1.Node
 		namespaces  []corev1.Namespace
 		secrets     []corev1.Secret
@@ -47,7 +52,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name:     "no namespaces exist",
-			initOpts: types.ZarfInitOptions{},
+			initOpts: InitOptions{},
 			nodes: []corev1.Node{
 				{
 					ObjectMeta: metav1.ObjectMeta{

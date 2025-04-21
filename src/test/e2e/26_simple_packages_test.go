@@ -6,14 +6,14 @@ package test
 
 import (
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/test"
 	"net/http"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/test"
 )
 
 func TestDosGames(t *testing.T) {

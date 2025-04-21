@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"io"
 	"os"
 	"slices"
@@ -33,14 +32,14 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 var (
 	subAltNames         []string
 	outputDirectory     string
-	updateCredsInitOpts types.ZarfInitOptions
+	updateCredsInitOpts cluster.InitOptions
 )
 
 const (
@@ -103,23 +102,23 @@ func (o *getCredsOptions) complete(ctx context.Context) error {
 }
 
 func (o *getCredsOptions) run(ctx context.Context, args []string) error {
-	state, err := o.cluster.LoadState(ctx)
+	s, err := o.cluster.Load(ctx)
 	if err != nil {
 		return err
 	}
 	// TODO: Determine if this is actually needed.
-	if state.Distro == "" {
-		return errors.New("zarf state secret did not load properly")
+	if s.Distro == "" {
+		return errors.New("zarf s secret did not load properly")
 	}
 
 	if len(args) > 0 {
 		// If a component name is provided, only show that component's credentials
 		// Printing both the pterm output and slogger for now
-		printComponentCredential(ctx, state, args[0], o.outputWriter)
-		message.PrintComponentCredential(state, args[0])
+		printComponentCredential(ctx, s, args[0], o.outputWriter)
+		message.PrintComponentCredential(s, args[0])
 		return nil
 	}
-	return printCredentialTable(state, o.outputFormat, o.outputWriter)
+	return printCredentialTable(s, o.outputFormat, o.outputWriter)
 }
 
 type credentialInfo struct {
@@ -298,7 +297,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	oldState, err := c.LoadState(ctx)
+	oldState, err := c.Load(ctx)
 	if err != nil {
 		return err
 	}
@@ -306,7 +305,13 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	if oldState.Distro == "" {
 		return errors.New("zarf state secret did not load properly")
 	}
-	newState, err := state.Merge(oldState, updateCredsInitOpts, args)
+	opts := state.MergeOptions{
+		GitServer:      updateCredsInitOpts.GitServer,
+		RegistryInfo:   updateCredsInitOpts.RegistryInfo,
+		ArtifactServer: updateCredsInitOpts.ArtifactServer,
+		Services:       args,
+	}
+	newState, err := state.Merge(oldState, opts)
 	if err != nil {
 		return fmt.Errorf("unable to update Zarf credentials: %w", err)
 	}
@@ -359,7 +364,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Save the final Zarf State
-	err = c.SaveZarfState(ctx, newState)
+	err = c.Save(ctx, newState)
 	if err != nil {
 		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
 	}

@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"os"
 	"strings"
 
@@ -23,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -156,7 +156,7 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	zarfState, err := c.LoadState(ctx)
+	zarfState, err := c.Load(ctx)
 	if err != nil {
 		return err
 	}
@@ -206,7 +206,7 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 	l := logger.From(ctx)
 
-	zarfState, err := c.LoadState(ctx)
+	zarfState, err := c.Load(ctx)
 	if err != nil {
 		return err
 	}
@@ -357,7 +357,7 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 
 		l.Info("retrieving registry information from Zarf state")
 
-		s, err := c.LoadState(ctx)
+		s, err := c.Load(ctx)
 		if err != nil {
 			l.Warn("could not get Zarf state from Kubernetes cluster, continuing without state information", "error", err.Error())
 			return originalListFn(cmd, args)

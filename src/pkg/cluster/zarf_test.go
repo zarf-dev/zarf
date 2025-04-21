@@ -7,7 +7,6 @@ package cluster
 import (
 	"context"
 	"encoding/json"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"strings"
 	"testing"
 
@@ -18,6 +17,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/types"
 )
 

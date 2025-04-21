@@ -7,7 +7,6 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -29,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"

@@ -7,7 +7,6 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"io"
 	"net/http"
 	"net/url"
@@ -26,6 +25,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
