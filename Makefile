@@ -65,8 +65,9 @@ help: ## Display this help information
 		| sort | awk 'BEGIN {FS = ":.*?## "}; \
 		{printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-clean: ## Clean the build directory
+clean: ## Clean the build and dist directories
 	rm -rf build
+	rm -rf dist
 
 destroy: ## Run `zarf destroy` on the current cluster
 	$(ZARF_BIN) destroy --confirm --remove-components
@@ -129,6 +130,20 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 # INTERNAL: used to build a release version of the init package with a specific agent image
 release-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
+
+## Build the Zarf CLI for all platforms aligned with the release process
+## skipping validation here to allow for building with a dirty git state (IE development)
+goreleaser-build:
+	K8S_MODULES_VER="$(K8S_MODULES_VER)" \
+	K8S_MODULES_MAJOR_VER="$(K8S_MODULES_MAJOR_VER)" \
+	K8S_MODULES_MINOR_VER="$(K8S_MODULES_MINOR_VER)" \
+	K8S_MODULES_PATCH_VER="$(K8S_MODULES_PATCH_VER)" \
+	K9S_VERSION="$(K9S_VERSION)" \
+	CRANE_VERSION="$(CRANE_VERSION)" \
+	SYFT_VERSION="$(SYFT_VERSION)" \
+	ARCHIVER_VERSION="$(ARCHIVER_VERSION)" \
+	HELM_VERSION="$(HELM_VERSION)" \
+	goreleaser build --clean --skip=validate
 
 # INTERNAL: used to publish the init package
 publish-init-package:
