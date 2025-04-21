@@ -3,6 +3,11 @@ metadata:
   name: dos-games
   description: Simple example to load classic DOS games into K8s in the airgap
   version: 1.2.0
+  annotations:
+    dev.uds.title: DOS Games
+    dev.uds.tagline: Simple example to load classic DOS games into K8s in the airgap
+    dev.uds.categories: Games
+    dev.uds.keywords: Games, DOS, Retro, Arcade
 
 components:
   - name: baseline
