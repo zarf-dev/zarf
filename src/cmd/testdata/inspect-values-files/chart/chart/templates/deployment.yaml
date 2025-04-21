@@ -1,7 +1,3 @@
-#type: chart
----
-# Source: /tmp/zarf-226794126/chart.yaml
-# Source: htppd/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -10,7 +6,7 @@ spec:
   selector:
     matchLabels:
       app: httpd
-  replicas: 2
+  replicas: {{ .Values.replicaCount }}
   template:
     metadata:
       labels:
@@ -19,7 +15,5 @@ spec:
       containers:
       - name: httpd
         image: httpd:alpine3.18
-        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
----
