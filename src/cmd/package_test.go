@@ -175,7 +175,6 @@ func TestPackageInspectManifests(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			tmpdir := t.TempDir()
@@ -249,7 +248,6 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			tmpdir := t.TempDir()
