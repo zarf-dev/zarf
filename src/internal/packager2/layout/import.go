@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -147,12 +146,28 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	}
 
 	pkg.Components = components
-	pkg.Variables = slices.CompactFunc(variables, func(l, r v1alpha1.InteractiveVariable) bool {
-		return l.Name == r.Name
-	})
-	pkg.Constants = slices.CompactFunc(constants, func(l, r v1alpha1.Constant) bool {
-		return l.Name == r.Name
-	})
+	// Grab the first occurrence of each variable
+	uniqueVars := make(map[string]v1alpha1.InteractiveVariable)
+	for _, v := range variables {
+		if _, exists := uniqueVars[v.Name]; !exists {
+			uniqueVars[v.Name] = v
+		}
+	}
+	pkg.Variables = make([]v1alpha1.InteractiveVariable, 0, len(uniqueVars))
+	for _, v := range uniqueVars {
+		pkg.Variables = append(pkg.Variables, v)
+	}
+	// Grab the first occurrence of each constant
+	uniqueConsts := make(map[string]v1alpha1.Constant)
+	for _, c := range constants {
+		if _, exists := uniqueConsts[c.Name]; !exists {
+			uniqueConsts[c.Name] = c
+		}
+	}
+	pkg.Constants = make([]v1alpha1.Constant, 0, len(uniqueConsts))
+	for _, c := range uniqueConsts {
+		pkg.Constants = append(pkg.Constants, c)
+	}
 	l.Debug("done layout.ResolveImports",
 		"pkg", pkg.Metadata.Name,
 		"components", len(pkg.Components),
