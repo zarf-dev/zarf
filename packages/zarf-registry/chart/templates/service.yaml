@@ -10,6 +10,9 @@ metadata:
     heritage: {{ .Release.Service }}
 spec:
   type: {{ .Values.service.type }}
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies:
+    - IPv6
   ports:
     - port: {{ .Values.service.port }}
       protocol: TCP
