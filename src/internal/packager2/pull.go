@@ -330,6 +330,8 @@ func nameFromMetadata(path string) (string, error) {
 	return fmt.Sprintf("%s.tar.zst", name), nil
 }
 
+// supportsFiltering checks if the package supports filtering.
+// This is true if the package is not a skeleton package and the platform is not nil.
 func supportsFiltering(platform *ocispec.Platform) bool {
 	if platform == nil {
 		return false
@@ -340,7 +342,11 @@ func supportsFiltering(platform *ocispec.Platform) bool {
 	return true
 }
 
+// isSkeleton checks if the package is explicitly a skeleton package.
 func isSkeleton(platform *ocispec.Platform) bool {
+	if platform == nil {
+		return false
+	}
 	skeletonPlatform := zoci.PlatformForSkeleton()
 	if platform.Architecture == skeletonPlatform.Architecture && platform.OS == skeletonPlatform.OS {
 		return true
