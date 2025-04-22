@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -370,6 +371,7 @@ func newPackageInspectCommand() *cobra.Command {
 	cmd.AddCommand(newPackageInspectImagesCommand())
 	cmd.AddCommand(newPackageInspectShowManifestsCommand())
 	cmd.AddCommand(newPackageInspectDefinitionCommand())
+	cmd.AddCommand(newPackageInspectValuesFilesCommand())
 
 	cmd.Flags().StringVar(&pkgConfig.InspectOpts.SBOMOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
 	cmd.Flags().BoolVar(&pkgConfig.InspectOpts.ListImages, "list-images", false, lang.CmdPackageInspectFlagListImages)
@@ -412,6 +414,81 @@ func (o *packageInspectOptions) run(cmd *cobra.Command, args []string) error {
 		skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 	}
 	return definitionOpts.run(cmd, args)
+}
+
+type packageInspectValuesFilesOpts struct {
+	skipSignatureValidation bool
+	components              string
+	kubeVersion             string
+	setVariables            map[string]string
+	outputWriter            io.Writer
+}
+
+func newPackageInspectValuesFilesOptions() *packageInspectValuesFilesOpts {
+	return &packageInspectValuesFilesOpts{
+		outputWriter: message.OutputWriter,
+	}
+}
+
+func newPackageInspectValuesFilesCommand() *cobra.Command {
+	o := newPackageInspectValuesFilesOptions()
+	cmd := &cobra.Command{
+		Use:   "values-files [ PACKAGE ]",
+		Short: "Creates, templates, and outputs the values-files to be sent to each chart",
+		Long:  "Creates, templates, and outputs the values-files to be sent to each chart. Does not consider values files builtin to charts",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			return o.run(ctx, args)
+		},
+	}
+
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show values files for")
+	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+
+	return cmd
+}
+
+func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) (err error) {
+	src, err := choosePackage(ctx, args)
+	if err != nil {
+		return err
+	}
+	v := getViper()
+	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+	loadOpt := packager2.LoadOptions{
+		Source:                  src,
+		SkipSignatureValidation: o.skipSignatureValidation,
+		Filter:                  filters.BySelectState(o.components),
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+	}
+	layout, err := packager2.LoadPackage(ctx, loadOpt)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, layout.Cleanup())
+	}()
+	result, err := packager2.InspectPackageResources(ctx, layout, packager2.InspectPackageResourcesOptions{
+		SetVariables: o.setVariables,
+		KubeVersion:  o.kubeVersion,
+	})
+	if err != nil {
+		return err
+	}
+	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
+		return r.ResourceType != packager2.ValuesFileResource
+	})
+	if len(result.Resources) == 0 {
+		return fmt.Errorf("0 values files found")
+	}
+	for _, resource := range result.Resources {
+		fmt.Fprintf(o.outputWriter, "# associated chart: %s\n", resource.Name)
+		fmt.Fprintf(o.outputWriter, "%s---\n", resource.Content)
+	}
+	return nil
 }
 
 type packageInspectManifestsOpts struct {
@@ -469,14 +546,17 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 	defer func() {
 		err = errors.Join(err, layout.Cleanup())
 	}()
-	result, err := packager2.InspectPackageManifests(ctx, layout, packager2.InspectPackageManifestsOptions{
+	result, err := packager2.InspectPackageResources(ctx, layout, packager2.InspectPackageResourcesOptions{
 		SetVariables: o.setVariables,
 		KubeVersion:  o.kubeVersion,
 	})
 	if err != nil {
 		return err
 	}
-	if result.Resources == nil {
+	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
+		return r.ResourceType == packager2.ValuesFileResource
+	})
+	if len(result.Resources) == 0 {
 		return fmt.Errorf("0 manifests found")
 	}
 	for _, resource := range result.Resources {
