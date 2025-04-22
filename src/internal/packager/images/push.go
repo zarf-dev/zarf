@@ -104,6 +104,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
 		}
 		pushed := []string{}
+		// Delete the images that were already successfully pushed so that they aren't attempted on the next retry
 		defer func() {
 			for _, refInfo := range pushed {
 				delete(toPush, refInfo)
