@@ -77,7 +77,7 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 	if err != nil {
 		return nil, err
 	}
-	componentLayers, images, err := LayersFromComponents(root, pkg, requestedComponents)
+	componentLayers, images, err := r.LayersFromComponents(ctx, pkg, requestedComponents)
 	if err != nil {
 		return nil, err
 	}
@@ -86,11 +86,7 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 	imageLayers := make([]ocispec.Descriptor, 0)
 	if len(images) > 0 && !isSkeleton {
 		// images layers are required for standard pulls
-		index, err := r.FetchImagesIndex(ctx)
-		if err != nil {
-			return nil, err
-		}
-		imageLayers, err = r.LayersFromImages(ctx, root, index, images)
+		imageLayers, err = r.LayersFromImages(ctx, images)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +104,12 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 }
 
 // LayersFromComponents returns the layers for the given components to pull from OCI.
-func LayersFromComponents(root *oci.Manifest, pkg v1alpha1.ZarfPackage, requestedComponents []v1alpha1.ZarfComponent) ([]ocispec.Descriptor, map[string]bool, error) {
+func (r *Remote) LayersFromComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, requestedComponents []v1alpha1.ZarfComponent) ([]ocispec.Descriptor, map[string]bool, error) {
+	root, err := r.FetchRoot(ctx)
+	if err != nil {
+		return []ocispec.Descriptor{}, map[string]bool{}, err
+	}
+
 	layers := make([]ocispec.Descriptor, 0)
 
 	images := map[string]bool{}
@@ -130,7 +131,17 @@ func LayersFromComponents(root *oci.Manifest, pkg v1alpha1.ZarfPackage, requeste
 }
 
 // LayersFromImages returns the layers for the given images to pull from OCI.
-func (r *Remote) LayersFromImages(ctx context.Context, root *oci.Manifest, index *ocispec.Index, images map[string]bool) ([]ocispec.Descriptor, error) {
+func (r *Remote) LayersFromImages(ctx context.Context, images map[string]bool) ([]ocispec.Descriptor, error) {
+	root, err := r.FetchRoot(ctx)
+	if err != nil {
+		return []ocispec.Descriptor{}, err
+	}
+
+	index, err := r.FetchImagesIndex(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	layers := make([]ocispec.Descriptor, 0)
 
 	layers = append(layers, root.Locate(layout.IndexPath), root.Locate(layout.OCILayoutPath))
