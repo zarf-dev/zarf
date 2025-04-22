@@ -61,7 +61,7 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 	}
 
 	// Store all layers
-	layerMap["all"] = root.Layers
+	layerMap[layout.AllLayers] = root.Layers
 
 	// We always pull the metadata layers provided we can locate them
 	alwaysPull := make([]ocispec.Descriptor, 0)

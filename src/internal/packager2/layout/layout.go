@@ -25,6 +25,7 @@ const (
 	IndexJSON = "index.json"
 	OCILayout = "oci-layout"
 
+	AllLayers       = "all"
 	MetadataLayers  = "metadata"
 	ImageLayers     = "images"
 	ComponentLayers = "components"
