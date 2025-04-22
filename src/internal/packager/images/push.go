@@ -96,8 +96,8 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
 	}
 
-	err = retry.Do(func() error {
-		for _, img := range cfg.ImageList {
+	for _, img := range cfg.ImageList {
+		err = retry.Do(func() error {
 			l.Info("pushing image", "name", img.Reference)
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
@@ -122,11 +122,10 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				return err
 			}
 			return nil
+		}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
+		if err != nil {
+			return err
 		}
-		return nil
-	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
-	if err != nil {
-		return err
 	}
 
 	return nil
