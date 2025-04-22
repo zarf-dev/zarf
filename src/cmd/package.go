@@ -663,7 +663,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	// The user may be pulling the package from the c or using a built package
+	// The user may be pulling the package from the cluster or using a built package
 	// since we don't know we don't check this error
 	c, _ := cluster.New(ctx) //nolint:errcheck
 
@@ -717,7 +717,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		return err
 	}
 
-	// The user may be pulling the package from the c or using a built package
+	// The user may be pulling the package from the cluster or using a built package
 	// since we don't know we don't check this error
 	c, _ := cluster.NewCluster(ctx) //nolint:errcheck
 

@@ -108,7 +108,7 @@ func (o *getCredsOptions) run(ctx context.Context, args []string) error {
 	}
 	// TODO: Determine if this is actually needed.
 	if s.Distro == "" {
-		return errors.New("zarf s secret did not load properly")
+		return errors.New("state.Distro empty, did not load from cluster")
 	}
 
 	if len(args) > 0 {

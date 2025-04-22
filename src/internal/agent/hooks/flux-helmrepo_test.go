@@ -147,7 +147,7 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
-			name: "should not mutate URL if it has the same hostname as Zarf s",
+			name: "should not mutate URL if it has the same hostname as State",
 			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Update, &flux.HelmRepository{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "no-mutate-this",
@@ -176,7 +176,7 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
-			name: "should not mutate URL if it has the same hostname as Zarf s internal repo",
+			name: "should not mutate URL if it has the same hostname as State internal repo",
 			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Update, &flux.HelmRepository{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "no-mutate-this",
