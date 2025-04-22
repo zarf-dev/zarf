@@ -33,6 +33,10 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		cfg.Retries = defaultRetries
 	}
 	cfg.ImageList = helpers.Unique(cfg.ImageList)
+	toPush := map[string]struct{}{}
+	for _, img := range cfg.ImageList {
+		toPush[img.Reference] = struct{}{}
+	}
 	l := logger.From(ctx)
 	registryURL := cfg.RegistryInfo.Address
 	err := addRefNameAnnotationToImages(cfg.SourceDirectory)
@@ -45,10 +49,11 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		return fmt.Errorf("failed to instantiate oci directory: %w", err)
 	}
 
-	// Retry in case the port forward breaks
+	// The user may or may not have a cluster available, if it's available then use it to connect to the registry
+	c, _ := cluster.NewCluster()
 	err = retry.Do(func() error {
+		// Include tunnel connection in case the port forward breaks, for example, a registry pod could spin down / restart
 		var tunnel *cluster.Tunnel
-		c, _ := cluster.NewCluster()
 		if c != nil {
 			var err error
 			registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegistryInfo)
@@ -98,38 +103,37 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 			return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
 		}
-
-		for _, img := range cfg.ImageList {
-			// pushed := []transform.Image{}
-			// defer func() {
-			// 	for _, refInfo := range pushed {
-			// 		delete(toPush, refInfo)
-			// 	}
-			// }()
-
-			l.Info("pushing image", "name", img.Reference)
+		pushed := []string{}
+		defer func() {
+			for _, refInfo := range pushed {
+				delete(toPush, refInfo)
+			}
+		}()
+		for img := range toPush {
+			l.Info("pushing image", "name", img)
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
-				offlineNameCRC, err := transform.ImageTransformHost(registryURL, img.Reference)
+				offlineNameCRC, err := transform.ImageTransformHost(registryURL, img)
 				if err != nil {
 					return err
 				}
 
-				if err = pushImage(img.Reference, offlineNameCRC); err != nil {
+				if err = pushImage(img, offlineNameCRC); err != nil {
 					return err
 				}
 			}
 
 			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
 			// (this may result in collisions but this is acceptable for this use case)
-			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, img.Reference)
+			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, img)
 			if err != nil {
 				return err
 			}
 
-			if err = pushImage(img.Reference, offlineName); err != nil {
+			if err = pushImage(img, offlineName); err != nil {
 				return err
 			}
+			pushed = append(pushed, img)
 		}
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
