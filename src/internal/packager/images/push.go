@@ -35,36 +35,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	cfg.ImageList = helpers.Unique(cfg.ImageList)
 	l := logger.From(ctx)
 	registryURL := cfg.RegistryInfo.Address
-	var tunnel *cluster.Tunnel
-	c, _ := cluster.NewCluster()
-	if c != nil {
-		var err error
-		registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegistryInfo)
-		if err != nil {
-			return err
-		}
-		if tunnel != nil {
-			defer tunnel.Close()
-		}
-	}
-	client := &auth.Client{
-		Client: orasRetry.DefaultClient,
-		Cache:  auth.NewCache(),
-		Credential: auth.StaticCredential(registryURL, auth.Credential{
-			Username: cfg.RegistryInfo.PushUsername,
-			Password: cfg.RegistryInfo.PushPassword,
-		}),
-	}
-
-	plainHTTP := cfg.PlainHTTP
-
-	if dns.IsLocalhost(registryURL) && !cfg.PlainHTTP {
-		var err error
-		plainHTTP, err = shouldUsePlainHTTP(ctx, registryURL, client)
-		if err != nil {
-			return err
-		}
-	}
 	err := addRefNameAnnotationToImages(cfg.SourceDirectory)
 	if err != nil {
 		return err
@@ -75,29 +45,68 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		return fmt.Errorf("failed to instantiate oci directory: %w", err)
 	}
 
-	pushImage := func(srcName, dstName string) error {
-		remoteRepo := &orasRemote.Repository{
-			PlainHTTP: plainHTTP,
-			Client:    client,
+	// Retry in case the port forward breaks
+	err = retry.Do(func() error {
+		var tunnel *cluster.Tunnel
+		c, _ := cluster.NewCluster()
+		if c != nil {
+			var err error
+			registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegistryInfo)
+			if err != nil {
+				return err
+			}
+			if tunnel != nil {
+				defer tunnel.Close()
+			}
 		}
-		remoteRepo.Reference, err = registry.ParseReference(dstName)
-		if err != nil {
-			return fmt.Errorf("failed to parse ref %s: %w", dstName, err)
+		client := &auth.Client{
+			Client: orasRetry.DefaultClient,
+			Cache:  auth.NewCache(),
+			Credential: auth.StaticCredential(registryURL, auth.Credential{
+				Username: cfg.RegistryInfo.PushUsername,
+				Password: cfg.RegistryInfo.PushPassword,
+			}),
 		}
-		defaultPlatform := &ocispec.Platform{
-			Architecture: cfg.Arch,
-			OS:           "linux",
-		}
-		if tunnel != nil {
-			return tunnel.Wrap(func() error {
-				return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
-			})
-		}
-		return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
-	}
 
-	for _, img := range cfg.ImageList {
-		err = retry.Do(func() error {
+		plainHTTP := cfg.PlainHTTP
+
+		if dns.IsLocalhost(registryURL) && !cfg.PlainHTTP {
+			var err error
+			plainHTTP, err = shouldUsePlainHTTP(ctx, registryURL, client)
+			if err != nil {
+				return err
+			}
+		}
+
+		pushImage := func(srcName, dstName string) error {
+			remoteRepo := &orasRemote.Repository{
+				PlainHTTP: plainHTTP,
+				Client:    client,
+			}
+			remoteRepo.Reference, err = registry.ParseReference(dstName)
+			if err != nil {
+				return fmt.Errorf("failed to parse ref %s: %w", dstName, err)
+			}
+			defaultPlatform := &ocispec.Platform{
+				Architecture: cfg.Arch,
+				OS:           "linux",
+			}
+			if tunnel != nil {
+				return tunnel.Wrap(func() error {
+					return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
+				})
+			}
+			return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
+		}
+
+		for _, img := range cfg.ImageList {
+			// pushed := []transform.Image{}
+			// defer func() {
+			// 	for _, refInfo := range pushed {
+			// 		delete(toPush, refInfo)
+			// 	}
+			// }()
+
 			l.Info("pushing image", "name", img.Reference)
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
@@ -121,13 +130,12 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			if err = pushImage(img.Reference, offlineName); err != nil {
 				return err
 			}
-			return nil
-		}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
-		if err != nil {
-			return err
 		}
+		return nil
+	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
+	if err != nil {
+		return err
 	}
-
 	return nil
 }
 
