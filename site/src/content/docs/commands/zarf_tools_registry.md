@@ -8,7 +8,7 @@ tableOfContents: false
 
 ## zarf tools registry
 
-Tools for working with container registries using go-containertools
+Tools for working with container registries using oras
 
 ### Options
 

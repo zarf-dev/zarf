@@ -47,5 +47,5 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 
 ### SEE ALSO
 
-* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
+* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using oras
 

@@ -45,5 +45,5 @@ $ zarf tools registry delete reg.example.com/stefanprodan/podinfo@sha256:57a654a
 
 ### SEE ALSO
 
-* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
+* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using oras
 

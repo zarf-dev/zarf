@@ -36,5 +36,5 @@ zarf tools registry login [OPTIONS] [SERVER] [flags]
 
 ### SEE ALSO
 
-* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
+* [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using oras
 
