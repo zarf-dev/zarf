@@ -63,11 +63,13 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 	// Store all layers
 	layerMap["all"] = root.Layers
 
-	// We always pull the metadata layers
+	// We always pull the metadata layers provided we can locate them
 	alwaysPull := make([]ocispec.Descriptor, 0)
 	for _, path := range PackageAlwaysPull {
 		desc := root.Locate(path)
-		alwaysPull = append(alwaysPull, desc)
+		if !oci.IsEmptyDescriptor(desc) {
+			alwaysPull = append(alwaysPull, desc)
+		}
 	}
 	layerMap[layout.MetadataLayers] = alwaysPull
 	// component layers are required for standard pulls and manifest inspects
@@ -80,20 +82,27 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 		return nil, err
 	}
 	layerMap[layout.ComponentLayers] = componentLayers
-	// images layers are required for standard pulls
-	index, err := r.FetchImagesIndex(ctx)
-	if err != nil {
-		return nil, err
-	}
-	imageLayers, err := r.LayersFromImages(ctx, root, index, images)
-	if err != nil {
-		return nil, err
+	// there may not be any image layers - let's create the slice such that map key is present
+	imageLayers := make([]ocispec.Descriptor, 0)
+	if len(images) > 0 {
+		// images layers are required for standard pulls
+		index, err := r.FetchImagesIndex(ctx)
+		if err != nil {
+			return nil, err
+		}
+		imageLayers, err = r.LayersFromImages(ctx, root, index, images)
+		if err != nil {
+			return nil, err
+		}
 	}
 	layerMap[layout.ImageLayers] = imageLayers
+	// there may not be any sbom layers - let's create the slice such that map key is present
+	sbomLayers := make([]ocispec.Descriptor, 0)
 	sbomsDescriptor := root.Locate(layout.SBOMTar)
 	if !oci.IsEmptyDescriptor(sbomsDescriptor) {
-		layerMap[layout.SbomLayers] = []ocispec.Descriptor{sbomsDescriptor}
+		sbomLayers = append(sbomLayers, sbomsDescriptor)
 	}
+	layerMap[layout.SbomLayers] = sbomLayers
 
 	return layerMap, nil
 }
@@ -124,9 +133,7 @@ func LayersFromComponents(root *oci.Manifest, pkg v1alpha1.ZarfPackage, requeste
 func (r *Remote) LayersFromImages(ctx context.Context, root *oci.Manifest, index *ocispec.Index, images map[string]bool) ([]ocispec.Descriptor, error) {
 	layers := make([]ocispec.Descriptor, 0)
 
-	if len(images) > 0 {
-		layers = append(layers, root.Locate(layout.IndexPath), root.Locate(layout.OCILayoutPath))
-	}
+	layers = append(layers, root.Locate(layout.IndexPath), root.Locate(layout.OCILayoutPath))
 
 	for image := range images {
 		// use docker's transform lib to parse the image ref
