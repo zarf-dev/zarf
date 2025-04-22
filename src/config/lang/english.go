@@ -362,7 +362,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 -a skeleton`
 	CmdToolsArchiverCompressShort   = "Compresses a collection of sources based off of the destination file extension."
 	CmdToolsArchiverDecompressShort = "Decompresses an archive or Zarf package based off of the source file extension."
 
-	CmdToolsRegistryShort     = "Tools for working with container registries using go-containertools"
+	CmdToolsRegistryShort     = "Tools for working with container registries using oras"
 	CmdToolsRegistryZarfState = "Retrieving registry information from Zarf state"
 	CmdToolsRegistryTunnel    = "Opening a tunnel from %s locally to %s in the cluster"
 
