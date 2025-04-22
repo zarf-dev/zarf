@@ -17,9 +17,9 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// Zarf Cluster Constants.
-// TODO(mkcp): Doccomments on each exported field
+// Declares secrets and metadata keys and values.
 // TODO(mkcp): Remove Zarf prefix, that's the project name.
+// TODO(mkcp): Provide semantic doccomments for how these are used.
 const (
 	ZarfManagedByLabel   = "app.kubernetes.io/managed-by"
 	ZarfNamespaceName    = "zarf"
@@ -29,7 +29,7 @@ const (
 )
 
 // Credential keys
-// TODO(mkcp): Doccomments on each exported field
+// TODO(mkcp): Provide semantic doccomments for how these are used.
 const (
 	RegistryKey     = "registry"
 	RegistryReadKey = "registry-readonly"
@@ -76,6 +76,7 @@ func Default() (*State, error) {
 }
 
 // MergeOptions tracks the user-defined options during cluster initialization.
+// TODO(mkcp): Provide semantic doccomments for how exported fields are used.
 type MergeOptions struct {
 	GitServer      types.GitServerInfo
 	RegistryInfo   types.RegistryInfo
@@ -139,7 +140,7 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 	return &newState, nil
 }
 
-// DebugPrint takes a reference to state struct
+// DebugPrint takes a State struct, sanitizes sensitive fields, and prints them.
 func DebugPrint(ctx context.Context, state *State) {
 	if state == nil {
 		return
@@ -147,7 +148,7 @@ func DebugPrint(ctx context.Context, state *State) {
 	// this is a shallow copy, nested pointers WILL NOT be copied
 	oldState := *state
 	sanitized := sanitizeState(&oldState)
-	logger.From(ctx).Debug("cluster.debugPrintZarfState", "state", sanitized)
+	logger.From(ctx).Debug("debugPrintZarfState", "state", sanitized)
 }
 
 func sanitizeState(s *State) *State {
