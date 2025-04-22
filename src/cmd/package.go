@@ -719,7 +719,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 
 	// The user may be pulling the package from the cluster or using a built package
 	// since we don't know we don't check this error
-	c, _ := cluster.NewCluster(ctx) //nolint:errcheck
+	c, _ := cluster.New(ctx) //nolint:errcheck
 
 	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, c, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
 	if err != nil {
@@ -771,7 +771,7 @@ func newPackageListCommand() *cobra.Command {
 func (o *packageListOptions) complete(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
-	c, err := cluster.NewClusterWithWait(timeoutCtx)
+	c, err := cluster.NewWithWait(timeoutCtx)
 	if err != nil {
 		return err
 	}

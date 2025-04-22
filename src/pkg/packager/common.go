@@ -154,7 +154,7 @@ func (p *Packager) connectToCluster(ctx context.Context) error {
 		return nil
 	}
 
-	c, err := cluster.NewClusterWithWait(ctx)
+	c, err := cluster.NewWithWait(ctx)
 	if err != nil {
 		return err
 	}

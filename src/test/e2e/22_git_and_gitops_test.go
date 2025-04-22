@@ -71,7 +71,7 @@ func testGitServerConnect(t *testing.T, gitURL string) {
 func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
-	c, err := cluster.NewClusterWithWait(timeoutCtx)
+	c, err := cluster.NewWithWait(timeoutCtx)
 	require.NoError(t, err)
 
 	// Init the state variable
@@ -106,7 +106,7 @@ func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
-	c, err := cluster.NewClusterWithWait(timeoutCtx)
+	c, err := cluster.NewWithWait(timeoutCtx)
 	require.NoError(t, err)
 
 	// Init the state variable
@@ -138,7 +138,7 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 func waitFluxPodInfoDeployment(t *testing.T) {
 	tmpdir := t.TempDir()
 	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
-	cluster, err := cluster.NewClusterWithWait(ctx)
+	cluster, err := cluster.NewWithWait(ctx)
 	require.NoError(t, err)
 	zarfState, err := cluster.Load(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")

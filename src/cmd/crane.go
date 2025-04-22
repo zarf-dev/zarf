@@ -151,7 +151,7 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 
 	l.Info("retrieving registry information from Zarf state")
 
-	c, err := cluster.NewCluster(ctx)
+	c, err := cluster.New(ctx)
 	if err != nil {
 		return err
 	}
@@ -198,7 +198,7 @@ func newRegistryPruneCommand() *cobra.Command {
 
 func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	// Try to connect to a Zarf initialized cluster
-	c, err := cluster.NewCluster(cmd.Context())
+	c, err := cluster.New(cmd.Context())
 	if err != nil {
 		return err
 	}

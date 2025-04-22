@@ -50,23 +50,13 @@ type Cluster struct {
 	Watcher watcher.StatusWatcher
 }
 
-// NewWithWait wraps NewClusterWithWait to provide a shorthand alias.
+// NewWithWait creates a new Cluster instance and waits for the given timeout for the cluster to be ready.
 func NewWithWait(ctx context.Context) (*Cluster, error) {
-	return NewClusterWithWait(ctx)
-}
-
-// New wraps NewCluster to provide a shorthand alias.
-func New(ctx context.Context) (*Cluster, error) {
-	return NewCluster(ctx)
-}
-
-// NewClusterWithWait creates a new Cluster instance and waits for the given timeout for the cluster to be ready.
-func NewClusterWithWait(ctx context.Context) (*Cluster, error) {
 	start := time.Now()
 	l := logger.From(ctx)
 	l.Info("waiting for cluster connection")
 
-	c, err := NewCluster(ctx)
+	c, err := New(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -98,8 +88,8 @@ func NewClusterWithWait(ctx context.Context) (*Cluster, error) {
 	return c, nil
 }
 
-// NewCluster creates a new Cluster instance and validates connection to the cluster by fetching the Kubernetes version.
-func NewCluster(_ context.Context) (*Cluster, error) {
+// New creates a new Cluster instance and validates connection to the cluster by fetching the Kubernetes version.
+func New(_ context.Context) (*Cluster, error) {
 	clusterErr := errors.New("unable to connect to the cluster")
 	clientset, cfg, err := ClientAndConfig()
 	if err != nil {
