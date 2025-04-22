@@ -40,12 +40,15 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 	if err != nil {
 		return pkg, nil, err
 	}
+
+	isSkeleton := pkg.Build.Architecture == zoci.SkeletonArch || strings.HasSuffix(s.Repo().Reference.Reference, zoci.SkeletonArch)
+
 	pkg.Components, err = filter.Apply(pkg)
 	if err != nil {
 		return pkg, nil, err
 	}
 
-	layerMap, err := s.AssembleLayers(ctx, pkg.Components)
+	layerMap, err := s.AssembleLayers(ctx, pkg.Components, isSkeleton)
 	if err != nil {
 		return pkg, nil, fmt.Errorf("unable to get published component image layers: %s", err.Error())
 	}

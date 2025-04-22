@@ -160,7 +160,6 @@ func pullOCI(ctx context.Context, opts PullOCIOptions) (bool, string, error) {
 	if err != nil {
 		return false, "", fmt.Errorf("could not find package %s with architecture %s: %w", opts.Source, platform.Architecture, err)
 	}
-	layersToPull := []ocispec.Descriptor{}
 	isPartial := false
 	tarPath := filepath.Join(opts.Directory, "data.tar")
 	pkg, err := remote.FetchZarfYAML(ctx)
@@ -177,12 +176,15 @@ func pullOCI(ctx context.Context, opts PullOCIOptions) (bool, string, error) {
 		}
 	}
 
-	layerMap, err := remote.AssembleLayers(ctx, pkg.Components)
+	// zarf creates layers around the contents of component primarily
+	// this assembles the layers for the components - whether filtered above or not
+	layerMap, err := remote.AssembleLayers(ctx, pkg.Components, isSkeleton(desc.Platform))
 	if err != nil {
 		return false, "", err
 	}
 
-	layersToPull, err = zoci.FilterLayers(layerMap, opts.InspectTarget)
+	// filter will enable pulling parts of a package as required - IE OCI inspect
+	layersToPull, err := zoci.FilterLayers(layerMap, opts.InspectTarget)
 	if err != nil {
 		return false, "", err
 	}
@@ -332,9 +334,16 @@ func supportsFiltering(platform *ocispec.Platform) bool {
 	if platform == nil {
 		return false
 	}
-	skeletonPlatform := zoci.PlatformForSkeleton()
-	if platform.Architecture == skeletonPlatform.Architecture && platform.OS == skeletonPlatform.OS {
+	if isSkeleton(platform) {
 		return false
 	}
 	return true
+}
+
+func isSkeleton(platform *ocispec.Platform) bool {
+	skeletonPlatform := zoci.PlatformForSkeleton()
+	if platform.Architecture == skeletonPlatform.Architecture && platform.OS == skeletonPlatform.OS {
+		return true
+	}
+	return false
 }

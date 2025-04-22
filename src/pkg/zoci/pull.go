@@ -51,7 +51,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 }
 
 // AssembleLayers returns all layers for the given zarf package to pull from OCI.
-func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent) (map[string][]ocispec.Descriptor, error) {
+func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, isSkeleton bool) (map[string][]ocispec.Descriptor, error) {
 	layerMap := make(map[string][]ocispec.Descriptor, 0)
 
 	// fetching the root manifest is the common denominator for all layers
@@ -84,7 +84,7 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 	layerMap[layout.ComponentLayers] = componentLayers
 	// there may not be any image layers - let's create the slice such that map key is present
 	imageLayers := make([]ocispec.Descriptor, 0)
-	if len(images) > 0 {
+	if len(images) > 0 && !isSkeleton {
 		// images layers are required for standard pulls
 		index, err := r.FetchImagesIndex(ctx)
 		if err != nil {
