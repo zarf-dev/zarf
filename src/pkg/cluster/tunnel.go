@@ -21,7 +21,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
-	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -531,22 +530,20 @@ func (tunnel *Tunnel) getAttachablePodForService(ctx context.Context) (string, e
 	return podList.Items[0].Name, nil
 }
 
-// taken from https://github.com/kubernetes/kubernetes/blob/680ea07dbb2c6050d13b93660fa4d27d2d28d6eb/staging/src/k8s.io/kubectl/pkg/cmd/portforward/portforward.go#L139-L156
+// Inspired by https://github.com/kubernetes/kubernetes/blob/680ea07dbb2c6050d13b93660fa4d27d2d28d6eb/staging/src/k8s.io/kubectl/pkg/cmd/portforward/portforward.go#L139-L156
 func createDialer(method string, url *url.URL, config *rest.Config) (httpstream.Dialer, error) {
 	transport, upgrader, err := spdy.RoundTripperFor(config)
 	if err != nil {
 		return nil, err
 	}
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, method, url)
-	if !cmdutil.PortForwardWebsockets.IsDisabled() {
-		tunnelingDialer, err := portforward.NewSPDYOverWebsocketDialer(url, config)
-		if err != nil {
-			return nil, err
-		}
-		// First attempt tunneling (websocket) dialer, then fallback to spdy dialer.
-		dialer = portforward.NewFallbackDialer(tunnelingDialer, dialer, func(err error) bool {
-			return httpstream.IsUpgradeFailure(err) || httpstream.IsHTTPSProxyError(err)
-		})
+	tunnelingDialer, err := portforward.NewSPDYOverWebsocketDialer(url, config)
+	if err != nil {
+		return nil, err
 	}
+	// First attempt tunneling (websocket) dialer, then fallback to spdy dialer.
+	dialer = portforward.NewFallbackDialer(tunnelingDialer, dialer, func(err error) bool {
+		return httpstream.IsUpgradeFailure(err) || httpstream.IsHTTPSProxyError(err)
+	})
 	return dialer, nil
 }
