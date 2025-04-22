@@ -12,9 +12,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/pki"
-
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -23,8 +20,10 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
@@ -190,12 +189,12 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) error {
 		}
 	}
 
-	state, err := p.cluster.LoadZarfState(ctx)
+	s, err := p.cluster.Load(ctx)
 	if err != nil {
-		// don't return the err here as state may not yet be setup
+		// don't return the err here as s may not yet be setup
 		return nil
 	}
-	return pki.CheckForExpiredCert(ctx, state.AgentTLS)
+	return pki.CheckForExpiredCert(ctx, s.AgentTLS)
 }
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.

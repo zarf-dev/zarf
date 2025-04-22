@@ -50,7 +50,7 @@ type State struct {
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
 	// PKI certificate information for the agent pods Zarf manages
-	AgentTLS types.GeneratedPKI `json:"agentTLS"`
+	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer types.GitServerInfo `json:"gitServer"`
