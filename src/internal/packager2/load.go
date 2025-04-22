@@ -16,7 +16,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -111,6 +110,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	if err != nil {
 		return nil, err
 	}
+	defer pkgLayout.Cleanup()
 	return pkgLayout, nil
 }
 
@@ -175,33 +175,4 @@ func assembleSplitTar(src, tarPath string) error {
 		}
 	}
 	return nil
-}
-
-func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string) (v1alpha1.ZarfPackage, error) {
-	_, err := identifySource(src)
-	if err != nil {
-		if cluster == nil {
-			return v1alpha1.ZarfPackage{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
-		}
-		depPkg, err := cluster.GetDeployedPackage(ctx, src)
-		if err != nil {
-			return v1alpha1.ZarfPackage{}, err
-		}
-		return depPkg.Data, nil
-	}
-
-	loadOpt := LoadOptions{
-		Source:                  src,
-		SkipSignatureValidation: skipSignatureValidation,
-		Architecture:            config.GetArch(),
-		Filter:                  filters.Empty(),
-		PublicKeyPath:           publicKeyPath,
-	}
-	p, err := LoadPackage(ctx, loadOpt)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	//nolint: errcheck // ignore
-	defer p.Cleanup()
-	return p.Pkg, nil
 }

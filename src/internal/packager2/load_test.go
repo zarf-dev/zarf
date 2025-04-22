@@ -8,9 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/client-go/kubernetes/fake"
-
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -133,26 +130,4 @@ func TestIdentifySource(t *testing.T) {
 			require.Equal(t, tt.expectedSrcType, srcType)
 		})
 	}
-}
-
-func TestPackageFromSourceOrCluster(t *testing.T) {
-	t.Parallel()
-
-	ctx := testutil.TestContext(t)
-
-	_, err := GetPackageFromSourceOrCluster(ctx, nil, "test", false, "")
-	require.EqualError(t, err, "cannot get Zarf package from Kubernetes without configuration")
-
-	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, "./testdata/zarf-package-test-amd64-0.0.1.tar.zst", false, "")
-	require.NoError(t, err)
-	require.Equal(t, "test", pkg.Metadata.Name)
-
-	c := &cluster.Cluster{
-		Clientset: fake.NewClientset(),
-	}
-	_, err = c.RecordPackageDeployment(ctx, pkg, nil, 1)
-	require.NoError(t, err)
-	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", false, "")
-	require.NoError(t, err)
-	require.Equal(t, "test", pkg.Metadata.Name)
 }
