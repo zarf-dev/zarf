@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -81,7 +82,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 		}
 	case "tarball":
 		tarPath = opt.Source
-	default:
+	case "cluster":
 		if opt.Cluster != nil {
 			depPkg, err := opt.Cluster.GetDeployedPackage(ctx, opt.Source)
 			if err != nil {
@@ -91,6 +92,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 				Pkg: depPkg.Data,
 			}, nil
 		}
+	default:
 		return nil, fmt.Errorf("unknown source type: %s", opt.Source)
 	}
 	if srcType != "oci" && opt.Shasum != "" {
@@ -125,6 +127,11 @@ func identifySource(src string) (string, error) {
 	}
 	if strings.Contains(src, ".part000") {
 		return "split", nil
+	}
+	// check if the source is a deployed package name using the following regex "^[a-z0-9][a-z0-9\\-]*$"
+	packageNameMatch := regexp.MustCompile(`^[a-z0-9][a-z0-9\\-]*$`)
+	if packageNameMatch.MatchString(src) {
+		return "cluster", nil
 	}
 	return "", fmt.Errorf("unknown source %s", src)
 }
