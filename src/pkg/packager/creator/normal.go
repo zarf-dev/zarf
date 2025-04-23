@@ -522,7 +522,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 			"duration", time.Since(manifestStart))
 	}
 
-	// Load all specified git repos.
+	// LoadState all specified git repos.
 	reposCount := len(component.Repos)
 	if reposCount > 0 {
 		reposStart := time.Now()

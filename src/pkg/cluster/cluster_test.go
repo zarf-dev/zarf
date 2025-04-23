@@ -40,7 +40,7 @@ func TestInit(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		initOpts    InitOptions
+		initOpts    InitStateOptions
 		nodes       []corev1.Node
 		namespaces  []corev1.Namespace
 		secrets     []corev1.Secret
@@ -52,7 +52,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name:     "no namespaces exist",
-			initOpts: InitOptions{},
+			initOpts: InitStateOptions{},
 			nodes: []corev1.Node{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -198,7 +198,7 @@ func TestInit(t *testing.T) {
 				}
 			}()
 
-			err := c.Init(ctx, tt.initOpts)
+			err := c.InitState(ctx, tt.initOpts)
 			if tt.expectedErr != "" {
 				require.EqualError(t, err, tt.expectedErr)
 				return

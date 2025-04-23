@@ -189,7 +189,7 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) error {
 		}
 	}
 
-	s, err := p.cluster.Load(ctx)
+	s, err := p.cluster.LoadState(ctx)
 	if err != nil {
 		// don't return the err here as s may not yet be setup
 		return nil

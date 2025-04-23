@@ -78,7 +78,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		}, nil
 	}
 
-	state, err := cluster.Load(ctx)
+	state, err := cluster.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +150,7 @@ func mutateEphemeralContainers(ctx context.Context, r *v1.AdmissionRequest, clus
 		return nil, fmt.Errorf(lang.AgentErrParsePod, err)
 	}
 
-	state, err := cluster.Load(ctx)
+	state, err := cluster.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -145,8 +145,8 @@ func WatcherForConfig(cfg *rest.Config) (watcher.StatusWatcher, error) {
 	return sw, nil
 }
 
-// InitOptions tracks the user-defined options during cluster initialization.
-type InitOptions struct {
+// InitStateOptions tracks the user-defined options during cluster initialization.
+type InitStateOptions struct {
 	// Indicates if Zarf was initialized while deploying its own k8s cluster
 	ApplianceMode bool
 	// Information about the repository Zarf is going to be using
@@ -159,14 +159,14 @@ type InitOptions struct {
 	StorageClass string
 }
 
-// Init takes initOptions and hydrates a cluster's state from InitOptions.
-func (c *Cluster) Init(ctx context.Context, opts InitOptions) error {
+// InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
+func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) error {
 	l := logger.From(ctx)
 
 	// Attempt to load an existing state prior to init.
 	// NOTE: We are ignoring the error here because we don't really expect a state to exist yet.
 	l.Debug("checking cluster for existing Zarf deployment")
-	s, err := c.Load(ctx)
+	s, err := c.LoadState(ctx)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return fmt.Errorf("failed to check for existing state: %w", err)
 	}
@@ -174,7 +174,6 @@ func (c *Cluster) Init(ctx context.Context, opts InitOptions) error {
 	// If state is nil, this is a new cluster.
 	// TODO(mkcp): Simplify nesting with early returns closer to the top of the function.
 	if s == nil {
-		// REVIEW(mkcp): Is it safe to use state.Default() here instead?
 		s = &state.State{}
 		l.Debug("new cluster, no prior Zarf deployments found")
 		if opts.ApplianceMode {
@@ -297,16 +296,16 @@ func (c *Cluster) Init(ctx context.Context, opts InitOptions) error {
 	}
 
 	// Save the state back to K8s
-	if err := c.Save(ctx, s); err != nil {
+	if err := c.SaveState(ctx, s); err != nil {
 		return fmt.Errorf("unable to save the Zarf state: %w", err)
 	}
 
 	return nil
 }
 
-// Load utilizes the k8s Clientset to load and return the current state.State data or an empty state.State if no
+// LoadState utilizes the k8s Clientset to load and return the current state.State data or an empty state.State if no
 // cluster is found.
-func (c *Cluster) Load(ctx context.Context) (*state.State, error) {
+func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 	stateErr := errors.New("failed to load the Zarf State from the cluster, has Zarf been initiated")
 	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, state.ZarfStateSecretName, metav1.GetOptions{})
 	if err != nil {
@@ -322,8 +321,8 @@ func (c *Cluster) Load(ctx context.Context) (*state.State, error) {
 	return s, nil
 }
 
-// Save takes a given state.State and persists it to k8s Cluster secrets.
-func (c *Cluster) Save(ctx context.Context, s *state.State) error {
+// SaveState takes a given state.State and persists it to k8s Cluster secrets.
+func (c *Cluster) SaveState(ctx context.Context, s *state.State) error {
 	state.DebugPrint(ctx, s)
 
 	data, err := json.Marshal(&s)

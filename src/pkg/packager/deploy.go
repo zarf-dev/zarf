@@ -251,7 +251,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.Z
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if component.RequiresCluster() && p.state == nil {
-		err := p.cluster.Init(ctx, cluster.InitOptions{
+		err := p.cluster.InitState(ctx, cluster.InitStateOptions{
 			ApplianceMode:  p.cfg.InitOpts.ApplianceMode,
 			GitServer:      p.cfg.InitOpts.GitServer,
 			RegistryInfo:   p.cfg.InitOpts.RegistryInfo,
@@ -485,7 +485,7 @@ func (p *Packager) setupState(ctx context.Context) error {
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	l.Debug("loading the Zarf State from the Kubernetes cluster")
 
-	s, err := p.cluster.Load(ctx)
+	s, err := p.cluster.LoadState(ctx)
 	// We ignore the error if in YOLO mode because Zarf should not be initiated.
 	if err != nil && !p.cfg.Pkg.Metadata.YOLO {
 		return err

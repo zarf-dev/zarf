@@ -88,7 +88,7 @@ func loadChartFromTarball(chart v1alpha1.ZarfChart, chartPath string) (*chart.Ch
 	// Get the path the temporary helm chart tarball
 	sourceFile := StandardName(chartPath, chart) + ".tgz"
 
-	// Load the loadedChart tarball
+	// LoadState the loadedChart tarball
 	loadedChart, err := loader.Load(sourceFile)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load helm chart archive: %w", err)

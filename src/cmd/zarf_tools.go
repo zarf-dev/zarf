@@ -39,7 +39,7 @@ import (
 var (
 	subAltNames         []string
 	outputDirectory     string
-	updateCredsInitOpts cluster.InitOptions
+	updateCredsInitOpts cluster.InitStateOptions
 )
 
 const (
@@ -102,7 +102,7 @@ func (o *getCredsOptions) complete(ctx context.Context) error {
 }
 
 func (o *getCredsOptions) run(ctx context.Context, args []string) error {
-	s, err := o.cluster.Load(ctx)
+	s, err := o.cluster.LoadState(ctx)
 	if err != nil {
 		return err
 	}
@@ -297,7 +297,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	oldState, err := c.Load(ctx)
+	oldState, err := c.LoadState(ctx)
 	if err != nil {
 		return err
 	}
@@ -364,7 +364,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Save the final Zarf State
-	err = c.Save(ctx, newState)
+	err = c.SaveState(ctx, newState)
 	if err != nil {
 		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
 	}

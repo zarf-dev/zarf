@@ -238,7 +238,7 @@ func (o *internalCreateReadOnlyGiteaUserOptions) run(cmd *cobra.Command, _ []str
 	if err != nil {
 		return err
 	}
-	s, err := c.Load(ctx)
+	s, err := c.LoadState(ctx)
 	if err != nil {
 		return err
 	}
@@ -292,7 +292,7 @@ func (o *internalCreateArtifactRegistryTokenOptions) run(cmd *cobra.Command, _ [
 	if err != nil {
 		return err
 	}
-	s, err := c.Load(ctx)
+	s, err := c.LoadState(ctx)
 	if err != nil {
 		return err
 	}
@@ -324,7 +324,7 @@ func (o *internalCreateArtifactRegistryTokenOptions) run(cmd *cobra.Command, _ [
 		if err != nil {
 			return err
 		}
-		if err := c.Save(ctx, s); err != nil {
+		if err := c.SaveState(ctx, s); err != nil {
 			return err
 		}
 	}

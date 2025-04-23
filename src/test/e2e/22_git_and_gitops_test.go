@@ -75,14 +75,14 @@ func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 	require.NoError(t, err)
 
 	// Init the state variable
-	state, err := c.Load(ctx)
+	s, err := c.LoadState(ctx)
 	require.NoError(t, err)
-	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, state.GitServer.PullPassword)
+	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, s.GitServer.PullPassword)
 	require.NoError(t, err)
 	repoName := "zarf-public-test-2363058019"
 
 	// Get the repo as the readonly user
-	b, statusCode, err := giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s", state.GitServer.PushUsername, repoName), nil)
+	b, statusCode, err := giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s", s.GitServer.PushUsername, repoName), nil)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, statusCode)
 
@@ -110,9 +110,9 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 	require.NoError(t, err)
 
 	// Init the state variable
-	state, err := c.Load(ctx)
+	s, err := c.LoadState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
-	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, state.GitServer.PullPassword)
+	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, s.GitServer.PullPassword)
 	require.NoError(t, err)
 	repoName := "zarf-public-test-2363058019"
 
@@ -138,11 +138,11 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 func waitFluxPodInfoDeployment(t *testing.T) {
 	tmpdir := t.TempDir()
 	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
-	cluster, err := cluster.NewWithWait(ctx)
+	c, err := cluster.NewWithWait(ctx)
 	require.NoError(t, err)
-	zarfState, err := cluster.Load(ctx)
+	s, err := c.LoadState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
-	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo.Address)
+	registryAddress, err := c.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo.Address)
 	require.NoError(t, err)
 	// Deploy the flux example and verify that it works
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/podinfo-flux", "-o", tmpdir, "--skip-sbom")

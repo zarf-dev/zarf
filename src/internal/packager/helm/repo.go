@@ -80,7 +80,7 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 		"path", chart.LocalPath,
 	)
 
-	// Load and validate the chart
+	// LoadState and validate the chart
 	cl, _, err := loadAndValidateChart(chart.LocalPath)
 	if err != nil {
 		return err

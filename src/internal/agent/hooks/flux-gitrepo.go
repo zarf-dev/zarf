@@ -47,7 +47,7 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		isUpdate = r.Operation == v1.Update
 	)
 
-	state, err := cluster.Load(ctx)
+	s, err := cluster.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -59,13 +59,13 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 
 	l.Info("using the Zarf git server URL to mutate the Flux GitRepository",
 		"name", repo.Name,
-		"git-server", state.GitServer.Address)
+		"git-server", s.GitServer.Address)
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
 	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
 	if isUpdate {
-		isPatched, err = helpers.DoHostnamesMatch(state.GitServer.Address, repo.Spec.URL)
+		isPatched, err = helpers.DoHostnamesMatch(s.GitServer.Address, repo.Spec.URL)
 		if err != nil {
 			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
 		}
@@ -76,7 +76,7 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	// Mutate the git URL if necessary
 	if isCreate || (isUpdate && !isPatched) {
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
-		transformedURL, err := transform.GitURL(state.GitServer.Address, patchedURL, state.GitServer.PushUsername)
+		transformedURL, err := transform.GitURL(s.GitServer.Address, patchedURL, s.GitServer.PushUsername)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
 		}

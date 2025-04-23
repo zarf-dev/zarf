@@ -59,7 +59,7 @@ func (o *destroyOptions) run(cmd *cobra.Command, _ []string) error {
 	// NOTE: If 'zarf init' failed to deploy the k3s component (or if we're looking at the wrong kubeconfig)
 	//       there will be no zarf-state to load and the struct will be empty. In these cases, if we can find
 	//       the scripts to remove k3s, we will still try to remove a locally installed k3s cluster
-	state, err := c.Load(ctx)
+	state, err := c.LoadState(ctx)
 	if err != nil {
 		l.Warn(err.Error())
 	}

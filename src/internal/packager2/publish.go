@@ -114,7 +114,7 @@ func PublishPackage(ctx context.Context, path string, dst registry.Reference, op
 		return fmt.Errorf("path must be specified")
 	}
 
-	// Load package layout
+	// LoadState package layout
 	l.Info("loading package", "path", path)
 	layoutOpts := layout2.PackageLayoutOptions{
 		PublicKeyPath:           opts.PublicKeyPath,
@@ -153,7 +153,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		return fmt.Errorf("path must be specified")
 	}
 
-	// Load package layout
+	// LoadState package layout
 	l.Info("loading skeleton package", "path", path)
 	// Create skeleton buildpath
 	createOpts := layout2.CreateOptions{
