@@ -24,7 +24,7 @@ type ChartImages []struct {
 
 // FindAnnotatedImagesForChart attempts to parse any image annotations found in a chart archive or directory.
 func FindAnnotatedImagesForChart(chartPath string, values chartutil.Values) (images []string, err error) {
-	// LoadState a new chart.
+	// Load a new chart.
 	chart, err := loader.Load(chartPath)
 	if err != nil {
 		return images, err

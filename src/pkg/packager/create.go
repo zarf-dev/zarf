@@ -46,7 +46,7 @@ func (p *Packager) Create(ctx context.Context) error {
 		return err
 	}
 
-	// LoadState package def
+	// Load package def
 	pkg, warnings, err := pc.LoadPackageDefinition(p.ctx, lo)
 	if err != nil {
 		return err

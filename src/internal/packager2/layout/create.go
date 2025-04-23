@@ -272,7 +272,7 @@ func LoadPackageDefinition(ctx context.Context, packagePath, flavor string, setV
 		"flavor", flavor,
 		"setVariables", setVariables)
 
-	// LoadState PackageConfig from disk
+	// Load PackageConfig from disk
 	b, err := os.ReadFile(filepath.Join(packagePath, ZarfYAML))
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
@@ -517,7 +517,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		}
 	}
 
-	// LoadState all specified git repos.
+	// Load all specified git repos.
 	for _, url := range component.Repos {
 		// Pull all the references if there is no `@` in the string.
 		_, err := git.Clone(ctx, filepath.Join(compBuildPath, string(RepoComponentDir)), url, false)
