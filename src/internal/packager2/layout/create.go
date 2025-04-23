@@ -140,13 +140,14 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 			return nil, err
 		}
 		pullCfg := images.PullConfig{
-			OCIConcurrency:       opt.OCIConcurrency,
-			DestinationDirectory: filepath.Join(buildPath, ImagesDir),
-			ImageList:            componentImages,
-			Arch:                 pkg.Metadata.Architecture,
-			RegistryOverrides:    opt.RegistryOverrides,
-			CacheDirectory:       filepath.Join(cachePath, ImagesDir),
-			PlainHTTP:            config.CommonOptions.PlainHTTP,
+			OCIConcurrency:        opt.OCIConcurrency,
+			DestinationDirectory:  filepath.Join(buildPath, ImagesDir),
+			ImageList:             componentImages,
+			Arch:                  pkg.Metadata.Architecture,
+			RegistryOverrides:     opt.RegistryOverrides,
+			CacheDirectory:        filepath.Join(cachePath, ImagesDir),
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
 		manifests, err := images.Pull(ctx, pullCfg)
 		if err != nil {
