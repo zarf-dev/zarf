@@ -27,25 +27,27 @@ import (
 
 // PullConfig is the configuration for pulling images.
 type PullConfig struct {
-	OCIConcurrency       int
-	DestinationDirectory string
-	ImageList            []transform.Image
-	Arch                 string
-	RegistryOverrides    map[string]string
-	CacheDirectory       string
-	PlainHTTP            bool
+	OCIConcurrency        int
+	DestinationDirectory  string
+	ImageList             []transform.Image
+	Arch                  string
+	RegistryOverrides     map[string]string
+	CacheDirectory        string
+	PlainHTTP             bool
+	InsecureSkipTLSVerify bool
 }
 
 // PushConfig is the configuration for pushing images.
 type PushConfig struct {
-	OCIConcurrency  int
-	SourceDirectory string
-	ImageList       []transform.Image
-	RegistryInfo    types.RegistryInfo
-	NoChecksum      bool
-	Arch            string
-	Retries         int
-	PlainHTTP       bool
+	OCIConcurrency        int
+	SourceDirectory       string
+	ImageList             []transform.Image
+	RegistryInfo          types.RegistryInfo
+	NoChecksum            bool
+	Arch                  string
+	Retries               int
+	PlainHTTP             bool
+	InsecureSkipTLSVerify bool
 }
 
 const (

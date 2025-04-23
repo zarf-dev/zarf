@@ -6,7 +6,9 @@ package images
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -64,6 +66,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				defer tunnel.Close()
 			}
 		}
+
 		client := &auth.Client{
 			Client: orasRetry.DefaultClient,
 			Cache:  auth.NewCache(),
@@ -72,6 +75,12 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				Password: cfg.RegistryInfo.PushPassword,
 			}),
 		}
+
+		// Enable / Disable TLS verification based on the config
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: cfg.InsecureSkipTLSVerify}
+		orasTransport := orasRetry.NewTransport(transport)
+		client.Client.Transport = orasTransport
 
 		plainHTTP := cfg.PlainHTTP
 
