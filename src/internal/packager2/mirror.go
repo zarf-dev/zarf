@@ -27,19 +27,20 @@ import (
 
 // MirrorOptions are the options for Mirror.
 type MirrorOptions struct {
-	Cluster         *cluster.Cluster
-	PkgLayout       *layout.PackageLayout
-	RegistryInfo    types.RegistryInfo
-	GitInfo         types.GitServerInfo
-	NoImageChecksum bool
-	Retries         int
-	PlainHTTP       bool
-	OCIConcurrency  int
+	Cluster               *cluster.Cluster
+	PkgLayout             *layout.PackageLayout
+	RegistryInfo          types.RegistryInfo
+	GitInfo               types.GitServerInfo
+	NoImageChecksum       bool
+	Retries               int
+	PlainHTTP             bool
+	OCIConcurrency        int
+	InsecureSkipTLSVerify bool
 }
 
 // Mirror mirrors the package contents to the given registry and git server.
 func Mirror(ctx context.Context, opt MirrorOptions) error {
-	err := pushImagesToRegistry(ctx, opt.PkgLayout, opt.RegistryInfo, opt.NoImageChecksum, opt.PlainHTTP, opt.OCIConcurrency, opt.Retries)
+	err := pushImagesToRegistry(ctx, opt.PkgLayout, opt.RegistryInfo, opt.NoImageChecksum, opt.PlainHTTP, opt.OCIConcurrency, opt.Retries, opt.InsecureSkipTLSVerify)
 	if err != nil {
 		return err
 	}
@@ -50,7 +51,7 @@ func Mirror(ctx context.Context, opt MirrorOptions) error {
 	return nil
 }
 
-func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, registryInfo types.RegistryInfo, noImgChecksum bool, plainHTTP bool, concurrency int, retries int) error {
+func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, registryInfo types.RegistryInfo, noImgChecksum bool, plainHTTP bool, concurrency int, retries int, insecure bool) error {
 	refs := []transform.Image{}
 	for _, component := range pkgLayout.Pkg.Components {
 		for _, img := range component.Images {
@@ -65,14 +66,15 @@ func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		return nil
 	}
 	pushConfig := images.PushConfig{
-		OCIConcurrency:  concurrency,
-		SourceDirectory: pkgLayout.GetImageDir(),
-		RegistryInfo:    registryInfo,
-		ImageList:       refs,
-		PlainHTTP:       plainHTTP,
-		NoChecksum:      noImgChecksum,
-		Arch:            pkgLayout.Pkg.Build.Architecture,
-		Retries:         retries,
+		OCIConcurrency:        concurrency,
+		SourceDirectory:       pkgLayout.GetImageDir(),
+		RegistryInfo:          registryInfo,
+		ImageList:             refs,
+		PlainHTTP:             plainHTTP,
+		NoChecksum:            noImgChecksum,
+		Arch:                  pkgLayout.Pkg.Build.Architecture,
+		Retries:               retries,
+		InsecureSkipTLSVerify: insecure,
 	}
 	err := images.Push(ctx, pushConfig)
 	if err != nil {

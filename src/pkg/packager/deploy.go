@@ -546,14 +546,15 @@ func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []s
 	}
 
 	pushCfg := images.PushConfig{
-		OCIConcurrency:  config.CommonOptions.OCIConcurrency,
-		SourceDirectory: p.layout.Images.Base,
-		ImageList:       imageList,
-		RegistryInfo:    p.state.RegistryInfo,
-		NoChecksum:      noImgChecksum,
-		Arch:            p.cfg.Pkg.Build.Architecture,
-		Retries:         p.cfg.PkgOpts.Retries,
-		PlainHTTP:       config.CommonOptions.PlainHTTP,
+		OCIConcurrency:        config.CommonOptions.OCIConcurrency,
+		SourceDirectory:       p.layout.Images.Base,
+		ImageList:             imageList,
+		RegistryInfo:          p.state.RegistryInfo,
+		NoChecksum:            noImgChecksum,
+		Arch:                  p.cfg.Pkg.Build.Architecture,
+		Retries:               p.cfg.PkgOpts.Retries,
+		PlainHTTP:             config.CommonOptions.PlainHTTP,
+		InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 	}
 
 	return images.Push(ctx, pushCfg)
