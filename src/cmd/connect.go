@@ -13,6 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
 
@@ -33,7 +34,7 @@ func newConnectCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.zt.ResourceName, "name", "", lang.CmdConnectFlagName)
-	cmd.Flags().StringVar(&o.zt.Namespace, "namespace", cluster.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
+	cmd.Flags().StringVar(&o.zt.Namespace, "namespace", state.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
 	cmd.Flags().StringVar(&o.zt.ResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
 	cmd.Flags().IntVar(&o.zt.LocalPort, "local-port", 0, lang.CmdConnectFlagLocalPort)
 	cmd.Flags().IntVar(&o.zt.RemotePort, "remote-port", 0, lang.CmdConnectFlagRemotePort)
@@ -54,7 +55,7 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 		target = args[0]
 	}
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	if err != nil {
 		return err
 	}
@@ -114,7 +115,7 @@ func newConnectListCommand() *cobra.Command {
 }
 
 func (o *connectListOptions) run(cmd *cobra.Command, _ []string) error {
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(cmd.Context())
 	if err != nil {
 		return err
 	}

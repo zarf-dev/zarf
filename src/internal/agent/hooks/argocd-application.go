@@ -61,7 +61,7 @@ func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster) o
 // mutateApplication mutates the git repository url to point to the repository URL defined in the ZarfState.
 func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
 	l := logger.From(ctx)
-	state, err := cluster.LoadZarfState(ctx)
+	s, err := cluster.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -73,11 +73,11 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 
 	l.Info("using the Zarf git server URL to mutate the ArgoCD Application",
 		"name", app.Name,
-		"git-server", state.GitServer.Address)
+		"git-server", s.GitServer.Address)
 
 	patches := make([]operations.PatchOperation, 0)
 	if app.Spec.Source != nil {
-		patchedURL, err := getPatchedRepoURL(ctx, app.Spec.Source.RepoURL, state.GitServer, r)
+		patchedURL, err := getPatchedRepoURL(ctx, app.Spec.Source.RepoURL, s.GitServer, r)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +86,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 
 	if len(app.Spec.Sources) > 0 {
 		for idx, source := range app.Spec.Sources {
-			patchedURL, err := getPatchedRepoURL(ctx, source.RepoURL, state.GitServer, r)
+			patchedURL, err := getPatchedRepoURL(ctx, source.RepoURL, s.GitServer, r)
 			if err != nil {
 				return nil, err
 			}

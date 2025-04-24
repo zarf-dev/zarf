@@ -6,6 +6,7 @@ package packager2
 import (
 	"context"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -25,7 +26,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -86,11 +86,11 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		return FindImagesResult{}, err
 	}
 
-	state, err := types.DefaultZarfState()
+	s, err := state.Default()
 	if err != nil {
 		return FindImagesResult{}, err
 	}
-	state.RegistryInfo.Address = opts.RegistryURL
+	s.RegistryInfo.Address = opts.RegistryURL
 	variableConfig := template.GetZarfVariableConfig(ctx)
 	variableConfig.SetConstants(pkg.Constants)
 	variableConfig.PopulateVariables(pkg.Variables, opts.DeploySetVariables)
@@ -108,7 +108,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		}
 		scan := ComponentImageScan{ComponentName: component.Name}
 
-		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, state)
+		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, s)
 		if err != nil {
 			return FindImagesResult{}, err
 		}

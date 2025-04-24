@@ -17,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -93,7 +94,7 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 		artifactServer := types.ArtifactServerInfo{}
 		artifactServer.FillInEmptyValues()
 
-		p.state = &types.ZarfState{
+		p.state = &state.State{
 			RegistryInfo:   registryInfo,
 			GitServer:      gitServer,
 			ArtifactServer: artifactServer,

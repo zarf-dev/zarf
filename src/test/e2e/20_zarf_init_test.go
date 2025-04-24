@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 func TestZarfInit(t *testing.T) {
@@ -54,7 +54,7 @@ func TestZarfInit(t *testing.T) {
 	}
 
 	// Check for any old secrets to ensure that they don't get saved in the init log
-	oldState := types.ZarfState{}
+	oldState := state.State{}
 	base64State, _, err := e2e.Kubectl(t, "get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
 	if err == nil {
 		oldStateJSON, err := base64.StdEncoding.DecodeString(base64State)
@@ -68,12 +68,12 @@ func TestZarfInit(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify that any state secrets were not included in the log
-	state := types.ZarfState{}
+	s := state.State{}
 	base64State, _, err = e2e.Kubectl(t, "get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
 	require.NoError(t, err)
 	stateJSON, err := base64.StdEncoding.DecodeString(base64State)
 	require.NoError(t, err)
-	err = json.Unmarshal(stateJSON, &state)
+	err = json.Unmarshal(stateJSON, &s)
 	require.NoError(t, err)
 
 	if e2e.ApplianceMode {

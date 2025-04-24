@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"runtime"
 	"slices"
 
@@ -116,10 +117,10 @@ func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage type
 		secretName := config.ZarfPackagePrefix + deployedPackage.Name
 
 		// Save the new secret with the removed components removed from the secret
-		newPackageSecret := v1ac.Secret(secretName, cluster.ZarfNamespaceName).
+		newPackageSecret := v1ac.Secret(secretName, state.ZarfNamespaceName).
 			WithLabels(map[string]string{
-				cluster.ZarfManagedByLabel:   "zarf",
-				cluster.ZarfPackageInfoLabel: deployedPackage.Name,
+				state.ZarfManagedByLabel:   "zarf",
+				state.ZarfPackageInfoLabel: deployedPackage.Name,
 			}).WithType(corev1.SecretTypeOpaque).
 			WithData(map[string][]byte{
 				"data": newPackageSecretData,
@@ -197,7 +198,7 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 		secretName := config.ZarfPackagePrefix + deployedPackage.Name
 
 		// All the installed components were deleted, therefore this package is no longer actually deployed
-		packageSecret, err := p.cluster.Clientset.CoreV1().Secrets(cluster.ZarfNamespaceName).Get(ctx, secretName, metav1.GetOptions{})
+		packageSecret, err := p.cluster.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, secretName, metav1.GetOptions{})
 
 		// We warn and ignore errors because we may have removed the cluster that this package was inside of
 		if err != nil {

@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,13 +37,13 @@ func TestArgoRepoWebhook(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	state := &types.ZarfState{GitServer: types.GitServerInfo{
+	s := &state.State{GitServer: types.GitServerInfo{
 		Address:      "https://git-server.com",
 		PushUsername: "a-push-user",
 		PullPassword: "a-pull-password",
 		PullUsername: "a-pull-user",
 	}}
-	c := createTestClientWithZarfState(ctx, t, state)
+	c := createTestClientWithZarfState(ctx, t, s)
 	handler := admission.NewHandler().Serve(ctx, NewRepositorySecretMutationHook(ctx, c))
 
 	tests := []admissionTest{
@@ -67,11 +68,11 @@ func TestArgoRepoWebhook(t *testing.T) {
 				),
 				operations.ReplacePatchOperation(
 					"/data/username",
-					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullUsername)),
+					b64.StdEncoding.EncodeToString([]byte(s.GitServer.PullUsername)),
 				),
 				operations.ReplacePatchOperation(
 					"/data/password",
-					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullPassword)),
+					b64.StdEncoding.EncodeToString([]byte(s.GitServer.PullPassword)),
 				),
 				operations.ReplacePatchOperation(
 					"/metadata/labels",
@@ -104,11 +105,11 @@ func TestArgoRepoWebhook(t *testing.T) {
 				),
 				operations.ReplacePatchOperation(
 					"/data/username",
-					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullUsername)),
+					b64.StdEncoding.EncodeToString([]byte(s.GitServer.PullUsername)),
 				),
 				operations.ReplacePatchOperation(
 					"/data/password",
-					b64.StdEncoding.EncodeToString([]byte(state.GitServer.PullPassword)),
+					b64.StdEncoding.EncodeToString([]byte(s.GitServer.PullPassword)),
 				),
 				operations.ReplacePatchOperation(
 					"/metadata/labels",

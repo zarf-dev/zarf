@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -49,7 +50,7 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 				AgentLabel: "skip",
 			},
 			secretLabels: map[string]string{
-				ZarfManagedByLabel: "zarf",
+				state.ZarfManagedByLabel: "zarf",
 			},
 			updatedImageSecret: true,
 			updatedGitSecret:   true,
@@ -60,7 +61,7 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 				AgentLabel: "ignore",
 			},
 			secretLabels: map[string]string{
-				ZarfManagedByLabel: "zarf",
+				state.ZarfManagedByLabel: "zarf",
 			},
 			updatedImageSecret: true,
 			updatedGitSecret:   true,
@@ -125,7 +126,7 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 			_, err = c.Clientset.CoreV1().Secrets(gitSecret.ObjectMeta.Namespace).Create(ctx, gitSecret, metav1.CreateOptions{})
 			require.NoError(t, err)
 
-			state := &types.ZarfState{
+			s := &state.State{
 				GitServer: types.GitServerInfo{
 					PullUsername: "pull-user",
 					PullPassword: "pull-password",
@@ -136,9 +137,9 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 					Address:      "127.0.0.1:30001",
 				},
 			}
-			err = c.UpdateZarfManagedImageSecrets(ctx, state)
+			err = c.UpdateZarfManagedImageSecrets(ctx, s)
 			require.NoError(t, err)
-			err = c.UpdateZarfManagedGitSecrets(ctx, state)
+			err = c.UpdateZarfManagedGitSecrets(ctx, s)
 			require.NoError(t, err)
 
 			// Make sure no new namespaces or secrets have been created.
@@ -163,7 +164,7 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 					Name:      config.ZarfImagePullSecretName,
 					Namespace: namespace.Name,
 					Labels: map[string]string{
-						ZarfManagedByLabel: "zarf",
+						state.ZarfManagedByLabel: "zarf",
 					},
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
@@ -188,13 +189,13 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 					Name:      config.ZarfGitServerSecretName,
 					Namespace: namespace.Name,
 					Labels: map[string]string{
-						ZarfManagedByLabel: "zarf",
+						state.ZarfManagedByLabel: "zarf",
 					},
 				},
 				Type: corev1.SecretTypeOpaque,
 				StringData: map[string]string{
-					"username": state.GitServer.PullUsername,
-					"password": state.GitServer.PullPassword,
+					"username": s.GitServer.PullUsername,
+					"password": s.GitServer.PullPassword,
 				},
 			}
 			if !tt.updatedGitSecret {

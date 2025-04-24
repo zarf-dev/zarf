@@ -53,7 +53,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	isUpdate := r.Operation == v1.Update
 	var isPatched bool
 
-	state, err := cluster.LoadZarfState(ctx)
+	s, err := cluster.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 
 	l.Info("using the Zarf git server URL to mutate the ArgoCD Repository secret",
 		"name", secret.Name,
-		"git-server", state.GitServer.Address)
+		"git-server", s.GitServer.Address)
 
 	url, exists := secret.Data["url"]
 	if !exists {
@@ -79,7 +79,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different from the hostname in the zarfState
 	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
 	if isUpdate {
-		isPatched, err = helpers.DoHostnamesMatch(state.GitServer.Address, repoCreds.URL)
+		isPatched, err = helpers.DoHostnamesMatch(s.GitServer.Address, repoCreds.URL)
 		if err != nil {
 			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
 		}
@@ -89,7 +89,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	// Mutate the repoURL if necessary
 	if isCreate || (isUpdate && !isPatched) {
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
-		transformedURL, err := transform.GitURL(state.GitServer.Address, repoCreds.URL, state.GitServer.PushUsername)
+		transformedURL, err := transform.GitURL(s.GitServer.Address, repoCreds.URL, s.GitServer.PushUsername)
 		if err != nil {
 			return nil, fmt.Errorf("unable the git url: %w", err)
 		}
@@ -97,7 +97,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 		l.Debug("mutating the ArgoCD repository secret URL to the Zarf URL", "original", repoCreds.URL, "mutated", patchedURL)
 	}
 
-	patches := populateArgoRepositoryPatchOperations(patchedURL, state.GitServer)
+	patches := populateArgoRepositoryPatchOperations(patchedURL, s.GitServer)
 	patches = append(patches, getLabelPatch(secret.Labels))
 
 	return &operations.Result{

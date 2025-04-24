@@ -9,39 +9,29 @@ import (
 	"strings"
 
 	"github.com/pterm/pterm"
-	"github.com/zarf-dev/zarf/src/types"
-)
-
-// Common constants for printing credentials
-const (
-	RegistryKey     = "registry"
-	RegistryReadKey = "registry-readonly"
-	GitKey          = "git"
-	GitReadKey      = "git-readonly"
-	ArtifactKey     = "artifact"
-	AgentKey        = "agent"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 // PrintComponentCredential displays credentials for a single component
-func PrintComponentCredential(state *types.ZarfState, componentName string) {
+func PrintComponentCredential(s *state.State, componentName string) {
 	switch strings.ToLower(componentName) {
-	case GitKey:
-		Notef("Git Server push password (username: %s):", state.GitServer.PushUsername)
-	case GitReadKey:
-		Notef("Git Server (read-only) password (username: %s):", state.GitServer.PullUsername)
-	case ArtifactKey:
-		Notef("Artifact Server token (username: %s):", state.ArtifactServer.PushUsername)
-	case RegistryKey:
-		Notef("Image Registry password (username: %s):", state.RegistryInfo.PushUsername)
-	case RegistryReadKey:
-		Notef("Image Registry (read-only) password (username: %s):", state.RegistryInfo.PullUsername)
+	case state.GitKey:
+		Notef("Git Server push password (username: %s):", s.GitServer.PushUsername)
+	case state.GitReadKey:
+		Notef("Git Server (read-only) password (username: %s):", s.GitServer.PullUsername)
+	case state.ArtifactKey:
+		Notef("Artifact Server token (username: %s):", s.ArtifactServer.PushUsername)
+	case state.RegistryKey:
+		Notef("Image Registry password (username: %s):", s.RegistryInfo.PushUsername)
+	case state.RegistryReadKey:
+		Notef("Image Registry (read-only) password (username: %s):", s.RegistryInfo.PullUsername)
 	default:
 		Warn("Unknown component: " + componentName)
 	}
 }
 
 // PrintCredentialUpdates displays credentials that will be updated
-func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState, services []string) {
+func PrintCredentialUpdates(oldState *state.State, newState *state.State, services []string) {
 	// Pause the logfile's output to avoid credentials being printed to the log file
 	if logFile != nil {
 		logFile.Pause()
@@ -52,7 +42,7 @@ func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState
 		HorizontalRule()
 
 		switch service {
-		case RegistryKey:
+		case state.RegistryKey:
 			oR := oldState.RegistryInfo
 			nR := newState.RegistryInfo
 			Title("Registry", "the information used to interact with Zarf's container image registry")
@@ -62,7 +52,7 @@ func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Password"), compareStrings(oR.PushPassword, nR.PushPassword, true))
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Pull Username"), compareStrings(oR.PullUsername, nR.PullUsername, false))
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Pull Password"), compareStrings(oR.PullPassword, nR.PullPassword, true))
-		case GitKey:
+		case state.GitKey:
 			oG := oldState.GitServer
 			nG := newState.GitServer
 			Title("Git Server", "the information used to interact with Zarf's GitOps Git Server")
@@ -72,7 +62,7 @@ func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Password"), compareStrings(oG.PushPassword, nG.PushPassword, true))
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Pull Username"), compareStrings(oG.PullUsername, nG.PullUsername, false))
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Pull Password"), compareStrings(oG.PullPassword, nG.PullPassword, true))
-		case ArtifactKey:
+		case state.ArtifactKey:
 			oA := oldState.ArtifactServer
 			nA := newState.ArtifactServer
 			Title("Artifact Server", "the information used to interact with Zarf's Artifact Server")
@@ -80,7 +70,7 @@ func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("URL Address"), compareStrings(oA.Address, nA.Address, false))
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Username"), compareStrings(oA.PushUsername, nA.PushUsername, false))
 			pterm.Printfln("    %s: %s", pterm.Bold.Sprint("Push Token"), compareStrings(oA.PushToken, nA.PushToken, true))
-		case AgentKey:
+		case state.AgentKey:
 			oT := oldState.AgentTLS
 			nT := newState.AgentTLS
 			Title("Agent TLS", "the certificates used to connect to Zarf's Agent")
@@ -94,15 +84,15 @@ func PrintCredentialUpdates(oldState *types.ZarfState, newState *types.ZarfState
 	pterm.Println()
 }
 
-func compareStrings(curent string, updated string, secret bool) string {
-	if updated == curent {
+func compareStrings(current string, updated string, secret bool) string {
+	if updated == current {
 		if secret {
 			return "**sanitized** (unchanged)"
 		}
-		return fmt.Sprintf("%s (unchanged)", curent)
+		return fmt.Sprintf("%s (unchanged)", current)
 	}
 	if secret {
 		return fmt.Sprintf("%s -> %s", pterm.FgRed.Sprint("**existing (sanitized)**"), pterm.FgGreen.Sprint("**replacement (sanitized)**"))
 	}
-	return fmt.Sprintf("%s -> %s", pterm.FgRed.Sprint(curent), pterm.FgGreen.Sprint(updated))
+	return fmt.Sprintf("%s -> %s", pterm.FgRed.Sprint(current), pterm.FgGreen.Sprint(updated))
 }

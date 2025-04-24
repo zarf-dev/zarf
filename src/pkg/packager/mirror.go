@@ -13,7 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 // Mirror pulls resources from a package (images, git repositories, etc) and pushes them to remotes in the airgap without deploying them
@@ -40,7 +40,7 @@ func (p *Packager) Mirror(ctx context.Context) error {
 		return fmt.Errorf("mirror cancelled")
 	}
 
-	p.state = &types.ZarfState{
+	p.state = &state.State{
 		RegistryInfo: p.cfg.InitOpts.RegistryInfo,
 		GitServer:    p.cfg.InitOpts.GitServer,
 	}

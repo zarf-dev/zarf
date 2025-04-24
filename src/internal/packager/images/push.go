@@ -50,7 +50,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	}
 
 	// The user may or may not have a cluster available, if it's available then use it to connect to the registry
-	c, _ := cluster.NewCluster()
+	c, _ := cluster.New(ctx)
 	err = retry.Do(func() error {
 		// Include tunnel connection in case the port forward breaks, for example, a registry pod could spin down / restart
 		var tunnel *cluster.Tunnel

@@ -14,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,7 +48,7 @@ func TestGetCreds(t *testing.T) {
 				Clientset: fake.NewClientset(),
 			}
 
-			state := &types.ZarfState{
+			s := &state.State{
 				GitServer: types.GitServerInfo{
 					Address:      "https://git-server.com",
 					PushUsername: "push-user",
@@ -71,15 +72,15 @@ func TestGetCreds(t *testing.T) {
 				Distro: "test",
 			}
 
-			b, err := json.Marshal(state)
+			b, err := json.Marshal(s)
 			require.NoError(t, err)
 			secret := corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      cluster.ZarfStateSecretName,
-					Namespace: cluster.ZarfNamespaceName,
+					Name:      state.ZarfStateSecretName,
+					Namespace: state.ZarfNamespaceName,
 				},
 				Data: map[string][]byte{
-					cluster.ZarfStateDataKey: b,
+					state.ZarfStateDataKey: b,
 				},
 			}
 			_, err = c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &secret, metav1.CreateOptions{})

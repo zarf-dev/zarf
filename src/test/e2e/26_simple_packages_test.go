@@ -5,7 +5,6 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -19,6 +18,7 @@ import (
 
 func TestDosGames(t *testing.T) {
 	t.Log("E2E: Dos games")
+	ctx := logger.WithContext(t.Context(), test.GetLogger(t))
 
 	tmpdir := t.TempDir()
 
@@ -31,9 +31,8 @@ func TestDosGames(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	require.NoError(t, err)
-	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
 	tunnel, err := c.Connect(ctx, "doom")
 	require.NoError(t, err)
 	defer tunnel.Close()
