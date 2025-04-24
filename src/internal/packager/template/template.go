@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -38,15 +39,15 @@ func GetZarfVariableConfig(ctx context.Context) *variables.VariableConfig {
 }
 
 // GetZarfTemplates returns the template keys and values to be used for templating.
-func GetZarfTemplates(ctx context.Context, componentName string, state *types.ZarfState) (templateMap map[string]*variables.TextTemplate, err error) {
+func GetZarfTemplates(ctx context.Context, componentName string, s *state.State) (templateMap map[string]*variables.TextTemplate, err error) {
 	templateMap = make(map[string]*variables.TextTemplate)
 
-	if state != nil {
-		regInfo := state.RegistryInfo
-		gitInfo := state.GitServer
+	if s != nil {
+		regInfo := s.RegistryInfo
+		gitInfo := s.GitServer
 
 		builtinMap := map[string]string{
-			"STORAGE_CLASS": state.StorageClass,
+			"STORAGE_CLASS": s.StorageClass,
 
 			// Registry info
 			"REGISTRY":           regInfo.Address,
@@ -66,7 +67,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, state *types.Za
 		// Don't template component-specific variables for every component
 		switch componentName {
 		case "zarf-agent":
-			agentTLS := state.AgentTLS
+			agentTLS := s.AgentTLS
 			builtinMap["AGENT_CRT"] = base64.StdEncoding.EncodeToString(agentTLS.Cert)
 			builtinMap["AGENT_KEY"] = base64.StdEncoding.EncodeToString(agentTLS.Key)
 			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)

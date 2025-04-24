@@ -19,9 +19,9 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/chartutil"
 )
 
@@ -51,7 +51,7 @@ type InspectPackageResourcesResults struct {
 
 // InspectPackageResources templates and returns the manifests, charts, and values files in the package as they would be on deploy
 func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayout, opts InspectPackageResourcesOptions) (results InspectPackageResourcesResults, err error) {
-	state, err := types.DefaultZarfState()
+	s, err := state.Default()
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
 	}
@@ -75,7 +75,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayo
 			return InspectPackageResourcesResults{}, err
 		}
 
-		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, state)
+		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, s)
 		if err != nil {
 			return InspectPackageResourcesResults{}, err
 		}
@@ -172,7 +172,7 @@ type InspectDefinitionResourcesResults struct {
 
 // InspectDefinitionResources templates and returns the manifests and Helm chart manifests found in the zarf.yaml at the given path
 func InspectDefinitionResources(ctx context.Context, packagePath string, opts InspectDefinitionResourcesOptions) (results InspectDefinitionResourcesResults, err error) {
-	state, err := types.DefaultZarfState()
+	s, err := state.Default()
 	if err != nil {
 		return InspectDefinitionResourcesResults{}, err
 	}
@@ -195,7 +195,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 
 	var resources []Resource
 	for _, component := range pkg.Components {
-		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, state)
+		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, s)
 		if err != nil {
 			return InspectDefinitionResourcesResults{}, err
 		}
