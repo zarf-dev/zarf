@@ -6,13 +6,14 @@ package packager2
 import (
 	"context"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/zarf-dev/zarf/src/pkg/state"
 
 	"github.com/distribution/reference"
 	sourcev1beta2 "github.com/fluxcd/source-controller/api/v1beta2"

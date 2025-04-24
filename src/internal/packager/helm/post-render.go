@@ -8,8 +8,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"slices"
+
+	"github.com/zarf-dev/zarf/src/pkg/state"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
