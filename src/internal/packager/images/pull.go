@@ -6,11 +6,9 @@ package images
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"maps"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,11 +83,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		Credential: credentials.Credential(credStore),
 	}
 
-	// Enable / Disable TLS verification based on the config
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: cfg.InsecureSkipTLSVerify}
-	orasTransport := retry.NewTransport(transport)
-	client.Client.Transport = orasTransport
+	client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify)
 
 	l.Debug("gathering credentials from default Docker config file", "credentials_configured", credStore.IsAuthConfigured())
 	platform := &ocispec.Platform{
