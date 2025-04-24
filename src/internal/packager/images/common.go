@@ -88,7 +88,6 @@ func buildScheme(plainHTTP bool) string {
 
 func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) error {
 	const pingTimeout = 5 * time.Second
-
 	ctx, cancel := context.WithTimeout(ctx, pingTimeout)
 	defer cancel()
 	url := fmt.Sprintf("%s://%s/v2/", buildScheme(plainHTTP), registryURL)
