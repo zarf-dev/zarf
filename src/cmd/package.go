@@ -337,14 +337,15 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	}()
 
 	mirrorOpt := packager2.MirrorOptions{
-		Cluster:         c,
-		PkgLayout:       pkgLayout,
-		RegistryInfo:    pkgConfig.InitOpts.RegistryInfo,
-		GitInfo:         pkgConfig.InitOpts.GitServer,
-		NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
-		Retries:         pkgConfig.PkgOpts.Retries,
-		OCIConcurrency:  config.CommonOptions.OCIConcurrency,
-		PlainHTTP:       config.CommonOptions.PlainHTTP,
+		Cluster:               c,
+		PkgLayout:             pkgLayout,
+		RegistryInfo:          pkgConfig.InitOpts.RegistryInfo,
+		GitInfo:               pkgConfig.InitOpts.GitServer,
+		NoImageChecksum:       pkgConfig.MirrorOpts.NoImgChecksum,
+		Retries:               pkgConfig.PkgOpts.Retries,
+		OCIConcurrency:        config.CommonOptions.OCIConcurrency,
+		PlainHTTP:             config.CommonOptions.PlainHTTP,
+		InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 	}
 	err = packager2.Mirror(ctx, mirrorOpt)
 	if err != nil {
