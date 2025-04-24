@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -86,6 +87,10 @@ func buildScheme(plainHTTP bool) string {
 }
 
 func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) error {
+	const pingTimeout = 5 * time.Second
+
+	ctx, cancel := context.WithTimeout(ctx, pingTimeout)
+	defer cancel()
 	url := fmt.Sprintf("%s://%s/v2/", buildScheme(plainHTTP), registryURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
