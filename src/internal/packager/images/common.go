@@ -25,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
 // PullConfig is the configuration for pulling images.
@@ -169,13 +170,13 @@ func saveIndexToOCILayout(dir string, idx ocispec.Index) error {
 	return nil
 }
 
-func orasTransport(insecureSkipTLSVerify bool) *http.Transport {
+func orasTransport(insecureSkipTLSVerify bool) *retry.Transport {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	// Enable / Disable TLS verification based on the config
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecureSkipTLSVerify}
 	// Users frequently run into servers hanging indefinitely, if the server doesn't send headers in 10 seconds then we timeout to avoid this
 	transport.ResponseHeaderTimeout = 10 * time.Second
-	return transport
+	return retry.NewTransport(transport)
 }
 
 // NoopOpt is a no-op option for crane.
