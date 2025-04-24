@@ -169,7 +169,7 @@ func saveIndexToOCILayout(dir string, idx ocispec.Index) error {
 	return nil
 }
 
-func transportForORAS(insecureSkipTLSVerify bool) *http.Transport {
+func orasTransport(insecureSkipTLSVerify bool) *http.Transport {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	// Enable / Disable TLS verification based on the config
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecureSkipTLSVerify}

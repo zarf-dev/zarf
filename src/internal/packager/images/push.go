@@ -74,7 +74,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}),
 		}
 
-		client.Client.Transport = transportForORAS(cfg.InsecureSkipTLSVerify)
+		client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify)
 
 		plainHTTP := cfg.PlainHTTP
 
