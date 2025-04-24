@@ -193,6 +193,7 @@ func (sc *SkeletonCreator) addComponent(ctx context.Context, component v1alpha1.
 		destinationDir := filepath.Dir(dst)
 
 		if file.ExtractPath != "" {
+			// FIXME(mkcp): Support with internal/archive
 			if err := archiver.Extract(file.Source, file.ExtractPath, destinationDir); err != nil {
 				return nil, fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
 			}

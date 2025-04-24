@@ -153,6 +153,7 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 	}
 	defer os.RemoveAll(tmpDir)
 	tarPath := filepath.Join(buildPath, ComponentsDir, component.Name) + ".tar"
+	// FIXME(mkcp): Support with internal/archive?
 	err = archiver.Unarchive(tarPath, tmpDir)
 	if err != nil {
 		return nil, err

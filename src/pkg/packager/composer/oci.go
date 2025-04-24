@@ -127,6 +127,7 @@ func (ic *ImportChain) fetchOCISkeleton(ctx context.Context) error {
 		return nil
 	}
 
+	// FIXME(mkcp): support with internal/archive?
 	tu := archiver.Tar{
 		OverwriteExisting: true,
 		// removes /<component-name>/ from the paths

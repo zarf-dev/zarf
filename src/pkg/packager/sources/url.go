@@ -7,6 +7,7 @@ package sources
 import (
 	"context"
 	"fmt"
+	"github.com/zarf-dev/zarf/src/internal/archive"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,7 +49,7 @@ func (s *URLSource) Collect(ctx context.Context, dir string) (string, error) {
 		return "", err
 	}
 
-	return RenameFromMetadata(dstTarball)
+	return archive.RenameFromMetadata(dstTarball)
 }
 
 // LoadPackage loads a package from an http, https or sget URL.

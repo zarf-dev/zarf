@@ -138,6 +138,7 @@ func (c *Components) Unarchive(ctx context.Context, component v1alpha1.ZarfCompo
 
 	// TODO(mkcp): Bring in context and port to logger
 	l.Debug("unarchiving", "component", filepath.Base(tb))
+	// FIXME(mkcp): support with internal/archive?
 	if err := archiver.Unarchive(tb, c.Base); err != nil {
 		return err
 	}

@@ -193,5 +193,6 @@ func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 
 	_ = os.Remove(dstTarball)
 
+	// FIXME(mkcp): Support with internal/archive
 	return dstTarball, archiver.Archive(allTheLayers, dstTarball)
 }
