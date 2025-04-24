@@ -6,6 +6,7 @@ package images
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -165,6 +166,15 @@ func saveIndexToOCILayout(dir string, idx ocispec.Index) error {
 		return fmt.Errorf("failed to save changes to index.json: %w", err)
 	}
 	return nil
+}
+
+func orasTransport(insecureSkipTLSVerify bool) *http.Transport {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// Enable / Disable TLS verification based on the config
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecureSkipTLSVerify}
+	// Users frequently run into servers hanging indefinitely, if the server doesn't send headers in 10 seconds then we timeout to avoid this
+	transport.ResponseHeaderTimeout = 10 * time.Second
+	return transport
 }
 
 // NoopOpt is a no-op option for crane.
