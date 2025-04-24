@@ -8,8 +8,9 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"strings"
+
+	"github.com/zarf-dev/zarf/src/pkg/state"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/types"

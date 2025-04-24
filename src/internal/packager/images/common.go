@@ -90,8 +90,7 @@ func buildScheme(plainHTTP bool) string {
 }
 
 func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) error {
-	const pingTimeout = 5 * time.Second
-	ctx, cancel := context.WithTimeout(ctx, pingTimeout)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	url := fmt.Sprintf("%s://%s/v2/", buildScheme(plainHTTP), registryURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -170,7 +169,7 @@ func saveIndexToOCILayout(dir string, idx ocispec.Index) error {
 	return nil
 }
 
-func orasTransport(insecureSkipTLSVerify bool) *http.Transport {
+func transportForORAS(insecureSkipTLSVerify bool) *http.Transport {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	// Enable / Disable TLS verification based on the config
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecureSkipTLSVerify}
