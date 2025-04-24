@@ -32,7 +32,7 @@ func NewClusterSource(pkgOpts *types.ZarfPackageOptions) (PackageSource, error) 
 	ctx, cancel := context.WithTimeout(context.Background(), cluster.DefaultTimeout)
 	defer cancel()
 
-	cluster, err := cluster.NewClusterWithWait(ctx)
+	cluster, err := cluster.NewWithWait(ctx)
 	if err != nil {
 		return nil, err
 	}

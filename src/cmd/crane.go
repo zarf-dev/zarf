@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -150,12 +151,12 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 
 	l.Info("retrieving registry information from Zarf state")
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	if err != nil {
 		return err
 	}
 
-	zarfState, err := c.LoadZarfState(ctx)
+	zarfState, err := c.LoadState(ctx)
 	if err != nil {
 		return err
 	}
@@ -197,7 +198,7 @@ func newRegistryPruneCommand() *cobra.Command {
 
 func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	// Try to connect to a Zarf initialized cluster
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(cmd.Context())
 	if err != nil {
 		return err
 	}
@@ -205,7 +206,7 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 	l := logger.From(ctx)
 
-	zarfState, err := c.LoadZarfState(ctx)
+	zarfState, err := c.LoadState(ctx)
 	if err != nil {
 		return err
 	}
@@ -230,9 +231,9 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	return doPruneImagesForPackages(ctx, zarfState, zarfPackages, registryEndpoint)
 }
 
-func doPruneImagesForPackages(ctx context.Context, zarfState *types.ZarfState, zarfPackages []types.DeployedPackage, registryEndpoint string) error {
+func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages []types.DeployedPackage, registryEndpoint string) error {
 	l := logger.From(ctx)
-	authOption := images.WithPushAuth(zarfState.RegistryInfo)
+	authOption := images.WithPushAuth(s.RegistryInfo)
 
 	l.Info("finding images to prune")
 
@@ -349,39 +350,39 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 		}
 
 		// Try to connect to a Zarf initialized cluster otherwise then pass it down to crane.
-		c, err := cluster.NewCluster()
+		c, err := cluster.New(ctx)
 		if err != nil {
 			return originalListFn(cmd, args)
 		}
 
 		l.Info("retrieving registry information from Zarf state")
 
-		zarfState, err := c.LoadZarfState(ctx)
+		s, err := c.LoadState(ctx)
 		if err != nil {
 			l.Warn("could not get Zarf state from Kubernetes cluster, continuing without state information", "error", err.Error())
 			return originalListFn(cmd, args)
 		}
 
 		// Check to see if it matches the existing internal address.
-		if !strings.HasPrefix(args[imageNameArgumentIndex], zarfState.RegistryInfo.Address) {
+		if !strings.HasPrefix(args[imageNameArgumentIndex], s.RegistryInfo.Address) {
 			return originalListFn(cmd, args)
 		}
 
-		_, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, zarfState.RegistryInfo)
+		_, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, s.RegistryInfo)
 		if err != nil {
 			return err
 		}
 
 		// Add the correct authentication to the crane command options
-		authOption := images.WithPushAuth(zarfState.RegistryInfo)
+		authOption := images.WithPushAuth(s.RegistryInfo)
 		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
 
 		if tunnel != nil {
-			l.Info("opening a tunnel to the Zarf registry", "local-endpoint", tunnel.Endpoint(), "cluster-address", zarfState.RegistryInfo.Address)
+			l.Info("opening a tunnel to the Zarf registry", "local-endpoint", tunnel.Endpoint(), "cluster-address", s.RegistryInfo.Address)
 
 			defer tunnel.Close()
 
-			givenAddress := fmt.Sprintf("%s/", zarfState.RegistryInfo.Address)
+			givenAddress := fmt.Sprintf("%s/", s.RegistryInfo.Address)
 			tunnelAddress := fmt.Sprintf("%s/", tunnel.Endpoint())
 			args[imageNameArgumentIndex] = strings.Replace(args[imageNameArgumentIndex], givenAddress, tunnelAddress, 1)
 			return tunnel.Wrap(func() error { return originalListFn(cmd, args) })

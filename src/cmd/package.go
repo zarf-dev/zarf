@@ -306,7 +306,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	var c *cluster.Cluster
 	if dns.IsServiceURL(pkgConfig.InitOpts.RegistryInfo.Address) || dns.IsServiceURL(pkgConfig.InitOpts.GitServer.Address) {
 		var err error
-		c, err = cluster.NewCluster()
+		c, err = cluster.New(ctx)
 		if err != nil {
 			return err
 		}
@@ -327,7 +327,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		Filter:                  filter,
 	}
-	pkgLayout, err := packager2.LoadPackage(cmd.Context(), loadOpt)
+	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {
 		return err
 	}
@@ -337,14 +337,15 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	}()
 
 	mirrorOpt := packager2.MirrorOptions{
-		Cluster:         c,
-		PkgLayout:       pkgLayout,
-		RegistryInfo:    pkgConfig.InitOpts.RegistryInfo,
-		GitInfo:         pkgConfig.InitOpts.GitServer,
-		NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
-		Retries:         pkgConfig.PkgOpts.Retries,
-		OCIConcurrency:  config.CommonOptions.OCIConcurrency,
-		PlainHTTP:       config.CommonOptions.PlainHTTP,
+		Cluster:               c,
+		PkgLayout:             pkgLayout,
+		RegistryInfo:          pkgConfig.InitOpts.RegistryInfo,
+		GitInfo:               pkgConfig.InitOpts.GitServer,
+		NoImageChecksum:       pkgConfig.MirrorOpts.NoImgChecksum,
+		Retries:               pkgConfig.PkgOpts.Retries,
+		OCIConcurrency:        config.CommonOptions.OCIConcurrency,
+		PlainHTTP:             config.CommonOptions.PlainHTTP,
+		InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 	}
 	err = packager2.Mirror(ctx, mirrorOpt)
 	if err != nil {
@@ -665,9 +666,9 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 
 	// The user may be pulling the package from the cluster or using a built package
 	// since we don't know we don't check this error
-	cluster, _ := cluster.NewCluster() //nolint:errcheck
+	c, _ := cluster.New(ctx) //nolint:errcheck
 
-	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
+	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, c, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
 	if err != nil {
 		return err
 	}
@@ -719,9 +720,9 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 
 	// The user may be pulling the package from the cluster or using a built package
 	// since we don't know we don't check this error
-	cluster, _ := cluster.NewCluster() //nolint:errcheck
+	c, _ := cluster.New(ctx) //nolint:errcheck
 
-	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
+	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, c, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
 	if err != nil {
 		return err
 	}
@@ -771,7 +772,7 @@ func newPackageListCommand() *cobra.Command {
 func (o *packageListOptions) complete(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
-	c, err := cluster.NewClusterWithWait(timeoutCtx)
+	c, err := cluster.NewWithWait(timeoutCtx)
 	if err != nil {
 		return err
 	}
@@ -874,10 +875,10 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		filters.ByLocalOS(runtime.GOOS),
 		filters.BySelectState(pkgConfig.PkgOpts.OptionalComponents),
 	)
-	cluster, _ := cluster.NewCluster() //nolint:errcheck
+	c, _ := cluster.New(ctx) //nolint:errcheck
 	removeOpt := packager2.RemoveOptions{
 		Source:                  packageSource,
-		Cluster:                 cluster,
+		Cluster:                 c,
 		Filter:                  filter,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
@@ -1068,7 +1069,7 @@ func choosePackage(ctx context.Context, args []string) (string, error) {
 func getPackageCompletionArgs(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	var pkgCandidates []string
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(cmd.Context())
 	if err != nil {
 		return pkgCandidates, cobra.ShellCompDirectiveDefault
 	}
