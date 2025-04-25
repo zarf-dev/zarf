@@ -30,7 +30,7 @@ else
 endif
 
 CLI_VERSION ?= $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
-BUILD_ARGS := -s -w -X github.com/zarf-dev/zarf/src/config.CLIVersion=$(CLI_VERSION)
+LD_FLAGS := -s -w -X github.com/zarf-dev/zarf/src/config.CLIVersion=$(CLI_VERSION)
 K8S_MODULES_VER=$(subst ., ,$(subst v,,$(shell go list -f '{{.Version}}' -m k8s.io/client-go)))
 K8S_MODULES_MAJOR_VER=$(shell echo $$(($(firstword $(K8S_MODULES_VER)) + 1)))
 K8S_MODULES_MINOR_VER=$(word 2,$(K8S_MODULES_VER))
@@ -41,25 +41,25 @@ SYFT_VERSION=$(shell go list -f '{{.Version}}' -m github.com/anchore/syft)
 ARCHIVER_VERSION=$(shell go list -f '{{.Version}}' -m github.com/mholt/archiver/v3)
 HELM_VERSION=$(shell go list -f '{{.Version}}' -m helm.sh/helm/v3)
 
-BUILD_ARGS += -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
-BUILD_ARGS += -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMinor=$(K8S_MODULES_MINOR_VER)
-BUILD_ARGS += -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
-BUILD_ARGS += -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor=$(K8S_MODULES_MINOR_VER)
-BUILD_ARGS += -X k8s.io/component-base/version.gitVersion=v$(K8S_MODULES_MAJOR_VER).$(K8S_MODULES_MINOR_VER).$(K8S_MODULES_PATCH_VER)
-BUILD_ARGS += -X github.com/derailed/k9s/cmd.version=$(K9S_VERSION)
-BUILD_ARGS += -X github.com/google/go-containerregistry/cmd/crane/cmd.Version=$(CRANE_VERSION)
-BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.syftVersion=$(SYFT_VERSION)
-BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.archiverVersion=$(ARCHIVER_VERSION)
-BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.helmVersion=$(HELM_VERSION)
+LD_FLAGS += -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
+LD_FLAGS += -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMinor=$(K8S_MODULES_MINOR_VER)
+LD_FLAGS += -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
+LD_FLAGS += -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor=$(K8S_MODULES_MINOR_VER)
+LD_FLAGS += -X k8s.io/component-base/version.gitVersion=v$(K8S_MODULES_MAJOR_VER).$(K8S_MODULES_MINOR_VER).$(K8S_MODULES_PATCH_VER)
+LD_FLAGS += -X github.com/derailed/k9s/cmd.version=$(K9S_VERSION)
+LD_FLAGS += -X github.com/google/go-containerregistry/cmd/crane/cmd.Version=$(CRANE_VERSION)
+LD_FLAGS += -X github.com/zarf-dev/zarf/src/cmd.syftVersion=$(SYFT_VERSION)
+LD_FLAGS += -X github.com/zarf-dev/zarf/src/cmd.archiverVersion=$(ARCHIVER_VERSION)
+LD_FLAGS += -X github.com/zarf-dev/zarf/src/cmd.helmVersion=$(HELM_VERSION)
 
 GIT_SHA := $(if $(shell git rev-parse HEAD),$(shell git rev-parse HEAD),"")
 BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
-BUILD_ARGS += -X k8s.io/component-base/version.gitCommit=$(GIT_SHA)
-BUILD_ARGS += -X k8s.io/component-base/version.buildDate=$(BUILD_DATE)
+LD_FLAGS += -X k8s.io/component-base/version.gitCommit=$(GIT_SHA)
+LD_FLAGS += -X k8s.io/component-base/version.buildDate=$(BUILD_DATE)
+EXTRA_BUILD_ARGS ?=
 
-.DEFAULT_GOAL := build
+export CGO_ENABLED := 0
 
-.PHONY: help
 help: ## Display this help information
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| sort | awk 'BEGIN {FS = ":.*?## "}; \
@@ -74,30 +74,39 @@ destroy: ## Run `zarf destroy` on the current cluster
 	rm -fr build
 
 # Note: the path to the main.go file is not used due to https://github.com/golang/go/issues/51831#issuecomment-1074188363
-.PHONY: build
 build: ## Build the Zarf CLI for the machines OS and architecture
 	go mod tidy
 	$(MAKE) $(BUILD_CLI_FOR_SYSTEM)
 
 build-cli-linux-amd: ## Build the Zarf CLI for Linux on AMD64
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf .
+	GOOS=linux GOARCH=amd64 \
+	go build -ldflags="$(LD_FLAGS)" $(EXTRA_BUILD_ARGS) \
+	-o build/zarf .
 
 build-cli-linux-arm: ## Build the Zarf CLI for Linux on ARM
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm .
+	GOOS=linux GOARCH=arm64 \
+	go build -ldflags="$(LD_FLAGS)" \
+	-o build/zarf-arm .
 
 build-cli-mac-intel: ## Build the Zarf CLI for macOS on AMD64
-	GOOS=darwin GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-intel .
+	GOOS=darwin GOARCH=amd64 \
+	go build -ldflags="$(LD_FLAGS)" $(EXTRA_BUILD_ARGS) \
+	-o build/zarf-mac-intel .
 
 build-cli-mac-apple: ## Build the Zarf CLI for macOS on ARM
-	GOOS=darwin GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-mac-apple .
+	GOOS=darwin GOARCH=arm64 \
+	go build -ldflags="$(LD_FLAGS)" $(EXTRA_BUILD_ARGS) \
+	-o build/zarf-mac-apple .
 
 build-cli-windows-amd: ## Build the Zarf CLI for Windows on AMD64
-	GOOS=windows GOARCH=amd64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf.exe . ## Build the Zarf CLI for Windows on AMD64
+	GOOS=windows GOARCH=amd64 \
+	go build -ldflags="$(LD_FLAGS)" $(EXTRA_BUILD_ARGS) \
+	-o build/zarf.exe .
 
 build-cli-windows-arm: ## Build the Zarf CLI for Windows on ARM
-	GOOS=windows GOARCH=arm64 go build -ldflags="$(BUILD_ARGS)" -o build/zarf-arm.exe . ## Build the Zarf CLI for Windows on ARM
-
-build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI for Linux on AMD64 and ARM
+	GOOS=windows GOARCH=arm64 \
+	go build -ldflags="$(LD_FLAGS)" $(EXTRA_BUILD_ARGS) \
+	-o build/zarf-arm.exe .
 
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
@@ -152,50 +161,39 @@ publish-init-package:
 
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE)
-
-	@test -s ./build/zarf-package-dos-games-$(ARCH)-1.2.0.tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
-
-	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
-
+	@test -s ./build/zarf-package-dos-games-$(ARCH)-1.2.0.tar.zst   || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst   || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
 	@test -s ./build/zarf-package-component-actions-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-actions -o build -a $(ARCH) --confirm
-
-	@test -s ./build/zarf-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/variables --set NGINX_VERSION=1.23.3 -o build -a $(ARCH) --confirm
-
-	@test -s ./build/zarf-package-kiwix-$(ARCH)-3.5.0.tar || $(ZARF_BIN) package create examples/kiwix -o build -a $(ARCH) --confirm
-
-	@test -s ./build/zarf-package-git-data-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/git-data -o build -a $(ARCH) --confirm
-
+	@test -s ./build/zarf-package-variables-$(ARCH).tar.zst         || $(ZARF_BIN) package create examples/variables --set NGINX_VERSION=1.23.3 -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-kiwix-$(ARCH)-3.5.0.tar           || $(ZARF_BIN) package create examples/kiwix -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-git-data-$(ARCH)-0.0.1.tar.zst    || $(ZARF_BIN) package create examples/git-data -o build -a $(ARCH) --confirm
 	@test -s ./build/zarf-package-helm-charts-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/helm-charts -o build -a $(ARCH) --confirm
-
-	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH) --confirm
-
-	@test -s ./build/zarf-package-argocd-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/argocd -o build -a $(ARCH) --confirm
-
-	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-podinfo-flux-$(ARCH).tar.zst      || $(ZARF_BIN) package create examples/podinfo-flux -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-argocd-$(ARCH).tar.zst            || $(ZARF_BIN) package create examples/argocd -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst              || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH) --confirm
 
 ## NOTE: Requires an existing cluster or the env var APPLIANCE_MODE=true
-.PHONY: test-e2e
 test-e2e: test-e2e-without-cluster test-e2e-with-cluster  ## Run all of the core Zarf CLI E2E tests (builds any deps that aren't present)
 
-.PHONY: test-e2e-with-cluster
 test-e2e-with-cluster: ## Run all of the core Zarf CLI E2E tests that DO require a cluster
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	cd src/test/e2e && go test ./main_test.go ./[2-9]*.go -failfast -v -timeout 35m
 
-.PHONY: test-e2e-without-cluster
 test-e2e-without-cluster: ## Run all of the core Zarf CLI E2E tests  that DO NOT require a cluster
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
-	cd src/test/e2e && go test ./main_test.go ./[01]* -failfast -v -timeout 35m
+	@rm -rf coverdir && mkdir coverdir
+	GOCOVERDIR=$$(pwd)/coverdir && cd src/test/e2e && GOCOVERDIR=$$GOCOVERDIR go test ./main_test.go ./[01]* -failfast -v -timeout 35m
+	@mkdir coverdir/merged
+	@go tool covdata merge -i=coverdir -o=coverdir/merged
+	@go tool covdata textfmt -i coverdir/merged -o e2e-coverage.out
 
 ## NOTE: Requires an existing cluster
-.PHONY: test-external
 test-external: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s $(ZARF_BIN) || $(MAKE)
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	cd src/test/external && go test -failfast -v -timeout 30m
 
 ## NOTE: Requires an existing cluster and
-.PHONY: test-upgrade
 test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s $(ZARF_BIN) || $(MAKE)
 	[ -n "$(shell zarf version)" ] || (echo "Zarf must be installed prior to the upgrade test" && exit 1)
@@ -203,7 +201,6 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s "zarf-package-test-upgrade-package-amd64-6.3.4.tar.zst" || zarf package create src/test/upgrade/ --set PODINFO_VERSION=6.3.4 --confirm
 	cd src/test/upgrade && go test -failfast -v -timeout 30m
 
-.PHONY: test-unit
 test-unit: ## Run unit tests
 	go test -failfast -v -coverprofile=coverage.out -covermode=atomic $$(go list ./... | grep -v '^github.com/zarf-dev/zarf/src/test')
 
@@ -222,3 +219,6 @@ cve-report: ## Create a CVE report for the current project (must `brew install g
 
 lint-go: ## Run golang-ci-lint to lint the go code (must `brew install golangci-lint` first)
 	golangci-lint run
+
+.DEFAULT_GOAL := build
+.PHONY: help build test-unit test-upgrade test-external test-e2e-without-cluster test-e2e-with-cluster test-e2e
