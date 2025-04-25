@@ -186,7 +186,7 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 	resolveOpts := oras.DefaultResolveOptions
 	desc, err := oras.Resolve(ctx, src, srcName, resolveOpts)
 	if err != nil {
-		return fmt.Errorf("failed to fetch image: %s: %w", srcName, err)
+		return fmt.Errorf("failed to resolve image: %s: %w", srcName, err)
 	}
 
 	// If an index is pulled we should try pulling with the default platform
@@ -194,7 +194,7 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 		resolveOpts.TargetPlatform = defaultPlatform
 		desc, err = oras.Resolve(ctx, src, srcName, resolveOpts)
 		if err != nil {
-			return fmt.Errorf("failed to fetch image %s with architecture %s: %w", srcName, defaultPlatform.Architecture, err)
+			return fmt.Errorf("failed to resolve image %s with architecture %s: %w", srcName, defaultPlatform.Architecture, err)
 		}
 	}
 
