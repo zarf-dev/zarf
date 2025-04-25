@@ -188,6 +188,14 @@ test-e2e-without-cluster: ## Run all of the core Zarf CLI E2E tests  that DO NOT
 	@go tool covdata merge -i=coverdir -o=coverdir/merged
 	@go tool covdata textfmt -i coverdir/merged -o e2e-coverage.out
 
+TEST_TO_RUN?=
+
+measure-test:
+	git switch main
+	time go test ./src/test/e2e -n $(TEST_TO_RUN) -failfast > measure-test.out
+	git switch -
+	time go test ./src/test/e2e -n $(TEST_TO_RUN) -failfast >> measure-test.out
+
 ## NOTE: Requires an existing cluster
 test-external: ## Run the Zarf CLI E2E tests for an external registry and cluster
 	@test -s $(ZARF_BIN) || $(MAKE)
