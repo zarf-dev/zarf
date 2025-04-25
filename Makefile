@@ -194,9 +194,15 @@ SHELL := /usr/bin/bash
 
 measure-test:
 	git switch main
-	time go test ./src/test/e2e -n $(TEST_TO_RUN) -failfast > measure-test.out
+	start=$$(date +%s); \
+		go test ./src/test/e2e -n $(TEST_TO_RUN) -failfast; \
+		end=$$(date +%s); \
+		echo "Elapsed time: $$((end-start)) seconds" > measure-test.out
 	git switch -
-	time go test ./src/test/e2e -n $(TEST_TO_RUN) -failfast >> measure-test.out
+	start=$$(date +%s); \
+		go test ./src/test/e2e -n $(TEST_TO_RUN) -failfast; \
+		end=$$(date +%s); \
+		echo "Elapsed time: $$((end-start)) seconds" >> measure-test.out
 
 ## NOTE: Requires an existing cluster
 test-external: ## Run the Zarf CLI E2E tests for an external registry and cluster
