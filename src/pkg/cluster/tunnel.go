@@ -475,12 +475,11 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("unable to create the dialer %w", err)
 	}
 
-	// out := &slogWriter{l, fmt.Sprintf("tunnel output for %s: ", tunnel.Endpoint())}
-	// errOut := &slogWriter{l, fmt.Sprintf("tunnel error output for %s: ", tunnel.Endpoint())}
-
 	// Construct a new PortForwarder struct that manages the instructed port forward tunnel.
 	ports := []string{fmt.Sprintf("%d:%d", localPort, tunnel.remotePort)}
-	portforwarder, err := portforward.New(dialer, ports, tunnel.stopChan, tunnel.readyChan, tunnel.out, tunnel.out)
+	out := &slogWriter{l, fmt.Sprintf("tunnel output for %s: ", ports)}
+	errOut := &slogWriter{l, fmt.Sprintf("tunnel error output for %s: ", ports)}
+	portforwarder, err := portforward.New(dialer, ports, tunnel.stopChan, tunnel.readyChan, out, errOut)
 	if err != nil {
 		return "", fmt.Errorf("unable to create the port forward: %w", err)
 	}
