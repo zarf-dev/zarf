@@ -124,7 +124,8 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 				err = retry.Do(
 					func() error { return pushImage(img, offlineNameCRC) },
-					retry.OnRetry(func(_ uint, err error) {
+					retry.OnRetry(func(attempt uint, err error) {
+						l.Debug("retrying image push", "attempt", attempt, "error", err)
 						if err != nil && tunnel != nil {
 							_ = tunnel.Reconnect(ctx)
 						}
@@ -136,9 +137,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				if err != nil {
 					return err
 				}
-				if err := pushImage(img, offlineNameCRC); err != nil {
-					return err
-				}
 			}
 
 			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
@@ -148,13 +146,22 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				return err
 			}
 
-			// if tunnel != nil {
-			// 	_ = tunnel.Reconnect(ctx)
-			// }
-
-			if err := pushImage(img, offlineName); err != nil {
+			err = retry.Do(
+				func() error { return pushImage(img, offlineName) },
+				retry.OnRetry(func(attempt uint, err error) {
+					l.Debug("retrying image push", "attempt", attempt, "error", err)
+					if err != nil && tunnel != nil {
+						_ = tunnel.Reconnect(ctx)
+					}
+				}),
+				retry.Context(ctx),
+				retry.Attempts(uint(cfg.Retries)),
+				retry.Delay(500*time.Millisecond),
+			)
+			if err != nil {
 				return err
 			}
+
 			pushed = append(pushed, img)
 		}
 		return nil

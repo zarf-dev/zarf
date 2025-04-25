@@ -316,19 +316,18 @@ const (
 
 // Tunnel is the main struct that configures and manages port forwarding tunnels to Kubernetes resources.
 type Tunnel struct {
-	clientset            kubernetes.Interface
-	restConfig           *rest.Config
-	out                  io.Writer
-	localPort            int
-	remotePort           int
-	namespace            string
-	resourceType         string
-	resourceName         string
-	urlSuffix            string
-	stopChan             chan struct{}
-	readyChan            chan struct{}
-	errChan              chan error
-	portForwardCreateURL *url.URL
+	clientset    kubernetes.Interface
+	restConfig   *rest.Config
+	out          io.Writer
+	localPort    int
+	remotePort   int
+	namespace    string
+	resourceType string
+	resourceName string
+	urlSuffix    string
+	stopChan     chan struct{}
+	readyChan    chan struct{}
+	errChan      chan error
 }
 
 // NewTunnel will create a new Tunnel struct.
@@ -404,9 +403,12 @@ func (tunnel *Tunnel) FullURL() string {
 
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
 func (tunnel *Tunnel) Close() {
+	if tunnel.stopChan == nil {
+		return
+	}
 	select {
 	case <-tunnel.stopChan:
-		// Already closed, do nothing
+		return
 	default:
 		close(tunnel.stopChan)
 	}
@@ -469,7 +471,7 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 	// Example: http://localhost:8080/api/v1/namespaces/helm/pods/tiller-deploy-9itlq/portforward.
 	postEndpoint := tunnel.clientset.CoreV1().RESTClient().Post()
 	namespace := tunnel.namespace
-	tunnel.portForwardCreateURL = postEndpoint.
+	portForwardCreateURL := postEndpoint.
 		Resource("pods").
 		Namespace(namespace).
 		Name(podName).
