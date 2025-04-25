@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/oci"
 	"oras.land/oras-go/v2/registry"
@@ -17,6 +16,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/internal/dns"
@@ -49,55 +49,54 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		return fmt.Errorf("failed to instantiate oci directory: %w", err)
 	}
 
-	// The user may or may not have a cluster available, if it's available then use it to connect to the registry
-	c, _ := cluster.New(ctx)
-	err = retry.Do(func() error {
-		// Include tunnel connection in case the port forward breaks, for example, a registry pod could spin down / restart
-		var tunnel *cluster.Tunnel
-		if c != nil {
-			var err error
-			registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegistryInfo)
-			if err != nil {
-				return err
-			}
-			if tunnel != nil {
-				defer tunnel.Close()
-			}
+	client := &auth.Client{
+		Client: orasRetry.DefaultClient,
+		Cache:  auth.NewCache(),
+		Credential: auth.StaticCredential(registryURL, auth.Credential{
+			Username: cfg.RegistryInfo.PushUsername,
+			Password: cfg.RegistryInfo.PushPassword,
+		}),
+	}
+
+	client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify)
+
+	plainHTTP := cfg.PlainHTTP
+
+	if dns.IsLocalhost(registryURL) && !cfg.PlainHTTP {
+		var err error
+		plainHTTP, err = shouldUsePlainHTTP(ctx, registryURL, client)
+		if err != nil {
+			return err
 		}
+	}
 
-		client := &auth.Client{
-			Client: orasRetry.DefaultClient,
-			Cache:  auth.NewCache(),
-			Credential: auth.StaticCredential(registryURL, auth.Credential{
-				Username: cfg.RegistryInfo.PushUsername,
-				Password: cfg.RegistryInfo.PushPassword,
-			}),
+	pushImage := func(srcName, dstName string) error {
+		remoteRepo := &orasRemote.Repository{
+			PlainHTTP: plainHTTP,
+			Client:    client,
 		}
-
-		client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify)
-
-		plainHTTP := cfg.PlainHTTP
-
-		if dns.IsLocalhost(registryURL) && !cfg.PlainHTTP {
-			var err error
-			plainHTTP, err = shouldUsePlainHTTP(ctx, registryURL, client)
-			if err != nil {
-				return err
-			}
+		remoteRepo.Reference, err = registry.ParseReference(dstName)
+		if err != nil {
+			return fmt.Errorf("failed to parse ref %s: %w", dstName, err)
 		}
-
-		pushImage := func(srcName, dstName string) error {
-			remoteRepo := &orasRemote.Repository{
-				PlainHTTP: plainHTTP,
-				Client:    client,
-			}
-			remoteRepo.Reference, err = registry.ParseReference(dstName)
-			if err != nil {
-				return fmt.Errorf("failed to parse ref %s: %w", dstName, err)
-			}
-			defaultPlatform := &ocispec.Platform{
-				Architecture: cfg.Arch,
-				OS:           "linux",
+		defaultPlatform := &ocispec.Platform{
+			Architecture: cfg.Arch,
+			OS:           "linux",
+		}
+		return retry.Do(func() error {
+			// The user may or may not have a cluster available, if it's available then use it to connect to the registry
+			c, _ := cluster.New(ctx)
+			// Include tunnel connection in case the port forward breaks, for example, a registry pod could spin down / restart
+			var tunnel *cluster.Tunnel
+			if c != nil {
+				var err error
+				registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegistryInfo)
+				if err != nil {
+					return err
+				}
+				if tunnel != nil {
+					defer tunnel.Close()
+				}
 			}
 			if tunnel != nil {
 				return tunnel.Wrap(func() error {
@@ -105,44 +104,40 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				})
 			}
 			return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
+		}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
+	}
+	pushed := []string{}
+	// Delete the images that were already successfully pushed so that they aren't attempted on the next retry
+	defer func() {
+		for _, refInfo := range pushed {
+			delete(toPush, refInfo)
 		}
-		pushed := []string{}
-		// Delete the images that were already successfully pushed so that they aren't attempted on the next retry
-		defer func() {
-			for _, refInfo := range pushed {
-				delete(toPush, refInfo)
-			}
-		}()
-		for img := range toPush {
-			l.Info("pushing image", "name", img)
-			// If this is not a no checksum image push it for use with the Zarf agent
-			if !cfg.NoChecksum {
-				offlineNameCRC, err := transform.ImageTransformHost(registryURL, img)
-				if err != nil {
-					return err
-				}
-
-				if err = pushImage(img, offlineNameCRC); err != nil {
-					return err
-				}
-			}
-
-			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
-			// (this may result in collisions but this is acceptable for this use case)
-			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, img)
+	}()
+	for img := range toPush {
+		l.Info("pushing image", "name", img)
+		// If this is not a no checksum image push it for use with the Zarf agent
+		if !cfg.NoChecksum {
+			offlineNameCRC, err := transform.ImageTransformHost(registryURL, img)
 			if err != nil {
 				return err
 			}
 
-			if err = pushImage(img, offlineName); err != nil {
+			if err = pushImage(img, offlineNameCRC); err != nil {
 				return err
 			}
-			pushed = append(pushed, img)
 		}
-		return nil
-	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
-	if err != nil {
-		return err
+
+		// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
+		// (this may result in collisions but this is acceptable for this use case)
+		offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, img)
+		if err != nil {
+			return err
+		}
+
+		if err = pushImage(img, offlineName); err != nil {
+			return err
+		}
+		pushed = append(pushed, img)
 	}
 	return nil
 }
