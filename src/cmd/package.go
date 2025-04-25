@@ -225,7 +225,7 @@ func (o *packageDeployOptions) preRun(_ *cobra.Command, _ []string) {
 	}
 }
 
-func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) error {
+func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
 	packageSource, err := choosePackage(ctx, args)
 	if err != nil {
@@ -253,11 +253,12 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	defer func() {
-		// Cleanup package files
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	if err := packager2.Deploy(ctx, pkgLayout); err != nil {
+	if err := packager2.Deploy(ctx, pkgLayout, packager2.DeployOpts{
+		SetVariables: pkgConfig.PkgOpts.SetVariables,
+	}); err != nil {
 		return fmt.Errorf("failed to deploy package: %w", err)
 	}
 	return nil

@@ -55,9 +55,12 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayo
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
 	}
+	// TODO make this a callable function
 	variableConfig := template.GetZarfVariableConfig(ctx)
 	variableConfig.SetConstants(pkgLayout.Pkg.Constants)
-	variableConfig.PopulateVariables(pkgLayout.Pkg.Variables, opts.SetVariables)
+	if err := variableConfig.PopulateVariables(pkgLayout.Pkg.Variables, opts.SetVariables); err != nil {
+		return InspectPackageResourcesResults{}, err
+	}
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
