@@ -186,13 +186,14 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 			return err
 		}
 		pullCfg := images.PullConfig{
-			OCIConcurrency:       config.CommonOptions.OCIConcurrency,
-			DestinationDirectory: dst.Images.Base,
-			ImageList:            imageList,
-			Arch:                 arch,
-			RegistryOverrides:    pc.createOpts.RegistryOverrides,
-			CacheDirectory:       filepath.Join(cachePath, layout.ImagesDir),
-			PlainHTTP:            config.CommonOptions.PlainHTTP,
+			OCIConcurrency:        config.CommonOptions.OCIConcurrency,
+			DestinationDirectory:  dst.Images.Base,
+			ImageList:             imageList,
+			Arch:                  arch,
+			RegistryOverrides:     pc.createOpts.RegistryOverrides,
+			CacheDirectory:        filepath.Join(cachePath, layout.ImagesDir),
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
 
 		_, err = images.Pull(ctx, pullCfg)

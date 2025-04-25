@@ -51,6 +51,7 @@ type ExtInClusterTestSuite struct {
 
 func (suite *ExtInClusterTestSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
+	ctx := suite.T().Context()
 
 	// Install a gitea chart to the k8s cluster to act as the 'remote' git server
 	giteaChartURL := "https://dl.gitea.io/charts/gitea-8.3.0.tgz"
@@ -68,7 +69,7 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 	suite.NoError(err, "unable to install the docker-registry chart")
 
 	// Verify the registry and gitea helm charts installed successfully
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	suite.NoError(err)
 	objs := []object.ObjMetadata{
 		{
@@ -87,8 +88,8 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 			Name:      "gitea-0",
 		},
 	}
-	ctx := logger.WithContext(context.Background(), test.GetLogger(suite.T()))
-	waitCtx, waitCancel := context.WithTimeout(ctx, 2*time.Minute)
+	ctx2 := logger.WithContext(ctx, test.GetLogger(suite.T()))
+	waitCtx, waitCancel := context.WithTimeout(ctx2, 2*time.Minute)
 	defer waitCancel()
 	err = healthchecks.WaitForReady(waitCtx, c.Watcher, objs)
 	suite.NoError(err)
@@ -117,7 +118,7 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	err = exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
 	suite.NoError(err, "unable to mirror the package with zarf")
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(t.Context())
 	suite.NoError(err)
 
 	ctx := testutil.TestContext(suite.T())
@@ -160,6 +161,7 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	// Use Zarf to initialize the cluster
 	initArgs := []string{"init", "--confirm"}
 	initArgs = append(initArgs, inClusterInitCredentialArgs...)
+	ctx := suite.T().Context()
 
 	err := exec.CmdWithPrint(zarfBinPath, initArgs...)
 	suite.NoError(err, "unable to initialize the k8s server with zarf")
@@ -175,7 +177,7 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	suite.NoError(err)
 	objs := []object.ObjMetadata{
 		{

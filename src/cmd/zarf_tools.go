@@ -32,14 +32,14 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 var (
 	subAltNames         []string
 	outputDirectory     string
-	updateCredsInitOpts types.ZarfInitOptions
+	updateCredsInitOpts cluster.InitStateOptions
 )
 
 const (
@@ -93,7 +93,7 @@ func newGetCredsCommand() *cobra.Command {
 func (o *getCredsOptions) complete(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
-	c, err := cluster.NewClusterWithWait(timeoutCtx)
+	c, err := cluster.NewWithWait(timeoutCtx)
 	if err != nil {
 		return err
 	}
@@ -102,23 +102,23 @@ func (o *getCredsOptions) complete(ctx context.Context) error {
 }
 
 func (o *getCredsOptions) run(ctx context.Context, args []string) error {
-	state, err := o.cluster.LoadZarfState(ctx)
+	s, err := o.cluster.LoadState(ctx)
 	if err != nil {
 		return err
 	}
 	// TODO: Determine if this is actually needed.
-	if state.Distro == "" {
-		return errors.New("zarf state secret did not load properly")
+	if s.Distro == "" {
+		return errors.New("state.Distro empty, did not load from cluster")
 	}
 
 	if len(args) > 0 {
 		// If a component name is provided, only show that component's credentials
 		// Printing both the pterm output and slogger for now
-		printComponentCredential(ctx, state, args[0], o.outputWriter)
-		message.PrintComponentCredential(state, args[0])
+		printComponentCredential(ctx, s, args[0], o.outputWriter)
+		message.PrintComponentCredential(s, args[0])
 		return nil
 	}
-	return printCredentialTable(state, o.outputFormat, o.outputWriter)
+	return printCredentialTable(s, o.outputFormat, o.outputWriter)
 }
 
 type credentialInfo struct {
@@ -132,22 +132,22 @@ type credentialInfo struct {
 // TODO Zarf state should be changed to have empty values when a service is not in use
 // Once this change is in place, this function should check if the git server, artifact server, or registry server
 // information is empty and avoid printing that service if so
-func printCredentialTable(state *types.ZarfState, outputFormat outputFormat, out io.Writer) error {
+func printCredentialTable(s *state.State, outputFormat outputFormat, out io.Writer) error {
 	var credentials []credentialInfo
 
-	if state.RegistryInfo.IsInternal() {
+	if s.RegistryInfo.IsInternal() {
 		credentials = append(credentials,
 			credentialInfo{
 				Application: "Registry",
-				Username:    state.RegistryInfo.PushUsername,
-				Password:    state.RegistryInfo.PushPassword,
+				Username:    s.RegistryInfo.PushUsername,
+				Password:    s.RegistryInfo.PushPassword,
 				Connect:     "zarf connect registry",
 				GetCredsKey: registryKey,
 			},
 			credentialInfo{
 				Application: "Registry (read-only)",
-				Username:    state.RegistryInfo.PullUsername,
-				Password:    state.RegistryInfo.PullPassword,
+				Username:    s.RegistryInfo.PullUsername,
+				Password:    s.RegistryInfo.PullPassword,
 				Connect:     "zarf connect registry",
 				GetCredsKey: registryReadKey,
 			},
@@ -157,22 +157,22 @@ func printCredentialTable(state *types.ZarfState, outputFormat outputFormat, out
 	credentials = append(credentials,
 		credentialInfo{
 			Application: "Git",
-			Username:    state.GitServer.PushUsername,
-			Password:    state.GitServer.PushPassword,
+			Username:    s.GitServer.PushUsername,
+			Password:    s.GitServer.PushPassword,
 			Connect:     "zarf connect git",
 			GetCredsKey: gitKey,
 		},
 		credentialInfo{
 			Application: "Git (read-only)",
-			Username:    state.GitServer.PullUsername,
-			Password:    state.GitServer.PullPassword,
+			Username:    s.GitServer.PullUsername,
+			Password:    s.GitServer.PullPassword,
 			Connect:     "zarf connect git",
 			GetCredsKey: gitReadKey,
 		},
 		credentialInfo{
 			Application: "Artifact Token",
-			Username:    state.ArtifactServer.PushUsername,
-			Password:    state.ArtifactServer.PushToken,
+			Username:    s.ArtifactServer.PushUsername,
+			Password:    s.ArtifactServer.PushToken,
 			Connect:     "zarf connect git",
 			GetCredsKey: artifactKey,
 		},
@@ -206,24 +206,24 @@ func printCredentialTable(state *types.ZarfState, outputFormat outputFormat, out
 	return nil
 }
 
-func printComponentCredential(ctx context.Context, state *types.ZarfState, componentName string, out io.Writer) {
+func printComponentCredential(ctx context.Context, s *state.State, componentName string, out io.Writer) {
 	l := logger.From(ctx)
 	switch strings.ToLower(componentName) {
 	case gitKey:
-		l.Info("Git server push password", "username", state.GitServer.PushUsername)
-		fmt.Fprintln(out, state.GitServer.PushPassword)
+		l.Info("Git server push password", "username", s.GitServer.PushUsername)
+		fmt.Fprintln(out, s.GitServer.PushPassword)
 	case gitReadKey:
-		l.Info("Git server (read-only) password", "username", state.GitServer.PullUsername)
-		fmt.Fprintln(out, state.GitServer.PullPassword)
+		l.Info("Git server (read-only) password", "username", s.GitServer.PullUsername)
+		fmt.Fprintln(out, s.GitServer.PullPassword)
 	case artifactKey:
-		l.Info("artifact server token", "username", state.ArtifactServer.PushUsername)
-		fmt.Fprintln(out, state.ArtifactServer.PushToken)
+		l.Info("artifact server token", "username", s.ArtifactServer.PushUsername)
+		fmt.Fprintln(out, s.ArtifactServer.PushToken)
 	case registryKey:
-		l.Info("image registry password", "username", state.RegistryInfo.PushUsername)
-		fmt.Fprintln(out, state.RegistryInfo.PushPassword)
+		l.Info("image registry password", "username", s.RegistryInfo.PushUsername)
+		fmt.Fprintln(out, s.RegistryInfo.PushPassword)
 	case registryReadKey:
-		l.Info("image registry (read-only) password", "username", state.RegistryInfo.PullUsername)
-		fmt.Fprintln(out, state.RegistryInfo.PullPassword)
+		l.Info("image registry (read-only) password", "username", s.RegistryInfo.PullUsername)
+		fmt.Fprintln(out, s.RegistryInfo.PullPassword)
 	default:
 		l.Warn("unknown component", "component", componentName)
 	}
@@ -272,7 +272,12 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 }
 
 func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
-	validKeys := []string{message.RegistryKey, message.GitKey, message.ArtifactKey, message.AgentKey}
+	validKeys := []string{
+		state.RegistryKey,
+		state.GitKey,
+		state.ArtifactKey,
+		state.AgentKey,
+	}
 	if len(args) == 0 {
 		args = validKeys
 	} else {
@@ -287,12 +292,12 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
-	c, err := cluster.NewClusterWithWait(timeoutCtx)
+	c, err := cluster.NewWithWait(timeoutCtx)
 	if err != nil {
 		return err
 	}
 
-	oldState, err := c.LoadZarfState(ctx)
+	oldState, err := c.LoadState(ctx)
 	if err != nil {
 		return err
 	}
@@ -300,7 +305,13 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	if oldState.Distro == "" {
 		return errors.New("zarf state secret did not load properly")
 	}
-	newState, err := cluster.MergeZarfState(oldState, updateCredsInitOpts, args)
+	opts := state.MergeOptions{
+		GitServer:      updateCredsInitOpts.GitServer,
+		RegistryInfo:   updateCredsInitOpts.RegistryInfo,
+		ArtifactServer: updateCredsInitOpts.ArtifactServer,
+		Services:       args,
+	}
+	newState, err := state.Merge(oldState, opts)
 	if err != nil {
 		return fmt.Errorf("unable to update Zarf credentials: %w", err)
 	}
@@ -325,13 +336,13 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Update registry and git pull secrets
-	if slices.Contains(args, message.RegistryKey) {
+	if slices.Contains(args, state.RegistryKey) {
 		err := c.UpdateZarfManagedImageSecrets(ctx, newState)
 		if err != nil {
 			return err
 		}
 	}
-	if slices.Contains(args, message.GitKey) {
+	if slices.Contains(args, state.GitKey) {
 		err := c.UpdateZarfManagedGitSecrets(ctx, newState)
 		if err != nil {
 			return err
@@ -345,7 +356,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Update artifact token (if internal)
-	if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() && internalGitServerExists {
+	if slices.Contains(args, state.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() && internalGitServerExists {
 		newState.ArtifactServer.PushToken, err = c.UpdateInternalArtifactServerToken(ctx, oldState.GitServer)
 		if err != nil {
 			return fmt.Errorf("unable to create the new Gitea artifact token: %w", err)
@@ -353,7 +364,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Save the final Zarf State
-	err = c.SaveZarfState(ctx, newState)
+	err = c.SaveState(ctx, newState)
 	if err != nil {
 		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
 	}
@@ -368,7 +379,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Update Zarf 'init' component Helm releases if present
-	if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.IsInternal() {
+	if slices.Contains(args, state.RegistryKey) && newState.RegistryInfo.IsInternal() {
 		err = helm.UpdateZarfRegistryValues(ctx, helmOpts)
 		if err != nil {
 			// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
@@ -376,13 +387,13 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 			l.Warn("unable to update Zarf Registry values", "error", err.Error())
 		}
 	}
-	if slices.Contains(args, message.GitKey) && newState.GitServer.IsInternal() && internalGitServerExists {
+	if slices.Contains(args, state.GitKey) && newState.GitServer.IsInternal() && internalGitServerExists {
 		err := c.UpdateInternalGitServerSecret(cmd.Context(), oldState.GitServer, newState.GitServer)
 		if err != nil {
 			return fmt.Errorf("unable to update Zarf Git Server values: %w", err)
 		}
 	}
-	if slices.Contains(args, message.AgentKey) {
+	if slices.Contains(args, state.AgentKey) {
 		err = helm.UpdateZarfAgentValues(ctx, helmOpts)
 		if err != nil {
 			// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
@@ -394,7 +405,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func printCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newState *types.ZarfState, services []string) {
+func printCredentialUpdates(ctx context.Context, oldState *state.State, newState *state.State, services []string) {
 	// Pause the logfile's output to avoid credentials being printed to the log file
 	l := logger.From(ctx)
 	l.Info("--- printing credential updates. Sensitive values will be redacted ---")
