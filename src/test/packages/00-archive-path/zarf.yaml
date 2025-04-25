@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=../../../../zarf.schema.json
+kind: ZarfPackageConfig
+metadata:
+  name: archive-path
+  description: Deploy a EKS K8s cluster
+
+components:
+  - name: untar
+    required: true
+    files:
+      - source: archive.tar
+        target: src/test/e2e/packages/00-archive-path/output.txt
+        shasum: 03ba204e50d126e4674c005e04d82e84c21366780af1f43bd54a37816b6ab340
+        extractPath: archive/content/data.txt
+    actions:
+      onCreate:
+        before:
+          - cmd: mkdir -p archive/content
+            mute: true
+          - cmd: echo "Hello World!" > archive/content/data.txt
+            mute: true
+          - cmd: tar -cf archive.tar archive
+            mute: true
+        onFailure:
+          - cmd: rm -f archive/content/* archive.tar
+        after:
+          - cmd: rm -f archive/content/* archive.tar && rmdir archive/content && rmdir archive
+            mute: true

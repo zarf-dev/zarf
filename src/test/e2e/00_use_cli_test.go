@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -18,7 +17,7 @@ import (
 )
 
 func TestUseCLI(t *testing.T) {
-	t.Log("E2E: Use CLI")
+	t.Parallel()
 
 	// TODO once cmd is refactored to accept an io.Writer, move this test to DevInspectDefinitionOptions.Run()
 	t.Run("zarf dev inspect definition", func(t *testing.T) {
@@ -75,10 +74,8 @@ func TestUseCLI(t *testing.T) {
 	t.Run("zarf version", func(t *testing.T) {
 		t.Parallel()
 		// Test `zarf version`
-		version, _, err := e2e.Zarf(t, "version")
-		require.NoError(t, err)
+		version := e2e.GetZarfVersion(t)
 		require.NotEmpty(t, version, "Zarf version should not be an empty string")
-		version = strings.Trim(version, "\n")
 
 		// test `zarf version --output-format=json`
 		stdOut, _, err := e2e.Zarf(t, "version", "--output-format=json")
@@ -135,18 +132,17 @@ func TestUseCLI(t *testing.T) {
 
 	t.Run("zarf package to test archive path", func(t *testing.T) {
 		t.Parallel()
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "packages/distros/eks", "--confirm")
+		tmpDir := t.TempDir()
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-archive-path", "-o", tmpDir, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
-		path := fmt.Sprintf("zarf-package-distro-eks-%s-0.0.3.tar.zst", e2e.Arch)
+		path := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-archive-path-%s.tar.zst", e2e.Arch))
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
-		require.NoError(t, err, stdOut, stdErr)
+		require.NoError(t, err)
 
-		require.FileExists(t, "binaries/eksctl_Darwin_x86_64")
-		require.FileExists(t, "binaries/eksctl_Darwin_arm64")
-		require.FileExists(t, "binaries/eksctl_Linux_x86_64")
+		require.FileExists(t, "src/test/e2e/packages/00-archive-path/output.txt")
 
-		e2e.CleanFiles(t, "binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", path, "eks.yaml")
+		e2e.CleanFiles(t, "src/test/e2e/packages/00-archive-path/output.txt")
 	})
 
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {
