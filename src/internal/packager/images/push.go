@@ -7,6 +7,7 @@ package images
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -101,6 +102,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 			if tunnel != nil {
 				return tunnel.Wrap(func() error {
+					l.Debug(fmt.Sprintf("there are %d goroutines running during tunnel push for %s", runtime.NumGoroutine(), dstName))
 					return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
 				})
 			}
