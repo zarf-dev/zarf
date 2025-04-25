@@ -190,6 +190,8 @@ test-e2e-without-cluster: ## Run all of the core Zarf CLI E2E tests  that DO NOT
 
 TEST_TO_RUN?=
 
+SHELL := /usr/bin/env bash
+
 measure-test:
 	git switch main
 	time go test ./src/test/e2e -n $(TEST_TO_RUN) -failfast > measure-test.out
