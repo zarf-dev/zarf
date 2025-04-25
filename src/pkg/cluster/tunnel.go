@@ -316,18 +316,19 @@ const (
 
 // Tunnel is the main struct that configures and manages port forwarding tunnels to Kubernetes resources.
 type Tunnel struct {
-	clientset    kubernetes.Interface
-	restConfig   *rest.Config
-	out          io.Writer
-	localPort    int
-	remotePort   int
-	namespace    string
-	resourceType string
-	resourceName string
-	urlSuffix    string
-	stopChan     chan struct{}
-	readyChan    chan struct{}
-	errChan      chan error
+	clientset            kubernetes.Interface
+	restConfig           *rest.Config
+	out                  io.Writer
+	localPort            int
+	remotePort           int
+	namespace            string
+	resourceType         string
+	resourceName         string
+	urlSuffix            string
+	stopChan             chan struct{}
+	readyChan            chan struct{}
+	errChan              chan error
+	portForwardCreateURL *url.URL
 }
 
 // NewTunnel will create a new Tunnel struct.
@@ -403,7 +404,12 @@ func (tunnel *Tunnel) FullURL() string {
 
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
 func (tunnel *Tunnel) Close() {
-	close(tunnel.stopChan)
+	select {
+	case <-tunnel.stopChan:
+		// Already closed, do nothing
+	default:
+		close(tunnel.stopChan)
+	}
 }
 
 type slogWriter struct {
@@ -463,7 +469,7 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 	// Example: http://localhost:8080/api/v1/namespaces/helm/pods/tiller-deploy-9itlq/portforward.
 	postEndpoint := tunnel.clientset.CoreV1().RESTClient().Post()
 	namespace := tunnel.namespace
-	portForwardCreateURL := postEndpoint.
+	tunnel.portForwardCreateURL = postEndpoint.
 		Resource("pods").
 		Namespace(namespace).
 		Name(podName).
@@ -508,6 +514,15 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 		l.Debug("creating port forwarding tunnel", "url", url)
 		return url, nil
 	}
+}
+
+func (tunnel *Tunnel) Reconnect(ctx context.Context) error {
+	logger.From(ctx).Debug(fmt.Sprintf("reconnecting to %s", tunnel.FullURL()))
+	tunnel.Close()
+	tunnel.stopChan = make(chan struct{})
+	// port will not change, dogsledding string
+	_, err := tunnel.establish(ctx)
+	return err
 }
 
 // getAttachablePodForResource will find a pod that can be port forwarded to the provided resource type and return

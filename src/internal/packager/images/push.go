@@ -7,7 +7,6 @@ package images
 import (
 	"context"
 	"fmt"
-	"runtime"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -102,7 +101,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 			if tunnel != nil {
 				return tunnel.Wrap(func() error {
-					l.Debug(fmt.Sprintf("there are %d goroutines running during tunnel push for %s", runtime.NumGoroutine(), dstName))
 					return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
 				})
 			}
@@ -126,11 +124,19 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 				err = retry.Do(
 					func() error { return pushImage(img, offlineNameCRC) },
+					retry.OnRetry(func(_ uint, err error) {
+						if err != nil && tunnel != nil {
+							_ = tunnel.Reconnect(ctx)
+						}
+					}),
 					retry.Context(ctx),
 					retry.Attempts(uint(cfg.Retries)),
 					retry.Delay(500*time.Millisecond),
 				)
 				if err != nil {
+					return err
+				}
+				if err := pushImage(img, offlineNameCRC); err != nil {
 					return err
 				}
 			}
@@ -142,13 +148,11 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				return err
 			}
 
-			err = retry.Do(
-				func() error { return pushImage(img, offlineName) },
-				retry.Context(ctx),
-				retry.Attempts(uint(cfg.Retries)),
-				retry.Delay(500*time.Millisecond),
-			)
-			if err != nil {
+			// if tunnel != nil {
+			// 	_ = tunnel.Reconnect(ctx)
+			// }
+
+			if err := pushImage(img, offlineName); err != nil {
 				return err
 			}
 			pushed = append(pushed, img)
