@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -405,6 +406,17 @@ func (tunnel *Tunnel) Close() {
 	close(tunnel.stopChan)
 }
 
+type slogWriter struct {
+	l      *slog.Logger
+	prefix string
+}
+
+func (w *slogWriter) Write(p []byte) (n int, err error) {
+	trimmed := strings.TrimRight(string(p), "\n")
+	w.l.Debug(w.prefix + trimmed)
+	return len(w.prefix) + len(trimmed), nil
+}
+
 // establish opens a tunnel to a kubernetes resource, as specified by the provided tunnel struct.
 func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 	var err error
@@ -458,10 +470,13 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 
 	l.Debug("using URL to create portforward", "url", portForwardCreateURL)
 
-	dialer, err := createDialer("POST", portForwardCreateURL, tunnel.restConfig)
+	dialer, err := createDialer(http.MethodPost, portForwardCreateURL, tunnel.restConfig)
 	if err != nil {
 		return "", fmt.Errorf("unable to create the dialer %w", err)
 	}
+
+	// out := &slogWriter{l, fmt.Sprintf("tunnel output for %s: ", tunnel.Endpoint())}
+	// errOut := &slogWriter{l, fmt.Sprintf("tunnel error output for %s: ", tunnel.Endpoint())}
 
 	// Construct a new PortForwarder struct that manages the instructed port forward tunnel.
 	ports := []string{fmt.Sprintf("%d:%d", localPort, tunnel.remotePort)}
