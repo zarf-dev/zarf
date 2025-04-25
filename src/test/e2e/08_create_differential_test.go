@@ -19,7 +19,7 @@ import (
 
 // TestCreateDifferential creates several differential packages and ensures the reference package images and repos are not included in the new package.
 func TestCreateDifferential(t *testing.T) {
-	t.Log("E2E: Test Differential Package Behavior")
+	t.Parallel()
 	tmpdir := t.TempDir()
 
 	packagePath := "src/test/packages/08-differential-package"
