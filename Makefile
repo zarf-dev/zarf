@@ -56,6 +56,7 @@ GIT_SHA := $(if $(shell git rev-parse HEAD),$(shell git rev-parse HEAD),"")
 BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 LD_FLAGS += -X k8s.io/component-base/version.gitCommit=$(GIT_SHA)
 LD_FLAGS += -X k8s.io/component-base/version.buildDate=$(BUILD_DATE)
+GOCOVERDIR=$(shell pwd)/coverdir
 EXTRA_BUILD_ARGS ?=
 
 export CGO_ENABLED := 0
@@ -182,7 +183,7 @@ test-e2e-with-cluster: ## Run all of the core Zarf CLI E2E tests that DO require
 test-e2e-without-cluster: ## Run all of the core Zarf CLI E2E tests  that DO NOT require a cluster
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	@rm -rf coverdir && mkdir coverdir
-	GOCOVERDIR=$$(pwd)/coverdir && cd src/test/e2e && GOCOVERDIR=$$GOCOVERDIR go test ./main_test.go ./[01]* -failfast -v -timeout 35m
+	cd src/test/e2e && GOCOVERDIR=$(GOCOVERDIR) go test ./main_test.go ./[01]* -failfast -v -timeout 35m
 	@mkdir coverdir/merged
 	@go tool covdata merge -i=coverdir -o=coverdir/merged
 	@go tool covdata textfmt -i coverdir/merged -o e2e-coverage.out
