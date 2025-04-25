@@ -133,11 +133,11 @@ func TestUseCLI(t *testing.T) {
 	t.Run("zarf package to test archive path", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-archive-path", "-o", tmpDir, "--confirm")
-		require.NoError(t, err, stdOut, stdErr)
+		_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-archive-path", "-o", tmpDir, "--confirm")
+		require.NoError(t, err)
 
 		path := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-archive-path-%s.tar.zst", e2e.Arch))
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
+		_, _, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 		require.NoError(t, err)
 
 		require.FileExists(t, "src/test/e2e/packages/00-archive-path/output.txt")
