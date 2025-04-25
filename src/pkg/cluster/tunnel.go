@@ -413,8 +413,10 @@ type slogWriter struct {
 
 func (w *slogWriter) Write(p []byte) (n int, err error) {
 	trimmed := strings.TrimRight(string(p), "\n")
-	w.l.Debug(w.prefix + trimmed)
-	return len(w.prefix) + len(trimmed), nil
+	for line := range strings.SplitSeq(trimmed, "\n") {
+		w.l.Debug(w.prefix + line)
+	}
+	return len(p), nil
 }
 
 // establish opens a tunnel to a kubernetes resource, as specified by the provided tunnel struct.
