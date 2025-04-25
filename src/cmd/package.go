@@ -33,7 +33,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
@@ -232,19 +231,33 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	pkgConfig.PkgOpts.PackageSource = packageSource
 
 	v := getViper()
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	pkgClient, err := packager.New(&pkgConfig, packager.WithContext(cmd.Context()))
+	filter := filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+		filters.ForDeploy(pkgConfig.PkgOpts.OptionalComponents, config.CommonOptions.Confirm),
+	)
+
+	loadOpt := packager2.LoadOptions{
+		Source:                  packageSource,
+		Shasum:                  pkgConfig.PkgOpts.Shasum,
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		Filter:                  filter,
+	}
+	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {
 		return err
 	}
-	defer pkgClient.ClearTempPaths()
+	defer func() {
+		// Cleanup package files
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
 
-	if err := pkgClient.Deploy(ctx); err != nil {
+	if err := packager2.Deploy(ctx, pkgLayout); err != nil {
 		return fmt.Errorf("failed to deploy package: %w", err)
 	}
 	return nil
