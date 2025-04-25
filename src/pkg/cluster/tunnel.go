@@ -328,6 +328,9 @@ type Tunnel struct {
 	stopChan     chan struct{}
 	readyChan    chan struct{}
 	errChan      chan error
+
+	// Add sync.Once to prevent race conditions on closing stopChan
+	closeOnce sync.Once
 }
 
 // NewTunnel will create a new Tunnel struct.
@@ -403,15 +406,18 @@ func (tunnel *Tunnel) FullURL() string {
 
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
 func (tunnel *Tunnel) Close() {
-	if tunnel.stopChan == nil {
-		return
-	}
-	select {
-	case <-tunnel.stopChan:
-		return
-	default:
-		close(tunnel.stopChan)
-	}
+	// Use sync.Once to ensure close(stopChan) is only called once.
+	tunnel.closeOnce.Do(func() {
+		if tunnel.stopChan == nil {
+			return
+		}
+		// Check if already closed within the Do func to be extra safe, though Once should handle it.
+		select {
+		case <-tunnel.stopChan:
+		default:
+			close(tunnel.stopChan)
+		}
+	})
 }
 
 type slogWriter struct {
@@ -431,6 +437,9 @@ func (w *slogWriter) Write(p []byte) (n int, err error) {
 func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 	var err error
 	l := logger.From(ctx)
+
+	// Reset closeOnce for the new tunnel instance being established.
+	tunnel.closeOnce = sync.Once{}
 
 	// Track this locally as we may need to retry if the tunnel fails.
 	localPort := tunnel.localPort
