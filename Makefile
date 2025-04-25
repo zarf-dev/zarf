@@ -195,12 +195,12 @@ SHELL := /usr/bin/bash
 measure-test:
 	git switch main
 	start=$$(date +%s); \
-		go test ./src/test/e2e -run $(TEST_TO_RUN) -failfast; \
+		go test ./src/test/e2e -run $(TEST_TO_RUN) -v -failfast -count=1; \
 		end=$$(date +%s); \
 		echo "Elapsed time: $$((end-start)) seconds" > measure-test.out
 	git switch -
 	start=$$(date +%s); \
-		go test ./src/test/e2e -run $(TEST_TO_RUN) -failfast; \
+		go test ./src/test/e2e -run $(TEST_TO_RUN) -v -failfast -count=1; \
 		end=$$(date +%s); \
 		echo "Elapsed time: $$((end-start)) seconds" >> measure-test.out
 
