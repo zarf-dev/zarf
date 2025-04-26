@@ -7,7 +7,6 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -318,7 +317,6 @@ const (
 type Tunnel struct {
 	clientset    kubernetes.Interface
 	restConfig   *rest.Config
-	out          io.Writer
 	localPort    int
 	remotePort   int
 	namespace    string
@@ -328,9 +326,6 @@ type Tunnel struct {
 	stopChan     chan struct{}
 	readyChan    chan struct{}
 	errChan      chan error
-
-	// Add sync.Once to prevent race conditions on closing stopChan
-	closeOnce sync.Once
 }
 
 // NewTunnel will create a new Tunnel struct.
@@ -340,7 +335,6 @@ func (c *Cluster) NewTunnel(namespace, resourceType, resourceName, urlSuffix str
 	return &Tunnel{
 		clientset:    c.Clientset,
 		restConfig:   c.RestConfig,
-		out:          io.Discard,
 		localPort:    local,
 		remotePort:   remote,
 		namespace:    namespace,
@@ -409,18 +403,14 @@ func (tunnel *Tunnel) FullURL() string {
 
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
 func (tunnel *Tunnel) Close() {
-	// Use sync.Once to ensure close(stopChan) is only called once.
-	tunnel.closeOnce.Do(func() {
-		if tunnel.stopChan == nil {
-			return
-		}
-		// Check if already closed within the Do func to be extra safe, though Once should handle it.
-		select {
-		case <-tunnel.stopChan:
-		default:
-			close(tunnel.stopChan)
-		}
-	})
+	if tunnel.stopChan == nil {
+		return
+	}
+	select {
+	case <-tunnel.stopChan:
+	default:
+		close(tunnel.stopChan)
+	}
 }
 
 type slogWriter struct {
@@ -440,9 +430,6 @@ func (w *slogWriter) Write(p []byte) (n int, err error) {
 func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 	var err error
 	l := logger.From(ctx)
-
-	// Reset closeOnce for the new tunnel instance being established.
-	tunnel.closeOnce = sync.Once{}
 
 	// Track this locally as we may need to retry if the tunnel fails.
 	localPort := tunnel.localPort
@@ -533,6 +520,7 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 func (tunnel *Tunnel) Reconnect(ctx context.Context) error {
 	logger.From(ctx).Debug(fmt.Sprintf("reconnecting to %s", tunnel.FullURL()))
 	tunnel.Close()
+	tunnel.readyChan = make(chan struct{})
 	tunnel.stopChan = make(chan struct{})
 	// port will not change, dogsledding string
 	_, err := tunnel.establish(ctx)
