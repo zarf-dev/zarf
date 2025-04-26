@@ -355,10 +355,11 @@ func (c *Cluster) NewTunnel(namespace, resourceType, resourceName, urlSuffix str
 // Wrap takes a function that returns an error and wraps it to check for tunnel errors as well.
 func (tunnel *Tunnel) Wrap(function func() error) error {
 	var err error
-	funcErrChan := make(chan error)
+	funcErrChan := make(chan error, 1)
 
 	go func() {
 		funcErrChan <- function()
+		close(funcErrChan)
 	}()
 
 	select {
@@ -366,6 +367,8 @@ func (tunnel *Tunnel) Wrap(function func() error) error {
 		return err
 	case err = <-tunnel.ErrChan():
 		return err
+	case <-tunnel.stopChan:
+		return fmt.Errorf("tunnel closed")
 	}
 }
 
