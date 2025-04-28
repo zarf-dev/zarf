@@ -1,6 +1,6 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: httpd-ignored
+  name: alpine-ignored
   labels:
     zarf.dev/agent: ignore
