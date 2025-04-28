@@ -4,11 +4,11 @@ metadata:
   description: Simple test to check that Zarf respects ignored namespaces.
 
 components:
-  - name: podinfo-deployment
+  - name: alpine-deployment
     required: true
     manifests:
-      - name: agent-ignore-podinfo
-        namespace: podinfo-ignored
+      - name: agent-ignore-alpine
+        namespace: alpine-ignored
         files:
           - manifests/deployment.yaml
           - manifests/namespace.yaml
@@ -18,6 +18,6 @@ components:
           - wait:
               cluster:
                 kind: deployment
-                name: podinfo-deployment
-                namespace: podinfo-ignored
+                name: alpine-deployment
+                namespace: alpine-ignored
                 condition: "{.status.readyReplicas}=2"
