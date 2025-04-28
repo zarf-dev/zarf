@@ -170,12 +170,12 @@ func saveIndexToOCILayout(dir string, idx ocispec.Index) error {
 	return nil
 }
 
-func orasTransport(insecureSkipTLSVerify bool) *retry.Transport {
+func orasTransport(insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration) *retry.Transport {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	// Enable / Disable TLS verification based on the config
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecureSkipTLSVerify}
 	// Users frequently run into servers hanging indefinitely, if the server doesn't send headers in 10 seconds then we timeout to avoid this
-	transport.ResponseHeaderTimeout = 10 * time.Second
+	transport.ResponseHeaderTimeout = responseHeaderTimeout
 	return retry.NewTransport(transport)
 }
 

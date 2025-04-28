@@ -49,6 +49,8 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		return fmt.Errorf("failed to instantiate oci directory: %w", err)
 	}
 
+	responseHeaderTimeout := 10 * time.Second
+
 	// The user may or may not have a cluster available, if it's available then use it to connect to the registry
 	c, _ := cluster.New(ctx)
 	err = retry.Do(func() error {
@@ -74,7 +76,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}),
 		}
 
-		client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify)
+		client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify, responseHeaderTimeout)
 
 		plainHTTP := cfg.PlainHTTP
 
@@ -124,14 +126,12 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 				err = retry.Do(
 					func() error { return pushImage(img, offlineNameCRC) },
-					retry.OnRetry(func(attempt uint, err error) {
-						l.Debug("retrying image push", "attempt", attempt, "error", err)
-						if err != nil && tunnel != nil {
-							_ = tunnel.Reconnect(ctx)
-						}
+					retry.OnRetry(func(_ uint, err error) {
+						cfg.OCIConcurrency = 1
+						l.Debug("retrying image push", "error", err, "concurrency", cfg.OCIConcurrency)
 					}),
 					retry.Context(ctx),
-					retry.Attempts(uint(cfg.Retries)),
+					retry.Attempts(2),
 					retry.Delay(500*time.Millisecond),
 				)
 				if err != nil {
@@ -148,14 +148,12 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 			err = retry.Do(
 				func() error { return pushImage(img, offlineName) },
-				retry.OnRetry(func(attempt uint, err error) {
-					l.Debug("retrying image push", "attempt", attempt, "error", err)
-					if err != nil && tunnel != nil {
-						_ = tunnel.Reconnect(ctx)
-					}
+				retry.OnRetry(func(_ uint, err error) {
+					cfg.OCIConcurrency = 1
+					l.Debug("retrying image push", "error", err, "concurrency", cfg.OCIConcurrency)
 				}),
 				retry.Context(ctx),
-				retry.Attempts(uint(cfg.Retries)),
+				retry.Attempts(2),
 				retry.Delay(500*time.Millisecond),
 			)
 			if err != nil {
@@ -165,7 +163,11 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			pushed = append(pushed, img)
 		}
 		return nil
-	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
+	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond), retry.OnRetry(func(attempt uint, _ error) {
+		if attempt == uint(cfg.Retries) {
+			responseHeaderTimeout = 0
+		}
+	}))
 	if err != nil {
 		return err
 	}
