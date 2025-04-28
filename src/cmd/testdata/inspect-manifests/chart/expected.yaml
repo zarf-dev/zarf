@@ -19,6 +19,7 @@ spec:
       containers:
       - name: httpd
         image: httpd:alpine3.18
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
 ---

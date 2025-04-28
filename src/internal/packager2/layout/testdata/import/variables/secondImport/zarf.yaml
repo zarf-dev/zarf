@@ -1,0 +1,18 @@
+kind: ZarfPackageConfig
+metadata:
+  name: child-package
+constants:
+  - name: PARENT_CONSTANT
+    value: "value from child in component imported later"
+  - name: CHILD_CONSTANT
+    value: "value from child in component imported later"
+variables:
+  - name: PARENT_VAR
+    default: "default from child"
+  - name: CHILD_VAR
+    default: "default from child in component imported later"
+  - name: SECONDARY_CHILD_VAR
+    default: "default from child in component imported later"
+components:
+  - name: component-from-different-package
+    required: true

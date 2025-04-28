@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
+	"strings"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -147,12 +147,25 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	}
 
 	pkg.Components = components
-	pkg.Variables = slices.CompactFunc(variables, func(l, r v1alpha1.InteractiveVariable) bool {
-		return l.Name == r.Name
-	})
-	pkg.Constants = slices.CompactFunc(constants, func(l, r v1alpha1.Constant) bool {
-		return l.Name == r.Name
-	})
+
+	varMap := map[string]bool{}
+	pkg.Variables = nil
+	for _, v := range variables {
+		if _, present := varMap[v.Name]; !present {
+			pkg.Variables = append(pkg.Variables, v)
+			varMap[v.Name] = true
+		}
+	}
+
+	constMap := map[string]bool{}
+	pkg.Constants = nil
+	for _, c := range constants {
+		if _, present := constMap[c.Name]; !present {
+			pkg.Constants = append(pkg.Constants, c)
+			constMap[c.Name] = true
+		}
+	}
+
 	l.Debug("done layout.ResolveImports",
 		"pkg", pkg.Metadata.Name,
 		"components", len(pkg.Components),
@@ -163,6 +176,9 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 
 func validateComponentCompose(c v1alpha1.ZarfComponent) error {
 	errs := []error{}
+	if strings.Contains(c.Import.Path, v1alpha1.ZarfPackageTemplatePrefix) || strings.Contains(c.Import.URL, v1alpha1.ZarfPackageTemplatePrefix) {
+		errs = append(errs, errors.New("package templates are not supported for import path or URL"))
+	}
 	if c.Import.Path == "" && c.Import.URL == "" {
 		errs = append(errs, errors.New("neither a path nor a URL was provided"))
 	}

@@ -140,13 +140,14 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 			return nil, err
 		}
 		pullCfg := images.PullConfig{
-			OCIConcurrency:       opt.OCIConcurrency,
-			DestinationDirectory: filepath.Join(buildPath, ImagesDir),
-			ImageList:            componentImages,
-			Arch:                 pkg.Metadata.Architecture,
-			RegistryOverrides:    opt.RegistryOverrides,
-			CacheDirectory:       filepath.Join(cachePath, ImagesDir),
-			PlainHTTP:            config.CommonOptions.PlainHTTP,
+			OCIConcurrency:        opt.OCIConcurrency,
+			DestinationDirectory:  filepath.Join(buildPath, ImagesDir),
+			ImageList:             componentImages,
+			Arch:                  pkg.Metadata.Architecture,
+			RegistryOverrides:     opt.RegistryOverrides,
+			CacheDirectory:        filepath.Join(cachePath, ImagesDir),
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
 		manifests, err := images.Pull(ctx, pullCfg)
 		if err != nil {
@@ -310,8 +311,8 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 		"setVariables", setVariables,
 	)
 
-	if err := validateFlavorExists(pkg, flavor); err != nil {
-		return err
+	if !hasFlavoredComponent(pkg, flavor) {
+		l.Warn("flavor not used in package", "flavor", flavor)
 	}
 	if err := lint.ValidatePackage(pkg); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
@@ -338,16 +339,13 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	return nil
 }
 
-func validateFlavorExists(pkg v1alpha1.ZarfPackage, flavor string) error {
-	if flavor == "" {
-		return nil
-	}
+func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
 	for _, comp := range pkg.Components {
 		if comp.Only.Flavor == flavor {
-			return nil
+			return true
 		}
 	}
-	return fmt.Errorf("could not find flavor %s in package definition %s", flavor, pkg.Metadata.Name)
+	return false
 }
 
 func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) error {

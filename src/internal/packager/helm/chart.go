@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 
 	"github.com/Masterminds/semver/v3"
@@ -45,7 +46,7 @@ type InstallUpgradeOpts struct {
 	// VariableConfig is used to template the variables in the chart
 	VariableConfig *variables.VariableConfig
 	// State is used to update the registry / git server secrets
-	State   *types.ZarfState
+	State   *state.State
 	Cluster *cluster.Cluster
 	// AirgapMode is true if the package being installed is not a YOLO package and it helps determine if Zarf state secrets should be updated
 	AirgapMode bool

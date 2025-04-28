@@ -13,7 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/pkg/state"
+
 	"github.com/distribution/reference"
+	sourcev1beta2 "github.com/fluxcd/source-controller/api/v1beta2"
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -24,7 +27,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -85,11 +87,11 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		return FindImagesResult{}, err
 	}
 
-	state, err := types.DefaultZarfState()
+	s, err := state.Default()
 	if err != nil {
 		return FindImagesResult{}, err
 	}
-	state.RegistryInfo.Address = opts.RegistryURL
+	s.RegistryInfo.Address = opts.RegistryURL
 	variableConfig := template.GetZarfVariableConfig(ctx)
 	variableConfig.SetConstants(pkg.Constants)
 	variableConfig.PopulateVariables(pkg.Variables, opts.DeploySetVariables)
@@ -107,7 +109,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		}
 		scan := ComponentImageScan{ComponentName: component.Name}
 
-		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, state)
+		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, s)
 		if err != nil {
 			return FindImagesResult{}, err
 		}
@@ -353,6 +355,13 @@ func processUnstructuredImages(ctx context.Context, resource *unstructured.Unstr
 		}
 		matchedImages = appendToImageMap(matchedImages, job.Spec.Template.Spec)
 
+	case "OCIRepository":
+		var ociRepo sourcev1beta2.OCIRepository
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &ociRepo); err != nil {
+			return nil, nil, fmt.Errorf("could not parse ocirepo: %w", err)
+		}
+		matchedImages = appendToImageMapOCIRepo(ctx, matchedImages, ociRepo)
+
 	default:
 		// Capture any custom images
 		matches := imageCheck.FindAllStringSubmatch(string(b), -1)
@@ -388,6 +397,23 @@ func appendToImageMap(imgMap map[string]bool, pod corev1.PodSpec) map[string]boo
 		if reference.ReferenceRegexp.MatchString(container.Image) {
 			imgMap[container.Image] = true
 		}
+	}
+	return imgMap
+}
+
+func appendToImageMapOCIRepo(ctx context.Context, imgMap map[string]bool, repo sourcev1beta2.OCIRepository) map[string]bool {
+	var url = strings.TrimPrefix(repo.Spec.URL, "oci://")
+
+	if repo.Spec.Reference.Tag != "" {
+		url = url + ":" + repo.Spec.Reference.Tag
+	} else if repo.Spec.Reference.Digest != "" {
+		url = url + "@" + repo.Spec.Reference.Digest
+	} else if repo.Spec.Reference.SemVer != "" || repo.Spec.Reference.SemverFilter != "" {
+		logger.From(ctx).Warn("cannot create image reference with semver or semverFilter", "image", url, "OCIRepository", repo.Name)
+		return imgMap
+	}
+	if reference.ReferenceRegexp.MatchString(url) {
+		imgMap[url] = true
 	}
 	return imgMap
 }

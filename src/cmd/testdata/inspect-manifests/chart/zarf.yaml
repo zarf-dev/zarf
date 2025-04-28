@@ -12,6 +12,8 @@ components:
         version: 1.0.0
         namespace: httpd
         localPath: chart
+        valuesFiles:
+          - values.yaml
         variables:
           - name: REPLICAS
             path: replicaCount
