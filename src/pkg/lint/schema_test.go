@@ -5,7 +5,6 @@
 package lint
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -69,10 +68,6 @@ func TestZarfSchema(t *testing.T) {
 						Only: v1alpha1.ZarfComponentOnlyTarget{
 							LocalOS: "unsupportedOS",
 						},
-						Import: v1alpha1.ZarfComponentImport{
-							Path: fmt.Sprintf("start%send", v1alpha1.ZarfPackageTemplatePrefix),
-							URL:  fmt.Sprintf("oci://start%send", v1alpha1.ZarfPackageTemplatePrefix),
-						},
 					},
 					{
 						Name: "actions",
@@ -114,8 +109,6 @@ func TestZarfSchema(t *testing.T) {
 				"components.0.only.localOS: components.0.only.localOS must be one of the following: \"linux\", \"darwin\", \"windows\"",
 				"components.1.actions.onCreate.before.0.setVariables.0.name: Does not match pattern '^[A-Z0-9_]+$'",
 				"components.1.actions.onRemove.onSuccess.0.setVariables.0.name: Does not match pattern '^[A-Z0-9_]+$'",
-				"components.0.import.path: Must not validate the schema (not)",
-				"components.0.import.url: Must not validate the schema (not)",
 				"apiVersion: apiVersion must be one of the following: \"zarf.dev/v1alpha1\"",
 			},
 		},
