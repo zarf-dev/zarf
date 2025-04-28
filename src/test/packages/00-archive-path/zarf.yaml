@@ -26,18 +26,18 @@ x-untar: &base-untar
           mute: true
 
 components:
-  - name: untar-linux
+  - name: untar
     only:
-      localOS: linux
+      flavor: linux
     <<: *base-untar
-  - name: untar-darwin
+  - name: darwin
     only:
-      localOS: darwin
+      flavor: darwin
     <<: *base-untar
   - name: untar-windows
     required: true
     only:
-      localOS: windows
+      flavor: windows
     files:
       - source: archive.tar
         target: src/test/packages/00-archive-path/output.txt
