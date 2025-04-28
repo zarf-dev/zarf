@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -175,6 +176,9 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 
 func validateComponentCompose(c v1alpha1.ZarfComponent) error {
 	errs := []error{}
+	if strings.Contains(c.Import.Path, v1alpha1.ZarfPackageTemplatePrefix) || strings.Contains(c.Import.URL, v1alpha1.ZarfPackageTemplatePrefix) {
+		errs = append(errs, errors.New("package templates are not supported for import path or URL"))
+	}
 	if c.Import.Path == "" && c.Import.URL == "" {
 		errs = append(errs, errors.New("neither a path nor a URL was provided"))
 	}

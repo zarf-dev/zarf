@@ -159,6 +159,30 @@ func TestValidateComponentCompose(t *testing.T) {
 				"URL is not a valid OCI URL",
 			},
 		},
+		{
+			name: "package template path provided",
+			component: v1alpha1.ZarfComponent{
+				Name: "template",
+				Import: v1alpha1.ZarfComponentImport{
+					Path: "###ZARF_PKG_TMPL_PATH###",
+				},
+			},
+			expectedErrs: []string{
+				"package templates are not supported for import path or URL",
+			},
+		},
+		{
+			name: "package template URL provided",
+			component: v1alpha1.ZarfComponent{
+				Name: "template",
+				Import: v1alpha1.ZarfComponentImport{
+					URL: "oci://registry.com/my-image:###ZARF_PKG_TMPL_TAG###",
+				},
+			},
+			expectedErrs: []string{
+				"package templates are not supported for import path or URL",
+			},
+		},
 	}
 
 	for _, tt := range tests {
