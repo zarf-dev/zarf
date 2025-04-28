@@ -63,7 +63,7 @@ func Pull(ctx context.Context, src, dir, shasum, architecture string, filter fil
 	isPartial := false
 	switch u.Scheme {
 	case "oci":
-		l.Info("starting pull from oci source", "src", src, "digest", shasum)
+		l.Info("starting pull from oci source", "src", src)
 		isPartial, tmpPath, err = pullOCI(ctx, src, tmpDir, shasum, architecture, filter)
 		if err != nil {
 			return err
