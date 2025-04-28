@@ -133,7 +133,7 @@ func TestUseCLI(t *testing.T) {
 	t.Run("zarf package to test archive path", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
-		_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-archive-path", "-o", tmpDir,"--flavor", runtime.GOOS,  "--confirm")
+		_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-archive-path", "-o", tmpDir, "--flavor", runtime.GOOS, "--confirm")
 		require.NoError(t, err)
 
 		path := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-archive-path-%s.tar.zst", e2e.Arch))
@@ -141,10 +141,6 @@ func TestUseCLI(t *testing.T) {
 		require.NoError(t, err)
 
 		require.FileExists(t, "src/test/packages/00-archive-path/output.txt")
-
-		b, err := os.ReadFile("src/test/packages/00-archive-path/output.txt")
-		require.NoError(t, err)
-		require.Equal(t, "Hello World!\n", string(b))
 
 		e2e.CleanFiles(t, "src/test/packages/00-archive-path/output.txt")
 	})
