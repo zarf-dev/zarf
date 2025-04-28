@@ -140,9 +140,13 @@ func TestUseCLI(t *testing.T) {
 		_, _, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 		require.NoError(t, err)
 
-		require.FileExists(t, "src/test/e2e/packages/00-archive-path/output.txt")
+		require.FileExists(t, "src/test/packages/00-archive-path/output.txt")
 
-		e2e.CleanFiles(t, "src/test/e2e/packages/00-archive-path/output.txt")
+		b, err := os.ReadFile("src/test/packages/00-archive-path/output.txt")
+		require.NoError(t, err)
+		require.Equal(t, "Hello World!\n", string(b))
+
+		e2e.CleanFiles(t, "src/test/packages/00-archive-path/output.txt")
 	})
 
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {

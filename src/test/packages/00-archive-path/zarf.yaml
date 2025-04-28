@@ -9,7 +9,7 @@ components:
     required: true
     files:
       - source: archive.tar
-        target: src/test/e2e/packages/00-archive-path/output.txt
+        target: src/test/packages/00-archive-path/output.txt
         shasum: 03ba204e50d126e4674c005e04d82e84c21366780af1f43bd54a37816b6ab340
         extractPath: archive/content/data.txt
     actions:
