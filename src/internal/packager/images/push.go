@@ -222,10 +222,6 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = concurrency
 	copyOpts.WithTargetPlatform(desc.Platform)
-	copyOpts.PreCopy = func(_ context.Context, desc ocispec.Descriptor) error {
-		logger.From(ctx).Debug("pushing", "blob", desc)
-		return nil
-	}
 	_, err = oras.Copy(ctx, src, srcName, remote, dstName, copyOpts)
 	if err != nil {
 		return fmt.Errorf("failed to push image %s: %w", srcName, err)
