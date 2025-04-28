@@ -11,7 +11,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,7 +22,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
-	"k8s.io/klog/v2"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -356,7 +354,6 @@ func (tunnel *Tunnel) Wrap(function func() error) error {
 
 	go func() {
 		funcErrChan <- function()
-		close(funcErrChan)
 	}()
 
 	select {
@@ -364,8 +361,6 @@ func (tunnel *Tunnel) Wrap(function func() error) error {
 		return err
 	case err = <-tunnel.ErrChan():
 		return err
-	case <-tunnel.stopChan:
-		return fmt.Errorf("tunnel closed")
 	}
 }
 
@@ -519,16 +514,6 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 	}
 }
 
-func (tunnel *Tunnel) Reconnect(ctx context.Context) error {
-	logger.From(ctx).Debug(fmt.Sprintf("reconnecting to %s", tunnel.FullURL()))
-	tunnel.Close()
-	tunnel.readyChan = make(chan struct{})
-	tunnel.stopChan = make(chan struct{})
-	// port will not change, dogsledding string
-	_, err := tunnel.establish(ctx)
-	return err
-}
-
 // getAttachablePodForResource will find a pod that can be port forwarded to the provided resource type and return
 // the name.
 func (tunnel *Tunnel) getAttachablePodForResource(ctx context.Context) (string, error) {
@@ -582,8 +567,4 @@ func createDialer(method string, url *url.URL, config *rest.Config) (httpstream.
 		return httpstream.IsUpgradeFailure(err) || httpstream.IsHTTPSProxyError(err)
 	})
 	return dialer, nil
-}
-
-func init() {
-	klog.SetOutput(os.Stderr)
 }
