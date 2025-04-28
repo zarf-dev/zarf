@@ -112,7 +112,6 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	if err != nil {
 		return nil, err
 	}
-	defer pkgLayout.Cleanup()
 	return pkgLayout, nil
 }
 
