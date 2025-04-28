@@ -2,11 +2,41 @@
 kind: ZarfPackageConfig
 metadata:
   name: archive-path
-  description: Deploy a EKS K8s cluster
+
+x-untar: &base-untar
+  name: untar
+  required: true
+  files:
+    - source: archive.tar
+      target: src/test/packages/00-archive-path/output.txt
+      shasum: 03ba204e50d126e4674c005e04d82e84c21366780af1f43bd54a37816b6ab340
+      extractPath: archive/content/data.txt
+  actions:
+    onCreate:
+      before:
+        - cmd: mkdir -p archive/content
+          mute: true
+        - cmd: echo "Hello World!" > archive/content/data.txt
+          mute: true
+        - cmd: tar -cf archive.tar archive
+          mute: true
+      onFailure:
+        - cmd: rm -f archive/content/* archive.tar
+      after:
+        - cmd: rm -f archive/content/* archive.tar && rmdir archive/content && rmdir archive
+          mute: true
 
 components:
+  - only:
+      localOS: linux
+    <<: *base-untar
+  - only:
+      localOS: darwin
+    <<: *base-untar
   - name: untar
     required: true
+    only:
+      localOS: windows
     files:
       - source: archive.tar
         target: src/test/packages/00-archive-path/output.txt
@@ -15,14 +45,14 @@ components:
     actions:
       onCreate:
         before:
-          - cmd: mkdir -p archive/content
+          - cmd: mkdir -Force -Path archive/content
             mute: true
-          - cmd: echo "Hello World!" > archive/content/data.txt
+          - cmd: echo "Hello World!" | Out-File -FilePath "archive/content/data.txt" -Encoding UTF8
             mute: true
           - cmd: tar -cf archive.tar archive
             mute: true
         onFailure:
-          - cmd: rm -f archive/content/* archive.tar
+          - cmd: Remove-Item -Path "archive/content/*", "archive.tar" -Force -ErrorAction SilentlyContinue
         after:
-          - cmd: rm -f archive/content/* archive.tar && rmdir archive/content && rmdir archive
+          - cmd: Remove-Item -Path "archive/content/*", "archive.tar" -Force -ErrorAction SilentlyContinue
             mute: true
