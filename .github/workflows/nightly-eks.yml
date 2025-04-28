@@ -51,7 +51,7 @@ jobs:
 
       - name: Deploy the eks package
         run: |
-          ./build/zarf package deploy build/zarf-package-distro-eks-amd64-0.0.3.tar.zst \
+          ./build/zarf package deploy build/zarf-package-distro-eks-amd64-0.0.4.tar.zst \
             --components=deploy-eks-cluster \
             --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
             --set=EKS_INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} \
@@ -69,7 +69,7 @@ jobs:
       - name: Teardown the cluster
         if: always()
         run: |
-          ./build/zarf package deploy build/zarf-package-distro-eks-amd64-0.0.3.tar.zst \
+          ./build/zarf package deploy build/zarf-package-distro-eks-amd64-0.0.4.tar.zst \
             --components=teardown-eks-cluster \
             --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
             --confirm
@@ -78,8 +78,8 @@ jobs:
         if: always()
         uses: ./.github/actions/save-logs
 
-      - name: Send trigger to Slack on workflow failure
-        if: failure()
-        uses: ./.github/actions/slack
-        with:
-          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      # - name: Send trigger to Slack on workflow failure
+      #   if: failure()
+      #   uses: ./.github/actions/slack
+      #   with:
+      #     slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
