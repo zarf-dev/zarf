@@ -82,6 +82,9 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		Cache:      auth.NewCache(),
 		Credential: credentials.Credential(credStore),
 	}
+
+	client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify)
+
 	l.Debug("gathering credentials from default Docker config file", "credentials_configured", credStore.IsAuthConfigured())
 	platform := &ocispec.Platform{
 		Architecture: cfg.Arch,

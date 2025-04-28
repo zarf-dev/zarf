@@ -19,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -97,7 +98,7 @@ func TestPackageList(t *testing.T) {
 						Name:      strings.Join([]string{config.ZarfPackagePrefix, p.Name}, ""),
 						Namespace: "zarf",
 						Labels: map[string]string{
-							cluster.ZarfPackageInfoLabel: p.Name,
+							state.ZarfPackageInfoLabel: p.Name,
 						},
 					},
 					Data: map[string][]byte{

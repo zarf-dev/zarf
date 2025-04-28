@@ -45,7 +45,7 @@ func Pull(ctx context.Context, src, dir, shasum, architecture string, filter fil
 		return err
 	}
 	if u.Scheme == "" {
-		return errors.New("scheme cannot be empty")
+		return errors.New("scheme must be either oci:// or http(s)://")
 	}
 	if u.Host == "" {
 		return errors.New("host cannot be empty")
