@@ -70,8 +70,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		return nil, fmt.Errorf("failed to create cache directory %s: %w", cfg.DestinationDirectory, err)
 	}
 
-	if cfg.ResponseHeaderTimeout <= 0 {
-		cfg.ResponseHeaderTimeout = 10 * time.Second
+	if cfg.ResponseHeaderTimeout < 0 {
+		cfg.ResponseHeaderTimeout = 0 // currently allowing infinite timeout
 	}
 
 	imageFetchStart := time.Now()
