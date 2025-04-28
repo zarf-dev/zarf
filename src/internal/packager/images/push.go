@@ -32,6 +32,9 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	if cfg.Retries < 1 {
 		cfg.Retries = defaultRetries
 	}
+	if cfg.ResponseHeaderTimeout <= 0 {
+		cfg.ResponseHeaderTimeout = 10 * time.Second
+	}
 	cfg.ImageList = helpers.Unique(cfg.ImageList)
 	toPush := map[string]struct{}{}
 	for _, img := range cfg.ImageList {
@@ -48,8 +51,6 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	if err != nil {
 		return fmt.Errorf("failed to instantiate oci directory: %w", err)
 	}
-
-	responseHeaderTimeout := 10 * time.Second
 
 	// The user may or may not have a cluster available, if it's available then use it to connect to the registry
 	c, _ := cluster.New(ctx)
@@ -76,7 +77,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}),
 		}
 
-		client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify, responseHeaderTimeout)
+		client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
 
 		plainHTTP := cfg.PlainHTTP
 
@@ -165,8 +166,9 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond), retry.OnRetry(func(attempt uint, _ error) {
 		if attempt == uint(cfg.Retries) {
-			responseHeaderTimeout = 0
+			cfg.ResponseHeaderTimeout = 60 * time.Second // this should really never happen
 		}
+		l.Debug("retrying component image(s) push", "response_timeout", cfg.ResponseHeaderTimeout)
 	}))
 	if err != nil {
 		return err

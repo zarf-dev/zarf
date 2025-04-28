@@ -70,6 +70,10 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		return nil, fmt.Errorf("failed to create cache directory %s: %w", cfg.DestinationDirectory, err)
 	}
 
+	if cfg.ResponseHeaderTimeout <= 0 {
+		cfg.ResponseHeaderTimeout = 10 * time.Second
+	}
+
 	imageFetchStart := time.Now()
 	l.Info("fetching info for images", "count", imageCount, "destination", cfg.DestinationDirectory)
 	storeOpts := credentials.StoreOptions{}
@@ -83,7 +87,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		Credential: credentials.Credential(credStore),
 	}
 
-	client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify)
+	client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
 
 	l.Debug("gathering credentials from default Docker config file", "credentials_configured", credStore.IsAuthConfigured())
 	platform := &ocispec.Platform{

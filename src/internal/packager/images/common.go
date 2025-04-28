@@ -38,6 +38,7 @@ type PullConfig struct {
 	CacheDirectory        string
 	PlainHTTP             bool
 	InsecureSkipTLSVerify bool
+	ResponseHeaderTimeout time.Duration
 }
 
 // PushConfig is the configuration for pushing images.
@@ -51,6 +52,7 @@ type PushConfig struct {
 	Retries               int
 	PlainHTTP             bool
 	InsecureSkipTLSVerify bool
+	ResponseHeaderTimeout time.Duration
 }
 
 const (
