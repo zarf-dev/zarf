@@ -4,6 +4,8 @@ set -euo pipefail
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
+cd $SCRIPT_DIR
+
 add_yaml_extensions() {
   local src=$1
   local dst=$2
@@ -21,8 +23,8 @@ add_yaml_extensions() {
   ' "$src" > "$dst"
 }
 
-go run "$SCRIPT_DIR/main.go" > "zarf_package_v1alpha1.schema.json"
+go run main.go > "zarf_package_v1alpha1.schema.json"
 
-add_yaml_extensions "zarf_package_v1alpha1.schema.json" "$SCRIPT_DIR/../../zarf.schema.json"
+add_yaml_extensions "zarf_package_v1alpha1.schema.json" "../../zarf.schema.json"
 
 rm zarf_package_v1alpha1.schema.json
