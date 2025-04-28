@@ -4,7 +4,6 @@ metadata:
   name: archive-path
 
 x-untar: &base-untar
-  name: untar
   required: true
   files:
     - source: archive.tar
@@ -27,14 +26,14 @@ x-untar: &base-untar
           mute: true
 
 components:
-  - only:
+  - name: untar-linux
+    only:
       localOS: linux
     <<: *base-untar
-    name: untar-linux
-  - only:
+  - name: untar-darwin
+    only:
       localOS: darwin
     <<: *base-untar
-    name: untar-darwin
   - name: untar-windows
     required: true
     only:
