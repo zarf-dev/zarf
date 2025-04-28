@@ -21,7 +21,7 @@ components:
       - "###ZARF_PKG_TMPL_AGENT_IMAGE_DOMAIN######ZARF_PKG_TMPL_AGENT_IMAGE###:###ZARF_PKG_TMPL_AGENT_IMAGE_TAG###"
     charts:
       - name: zarf-agent
-        releaseName: zarf-agent
+        releaseName: zarf-d2db14ef40305397791454e883b26fc94ad9615d
         localPath: chart
         version: 0.51.0
         namespace: zarf
