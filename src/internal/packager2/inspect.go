@@ -19,6 +19,8 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
@@ -241,6 +243,212 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	}
 
 	return InspectDefinitionResourcesResults{Resources: resources}, nil
+}
+
+type InspectPackageSbomsOptions struct {
+	Architecture            string
+	Source                  string
+	PublicKeyPath           string
+	SkipSignatureValidation bool
+	OutputDir               string
+}
+
+func InspectPackageSboms(ctx context.Context, opts InspectPackageSbomsOptions) (string, error) {
+
+	// Identify the source type
+	srcType, err := identifySource(opts.Source)
+	if err != nil {
+		return "", err
+	}
+
+	// Prepare a temp workspace
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(tmpDir)
+
+	// Note: we do not support inspecting sboms from packages deployed to the cluster
+	// as such we won't get anything from the cluster or create a cluster object
+	filter := filters.Empty()
+	// Fetch the package tar
+	isPartial, tarPath, err := fetchPackage(ctx, srcType, opts.Source, "", opts.Architecture, "sbom", tmpDir, filter)
+	if err != nil {
+		return "", err
+	}
+
+	// Load package layout
+	layoutOpt := layout.PackageLayoutOptions{
+		PublicKeyPath:           opts.PublicKeyPath,
+		SkipSignatureValidation: opts.SkipSignatureValidation,
+		IsPartial:               isPartial,
+		Filter:                  filter,
+	}
+	pkgLayout, err := layout.LoadFromTar(ctx, tarPath, layoutOpt)
+	if err != nil {
+		return "", err
+	}
+
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+	outputPath, err := pkgLayout.GetSBOM(opts.OutputDir)
+	if err != nil {
+		return "", fmt.Errorf("could not get SBOM: %w", err)
+	}
+	return outputPath, nil
+
+}
+
+// TODO: evaluate if we can de-duplicate these options
+type InspectPackageDefinitionOptions struct {
+	Architecture            string
+	Source                  string
+	PublicKeyPath           string
+	SkipSignatureValidation bool
+}
+
+func InspectPackageDefinition(ctx context.Context, opts InspectPackageDefinitionOptions) (v1alpha1.ZarfPackage, error) {
+	// Identify the source type
+	srcType, err := identifySource(opts.Source)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+
+	// Prepare a temp workspace
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	defer os.Remove(tmpDir)
+
+	// Handle cluster-deployed packages directly
+	if srcType == "cluster" {
+		cluster, err := cluster.New(ctx) //nolint:errcheck
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, err
+		}
+
+		pkgLayout, err := loadFromCluster(ctx, opts.Source, cluster)
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, err
+		}
+		defer func() {
+			err = errors.Join(err, pkgLayout.Cleanup())
+		}()
+		return pkgLayout.Pkg, nil
+	}
+
+	filter := filters.Empty()
+	// Fetch the package tar
+	isPartial, tarPath, err := fetchPackage(ctx, srcType, opts.Source, "", opts.Architecture, "sbom", tmpDir, filter)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+
+	// Load package layout
+	layoutOpt := layout.PackageLayoutOptions{
+		PublicKeyPath:           opts.PublicKeyPath,
+		SkipSignatureValidation: opts.SkipSignatureValidation,
+		IsPartial:               isPartial,
+		Filter:                  filter,
+	}
+	pkgLayout, err := layout.LoadFromTar(ctx, tarPath, layoutOpt)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+
+	return pkgLayout.Pkg, nil
+}
+
+// TODO: evaluate if we can de-duplicate these options
+type InspectPackageImagesOptions struct {
+	Architecture            string
+	Source                  string
+	PublicKeyPath           string
+	SkipSignatureValidation bool
+}
+
+func InspectPackageImages(ctx context.Context, opts InspectPackageImagesOptions) ([]string, error) {
+	// Identify the source type
+	srcType, err := identifySource(opts.Source)
+	if err != nil {
+		return []string{}, err
+	}
+
+	// Prepare a temp workspace
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return []string{}, err
+	}
+	defer os.Remove(tmpDir)
+
+	// Handle cluster-deployed packages directly
+	if srcType == "cluster" {
+		cluster, err := cluster.New(ctx) //nolint:errcheck
+		if err != nil {
+			return []string{}, err
+		}
+
+		pkgLayout, err := loadFromCluster(ctx, opts.Source, cluster)
+		if err != nil {
+			return []string{}, err
+		}
+		defer func() {
+			err = errors.Join(err, pkgLayout.Cleanup())
+		}()
+
+		images := getimagesFromPackage(pkgLayout.Pkg)
+		if len(images) == 0 {
+			return []string{}, fmt.Errorf("no images found in package")
+		}
+
+		return images, nil
+	}
+
+	filter := filters.Empty()
+	// Fetch the package tar
+	isPartial, tarPath, err := fetchPackage(ctx, srcType, opts.Source, "", opts.Architecture, "sbom", tmpDir, filter)
+	if err != nil {
+		return []string{}, err
+	}
+
+	// Load package layout
+	layoutOpt := layout.PackageLayoutOptions{
+		PublicKeyPath:           opts.PublicKeyPath,
+		SkipSignatureValidation: opts.SkipSignatureValidation,
+		IsPartial:               isPartial,
+		Filter:                  filter,
+	}
+	pkgLayout, err := layout.LoadFromTar(ctx, tarPath, layoutOpt)
+	if err != nil {
+		return []string{}, err
+	}
+
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+
+	images := getimagesFromPackage(pkgLayout.Pkg)
+	if len(images) == 0 {
+		return []string{}, fmt.Errorf("no images found in package")
+	}
+
+	return images, nil
+
+}
+
+func getimagesFromPackage(pkg v1alpha1.ZarfPackage) []string {
+	images := make([]string, 0)
+	for _, component := range pkg.Components {
+		images = append(images, component.Images...)
+	}
+	images = helpers.Unique(images)
+	return images
 }
 
 func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig) ([]Resource, error) {

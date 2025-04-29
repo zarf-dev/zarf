@@ -607,24 +607,17 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	if err != nil {
 		return err
 	}
-	loadOpt := packager2.LoadOptions{
+
+	inspectOptions := packager2.InspectPackageSbomsOptions{
 		Source:                  src,
 		SkipSignatureValidation: o.skipSignatureValidation,
-		Filter:                  filters.Empty(),
+		OutputDir:               o.outputDir,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		InspectTarget:           "sbom",
+		Architecture:            config.GetArch(),
 	}
-	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = errors.Join(err, pkgLayout.Cleanup())
-	}()
-	outputPath, err := pkgLayout.GetSBOM(o.outputDir)
-	if err != nil {
-		return fmt.Errorf("could not get SBOM: %w", err)
-	}
+
+	outputPath, err := packager2.InspectPackageSboms(ctx, inspectOptions)
+
 	outputPath, err = filepath.Abs(outputPath)
 	if err != nil {
 		logger.From(ctx).Warn("SBOM successfully extracted, couldn't get output path", "error", err)
@@ -666,33 +659,17 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	// The user may be pulling the package from the cluster or using a built package
-	// since we don't know we don't check this error
-	cluster, _ := cluster.New(ctx) //nolint:errcheck
-
-	loadOpt := packager2.LoadOptions{
-		Cluster:                 cluster,
+	inspectImageOpts := packager2.InspectPackageImagesOptions{
+		Architecture:            config.GetArch(),
 		Source:                  src,
 		SkipSignatureValidation: o.skipSignatureValidation,
-		Filter:                  filters.Empty(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		InspectTarget:           "metadata",
 	}
-	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
+
+	imageList, err := packager2.InspectPackageImages(ctx, inspectImageOpts)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err = errors.Join(err, pkgLayout.Cleanup())
-	}()
-	var imageList []string
-	for _, component := range pkgLayout.Pkg.Components {
-		imageList = append(imageList, component.Images...)
-	}
-	if imageList == nil {
-		return fmt.Errorf("failed listing images: 0 images found in package")
-	}
-	imageList = helpers.Unique(imageList)
 	for _, image := range imageList {
 		fmt.Println("-", image)
 	}
@@ -731,26 +708,19 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		return err
 	}
 
-	// The user may be pulling the package from the cluster or using a built package
-	// since we don't know we don't check this error
-	cluster, _ := cluster.New(ctx) //nolint:errcheck
-
-	loadOpt := packager2.LoadOptions{
-		Cluster:                 cluster,
+	defOpts := packager2.InspectPackageDefinitionOptions{
+		Architecture:            config.GetArch(),
 		Source:                  src,
 		SkipSignatureValidation: o.skipSignatureValidation,
-		Filter:                  filters.Empty(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		InspectTarget:           "metadata",
 	}
-	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
+
+	pkg, err := packager2.InspectPackageDefinition(ctx, defOpts)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err = errors.Join(err, pkgLayout.Cleanup())
-	}()
-	err = utils.ColorPrintYAML(pkgLayout.Pkg, nil, false)
+
+	err = utils.ColorPrintYAML(pkg, nil, false)
 	if err != nil {
 		return err
 	}
