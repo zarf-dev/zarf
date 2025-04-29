@@ -374,60 +374,6 @@ type InspectPackageImagesOptions struct {
 }
 
 func InspectPackageImages(ctx context.Context, opts InspectPackageImagesOptions) ([]string, error) {
-	// Identify the source type
-	srcType, err := identifySource(opts.Source)
-	if err != nil {
-		return []string{}, err
-	}
-
-	// Prepare a temp workspace
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return []string{}, err
-	}
-	defer os.Remove(tmpDir)
-
-	// Handle cluster-deployed packages directly
-	if srcType == "cluster" {
-		cluster, err := cluster.New(ctx) //nolint:errcheck
-		if err != nil {
-			return []string{}, err
-		}
-
-		pkgLayout, err := loadFromCluster(ctx, opts.Source, cluster)
-		if err != nil {
-			return []string{}, err
-		}
-		defer func() {
-			err = errors.Join(err, pkgLayout.Cleanup())
-		}()
-
-		images := getimagesFromPackage(pkgLayout.Pkg)
-		if len(images) == 0 {
-			return []string{}, fmt.Errorf("no images found in package")
-		}
-
-		return images, nil
-	}
-
-	filter := filters.Empty()
-	// Fetch the package tar
-	isPartial, tarPath, err := fetchPackage(ctx, srcType, opts.Source, "", opts.Architecture, "sbom", tmpDir, filter)
-	if err != nil {
-		return []string{}, err
-	}
-
-	// Load package layout
-	layoutOpt := layout.PackageLayoutOptions{
-		PublicKeyPath:           opts.PublicKeyPath,
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-		IsPartial:               isPartial,
-		Filter:                  filter,
-	}
-	pkgLayout, err := layout.LoadFromTar(ctx, tarPath, layoutOpt)
-	if err != nil {
-		return []string{}, err
-	}
 
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
@@ -497,6 +443,52 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 		})
 	}
 	return resources, nil
+}
+
+// loadInspectPackageLayout replicates the Load process while adding inspect targets not utilized in the primary LoadPackage function.
+func loadInspectPackageLayout(ctx context.Context, source, architecture, inspectTarget string, cluster *cluster.Cluster, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) (*layout2.PackageLayout, error) {
+
+	// Validate the inspectTarget
+
+	// Identify the source type
+	srcType, err := identifySource(source)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare a temp workspace
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(tmpDir)
+
+	// Handle cluster-deployed packages directly
+	if srcType == "cluster" {
+		if cluster != nil {
+			return loadFromCluster(ctx, source, cluster)
+		}
+		return nil, fmt.Errorf("unable to load package from cluster: no cluster connectivity detected")
+	}
+
+	// Fetch the package tar
+	isPartial, tarPath, err := fetchPackage(ctx, srcType, source, "", architecture, inspectTarget, tmpDir, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load package layout
+	layoutOpt := layout.PackageLayoutOptions{
+		PublicKeyPath:           publicKeyPath,
+		SkipSignatureValidation: skipSignatureValidation,
+		IsPartial:               isPartial,
+		Filter:                  filter,
+	}
+	pkgLayout, err := layout.LoadFromTar(ctx, tarPath, layoutOpt)
+	if err != nil {
+		return nil, err
+	}
+	return pkgLayout, nil
 }
 
 // getTemplatedChart returns a templated chart.yaml as a string after templating

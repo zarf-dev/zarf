@@ -538,7 +538,6 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 		SkipSignatureValidation: o.skipSignatureValidation,
 		Filter:                  filters.BySelectState(o.components),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		InspectTarget:           "manifests",
 	}
 	layout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {
