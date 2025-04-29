@@ -85,7 +85,11 @@ func TestUseCLI(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-				defer file.Close()
+				defer func() {
+					if err := file.Close(); err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+					}
+				}()
 				_, err = io.Copy(w, file)
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
