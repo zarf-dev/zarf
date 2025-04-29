@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/fluxcd/pkg/apis/meta"
@@ -97,7 +98,18 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			patchedURL = fmt.Sprintf("%s:%s", patchedURL, src.Spec.Reference.Tag)
 		}
 
-		patchedSrc, err := transform.ImageTransformHost(registryAddress, patchedURL)
+		var (
+			patchedSrc string
+			err        error
+		)
+
+		// Do not include a crc32 hash if the MediaType starts with known helm selector
+		if (src.Spec.LayerSelector != nil) && strings.HasPrefix(src.Spec.LayerSelector.MediaType, "application/vnd.cncf.helm.chart.content.v1.tar+gzip") {
+			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, patchedURL)
+		} else {
+			patchedSrc, err = transform.ImageTransformHost(registryAddress, patchedURL)
+		}
+
 		if err != nil {
 			return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
 		}

@@ -119,6 +119,44 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
+			name: "mute helm chart, but don't include crc32 hash",
+			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Update, &flux.OCIRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mutate-this",
+				},
+				Spec: flux.OCIRepositorySpec{
+					URL: "oci://ghcr.io/stefanprodan/charts/podinfo",
+					LayerSelector: &flux.OCILayerSelector{
+						MediaType: "application/vnd.cncf.helm.config.v1+json",
+					},
+					Reference: &flux.OCIRepositoryRef{
+						Tag: "6.4.0",
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://127.0.0.1:31999/stefanprodan/charts/podinfo",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/spec/ref/tag",
+					"6.4.0",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
 			name: "should be mutated with internal service registry",
 			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Create, &flux.OCIRepository{
 				ObjectMeta: metav1.ObjectMeta{
