@@ -32,6 +32,9 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	if cfg.Retries < 1 {
 		cfg.Retries = defaultRetries
 	}
+	if cfg.ResponseHeaderTimeout <= 0 {
+		cfg.ResponseHeaderTimeout = 10 * time.Second
+	}
 	cfg.ImageList = helpers.Unique(cfg.ImageList)
 	toPush := map[string]struct{}{}
 	for _, img := range cfg.ImageList {
@@ -52,6 +55,9 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	// The user may or may not have a cluster available, if it's available then use it to connect to the registry
 	c, _ := cluster.New(ctx)
 	err = retry.Do(func() error {
+		// reset concurrency to user-provided value on each component retry
+		ociConcurrency := cfg.OCIConcurrency
+
 		// Include tunnel connection in case the port forward breaks, for example, a registry pod could spin down / restart
 		var tunnel *cluster.Tunnel
 		if c != nil {
@@ -74,7 +80,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}),
 		}
 
-		client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify)
+		client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
 
 		plainHTTP := cfg.PlainHTTP
 
@@ -101,10 +107,10 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 			if tunnel != nil {
 				return tunnel.Wrap(func() error {
-					return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
+					return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency, defaultPlatform)
 				})
 			}
-			return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
+			return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency, defaultPlatform)
 		}
 		pushed := []string{}
 		// Delete the images that were already successfully pushed so that they aren't attempted on the next retry
@@ -122,7 +128,17 @@ func Push(ctx context.Context, cfg PushConfig) error {
 					return err
 				}
 
-				if err = pushImage(img, offlineNameCRC); err != nil {
+				err = retry.Do(
+					func() error { return pushImage(img, offlineNameCRC) },
+					retry.OnRetry(func(_ uint, err error) {
+						ociConcurrency = 1
+						l.Debug("retrying image push", "error", err, "concurrency", ociConcurrency)
+					}),
+					retry.Context(ctx),
+					retry.Attempts(2),
+					retry.Delay(500*time.Millisecond),
+				)
+				if err != nil {
 					return err
 				}
 			}
@@ -134,13 +150,29 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				return err
 			}
 
-			if err = pushImage(img, offlineName); err != nil {
+			err = retry.Do(
+				func() error { return pushImage(img, offlineName) },
+				retry.OnRetry(func(_ uint, err error) {
+					ociConcurrency = 1
+					l.Debug("retrying image push", "error", err, "concurrency", ociConcurrency)
+				}),
+				retry.Context(ctx),
+				retry.Attempts(2),
+				retry.Delay(500*time.Millisecond),
+			)
+			if err != nil {
 				return err
 			}
+
 			pushed = append(pushed, img)
 		}
 		return nil
-	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond))
+	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond), retry.OnRetry(func(attempt uint, _ error) {
+		if uint(cfg.Retries) > 2 && attempt == uint(cfg.Retries)-2 {
+			cfg.ResponseHeaderTimeout = 60 * time.Second // this should really never happen
+		}
+		l.Debug("retrying component image(s) push", "response_timeout", cfg.ResponseHeaderTimeout)
+	}))
 	if err != nil {
 		return err
 	}
@@ -174,7 +206,7 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 	resolveOpts := oras.DefaultResolveOptions
 	desc, err := oras.Resolve(ctx, src, srcName, resolveOpts)
 	if err != nil {
-		return fmt.Errorf("failed to fetch image: %s: %w", srcName, err)
+		return fmt.Errorf("failed to resolve image: %s: %w", srcName, err)
 	}
 
 	// If an index is pulled we should try pulling with the default platform
@@ -182,7 +214,7 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 		resolveOpts.TargetPlatform = defaultPlatform
 		desc, err = oras.Resolve(ctx, src, srcName, resolveOpts)
 		if err != nil {
-			return fmt.Errorf("failed to fetch image %s with architecture %s: %w", srcName, defaultPlatform.Architecture, err)
+			return fmt.Errorf("failed to resolve image %s with architecture %s: %w", srcName, defaultPlatform.Architecture, err)
 		}
 	}
 
