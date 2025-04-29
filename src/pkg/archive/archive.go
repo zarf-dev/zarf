@@ -55,7 +55,7 @@ func Decompress(ctx context.Context, sourceArchive, dst string, opts DecompressO
 	return nil
 }
 
-// nestedWalk takes a destination path and walks each file in the directory, unarchiving each.
+// nestedUnarchive takes a destination path and walks each file in the directory, unarchiving each.
 func nestedUnarchive(ctx context.Context, dst string) error {
 	err := filepath.Walk(dst, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
