@@ -78,6 +78,7 @@ func TestUseCLI(t *testing.T) {
 		shaSum := strings.TrimSpace(stdOut)
 
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			t.Helper()
 			if r.URL.Path == fmt.Sprintf("/zarf-package-http-pull-%s.tar.zst", e2e.Arch) {
 				w.WriteHeader(http.StatusOK)
 				file, err := os.Open(filepath.Join(tmpDir, fmt.Sprintf("zarf-package-http-pull-%s.tar.zst", e2e.Arch)))
@@ -85,7 +86,8 @@ func TestUseCLI(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-				_, _ = io.Copy(w, file)
+				_, err = io.Copy(w, file)
+				require.NoError(t, err)
 				return
 			}
 			w.WriteHeader(http.StatusNotFound)
