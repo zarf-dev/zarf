@@ -1,111 +1,24 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package archive declares commonly used internal archival and compression operations in Zarf
 package archive
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	goyaml "github.com/goccy/go-yaml"
-	"github.com/mholt/archiver/v3"
-	"github.com/mholt/archives"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/defenseunicorns/pkg/helpers/v2"
+	goyaml "github.com/goccy/go-yaml"
+	"github.com/mholt/archiver/v3"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
-
-// CompressOpts is a placeholder for future optional Compress params
-type CompressOpts struct{}
-
-// Compress takes any number of source files and archives them into a tarball at dest path.
-// FIXME(mkcp): Migrate Compress operation to use mholt/archives.
-func Compress(_ context.Context, sources []string, dest string, _ CompressOpts) error {
-	return archiver.Archive(sources, dest)
-}
-
-// CompressNew is a WIP
-func CompressNew(ctx context.Context, sources []string, dest string, _ CompressOpts) (err error) {
-	fdOpts := archives.FromDiskOptions{
-		FollowSymlinks:  false,
-		ClearAttributes: false,
-	}
-	// TODO(mkcp): Validate this, what the second param in fNames is supposed to be
-	var fNames = make(map[string]string, len(sources))
-	for _, source := range sources {
-		fNames[source] = ""
-	}
-	// FIXME(mkcp): opts can be nil here
-	files, err := archives.FilesFromDisk(ctx, &fdOpts, fNames)
-	if err != nil {
-		return err
-	}
-	// Open file at archive destination
-	out, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	// Ensure we close out archive dest even if compression fails
-	defer func() {
-		err2 := out.Close()
-		err = errors.Join(err, err2)
-	}()
-	// TODO built format
-	format := archives.CompressedArchive{
-		Compression: archives.Gz{},
-		Archival:    archives.Tar{},
-	}
-	// Compress files to archive directory
-	return format.Archive(ctx, out, files)
-}
-
-// DecompressOpts provides optional parameters for Decompress
-type DecompressOpts struct {
-	// TODO doccomment
-	UnarchiveAll bool
-}
-
-// TODO(mkcp): doccomment
-// FIXME(mkcp): Migrate Decompress operation to use mholt/archives.
-func Decompress(_ context.Context, sourceArchive, dest string, opts DecompressOpts) error {
-	err := archiver.Unarchive(sourceArchive, dest)
-	if err != nil {
-		return fmt.Errorf("unable to perform decompression: %w", err)
-	}
-	if !opts.UnarchiveAll {
-		return nil
-	}
-	err = filepath.Walk(dest, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if strings.HasSuffix(path, ".tar") {
-			dst := filepath.Join(strings.TrimSuffix(path, ".tar"), "..")
-			// Unpack sboms.tar differently since it has a different folder structure than components
-			if info.Name() == layout.SBOMTar {
-				dst = strings.TrimSuffix(path, ".tar")
-			}
-			// FIXME(mkcp): support with internal/archive
-			err := archiver.Unarchive(path, dst)
-			if err != nil {
-				return fmt.Errorf(lang.ErrUnarchive, path, err.Error())
-			}
-			err = os.Remove(path)
-			if err != nil {
-				return fmt.Errorf(lang.ErrRemoveFile, path, err.Error())
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("unable to unarchive all nested tarballs: %w", err)
-	}
-	return nil
-}
 
 // RenameFromMetadata renames a tarball based on its metadata.
 // FIXME(mkcp): Simplify, extract out packager-specific stuff

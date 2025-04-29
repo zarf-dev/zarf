@@ -7,7 +7,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/archive"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 )
 
 // ldflags github.com/zarf-dev/zarf/src/cmd.archivesVersion=x.x.x
