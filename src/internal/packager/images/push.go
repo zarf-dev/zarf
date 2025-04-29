@@ -55,6 +55,9 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	// The user may or may not have a cluster available, if it's available then use it to connect to the registry
 	c, _ := cluster.New(ctx)
 	err = retry.Do(func() error {
+		// reset concurrency to user-provided value on each component retry
+		ociConcurrency := cfg.OCIConcurrency
+
 		// Include tunnel connection in case the port forward breaks, for example, a registry pod could spin down / restart
 		var tunnel *cluster.Tunnel
 		if c != nil {
@@ -104,10 +107,10 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 			if tunnel != nil {
 				return tunnel.Wrap(func() error {
-					return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
+					return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency, defaultPlatform)
 				})
 			}
-			return copyImage(ctx, src, remoteRepo, srcName, dstName, cfg.OCIConcurrency, defaultPlatform)
+			return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency, defaultPlatform)
 		}
 		pushed := []string{}
 		// Delete the images that were already successfully pushed so that they aren't attempted on the next retry
@@ -128,8 +131,8 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				err = retry.Do(
 					func() error { return pushImage(img, offlineNameCRC) },
 					retry.OnRetry(func(_ uint, err error) {
-						cfg.OCIConcurrency = 1
-						l.Debug("retrying image push", "error", err, "concurrency", cfg.OCIConcurrency)
+						ociConcurrency = 1
+						l.Debug("retrying image push", "error", err, "concurrency", ociConcurrency)
 					}),
 					retry.Context(ctx),
 					retry.Attempts(2),
@@ -150,8 +153,8 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			err = retry.Do(
 				func() error { return pushImage(img, offlineName) },
 				retry.OnRetry(func(_ uint, err error) {
-					cfg.OCIConcurrency = 1
-					l.Debug("retrying image push", "error", err, "concurrency", cfg.OCIConcurrency)
+					ociConcurrency = 1
+					l.Debug("retrying image push", "error", err, "concurrency", ociConcurrency)
 				}),
 				retry.Context(ctx),
 				retry.Attempts(2),
