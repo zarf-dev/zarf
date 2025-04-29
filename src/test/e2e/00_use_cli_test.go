@@ -6,9 +6,13 @@ package test
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -60,15 +64,55 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, expectedShasum, "The expected SHASUM should equal the actual SHASUM")
 	})
 
-	t.Run("zarf package pull https", func(t *testing.T) {
+	t.Run("zarf package pull http", func(t *testing.T) {
 		t.Parallel()
-		packageShasum := "690799dbe8414238e11d4488754eee52ec264c1584cd0265e3b91e3e251e8b1a"
-		packageName := "zarf-init-amd64-v0.39.0.tar.zst"
-		_, _, err := e2e.Zarf(t, "package", "pull", fmt.Sprintf("https://github.com/zarf-dev/zarf/releases/download/v0.39.0/%s", packageName), "--shasum", packageShasum)
+
+		tmpDir := t.TempDir()
+
+		_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-http-pull", "-o", tmpDir, "--confirm")
 		require.NoError(t, err)
-		require.FileExists(t, packageName)
-		err = os.Remove(packageName)
+
+		// archive/v3 zstd creates non-reproducible tarballs, so need to calculate the sha each time
+		stdOut, _, err := e2e.Zarf(t, "prepare", "sha256sum", fmt.Sprintf("%s/zarf-package-http-pull-%s.tar.zst", tmpDir, e2e.Arch))
 		require.NoError(t, err)
+		shaSum := strings.TrimSpace(stdOut)
+
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == fmt.Sprintf("/zarf-package-http-pull-%s.tar.zst", e2e.Arch) {
+				w.WriteHeader(http.StatusOK)
+				file, err := os.Open(filepath.Join(tmpDir, fmt.Sprintf("zarf-package-http-pull-%s.tar.zst", e2e.Arch)))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				_, _ = io.Copy(w, file)
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		})
+
+		httpServer := httptest.NewServer(handler)
+		t.Cleanup(func() {
+			httpServer.Close()
+		})
+
+		// TODO: also create a httptest.NewTLSServer and pass the server.Client in a unit test
+
+		f := func(url string, expectedErr string) {
+			t.Helper()
+			outputTmpDir := t.TempDir()
+			_, stdErr, err := e2e.Zarf(t, "package", "pull", url, "--shasum", shaSum, "-o", outputTmpDir)
+			if expectedErr != "" {
+				require.Error(t, err)
+				require.Contains(t, stdErr, expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.FileExists(t, filepath.Join(outputTmpDir, fmt.Sprintf("zarf-package-http-pull-%s.tar.zst", e2e.Arch)))
+		}
+
+		f(fmt.Sprintf("%s/zarf-package-http-pull-%s.tar.zst", httpServer.URL, e2e.Arch), "")
+		f(httpServer.URL, "404 Not Found")
 	})
 
 	t.Run("zarf version", func(t *testing.T) {
