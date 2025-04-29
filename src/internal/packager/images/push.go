@@ -165,7 +165,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		}
 		return nil
 	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond), retry.OnRetry(func(attempt uint, _ error) {
-		if attempt == uint(cfg.Retries) {
+		if uint(cfg.Retries) > 2 && attempt == uint(cfg.Retries)-2 {
 			cfg.ResponseHeaderTimeout = 60 * time.Second // this should really never happen
 		}
 		l.Debug("retrying component image(s) push", "response_timeout", cfg.ResponseHeaderTimeout)
