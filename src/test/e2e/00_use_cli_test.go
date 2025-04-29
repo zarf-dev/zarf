@@ -130,19 +130,19 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdErr, expectedOutString, "The log level should be changed to 'debug'")
 	})
 
-	t.Run("zarf package to test archive path", func(t *testing.T) {
+	t.Run("zarf package to test extract path", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
-		_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-archive-path", "-o", tmpDir, "--flavor", runtime.GOOS, "--confirm")
+		_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-extract-path", "-o", tmpDir, "--flavor", runtime.GOOS, "--confirm")
 		require.NoError(t, err)
 
-		path := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-archive-path-%s.tar.zst", e2e.Arch))
+		path := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-extract-path-%s.tar.zst", e2e.Arch))
 		_, _, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 		require.NoError(t, err)
 
-		require.FileExists(t, "src/test/packages/00-archive-path/output.txt")
+		require.FileExists(t, "src/test/packages/00-extract-path/output.txt")
 
-		e2e.CleanFiles(t, "src/test/packages/00-archive-path/output.txt")
+		e2e.CleanFiles(t, "src/test/packages/00-extract-path/output.txt")
 	})
 
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {

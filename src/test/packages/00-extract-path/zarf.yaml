@@ -1,13 +1,13 @@
 # yaml-language-server: $schema=../../../../zarf.schema.json
 kind: ZarfPackageConfig
 metadata:
-  name: archive-path
+  name: extract-path
 
 x-untar: &base-untar
   required: true
   files:
     - source: archive.tar
-      target: src/test/packages/00-archive-path/output.txt
+      target: src/test/packages/00-extract-path/output.txt
       shasum: 03ba204e50d126e4674c005e04d82e84c21366780af1f43bd54a37816b6ab340
       extractPath: archive/content/data.txt
   actions:
@@ -40,7 +40,7 @@ components:
       flavor: windows
     files:
       - source: archive.tar
-        target: src/test/packages/00-archive-path/output.txt
+        target: src/test/packages/00-extract-path/output.txt
         shasum: 6ba6c3d1a3636d168baaa59a25b503a6160d9987f492cae4b279c8e77dc913f3
         extractPath: archive/content/data.txt
     actions:
