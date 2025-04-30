@@ -411,9 +411,9 @@ func loadInspectPackageLayout(ctx context.Context, source, architecture, inspect
 
 	// create map[string]bool to track the inspect targets
 	inspectTargets := map[string]bool{
-		SbomTarget:       true,
-		MetadataTarget:   true,
-		ComponentsTarget: true,
+		SbomTarget:       true, // captures inspecting the sbom
+		MetadataTarget:   true, // captures inspecting the definition and images
+		ComponentsTarget: true, // captures inspecting the manifests and values files
 	}
 
 	// Check if the inspect target is valid

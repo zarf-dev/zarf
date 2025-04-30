@@ -189,7 +189,7 @@ func FilterLayers(layerMap map[string][]ocispec.Descriptor, inspectTarget string
 		layers = append(layers, layerMap[layout.ComponentLayers]...)
 		layers = append(layers, layerMap[layout.ImageLayers]...)
 		layers = append(layers, layerMap[layout.SbomLayers]...)
-	case "layout.MetadataLayers":
+	case "metadata":
 		layers = append(layers, layerMap[layout.MetadataLayers]...)
 	case "manifests":
 		layers = append(layers, layerMap[layout.MetadataLayers]...)
