@@ -219,7 +219,7 @@ type RegistryInfo struct {
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
 func (ri RegistryInfo) IsInternal() bool {
-	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
+	return ri.Address == fmt.Sprintf("%s:%d", "localhost", ri.NodePort)
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
@@ -232,7 +232,7 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 
 	// Set default url if an external registry was not provided
 	if ri.Address == "" {
-		ri.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
+		ri.Address = fmt.Sprintf("%s:%d", "localhost", ri.NodePort)
 	}
 
 	// Generate a push-user password if not provided by init flag

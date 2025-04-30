@@ -1,0 +1,34 @@
+{{ if eq .Values.service.preferredIPFamily "IPv6" }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: zarf-registry-proxy
+spec:
+  selector:
+    matchLabels:
+      app: zarf-registry-proxy
+  template:
+    metadata:
+      labels:
+        app: zarf-registry-proxy
+        # Don't mutate this pod
+        zarf.dev/agent: ignore
+    spec:
+      containers:
+        - args:
+            - tcp6-listen:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
+            - tcp6:{{ template "docker-registry.fullname" . }}:5000
+          image: alpine/socat:1.8.0.1
+          name: zarf-registry-proxy
+          ports:
+            - containerPort: {{ .Values.service.nodePort }}
+          resources:
+            limits:
+              cpu: 100m
+              memory: 200Mi
+            requests:
+              cpu: 100m
+              memory: 200Mi
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+{{- end }}

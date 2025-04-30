@@ -10,12 +10,17 @@ metadata:
     heritage: {{ .Release.Service }}
 spec:
   type: {{ .Values.service.type }}
+  ipFamilyPolicy: PreferDualStack
+  ipFamilies:
+    - {{ .Values.service.preferredIPFamily }}
   ports:
     - port: {{ .Values.service.port }}
       protocol: TCP
       name: {{ if .Values.tlsSecretName }}https{{ else }}http{{ end }}-{{ .Values.service.port }}
       targetPort: 5000
+      {{- if eq .Values.service.type "NodePort " }}
       nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
   selector:
     app: {{ template "docker-registry.name" . }}
     release: {{ .Release.Name }}

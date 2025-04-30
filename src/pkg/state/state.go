@@ -47,6 +47,8 @@ type State struct {
 	Distro string `json:"distro"`
 	// Machine architecture of the k8s node(s)
 	Architecture string `json:"architecture"`
+	// Indicates the preferred IP family (IPv4 or IPv6) that Zarf will use when deploying its k8s registry Service
+	PreferredIPFamily string `json:"preferredIPFamily"`
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
 	// PKI certificate information for the agent pods Zarf manages

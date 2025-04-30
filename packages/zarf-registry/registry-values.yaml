@@ -20,6 +20,7 @@ secrets:
 
 service:
   nodePort: "###ZARF_NODEPORT###"
+  preferredIPFamily: "###ZARF_PREFERRED_IP_FAMILY###"
 
 resources:
   requests:
