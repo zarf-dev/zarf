@@ -256,7 +256,9 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) error {
 		}
 
 		s.PreferredIPFamily, err = c.DeterminePreferredIPFamily(ctx)
-
+		if err != nil {
+			return err
+		}
 		err = opts.GitServer.FillInEmptyValues()
 		if err != nil {
 			return err
