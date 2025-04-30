@@ -472,10 +472,17 @@ func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) 
 	defer func() {
 		err = errors.Join(err, layout.Cleanup())
 	}()
-	result, err := packager2.InspectPackageResources(ctx, layout, packager2.InspectPackageResourcesOptions{
-		SetVariables: o.setVariables,
-		KubeVersion:  o.kubeVersion,
-	})
+
+	resourceOpts := packager2.InspectPackageResourcesOptions{
+		Source:                  src,
+		SkipSignatureValidation: o.skipSignatureValidation,
+		Architecture:            config.GetArch(),
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		SetVariables:            o.setVariables,
+		KubeVersion:             o.kubeVersion,
+	}
+
+	result, err := packager2.InspectPackageResources(ctx, resourceOpts)
 	if err != nil {
 		return err
 	}
@@ -533,23 +540,17 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 	}
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-	loadOpt := packager2.LoadOptions{
+
+	resourceOpts := packager2.InspectPackageResourcesOptions{
 		Source:                  src,
 		SkipSignatureValidation: o.skipSignatureValidation,
-		Filter:                  filters.BySelectState(o.components),
+		Architecture:            config.GetArch(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		SetVariables:            o.setVariables,
+		KubeVersion:             o.kubeVersion,
 	}
-	layout, err := packager2.LoadPackage(ctx, loadOpt)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = errors.Join(err, layout.Cleanup())
-	}()
-	result, err := packager2.InspectPackageResources(ctx, layout, packager2.InspectPackageResourcesOptions{
-		SetVariables: o.setVariables,
-		KubeVersion:  o.kubeVersion,
-	})
+
+	result, err := packager2.InspectPackageResources(ctx, resourceOpts)
 	if err != nil {
 		return err
 	}
@@ -615,9 +616,12 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		Architecture:            config.GetArch(),
 	}
 
-	outputPath, err := packager2.InspectPackageSboms(ctx, inspectOptions)
+	result, err := packager2.InspectPackageSboms(ctx, inspectOptions)
+	if err != nil {
+		return err
+	}
 
-	outputPath, err = filepath.Abs(outputPath)
+	outputPath, err := filepath.Abs(result.Path)
 	if err != nil {
 		logger.From(ctx).Warn("SBOM successfully extracted, couldn't get output path", "error", err)
 		return nil
@@ -665,11 +669,11 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 	}
 
-	imageList, err := packager2.InspectPackageImages(ctx, inspectImageOpts)
+	result, err := packager2.InspectPackageImages(ctx, inspectImageOpts)
 	if err != nil {
 		return err
 	}
-	for _, image := range imageList {
+	for _, image := range result.Images {
 		fmt.Println("-", image)
 	}
 	return nil
@@ -714,12 +718,12 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 	}
 
-	pkg, err := packager2.InspectPackageDefinition(ctx, defOpts)
+	result, err := packager2.InspectPackageDefinition(ctx, defOpts)
 	if err != nil {
 		return err
 	}
 
-	err = utils.ColorPrintYAML(pkg, nil, false)
+	err = utils.ColorPrintYAML(result.Package, nil, false)
 	if err != nil {
 		return err
 	}

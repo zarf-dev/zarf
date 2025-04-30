@@ -33,6 +33,10 @@ const (
 	ManifestResource   ResourceType = "manifest"
 	ChartResource      ResourceType = "chart"
 	ValuesFileResource ResourceType = "valuesfile"
+
+	SbomTarget       = "sboms"
+	MetadataTarget   = "metadata"
+	ComponentsTarget = "components"
 )
 
 // Resource contains a Kubernetes Manifest or Chart
@@ -43,8 +47,12 @@ type Resource struct {
 }
 
 type InspectPackageResourcesOptions struct {
-	SetVariables map[string]string
-	KubeVersion  string
+	Architecture            string
+	Source                  string
+	PublicKeyPath           string
+	SkipSignatureValidation bool
+	SetVariables            map[string]string
+	KubeVersion             string
 }
 
 type InspectPackageResourcesResults struct {
@@ -52,8 +60,12 @@ type InspectPackageResourcesResults struct {
 }
 
 // InspectPackageResources templates and returns the manifests, charts, and values files in the package as they would be on deploy
-func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayout, opts InspectPackageResourcesOptions) (results InspectPackageResourcesResults, err error) {
+func InspectPackageResources(ctx context.Context, opts InspectPackageResourcesOptions) (results InspectPackageResourcesResults, err error) {
 	s, err := state.Default()
+	if err != nil {
+		return InspectPackageResourcesResults{}, err
+	}
+	pkgLayout, err := loadInspectPackageLayout(ctx, opts.Source, opts.Architecture, ComponentsTarget, nil, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
 	}
@@ -245,6 +257,10 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	return InspectDefinitionResourcesResults{Resources: resources}, nil
 }
 
+type InspectPackageSbomsResult struct {
+	Path string
+}
+
 type InspectPackageSbomsOptions struct {
 	Architecture            string
 	Source                  string
@@ -253,40 +269,12 @@ type InspectPackageSbomsOptions struct {
 	OutputDir               string
 }
 
-func InspectPackageSboms(ctx context.Context, opts InspectPackageSbomsOptions) (string, error) {
+func InspectPackageSboms(ctx context.Context, opts InspectPackageSbomsOptions) (InspectPackageSbomsResult, error) {
 
-	// Identify the source type
-	srcType, err := identifySource(opts.Source)
+	// we cannot retrieve sboms from the cluster currently
+	pkgLayout, err := loadInspectPackageLayout(ctx, opts.Source, opts.Architecture, SbomTarget, nil, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
 	if err != nil {
-		return "", err
-	}
-
-	// Prepare a temp workspace
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return "", err
-	}
-	defer os.Remove(tmpDir)
-
-	// Note: we do not support inspecting sboms from packages deployed to the cluster
-	// as such we won't get anything from the cluster or create a cluster object
-	filter := filters.Empty()
-	// Fetch the package tar
-	isPartial, tarPath, err := fetchPackage(ctx, srcType, opts.Source, "", opts.Architecture, "sbom", tmpDir, filter)
-	if err != nil {
-		return "", err
-	}
-
-	// Load package layout
-	layoutOpt := layout.PackageLayoutOptions{
-		PublicKeyPath:           opts.PublicKeyPath,
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-		IsPartial:               isPartial,
-		Filter:                  filter,
-	}
-	pkgLayout, err := layout.LoadFromTar(ctx, tarPath, layoutOpt)
-	if err != nil {
-		return "", err
+		return InspectPackageSbomsResult{}, err
 	}
 
 	defer func() {
@@ -294,13 +282,18 @@ func InspectPackageSboms(ctx context.Context, opts InspectPackageSbomsOptions) (
 	}()
 	outputPath, err := pkgLayout.GetSBOM(opts.OutputDir)
 	if err != nil {
-		return "", fmt.Errorf("could not get SBOM: %w", err)
+		return InspectPackageSbomsResult{}, fmt.Errorf("could not get SBOM: %w", err)
 	}
-	return outputPath, nil
+	return InspectPackageSbomsResult{
+		Path: outputPath,
+	}, nil
 
 }
 
-// TODO: evaluate if we can de-duplicate these options
+type InspectPackageDefinitionResult struct {
+	Package v1alpha1.ZarfPackage
+}
+
 type InspectPackageDefinitionOptions struct {
 	Architecture            string
 	Source                  string
@@ -308,64 +301,28 @@ type InspectPackageDefinitionOptions struct {
 	SkipSignatureValidation bool
 }
 
-func InspectPackageDefinition(ctx context.Context, opts InspectPackageDefinitionOptions) (v1alpha1.ZarfPackage, error) {
-	// Identify the source type
-	srcType, err := identifySource(opts.Source)
+func InspectPackageDefinition(ctx context.Context, opts InspectPackageDefinitionOptions) (InspectPackageDefinitionResult, error) {
+	cluster, _ := cluster.New(ctx) //nolint:errcheck
+
+	pkgLayout, err := loadInspectPackageLayout(ctx, opts.Source, opts.Architecture, "metadata", cluster, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-
-	// Prepare a temp workspace
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	defer os.Remove(tmpDir)
-
-	// Handle cluster-deployed packages directly
-	if srcType == "cluster" {
-		cluster, err := cluster.New(ctx) //nolint:errcheck
-		if err != nil {
-			return v1alpha1.ZarfPackage{}, err
-		}
-
-		pkgLayout, err := loadFromCluster(ctx, opts.Source, cluster)
-		if err != nil {
-			return v1alpha1.ZarfPackage{}, err
-		}
-		defer func() {
-			err = errors.Join(err, pkgLayout.Cleanup())
-		}()
-		return pkgLayout.Pkg, nil
-	}
-
-	filter := filters.Empty()
-	// Fetch the package tar
-	isPartial, tarPath, err := fetchPackage(ctx, srcType, opts.Source, "", opts.Architecture, "sbom", tmpDir, filter)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-
-	// Load package layout
-	layoutOpt := layout.PackageLayoutOptions{
-		PublicKeyPath:           opts.PublicKeyPath,
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-		IsPartial:               isPartial,
-		Filter:                  filter,
-	}
-	pkgLayout, err := layout.LoadFromTar(ctx, tarPath, layoutOpt)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return InspectPackageDefinitionResult{}, err
 	}
 
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	return pkgLayout.Pkg, nil
+	return InspectPackageDefinitionResult{
+		Package: pkgLayout.Pkg,
+	}, nil
 }
 
-// TODO: evaluate if we can de-duplicate these options
+// Each result contains an image. This allows expansion to other metadata
+type InspectPackageImageResult struct {
+	Images []string
+}
+
 type InspectPackageImagesOptions struct {
 	Architecture            string
 	Source                  string
@@ -373,28 +330,32 @@ type InspectPackageImagesOptions struct {
 	SkipSignatureValidation bool
 }
 
-func InspectPackageImages(ctx context.Context, opts InspectPackageImagesOptions) ([]string, error) {
+func InspectPackageImages(ctx context.Context, opts InspectPackageImagesOptions) (InspectPackageImageResult, error) {
+
+	cluster, _ := cluster.New(ctx) //nolint:errcheck
+
+	pkgLayout, err := loadInspectPackageLayout(ctx, opts.Source, opts.Architecture, MetadataTarget, cluster, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
+	if err != nil {
+		return InspectPackageImageResult{}, err
+	}
 
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	images := getimagesFromPackage(pkgLayout.Pkg)
-	if len(images) == 0 {
-		return []string{}, fmt.Errorf("no images found in package")
-	}
-
-	return images, nil
-
-}
-
-func getimagesFromPackage(pkg v1alpha1.ZarfPackage) []string {
 	images := make([]string, 0)
-	for _, component := range pkg.Components {
+	for _, component := range pkgLayout.Pkg.Components {
 		images = append(images, component.Images...)
 	}
 	images = helpers.Unique(images)
-	return images
+	if len(images) == 0 {
+		return InspectPackageImageResult{}, fmt.Errorf("no images found in package")
+	}
+
+	return InspectPackageImageResult{
+		Images: images,
+	}, nil
+
 }
 
 func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig) ([]Resource, error) {
@@ -448,7 +409,17 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 // loadInspectPackageLayout replicates the Load process while adding inspect targets not utilized in the primary LoadPackage function.
 func loadInspectPackageLayout(ctx context.Context, source, architecture, inspectTarget string, cluster *cluster.Cluster, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) (*layout2.PackageLayout, error) {
 
-	// Validate the inspectTarget
+	// create map[string]bool to track the inspect targets
+	inspectTargets := map[string]bool{
+		SbomTarget:       true,
+		MetadataTarget:   true,
+		ComponentsTarget: true,
+	}
+
+	// Check if the inspect target is valid
+	if _, ok := inspectTargets[inspectTarget]; !ok {
+		return nil, fmt.Errorf("invalid inspect target: %s", inspectTarget)
+	}
 
 	// Identify the source type
 	srcType, err := identifySource(source)
