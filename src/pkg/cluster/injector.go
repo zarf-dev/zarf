@@ -84,7 +84,9 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return err
 	}
 
-	if ipFamily == "IPv4" {
+	var zarfSeedPort string
+	switch ipFamily {
+	case "IPv4":
 		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
 			WithSpec(v1ac.ServiceSpec().
 				WithType(corev1.ServiceTypeNodePort).
@@ -117,10 +119,8 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		if err != nil {
 			return err
 		}
-
-		// TODO: Remove use of passing data through global variables.
-		config.ZarfSeedPort = fmt.Sprintf("%d", svc.Spec.Ports[0].NodePort)
-	} else {
+		zarfSeedPort = fmt.Sprintf("%d", svc.Spec.Ports[0].NodePort)
+	case "IPv6":
 		dsSpec := buildInjectionDaemonset(injectorImage, payloadCmNames, shasum, resReq)
 		ds, err := c.Clientset.AppsV1().DaemonSets(state.ZarfNamespaceName).Apply(ctx, dsSpec, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
@@ -128,10 +128,13 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		}
 
 		// TODO add healthcheck on daemonset
-
-		// TODO: Remove use of passing data through global variables.
-		config.ZarfSeedPort = fmt.Sprintf("%d", ds.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort)
+		zarfSeedPort = fmt.Sprintf("%d", ds.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort)
+	default:
+		return fmt.Errorf("invalid ipFamily: %s", ipFamily)
 	}
+
+	// TODO: Remove use of passing data through global variables.
+	config.ZarfSeedPort = zarfSeedPort
 
 	l.Debug("done with injection", "duration", time.Since(start))
 	return nil
@@ -142,7 +145,8 @@ func (c *Cluster) StopInjection(ctx context.Context, ipFamily string) error {
 	start := time.Now()
 	l := logger.From(ctx)
 	l.Debug("deleting injector resources")
-	if ipFamily == "IPv4" {
+	switch ipFamily {
+	case "IPv4":
 		err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err
@@ -151,11 +155,13 @@ func (c *Cluster) StopInjection(ctx context.Context, ipFamily string) error {
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err
 		}
-	} else {
+	case "IPv6":
 		err := c.Clientset.AppsV1().DaemonSets(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err
 		}
+	default:
+		return fmt.Errorf("invalid ipFamily: %s", ipFamily)
 	}
 	err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
