@@ -92,6 +92,8 @@ $ zarf package create . \
 --set REGISTRY_IMAGE="opensource/registry" \
 --set REGISTRY_IMAGE_DOMAIN="custom.enterprise.corp" \
 --set GITEA_IMAGE="custom.enterprise.corp/opensource/gitea:v1.21.0-rootless"
+--set GITEA_HELM_REPO="custom.enterprise.corp/charts"
+--set INJECTOR_DOMAIN="custom.enterprise.corp/s3-proxy"
 ```
 
 ⚠️ - The Gitea image is different from the Agent and Registry in that Zarf will always prefer the `rootless` version of a given server image. The image no longer must be tagged with `-rootless`, but it still needs to implement the [Gitea configuration of a rootless image](https://github.com/go-gitea/gitea/blob/main/Dockerfile.rootless). If you need to change this, edit the `packages/gitea` package.

@@ -58,7 +58,7 @@ components:
     charts:
       - name: gitea
         releaseName: zarf-gitea
-        url: https://dl.gitea.io/charts
+        url: "###ZARF_PKG_TMPL_GITEA_HELM_REPO###"
         version: 10.1.1
         namespace: zarf
         valuesFiles:

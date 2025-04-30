@@ -6,6 +6,7 @@ agent_image_tag = 'local'
 
 # Tag for the zarf injector binary to use
 injector_version = '2025-03-24'
+injector_domain = 'zarf-init-resources.s3.us-east-1.amazonaws.com'
 injector_amd64_shasum = 'a78d66b9e2b00a22edd9b4e6432a4d934621e3757f09493b12f688c7c9baca93'
 injector_arm64_shasum = 'f68cf097ace34bdd04f6b1571a8d8ab4e04a27614dd7e752199ff09e21f4089b'
 
@@ -17,3 +18,4 @@ registry_image_tag = '3.0.0'
 
 # The image reference to use for the optional git-server Zarf deploys
 gitea_image = 'gitea/gitea:1.21.5-rootless'
+gitea_helm_repo = 'dl.gitea.io/charts'
