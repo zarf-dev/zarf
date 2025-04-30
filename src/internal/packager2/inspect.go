@@ -34,7 +34,7 @@ const (
 	ChartResource      ResourceType = "chart"
 	ValuesFileResource ResourceType = "valuesfile"
 
-	SbomTarget       = "sboms"
+	SbomTarget       = "sbom"
 	MetadataTarget   = "metadata"
 	ComponentsTarget = "components"
 )

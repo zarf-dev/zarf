@@ -459,19 +459,6 @@ func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) 
 	}
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-	loadOpt := packager2.LoadOptions{
-		Source:                  src,
-		SkipSignatureValidation: o.skipSignatureValidation,
-		Filter:                  filters.BySelectState(o.components),
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-	}
-	layout, err := packager2.LoadPackage(ctx, loadOpt)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = errors.Join(err, layout.Cleanup())
-	}()
 
 	resourceOpts := packager2.InspectPackageResourcesOptions{
 		Source:                  src,
