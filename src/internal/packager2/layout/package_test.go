@@ -59,7 +59,7 @@ func TestPackageLayout(t *testing.T) {
 	}
 	require.Equal(t, len(expectedNames), len(files))
 	for _, expectedName := range expectedNames {
-		path := filepath.Join(pkgLayout.dirPath, filepath.FromSlash(expectedName))
+		path := filepath.Join(pkgLayout.DirPath, filepath.FromSlash(expectedName))
 		name := files[path]
 		require.Equal(t, expectedName, name)
 	}

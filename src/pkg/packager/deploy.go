@@ -129,6 +129,7 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// FIXME, move this to cli level and error
 	if len(deployedComponents) == 0 {
 		l.Warn("no components were selected for deployment. Inspect the package to view the available components and select components interactively or by name with \"--components\"")
 	}
@@ -365,7 +366,7 @@ func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfC
 	g, gCtx := errgroup.WithContext(ctx)
 	for idx, data := range component.DataInjections {
 		g.Go(func() error {
-			return p.cluster.HandleDataInjection(gCtx, data, componentPath, idx)
+			return p.cluster.HandleDataInjection(gCtx, data, componentPath.DataInjections, idx)
 		})
 	}
 
