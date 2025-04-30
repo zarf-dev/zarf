@@ -101,10 +101,13 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 	l.Info("download start", "url", url)
 	start := time.Now()
 
-	// Get the data
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return fmt.Errorf("unable to download the file %s", url)
+		return fmt.Errorf("unable to create request for %s: %w", url, err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("unable to download the file %s: %w", url, err)
 	}
 	defer func() {
 		err2 := resp.Body.Close()

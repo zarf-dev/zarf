@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=../../../../zarf.schema.json
+kind: ZarfPackageConfig
+metadata:
+  name: extract-path
+
+x-untar: &base-untar
+  required: true
+  files:
+    - source: archive.tar
+      target: src/test/packages/00-extract-path/output.txt
+      shasum: 03ba204e50d126e4674c005e04d82e84c21366780af1f43bd54a37816b6ab340
+      extractPath: archive/content/data.txt
+  actions:
+    onCreate:
+      before:
+        - cmd: mkdir -p archive/content
+          mute: true
+        - cmd: echo "Hello World!" > archive/content/data.txt
+          mute: true
+        - cmd: tar -cf archive.tar archive
+          mute: true
+      onFailure:
+        - cmd: rm -f archive/content/* archive.tar
+      after:
+        - cmd: rm -f archive/content/* archive.tar && rmdir archive/content && rmdir archive
+          mute: true
+
+components:
+  - name: untar
+    only:
+      flavor: linux
+    <<: *base-untar
+  - name: untar
+    only:
+      flavor: darwin
+    <<: *base-untar
+  - name: untar
+    required: true
+    only:
+      flavor: windows
+    files:
+      - source: archive.tar
+        target: src/test/packages/00-extract-path/output.txt
+        shasum: 6ba6c3d1a3636d168baaa59a25b503a6160d9987f492cae4b279c8e77dc913f3
+        extractPath: archive/content/data.txt
+    actions:
+      onCreate:
+        before:
+          - cmd: mkdir -Force -Path archive/content
+            mute: true
+          - cmd: echo "Hello World!" | Out-File -FilePath "archive/content/data.txt" -Encoding UTF8
+            mute: true
+          - cmd: tar -cf archive.tar archive
+            mute: true
+        onFailure:
+          - cmd: Remove-Item -Path "archive/content/*", "archive.tar" -Force -ErrorAction SilentlyContinue
+        after:
+          - cmd: Remove-Item -Path "archive/content/*", "archive.tar" -Force -ErrorAction SilentlyContinue
+            mute: true
