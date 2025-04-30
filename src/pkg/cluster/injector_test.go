@@ -93,7 +93,7 @@ func TestInjector(t *testing.T) {
 	_, err = cs.CoreV1().Pods(pod.ObjectMeta.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	err = c.StopInjection(ctx)
+	err = c.StopInjection(ctx, "IPv4")
 	require.NoError(t, err)
 
 	for range 2 {
@@ -136,7 +136,7 @@ func TestInjector(t *testing.T) {
 		require.Equal(t, binData, cm.BinaryData["zarf-injector"])
 	}
 
-	err = c.StopInjection(ctx)
+	err = c.StopInjection(ctx, "IPv4")
 	require.NoError(t, err)
 
 	podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})

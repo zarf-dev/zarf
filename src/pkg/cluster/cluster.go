@@ -255,6 +255,8 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) error {
 			return fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 
+		s.PreferredIPFamily, err = c.DeterminePreferredIPFamily(ctx)
+
 		err = opts.GitServer.FillInEmptyValues()
 		if err != nil {
 			return err
@@ -301,6 +303,31 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) error {
 	}
 
 	return nil
+}
+
+func (c *Cluster) DeterminePreferredIPFamily(ctx context.Context) (string, error) {
+	l := logger.From(ctx)
+	l.Debug("checking if Zarf can create a Kubernetes Service with IPv4")
+	svcName := "zarf-ipv4-check"
+	svcAc := v1ac.Service(svcName, state.ZarfNamespaceName).
+		WithSpec(v1ac.ServiceSpec().
+			WithIPFamilies(corev1.IPv4Protocol).
+			WithPorts(
+				v1ac.ServicePort().WithPort(int32(5000)),
+			))
+	_, err := c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+	if err != nil {
+		if !kerrors.IsInvalid(err) {
+			return "", fmt.Errorf("unable to create Service: %w", err)
+		} else {
+			return "IPv6", nil
+		}
+	}
+	err = c.Clientset.CoreV1().Services(*svcAc.Namespace).Delete(ctx, svcName, metav1.DeleteOptions{})
+	if err != nil {
+		return "", fmt.Errorf("unable to delete Service: %w", err)
+	}
+	return "IPv4", nil
 }
 
 // LoadState utilizes the k8s Clientset to load and return the current state.State data or an empty state.State if no

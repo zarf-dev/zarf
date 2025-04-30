@@ -10,6 +10,7 @@ service:
   name: registry
   type: NodePort
   port: 5000
+  preferredIPFamily: "IPv4"
 
 resources: {}
 

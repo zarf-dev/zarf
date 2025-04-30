@@ -263,7 +263,7 @@ async fn main() {
 
     unpack(payload_sha);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:5000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("[::]:5000").await.unwrap();
     println!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, start_seed_registry()).await.unwrap();
     println!("Usage: {} <sha256sum>", args[1]);

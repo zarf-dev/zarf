@@ -15,7 +15,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/types"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -51,10 +50,11 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 			"STORAGE_CLASS": s.StorageClass,
 
 			// Registry info
-			"REGISTRY":           regInfo.Address,
-			"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
-			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
-			"REGISTRY_AUTH_PULL": regInfo.PullPassword,
+			"REGISTRY":            regInfo.Address,
+			"NODEPORT":            fmt.Sprintf("%d", regInfo.NodePort),
+			"PREFERRED_IP_FAMILY": s.PreferredIPFamily,
+			"REGISTRY_AUTH_PUSH":  regInfo.PushPassword,
+			"REGISTRY_AUTH_PULL":  regInfo.PullPassword,
 
 			// Git server info
 			"GIT_PUSH":      gitInfo.PushUsername,
@@ -74,7 +74,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
 
 		case "zarf-seed-registry", "zarf-registry":
-			builtinMap["SEED_REGISTRY"] = fmt.Sprintf("%s:%s", helpers.IPV4Localhost, config.ZarfSeedPort)
+			builtinMap["SEED_REGISTRY"] = fmt.Sprintf("%s:%s", "localhost", config.ZarfSeedPort)
 			htpasswd, err := generateHtpasswd(&regInfo)
 			if err != nil {
 				return templateMap, err
