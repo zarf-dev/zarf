@@ -127,7 +127,7 @@ func (ic *ImportChain) fetchOCISkeleton(ctx context.Context) error {
 		return nil
 	}
 
-	// FIXME(mkcp): support with internal/archive?
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	tu := archiver.Tar{
 		OverwriteExisting: true,
 		// removes /<component-name>/ from the paths

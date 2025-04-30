@@ -216,7 +216,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 	if err != nil {
 		return nil, "", err
 	}
-	// FIXME(mkcp): Support with internal/archive?
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	if err := archiver.Archive(tarFileList, tarPath); err != nil {
 		return nil, "", err
 	}

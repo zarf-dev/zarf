@@ -10,7 +10,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 )
 
-// ldflags github.com/zarf-dev/zarf/src/cmd.archivesVersion=x.x.x
+// ldflags github.com/zarf-dev/zarf/src/cmd.archiverVersion=x.x.x
 var archiverVersion string
 
 func newArchiverCommand() *cobra.Command {
@@ -23,7 +23,7 @@ func newArchiverCommand() *cobra.Command {
 
 	cmd.AddCommand(newArchiverCompressCommand())
 	cmd.AddCommand(newArchiverDecompressCommand())
-	// FIXME(mkcp): archivesVersion
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	cmd.AddCommand(newToolsVersionCmd("mholt/archives", archiverVersion))
 
 	return cmd

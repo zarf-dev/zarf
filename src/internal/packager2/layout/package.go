@@ -52,7 +52,7 @@ func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
-	// FIXME(mkcp): Support with internal/archive
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	err = archiver.Walk(tarPath, func(f archiver.File) error {
 		if f.IsDir() {
 			return nil
@@ -146,7 +146,7 @@ func (p *PackageLayout) GetSBOM(destPath string) (string, error) {
 		return "", &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
 	}
 	path := filepath.Join(destPath, p.Pkg.Metadata.Name)
-	// FIXME(mkcp): Support with internal/archive
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	err := archiver.Extract(filepath.Join(p.dirPath, SBOMTar), "", path)
 	if err != nil {
 		return "", err
@@ -171,7 +171,6 @@ func (p *PackageLayout) GetComponentDir(destPath, componentName string, ct Compo
 	defer os.RemoveAll(tmpDir)
 	// TODO (phillebaba): We are not using archiver.Extract here because there is a bug in Windows where the files will not be extracted properly from nested directories.
 	// https://github.com/zarf-dev/zarf/issues/3051
-	// FIXME(mkcp): Support with internal/archive
 	err = archiver.Unarchive(sourcePath, tmpDir)
 	if err != nil {
 		return "", err
@@ -213,7 +212,7 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 	for _, file := range files {
 		filePaths = append(filePaths, filepath.Join(p.dirPath, file.Name()))
 	}
-	// FIXME(mkcp): Support with internal/archive
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	err = archiver.Archive(filePaths, tarballPath)
 	if err != nil {
 		return fmt.Errorf("unable to create package: %w", err)

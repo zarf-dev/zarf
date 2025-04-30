@@ -281,7 +281,7 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		return rel, nil
 	}
 
-	// FIXME(mkcp): support with internal/archive?
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	tu := archiver.Tar{
 		OverwriteExisting: true,
 		// removes /<component-name>/ from the paths

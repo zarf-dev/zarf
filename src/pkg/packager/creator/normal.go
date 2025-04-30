@@ -401,7 +401,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 
-				// FIXME(mkcp): support with internal/archive?
+				// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 				err = archiver.Extract(compressedFile, file.ExtractPath, destinationDir)
 				if err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
@@ -413,7 +413,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 			}
 		} else {
 			if file.ExtractPath != "" {
-				// FIXME(mkcp): Support with internal/archive
+				// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 				if err := archiver.Extract(file.Source, file.ExtractPath, destinationDir); err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
 				}
