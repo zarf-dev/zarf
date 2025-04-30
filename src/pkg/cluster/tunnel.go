@@ -317,7 +317,6 @@ const (
 type Tunnel struct {
 	clientset    kubernetes.Interface
 	restConfig   *rest.Config
-	out          io.Writer
 	localPort    int
 	remotePort   int
 	namespace    string
@@ -336,7 +335,6 @@ func (c *Cluster) NewTunnel(namespace, resourceType, resourceName, urlSuffix str
 	return &Tunnel{
 		clientset:    c.Clientset,
 		restConfig:   c.RestConfig,
-		out:          io.Discard,
 		localPort:    local,
 		remotePort:   remote,
 		namespace:    namespace,
@@ -351,7 +349,7 @@ func (c *Cluster) NewTunnel(namespace, resourceType, resourceName, urlSuffix str
 // Wrap takes a function that returns an error and wraps it to check for tunnel errors as well.
 func (tunnel *Tunnel) Wrap(function func() error) error {
 	var err error
-	funcErrChan := make(chan error)
+	funcErrChan := make(chan error, 1)
 
 	go func() {
 		funcErrChan <- function()
@@ -402,7 +400,14 @@ func (tunnel *Tunnel) FullURL() string {
 
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
 func (tunnel *Tunnel) Close() {
-	close(tunnel.stopChan)
+	if tunnel.stopChan == nil {
+		return
+	}
+	select {
+	case <-tunnel.stopChan:
+	default:
+		close(tunnel.stopChan)
+	}
 }
 
 // establish opens a tunnel to a kubernetes resource, as specified by the provided tunnel struct.
@@ -458,14 +463,14 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 
 	l.Debug("using URL to create portforward", "url", portForwardCreateURL)
 
-	dialer, err := createDialer("POST", portForwardCreateURL, tunnel.restConfig)
+	dialer, err := createDialer(http.MethodPost, portForwardCreateURL, tunnel.restConfig)
 	if err != nil {
 		return "", fmt.Errorf("unable to create the dialer %w", err)
 	}
 
 	// Construct a new PortForwarder struct that manages the instructed port forward tunnel.
 	ports := []string{fmt.Sprintf("%d:%d", localPort, tunnel.remotePort)}
-	portforwarder, err := portforward.New(dialer, ports, tunnel.stopChan, tunnel.readyChan, tunnel.out, tunnel.out)
+	portforwarder, err := portforward.New(dialer, ports, tunnel.stopChan, tunnel.readyChan, io.Discard, io.Discard)
 	if err != nil {
 		return "", fmt.Errorf("unable to create the port forward: %w", err)
 	}
