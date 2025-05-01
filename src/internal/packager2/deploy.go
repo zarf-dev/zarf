@@ -71,6 +71,14 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		return fmt.Errorf("unable to populate variables: %w", err)
 	}
 
+	if pkgLayout.Pkg.IsInitConfig() {
+		for _, component := range pkgLayout.Pkg.Components {
+			if component.Name == "k3s" {
+				opts.ApplianceMode = true
+			}
+		}
+	}
+
 	d := deployer{
 		vc:          variableConfig,
 		hpaModified: false,
@@ -203,12 +211,6 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
 	isAgent := component.Name == "zarf-agent"
-	isK3s := component.Name == "k3s"
-
-	// FIXME, we can move this logic up a level
-	if isK3s {
-		opts.ApplianceMode = true
-	}
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if component.RequiresCluster() && d.s == nil {
@@ -270,9 +272,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	if component.RequiresCluster() {
 		// Setup the state in the config
 		if d.s == nil {
-			var err error
-			d.s, err = setupState(ctx, d.c, pkgLayout.Pkg)
-			if err != nil {
+			if err := d.setupState(ctx, d.c, pkgLayout.Pkg); err != nil {
 				return nil, err
 			}
 		}
@@ -490,8 +490,8 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 	return installedCharts, nil
 }
 
-// setupState fetches the current State from the k8s cluster and sets the packager to use it
-func setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackage) (*state.State, error) {
+// setupState fetches the current State from the k8s cluster and sets the deployer to use it
+func (d *deployer) setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackage) error {
 	l := logger.From(ctx)
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	l.Debug("loading the Zarf State from the Kubernetes cluster")
@@ -499,11 +499,11 @@ func setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackag
 	s, err := c.LoadState(ctx)
 	// We ignore the error if in YOLO mode because Zarf should not be initiated.
 	if err != nil && !pkg.Metadata.YOLO {
-		return nil, err
+		return err
 	}
 	// Only ignore state load error in yolo mode when secret could not be found.
 	if err != nil && !kerrors.IsNotFound(err) && pkg.Metadata.YOLO {
-		return nil, err
+		return err
 	}
 	if s == nil && pkg.Metadata.YOLO {
 		s = &state.State{}
@@ -514,11 +514,11 @@ func setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackag
 		zarfNamespace := cluster.NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
 		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 		if err != nil {
-			return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
+			return fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
 	}
 	if s == nil {
-		return nil, errors.New("cluster state should not be nil")
+		return errors.New("cluster state should not be nil")
 	}
 	if pkg.Metadata.YOLO && s.Distro != "YOLO" {
 		l.Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
@@ -526,7 +526,8 @@ func setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackag
 			"the pod or namespace label `zarf.dev/agent: ignore'.")
 	}
 
-	return s, nil
+	d.s = s
+	return nil
 }
 
 func (d *deployer) connectToCluster(ctx context.Context, pkg v1alpha1.ZarfPackage) error {
