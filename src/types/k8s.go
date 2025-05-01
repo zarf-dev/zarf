@@ -146,6 +146,10 @@ func (gs *GitServerInfo) FillInEmptyValues() error {
 		}
 	}
 
+	if gs.PushUsername == "" && gs.IsInternal() {
+		gs.PushUsername = ZarfGitPushUser
+	}
+
 	// Set read-user information if using an internal repository, otherwise copy from the push-user
 	if gs.PullUsername == "" {
 		if gs.IsInternal() {
@@ -236,6 +240,10 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 		if ri.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 		}
+	}
+
+	if ri.PushUsername == "" && ri.IsInternal() {
+		ri.PushUsername = ZarfRegistryPushUser
 	}
 
 	// Set pull-username if not provided by init flag
