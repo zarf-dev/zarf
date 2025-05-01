@@ -48,14 +48,9 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 		return pkg, nil, err
 	}
 
-	layerMap, err := s.AssembleLayers(ctx, pkg.Components, isSkeleton)
+	layersToPull, err := s.AssembleLayers(ctx, pkg.Components, isSkeleton, "")
 	if err != nil {
 		return pkg, nil, fmt.Errorf("unable to get published component image layers: %s", err.Error())
-	}
-
-	layersToPull, err := zoci.FilterLayers(layerMap, "")
-	if err != nil {
-		return pkg, nil, fmt.Errorf("unable to filter layers: %s", err.Error())
 	}
 
 	isPartial := true

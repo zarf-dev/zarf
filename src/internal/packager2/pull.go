@@ -178,13 +178,7 @@ func pullOCI(ctx context.Context, opts PullOCIOptions) (bool, string, error) {
 
 	// zarf creates layers around the contents of component primarily
 	// this assembles the layers for the components - whether filtered above or not
-	layerMap, err := remote.AssembleLayers(ctx, pkg.Components, isSkeleton(desc.Platform))
-	if err != nil {
-		return false, "", err
-	}
-
-	// filter will enable pulling parts of a package as required - IE OCI inspect
-	layersToPull, err := zoci.FilterLayers(layerMap, opts.InspectTarget)
+	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, isSkeleton(desc.Platform), opts.InspectTarget)
 	if err != nil {
 		return false, "", err
 	}

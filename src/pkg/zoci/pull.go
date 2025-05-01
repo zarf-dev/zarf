@@ -51,7 +51,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 }
 
 // AssembleLayers returns all layers for the given zarf package to pull from OCI.
-func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, isSkeleton bool) (map[string][]ocispec.Descriptor, error) {
+func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, isSkeleton bool, inspectTarget string) ([]ocispec.Descriptor, error) {
 	layerMap := make(map[string][]ocispec.Descriptor, 0)
 
 	// fetching the root manifest is the common denominator for all layers
@@ -100,7 +100,7 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 	}
 	layerMap[layout.SbomLayers] = sbomLayers
 
-	return layerMap, nil
+	return filterLayers(layerMap, inspectTarget)
 }
 
 // LayersFromComponents returns the layers for the given components to pull from OCI.
@@ -180,15 +180,12 @@ func (r *Remote) LayersFromImages(ctx context.Context, images map[string]bool) (
 }
 
 // FilterLayers filters the layers based on the inspect target.
-func FilterLayers(layerMap map[string][]ocispec.Descriptor, inspectTarget string) ([]ocispec.Descriptor, error) {
+func filterLayers(layerMap map[string][]ocispec.Descriptor, inspectTarget string) ([]ocispec.Descriptor, error) {
 	layers := make([]ocispec.Descriptor, 0)
 
 	switch inspectTarget {
 	case "":
-		layers = append(layers, layerMap[layout.MetadataLayers]...)
-		layers = append(layers, layerMap[layout.ComponentLayers]...)
-		layers = append(layers, layerMap[layout.ImageLayers]...)
-		layers = append(layers, layerMap[layout.SbomLayers]...)
+		layers = append(layers, layerMap[layout.AllLayers]...)
 	case "metadata":
 		layers = append(layers, layerMap[layout.MetadataLayers]...)
 	case "manifests":
