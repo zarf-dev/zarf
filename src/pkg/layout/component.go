@@ -138,6 +138,7 @@ func (c *Components) Unarchive(ctx context.Context, component v1alpha1.ZarfCompo
 
 	// TODO(mkcp): Bring in context and port to logger
 	l.Debug("unarchiving", "component", filepath.Base(tb))
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	if err := archiver.Unarchive(tb, c.Base); err != nil {
 		return err
 	}

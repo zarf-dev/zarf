@@ -171,6 +171,7 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture strin
 	if err != nil {
 		return false, "", err
 	}
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	err = archiver.Archive(allTheLayers, tarPath)
 	if err != nil {
 		return false, "", err
@@ -252,6 +253,7 @@ func pullHTTPFile(ctx context.Context, src, tarPath string) error {
 
 func nameFromMetadata(path string) (string, error) {
 	var pkg v1alpha1.ZarfPackage
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	err := archiver.Walk(path, func(f archiver.File) error {
 		if f.Name() == layout.ZarfYAML {
 			b, err := io.ReadAll(f)

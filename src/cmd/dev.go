@@ -535,6 +535,7 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 
 		extractedFile := filepath.Join(tmp, o.extractPath)
 
+		// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 		err = archiver.Extract(fileName, o.extractPath, tmp)
 		if err != nil {
 			return errors.Join(hashErr, err)

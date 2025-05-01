@@ -153,6 +153,7 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 	}
 	defer os.RemoveAll(tmpDir)
 	tarPath := filepath.Join(buildPath, ComponentsDir, component.Name) + ".tar"
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	err = archiver.Unarchive(tarPath, tmpDir)
 	if err != nil {
 		return nil, err
