@@ -18,7 +18,7 @@ title: Zarf 2025 Roadmap
   Improve package lifecycle operations, diagnostics, and user observability to make Zarf more usable and reliable in production.
 
 - **Workflow Stability & Expansion**
-  Mature the current package lifecycle, extend schema-based definitions, and reduce the learning curve for new users through simplification and documentation.
+  Mature the package lifecycle, extend schema-based definitions, and reduce the learning curve for new users through simplification and documentation.
 
 ---
 
@@ -28,19 +28,20 @@ title: Zarf 2025 Roadmap
 
 We began the year with a deliberate push to lay the groundwork for SDK support. This involves:
 
-- Refactoring internal logic to split the CLI from the shared library.
-- Establishing SDK entry points for Zarf functionality.
-- Introducing shared serialization and validation tooling to enable custom tooling built on Zarf.
+- Refactor internal logic to split the CLI from the shared library.
+- Establish SDK entry points for Zarf functionality.
+- Standardize on logging patterns for package lifecycle execution.
 
 Parallel to these efforts, we also focused on extending our test suite to cover decoupled components and ensure changes did not regress GA stability.
 
 ### Hardening & Observability (Q2 - Q3)
 
-As the architecture matured, attention turns to reliability and transparency:
+As the architecture matures, attention turns to reliability and transparency:
 
-- Added in-depth error messages and diagnostic metadata to simplify user troubleshooting.
-- Hardened lifecycle to recover from partial failures or restarts.
-- Standardize on logging patterns for package lifecycle execution.
+- Improve support for chaining packages and dynamic variable injection during deploy.
+- Enhance package and chart values patterns and enhance configuration opportunities.
+- Improve supply chain lifecycle with enhanced artifact delivery and discovery.
+- Harden lifecycle to recover from partial failures on deploy or remove.
 
 These upgrades strengthen Zarf's use in production pipelines and across disconnected systems.
 
@@ -48,9 +49,9 @@ These upgrades strengthen Zarf's use in production pipelines and across disconne
 
 Actively investing in enhancements that simplify and expand what Zarf can do:
 
-- Simplified authoring of `zarf.yaml` with clearer validation errors and editor integrations.
-- Improved support for chaining packages and dynamic variable injection during deploy.
-- Enhance chart values patterns and enhance configuration opportunities.
+- Add observable error messages and diagnostic metadata to simplify user troubleshooting.
+- Introduce schema enhancements from new features and deprecation removals.
+- Improve state management to enable more dynamic deployment scenarios and ensure resource traceability.
 
 We believe these improvements can assist in making zarf more operationally effective.
 
@@ -59,9 +60,11 @@ We believe these improvements can assist in making zarf more operationally effec
 Throughout the year, the Zarf team remains committed to open governance and community development:
 
 - Bi-weekly community meetups to showcase demos and field feature proposals.
-- RFC-based feature discussion process introduced to align internal and external contributors.
+- [Zarf Enhancements Proposal](https://github.com/zarf-dev/proposals) process introduced to align contributors and consumers of proposed features or changes.
 - Continued engagement with the OpenSSF Incubation process and secure software practices.
-- Creation and maintenance of learning materials.
+- Creation and maintenance of learning and community materials.
+- Improve sustainability and governance of the project.
+- Respond to Critical bug fixes and vulnerabilities.
 
 ---
 
