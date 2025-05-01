@@ -140,16 +140,16 @@ func (e *NoSBOMAvailableError) Error() string {
 }
 
 // GetSBOM outputs the SBOM data from the package to the give destination path.
-func (p *PackageLayout) GetSBOM(destPath string) (string, error) {
+func (p *PackageLayout) GetSBOM(destPath string) error {
 	if !p.Pkg.IsSBOMAble() {
-		return "", &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
+		return &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
 	}
-	path := filepath.Join(destPath, p.Pkg.Metadata.Name)
-	err := archiver.Extract(filepath.Join(p.DirPath, SBOMTar), "", path)
+	// FIXME give a specific error if the package was built without an SBOM
+	err := archiver.Extract(filepath.Join(p.DirPath, SBOMTar), "", destPath)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return path, nil
+	return nil
 }
 
 // GetComponentDir returns a path to the directory in the given component.

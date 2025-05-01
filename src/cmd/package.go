@@ -23,8 +23,10 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"oras.land/oras-go/v2/registry"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/dns"
@@ -256,6 +258,14 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
+	deployConfirmed, err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
+	if err != nil {
+		return err
+	}
+	if !deployConfirmed {
+		return fmt.Errorf("deployment cancelled")
+	}
+
 	deployedComponents, err := packager2.Deploy(ctx, pkgLayout, packager2.DeployOpts{
 		AdoptExistingResources: pkgConfig.DeployOpts.AdoptExistingResources,
 		Timeout:                pkgConfig.DeployOpts.Timeout,
@@ -281,6 +291,77 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 	message.PrintConnectStringTable(connectStrings)
 	return nil
+}
+
+func confirmDeploy(ctx context.Context, pkgLayout *layout2.PackageLayout, setVariables map[string]string) (bool, error) {
+	l := logger.From(ctx)
+	err := utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), true)
+	if err != nil {
+		l.Error("unable to print yaml", "error", err)
+	}
+
+	if pkgLayout.Pkg.IsSBOMAble() {
+		// Print the location that the user can view the package SBOMs from
+		//FIXME
+
+		SBOMExists := true
+		err := pkgLayout.GetSBOM("zarf-sbom")
+		if err != nil {
+			l.Error("unable to get SBOM", "error", err)
+		}
+		if SBOMExists {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return false, err
+			}
+			l.Info("this package has SBOMs available for review in a temporary directory", "directory", filepath.Join(cwd, "zarf-sbom"))
+		} else {
+			l.Warn("this package does NOT contain an SBOM.  If you require an SBOM, please contact the creator of this package to request a version that includes an SBOM.",
+				"name", pkgLayout.Pkg.Metadata.Name)
+		}
+	}
+
+	// Display prompt if not auto-confirmed
+	if config.CommonOptions.Confirm {
+		return config.CommonOptions.Confirm, nil
+	}
+
+	// Prompt the user for confirmation, on abort return false
+	prompt := &survey.Confirm{
+		Message: "deploy this Zarf package?",
+	}
+	var confirm bool
+	if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
+		// User aborted or declined, cancel the action
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func getPackageYAMLHints(pkg v1alpha1.ZarfPackage, setVariables map[string]string) map[string]string {
+	hints := map[string]string{}
+
+	for _, variable := range pkg.Variables {
+		value, present := setVariables[variable.Name]
+		if !present {
+			value = fmt.Sprintf("'%s' (default)", helpers.Truncate(variable.Default, 20, false))
+		} else {
+			value = fmt.Sprintf("'%s'", helpers.Truncate(value, 20, false))
+		}
+		if variable.Sensitive {
+			value = "'**sanitized**'"
+		}
+		hints = utils.AddRootListHint(hints, "name", variable.Name, fmt.Sprintf("currently set to %s", value))
+	}
+
+	hints = utils.AddRootHint(hints, "metadata", "information about this package\n")
+	hints = utils.AddRootHint(hints, "build", "info about the machine, zarf version, and user that created this package\n")
+	hints = utils.AddRootHint(hints, "components", "components selected for this operation")
+	hints = utils.AddRootHint(hints, "constants", "static values set by the package author")
+	hints = utils.AddRootHint(hints, "variables", "deployment-specific values that are set on each package deployment")
+
+	return hints
 }
 
 type packageMirrorResourcesOptions struct{}
@@ -652,7 +733,8 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	outputPath, err := pkgLayout.GetSBOM(o.outputDir)
+	outputPath := filepath.Join(o.outputDir, pkgLayout.Pkg.Metadata.Name)
+	err = pkgLayout.GetSBOM(outputPath)
 	if err != nil {
 		return fmt.Errorf("could not get SBOM: %w", err)
 	}

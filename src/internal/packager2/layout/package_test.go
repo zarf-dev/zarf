@@ -40,9 +40,9 @@ func TestPackageLayout(t *testing.T) {
 	require.ErrorContains(t, err, "component test could not access a files directory")
 
 	tmpDir = t.TempDir()
-	sbomPath, err := pkgLayout.GetSBOM(tmpDir)
+	err = pkgLayout.GetSBOM(tmpDir)
 	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(sbomPath, "compare.html"))
+	require.FileExists(t, filepath.Join(tmpDir, "compare.html"))
 
 	files, err := pkgLayout.Files()
 	require.NoError(t, err)
