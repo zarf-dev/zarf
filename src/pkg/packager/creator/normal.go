@@ -186,13 +186,14 @@ func (pc *PackageCreator) Assemble(ctx context.Context, dst *layout.PackagePaths
 			return err
 		}
 		pullCfg := images.PullConfig{
-			OCIConcurrency:       config.CommonOptions.OCIConcurrency,
-			DestinationDirectory: dst.Images.Base,
-			ImageList:            imageList,
-			Arch:                 arch,
-			RegistryOverrides:    pc.createOpts.RegistryOverrides,
-			CacheDirectory:       filepath.Join(cachePath, layout.ImagesDir),
-			PlainHTTP:            config.CommonOptions.PlainHTTP,
+			OCIConcurrency:        config.CommonOptions.OCIConcurrency,
+			DestinationDirectory:  dst.Images.Base,
+			ImageList:             imageList,
+			Arch:                  arch,
+			RegistryOverrides:     pc.createOpts.RegistryOverrides,
+			CacheDirectory:        filepath.Join(cachePath, layout.ImagesDir),
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
 
 		_, err = images.Pull(ctx, pullCfg)
@@ -400,6 +401,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 
+				// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 				err = archiver.Extract(compressedFile, file.ExtractPath, destinationDir)
 				if err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
@@ -411,6 +413,7 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 			}
 		} else {
 			if file.ExtractPath != "" {
+				// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 				if err := archiver.Extract(file.Source, file.ExtractPath, destinationDir); err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
 				}

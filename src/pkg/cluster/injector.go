@@ -28,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
@@ -68,7 +69,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	if err != nil {
 		return err
 	}
-	cm := v1ac.ConfigMap("rust-binary", ZarfNamespaceName).
+	cm := v1ac.ConfigMap("rust-binary", state.ZarfNamespaceName).
 		WithBinaryData(map[string][]byte{
 			"zarf-injector": b,
 		})
@@ -77,7 +78,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return err
 	}
 
-	svcAc := v1ac.Service("zarf-injector", ZarfNamespaceName).
+	svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
 		WithSpec(v1ac.ServiceSpec().
 			WithType(corev1.ServiceTypeNodePort).
 			WithPorts(
@@ -120,15 +121,15 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	start := time.Now()
 	l := logger.From(ctx)
 	l.Debug("deleting injector resources")
-	err := c.Clientset.CoreV1().Pods(ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
+	err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
-	err = c.Clientset.CoreV1().Services(ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
+	err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
-	err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
@@ -143,14 +144,14 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	listOpts := metav1.ListOptions{
 		LabelSelector: selector.String(),
 	}
-	err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
 	if err != nil {
 		return err
 	}
 
 	// This is needed because labels were not present in payload config maps previously.
 	// Without this injector will fail if the config maps exist from a previous Zarf version.
-	cmList, err := c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+	cmList, err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -158,7 +159,7 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 		if !strings.HasPrefix(cm.Name, "zarf-payload-") {
 			continue
 		}
-		err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).Delete(ctx, cm.Name, metav1.DeleteOptions{})
+		err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, cm.Name, metav1.DeleteOptions{})
 		if err != nil {
 			return err
 		}
@@ -166,7 +167,7 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 
 	// TODO: Replace with wait package in the future.
 	err = wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
-		_, err := c.Clientset.CoreV1().Pods(ZarfNamespaceName).Get(ctx, "injector", metav1.GetOptions{})
+		_, err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Get(ctx, "injector", metav1.GetOptions{})
 		if kerrors.IsNotFound(err) {
 			return true, nil
 		}
@@ -215,6 +216,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 	if err != nil {
 		return nil, "", err
 	}
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	if err := archiver.Archive(tarFileList, tarPath); err != nil {
 		return nil, "", err
 	}
@@ -229,14 +231,14 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 	for i, data := range chunks {
 		fileName := fmt.Sprintf("zarf-payload-%03d", i)
 
-		cm := v1ac.ConfigMap(fileName, ZarfNamespaceName).
+		cm := v1ac.ConfigMap(fileName, state.ZarfNamespaceName).
 			WithLabels(map[string]string{
 				"zarf-injector": "payload",
 			}).
 			WithBinaryData(map[string][]byte{
 				fileName: data,
 			})
-		_, err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+		_, err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return nil, "", err
 		}
@@ -345,7 +347,7 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 			WithSubPath(filename))
 	}
 
-	pod := v1ac.Pod("injector", ZarfNamespaceName).
+	pod := v1ac.Pod("injector", state.ZarfNamespaceName).
 		WithLabels(map[string]string{
 			"app":      "zarf-injector",
 			AgentLabel: "ignore",

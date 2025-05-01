@@ -38,7 +38,7 @@ func TestYOLOMode(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(t.Context())
 	require.NoError(t, err)
 	tunnel, err := c.Connect(context.Background(), "doom")
 	require.NoError(t, err)

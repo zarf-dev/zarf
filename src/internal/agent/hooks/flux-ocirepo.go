@@ -59,7 +59,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		l.Warn("Detected a semver OCI ref, continuing but will be unable to guarantee against collisions if multiple OCI artifacts with the same name are brought in from different registries", "ref", src.Spec.Reference.SemVer)
 	}
 
-	zarfState, err := cluster.LoadZarfState(ctx)
+	zarfState, err := cluster.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}

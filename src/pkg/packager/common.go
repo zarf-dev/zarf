@@ -12,8 +12,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/zarf-dev/zarf/src/pkg/logger"
-
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -22,8 +20,11 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/types"
@@ -35,7 +36,7 @@ type Packager struct {
 	ctx            context.Context
 	cfg            *types.PackagerConfig
 	variableConfig *variables.VariableConfig
-	state          *types.ZarfState
+	state          *state.State
 	cluster        *cluster.Cluster
 	layout         *layout.PackagePaths
 	hpaModified    bool
@@ -153,11 +154,11 @@ func (p *Packager) connectToCluster(ctx context.Context) error {
 		return nil
 	}
 
-	cluster, err := cluster.NewClusterWithWait(ctx)
+	c, err := cluster.NewWithWait(ctx)
 	if err != nil {
 		return err
 	}
-	p.cluster = cluster
+	p.cluster = c
 
 	return p.attemptClusterChecks(ctx)
 }
@@ -188,7 +189,12 @@ func (p *Packager) attemptClusterChecks(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	s, err := p.cluster.LoadState(ctx)
+	if err != nil {
+		// don't return the err here as s may not yet be setup
+		return nil
+	}
+	return pki.CheckForExpiredCert(ctx, s.AgentTLS)
 }
 
 // validatePackageArchitecture validates that the package architecture matches the target cluster architecture.

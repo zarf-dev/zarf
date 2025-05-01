@@ -45,7 +45,7 @@ func TestDataInjection(t *testing.T) {
 	require.Contains(t, stdOut, ".zarf-injection-")
 
 	// need target to equal svc that we are trying to connect to call checkForZarfConnectLabel
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	require.NoError(t, err)
 	tunnel, err := c.Connect(ctx, "kiwix")
 	require.NoError(t, err)

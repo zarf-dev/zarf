@@ -49,4 +49,5 @@ zarf package inspect [ PACKAGE_SOURCE ] [flags]
 * [zarf package inspect images](/commands/zarf_package_inspect_images/)	 - List all container images contained in the package
 * [zarf package inspect manifests](/commands/zarf_package_inspect_manifests/)	 - Template and output all manifests and charts in a package
 * [zarf package inspect sbom](/commands/zarf_package_inspect_sbom/)	 - Output the package SBOM (Software Bill Of Materials) to the specified directory
+* [zarf package inspect values-files](/commands/zarf_package_inspect_values-files/)	 - Creates, templates, and outputs the values-files to be sent to each chart
 

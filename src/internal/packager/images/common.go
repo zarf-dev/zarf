@@ -6,12 +6,14 @@ package images
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -23,29 +25,34 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
 // PullConfig is the configuration for pulling images.
 type PullConfig struct {
-	OCIConcurrency       int
-	DestinationDirectory string
-	ImageList            []transform.Image
-	Arch                 string
-	RegistryOverrides    map[string]string
-	CacheDirectory       string
-	PlainHTTP            bool
+	OCIConcurrency        int
+	DestinationDirectory  string
+	ImageList             []transform.Image
+	Arch                  string
+	RegistryOverrides     map[string]string
+	CacheDirectory        string
+	PlainHTTP             bool
+	InsecureSkipTLSVerify bool
+	ResponseHeaderTimeout time.Duration
 }
 
 // PushConfig is the configuration for pushing images.
 type PushConfig struct {
-	OCIConcurrency  int
-	SourceDirectory string
-	ImageList       []transform.Image
-	RegistryInfo    types.RegistryInfo
-	NoChecksum      bool
-	Arch            string
-	Retries         int
-	PlainHTTP       bool
+	OCIConcurrency        int
+	SourceDirectory       string
+	ImageList             []transform.Image
+	RegistryInfo          types.RegistryInfo
+	NoChecksum            bool
+	Arch                  string
+	Retries               int
+	PlainHTTP             bool
+	InsecureSkipTLSVerify bool
+	ResponseHeaderTimeout time.Duration
 }
 
 const (
@@ -86,6 +93,8 @@ func buildScheme(plainHTTP bool) string {
 }
 
 func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 	url := fmt.Sprintf("%s://%s/v2/", buildScheme(plainHTTP), registryURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -161,6 +170,15 @@ func saveIndexToOCILayout(dir string, idx ocispec.Index) error {
 		return fmt.Errorf("failed to save changes to index.json: %w", err)
 	}
 	return nil
+}
+
+func orasTransport(insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration) *retry.Transport {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// Enable / Disable TLS verification based on the config
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecureSkipTLSVerify}
+	// Users frequently run into servers hanging indefinitely, if the server doesn't send headers in 10 seconds then we timeout to avoid this
+	transport.ResponseHeaderTimeout = responseHeaderTimeout
+	return retry.NewTransport(transport)
 }
 
 // NoopOpt is a no-op option for crane.

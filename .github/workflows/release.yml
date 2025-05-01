@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-release:
-    runs-on: ubuntu-latest
+    runs-on: large-ubuntu-zarf-release
     permissions:
       id-token: write
       packages: write
@@ -93,7 +93,7 @@ jobs:
           retention-days: 1
 
   validate-release:
-    runs-on: ubuntu-latest
+    runs-on: large-ubuntu-zarf-release
     needs: build-release
     steps:
       # Checkout the repo and setup the tooling for this job
@@ -103,7 +103,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download build artifacts
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: build-artifacts
           path: build/
@@ -117,10 +117,6 @@ jobs:
         run: |
           chmod +x build/zarf
 
-      # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
-      - name: Cleanup files
-        uses: ./.github/actions/cleanup-files
-
       # Build the example packages and run the tests
       - name: Build examples and run tests
         run: |
@@ -131,7 +127,7 @@ jobs:
         uses: ./.github/actions/save-logs
 
   create-release:
-    runs-on: ubuntu-latest
+    runs-on: large-ubuntu-zarf-release
     needs: validate-release
     environment: release
     permissions:
@@ -152,7 +148,7 @@ jobs:
         uses: ./.github/actions/install-tools
 
       - name: Download build artifacts
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: build-artifacts
           path: build/
@@ -165,10 +161,6 @@ jobs:
           else
             echo "BREW_NAME=zarf" >> $GITHUB_ENV
           fi
-
-      # Before we run the release we need to aggressively cleanup files to reduce disk pressure
-      - name: Cleanup files
-        uses: ./.github/actions/cleanup-files
 
       - name: Setup release ENV vars
         run: |

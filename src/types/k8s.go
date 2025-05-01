@@ -10,6 +10,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 )
 
 // ComponentStatus defines the deployment status of a Zarf component within a package.
@@ -38,13 +39,6 @@ const (
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 )
 
-// GeneratedPKI is a struct for storing generated PKI data.
-type GeneratedPKI struct {
-	CA   []byte `json:"ca"`
-	Cert []byte `json:"cert"`
-	Key  []byte `json:"key"`
-}
-
 // ZarfState is maintained as a secret in the Zarf namespace to track Zarf init data.
 type ZarfState struct {
 	// Indicates if Zarf was initialized while deploying its own k8s cluster
@@ -56,7 +50,7 @@ type ZarfState struct {
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
 	// PKI certificate information for the agent pods Zarf manages
-	AgentTLS GeneratedPKI `json:"agentTLS"`
+	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`
@@ -152,6 +146,10 @@ func (gs *GitServerInfo) FillInEmptyValues() error {
 		}
 	}
 
+	if gs.PushUsername == "" && gs.IsInternal() {
+		gs.PushUsername = ZarfGitPushUser
+	}
+
 	// Set read-user information if using an internal repository, otherwise copy from the push-user
 	if gs.PullUsername == "" {
 		if gs.IsInternal() {
@@ -242,6 +240,10 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 		if ri.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 		}
+	}
+
+	if ri.PushUsername == "" && ri.IsInternal() {
+		ri.PushUsername = ZarfRegistryPushUser
 	}
 
 	// Set pull-username if not provided by init flag

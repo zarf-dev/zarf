@@ -75,6 +75,7 @@ func TestResolveImports(t *testing.T) {
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
 			require.NoError(t, err)
 			expectedPkg, err := ParseZarfPackage(b)
+
 			require.NoError(t, err)
 			require.Equal(t, expectedPkg, resolvedPkg)
 		})
@@ -156,6 +157,30 @@ func TestValidateComponentCompose(t *testing.T) {
 			},
 			expectedErrs: []string{
 				"URL is not a valid OCI URL",
+			},
+		},
+		{
+			name: "package template path provided",
+			component: v1alpha1.ZarfComponent{
+				Name: "template",
+				Import: v1alpha1.ZarfComponentImport{
+					Path: "###ZARF_PKG_TMPL_PATH###",
+				},
+			},
+			expectedErrs: []string{
+				"package templates are not supported for import path or URL",
+			},
+		},
+		{
+			name: "package template URL provided",
+			component: v1alpha1.ZarfComponent{
+				Name: "template",
+				Import: v1alpha1.ZarfComponentImport{
+					URL: "oci://registry.com/my-image:###ZARF_PKG_TMPL_TAG###",
+				},
+			},
+			expectedErrs: []string{
+				"package templates are not supported for import path or URL",
 			},
 		},
 	}

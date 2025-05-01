@@ -140,13 +140,14 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 			return nil, err
 		}
 		pullCfg := images.PullConfig{
-			OCIConcurrency:       opt.OCIConcurrency,
-			DestinationDirectory: filepath.Join(buildPath, ImagesDir),
-			ImageList:            componentImages,
-			Arch:                 pkg.Metadata.Architecture,
-			RegistryOverrides:    opt.RegistryOverrides,
-			CacheDirectory:       filepath.Join(cachePath, ImagesDir),
-			PlainHTTP:            config.CommonOptions.PlainHTTP,
+			OCIConcurrency:        opt.OCIConcurrency,
+			DestinationDirectory:  filepath.Join(buildPath, ImagesDir),
+			ImageList:             componentImages,
+			Arch:                  pkg.Metadata.Architecture,
+			RegistryOverrides:     opt.RegistryOverrides,
+			CacheDirectory:        filepath.Join(cachePath, ImagesDir),
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
 		manifests, err := images.Pull(ctx, pullCfg)
 		if err != nil {
@@ -310,8 +311,8 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 		"setVariables", setVariables,
 	)
 
-	if err := validateFlavorExists(pkg, flavor); err != nil {
-		return err
+	if !hasFlavoredComponent(pkg, flavor) {
+		l.Warn("flavor not used in package", "flavor", flavor)
 	}
 	if err := lint.ValidatePackage(pkg); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
@@ -338,16 +339,13 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	return nil
 }
 
-func validateFlavorExists(pkg v1alpha1.ZarfPackage, flavor string) error {
-	if flavor == "" {
-		return nil
-	}
+func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
 	for _, comp := range pkg.Components {
 		if comp.Only.Flavor == flavor {
-			return nil
+			return true
 		}
 	}
-	return fmt.Errorf("could not find flavor %s in package definition %s", flavor, pkg.Metadata.Name)
+	return false
 }
 
 func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
@@ -409,6 +407,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				if err := utils.DownloadToFile(ctx, file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
+				// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 				err = archiver.Extract(compressedFile, file.ExtractPath, destinationDir)
 				if err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
@@ -420,6 +419,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 			}
 		} else {
 			if file.ExtractPath != "" {
+				// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 				if err := archiver.Extract(filepath.Join(packagePath, file.Source), file.ExtractPath, destinationDir); err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
 				}
@@ -612,6 +612,7 @@ func assembleSkeletonComponent(component v1alpha1.ZarfComponent, packagePath, bu
 		destinationDir := filepath.Dir(dst)
 
 		if file.ExtractPath != "" {
+			// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 			if err := archiver.Extract(filepath.Join(packagePath, file.Source), file.ExtractPath, destinationDir); err != nil {
 				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
 			}

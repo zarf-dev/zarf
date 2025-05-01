@@ -17,9 +17,9 @@
   },
   "dependencies": {
     "@astrojs/check": "^0.5.10",
-    "@astrojs/starlight": "^0.21.2",
+    "@astrojs/starlight": "^0.34.1",
     "@fontsource/source-code-pro": "^5.0.17",
-    "astro": "^4.16.18",
+    "astro": "^5.7.7",
     "mermaid": "^10.9.3",
     "rehype-autolink-headings": "^7.1.0",
     "sharp": "^0.33.3",
