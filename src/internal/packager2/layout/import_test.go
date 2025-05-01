@@ -25,7 +25,7 @@ func TestResolveImportsCircular(t *testing.T) {
 
 	b, err := os.ReadFile(filepath.Join("./testdata/import/circular/first", ZarfYAML))
 	require.NoError(t, err)
-	pkg, err := ParseZarfPackage(b)
+	pkg, err := ParseZarfPackage(ctx, b)
 	require.NoError(t, err)
 
 	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{})
@@ -66,7 +66,7 @@ func TestResolveImports(t *testing.T) {
 
 			b, err := os.ReadFile(filepath.Join(tc.path, ZarfYAML))
 			require.NoError(t, err)
-			pkg, err := ParseZarfPackage(b)
+			pkg, err := ParseZarfPackage(ctx, b)
 			require.NoError(t, err)
 
 			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{})
@@ -74,7 +74,7 @@ func TestResolveImports(t *testing.T) {
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
 			require.NoError(t, err)
-			expectedPkg, err := ParseZarfPackage(b)
+			expectedPkg, err := ParseZarfPackage(ctx, b)
 
 			require.NoError(t, err)
 			require.Equal(t, expectedPkg, resolvedPkg)

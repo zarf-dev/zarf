@@ -278,7 +278,7 @@ func LoadPackageDefinition(ctx context.Context, packagePath, flavor string, setV
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	pkg, err := ParseZarfPackage(b)
+	pkg, err := ParseZarfPackage(ctx, b)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
