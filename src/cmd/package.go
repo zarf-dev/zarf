@@ -27,7 +27,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
@@ -303,14 +302,7 @@ func (o *packageMirrorResourcesOptions) preRun(_ *cobra.Command, _ []string) {
 
 func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
-	var c *cluster.Cluster
-	if dns.IsServiceURL(pkgConfig.InitOpts.RegistryInfo.Address) || dns.IsServiceURL(pkgConfig.InitOpts.GitServer.Address) {
-		var err error
-		c, err = cluster.New(ctx)
-		if err != nil {
-			return err
-		}
-	}
+
 	src, err := choosePackage(ctx, args)
 	if err != nil {
 		return err
@@ -335,6 +327,31 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		// Cleanup package files
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
+
+	// We don't yet know if the targets are internal or external
+	c, _ := cluster.New(ctx) //nolint:errcheck
+
+	if pkgConfig.InitOpts.RegistryInfo.Address == "" {
+		// if empty flag & zarf state available - execute
+		// otherwise return error
+		state, err := c.LoadState(ctx)
+		if err != nil {
+			return fmt.Errorf("no registry URL provided and no zarf state found")
+		}
+		// default registry address will be 127.0.0.1:31999 - we need to update this in order to tunnel
+		state.RegistryInfo.Address = "http://zarf-docker-registry.zarf.svc.cluster.local:5000"
+		logger.From(ctx).Debug("No registry URL provided, using zarf state", "address", state.RegistryInfo.Address)
+		pkgConfig.InitOpts.RegistryInfo = state.RegistryInfo
+	}
+
+	if pkgConfig.InitOpts.GitServer.Address == "" {
+		state, err := c.LoadState(ctx)
+		if err != nil {
+			return fmt.Errorf("no git URL provided and no zarf state found")
+		}
+		logger.From(ctx).Debug("No git URL provided, using zarf state", "address", state.GitServer.Address)
+		pkgConfig.InitOpts.GitServer = state.GitServer
+	}
 
 	mirrorOpt := packager2.MirrorOptions{
 		Cluster:               c,
