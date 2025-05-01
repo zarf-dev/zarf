@@ -300,25 +300,21 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout2.PackageLayout, setVar
 		l.Error("unable to print yaml", "error", err)
 	}
 
-	if pkgLayout.Pkg.IsSBOMAble() {
-		// Print the location that the user can view the package SBOMs from
-		//FIXME
-
-		SBOMExists := true
-		err := pkgLayout.GetSBOM("zarf-sbom")
+	if pkgLayout.Pkg.IsSBOMAble() && !pkgLayout.ContainsSBOM() {
+		l.Warn("this package does NOT contain an SBOM.  If you require an SBOM, please contact the creator of this package to request a version that includes an SBOM.",
+			"name", pkgLayout.Pkg.Metadata.Name)
+	}
+	if pkgLayout.ContainsSBOM() {
+		cwd, err := os.Getwd()
 		if err != nil {
-			l.Error("unable to get SBOM", "error", err)
+			return false, err
 		}
-		if SBOMExists {
-			cwd, err := os.Getwd()
-			if err != nil {
-				return false, err
-			}
-			l.Info("this package has SBOMs available for review in a temporary directory", "directory", filepath.Join(cwd, "zarf-sbom"))
-		} else {
-			l.Warn("this package does NOT contain an SBOM.  If you require an SBOM, please contact the creator of this package to request a version that includes an SBOM.",
-				"name", pkgLayout.Pkg.Metadata.Name)
+		SBOMPath := filepath.Join(cwd, "zarf-sbom")
+		err = pkgLayout.GetSBOM(SBOMPath)
+		if err != nil {
+			return false, err
 		}
+		l.Info("this package has SBOMs available for review in a temporary directory", "directory", SBOMPath)
 	}
 
 	// Display prompt if not auto-confirmed

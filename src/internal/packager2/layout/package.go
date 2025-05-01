@@ -139,9 +139,17 @@ func (e *NoSBOMAvailableError) Error() string {
 	return fmt.Sprintf("zarf package %s does not have an SBOM available", e.pkgName)
 }
 
+func (p *PackageLayout) ContainsSBOM() bool {
+	if !p.Pkg.IsSBOMAble() {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(p.DirPath, SBOMTar))
+	return err == nil
+}
+
 // GetSBOM outputs the SBOM data from the package to the give destination path.
 func (p *PackageLayout) GetSBOM(destPath string) error {
-	if !p.Pkg.IsSBOMAble() {
+	if !p.ContainsSBOM() {
 		return &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
 	}
 	// FIXME give a specific error if the package was built without an SBOM
