@@ -349,7 +349,7 @@ func TestGetSBOM(t *testing.T) {
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
-	require.NoFileExists(t, filepath.Join(pkgLayout.DirPath, SBOMTar))
+	require.NoFileExists(t, filepath.Join(pkgLayout.dirPath, SBOMTar))
 	// Ensure Zarf errors correctly
 	err = pkgLayout.GetSBOM(tmpdir)
 	var noSBOMErr *NoSBOMAvailableError

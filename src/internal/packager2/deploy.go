@@ -231,7 +231,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := d.c.StartInjection(ctx, pkgLayout.DirPath, pkgLayout.GetImageDir(), component.Images)
+		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDir(), component.Images)
 		if err != nil {
 			return nil, err
 		}
@@ -642,7 +642,7 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 		}
 
 		// Replace temp target directory and home directory
-		target, err := config.GetAbsHomePath(strings.Replace(file.Target, "###ZARF_TEMP###", pkgLayout.DirPath, 1))
+		target, err := config.GetAbsHomePath(strings.Replace(file.Target, "###ZARF_TEMP###", pkgLayout.DirPath(), 1))
 		if err != nil {
 			return err
 		}

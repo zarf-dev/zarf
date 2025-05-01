@@ -31,7 +31,7 @@ import (
 
 // PackageLayout manages the layout for a package.
 type PackageLayout struct {
-	DirPath string
+	dirPath string
 	Pkg     v1alpha1.ZarfPackage
 }
 
@@ -41,6 +41,10 @@ type PackageLayoutOptions struct {
 	SkipSignatureValidation bool
 	IsPartial               bool
 	Filter                  filters.ComponentFilterStrategy
+}
+
+func (p *PackageLayout) DirPath() string {
+	return p.dirPath
 }
 
 // LoadFromTar unpacks the give compressed package and loads it.
@@ -107,7 +111,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 		return nil, err
 	}
 	pkgLayout := &PackageLayout{
-		DirPath: dirPath,
+		dirPath: dirPath,
 		Pkg:     pkg,
 	}
 	err = validatePackageIntegrity(pkgLayout, opt.IsPartial)
@@ -123,7 +127,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 
 // Cleanup removes any temporary directories created.
 func (p *PackageLayout) Cleanup() error {
-	err := os.RemoveAll(p.DirPath)
+	err := os.RemoveAll(p.dirPath)
 	if err != nil {
 		return err
 	}
@@ -143,7 +147,7 @@ func (p *PackageLayout) ContainsSBOM() bool {
 	if !p.Pkg.IsSBOMAble() {
 		return false
 	}
-	_, err := os.Stat(filepath.Join(p.DirPath, SBOMTar))
+	_, err := os.Stat(filepath.Join(p.dirPath, SBOMTar))
 	return err == nil
 }
 
@@ -153,7 +157,7 @@ func (p *PackageLayout) GetSBOM(destPath string) error {
 		return &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
 	}
 	// FIXME give a specific error if the package was built without an SBOM
-	err := archiver.Extract(filepath.Join(p.DirPath, SBOMTar), "", destPath)
+	err := archiver.Extract(filepath.Join(p.dirPath, SBOMTar), "", destPath)
 	if err != nil {
 		return err
 	}
@@ -162,7 +166,7 @@ func (p *PackageLayout) GetSBOM(destPath string) error {
 
 // GetComponentDir returns a path to the directory in the given component.
 func (p *PackageLayout) GetComponentDir(destPath, componentName string, ct ComponentDir) (string, error) {
-	sourcePath := filepath.Join(p.DirPath, ComponentsDir, fmt.Sprintf("%s.tar", componentName))
+	sourcePath := filepath.Join(p.dirPath, ComponentsDir, fmt.Sprintf("%s.tar", componentName))
 	_, err := os.Stat(sourcePath)
 	if errors.Is(err, os.ErrNotExist) {
 		return "", fmt.Errorf("component %s does not exist in package: %w", componentName, err)
@@ -199,7 +203,7 @@ func (p *PackageLayout) GetComponentDir(destPath, componentName string, ct Compo
 
 func (p *PackageLayout) GetImageDir() string {
 	// Use the manifest within the index.json to load the specific image we want
-	return filepath.Join(p.DirPath, ImagesDir)
+	return filepath.Join(p.dirPath, ImagesDir)
 }
 
 func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
@@ -210,13 +214,13 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 		return err
 	}
 	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
-	files, err := os.ReadDir(p.DirPath)
+	files, err := os.ReadDir(p.dirPath)
 	if err != nil {
 		return err
 	}
 	var filePaths []string
 	for _, file := range files {
-		filePaths = append(filePaths, filepath.Join(p.DirPath, file.Name()))
+		filePaths = append(filePaths, filepath.Join(p.dirPath, file.Name()))
 	}
 	err = archiver.Archive(filePaths, tarballPath)
 	if err != nil {
@@ -244,11 +248,11 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 // Files returns a map off all the files in the package.
 func (p *PackageLayout) Files() (map[string]string, error) {
 	files := map[string]string{}
-	err := filepath.Walk(p.DirPath, func(path string, info fs.FileInfo, err error) error {
+	err := filepath.Walk(p.dirPath, func(path string, info fs.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
-		rel, err := filepath.Rel(p.DirPath, path)
+		rel, err := filepath.Rel(p.dirPath, path)
 		if err != nil {
 			return err
 		}
@@ -263,15 +267,15 @@ func (p *PackageLayout) Files() (map[string]string, error) {
 }
 
 func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
-	_, err := os.Stat(filepath.Join(pkgLayout.DirPath, ZarfYAML))
+	_, err := os.Stat(filepath.Join(pkgLayout.dirPath, ZarfYAML))
 	if err != nil {
 		return err
 	}
-	_, err = os.Stat(filepath.Join(pkgLayout.DirPath, Checksums))
+	_, err = os.Stat(filepath.Join(pkgLayout.dirPath, Checksums))
 	if err != nil {
 		return err
 	}
-	err = helpers.SHAsMatch(filepath.Join(pkgLayout.DirPath, Checksums), pkgLayout.Pkg.Metadata.AggregateChecksum)
+	err = helpers.SHAsMatch(filepath.Join(pkgLayout.dirPath, Checksums), pkgLayout.Pkg.Metadata.AggregateChecksum)
 	if err != nil {
 		return err
 	}
@@ -281,11 +285,11 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 		return err
 	}
 	// Remove files which are not in the checksums.
-	delete(packageFiles, filepath.Join(pkgLayout.DirPath, ZarfYAML))
-	delete(packageFiles, filepath.Join(pkgLayout.DirPath, Checksums))
-	delete(packageFiles, filepath.Join(pkgLayout.DirPath, Signature))
+	delete(packageFiles, filepath.Join(pkgLayout.dirPath, ZarfYAML))
+	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Checksums))
+	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Signature))
 
-	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath, Checksums))
+	b, err := os.ReadFile(filepath.Join(pkgLayout.dirPath, Checksums))
 	if err != nil {
 		return err
 	}
@@ -306,7 +310,7 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 			return fmt.Errorf("invalid checksum line: %s", line)
 		}
 
-		path := filepath.Join(pkgLayout.DirPath, rel)
+		path := filepath.Join(pkgLayout.dirPath, rel)
 		_, ok := packageFiles[path]
 		if !ok && isPartial {
 			delete(packageFiles, path)
@@ -335,7 +339,7 @@ func validatePackageSignature(ctx context.Context, pkgLayout *PackageLayout, pub
 		return nil
 	}
 
-	signaturePath := filepath.Join(pkgLayout.DirPath, Signature)
+	signaturePath := filepath.Join(pkgLayout.dirPath, Signature)
 	sigExist := true
 	_, err := os.Stat(signaturePath)
 	if err != nil {
@@ -358,7 +362,7 @@ func validatePackageSignature(ctx context.Context, pkgLayout *PackageLayout, pub
 		Offline:    true,
 		IgnoreTlog: true,
 	}
-	err = cmd.Exec(ctx, filepath.Join(pkgLayout.DirPath, ZarfYAML))
+	err = cmd.Exec(ctx, filepath.Join(pkgLayout.dirPath, ZarfYAML))
 	if err != nil {
 		return fmt.Errorf("package signature did not match the provided key: %w", err)
 	}
