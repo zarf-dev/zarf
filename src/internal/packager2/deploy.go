@@ -36,6 +36,7 @@ import (
 )
 
 type DeployOpts struct {
+	cluster.InitStateOptions
 	// Deploy time set variables
 	SetVariables map[string]string
 	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
@@ -153,7 +154,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		var charts []types.InstalledChart
 		var deployErr error
 		if pkgLayout.Pkg.IsInitConfig() {
-			charts, deployErr = deployInitComponent(ctx, pkgLayout, component)
+			charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
 		} else {
 			charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, opts)
 		}
@@ -195,8 +196,61 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 	return deployedComponents, nil
 }
 
-func deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent) ([]types.InstalledChart, error) {
-	return nil, nil
+func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) ([]types.InstalledChart, error) {
+	l := logger.From(ctx)
+	hasExternalRegistry := opts.InitStateOptions.RegistryInfo.Address != ""
+	isSeedRegistry := component.Name == "zarf-seed-registry"
+	isRegistry := component.Name == "zarf-registry"
+	isInjector := component.Name == "zarf-injector"
+	isAgent := component.Name == "zarf-agent"
+	isK3s := component.Name == "k3s"
+
+	// FIXME, we can move this logic up a level
+	if isK3s {
+		opts.ApplianceMode = true
+	}
+
+	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
+	if component.RequiresCluster() && d.s == nil {
+		err := d.c.InitState(ctx, opts.InitStateOptions)
+		if err != nil {
+			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
+		}
+	}
+
+	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
+		l.Info("skipping init package component since external registry information was provided", "component", component.Name)
+		return nil, nil
+	}
+
+	if isRegistry {
+		// If we are deploying the registry then mark the HPA as "modified" to set it to Min later
+		d.hpaModified = true
+	}
+
+	// Before deploying the seed registry, start the injector
+	if isSeedRegistry {
+		err := d.c.StartInjection(ctx, pkgLayout.DirPath, pkgLayout.GetImageDir(), component.Images)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Skip image checksum if component is agent.
+	// Skip image push if component is seed registry.
+	charts, err := d.deployComponent(ctx, pkgLayout, component, isAgent, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// Do cleanup for when we inject the seed registry during initialization
+	if isSeedRegistry {
+		if err := d.c.StopInjection(ctx); err != nil {
+			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
+		}
+	}
+
+	return charts, nil
 }
 
 func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgPush bool, opts DeployOpts) ([]types.InstalledChart, error) {
@@ -255,7 +309,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 
 	if hasRepos {
-		if err = pushReposToRepository(ctx, d.c, pkgLayout, d.s.GitServer, 3); err != nil {
+		if err = pushReposToRepository(ctx, d.c, pkgLayout, d.s.GitServer, opts.Retries); err != nil {
 			return nil, fmt.Errorf("unable to push the repos to the repository: %w", err)
 		}
 	}
@@ -277,11 +331,20 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 
 	charts := []types.InstalledChart{}
-	if hasCharts || hasManifests {
-		charts, err = d.installChartAndManifests(ctx, pkgLayout, component, opts)
+	if hasCharts {
+		helmCharts, err := d.installCharts(ctx, pkgLayout, component, opts)
 		if err != nil {
 			return nil, err
 		}
+		charts = append(charts, helmCharts...)
+	}
+
+	if hasManifests {
+		chartsFromManifests, err := d.installManifests(ctx, pkgLayout, component, opts)
+		if err != nil {
+			return nil, err
+		}
+		charts = append(charts, chartsFromManifests...)
 	}
 
 	if err = actions.Run(ctx, onDeploy.Defaults, onDeploy.After, d.vc); err != nil {
@@ -305,7 +368,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	return charts, nil
 }
 
-func (d *deployer) installChartAndManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) ([]types.InstalledChart, error) {
+func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) ([]types.InstalledChart, error) {
 	installedCharts := []types.InstalledChart{}
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -365,12 +428,21 @@ func (d *deployer) installChartAndManifests(ctx context.Context, pkgLayout *layo
 		installedCharts = append(installedCharts, types.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
 	}
 
-	//FIXME make sure there is more than one manifest
+	return installedCharts, nil
+}
+
+func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) ([]types.InstalledChart, error) {
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(tmpDir)
 	manifestDir, err := pkgLayout.GetComponentDir(tmpDir, component.Name, layout2.ManifestsComponentDir)
 	if err != nil {
 		return nil, err
 	}
 
+	installedCharts := []types.InstalledChart{}
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
 			if helpers.InvalidPath(filepath.Join(manifestDir, manifest.Files[idx])) {
