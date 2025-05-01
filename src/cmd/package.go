@@ -858,10 +858,15 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageRemoveOptions) preRun(_ *cobra.Command, _ []string) {
+func (o *packageRemoveOptions) preRun(cmd *cobra.Command, _ []string) {
 	// If --insecure was provided, set --skip-signature-validation to match
 	if config.CommonOptions.Insecure {
 		pkgConfig.PkgOpts.SkipSignatureValidation = true
+	}
+
+	// Check for the required --confirm flag and provide a clear error message for remediation
+	if !config.CommonOptions.Confirm {
+		logger.From(cmd.Context()).Error("The --confirm flag is required to remove a package.")
 	}
 }
 
