@@ -256,11 +256,30 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	if err := packager2.Deploy(ctx, pkgLayout, packager2.DeployOpts{
-		SetVariables: pkgConfig.PkgOpts.SetVariables,
-	}); err != nil {
+	deployedComponents, err := packager2.Deploy(ctx, pkgLayout, packager2.DeployOpts{
+		AdoptExistingResources: pkgConfig.DeployOpts.AdoptExistingResources,
+		Timeout:                pkgConfig.DeployOpts.Timeout,
+		Retries:                pkgConfig.PkgOpts.Retries,
+		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
+		PlainHTTP:              config.CommonOptions.PlainHTTP,
+		InsecureTLSSkipVerify:  config.CommonOptions.InsecureSkipTLSVerify,
+		SetVariables:           pkgConfig.PkgOpts.SetVariables,
+	})
+	if err != nil {
 		return fmt.Errorf("failed to deploy package: %w", err)
 	}
+	if pkgLayout.Pkg.IsInitConfig() {
+		return nil
+	}
+	connectStrings := types.ConnectStrings{}
+	for _, comp := range deployedComponents {
+		for _, chart := range comp.InstalledCharts {
+			for k, v := range chart.ConnectStrings {
+				connectStrings[k] = v
+			}
+		}
+	}
+	message.PrintConnectStringTable(connectStrings)
 	return nil
 }
 

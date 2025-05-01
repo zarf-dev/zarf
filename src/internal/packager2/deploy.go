@@ -61,14 +61,14 @@ type deployer struct {
 	hpaModified bool
 }
 
-func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpts) error {
+func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpts) ([]types.DeployedComponent, error) {
 	l := logger.From(ctx)
 	l.Info("starting deploy")
 	start := time.Now()
 	variableConfig := template.GetZarfVariableConfig(ctx)
 	variableConfig.SetConstants(pkgLayout.Pkg.Constants)
 	if err := variableConfig.PopulateVariables(pkgLayout.Pkg.Variables, opts.SetVariables); err != nil {
-		return fmt.Errorf("unable to populate variables: %w", err)
+		return nil, fmt.Errorf("unable to populate variables: %w", err)
 	}
 
 	if pkgLayout.Pkg.IsInitConfig() {
@@ -90,11 +90,10 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, opts)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	//FIXME
-	fmt.Println(deployedComponents)
-	return nil
+	l.Debug("deployment complete", "duration", time.Since(start))
+	return deployedComponents, nil
 }
 
 func (d *deployer) resetRegistryHPA(ctx context.Context) {
@@ -287,12 +286,11 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 	}
 
-	err := populateComponentAndStateTemplates(ctx, component.Name, d.s, d.vc)
-	if err != nil {
+	if err := populateComponentAndStateTemplates(ctx, component.Name, d.s, d.vc); err != nil {
 		return nil, err
 	}
 
-	if err = actions.Run(ctx, onDeploy.Defaults, onDeploy.Before, d.vc); err != nil {
+	if err := actions.Run(ctx, onDeploy.Defaults, onDeploy.Before, d.vc); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -309,7 +307,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 
 	if hasRepos {
-		if err = pushReposToRepository(ctx, d.c, pkgLayout, d.s.GitServer, opts.Retries); err != nil {
+		if err := pushReposToRepository(ctx, d.c, pkgLayout, d.s.GitServer, opts.Retries); err != nil {
 			return nil, fmt.Errorf("unable to push the repos to the repository: %w", err)
 		}
 	}
@@ -347,7 +345,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		charts = append(charts, chartsFromManifests...)
 	}
 
-	if err = actions.Run(ctx, onDeploy.Defaults, onDeploy.After, d.vc); err != nil {
+	if err := actions.Run(ctx, onDeploy.Defaults, onDeploy.After, d.vc); err != nil {
 		return nil, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -355,13 +353,12 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		healthCheckContext, cancel := context.WithTimeout(ctx, opts.Timeout)
 		defer cancel()
 		l.Info("running health checks")
-		if err = healthchecks.Run(healthCheckContext, d.c.Watcher, component.HealthChecks); err != nil {
+		if err := healthchecks.Run(healthCheckContext, d.c.Watcher, component.HealthChecks); err != nil {
 			return nil, fmt.Errorf("health checks failed: %w", err)
 		}
 	}
 
-	err = g.Wait()
-	if err != nil {
+	if err := g.Wait(); err != nil {
 		return nil, err
 	}
 	l.Debug("done deploying component", "name", component.Name, "duration", time.Since(start))
