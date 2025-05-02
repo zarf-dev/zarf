@@ -238,17 +238,12 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(pkgConfig.PkgOpts.OptionalComponents, config.CommonOptions.Confirm),
-	)
-
 	loadOpt := packager2.LoadOptions{
 		Source:                  packageSource,
 		Shasum:                  pkgConfig.PkgOpts.Shasum,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
-		Filter:                  filter,
+		Filter:                  filters.Empty(),
 	}
 	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {
@@ -264,6 +259,17 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 	if !deployConfirmed {
 		return fmt.Errorf("deployment cancelled")
+	}
+
+	// filter after confirmation to allow users to view the entire package
+	filter := filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+		filters.ForDeploy(pkgConfig.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm),
+	)
+
+	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
+	if err != nil {
+		return err
 	}
 
 	deployedComponents, err := packager2.Deploy(ctx, pkgLayout, packager2.DeployOpts{
@@ -293,9 +299,9 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	return nil
 }
 
-func confirmDeploy(ctx context.Context, pkgLayout *layout2.PackageLayout, setVariables map[string]string) (bool, error) {
+func confirmDeploy(ctx context.Context, pkgLayout *layout2.PackageLayout, setVariables map[string]string) (deployConfirmed bool, err error) {
 	l := logger.From(ctx)
-	err := utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), true)
+	err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), true)
 	if err != nil {
 		l.Error("unable to print yaml", "error", err)
 	}
@@ -314,6 +320,9 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout2.PackageLayout, setVar
 		if err != nil {
 			return false, err
 		}
+		defer func() {
+			err = errors.Join(err, os.RemoveAll(SBOMPath))
+		}()
 		l.Info("this package has SBOMs available for review in a temporary directory", "directory", SBOMPath)
 	}
 

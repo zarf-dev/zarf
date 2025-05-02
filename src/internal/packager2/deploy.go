@@ -17,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
@@ -26,6 +27,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/types"
@@ -36,7 +38,6 @@ import (
 )
 
 type DeployOpts struct {
-	cluster.InitStateOptions
 	// Deploy time set variables
 	SetVariables map[string]string
 	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
@@ -50,6 +51,9 @@ type DeployOpts struct {
 	OCIConcurrency        int
 	PlainHTTP             bool
 	InsecureTLSSkipVerify bool
+	GitServer             types.GitServerInfo
+	RegistryInfo          types.RegistryInfo
+	ArtifactServer        types.ArtifactServerInfo
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -69,14 +73,6 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	variableConfig.SetConstants(pkgLayout.Pkg.Constants)
 	if err := variableConfig.PopulateVariables(pkgLayout.Pkg.Variables, opts.SetVariables); err != nil {
 		return nil, fmt.Errorf("unable to populate variables: %w", err)
-	}
-
-	if pkgLayout.Pkg.IsInitConfig() {
-		for _, component := range pkgLayout.Pkg.Components {
-			if component.Name == "k3s" {
-				opts.ApplianceMode = true
-			}
-		}
 	}
 
 	d := deployer{
@@ -163,7 +159,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		if pkgLayout.Pkg.IsInitConfig() {
 			charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
 		} else {
-			charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, opts)
+			charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, false, opts)
 		}
 
 		onDeploy := component.Actions.OnDeploy
@@ -205,7 +201,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) ([]types.InstalledChart, error) {
 	l := logger.From(ctx)
-	hasExternalRegistry := opts.InitStateOptions.RegistryInfo.Address != ""
+	hasExternalRegistry := opts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "zarf-seed-registry"
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
@@ -213,7 +209,18 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if component.RequiresCluster() && d.s == nil {
-		err := d.c.InitState(ctx, opts.InitStateOptions)
+		applianceMode := false
+		for _, component := range pkgLayout.Pkg.Components {
+			if component.Name == "k3s" {
+				applianceMode = true
+			}
+		}
+		err := d.c.InitState(ctx, cluster.InitStateOptions{
+			GitServer:      opts.GitServer,
+			RegistryInfo:   opts.RegistryInfo,
+			ArtifactServer: opts.ArtifactServer,
+			ApplianceMode:  applianceMode,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
 		}
@@ -239,7 +246,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Skip image checksum if component is agent.
 	// Skip image push if component is seed registry.
-	charts, err := d.deployComponent(ctx, pkgLayout, component, isAgent, opts)
+	charts, err := d.deployComponent(ctx, pkgLayout, component, isAgent, isSeedRegistry, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +261,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	return charts, nil
 }
 
-func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgPush bool, opts DeployOpts) ([]types.InstalledChart, error) {
+func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOpts) ([]types.InstalledChart, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -301,7 +308,27 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 
 	if hasImages {
-		if err := pushImagesToRegistry(ctx, pkgLayout, d.s.RegistryInfo, false, opts.PlainHTTP, opts.OCIConcurrency, opts.Retries, opts.InsecureTLSSkipVerify); err != nil {
+		refs := []transform.Image{}
+		for _, img := range component.Images {
+			ref, err := transform.ParseImageRef(img)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create ref for image %s: %w", img, err)
+			}
+			refs = append(refs, ref)
+		}
+		pushConfig := images.PushConfig{
+			OCIConcurrency:        opts.OCIConcurrency,
+			SourceDirectory:       pkgLayout.GetImageDir(),
+			RegistryInfo:          d.s.RegistryInfo,
+			ImageList:             refs,
+			PlainHTTP:             opts.PlainHTTP,
+			NoChecksum:            noImgChecksum,
+			Arch:                  pkgLayout.Pkg.Build.Architecture,
+			Retries:               opts.Retries,
+			InsecureSkipTLSVerify: opts.InsecureTLSSkipVerify,
+		}
+		err := images.Push(ctx, pushConfig)
+		if err != nil {
 			return nil, fmt.Errorf("unable to push images to the registry: %w", err)
 		}
 	}

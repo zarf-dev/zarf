@@ -78,7 +78,7 @@ func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	}
 	err := images.Push(ctx, pushConfig)
 	if err != nil {
-		return fmt.Errorf("failed to mirror images: %w", err)
+		return fmt.Errorf("failed to push images: %w", err)
 	}
 	return nil
 }
