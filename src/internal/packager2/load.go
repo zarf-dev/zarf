@@ -115,7 +115,7 @@ func loadFromCluster(ctx context.Context, source string, cluster *cluster.Cluste
 }
 
 // fetchPackage fetches or assembles the package tar for different source types.
-func fetchPackage(ctx context.Context, srcType string, source string, shasum string, architecture string, inspectTarget string, workDir string, filter filters.ComponentFilterStrategy) (bool, string, error) {
+func fetchPackage(ctx context.Context, srcType string, source string, shasum string, architecture string, inspectTarget InspectTarget, workDir string, filter filters.ComponentFilterStrategy) (bool, string, error) {
 	tarPath := filepath.Join(workDir, "data.tar.zst")
 	switch srcType {
 	case "oci":

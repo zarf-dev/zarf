@@ -27,15 +27,17 @@ import (
 )
 
 type ResourceType string
+type InspectTarget string
 
 const (
 	ManifestResource   ResourceType = "manifest"
 	ChartResource      ResourceType = "chart"
 	ValuesFileResource ResourceType = "valuesfile"
 
-	SbomTarget       = "sbom"
-	MetadataTarget   = "metadata"
-	ComponentsTarget = "components"
+	NoTarget         InspectTarget = ""
+	SbomTarget       InspectTarget = "sbom"
+	MetadataTarget   InspectTarget = "metadata"
+	ComponentsTarget InspectTarget = "components"
 )
 
 // Resource contains a Kubernetes Manifest or Chart
@@ -403,19 +405,7 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 }
 
 // loadInspectPackageLayout replicates the Load process while adding inspect targets not utilized in the primary LoadPackage function.
-func loadInspectPackageLayout(ctx context.Context, source, architecture, inspectTarget string, cluster *cluster.Cluster, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) (*layout.PackageLayout, error) {
-
-	// create map[string]bool to track the inspect targets
-	inspectTargets := map[string]bool{
-		SbomTarget:       true, // captures inspecting the sbom
-		MetadataTarget:   true, // captures inspecting the definition and images
-		ComponentsTarget: true, // captures inspecting the manifests and values files
-	}
-
-	// Check if the inspect target is valid
-	if _, ok := inspectTargets[inspectTarget]; !ok {
-		return nil, fmt.Errorf("invalid inspect target: %s", inspectTarget)
-	}
+func loadInspectPackageLayout(ctx context.Context, source, architecture string, inspectTarget InspectTarget, cluster *cluster.Cluster, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) (*layout.PackageLayout, error) {
 
 	// Identify the source type
 	srcType, err := identifySource(source)
