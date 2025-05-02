@@ -23,7 +23,7 @@ const (
 	// DefaultConcurrency is the default concurrency used for operations
 	DefaultConcurrency = 3
 	// AllLayers is used to indicate all layers should be referenced
-	AllLayers = "all"
+	AllLayers = ""
 	// MetadataLayers is used to indicate metadata layers (zarf.yaml, signature, ) should be referenced
 	MetadataLayers = "metadata"
 	// ImageLayers is used to indicate image layers should be referenced
@@ -31,7 +31,7 @@ const (
 	// ComponentLayers is used to indicate component layers (component.tar) should be referenced
 	ComponentLayers = "components"
 	//  SbomLayers is used to indicate SBOM layers (sbom.tar) should be referenced
-	SbomLayers = "sboms"
+	SbomLayers = "sbom"
 )
 
 // Remote is a wrapper around the Oras remote repository with zarf specific functions
