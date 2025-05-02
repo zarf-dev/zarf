@@ -167,7 +167,7 @@ func templateValuesFiles(chart v1alpha1.ZarfChart, valuesDir string, variableCon
 	for idx := range chart.ValuesFiles {
 		valueFilePath := helm.StandardValuesName(valuesDir, chart, idx)
 		if err := variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
-			return fmt.Errorf("error templating the values file: %w", err)
+			return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
 		}
 	}
 	return nil
