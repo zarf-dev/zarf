@@ -18,4 +18,4 @@ registry_image_tag = '3.0.0'
 
 # The image reference to use for the optional git-server Zarf deploys
 gitea_image = 'gitea/gitea:1.21.5-rootless'
-gitea_helm_repo = 'dl.gitea.io/charts'
+gitea_helm_repo = 'https://dl.gitea.io/charts'
