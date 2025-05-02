@@ -56,6 +56,7 @@ func TestDevInspectManifests(t *testing.T) {
 			deploySetVariables: map[string]string{
 				"REPLICAS": "2",
 				"PORT":     "8080",
+				"LABEL":    "httpd",
 			},
 		},
 		{

@@ -165,6 +165,7 @@ func TestPackageInspectManifests(t *testing.T) {
 			setVariables: map[string]string{
 				"REPLICAS": "2",
 				"PORT":     "8080",
+				"LABEL":    "httpd",
 			},
 		},
 		{

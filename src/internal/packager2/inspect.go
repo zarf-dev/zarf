@@ -101,11 +101,8 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayo
 						}
 					}
 				}
-				for idx := range chart.ValuesFiles {
-					valueFilePath := helm.StandardValuesName(valuesDir, chart, idx)
-					if err := variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
-						return InspectPackageResourcesResults{}, fmt.Errorf("error templating the values file: %w", err)
-					}
+				if err := templateValuesFiles(chart, valuesDir, variableConfig); err != nil {
+					return InspectPackageResourcesResults{}, err
 				}
 
 				helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, chartOverrides)
@@ -164,6 +161,16 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayo
 	}
 
 	return InspectPackageResourcesResults{Resources: resources}, nil
+}
+
+func templateValuesFiles(chart v1alpha1.ZarfChart, valuesDir string, variableConfig *variables.VariableConfig) error {
+	for idx := range chart.ValuesFiles {
+		valueFilePath := helm.StandardValuesName(valuesDir, chart, idx)
+		if err := variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
+			return fmt.Errorf("error templating the values file: %w", err)
+		}
+	}
+	return nil
 }
 
 type InspectDefinitionResourcesOptions struct {
