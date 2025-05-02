@@ -16,4 +16,4 @@ spec:
       - name: httpd
         image: httpd:alpine3.18
         ports:
-        - containerPort: 8080
+        - containerPort: {{ .Values.port }}

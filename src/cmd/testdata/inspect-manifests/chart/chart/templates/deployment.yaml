@@ -5,12 +5,12 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: httpd
+      app: {{ .Values.label }}
   replicas: {{ .Values.replicaCount }}
   template:
     metadata:
       labels:
-        app: httpd
+        app: {{ .Values.label }}
     spec:
       containers:
       - name: httpd
