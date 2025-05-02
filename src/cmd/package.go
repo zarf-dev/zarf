@@ -249,7 +249,10 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-type packageMirrorResourcesOptions struct{}
+type packageMirrorResourcesOptions struct {
+	imagesOnly bool
+	reposOnly  bool
+}
 
 func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 	o := &packageMirrorResourcesOptions{}
@@ -290,6 +293,11 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
 
+	// Flags for specifying which resources to mirror
+	cmd.Flags().BoolVar(&o.imagesOnly, "images", false, "mirror only the images")
+	cmd.Flags().BoolVar(&o.reposOnly, "repos", false, "mirror only the git repositories")
+	cmd.MarkFlagsMutuallyExclusive("images", "repos")
+
 	return cmd
 }
 
@@ -297,6 +305,12 @@ func (o *packageMirrorResourcesOptions) preRun(_ *cobra.Command, _ []string) {
 	// If --insecure was provided, set --skip-signature-validation to match
 	if config.CommonOptions.Insecure {
 		pkgConfig.PkgOpts.SkipSignatureValidation = true
+	}
+
+	// post flag validation - perform both if neither were set
+	if !o.imagesOnly && !o.reposOnly {
+		o.imagesOnly = true
+		o.reposOnly = true
 	}
 }
 
@@ -334,45 +348,70 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		images += len(component.Images)
 		repos += len(component.Repos)
 	}
-	logger.From(ctx).Info("Package contains images and repos", "images", images, "repos", repos)
+	logger.From(ctx).Debug("Package contains images and repos", "images", images, "repos", repos)
 
 	// We don't yet know if the targets are internal or external
 	c, _ := cluster.New(ctx) //nolint:errcheck
 
-	if pkgConfig.InitOpts.RegistryInfo.Address == "" {
-		// if empty flag & zarf state available - execute
-		// otherwise return error
-		state, err := c.LoadState(ctx)
-		if err != nil {
-			return fmt.Errorf("no registry URL provided and no zarf state found")
+	if o.imagesOnly {
+		if images == 0 {
+			return fmt.Errorf("no images found in package to mirror")
 		}
-		logger.From(ctx).Debug("No registry URL provided, using zarf state", "address", state.RegistryInfo.Address)
-		pkgConfig.InitOpts.RegistryInfo = state.RegistryInfo
+		logger.From(ctx).Info("Mirroring images", "images", images)
+		if pkgConfig.InitOpts.RegistryInfo.Address == "" {
+			// if empty flag & zarf state available - execute
+			// otherwise return error
+			state, err := c.LoadState(ctx)
+			if err != nil {
+				return fmt.Errorf("no registry URL provided and no zarf state found")
+			}
+			logger.From(ctx).Debug("No registry URL provided, using zarf state", "address", state.RegistryInfo.Address)
+			pkgConfig.InitOpts.RegistryInfo = state.RegistryInfo
+		}
+		mirrorOpt := packager2.MirrorOptions{
+			Cluster:               c,
+			PkgLayout:             pkgLayout,
+			RegistryInfo:          pkgConfig.InitOpts.RegistryInfo,
+			NoImageChecksum:       pkgConfig.MirrorOpts.NoImgChecksum,
+			Retries:               pkgConfig.PkgOpts.Retries,
+			OCIConcurrency:        config.CommonOptions.OCIConcurrency,
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		}
+		err = packager2.MirrorImages(ctx, mirrorOpt)
+		if err != nil {
+			return err
+		}
 	}
 
-	if pkgConfig.InitOpts.GitServer.Address == "" {
-		state, err := c.LoadState(ctx)
-		if err != nil {
-			return fmt.Errorf("no git URL provided and no zarf state found")
+	if o.reposOnly {
+		if repos == 0 {
+			return fmt.Errorf("no repos found in package to mirror")
 		}
-		logger.From(ctx).Debug("No git URL provided, using zarf state", "address", state.GitServer.Address)
-		pkgConfig.InitOpts.GitServer = state.GitServer
-	}
+		logger.From(ctx).Info("Mirroring repos", "repos", repos)
+		if pkgConfig.InitOpts.GitServer.Address == "" {
+			state, err := c.LoadState(ctx)
+			if err != nil {
+				return fmt.Errorf("no git URL provided and no zarf state found")
+			}
+			logger.From(ctx).Debug("No git URL provided, using zarf state", "address", state.GitServer.Address)
+			pkgConfig.InitOpts.GitServer = state.GitServer
+		}
 
-	mirrorOpt := packager2.MirrorOptions{
-		Cluster:               c,
-		PkgLayout:             pkgLayout,
-		RegistryInfo:          pkgConfig.InitOpts.RegistryInfo,
-		GitInfo:               pkgConfig.InitOpts.GitServer,
-		NoImageChecksum:       pkgConfig.MirrorOpts.NoImgChecksum,
-		Retries:               pkgConfig.PkgOpts.Retries,
-		OCIConcurrency:        config.CommonOptions.OCIConcurrency,
-		PlainHTTP:             config.CommonOptions.PlainHTTP,
-		InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
-	}
-	err = packager2.Mirror(ctx, mirrorOpt)
-	if err != nil {
-		return err
+		mirrorOpt := packager2.MirrorOptions{
+			Cluster:               c,
+			PkgLayout:             pkgLayout,
+			GitInfo:               pkgConfig.InitOpts.GitServer,
+			NoImageChecksum:       pkgConfig.MirrorOpts.NoImgChecksum,
+			Retries:               pkgConfig.PkgOpts.Retries,
+			OCIConcurrency:        config.CommonOptions.OCIConcurrency,
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		}
+		err = packager2.MirrorRepos(ctx, mirrorOpt)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
