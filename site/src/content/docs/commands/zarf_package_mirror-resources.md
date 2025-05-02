@@ -52,10 +52,12 @@ $ zarf package mirror-resources <your-package.tar.zst> \
       --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push' (default "zarf-git-user")
       --git-url string                  External git server url to use for this Zarf cluster
   -h, --help                            help for mirror-resources
+      --images                          mirror only the images
       --no-img-checksum                 Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images.
       --registry-push-password string   Password for the push-user to connect to the registry
       --registry-push-username string   Username to access to the registry Zarf is configured to use (default "zarf-push")
       --registry-url string             External registry url address to use for this Zarf cluster
+      --repos                           mirror only the git repositories
       --retries int                     Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
       --shasum string                   Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'
       --skip-signature-validation       Skip validating the signature of the Zarf package
