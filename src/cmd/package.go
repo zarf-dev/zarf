@@ -328,6 +328,14 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
+	images, repos := 0, 0
+	// Let's count the images and repos in the package
+	for _, component := range pkgLayout.Pkg.Components {
+		images += len(component.Images)
+		repos += len(component.Repos)
+	}
+	logger.From(ctx).Info("Package contains images and repos", "images", images, "repos", repos)
+
 	// We don't yet know if the targets are internal or external
 	c, _ := cluster.New(ctx) //nolint:errcheck
 
@@ -338,8 +346,6 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		if err != nil {
 			return fmt.Errorf("no registry URL provided and no zarf state found")
 		}
-		// default registry address will be 127.0.0.1:31999 - we need to update this in order to tunnel
-		state.RegistryInfo.Address = "http://zarf-docker-registry.zarf.svc.cluster.local:5000"
 		logger.From(ctx).Debug("No registry URL provided, using zarf state", "address", state.RegistryInfo.Address)
 		pkgConfig.InitOpts.RegistryInfo = state.RegistryInfo
 	}
