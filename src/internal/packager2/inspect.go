@@ -48,6 +48,7 @@ type Resource struct {
 
 type InspectPackageResourcesOptions struct {
 	Architecture            string
+	Components              string
 	Source                  string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
@@ -65,7 +66,7 @@ func InspectPackageResources(ctx context.Context, opts InspectPackageResourcesOp
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
 	}
-	pkgLayout, err := loadInspectPackageLayout(ctx, opts.Source, opts.Architecture, ComponentsTarget, nil, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
+	pkgLayout, err := loadInspectPackageLayout(ctx, opts.Source, opts.Architecture, ComponentsTarget, nil, filters.BySelectState(opts.Components), opts.PublicKeyPath, opts.SkipSignatureValidation)
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
 	}
@@ -304,7 +305,7 @@ type InspectPackageDefinitionOptions struct {
 func InspectPackageDefinition(ctx context.Context, opts InspectPackageDefinitionOptions) (InspectPackageDefinitionResult, error) {
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
-	pkgLayout, err := loadInspectPackageLayout(ctx, opts.Source, opts.Architecture, "metadata", cluster, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
+	pkgLayout, err := loadInspectPackageLayout(ctx, opts.Source, opts.Architecture, MetadataTarget, cluster, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
 	if err != nil {
 		return InspectPackageDefinitionResult{}, err
 	}

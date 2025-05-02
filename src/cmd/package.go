@@ -463,6 +463,7 @@ func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) 
 	resourceOpts := packager2.InspectPackageResourcesOptions{
 		Source:                  src,
 		SkipSignatureValidation: o.skipSignatureValidation,
+		Components:              o.components,
 		Architecture:            config.GetArch(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SetVariables:            o.setVariables,

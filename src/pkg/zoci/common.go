@@ -22,6 +22,16 @@ const (
 	SkeletonArch = "skeleton"
 	// DefaultConcurrency is the default concurrency used for operations
 	DefaultConcurrency = 3
+	// AllLayers is used to indicate all layers should be referenced
+	AllLayers = "all"
+	// MetadataLayers is used to indicate metadata layers (zarf.yaml, signature, ) should be referenced
+	MetadataLayers = "metadata"
+	// ImageLayers is used to indicate image layers should be referenced
+	ImageLayers = "images"
+	// ComponentLayers is used to indicate component layers (component.tar) should be referenced
+	ComponentLayers = "components"
+	//  SbomLayers is used to indicate SBOM layers (sbom.tar) should be referenced
+	SbomLayers = "sboms"
 )
 
 // Remote is a wrapper around the Oras remote repository with zarf specific functions

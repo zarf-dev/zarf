@@ -61,7 +61,7 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 	}
 
 	// Store all layers
-	layerMap[layout.AllLayers] = root.Layers
+	layerMap[AllLayers] = root.Layers
 
 	// We always pull the metadata layers provided we can locate them
 	alwaysPull := make([]ocispec.Descriptor, 0)
@@ -71,7 +71,7 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 			alwaysPull = append(alwaysPull, desc)
 		}
 	}
-	layerMap[layout.MetadataLayers] = alwaysPull
+	layerMap[MetadataLayers] = alwaysPull
 	// component layers are required for standard pulls and manifest inspects
 	pkg, err := r.FetchZarfYAML(ctx)
 	if err != nil {
@@ -81,7 +81,7 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 	if err != nil {
 		return nil, err
 	}
-	layerMap[layout.ComponentLayers] = componentLayers
+	layerMap[ComponentLayers] = componentLayers
 	// there may not be any image layers - let's create the slice such that map key is present
 	imageLayers := make([]ocispec.Descriptor, 0)
 	if len(images) > 0 && !isSkeleton {
@@ -91,14 +91,14 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 			return nil, err
 		}
 	}
-	layerMap[layout.ImageLayers] = imageLayers
+	layerMap[ImageLayers] = imageLayers
 	// there may not be any sbom layers - let's create the slice such that map key is present
 	sbomLayers := make([]ocispec.Descriptor, 0)
 	sbomsDescriptor := root.Locate(layout.SBOMTar)
 	if !oci.IsEmptyDescriptor(sbomsDescriptor) {
 		sbomLayers = append(sbomLayers, sbomsDescriptor)
 	}
-	layerMap[layout.SbomLayers] = sbomLayers
+	layerMap[SbomLayers] = sbomLayers
 
 	return filterLayers(layerMap, inspectTarget)
 }
@@ -185,18 +185,18 @@ func filterLayers(layerMap map[string][]ocispec.Descriptor, inspectTarget string
 
 	switch inspectTarget {
 	case "":
-		layers = append(layers, layerMap[layout.AllLayers]...)
+		layers = append(layers, layerMap[AllLayers]...)
 	case "metadata":
-		layers = append(layers, layerMap[layout.MetadataLayers]...)
+		layers = append(layers, layerMap[MetadataLayers]...)
 	case "manifests":
-		layers = append(layers, layerMap[layout.MetadataLayers]...)
-		layers = append(layers, layerMap[layout.ComponentLayers]...)
+		layers = append(layers, layerMap[MetadataLayers]...)
+		layers = append(layers, layerMap[ComponentLayers]...)
 	case "sbom":
-		layers = append(layers, layerMap[layout.MetadataLayers]...)
-		layers = append(layers, layerMap[layout.SbomLayers]...)
+		layers = append(layers, layerMap[MetadataLayers]...)
+		layers = append(layers, layerMap[SbomLayers]...)
 	case "components":
-		layers = append(layers, layerMap[layout.MetadataLayers]...)
-		layers = append(layers, layerMap[layout.ComponentLayers]...)
+		layers = append(layers, layerMap[MetadataLayers]...)
+		layers = append(layers, layerMap[ComponentLayers]...)
 	default:
 		return nil, fmt.Errorf("unknown inspect target %s", inspectTarget)
 	}

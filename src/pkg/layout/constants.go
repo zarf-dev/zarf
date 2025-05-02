@@ -28,12 +28,6 @@ const (
 
 	IndexJSON = "index.json"
 	OCILayout = "oci-layout"
-	// duplicating here - will be removed in the future packager deprecation/removal
-	AllLayers       = "all"
-	MetadataLayers  = "metadata"
-	ImageLayers     = "images"
-	ComponentLayers = "components"
-	SbomLayers      = "sboms"
 )
 
 var (

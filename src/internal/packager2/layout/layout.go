@@ -24,12 +24,6 @@ const (
 
 	IndexJSON = "index.json"
 	OCILayout = "oci-layout"
-
-	AllLayers       = "all"
-	MetadataLayers  = "metadata"
-	ImageLayers     = "images"
-	ComponentLayers = "components"
-	SbomLayers      = "sboms"
 )
 
 // ComponentDir is the type for the different directories in a component.
