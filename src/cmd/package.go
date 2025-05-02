@@ -353,7 +353,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	// We don't yet know if the targets are internal or external
 	c, _ := cluster.New(ctx) //nolint:errcheck
 
-	if images == 0 {
+	if images == 0 && o.mirrorImages {
 		logger.From(ctx).Warn("No images found in package to mirror")
 	}
 
@@ -385,7 +385,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		}
 	}
 
-	if repos == 0 {
+	if repos == 0 && o.mirrorRepos {
 		logger.From(ctx).Warn("No git repositories found in package to mirror")
 	}
 
