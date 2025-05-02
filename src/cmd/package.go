@@ -348,17 +348,17 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		images += len(component.Images)
 		repos += len(component.Repos)
 	}
-	logger.From(ctx).Debug("Package contains images and repos", "images", images, "repos", repos)
+	logger.From(ctx).Debug("package contains images and repos", "images", images, "repos", repos)
 
 	// We don't yet know if the targets are internal or external
 	c, _ := cluster.New(ctx) //nolint:errcheck
 
 	if images == 0 && o.mirrorImages {
-		logger.From(ctx).Warn("No images found in package to mirror")
+		logger.From(ctx).Warn("no images found in package to mirror")
 	}
 
 	if o.mirrorImages && images > 0 {
-		logger.From(ctx).Info("Mirroring images", "images", images)
+		logger.From(ctx).Info("mirroring images", "images", images)
 		if pkgConfig.InitOpts.RegistryInfo.Address == "" {
 			// if empty flag & zarf state available - execute
 			// otherwise return error
@@ -366,7 +366,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 			if err != nil {
 				return fmt.Errorf("no registry URL provided and no zarf state found")
 			}
-			logger.From(ctx).Debug("No registry URL provided, using zarf state", "address", state.RegistryInfo.Address)
+			logger.From(ctx).Debug("no registry URL provided, using zarf state", "address", state.RegistryInfo.Address)
 			pkgConfig.InitOpts.RegistryInfo = state.RegistryInfo
 		}
 		mirrorOpt := packager2.MirrorOptions{
@@ -386,17 +386,17 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	}
 
 	if repos == 0 && o.mirrorRepos {
-		logger.From(ctx).Warn("No git repositories found in package to mirror")
+		logger.From(ctx).Warn("no git repositories found in package to mirror")
 	}
 
 	if o.mirrorRepos && repos > 0 {
-		logger.From(ctx).Info("Mirroring repos", "repos", repos)
+		logger.From(ctx).Info("mirroring repos", "repos", repos)
 		if pkgConfig.InitOpts.GitServer.Address == "" {
 			state, err := c.LoadState(ctx)
 			if err != nil {
 				return fmt.Errorf("no git URL provided and no zarf state found")
 			}
-			logger.From(ctx).Debug("No git URL provided, using zarf state", "address", state.GitServer.Address)
+			logger.From(ctx).Debug("no git URL provided, using zarf state", "address", state.GitServer.Address)
 			pkgConfig.InitOpts.GitServer = state.GitServer
 		}
 
