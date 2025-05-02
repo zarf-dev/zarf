@@ -461,7 +461,6 @@ func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) 
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
 	resourceOpts := packager2.InspectPackageResourcesOptions{
-		Source:                  src,
 		SkipSignatureValidation: o.skipSignatureValidation,
 		Components:              o.components,
 		Architecture:            config.GetArch(),
@@ -470,7 +469,7 @@ func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) 
 		KubeVersion:             o.kubeVersion,
 	}
 
-	result, err := packager2.InspectPackageResources(ctx, resourceOpts)
+	result, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
 	if err != nil {
 		return err
 	}
@@ -530,7 +529,6 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
 	resourceOpts := packager2.InspectPackageResourcesOptions{
-		Source:                  src,
 		SkipSignatureValidation: o.skipSignatureValidation,
 		Architecture:            config.GetArch(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
@@ -538,7 +536,7 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 		KubeVersion:             o.kubeVersion,
 	}
 
-	result, err := packager2.InspectPackageResources(ctx, resourceOpts)
+	result, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
 	if err != nil {
 		return err
 	}
@@ -597,14 +595,13 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	}
 
 	inspectOptions := packager2.InspectPackageSbomsOptions{
-		Source:                  src,
 		SkipSignatureValidation: o.skipSignatureValidation,
 		OutputDir:               o.outputDir,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		Architecture:            config.GetArch(),
 	}
 
-	result, err := packager2.InspectPackageSboms(ctx, inspectOptions)
+	result, err := packager2.InspectPackageSboms(ctx, src, inspectOptions)
 	if err != nil {
 		return err
 	}
@@ -652,12 +649,11 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 
 	inspectImageOpts := packager2.InspectPackageImagesOptions{
 		Architecture:            config.GetArch(),
-		Source:                  src,
 		SkipSignatureValidation: o.skipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 	}
 
-	result, err := packager2.InspectPackageImages(ctx, inspectImageOpts)
+	result, err := packager2.InspectPackageImages(ctx, src, inspectImageOpts)
 	if err != nil {
 		return err
 	}
@@ -701,12 +697,11 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 
 	defOpts := packager2.InspectPackageDefinitionOptions{
 		Architecture:            config.GetArch(),
-		Source:                  src,
 		SkipSignatureValidation: o.skipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 	}
 
-	result, err := packager2.InspectPackageDefinition(ctx, defOpts)
+	result, err := packager2.InspectPackageDefinition(ctx, src, defOpts)
 	if err != nil {
 		return err
 	}

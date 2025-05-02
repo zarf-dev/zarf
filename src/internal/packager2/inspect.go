@@ -18,7 +18,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -49,7 +48,6 @@ type Resource struct {
 type InspectPackageResourcesOptions struct {
 	Architecture            string
 	Components              string
-	Source                  string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	SetVariables            map[string]string
@@ -61,12 +59,12 @@ type InspectPackageResourcesResults struct {
 }
 
 // InspectPackageResources templates and returns the manifests, charts, and values files in the package as they would be on deploy
-func InspectPackageResources(ctx context.Context, opts InspectPackageResourcesOptions) (results InspectPackageResourcesResults, err error) {
+func InspectPackageResources(ctx context.Context, source string, opts InspectPackageResourcesOptions) (results InspectPackageResourcesResults, err error) {
 	s, err := state.Default()
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
 	}
-	pkgLayout, err := loadInspectPackageLayout(ctx, opts.Source, opts.Architecture, ComponentsTarget, nil, filters.BySelectState(opts.Components), opts.PublicKeyPath, opts.SkipSignatureValidation)
+	pkgLayout, err := loadInspectPackageLayout(ctx, source, opts.Architecture, ComponentsTarget, nil, filters.BySelectState(opts.Components), opts.PublicKeyPath, opts.SkipSignatureValidation)
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
 	}
@@ -97,11 +95,11 @@ func InspectPackageResources(ctx context.Context, opts InspectPackageResourcesOp
 		variableConfig.SetApplicationTemplates(applicationTemplates)
 
 		if len(component.Charts) > 0 {
-			chartDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout2.ChartsComponentDir)
+			chartDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout.ChartsComponentDir)
 			if err != nil {
 				return InspectPackageResourcesResults{}, err
 			}
-			valuesDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout2.ValuesComponentDir)
+			valuesDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout.ValuesComponentDir)
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				return InspectPackageResourcesResults{}, fmt.Errorf("failed to get values: %w", err)
 			}
@@ -142,7 +140,7 @@ func InspectPackageResources(ctx context.Context, opts InspectPackageResourcesOp
 		}
 
 		if len(component.Manifests) > 0 {
-			manifestDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout2.ManifestsComponentDir)
+			manifestDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout.ManifestsComponentDir)
 			if err != nil {
 				return InspectPackageResourcesResults{}, fmt.Errorf("failed to get package manifests: %w", err)
 			}
@@ -264,16 +262,15 @@ type InspectPackageSbomsResult struct {
 
 type InspectPackageSbomsOptions struct {
 	Architecture            string
-	Source                  string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	OutputDir               string
 }
 
-func InspectPackageSboms(ctx context.Context, opts InspectPackageSbomsOptions) (InspectPackageSbomsResult, error) {
+func InspectPackageSboms(ctx context.Context, source string, opts InspectPackageSbomsOptions) (InspectPackageSbomsResult, error) {
 
 	// we cannot retrieve sboms from the cluster currently
-	pkgLayout, err := loadInspectPackageLayout(ctx, opts.Source, opts.Architecture, SbomTarget, nil, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
+	pkgLayout, err := loadInspectPackageLayout(ctx, source, opts.Architecture, SbomTarget, nil, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
 	if err != nil {
 		return InspectPackageSbomsResult{}, err
 	}
@@ -297,15 +294,14 @@ type InspectPackageDefinitionResult struct {
 
 type InspectPackageDefinitionOptions struct {
 	Architecture            string
-	Source                  string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 }
 
-func InspectPackageDefinition(ctx context.Context, opts InspectPackageDefinitionOptions) (InspectPackageDefinitionResult, error) {
+func InspectPackageDefinition(ctx context.Context, source string, opts InspectPackageDefinitionOptions) (InspectPackageDefinitionResult, error) {
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
-	pkgLayout, err := loadInspectPackageLayout(ctx, opts.Source, opts.Architecture, MetadataTarget, cluster, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
+	pkgLayout, err := loadInspectPackageLayout(ctx, source, opts.Architecture, MetadataTarget, cluster, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
 	if err != nil {
 		return InspectPackageDefinitionResult{}, err
 	}
@@ -326,16 +322,15 @@ type InspectPackageImageResult struct {
 
 type InspectPackageImagesOptions struct {
 	Architecture            string
-	Source                  string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 }
 
-func InspectPackageImages(ctx context.Context, opts InspectPackageImagesOptions) (InspectPackageImageResult, error) {
+func InspectPackageImages(ctx context.Context, source string, opts InspectPackageImagesOptions) (InspectPackageImageResult, error) {
 
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
-	pkgLayout, err := loadInspectPackageLayout(ctx, opts.Source, opts.Architecture, MetadataTarget, cluster, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
+	pkgLayout, err := loadInspectPackageLayout(ctx, source, opts.Architecture, MetadataTarget, cluster, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
 	if err != nil {
 		return InspectPackageImageResult{}, err
 	}
@@ -408,7 +403,7 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 }
 
 // loadInspectPackageLayout replicates the Load process while adding inspect targets not utilized in the primary LoadPackage function.
-func loadInspectPackageLayout(ctx context.Context, source, architecture, inspectTarget string, cluster *cluster.Cluster, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) (*layout2.PackageLayout, error) {
+func loadInspectPackageLayout(ctx context.Context, source, architecture, inspectTarget string, cluster *cluster.Cluster, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) (*layout.PackageLayout, error) {
 
 	// create map[string]bool to track the inspect targets
 	inspectTargets := map[string]bool{
