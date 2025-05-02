@@ -146,7 +146,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	_, err = packager2.Deploy(ctx, pkgLayout, packager2.DeployOpts{
+	opts := packager2.DeployOpts{
 		GitServer:              pkgConfig.InitOpts.GitServer,
 		RegistryInfo:           pkgConfig.InitOpts.RegistryInfo,
 		ArtifactServer:         pkgConfig.InitOpts.ArtifactServer,
@@ -157,7 +157,8 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		PlainHTTP:              config.CommonOptions.PlainHTTP,
 		InsecureTLSSkipVerify:  config.CommonOptions.InsecureSkipTLSVerify,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
-	})
+	}
+	_, err = deploy(ctx, pkgLayout, opts)
 	if err != nil {
 		return err
 	}

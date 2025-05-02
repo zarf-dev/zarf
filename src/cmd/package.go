@@ -253,26 +253,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	deployConfirmed, err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
-	if err != nil {
-		return err
-	}
-	if !deployConfirmed {
-		return fmt.Errorf("deployment cancelled")
-	}
-
-	// filter after confirmation to allow users to view the entire package
-	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(pkgConfig.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm),
-	)
-
-	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
-	if err != nil {
-		return err
-	}
-
-	deployedComponents, err := packager2.Deploy(ctx, pkgLayout, packager2.DeployOpts{
+	deployOpts := packager2.DeployOpts{
 		AdoptExistingResources: pkgConfig.DeployOpts.AdoptExistingResources,
 		Timeout:                pkgConfig.DeployOpts.Timeout,
 		Retries:                pkgConfig.PkgOpts.Retries,
@@ -280,10 +261,13 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		PlainHTTP:              config.CommonOptions.PlainHTTP,
 		InsecureTLSSkipVerify:  config.CommonOptions.InsecureSkipTLSVerify,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to deploy package: %w", err)
 	}
+
+	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts)
+	if err != nil {
+		return err
+	}
+
 	if pkgLayout.Pkg.IsInitConfig() {
 		return nil
 	}
@@ -297,6 +281,34 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 	message.PrintConnectStringTable(connectStrings)
 	return nil
+}
+
+func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager2.DeployOpts) ([]types.DeployedComponent, error) {
+	deployConfirmed, err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
+	if err != nil {
+		return nil, err
+	}
+	if !deployConfirmed {
+		return nil, fmt.Errorf("deployment cancelled")
+	}
+
+	// filter after confirmation to allow users to view the entire package
+	filter := filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+		filters.ForDeploy(pkgConfig.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm),
+	)
+
+	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
+	if err != nil {
+		return nil, err
+	}
+
+	deployedComponents, err := packager2.Deploy(ctx, pkgLayout, opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to deploy package: %w", err)
+	}
+
+	return deployedComponents, nil
 }
 
 func confirmDeploy(ctx context.Context, pkgLayout *layout2.PackageLayout, setVariables map[string]string) (deployConfirmed bool, err error) {
