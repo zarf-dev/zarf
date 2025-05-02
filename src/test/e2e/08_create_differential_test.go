@@ -43,6 +43,7 @@ func TestCreateDifferential(t *testing.T) {
 	defer e2e.CleanFiles(t, differentialPackageName)
 
 	// Extract the yaml of the differential package
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	err = archiver.Extract(differentialPackageName, layout.ZarfYAML, tmpdir)
 	require.NoError(t, err, "unable to extract zarf.yaml from the differential git package")
 

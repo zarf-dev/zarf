@@ -38,10 +38,10 @@ export default defineConfig({
       components: {
         SkipLink: "./src/components/SkipLink.astro",
       },
-      social: {
-        github: "https://github.com/zarf-dev/zarf",
-        slack: "https://kubernetes.slack.com/archives/C03B6BJAUJ3",
-      },
+      social: [
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/zarf-dev/zarf' },
+        { icon: 'slack', label: 'Slack', href: 'https://kubernetes.slack.com/archives/C03B6BJAUJ3' },
+      ],
       favicon: "/favicon.svg",
       editLink: {
         baseUrl: "https://github.com/zarf-dev/zarf/edit/main/site",
