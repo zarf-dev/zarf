@@ -135,6 +135,7 @@ func TestDevInspectValuesFiles(t *testing.T) {
 			setVariables: map[string]string{
 				"REPLICAS":    "2",
 				"DESCRIPTION": ".chart.variables takes priority",
+				"PORT":        "8080",
 			},
 		},
 		{

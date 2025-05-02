@@ -101,6 +101,13 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayo
 						}
 					}
 				}
+				for idx := range chart.ValuesFiles {
+					valueFilePath := helm.StandardValuesName(valuesDir, chart, idx)
+					if err := variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
+						return InspectPackageResourcesResults{}, fmt.Errorf("error templating the values file: %w", err)
+					}
+				}
+
 				helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, chartOverrides)
 				if err != nil {
 					return InspectPackageResourcesResults{}, fmt.Errorf("failed to load chart data: %w", err)
