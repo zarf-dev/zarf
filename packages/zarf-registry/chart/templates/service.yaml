@@ -18,7 +18,7 @@ spec:
       protocol: TCP
       name: {{ if .Values.tlsSecretName }}https{{ else }}http{{ end }}-{{ .Values.service.port }}
       targetPort: 5000
-      {{- if eq .Values.service.type "NodePort " }}
+      {{- if eq .Values.service.type "NodePort" }}
       nodePort: {{ .Values.service.nodePort }}
       {{- end }}
   selector:
