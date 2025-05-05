@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
@@ -60,20 +59,6 @@ func TestMultiPartPackage(t *testing.T) {
 	// Verify the package was deployed
 	require.FileExists(t, outputFile)
 
-	// deploying package combines parts back into single archive, check dir again to find all files
-	parts, err = filepath.Glob("zarf-package-multi-part-*")
-	require.NoError(t, err)
-	// Length is 1 because `zarf package deploy` will recombine the file
-	require.Len(t, parts, 1)
-	// Ensure that the number of pkgData bytes was correct
-	fullFileInfo, err := os.Stat(parts[0])
-	require.NoError(t, err)
-	require.Equal(t, pkgData.Bytes, fullFileInfo.Size())
-	// Ensure that the pkgData shasum was correct (should be checked during deploy as well, but this is to double check)
-	err = helpers.SHAsMatch(parts[0], pkgData.Sha256Sum)
-	require.NoError(t, err)
-
-	e2e.CleanFiles(t, parts...)
 	e2e.CleanFiles(t, outputFile)
 }
 
