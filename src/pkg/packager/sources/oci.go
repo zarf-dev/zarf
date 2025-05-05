@@ -196,5 +196,6 @@ func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 
 	_ = os.Remove(dstTarball)
 
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	return dstTarball, archiver.Archive(allTheLayers, dstTarball)
 }

@@ -4,6 +4,7 @@ metadata:
 
 variables:
   - name: PORT
+  - name: LABEL
 
 components:
   - name: demo-helm-charts

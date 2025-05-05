@@ -2,5 +2,6 @@ replicaCount: "2"
 image:
   pullPolicy: "IfNotPresent"
 description: ".chart.variables takes priority"
+port: 8080
 ---
 replicaCount: "2"

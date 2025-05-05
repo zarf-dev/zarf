@@ -48,6 +48,7 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 
 	pathsExtracted := []string{}
 
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	err = archiver.Walk(s.PackageSource, func(f archiver.File) error {
 		if f.IsDir() {
 			return nil
@@ -156,6 +157,7 @@ func (s *TarballSource) LoadPackageMetadata(ctx context.Context, dst *layout.Pac
 	pathsExtracted := []string{}
 
 	for _, rel := range toExtract {
+		// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 		if err := archiver.Extract(s.PackageSource, rel, dst.Base); err != nil {
 			return pkg, nil, err
 		}

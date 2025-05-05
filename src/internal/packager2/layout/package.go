@@ -52,6 +52,7 @@ func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	err = archiver.Walk(tarPath, func(f archiver.File) error {
 		if f.IsDir() {
 			return nil
@@ -145,6 +146,7 @@ func (p *PackageLayout) GetSBOM(destPath string) (string, error) {
 		return "", &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
 	}
 	path := filepath.Join(destPath, p.Pkg.Metadata.Name)
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	err := archiver.Extract(filepath.Join(p.dirPath, SBOMTar), "", path)
 	if err != nil {
 		return "", err
@@ -210,6 +212,7 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 	for _, file := range files {
 		filePaths = append(filePaths, filepath.Join(p.dirPath, file.Name()))
 	}
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	err = archiver.Archive(filePaths, tarballPath)
 	if err != nil {
 		return fmt.Errorf("unable to create package: %w", err)
