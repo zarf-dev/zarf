@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -127,24 +126,6 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-
-	deployConfirmed, err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
-	if err != nil {
-		return err
-	}
-	if !deployConfirmed {
-		return fmt.Errorf("deployment cancelled")
-	}
-
-	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(pkgConfig.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm),
-	)
-
-	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
-	if err != nil {
-		return err
-	}
 
 	opts := packager2.DeployOpts{
 		GitServer:              pkgConfig.InitOpts.GitServer,
