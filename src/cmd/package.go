@@ -283,15 +283,12 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 }
 
 func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager2.DeployOpts) ([]types.DeployedComponent, error) {
-	deployConfirmed, err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
+	err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
 	if err != nil {
 		return nil, err
 	}
-	if !deployConfirmed {
-		return nil, fmt.Errorf("deployment cancelled")
-	}
 
-	// filter after confirmation to allow users to view the entire package
+	// filter after confirmation to allow users to view the entire package interactively
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.ForDeploy(pkgConfig.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm),
@@ -310,7 +307,7 @@ func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager
 	return deployedComponents, nil
 }
 
-func confirmDeploy(ctx context.Context, pkgLayout *layout2.PackageLayout, setVariables map[string]string) (deployConfirmed bool, err error) {
+func confirmDeploy(ctx context.Context, pkgLayout *layout2.PackageLayout, setVariables map[string]string) (err error) {
 	l := logger.From(ctx)
 	err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), true)
 	if err != nil {
@@ -324,12 +321,12 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout2.PackageLayout, setVar
 	if pkgLayout.ContainsSBOM() && !config.CommonOptions.Confirm {
 		cwd, err := os.Getwd()
 		if err != nil {
-			return false, err
+			return err
 		}
 		SBOMPath := filepath.Join(cwd, "zarf-sbom")
 		err = pkgLayout.GetSBOM(SBOMPath)
 		if err != nil {
-			return false, err
+			return err
 		}
 		defer func() {
 			err = errors.Join(err, os.RemoveAll(SBOMPath))
@@ -337,22 +334,19 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout2.PackageLayout, setVar
 		l.Info("this package has SBOMs available for review in a temporary directory", "directory", SBOMPath)
 	}
 
-	// Display prompt if not auto-confirmed
 	if config.CommonOptions.Confirm {
-		return config.CommonOptions.Confirm, nil
+		return nil
 	}
 
-	// Prompt the user for confirmation, on abort return false
 	prompt := &survey.Confirm{
 		Message: "deploy this Zarf package?",
 	}
 	var confirm bool
 	if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
-		// User aborted or declined, cancel the action
-		return false, nil
+		return fmt.Errorf("deployment cancelled")
 	}
 
-	return true, nil
+	return nil
 }
 
 func getPackageYAMLHints(pkg v1alpha1.ZarfPackage, setVariables map[string]string) map[string]string {
