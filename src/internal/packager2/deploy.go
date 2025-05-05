@@ -24,7 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
-	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -46,15 +45,19 @@ type DeployOpts struct {
 	Timeout time.Duration
 	// Retries to preform for operations like git and image pushes
 	Retries int
-	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
-	ValuesOverridesMap    map[string]map[string]map[string]interface{}
-	OCIConcurrency        int
-	PlainHTTP             bool
+	// Number of layers to push concurrently per image
+	OCIConcurrency int
+	// Whether to use plainHTTP when connecting to the registry
+	PlainHTTP bool
+	// Whether or not to skipTLSVerify when connecting to the registry
 	InsecureTLSSkipVerify bool
-	// Options to configure Zarf state if it's not already been configured
+	// How to configure Zarf state if it's not already been configured
 	GitServer      types.GitServerInfo
 	RegistryInfo   types.RegistryInfo
 	ArtifactServer types.ArtifactServerInfo
+
+	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
+	ValuesOverridesMap map[string]map[string]map[string]interface{}
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -123,7 +126,13 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			connectCtx, cancel := context.WithTimeout(ctx, timeout)
 			defer cancel()
 			if !d.isConnectedToCluster() {
-				if err := d.connectToCluster(connectCtx, pkgLayout.Pkg); err != nil {
+				// If we are already connected to the cluster then return
+				var err error
+				d.c, err = cluster.NewWithWait(ctx)
+				if err != nil {
+					return nil, err
+				}
+				if err := d.verifyPackageIsDeployable(connectCtx, pkgLayout.Pkg); err != nil {
 					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 				}
 			}
@@ -295,9 +304,11 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 	}
 
-	if err := populateComponentAndStateTemplates(ctx, component.Name, d.s, d.vc); err != nil {
+	applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, d.s)
+	if err != nil {
 		return nil, err
 	}
+	d.vc.SetApplicationTemplates(applicationTemplates)
 
 	if err := actions.Run(ctx, onDeploy.Defaults, onDeploy.Before, d.vc); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
@@ -556,22 +567,9 @@ func (d *deployer) setupState(ctx context.Context, c *cluster.Cluster, pkg v1alp
 	return nil
 }
 
-func (d *deployer) connectToCluster(ctx context.Context, pkg v1alpha1.ZarfPackage) error {
+func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkg v1alpha1.ZarfPackage) error {
 	// If we are already connected to the cluster then return
-	c, err := cluster.NewWithWait(ctx)
-	if err != nil {
-		return err
-	}
-	if err := attemptClusterChecks(ctx, c, pkg); err != nil {
-		return err
-	}
-	d.c = c
-	return nil
-}
-
-func attemptClusterChecks(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackage) error {
-	// Check the clusters architecture matches the package spec
-	if err := validatePackageArchitecture(ctx, c, pkg); err != nil {
+	if err := validatePackageArchitecture(ctx, d.c, pkg); err != nil {
 		if errors.Is(err, lang.ErrUnableToCheckArch) {
 			logger.From(ctx).Warn("unable to validate package architecture", "error", err)
 		} else {
@@ -579,16 +577,7 @@ func attemptClusterChecks(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.
 		}
 	}
 
-	// Check for any breaking changes between the initialized Zarf version and this CLI
-	if existingInitPackage, _ := c.GetDeployedPackage(ctx, "init"); existingInitPackage != nil {
-		// Use the build version instead of the metadata since this will support older Zarf versions
-		err := deprecated.PrintBreakingChanges(os.Stderr, existingInitPackage.Data.Build.Version, config.CLIVersion)
-		if err != nil {
-			return err
-		}
-	}
-
-	s, err := c.LoadState(ctx)
+	s, err := d.c.LoadState(ctx)
 	if err != nil {
 		// don't return the err here as state may not yet be setup
 		return nil
@@ -624,15 +613,6 @@ func validatePackageArchitecture(ctx context.Context, c *cluster.Cluster, pkg v1
 		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, pkg.Metadata.Architecture, strings.Join(architectures, ", "))
 	}
 
-	return nil
-}
-
-func populateComponentAndStateTemplates(ctx context.Context, componentName string, s *state.State, variableConfig *variables.VariableConfig) error {
-	applicationTemplates, err := template.GetZarfTemplates(ctx, componentName, s)
-	if err != nil {
-		return err
-	}
-	variableConfig.SetApplicationTemplates(applicationTemplates)
 	return nil
 }
 
