@@ -73,7 +73,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
 	start := time.Now()
-	variableConfig, err := getPopulateVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,6 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 	l := logger.From(ctx)
 	deployedComponents := []types.DeployedComponent{}
 
-	// Process all the components we are deploying
 	for _, component := range pkgLayout.Pkg.Components {
 		packageGeneration := 1
 		// Connect to cluster if a component requires it.
@@ -126,7 +125,6 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			connectCtx, cancel := context.WithTimeout(ctx, timeout)
 			defer cancel()
 			if !d.isConnectedToCluster() {
-				// If we are already connected to the cluster then return
 				var err error
 				d.c, err = cluster.NewWithWait(ctx)
 				if err != nil {
@@ -164,7 +162,6 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
 		}
-		// Deploy the component
 		var charts []types.InstalledChart
 		var deployErr error
 		if pkgLayout.Pkg.IsInitConfig() {
@@ -705,29 +702,4 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 	l.Debug("done copying files", "duration", time.Since(start))
 
 	return nil
-}
-
-func generateValuesOverrides(chart v1alpha1.ZarfChart, componentName string, variableConfig *variables.VariableConfig, valuesOverridesMap map[string]map[string]map[string]interface{}) (map[string]any, error) {
-	valuesOverrides := make(map[string]any)
-	chartOverrides := make(map[string]any)
-
-	for _, variable := range chart.Variables {
-		if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
-			// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
-			if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
-				return nil, fmt.Errorf("unable to merge path and value into map: %w", err)
-			}
-		}
-	}
-
-	// Apply any direct overrides specified in the deployment options for this component and chart
-	if componentOverrides, ok := valuesOverridesMap[componentName]; ok {
-		if chartSpecificOverrides, ok := componentOverrides[chart.Name]; ok {
-			valuesOverrides = chartSpecificOverrides
-		}
-	}
-
-	// Merge chartOverrides into valuesOverrides to ensure all overrides are applied.
-	// This corrects the logic to ensure that chartOverrides and valuesOverrides are merged correctly.
-	return helpers.MergeMapRecursive(chartOverrides, valuesOverrides), nil
 }

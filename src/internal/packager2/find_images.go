@@ -92,7 +92,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		return FindImagesResult{}, err
 	}
 	s.RegistryInfo.Address = opts.RegistryURL
-	variableConfig, err := getPopulateVariableConfig(ctx, pkg, opts.DeploySetVariables)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables)
 	if err != nil {
 		return FindImagesResult{}, err
 	}
