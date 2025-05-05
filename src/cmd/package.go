@@ -309,16 +309,16 @@ func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager
 
 func confirmDeploy(ctx context.Context, pkgLayout *layout2.PackageLayout, setVariables map[string]string) (err error) {
 	l := logger.From(ctx)
-	err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), true)
-	if err != nil {
-		l.Error("unable to print yaml", "error", err)
-	}
 
 	if pkgLayout.Pkg.IsSBOMAble() && !pkgLayout.ContainsSBOM() {
 		l.Warn("this package does NOT contain an SBOM.  If you require an SBOM, please contact the creator of this package to request a version that includes an SBOM.",
 			"name", pkgLayout.Pkg.Metadata.Name)
 	}
 	if pkgLayout.ContainsSBOM() && !config.CommonOptions.Confirm {
+		err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), true)
+		if err != nil {
+			return fmt.Errorf("unable to print package definition: %w", err)
+		}
 		cwd, err := os.Getwd()
 		if err != nil {
 			return err
