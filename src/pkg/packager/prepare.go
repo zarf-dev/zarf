@@ -97,7 +97,7 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 
 	// Set default builtin values so they exist in case any helm charts rely on them
 	registryInfo := types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}
-	err := registryInfo.FillInEmptyValues()
+	err := registryInfo.FillInEmptyValues("IPv4")
 	if err != nil {
 		return nil, err
 	}

@@ -90,8 +90,6 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
 			WithSpec(v1ac.ServiceSpec().
 				WithType(corev1.ServiceTypeNodePort).
-				WithIPFamilyPolicy(corev1.IPFamilyPolicyPreferDualStack).
-				WithIPFamilies(corev1.IPv4Protocol).
 				WithPorts(
 					v1ac.ServicePort().WithPort(int32(5000)),
 				).WithSelector(map[string]string{
