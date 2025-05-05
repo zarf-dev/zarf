@@ -286,7 +286,9 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	if component.RequiresCluster() {
 		// Setup the state in the config
 		if d.s == nil {
-			if err := d.setupState(ctx, d.c, pkgLayout.Pkg); err != nil {
+			var err error
+			d.s, err = setupState(ctx, d.c, pkgLayout.Pkg)
+			if err != nil {
 				return nil, err
 			}
 		}
@@ -524,46 +526,6 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 	return installedCharts, nil
 }
 
-// setupState fetches the current State from the k8s cluster and sets the deployer to use it
-func (d *deployer) setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackage) error {
-	l := logger.From(ctx)
-	// If we are touching K8s, make sure we can talk to it once per deployment
-	l.Debug("loading the Zarf State from the Kubernetes cluster")
-
-	s, err := c.LoadState(ctx)
-	// We ignore the error if in YOLO mode because Zarf should not be initiated.
-	if err != nil && !pkg.Metadata.YOLO {
-		return err
-	}
-	// Only ignore state load error in yolo mode when secret could not be found.
-	if err != nil && !kerrors.IsNotFound(err) && pkg.Metadata.YOLO {
-		return err
-	}
-	if s == nil && pkg.Metadata.YOLO {
-		s = &state.State{}
-		// YOLO mode, so minimal state needed
-		s.Distro = "YOLO"
-
-		l.Info("creating the Zarf namespace")
-		zarfNamespace := cluster.NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
-		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
-		if err != nil {
-			return fmt.Errorf("unable to apply the Zarf namespace: %w", err)
-		}
-	}
-	if s == nil {
-		return errors.New("cluster state should not be nil")
-	}
-	if pkg.Metadata.YOLO && s.Distro != "YOLO" {
-		l.Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
-			"This may cause issues if the package does not exclude any charts or manifests from the Zarf Agent using " +
-			"the pod or namespace label `zarf.dev/agent: ignore'.")
-	}
-
-	d.s = s
-	return nil
-}
-
 func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkg v1alpha1.ZarfPackage) error {
 	// If we are already connected to the cluster then return
 	if err := validatePackageArchitecture(ctx, d.c, pkg); err != nil {
@@ -580,6 +542,44 @@ func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkg v1alpha1.Z
 		return nil
 	}
 	return pki.CheckForExpiredCert(ctx, s.AgentTLS)
+}
+
+func setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackage) (*state.State, error) {
+	l := logger.From(ctx)
+	// If we are touching K8s, make sure we can talk to it once per deployment
+	l.Debug("loading the Zarf State from the Kubernetes cluster")
+
+	s, err := c.LoadState(ctx)
+	// We ignore the error if in YOLO mode because Zarf should not be initiated.
+	if err != nil && !pkg.Metadata.YOLO {
+		return nil, err
+	}
+	// Only ignore state load error in yolo mode when secret could not be found.
+	if err != nil && !kerrors.IsNotFound(err) && pkg.Metadata.YOLO {
+		return nil, err
+	}
+	if s == nil && pkg.Metadata.YOLO {
+		s = &state.State{}
+		// YOLO mode, so minimal state needed
+		s.Distro = "YOLO"
+
+		l.Info("creating the Zarf namespace")
+		zarfNamespace := cluster.NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
+		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
+		if err != nil {
+			return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
+		}
+	}
+	if s == nil {
+		return nil, errors.New("cluster state should not be nil")
+	}
+	if pkg.Metadata.YOLO && s.Distro != "YOLO" {
+		l.Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
+			"This may cause issues if the package does not exclude any charts or manifests from the Zarf Agent using " +
+			"the pod or namespace label `zarf.dev/agent: ignore'.")
+	}
+
+	return s, nil
 }
 
 func validatePackageArchitecture(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackage) error {
