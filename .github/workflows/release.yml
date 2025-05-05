@@ -200,3 +200,9 @@ jobs:
         with:
           name: cve-report
           path: build/zarf-known-cves.csv
+
+      - name: Report disk space on failure
+        if: failure()
+        run: |
+          echo "create-release failed, printing out available diskspace"
+          lsblk -f
