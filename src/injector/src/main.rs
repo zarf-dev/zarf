@@ -26,6 +26,7 @@ use sha2::{Digest, Sha256};
 use tar::Archive;
 use tokio_util::io::ReaderStream;
 const OCI_MIME_TYPE: &str = "application/vnd.oci.image.manifest.v1+json";
+const ZARF_SEED_DIR: &str = "/zarf-seed";
 
 // Reads the binary contents of a file
 fn get_file(path: &PathBuf) -> io::Result<Vec<u8>> {
@@ -90,7 +91,7 @@ fn unpack(sha_sum: &String) {
     let tar = GzDecoder::new(&contents[..]);
     let mut archive = Archive::new(tar);
     archive
-        .unpack("/zarf-seed")
+        .unpack(ZARF_SEED_DIR)
         .expect("Unable to unarchive the resulting tarball");
 }
 
@@ -158,10 +159,11 @@ async fn handler(Path(path): Path<String>) -> Response {
 
 /// Handles the GET request for the manifest (only returns a OCI manifest regardless of Accept header)
 async fn handle_get_manifest(name: String, reference: String) -> Response {
-    let index = fs::read_to_string(PathBuf::from("/zarf-seed").join("index.json"))
+    let index = fs::read_to_string(PathBuf::from(ZARF_SEED_DIR).join("index.json"))
         .expect("index.json is read");
     let json: Value = serde_json::from_str(&index).expect("unable to parse index.json");
 
+    let mut media_type_manifest: String = "".to_owned();
     let mut sha_manifest: String = "".to_owned();
 
     if reference.starts_with("sha256:") {
@@ -173,6 +175,10 @@ async fn handle_get_manifest(name: String, reference: String) -> Response {
                 .unwrap();
             let requested_reference = name.to_owned() + ":" + &reference;
             if requested_reference == image_base_name {
+                media_type_manifest = manifest["mediaType"]
+                    .as_str()
+                    .unwrap()
+                    .to_owned();
                 sha_manifest = manifest["digest"]
                     .as_str()
                     .unwrap()
@@ -189,11 +195,16 @@ async fn handle_get_manifest(name: String, reference: String) -> Response {
             .unwrap()
             .into_response()
     } else {
-        let file_path = PathBuf::from("/zarf-seed")
+        let file_path = PathBuf::from(ZARF_SEED_DIR)
             .to_owned()
             .join("blobs")
             .join("sha256")
             .join(&sha_manifest);
+        if media_type_manifest.is_empty() {
+            let file_content = fs::read_to_string(file_path.clone()).expect("file is read");
+            let file_json: Value = serde_json::from_str(&file_content).expect("unable to parse file");
+            media_type_manifest = file_json["mediaType"].as_str().unwrap_or(OCI_MIME_TYPE).to_owned();
+        }
         match tokio::fs::File::open(&file_path).await {
             Ok(file) => {
                 let metadata = match file.metadata().await {
@@ -208,7 +219,7 @@ async fn handle_get_manifest(name: String, reference: String) -> Response {
                 let stream = ReaderStream::new(file);
                 Response::builder()
                     .status(StatusCode::OK)
-                    .header("Content-Type", OCI_MIME_TYPE)
+                    .header("Content-Type", media_type_manifest)
                     .header("Content-Length", metadata.len())
                     .header(
                         "Docker-Content-Digest",
@@ -230,7 +241,7 @@ async fn handle_get_manifest(name: String, reference: String) -> Response {
 
 /// Handles the GET request for a blob
 async fn handle_get_digest(tag: String) -> Response {
-    let blob_root = PathBuf::from("/zarf-seed").join("blobs").join("sha256");
+    let blob_root = PathBuf::from(ZARF_SEED_DIR).join("blobs").join("sha256");
     let path = blob_root.join(tag.strip_prefix("sha256:").unwrap());
 
     match tokio::fs::File::open(&path).await {
