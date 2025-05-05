@@ -247,7 +247,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to load package: %w", err)
 	}
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())

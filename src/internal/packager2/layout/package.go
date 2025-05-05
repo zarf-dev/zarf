@@ -351,7 +351,7 @@ func validatePackageSignature(ctx context.Context, pkgLayout *PackageLayout, pub
 		// Nobody was expecting a signature, so we can just return
 		return nil
 	} else if sigExist && publicKeyPath == "" {
-		return errors.New("package is signed but no key was provided")
+		return errors.New("package is signed but no key was provided - add a key with the --key flag or use the --skip-signature-validation flag and run the command again")
 	} else if !sigExist && publicKeyPath != "" {
 		return errors.New("a key was provided but the package is not signed")
 	}
