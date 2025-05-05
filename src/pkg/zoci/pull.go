@@ -186,17 +186,20 @@ func filterLayers(layerMap map[string][]ocispec.Descriptor, inspectTarget string
 	switch inspectTarget {
 	case "":
 		layers = append(layers, layerMap[AllLayers]...)
+	case "sbom":
+		layers = append(layers, layerMap[MetadataLayers]...)
+		layers = append(layers, layerMap[SbomLayers]...)
 	case "metadata":
 		layers = append(layers, layerMap[MetadataLayers]...)
 	case "manifests":
 		layers = append(layers, layerMap[MetadataLayers]...)
 		layers = append(layers, layerMap[ComponentLayers]...)
-	case "sbom":
-		layers = append(layers, layerMap[MetadataLayers]...)
-		layers = append(layers, layerMap[SbomLayers]...)
 	case "components":
 		layers = append(layers, layerMap[MetadataLayers]...)
 		layers = append(layers, layerMap[ComponentLayers]...)
+	case "images":
+		layers = append(layers, layerMap[MetadataLayers]...)
+		layers = append(layers, layerMap[ImageLayers]...)
 	default:
 		return nil, fmt.Errorf("unknown inspect target %s", inspectTarget)
 	}

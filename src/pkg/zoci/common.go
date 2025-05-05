@@ -24,7 +24,7 @@ const (
 	DefaultConcurrency = 3
 	// AllLayers is used to indicate all layers should be referenced
 	AllLayers = ""
-	// MetadataLayers is used to indicate metadata layers (zarf.yaml, signature, ) should be referenced
+	// MetadataLayers is used to indicate metadata layers (zarf.yaml, signature, checksums.txt) should be referenced
 	MetadataLayers = "metadata"
 	// ImageLayers is used to indicate image layers should be referenced
 	ImageLayers = "images"
