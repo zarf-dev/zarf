@@ -104,6 +104,10 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayo
 						}
 					}
 				}
+				if err := templateValuesFiles(chart, valuesDir, variableConfig); err != nil {
+					return InspectPackageResourcesResults{}, err
+				}
+
 				helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, chartOverrides)
 				if err != nil {
 					return InspectPackageResourcesResults{}, fmt.Errorf("failed to load chart data: %w", err)
@@ -160,6 +164,16 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayo
 	}
 
 	return InspectPackageResourcesResults{Resources: resources}, nil
+}
+
+func templateValuesFiles(chart v1alpha1.ZarfChart, valuesDir string, variableConfig *variables.VariableConfig) error {
+	for idx := range chart.ValuesFiles {
+		valueFilePath := helm.StandardValuesName(valuesDir, chart, idx)
+		if err := variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
+			return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
+		}
+	}
+	return nil
 }
 
 type InspectDefinitionResourcesOptions struct {
