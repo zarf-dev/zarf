@@ -69,7 +69,8 @@ func TestGetCreds(t *testing.T) {
 					Address:      "127.0.0.1:30001",
 					NodePort:     30001,
 				},
-				Distro: "test",
+				Distro:            "test",
+				PreferredIPFamily: "IPv4",
 			}
 
 			b, err := json.Marshal(s)

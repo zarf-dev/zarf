@@ -69,7 +69,7 @@ func Default() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = state.RegistryInfo.FillInEmptyValues()
+	err = state.RegistryInfo.FillInEmptyValues("IPv4")
 	if err != nil {
 		return nil, err
 	}

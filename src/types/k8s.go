@@ -24,6 +24,9 @@ const (
 	ComponentStatusRemoving  ComponentStatus = "Removing"
 )
 
+// TODO move to helpers
+const IPV6Localhost = "::1"
+
 // Values during setup of the initial zarf state
 const (
 	ZarfGeneratedPasswordLen               = 24
@@ -67,7 +70,7 @@ func DefaultZarfState() (*ZarfState, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = state.RegistryInfo.FillInEmptyValues()
+	err = state.RegistryInfo.FillInEmptyValues("IPv4")
 	if err != nil {
 		return nil, err
 	}
@@ -219,11 +222,12 @@ type RegistryInfo struct {
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
 func (ri RegistryInfo) IsInternal() bool {
-	return ri.Address == fmt.Sprintf("%s:%d", "localhost", ri.NodePort)
+	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort) ||
+		ri.Address == fmt.Sprintf("%s:%d", IPV6Localhost, ri.NodePort)
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
-func (ri *RegistryInfo) FillInEmptyValues() error {
+func (ri *RegistryInfo) FillInEmptyValues(preferredIPFamily string) error {
 	var err error
 	// Set default NodePort if none was provided and the registry is internal
 	if ri.NodePort == 0 && ri.Address == "" {
@@ -232,7 +236,14 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 
 	// Set default url if an external registry was not provided
 	if ri.Address == "" {
-		ri.Address = fmt.Sprintf("%s:%d", "localhost", ri.NodePort)
+		switch preferredIPFamily {
+		case "IPv4":
+			ri.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
+		case "IPv6":
+			ri.Address = fmt.Sprintf("%s:%d", IPV6Localhost, ri.NodePort)
+		default:
+			return fmt.Errorf("invalid ipFamily: %s", preferredIPFamily)
+		}
 	}
 
 	// Generate a push-user password if not provided by init flag
