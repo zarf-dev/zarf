@@ -42,7 +42,7 @@ type DeployOpts struct {
 	SetVariables map[string]string
 	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
 	AdoptExistingResources bool
-	// Timeout for performing Helm operations
+	// Timeout for Helm operations
 	Timeout time.Duration
 	// Retries to preform for operations like git and image pushes
 	Retries int
@@ -51,9 +51,10 @@ type DeployOpts struct {
 	OCIConcurrency        int
 	PlainHTTP             bool
 	InsecureTLSSkipVerify bool
-	GitServer             types.GitServerInfo
-	RegistryInfo          types.RegistryInfo
-	ArtifactServer        types.ArtifactServerInfo
+	// Options to configure Zarf state if it's not already been configured
+	GitServer      types.GitServerInfo
+	RegistryInfo   types.RegistryInfo
+	ArtifactServer types.ArtifactServerInfo
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -67,17 +68,15 @@ type deployer struct {
 
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpts) ([]types.DeployedComponent, error) {
 	l := logger.From(ctx)
-	l.Info("starting deploy")
+	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
 	start := time.Now()
-	variableConfig := template.GetZarfVariableConfig(ctx)
-	variableConfig.SetConstants(pkgLayout.Pkg.Constants)
-	if err := variableConfig.PopulateVariables(pkgLayout.Pkg.Variables, opts.SetVariables); err != nil {
-		return nil, fmt.Errorf("unable to populate variables: %w", err)
+	variableConfig, err := getPopulateVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
+	if err != nil {
+		return nil, err
 	}
 
 	d := deployer{
-		vc:          variableConfig,
-		hpaModified: false,
+		vc: variableConfig,
 	}
 
 	// During deploy we disable
@@ -563,13 +562,10 @@ func (d *deployer) connectToCluster(ctx context.Context, pkg v1alpha1.ZarfPackag
 	if err != nil {
 		return err
 	}
-
 	if err := attemptClusterChecks(ctx, c, pkg); err != nil {
 		return err
 	}
-
 	d.c = c
-
 	return nil
 }
 
