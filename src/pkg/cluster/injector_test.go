@@ -27,7 +27,15 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 )
 
-func TestInjector(t *testing.T) {
+func TestInjectorInIPv4Cluster(t *testing.T) {
+	testInjector(t, "IPv4")
+}
+
+func TestInjectorInIPv6Cluster(t *testing.T) {
+	testInjector(t, "IPv6")
+}
+
+func testInjector(t *testing.T, ipFamily string) {
 	ctx := context.Background()
 	cs := fake.NewClientset()
 	c := &Cluster{
@@ -93,7 +101,7 @@ func TestInjector(t *testing.T) {
 	_, err = cs.CoreV1().Pods(pod.ObjectMeta.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	err = c.StopInjection(ctx, "IPv4")
+	err = c.StopInjection(ctx, ipFamily)
 	require.NoError(t, err)
 
 	for range 2 {
@@ -107,18 +115,25 @@ func TestInjector(t *testing.T) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil)
+		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, ipFamily)
 		require.NoError(t, err)
 
-		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-		require.NoError(t, err)
-		require.Len(t, podList.Items, 1)
-		require.Equal(t, "injector", podList.Items[0].Name)
+		if ipFamily == "IPv4" {
+			podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+			require.NoError(t, err)
+			require.Len(t, podList.Items, 1)
+			require.Equal(t, "injector", podList.Items[0].Name)
+		} else {
+			daemonsetList, err := cs.AppsV1().DaemonSets(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+			require.NoError(t, err)
+			require.Len(t, daemonsetList.Items, 1)
+			require.Equal(t, "zarf-injector", daemonsetList.Items[0].Name)
+		}
 
 		svcList, err := cs.CoreV1().Services(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, svcList.Items, 1)
-		expected, err := os.ReadFile("./testdata/expected-injection-service.json")
+		expected, err := os.ReadFile(fmt.Sprintf("./testdata/expected-injection-service-%s.json", ipFamily))
 		require.NoError(t, err)
 		svc, err := cs.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, "zarf-injector", metav1.GetOptions{})
 		// Managed fields are auto-set and contain timestamps
@@ -136,7 +151,7 @@ func TestInjector(t *testing.T) {
 		require.Equal(t, binData, cm.BinaryData["zarf-injector"])
 	}
 
-	err = c.StopInjection(ctx, "IPv4")
+	err = c.StopInjection(ctx, ipFamily)
 	require.NoError(t, err)
 
 	podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})

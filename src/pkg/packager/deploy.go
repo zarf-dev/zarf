@@ -276,7 +276,11 @@ func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.Z
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := p.cluster.StartInjection(ctx, p.layout.Base, p.layout.Images.Base, component.Images)
+		ipFamily, err := p.cluster.DeterminePreferredIPFamily(ctx)
+		if err != nil {
+			return nil, err
+		}
+		err = p.cluster.StartInjection(ctx, p.layout.Base, p.layout.Images.Base, component.Images, ipFamily)
 		if err != nil {
 			return nil, err
 		}
