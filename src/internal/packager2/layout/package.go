@@ -157,7 +157,6 @@ func (p *PackageLayout) GetSBOM(destPath string) error {
 	if !p.ContainsSBOM() {
 		return &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
 	}
-	// FIXME give a specific error if the package was built without an SBOM
 	err := archiver.Extract(filepath.Join(p.dirPath, SBOMTar), "", destPath)
 	if err != nil {
 		return err
