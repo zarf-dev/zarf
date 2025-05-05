@@ -223,7 +223,7 @@ type RegistryInfo struct {
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
 func (ri RegistryInfo) IsInternal() bool {
 	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort) ||
-		ri.Address == fmt.Sprintf("%s:%d", IPV6Localhost, ri.NodePort)
+		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.NodePort)
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
@@ -240,7 +240,7 @@ func (ri *RegistryInfo) FillInEmptyValues(preferredIPFamily string) error {
 		case "IPv4":
 			ri.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
 		case "IPv6":
-			ri.Address = fmt.Sprintf("%s:%d", IPV6Localhost, ri.NodePort)
+			ri.Address = fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.NodePort)
 		default:
 			return fmt.Errorf("invalid ipFamily: %s", preferredIPFamily)
 		}
