@@ -97,6 +97,8 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+
+	l.Debug("using temporary directory", "tmpDir", config.CommonOptions.TempDirectory)
 	return nil
 }
 

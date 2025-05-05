@@ -88,6 +88,9 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	if err != nil {
 		return nil, err
 	}
+	if len(deployedComponents) == 0 {
+		l.Warn("no components were selected for deployment. Inspect the package to view the available components and select components interactively or by name with \"--components\"")
+	}
 	l.Debug("deployment complete", "duration", time.Since(start))
 	return deployedComponents, nil
 }

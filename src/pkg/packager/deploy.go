@@ -129,7 +129,7 @@ func (p *Packager) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// FIXME, move this to cli level and error
+
 	if len(deployedComponents) == 0 {
 		l.Warn("no components were selected for deployment. Inspect the package to view the available components and select components interactively or by name with \"--components\"")
 	}
