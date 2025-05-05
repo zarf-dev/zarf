@@ -18,7 +18,8 @@ spec:
         - args:
             - tcp6-listen:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
             - tcp6:{{ template "docker-registry.fullname" . }}:5000
-          image: alpine/socat:1.8.0.1
+          image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
+          imagePullPolicy: IfNotPresent
           name: zarf-registry-proxy
           ports:
             - containerPort: {{ .Values.service.nodePort }}

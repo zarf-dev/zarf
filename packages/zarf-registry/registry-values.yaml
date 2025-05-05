@@ -9,6 +9,11 @@ image:
   repository: "###ZARF_REGISTRY###/###ZARF_CONST_REGISTRY_IMAGE###"
   tag: "###ZARF_CONST_REGISTRY_IMAGE_TAG###"
 
+proxy:
+  image:
+    repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_REGISTRY_PROXY_IMAGE###"
+    tag: "###ZARF_CONST_REGISTRY_PROXY_IMAGE_TAG###"
+
 imagePullSecrets:
   - name: private-registry
 

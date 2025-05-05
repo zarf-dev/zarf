@@ -100,6 +100,12 @@ constants:
   - name: REGISTRY_IMAGE_TAG
     value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
 
+  - name: REGISTRY_PROXY_IMAGE
+    value: "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE###"
+
+  - name: REGISTRY_PROXY_IMAGE_TAG
+    value: "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_TAG###"
+
 components:
   - name: zarf-injector
     description: |
@@ -146,7 +152,7 @@ components:
     images:
       # The seed image (or images) that will be injected (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
-      - alpine/socat:1.8.0.1
+      - "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_TAG###"
 
   - name: zarf-registry
     description: |
@@ -172,4 +178,4 @@ components:
     images:
       # This image (or images) must match that used for injection (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
-      - alpine/socat:1.8.0.1
+      - "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_TAG###"
