@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
@@ -94,8 +94,7 @@ func identifySource(src string) (string, error) {
 		return "split", nil
 	}
 	// match deployed package names: lowercase, digits, hyphens
-	namePattern := regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*$`)
-	if namePattern.MatchString(src) {
+	if lint.IsLowercaseNumberHyphenNoStartHyphen(src) {
 		return "cluster", nil
 	}
 	return "", fmt.Errorf("unknown source %s", src)
