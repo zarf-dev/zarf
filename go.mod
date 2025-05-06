@@ -17,9 +17,9 @@ require (
 	github.com/anchore/syft v1.19.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.1
-	github.com/defenseunicorns/pkg/oci v1.0.4
+	github.com/defenseunicorns/pkg/oci v1.1.2-0.20250506153810-3a79d33a5d22
 	github.com/derailed/k9s v0.40.5
-	github.com/distribution/distribution/v3 v3.0.0
+	github.com/distribution/distribution/v3 v3.0.1-0.20250417064513-e016d9595f53
 	github.com/distribution/reference v0.6.0
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/fairwindsops/pluto/v5 v5.21.3
@@ -28,7 +28,7 @@ require (
 	github.com/fluxcd/pkg/apis/meta v1.10.0
 	github.com/fluxcd/source-controller/api v1.5.0
 	github.com/go-git/go-git/v5 v5.16.0
-	github.com/goccy/go-yaml v1.16.0
+	github.com/goccy/go-yaml v1.17.1
 	github.com/gofrs/flock v0.12.1
 	github.com/golang-cz/devslog v0.0.12
 	github.com/google/go-containerregistry v0.20.3
