@@ -24,7 +24,7 @@ const (
 	ComponentStatusRemoving  ComponentStatus = "Removing"
 )
 
-// TODO move to helpers
+// IPV6Localhost is the IP of localhost in IPv6 (TODO: move to helpers next to IPV4Localhost)
 const IPV6Localhost = "::1"
 
 // Values during setup of the initial zarf state
