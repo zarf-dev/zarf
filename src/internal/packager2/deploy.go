@@ -527,7 +527,6 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 }
 
 func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkg v1alpha1.ZarfPackage) error {
-	// If we are already connected to the cluster then return
 	if err := validatePackageArchitecture(ctx, d.c, pkg); err != nil {
 		if errors.Is(err, lang.ErrUnableToCheckArch) {
 			logger.From(ctx).Warn("unable to validate package architecture", "error", err)
