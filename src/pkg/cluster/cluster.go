@@ -307,6 +307,8 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) error {
 	return nil
 }
 
+// DeterminePreferredIPFamily checks the supported IP families (IPv4 or IPv6) in the Kubernetes
+// cluster and returns the preferred entry.
 func (c *Cluster) DeterminePreferredIPFamily(ctx context.Context) (string, error) {
 	l := logger.From(ctx)
 	l.Debug("checking if Zarf can create a Kubernetes Service with IPv4")
@@ -321,9 +323,8 @@ func (c *Cluster) DeterminePreferredIPFamily(ctx context.Context) (string, error
 	if err != nil {
 		if !kerrors.IsInvalid(err) {
 			return "", fmt.Errorf("unable to create Service: %w", err)
-		} else {
-			return "IPv6", nil
 		}
+		return "IPv6", nil
 	}
 	err = c.Clientset.CoreV1().Services(*svcAc.Namespace).Delete(ctx, svcName, metav1.DeleteOptions{})
 	if err != nil {
