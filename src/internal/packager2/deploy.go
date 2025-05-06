@@ -582,8 +582,8 @@ func setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackag
 }
 
 func validatePackageArchitecture(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackage) error {
-	// Ignore this check if we don't have a cluster connection, or the package contains no images
-	if !pkg.HasImages() || c == nil {
+	// Ignore this check if the package contains no images
+	if !pkg.HasImages() {
 		return nil
 	}
 
