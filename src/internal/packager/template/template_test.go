@@ -5,11 +5,48 @@
 package template
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/types"
 )
+
+func TestGetZarfTemplatesForIPv6SeedRegistry(t *testing.T) {
+	tests := []struct {
+		ipFamily                string
+		expectedRegistryAddress string
+	}{
+		{
+			ipFamily:                "IPv4",
+			expectedRegistryAddress: "127.0.0.1:31997",
+		},
+		{
+			ipFamily:                "IPv6",
+			expectedRegistryAddress: "[::1]:31997",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.ipFamily, func(t *testing.T) {
+			config.ZarfSeedPort = "31997"
+			state := state.State{
+				RegistryInfo: types.RegistryInfo{
+					Address:  test.expectedRegistryAddress,
+					NodePort: 31997,
+				},
+				PreferredIPFamily: test.ipFamily,
+			}
+			templateMap, err := GetZarfTemplates(context.Background(), "zarf-seed-registry", &state)
+			require.NoError(t, err)
+			require.Equal(t, test.expectedRegistryAddress, templateMap["###ZARF_SEED_REGISTRY###"].Value)
+			require.Equal(t, test.ipFamily, templateMap["###ZARF_PREFERRED_IP_FAMILY###"].Value)
+			require.NotEmpty(t, templateMap["###ZARF_HTPASSWD###"].Value)
+		})
+	}
+}
 
 func TestGetSanitizedTemplateMap(t *testing.T) {
 	t.Parallel()
