@@ -12,7 +12,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	orasContent "oras.land/oras-go/v2/content/oci"
+	ociDirectory "oras.land/oras-go/v2/content/oci"
 )
 
 const (
@@ -41,7 +41,7 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 	if err != nil {
 		return nil, err
 	}
-	orasStore, err := orasContent.NewWithContext(ctx, filepath.Join(absCachePath, ImageCacheDirectory))
+	ociCache, err := ociDirectory.NewWithContext(ctx, filepath.Join(absCachePath, ImageCacheDirectory))
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 		oci.WithInsecureSkipVerify(config.CommonOptions.InsecureSkipTLSVerify),
 		oci.WithLogger(l),
 		oci.WithUserAgent("zarf/" + config.CLIVersion),
-		oci.WithCache(orasStore),
+		oci.WithCache(ociCache),
 	}, mods...)
 	remote, err := oci.NewOrasRemote(url, platform, modifiers...)
 	if err != nil {
