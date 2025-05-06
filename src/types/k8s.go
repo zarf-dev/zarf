@@ -236,13 +236,9 @@ func (ri *RegistryInfo) FillInEmptyValues(preferredIPFamily string) error {
 
 	// Set default url if an external registry was not provided
 	if ri.Address == "" {
-		switch preferredIPFamily {
-		case "IPv4":
-			ri.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
-		case "IPv6":
-			ri.Address = fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.NodePort)
-		default:
-			return fmt.Errorf("invalid ipFamily: %s", preferredIPFamily)
+		ri.Address, err = LocalhostRegistryAddress(preferredIPFamily, ri.NodePort)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -284,4 +280,16 @@ func (ri *RegistryInfo) FillInEmptyValues(preferredIPFamily string) error {
 	}
 
 	return nil
+}
+
+// LocalhostRegistryAddress builds the IPv4 or IPv6 local address of the Zarf deployed registry.
+func LocalhostRegistryAddress(ipFamily string, nodePort int) (string, error) {
+	switch ipFamily {
+	case "IPv4":
+		return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, nodePort), nil
+	case "IPv6":
+		return fmt.Sprintf("[%s]:%d", IPV6Localhost, nodePort), nil
+	default:
+		return "", fmt.Errorf("invalid ipFamily: %s", ipFamily)
+	}
 }
