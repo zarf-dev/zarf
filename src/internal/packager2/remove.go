@@ -36,22 +36,10 @@ type RemoveOptions struct {
 func Remove(ctx context.Context, opt RemoveOptions) error {
 	l := logger.From(ctx)
 
-	loadOpts := LoadOptions{
-		Cluster:                 opt.Cluster,
-		Source:                  opt.Source,
-		SkipSignatureValidation: opt.SkipSignatureValidation,
-		PublicKeyPath:           opt.PublicKeyPath,
-		Filter:                  opt.Filter,
-		Architecture:            config.GetArch(),
-	}
-
-	pkgLayout, err := LoadPackage(ctx, loadOpts)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to load the package: %w", err)
 	}
-
-	pkg := pkgLayout.Pkg
-
 	// If components were provided; just remove the things we were asked to remove
 	components, err := opt.Filter.Apply(pkg)
 	if err != nil {

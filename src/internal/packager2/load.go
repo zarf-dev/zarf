@@ -16,6 +16,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -34,6 +35,7 @@ type LoadOptions struct {
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
+	InspectTarget           InspectTarget
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
@@ -47,11 +49,6 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 		return nil, err
 	}
 
-	// Handle cluster-deployed packages directly
-	if srcType == "cluster" {
-		return loadFromCluster(ctx, opt.Source, opt.Cluster)
-	}
-
 	// Prepare a temp workspace
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -60,7 +57,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	defer os.Remove(tmpDir)
 
 	// Fetch or assemble the package tar
-	isPartial, tarPath, err := fetchPackage(ctx, srcType, opt.Source, opt.Shasum, opt.Architecture, "", tmpDir, opt.Filter)
+	isPartial, tarPath, err := fetchPackage(ctx, srcType, opt.Source, opt.Shasum, opt.Architecture, opt.InspectTarget, tmpDir, opt.Filter)
 	if err != nil {
 		return nil, err
 	}
@@ -100,19 +97,6 @@ func identifySource(src string) (string, error) {
 	return "", fmt.Errorf("unknown source %s", src)
 }
 
-// loadFromCluster handles loading packages deployed in a cluster.
-func loadFromCluster(ctx context.Context, source string, cluster *cluster.Cluster) (*layout.PackageLayout, error) {
-	if cluster == nil {
-		return nil, fmt.Errorf("cluster client is nil for source %s", source)
-	}
-
-	depPkg, err := cluster.GetDeployedPackage(ctx, source)
-	if err != nil {
-		return nil, err
-	}
-	return &layout.PackageLayout{Pkg: depPkg.Data}, nil
-}
-
 // fetchPackage fetches or assembles the package tar for different source types.
 func fetchPackage(ctx context.Context, srcType string, source string, shasum string, architecture string, inspectTarget InspectTarget, workDir string, filter filters.ComponentFilterStrategy) (bool, string, error) {
 	tarPath := filepath.Join(workDir, "data.tar.zst")
@@ -141,7 +125,7 @@ func fetchPackage(ctx context.Context, srcType string, source string, shasum str
 		return false, source, nil
 
 	default:
-		err := fmt.Errorf("unsupported source type %s", srcType)
+		err := fmt.Errorf("cannot fetch or locate tarball for unsupported source type %s", srcType)
 		return false, "", err
 	}
 }
@@ -191,4 +175,36 @@ func assembleSplitTar(src, dest string) error {
 		f.Close()
 	}
 	return nil
+}
+
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string) (v1alpha1.ZarfPackage, error) {
+	srcType, err := identifySource(src)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	if srcType == "cluster" {
+		if cluster == nil {
+			return v1alpha1.ZarfPackage{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
+		}
+		depPkg, err := cluster.GetDeployedPackage(ctx, src)
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, err
+		}
+		return depPkg.Data, nil
+	}
+
+	loadOpt := LoadOptions{
+		Source:                  src,
+		SkipSignatureValidation: skipSignatureValidation,
+		Architecture:            config.GetArch(),
+		Filter:                  filters.Empty(),
+		PublicKeyPath:           publicKeyPath,
+	}
+	p, err := LoadPackage(ctx, loadOpt)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	//nolint: errcheck // ignore
+	defer p.Cleanup()
+	return p.Pkg, nil
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"helm.sh/helm/v3/pkg/chartutil"
 )
 
@@ -35,9 +36,9 @@ const (
 	ValuesFileResource ResourceType = "valuesfile"
 
 	NoTarget         InspectTarget = ""
-	SbomTarget       InspectTarget = "sbom"
-	MetadataTarget   InspectTarget = "metadata"
-	ComponentsTarget InspectTarget = "components"
+	SbomTarget       InspectTarget = zoci.SbomLayers
+	MetadataTarget   InspectTarget = zoci.MetadataLayers
+	ComponentsTarget InspectTarget = zoci.ComponentLayers
 )
 
 // Resource contains a Kubernetes Manifest or Chart
@@ -66,10 +67,25 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
 	}
-	pkgLayout, err := loadInspectPackageLayout(ctx, source, opts.Architecture, ComponentsTarget, nil, filters.BySelectState(opts.Components), opts.PublicKeyPath, opts.SkipSignatureValidation)
+
+	loadOpts := LoadOptions{
+		Source:                  source,
+		Architecture:            opts.Architecture,
+		PublicKeyPath:           opts.PublicKeyPath,
+		SkipSignatureValidation: opts.SkipSignatureValidation,
+		InspectTarget:           ComponentsTarget,
+		Filter:                  filters.BySelectState(opts.Components),
+	}
+
+	pkgLayout, err := LoadPackage(ctx, loadOpts)
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
 	}
+
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+
 	variableConfig := template.GetZarfVariableConfig(ctx)
 	variableConfig.SetConstants(pkgLayout.Pkg.Constants)
 	variableConfig.PopulateVariables(pkgLayout.Pkg.Variables, opts.SetVariables)
@@ -285,10 +301,17 @@ type InspectPackageSbomsOptions struct {
 
 func InspectPackageSboms(ctx context.Context, source string, opts InspectPackageSbomsOptions) (InspectPackageSbomsResult, error) {
 
-	// we cannot retrieve sboms from the cluster currently
-	pkgLayout, err := loadInspectPackageLayout(ctx, source, opts.Architecture, SbomTarget, nil, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
+	loadOpts := LoadOptions{
+		Source:                  source,
+		Architecture:            opts.Architecture,
+		PublicKeyPath:           opts.PublicKeyPath,
+		SkipSignatureValidation: opts.SkipSignatureValidation,
+		InspectTarget:           SbomTarget,
+		Filter:                  filters.Empty(),
+	}
+	pkgLayout, err := LoadPackage(ctx, loadOpts)
 	if err != nil {
-		return InspectPackageSbomsResult{}, err
+		return InspectPackageSbomsResult{}, fmt.Errorf("unable to load the package: %w", err)
 	}
 
 	defer func() {
@@ -317,17 +340,13 @@ type InspectPackageDefinitionOptions struct {
 func InspectPackageDefinition(ctx context.Context, source string, opts InspectPackageDefinitionOptions) (InspectPackageDefinitionResult, error) {
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
-	pkgLayout, err := loadInspectPackageLayout(ctx, source, opts.Architecture, MetadataTarget, cluster, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath)
 	if err != nil {
-		return InspectPackageDefinitionResult{}, err
+		return InspectPackageDefinitionResult{}, fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	defer func() {
-		err = errors.Join(err, pkgLayout.Cleanup())
-	}()
-
 	return InspectPackageDefinitionResult{
-		Package: pkgLayout.Pkg,
+		Package: pkg,
 	}, nil
 }
 
@@ -346,17 +365,13 @@ func InspectPackageImages(ctx context.Context, source string, opts InspectPackag
 
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
-	pkgLayout, err := loadInspectPackageLayout(ctx, source, opts.Architecture, MetadataTarget, cluster, filters.Empty(), opts.PublicKeyPath, opts.SkipSignatureValidation)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath)
 	if err != nil {
-		return InspectPackageImageResult{}, err
+		return InspectPackageImageResult{}, fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	defer func() {
-		err = errors.Join(err, pkgLayout.Cleanup())
-	}()
-
 	images := make([]string, 0)
-	for _, component := range pkgLayout.Pkg.Components {
+	for _, component := range pkg.Components {
 		images = append(images, component.Images...)
 	}
 	images = helpers.Unique(images)
@@ -416,50 +431,6 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 		})
 	}
 	return resources, nil
-}
-
-// loadInspectPackageLayout replicates the Load process while adding inspect targets not utilized in the primary LoadPackage function.
-func loadInspectPackageLayout(ctx context.Context, source, architecture string, inspectTarget InspectTarget, cluster *cluster.Cluster, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) (*layout.PackageLayout, error) {
-
-	// Identify the source type
-	srcType, err := identifySource(source)
-	if err != nil {
-		return nil, err
-	}
-
-	// Prepare a temp workspace
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return nil, err
-	}
-	defer os.Remove(tmpDir)
-
-	// Handle cluster-deployed packages directly
-	if srcType == "cluster" {
-		if cluster != nil {
-			return loadFromCluster(ctx, source, cluster)
-		}
-		return nil, fmt.Errorf("unable to load package from cluster: no cluster connectivity detected")
-	}
-
-	// Fetch the package tar
-	isPartial, tarPath, err := fetchPackage(ctx, srcType, source, "", architecture, inspectTarget, tmpDir, filter)
-	if err != nil {
-		return nil, err
-	}
-
-	// Load package layout
-	layoutOpt := layout.PackageLayoutOptions{
-		PublicKeyPath:           publicKeyPath,
-		SkipSignatureValidation: skipSignatureValidation,
-		IsPartial:               isPartial,
-		Filter:                  filter,
-	}
-	pkgLayout, err := layout.LoadFromTar(ctx, tarPath, layoutOpt)
-	if err != nil {
-		return nil, err
-	}
-	return pkgLayout, nil
 }
 
 // getTemplatedChart returns a templated chart.yaml as a string after templating
