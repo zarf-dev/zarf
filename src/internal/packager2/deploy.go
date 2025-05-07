@@ -126,7 +126,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			defer cancel()
 			if !d.isConnectedToCluster() {
 				var err error
-				d.c, err = cluster.NewWithWait(ctx)
+				d.c, err = cluster.NewWithWait(connectCtx)
 				if err != nil {
 					return nil, err
 				}
