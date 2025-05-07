@@ -138,6 +138,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		PlainHTTP:              config.CommonOptions.PlainHTTP,
 		InsecureTLSSkipVerify:  config.CommonOptions.InsecureSkipTLSVerify,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
+		StorageClass:           pkgConfig.InitOpts.StorageClass,
 	}
 	_, err = deploy(ctx, pkgLayout, opts)
 	if err != nil {

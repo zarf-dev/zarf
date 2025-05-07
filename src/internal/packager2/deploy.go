@@ -55,6 +55,7 @@ type DeployOpts struct {
 	GitServer      types.GitServerInfo
 	RegistryInfo   types.RegistryInfo
 	ArtifactServer types.ArtifactServerInfo
+	StorageClass   string
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap map[string]map[string]map[string]interface{}
@@ -228,6 +229,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			RegistryInfo:   opts.RegistryInfo,
 			ArtifactServer: opts.ArtifactServer,
 			ApplianceMode:  applianceMode,
+			StorageClass:   opts.StorageClass,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
