@@ -19,7 +19,8 @@ import (
 )
 
 func TestPull(t *testing.T) {
-	t.Parallel()
+	// REVIEW(mkcp): Parallel is making these server tests fail. Weird
+	// t.Parallel()
 
 	ctx := testutil.TestContext(t)
 	packagePath := "./testdata/zarf-package-test-amd64-0.0.1.tar.zst"
@@ -54,7 +55,8 @@ func TestPull(t *testing.T) {
 }
 
 func TestPullUncompressed(t *testing.T) {
-	t.Parallel()
+	// REVIEW(mkcp): Parallel is making these server tests fail. Weird
+	// t.Parallel()
 
 	ctx := testutil.TestContext(t)
 	packagePath := "./testdata/uncompressed/zarf-package-test-uncompressed-amd64-0.0.1.tar"
@@ -88,7 +90,8 @@ func TestPullUncompressed(t *testing.T) {
 }
 
 func TestPullUnsupported(t *testing.T) {
-	t.Parallel()
+	// REVIEW(mkcp): Parallel is making these server tests fail. Weird
+	// t.Parallel()
 
 	ctx := testutil.TestContext(t)
 	packagePath := "./testdata/uncompressed/zarf.yaml"
