@@ -316,8 +316,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout2.PackageLayout, setVar
 	}
 
 	if pkgLayout.Pkg.IsSBOMAble() && !pkgLayout.ContainsSBOM() {
-		l.Warn("this package does NOT contain an SBOM.  If you require an SBOM, please contact the creator of this package to request a version that includes an SBOM.",
-			"name", pkgLayout.Pkg.Metadata.Name)
+		l.Warn("this package does NOT contain an SBOM. If you require an SBOM, the package must be built without the --skip-sbom flag")
 	}
 	if pkgLayout.ContainsSBOM() && !config.CommonOptions.Confirm {
 		cwd, err := os.Getwd()

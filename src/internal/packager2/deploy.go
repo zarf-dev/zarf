@@ -118,19 +118,19 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		packageGeneration := 1
 		// Connect to cluster if a component requires it.
 		if component.RequiresCluster() {
-			timeout := cluster.DefaultTimeout
-			if pkgLayout.Pkg.IsInitConfig() {
-				timeout = 5 * time.Minute
-			}
-			connectCtx, cancel := context.WithTimeout(ctx, timeout)
-			defer cancel()
 			if !d.isConnectedToCluster() {
+				timeout := cluster.DefaultTimeout
+				if pkgLayout.Pkg.IsInitConfig() {
+					timeout = 5 * time.Minute
+				}
+				connectCtx, cancel := context.WithTimeout(ctx, timeout)
+				defer cancel()
 				var err error
 				d.c, err = cluster.NewWithWait(connectCtx)
 				if err != nil {
 					return nil, err
 				}
-				if err := d.verifyPackageIsDeployable(connectCtx, pkgLayout.Pkg); err != nil {
+				if err := d.verifyPackageIsDeployable(ctx, pkgLayout.Pkg); err != nil {
 					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 				}
 			}
