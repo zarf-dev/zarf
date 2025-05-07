@@ -5,6 +5,7 @@
 package lint
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -219,4 +221,41 @@ func TestYqCompat(t *testing.T) {
 		actual := makeFieldPathYqCompat(input)
 		require.Equal(t, input, actual)
 	})
+}
+
+func TestFillObjTemplate(t *testing.T) {
+	SetVariables := map[string]string{
+		"KEY1": "value1",
+		"KEY2": "value2",
+	}
+
+	component := v1alpha1.ZarfComponent{
+		Images: []string{
+			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY1"),
+			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageVariablePrefix, "KEY2"),
+			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY3"),
+		},
+	}
+
+	findings, err := templateZarfObj(&component, SetVariables)
+	require.NoError(t, err)
+	expectedFindings := []PackageFinding{
+		{
+			Severity:    SevWarn,
+			Description: "package template KEY3 is not set and won't be evaluated during lint",
+		},
+		{
+			Severity:    SevWarn,
+			Description: fmt.Sprintf(lang.PkgValidateTemplateDeprecation, "KEY2", "KEY2", "KEY2"),
+		},
+	}
+	expectedComponent := v1alpha1.ZarfComponent{
+		Images: []string{
+			"value1",
+			"value2",
+			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY3"),
+		},
+	}
+	require.ElementsMatch(t, expectedFindings, findings)
+	require.Equal(t, expectedComponent, component)
 }

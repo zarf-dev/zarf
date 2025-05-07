@@ -8,6 +8,29 @@ import (
 	"fmt"
 )
 
+// LintError represents an error containing lint findings.
+//
+//nolint:revive // ignore name
+type LintError struct {
+	BaseDir     string
+	PackageName string
+	Findings    []PackageFinding
+}
+
+func (e *LintError) Error() string {
+	return fmt.Sprintf("linting error found %d instance(s)", len(e.Findings))
+}
+
+// OnlyWarnings returns true if all findings have severity warning.
+func (e *LintError) OnlyWarnings() bool {
+	for _, f := range e.Findings {
+		if f.Severity == SevErr {
+			return false
+		}
+	}
+	return true
+}
+
 // Severity is the type of finding.
 type Severity string
 

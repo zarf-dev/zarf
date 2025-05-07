@@ -11,6 +11,8 @@ import (
 	"regexp"
 
 	"github.com/xeipuuv/gojsonschema"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -96,4 +98,49 @@ func runSchema(jsonSchema []byte, pkg interface{}) ([]gojsonschema.ResultError, 
 		return result.Errors(), nil
 	}
 	return nil, nil
+}
+
+func templateZarfObj(zarfObj any, setVariables map[string]string) ([]PackageFinding, error) {
+	var findings []PackageFinding
+	templateMap := map[string]string{}
+
+	setVarsAndWarn := func(templatePrefix string, deprecated bool) error {
+		yamlTemplates, err := utils.FindYamlTemplates(zarfObj, templatePrefix, "###")
+		if err != nil {
+			return err
+		}
+
+		for key := range yamlTemplates {
+			if deprecated {
+				findings = append(findings, PackageFinding{
+					Description: fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key),
+					Severity:    SevWarn,
+				})
+			}
+			if _, present := setVariables[key]; !present {
+				findings = append(findings, PackageFinding{
+					Description: fmt.Sprintf("package template %s is not set and won't be evaluated during lint", key),
+					Severity:    SevWarn,
+				})
+			}
+		}
+		for key, value := range setVariables {
+			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
+		}
+		return nil
+	}
+
+	if err := setVarsAndWarn(v1alpha1.ZarfPackageTemplatePrefix, false); err != nil {
+		return nil, err
+	}
+
+	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
+	if err := setVarsAndWarn(v1alpha1.ZarfPackageVariablePrefix, true); err != nil {
+		return nil, err
+	}
+
+	if err := utils.ReloadYamlTemplate(zarfObj, templateMap); err != nil {
+		return nil, err
+	}
+	return findings, nil
 }
