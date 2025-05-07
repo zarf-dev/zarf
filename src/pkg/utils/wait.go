@@ -94,6 +94,11 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 			zarfKubectlGet := fmt.Sprintf("%s tools kubectl get %s %s %s", zarfCommand, namespaceFlag, kind, identifier)
 			_, stderr, err := exec.Cmd(shell, append(shellArgs, zarfKubectlGet)...)
 			if err != nil {
+				// bail out immediately if the API server is refusing connections
+				if strings.Contains(stderr, "connect: connection refused") {
+					return fmt.Errorf("cannot reach Kubernetes API (connection refused): %s", stderr)
+				}
+				// otherwise just log and retry
 				l.Debug("resource error", "error", err)
 				continue
 			}
