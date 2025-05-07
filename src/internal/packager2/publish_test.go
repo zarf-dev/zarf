@@ -29,7 +29,7 @@ func pullFromRemote(t *testing.T, ctx context.Context, packageRef string, archit
 
 	// Generate tmpdir and pull published package from local registry
 	tmpdir := t.TempDir()
-	_, tarPath, err := pullOCI(context.Background(), packageRef, tmpdir, "", architecture, filters.Empty(), oci.WithPlainHTTP(true))
+	_, tarPath, err := PullOCI(context.Background(), packageRef, tmpdir, "", architecture, filters.Empty(), oci.WithPlainHTTP(true))
 	require.NoError(t, err)
 
 	layoutActual, err := layout.LoadFromTar(ctx, tarPath, layout.PackageLayoutOptions{Filter: filters.Empty()})

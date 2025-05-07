@@ -1083,7 +1083,12 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		}
 		outputDir = wd
 	}
-	err := packager2.Pull(cmd.Context(), args[0], outputDir, pkgConfig.PkgOpts.Shasum, config.GetArch(), filters.Empty(), pkgConfig.PkgOpts.PublicKeyPath, pkgConfig.PkgOpts.SkipSignatureValidation)
+	err := packager.Pull(cmd.Context(), args[0], packager.PullOptions{
+		OutputDirectory:         outputDir,
+		SHASum:                  pkgConfig.PkgOpts.Shasum,
+		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+	})
 	if err != nil {
 		return err
 	}

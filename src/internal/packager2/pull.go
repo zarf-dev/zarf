@@ -9,116 +9,21 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
-
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/gabriel-vasile/mimetype"
-	goyaml "github.com/goccy/go-yaml"
 	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
-// TODO: Add options struct
-// Pull fetches the Zarf package from the given sources.
-func Pull(ctx context.Context, src, dir, shasum, architecture string, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) error {
-	if filter == nil {
-		filter = filters.Empty()
-	}
-	l := logger.From(ctx)
-	start := time.Now()
-	u, err := url.Parse(src)
-	if err != nil {
-		return err
-	}
-	if u.Scheme == "" {
-		return errors.New("scheme must be either oci:// or http(s)://")
-	}
-	if u.Host == "" {
-		return errors.New("host cannot be empty")
-	}
-	// ensure architecture is set
-	architecture = config.GetArch(architecture)
-
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmpDir)
-	tmpPath := ""
-
-	isPartial := false
-	switch u.Scheme {
-	case "oci":
-		l.Info("starting pull from oci source", "src", src)
-		isPartial, tmpPath, err = pullOCI(ctx, src, tmpDir, shasum, architecture, filter)
-		if err != nil {
-			return err
-		}
-	case "http", "https":
-		l.Info("starting pull from http(s) source", "src", src, "digest", shasum)
-		tmpPath, err = pullHTTP(ctx, src, tmpDir, shasum)
-		if err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("unknown scheme %s", u.Scheme)
-	}
-
-	// This loadFromTar is done so that validatePackageIntegrtiy and validatePackageSignature are called
-	layoutOpt := layout.PackageLayoutOptions{
-		PublicKeyPath:           publicKeyPath,
-		SkipSignatureValidation: skipSignatureValidation,
-		IsPartial:               isPartial,
-		Filter:                  filter,
-	}
-	_, err = layout.LoadFromTar(ctx, tmpPath, layoutOpt)
-	if err != nil {
-		return err
-	}
-
-	name, err := nameFromMetadata(tmpPath)
-	if err != nil {
-		return err
-	}
-	tarPath := filepath.Join(dir, name)
-	err = os.Remove(tarPath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
-	dstFile, err := os.Create(tarPath)
-	if err != nil {
-		return err
-	}
-	defer dstFile.Close()
-	srcFile, err := os.Open(tmpPath)
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-	_, err = io.Copy(dstFile, srcFile)
-	if err != nil {
-		return err
-	}
-
-	l.Debug("done packager2.Pull", "src", src, "dir", dir, "duration", time.Since(start))
-	return nil
-}
-
-func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture string, filter filters.ComponentFilterStrategy, mods ...oci.Modifier) (bool, string, error) {
+func PullOCI(ctx context.Context, src, tarDir, shasum string, architecture string, filter filters.ComponentFilterStrategy, mods ...oci.Modifier) (bool, string, error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return false, "", err
@@ -179,13 +84,13 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture strin
 	return isPartial, tarPath, nil
 }
 
-func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
+func PullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 	if shasum == "" {
 		return "", errors.New("shasum cannot be empty")
 	}
 	tarPath := filepath.Join(tarDir, "data")
 
-	err := pullHTTPFile(ctx, src, tarPath)
+	err := PullHTTPFile(ctx, src, tarPath)
 	if err != nil {
 		return "", err
 	}
@@ -222,7 +127,7 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 	return "", fmt.Errorf("unsupported file type: %s", mtype.Extension())
 }
 
-func pullHTTPFile(ctx context.Context, src, tarPath string) error {
+func PullHTTPFile(ctx context.Context, src, tarPath string) error {
 	f, err := os.Create(tarPath)
 	if err != nil {
 		return err
@@ -249,53 +154,6 @@ func pullHTTPFile(ctx context.Context, src, tarPath string) error {
 		return err
 	}
 	return nil
-}
-
-func nameFromMetadata(path string) (string, error) {
-	var pkg v1alpha1.ZarfPackage
-	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-	err := archiver.Walk(path, func(f archiver.File) error {
-		if f.Name() == layout.ZarfYAML {
-			b, err := io.ReadAll(f)
-			if err != nil {
-				return err
-			}
-			if err := goyaml.Unmarshal(b, &pkg); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return "", err
-	}
-	if pkg.Metadata.Name == "" {
-		return "", fmt.Errorf("%s does not contain a zarf.yaml", path)
-	}
-
-	arch := config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
-	if pkg.Build.Architecture == zoci.SkeletonArch {
-		arch = zoci.SkeletonArch
-	}
-
-	var name string
-	switch pkg.Kind {
-	case v1alpha1.ZarfInitConfig:
-		name = fmt.Sprintf("zarf-init-%s", arch)
-	case v1alpha1.ZarfPackageConfig:
-		name = fmt.Sprintf("zarf-package-%s-%s", pkg.Metadata.Name, arch)
-	default:
-		name = fmt.Sprintf("zarf-%s-%s", strings.ToLower(string(pkg.Kind)), arch)
-	}
-	if pkg.Build.Differential {
-		name = fmt.Sprintf("%s-%s-differential-%s", name, pkg.Build.DifferentialPackageVersion, pkg.Metadata.Version)
-	} else if pkg.Metadata.Version != "" {
-		name = fmt.Sprintf("%s-%s", name, pkg.Metadata.Version)
-	}
-	if pkg.Metadata.Uncompressed {
-		return fmt.Sprintf("%s.tar", name), nil
-	}
-	return fmt.Sprintf("%s.tar.zst", name), nil
 }
 
 func supportsFiltering(platform *ocispec.Platform) bool {
