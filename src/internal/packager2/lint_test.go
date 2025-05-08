@@ -4,6 +4,7 @@ package packager2
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -44,7 +45,7 @@ func TestLintPackageWithImports(t *testing.T) {
 			Severity:    lint.SevWarn,
 		},
 	}
-	err := Lint(ctx, "testdata/lint-with-imports", "good-flavor", setVariables)
+	err := Lint(ctx, filepath.Join("testdata", "lint-with-imports"), "good-flavor", setVariables)
 	var lintErr *lint.LintError
 	require.ErrorAs(t, err, &lintErr)
 	require.ElementsMatch(t, findings, lintErr.Findings)

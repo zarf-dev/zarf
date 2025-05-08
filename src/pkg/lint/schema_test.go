@@ -13,7 +13,6 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -237,17 +236,8 @@ func TestFillObjTemplate(t *testing.T) {
 		},
 	}
 
-	findings, err := templateZarfObj(&component, SetVariables)
-	require.NoError(t, err)
-	expectedFindings := []PackageFinding{
-		{
-			Severity:    SevWarn,
-			Description: "package template KEY3 is not set and won't be evaluated during lint",
-		},
-		{
-			Severity:    SevWarn,
-			Description: fmt.Sprintf(lang.PkgValidateTemplateDeprecation, "KEY2", "KEY2", "KEY2"),
-		},
+	if err := templateZarfObj(&component, SetVariables); err != nil {
+		require.NoError(t, err)
 	}
 	expectedComponent := v1alpha1.ZarfComponent{
 		Images: []string{
@@ -256,6 +246,5 @@ func TestFillObjTemplate(t *testing.T) {
 			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY3"),
 		},
 	}
-	require.ElementsMatch(t, expectedFindings, findings)
 	require.Equal(t, expectedComponent, component)
 }

@@ -12,7 +12,6 @@ import (
 
 	"github.com/xeipuuv/gojsonschema"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -30,8 +29,7 @@ func ValidatePackageSchemaAtPath(path string, setVariables map[string]string) ([
 	if err != nil {
 		return nil, err
 	}
-	_, err = templateZarfObj(&untypedZarfPackage, setVariables)
-	if err != nil {
+	if err := templateZarfObj(&untypedZarfPackage, setVariables); err != nil {
 		return nil, err
 	}
 	return getSchemaFindings(jsonSchema, untypedZarfPackage)
@@ -47,8 +45,7 @@ func ValidatePackageSchema(setVariables map[string]string) ([]PackageFinding, er
 	if err != nil {
 		return nil, err
 	}
-	_, err = templateZarfObj(&untypedZarfPackage, setVariables)
-	if err != nil {
+	if err := templateZarfObj(&untypedZarfPackage, setVariables); err != nil {
 		return nil, err
 	}
 	return getSchemaFindings(jsonSchema, untypedZarfPackage)
@@ -100,47 +97,24 @@ func runSchema(jsonSchema []byte, pkg interface{}) ([]gojsonschema.ResultError, 
 	return nil, nil
 }
 
-func templateZarfObj(zarfObj any, setVariables map[string]string) ([]PackageFinding, error) {
-	var findings []PackageFinding
+func templateZarfObj(zarfObj any, setVariables map[string]string) error {
 	templateMap := map[string]string{}
 
-	setVarsAndWarn := func(templatePrefix string, deprecated bool) error {
-		yamlTemplates, err := utils.FindYamlTemplates(zarfObj, templatePrefix, "###")
-		if err != nil {
-			return err
-		}
-
-		for key := range yamlTemplates {
-			if deprecated {
-				findings = append(findings, PackageFinding{
-					Description: fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key),
-					Severity:    SevWarn,
-				})
-			}
-			if _, present := setVariables[key]; !present {
-				findings = append(findings, PackageFinding{
-					Description: fmt.Sprintf("package template %s is not set and won't be evaluated during lint", key),
-					Severity:    SevWarn,
-				})
-			}
-		}
+	setVars := func(templatePrefix string) error {
 		for key, value := range setVariables {
 			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
 		}
 		return nil
 	}
 
-	if err := setVarsAndWarn(v1alpha1.ZarfPackageTemplatePrefix, false); err != nil {
-		return nil, err
+	if err := setVars(v1alpha1.ZarfPackageTemplatePrefix); err != nil {
+		return err
 	}
 
 	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
-	if err := setVarsAndWarn(v1alpha1.ZarfPackageVariablePrefix, true); err != nil {
-		return nil, err
+	if err := setVars(v1alpha1.ZarfPackageVariablePrefix); err != nil {
+		return err
 	}
 
-	if err := utils.ReloadYamlTemplate(zarfObj, templateMap); err != nil {
-		return nil, err
-	}
-	return findings, nil
+	return utils.ReloadYamlTemplate(zarfObj, templateMap)
 }
