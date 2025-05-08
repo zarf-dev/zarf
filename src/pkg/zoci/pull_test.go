@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
@@ -59,6 +60,9 @@ func TestAssembleLayers(t *testing.T) {
 			registryRef := createRegistry(t, ctx)
 			tmpdir := t.TempDir()
 
+			//
+			config.CommonOptions.CachePath = tmpdir
+
 			// create the package
 			opt := packager2.CreateOptions{
 				Output:         tmpdir,
@@ -99,6 +103,7 @@ func TestAssembleLayers(t *testing.T) {
 			require.NotEmpty(t, sbomInspectLayers)
 			for _, layer := range sbomInspectLayers {
 				if layer.Annotations["org.opencontainers.image.title"] != "zarf.yaml" { // zarf.yaml is not deterministic
+					t.Logf("Layer: %s, Title: %s", layer.Digest.String(), layer.Annotations["org.opencontainers.image.title"])
 					require.Contains(t, expectedSbomLayers, layer.Digest.String())
 				}
 			}
@@ -115,6 +120,7 @@ func TestAssembleLayers(t *testing.T) {
 			require.NotEmpty(t, imageInspectLayers)
 			for _, layer := range imageInspectLayers {
 				if layer.Annotations["org.opencontainers.image.title"] != "zarf.yaml" { // zarf.yaml is not deterministic
+					t.Logf("Layer: %s, Title: %s", layer.Digest.String(), layer.Annotations["org.opencontainers.image.title"])
 					require.Contains(t, expectedImageLayers, layer.Digest.String())
 				}
 			}
@@ -127,6 +133,7 @@ func TestAssembleLayers(t *testing.T) {
 			require.NotEmpty(t, componentLayers)
 			for _, layer := range componentLayers {
 				if layer.Annotations["org.opencontainers.image.title"] != "zarf.yaml" { // zarf.yaml is not deterministic
+					t.Logf("Layer: %s, Title: %s", layer.Digest.String(), layer.Annotations["org.opencontainers.image.title"])
 					require.Contains(t, expectedComponentLayers, layer.Digest.String())
 				}
 			}
