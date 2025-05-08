@@ -3,7 +3,7 @@ metadata:
   name: lint
 
 components:
-  - name1: import-test
+  - name: import-test
     import:
       path: linted-import
 
