@@ -6,6 +6,7 @@ package zoci_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -34,14 +36,15 @@ func createRegistry(t *testing.T, ctx context.Context) registry.Reference { //no
 }
 
 func TestAssembleLayers(t *testing.T) {
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 	tt := []struct {
 		name string
 		path string
 		opts packager2.PublishPackageOpts
 	}{
 		{
-			name: "Publish package",
-			path: "../../internal/packager2/testdata/zarf-package-test-amd64-0.0.1.tar.zst",
+			name: "Assemble layers from a package",
+			path: "testdata/basic",
 			opts: packager2.PublishPackageOpts{
 				WithPlainHTTP: true,
 				Architecture:  "amd64",
@@ -54,13 +57,23 @@ func TestAssembleLayers(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := testutil.TestContext(t)
 			registryRef := createRegistry(t, ctx)
+			tmpdir := t.TempDir()
+
+			// create the package
+			opt := packager2.CreateOptions{
+				Output:         tmpdir,
+				OCIConcurrency: tc.opts.Concurrency,
+			}
+			err := packager2.Create(ctx, tc.path, opt)
+			require.NoError(t, err)
+			src := fmt.Sprintf("%s/%s-%s-0.0.1.tar.zst", tmpdir, "zarf-package-basic-pod", tc.opts.Architecture)
 
 			// Publish test package
-			err := packager2.PublishPackage(ctx, tc.path, registryRef, tc.opts)
+			err = packager2.PublishPackage(ctx, src, registryRef, tc.opts)
 			require.NoError(t, err)
 
 			// We want to pull the package and sure the content is the same as the local package
-			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{Filter: filters.Empty()})
+			layoutExpected, err := layout.LoadFromTar(ctx, src, layout.PackageLayoutOptions{Filter: filters.Empty()})
 			require.NoError(t, err)
 			// // Publish creates a local oci manifest file using the package name, delete this to clean up test name
 			defer os.Remove(layoutExpected.Pkg.Metadata.Name) //nolint:errcheck
@@ -75,26 +88,48 @@ func TestAssembleLayers(t *testing.T) {
 			// get all layers
 			layers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.AllLayers)
 			require.NoError(t, err)
-			t.Logf("Layers: %v", layers)
 			require.NotEmpty(t, layers)
 
 			// get sbom layers
-			sbomLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.SbomLayers)
+			expectedSbomLayers := []string{"sha256:fb8c0fe651249b81e43e9cc15a48cc636f8ab1041d45bc7c55b766923fc948f2",
+				"sha256:cad847be999d24eca360908320e7e5b8cb885fa4d0bc3f554b314240f8a84320",
+			}
+			sbomInspectLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.SbomLayers)
 			require.NoError(t, err)
-			t.Logf("SBOM Layers: %v", sbomLayers)
-			require.NotEmpty(t, sbomLayers)
+			require.NotEmpty(t, sbomInspectLayers)
+			for _, layer := range sbomInspectLayers {
+				if layer.Annotations["org.opencontainers.image.title"] != "zarf.yaml" { // zarf.yaml is not deterministic
+					require.Contains(t, expectedSbomLayers, layer.Digest.String())
+				}
+			}
 
 			// get image layers
-			imageLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.ImageLayers)
+			expectedImageLayers := []string{"sha256:fb8c0fe651249b81e43e9cc15a48cc636f8ab1041d45bc7c55b766923fc948f2",
+				"sha256:eda48e36dc18bbe4547311bdce8878f9e06b4bee032c85c4ff368bd53af6aecb",
+				"sha256:18f0797eab35a4597c1e9624aa4f15fd91f6254e5538c1e0d193b2a95dd4acc6",
+				"sha256:1c4eef651f65e2f7daee7ee785882ac164b02b78fb74503052a26dc061c90474",
+				"sha256:aded1e1a5b3705116fa0a92ba074a5e0b0031647d9c315983ccba2ee5428ec8b",
+				"sha256:f18232174bc91741fdf3da96d85011092101a032a93a388b79e99e69c2d5c870"}
+			imageInspectLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.ImageLayers)
 			require.NoError(t, err)
-			t.Logf("Image Layers: %v", imageLayers)
-			require.NotEmpty(t, imageLayers)
+			require.NotEmpty(t, imageInspectLayers)
+			for _, layer := range imageInspectLayers {
+				if layer.Annotations["org.opencontainers.image.title"] != "zarf.yaml" { // zarf.yaml is not deterministic
+					require.Contains(t, expectedImageLayers, layer.Digest.String())
+				}
+			}
 
 			// get component layers
+			expectedComponentLayers := []string{"sha256:fb8c0fe651249b81e43e9cc15a48cc636f8ab1041d45bc7c55b766923fc948f2",
+				"sha256:4b30e74becde73875016eda0c101098f7124dc19c32cfc2bd7200977e7a41b5f"}
 			componentLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.ComponentLayers)
 			require.NoError(t, err)
-			t.Logf("Component Layers: %v", componentLayers)
 			require.NotEmpty(t, componentLayers)
+			for _, layer := range componentLayers {
+				if layer.Annotations["org.opencontainers.image.title"] != "zarf.yaml" { // zarf.yaml is not deterministic
+					require.Contains(t, expectedComponentLayers, layer.Digest.String())
+				}
+			}
 		})
 	}
 }
