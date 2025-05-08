@@ -103,8 +103,7 @@ func TestAssembleLayers(t *testing.T) {
 			require.NotEmpty(t, sbomInspectLayers)
 
 			// get image layers
-			expectedImageLayers := []string{"sha256:fb8c0fe651249b81e43e9cc15a48cc636f8ab1041d45bc7c55b766923fc948f2",
-				"sha256:eda48e36dc18bbe4547311bdce8878f9e06b4bee032c85c4ff368bd53af6aecb",
+			expectedImageLayers := []string{"sha256:eda48e36dc18bbe4547311bdce8878f9e06b4bee032c85c4ff368bd53af6aecb",
 				"sha256:18f0797eab35a4597c1e9624aa4f15fd91f6254e5538c1e0d193b2a95dd4acc6",
 				"sha256:1c4eef651f65e2f7daee7ee785882ac164b02b78fb74503052a26dc061c90474",
 				"sha256:aded1e1a5b3705116fa0a92ba074a5e0b0031647d9c315983ccba2ee5428ec8b",
@@ -120,8 +119,7 @@ func TestAssembleLayers(t *testing.T) {
 			}
 
 			// get component layers
-			expectedComponentLayers := []string{"sha256:fb8c0fe651249b81e43e9cc15a48cc636f8ab1041d45bc7c55b766923fc948f2",
-				"sha256:4b30e74becde73875016eda0c101098f7124dc19c32cfc2bd7200977e7a41b5f"}
+			expectedComponentLayers := []string{"sha256:4b30e74becde73875016eda0c101098f7124dc19c32cfc2bd7200977e7a41b5f"}
 			componentLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.ComponentLayers)
 			require.NoError(t, err)
 			require.NotEmpty(t, componentLayers)
