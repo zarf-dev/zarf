@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -94,6 +95,8 @@ func TestAssembleLayers(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEmpty(t, layers)
 
+			nonDeterministicLayers := []string{"zarf.yaml", "checksums.txt"}
+
 			// get sbom layers
 			expectedSbomLayers := []string{"sha256:fb8c0fe651249b81e43e9cc15a48cc636f8ab1041d45bc7c55b766923fc948f2",
 				"sha256:cad847be999d24eca360908320e7e5b8cb885fa4d0bc3f554b314240f8a84320",
@@ -102,7 +105,7 @@ func TestAssembleLayers(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEmpty(t, sbomInspectLayers)
 			for _, layer := range sbomInspectLayers {
-				if layer.Annotations["org.opencontainers.image.title"] != "zarf.yaml" { // zarf.yaml is not deterministic
+				if !slices.Contains(nonDeterministicLayers, layer.Annotations["org.opencontainers.image.title"]) {
 					t.Logf("Layer: %s, Title: %s", layer.Digest.String(), layer.Annotations["org.opencontainers.image.title"])
 					require.Contains(t, expectedSbomLayers, layer.Digest.String())
 				}
@@ -119,7 +122,7 @@ func TestAssembleLayers(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEmpty(t, imageInspectLayers)
 			for _, layer := range imageInspectLayers {
-				if layer.Annotations["org.opencontainers.image.title"] != "zarf.yaml" { // zarf.yaml is not deterministic
+				if !slices.Contains(nonDeterministicLayers, layer.Annotations["org.opencontainers.image.title"]) {
 					t.Logf("Layer: %s, Title: %s", layer.Digest.String(), layer.Annotations["org.opencontainers.image.title"])
 					require.Contains(t, expectedImageLayers, layer.Digest.String())
 				}
@@ -132,7 +135,7 @@ func TestAssembleLayers(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEmpty(t, componentLayers)
 			for _, layer := range componentLayers {
-				if layer.Annotations["org.opencontainers.image.title"] != "zarf.yaml" { // zarf.yaml is not deterministic
+				if !slices.Contains(nonDeterministicLayers, layer.Annotations["org.opencontainers.image.title"]) {
 					t.Logf("Layer: %s, Title: %s", layer.Digest.String(), layer.Annotations["org.opencontainers.image.title"])
 					require.Contains(t, expectedComponentLayers, layer.Digest.String())
 				}
