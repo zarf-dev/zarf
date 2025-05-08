@@ -6,7 +6,6 @@ package zoci
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/oci"
@@ -39,7 +38,6 @@ type Remote struct {
 func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {
 	l := logger.From(ctx)
 	if config.CommonOptions.CachePath != "" {
-		fmt.Println("here in cache")
 		absCachePath, err := config.GetAbsCachePath()
 		if err != nil {
 			return nil, err
