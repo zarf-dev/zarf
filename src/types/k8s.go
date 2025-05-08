@@ -284,6 +284,9 @@ func (ri *RegistryInfo) FillInEmptyValues(preferredIPFamily string) error {
 
 // LocalhostRegistryAddress builds the IPv4 or IPv6 local address of the Zarf deployed registry.
 func LocalhostRegistryAddress(ipFamily string, nodePort int) (string, error) {
+	if len(ipFamily) == 0 {
+		ipFamily = "IPv4"
+	}
 	switch ipFamily {
 	case "IPv4":
 		return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, nodePort), nil

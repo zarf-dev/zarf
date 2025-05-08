@@ -80,7 +80,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return err
 	}
 
-	var zarfSeedPort string
+	var zarfSeedPort int32
 	switch ipFamily {
 	case "IPv4":
 		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
@@ -113,7 +113,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		if err != nil {
 			return err
 		}
-		zarfSeedPort = fmt.Sprintf("%d", svc.Spec.Ports[0].NodePort)
+		zarfSeedPort = svc.Spec.Ports[0].NodePort
 	case "IPv6":
 		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
 			WithSpec(v1ac.ServiceSpec().
@@ -136,13 +136,13 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		}
 
 		// TODO add healthcheck on daemonset
-		zarfSeedPort = fmt.Sprintf("%d", ds.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort)
+		zarfSeedPort = ds.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort
 	default:
 		return fmt.Errorf("invalid ipFamily: %s", ipFamily)
 	}
 
 	// TODO: Remove use of passing data through global variables.
-	config.ZarfSeedPort = zarfSeedPort
+	config.ZarfSeedPort = int(zarfSeedPort)
 
 	l.Debug("done with injection", "duration", time.Since(start))
 	return nil

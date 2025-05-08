@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -75,11 +74,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
 
 		case "zarf-seed-registry", "zarf-registry":
-			zarfSeedPort, err := strconv.Atoi(config.ZarfSeedPort)
-			if err != nil {
-				return templateMap, err
-			}
-			builtinMap["SEED_REGISTRY"], err = types.LocalhostRegistryAddress(s.PreferredIPFamily, zarfSeedPort)
+			builtinMap["SEED_REGISTRY"], err = types.LocalhostRegistryAddress(s.PreferredIPFamily, config.ZarfSeedPort)
 			if err != nil {
 				return templateMap, err
 			}
