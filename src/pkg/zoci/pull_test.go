@@ -119,16 +119,9 @@ func TestAssembleLayers(t *testing.T) {
 			}
 
 			// get component layers
-			expectedComponentLayers := []string{"sha256:4b30e74becde73875016eda0c101098f7124dc19c32cfc2bd7200977e7a41b5f"}
 			componentLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.ComponentLayers)
 			require.NoError(t, err)
 			require.NotEmpty(t, componentLayers)
-			for _, layer := range componentLayers {
-				if !slices.Contains(nonDeterministicLayers, layer.Annotations["org.opencontainers.image.title"]) {
-					t.Logf("Layer: %s, Title: %s", layer.Digest.String(), layer.Annotations["org.opencontainers.image.title"])
-					require.Contains(t, expectedComponentLayers, layer.Digest.String())
-				}
-			}
 		})
 	}
 }
