@@ -17,9 +17,15 @@ import (
 
 func TestGetZarfTemplatesForIPv6SeedRegistry(t *testing.T) {
 	tests := []struct {
+		name                    string
 		ipFamily                string
 		expectedRegistryAddress string
 	}{
+		{
+			name:                    "no ipFamily defined, fall-back to default IPv4",
+			ipFamily:                "",
+			expectedRegistryAddress: "127.0.0.1:31997",
+		},
 		{
 			ipFamily:                "IPv4",
 			expectedRegistryAddress: "127.0.0.1:31997",
@@ -31,7 +37,7 @@ func TestGetZarfTemplatesForIPv6SeedRegistry(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.ipFamily, func(t *testing.T) {
-			config.ZarfSeedPort = "31997"
+			config.ZarfSeedPort = 31997
 			state := state.State{
 				RegistryInfo: types.RegistryInfo{
 					Address:  test.expectedRegistryAddress,
