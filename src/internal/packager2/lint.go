@@ -5,38 +5,35 @@ package packager2
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/composer"
 )
 
-// Validate lints the given Zarf package
-func Validate(ctx context.Context, pkg v1alpha1.ZarfPackage, baseDir, flavor string, setVariables map[string]string) error {
-	findings := []lint.PackageFinding{}
-	compFindings, err := lintComponents(ctx, pkg, flavor, setVariables)
+// Lint lints the given Zarf package
+func Lint(ctx context.Context, packagePath, flavor string, setVariables map[string]string) error {
+	pkg, err := layout2.LoadPackageDefinition(ctx, packagePath, flavor, setVariables)
 	if err != nil {
 		return err
 	}
-	findings = append(findings, compFindings...)
-	schemaFindings, err := lint.ValidatePackageSchemaAtPath(baseDir, setVariables)
+	findings, err := lintComponents(pkg, flavor)
 	if err != nil {
-		return fmt.Errorf("unable to check schema: %w", err)
+		return err
 	}
-	findings = append(findings, schemaFindings...)
 	if len(findings) == 0 {
 		return nil
 	}
 	return &lint.LintError{
-		BaseDir:     baseDir,
+		BaseDir:     packagePath,
 		PackageName: pkg.Metadata.Name,
 		Findings:    findings,
 	}
 }
 
-func lintComponents(ctx context.Context, pkg v1alpha1.ZarfPackage, flavor string, setVariables map[string]string) ([]lint.PackageFinding, error) {
+func lintComponents(pkg v1alpha1.ZarfPackage, flavor string) ([]lint.PackageFinding, error) {
 	findings := []lint.PackageFinding{}
 	for i, component := range pkg.Components {
 		arch := config.GetArch(pkg.Metadata.Architecture)

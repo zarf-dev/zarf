@@ -733,11 +733,8 @@ func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	v := getViper()
 	pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
-	pkg, err := layout2.LoadPackageDefinition(ctx, baseDir, pkgConfig.CreateOpts.Flavor, pkgConfig.CreateOpts.SetVariables)
-	if err != nil {
-		return err
-	}
-	err = packager2.Validate(ctx, pkg, baseDir, pkgConfig.CreateOpts.Flavor, pkgConfig.CreateOpts.SetVariables)
+
+	err := packager2.Lint(ctx, baseDir, pkgConfig.CreateOpts.Flavor, pkgConfig.CreateOpts.SetVariables)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
