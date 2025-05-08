@@ -37,20 +37,23 @@ type Remote struct {
 // with zarf opination embedded
 func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {
 	l := logger.From(ctx)
-	absCachePath, err := config.GetAbsCachePath()
-	if err != nil {
-		return nil, err
+	if config.CommonOptions.CachePath != "" {
+		absCachePath, err := config.GetAbsCachePath()
+		if err != nil {
+			return nil, err
+		}
+		ociCache, err := ociDirectory.NewWithContext(ctx, filepath.Join(absCachePath, ImageCacheDirectory))
+		if err != nil {
+			return nil, err
+		}
+		mods = append(mods, oci.WithCache(ociCache))
 	}
-	ociCache, err := ociDirectory.NewWithContext(ctx, filepath.Join(absCachePath, ImageCacheDirectory))
-	if err != nil {
-		return nil, err
-	}
+
 	modifiers := append([]oci.Modifier{
 		oci.WithPlainHTTP(config.CommonOptions.PlainHTTP),
 		oci.WithInsecureSkipVerify(config.CommonOptions.InsecureSkipTLSVerify),
 		oci.WithLogger(l),
 		oci.WithUserAgent("zarf/" + config.CLIVersion),
-		oci.WithCache(ociCache),
 	}, mods...)
 	remote, err := oci.NewOrasRemote(url, platform, modifiers...)
 	if err != nil {
