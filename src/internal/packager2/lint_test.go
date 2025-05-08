@@ -12,37 +12,11 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func TestLintError(t *testing.T) {
-	t.Parallel()
-
-	lintErr := &lint.LintError{
-		Findings: []lint.PackageFinding{
-			{
-				Severity: lint.SevWarn,
-			},
-		},
-	}
-	require.Equal(t, "linting error found 1 instance(s)", lintErr.Error())
-	require.True(t, lintErr.OnlyWarnings())
-
-	lintErr = &lint.LintError{
-		Findings: []lint.PackageFinding{
-			{
-				Severity: lint.SevWarn,
-			},
-			{
-				Severity: lint.SevErr,
-			},
-		},
-	}
-	require.Equal(t, "linting error found 2 instance(s)", lintErr.Error())
-	require.False(t, lintErr.OnlyWarnings())
-}
-
 func TestLintPackageWithImports(t *testing.T) {
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 	setVariables := map[string]string{
 		"BUSYBOX_IMAGE": "latest",
+		"UNSET":         "actually-is-set",
 	}
 	ctx := context.Background()
 	findings := []lint.PackageFinding{
@@ -93,7 +67,7 @@ func TestLintPackageWithImports(t *testing.T) {
 	}
 	pkg, err := layout2.LoadPackageDefinition(ctx, "testdata/lint-with-imports", "good-flavor", setVariables)
 	require.NoError(t, err)
-	err = Validate(ctx, pkg, "good-flavor", "", setVariables)
+	err = Validate(ctx, pkg, "testdata/lint-with-imports", "good-flavor", setVariables)
 	var lintErr *lint.LintError
 	require.ErrorAs(t, err, &lintErr)
 	require.ElementsMatch(t, findings, lintErr.Findings)

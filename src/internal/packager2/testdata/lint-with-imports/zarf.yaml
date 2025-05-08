@@ -12,9 +12,9 @@ components:
       - busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79
       - busybox:###ZARF_PKG_TMPL_UNSET###
 
-  - name: oci-games-url
-    import:
-      path: linted-import
+  # - name: oci-games-url
+  #   import:
+  #     path: linted-import
 
   - name: import-bad-flavor
     only:

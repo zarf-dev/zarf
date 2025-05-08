@@ -5,6 +5,7 @@ package packager2
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -20,9 +21,9 @@ func Validate(ctx context.Context, pkg v1alpha1.ZarfPackage, baseDir, flavor str
 		return err
 	}
 	findings = append(findings, compFindings...)
-	schemaFindings, err := lint.ValidatePackageSchema(setVariables)
+	schemaFindings, err := lint.ValidatePackageSchemaAtPath(baseDir, setVariables)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to check schema: %w", err)
 	}
 	findings = append(findings, schemaFindings...)
 	if len(findings) == 0 {

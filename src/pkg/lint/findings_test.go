@@ -10,6 +10,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestLintError(t *testing.T) {
+	t.Parallel()
+
+	lintErr := &LintError{
+		Findings: []PackageFinding{
+			{
+				Severity: SevWarn,
+			},
+		},
+	}
+	require.Equal(t, "linting error found 1 instance(s)", lintErr.Error())
+	require.True(t, lintErr.OnlyWarnings())
+
+	lintErr = &LintError{
+		Findings: []PackageFinding{
+			{
+				Severity: SevWarn,
+			},
+			{
+				Severity: SevErr,
+			},
+		},
+	}
+	require.Equal(t, "linting error found 2 instance(s)", lintErr.Error())
+	require.False(t, lintErr.OnlyWarnings())
+}
+
 func TestGroupFindingsByPath(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
