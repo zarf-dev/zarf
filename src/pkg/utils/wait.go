@@ -74,12 +74,14 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 	}
 
 	// Setup the spinner messages.
-	conditionMsg := fmt.Sprintf("Waiting for %s%s%s to be %s.", kind, identifierMsg, namespaceMsg, condition)
-	existMsg := fmt.Sprintf("Waiting for %s%s to exist.", path.Join(kind, identifierMsg), namespaceMsg)
+	conditionMsg := fmt.Sprintf("waiting for %s%s to be %s.", path.Join(kind, identifierMsg), namespaceMsg, condition)
+	existMsg := fmt.Sprintf("waiting for %s%s to exist.", path.Join(kind, identifierMsg), namespaceMsg)
+	completedMsg := fmt.Sprintf("wait for %s%s complete.", path.Join(kind, identifierMsg), namespaceMsg)
 
 	// Get the OS shell to execute commands in
 	shell, shellArgs := exec.GetOSShell(v1alpha1.Shell{Windows: "cmd"})
 
+	l.Info(existMsg)
 	for {
 		// Delay the check for 1 second
 		time.Sleep(time.Second)
@@ -89,12 +91,16 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 			return errors.New("wait timed out")
 
 		default:
-			l.Info(existMsg)
 			// Check if the resource exists.
 			zarfKubectlGet := fmt.Sprintf("%s tools kubectl get %s %s %s", zarfCommand, namespaceFlag, kind, identifier)
 			_, stderr, err := exec.Cmd(shell, append(shellArgs, zarfKubectlGet)...)
 			if err != nil {
-				l.Debug("resource error", "error", err)
+				if strings.Contains(stderr, "connect: connection refused") {
+					l.Info("api server unavailable")
+					continue
+				}
+				// otherwise just log and retry
+				l.Info("resource error", "error", err)
 				continue
 			}
 
@@ -122,7 +128,7 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 			}
 
 			// And just like that, success!
-			l.Info(conditionMsg)
+			l.Info(completedMsg)
 			return nil
 		}
 	}
