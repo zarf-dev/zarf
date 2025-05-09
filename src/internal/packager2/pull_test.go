@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package packager
+package packager2
 
 import (
 	"io"
@@ -19,8 +19,7 @@ import (
 )
 
 func TestPull(t *testing.T) {
-	// REVIEW(mkcp): Parallel is making these server tests fail. Weird
-	// t.Parallel()
+	t.Parallel()
 
 	ctx := testutil.TestContext(t)
 	packagePath := "./testdata/zarf-package-test-amd64-0.0.1.tar.zst"
@@ -38,12 +37,10 @@ func TestPull(t *testing.T) {
 	})
 
 	dir := t.TempDir()
-	opts := PullOptions{
-		OutputDirectory: dir,
-		SHASum:          "f9b15b1bc0f760a87bad68196b339a8ce8330e3a0241191a826a8962a88061f1",
-		Architecture:    "amd64",
-	}
-	err := Pull(ctx, srv.URL, opts)
+	err := Pull(ctx, srv.URL, dir, PullOptions{
+		SHASum:       "f9b15b1bc0f760a87bad68196b339a8ce8330e3a0241191a826a8962a88061f1",
+		Architecture: "amd64",
+	})
 	require.NoError(t, err)
 
 	packageData, err := os.ReadFile(packagePath)
@@ -55,8 +52,7 @@ func TestPull(t *testing.T) {
 }
 
 func TestPullUncompressed(t *testing.T) {
-	// REVIEW(mkcp): Parallel is making these server tests fail. Weird
-	// t.Parallel()
+	t.Parallel()
 
 	ctx := testutil.TestContext(t)
 	packagePath := "./testdata/uncompressed/zarf-package-test-uncompressed-amd64-0.0.1.tar"
@@ -72,13 +68,12 @@ func TestPullUncompressed(t *testing.T) {
 	t.Cleanup(func() {
 		srv.Close()
 	})
+
 	dir := t.TempDir()
-	opts := PullOptions{
-		OutputDirectory: dir,
-		SHASum:          "a118a4d306acc5dd4eab2c161e78fa3dfd1e08ae1e1794a4393be98c79257f5c",
-		Architecture:    "amd64",
-	}
-	err := Pull(ctx, srv.URL, opts)
+	err := Pull(ctx, srv.URL, dir, PullOptions{
+		SHASum:       "a118a4d306acc5dd4eab2c161e78fa3dfd1e08ae1e1794a4393be98c79257f5c",
+		Architecture: "amd64",
+	})
 	require.NoError(t, err)
 
 	packageData, err := os.ReadFile(packagePath)
@@ -90,8 +85,7 @@ func TestPullUncompressed(t *testing.T) {
 }
 
 func TestPullUnsupported(t *testing.T) {
-	// REVIEW(mkcp): Parallel is making these server tests fail. Weird
-	// t.Parallel()
+	t.Parallel()
 
 	ctx := testutil.TestContext(t)
 	packagePath := "./testdata/uncompressed/zarf.yaml"
@@ -109,12 +103,10 @@ func TestPullUnsupported(t *testing.T) {
 	})
 
 	dir := t.TempDir()
-	opts := PullOptions{
-		OutputDirectory: dir,
-		SHASum:          "6e9dccce07ba9d3c45b7c872fae863c5415d296fd5e2fb72a2583530aa750ccd",
-		Architecture:    "amd64",
-	}
-	err := Pull(ctx, srv.URL, opts)
+	err := Pull(ctx, srv.URL, dir, PullOptions{
+		SHASum:       "6e9dccce07ba9d3c45b7c872fae863c5415d296fd5e2fb72a2583530aa750ccd",
+		Architecture: "amd64",
+	})
 	require.EqualError(t, err, "unsupported file type: .txt", "unsupported file type: .txt")
 }
 
