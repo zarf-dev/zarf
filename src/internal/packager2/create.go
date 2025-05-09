@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -72,7 +73,7 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 	}
 
 	if opt.SBOMOut != "" {
-		_, err := pkgLayout.GetSBOM(opt.SBOMOut)
+		err := pkgLayout.GetSBOM(filepath.Join(opt.SBOMOut, pkgLayout.Pkg.Metadata.Name))
 		// Don't fail package create if the package doesn't have an sbom
 		var noSBOMErr *layout2.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {
