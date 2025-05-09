@@ -323,7 +323,6 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	}
 	if len(findings) != 0 {
 		return &lint.LintError{
-			BaseDir:     packagePath,
 			PackageName: pkg.Metadata.Name,
 			Findings:    findings,
 		}

@@ -31,7 +31,6 @@ func Validate(pkg v1alpha1.ZarfPackage, baseDir string, setVariables map[string]
 		return nil
 	}
 	return &lint.LintError{
-		BaseDir:     baseDir,
 		PackageName: pkg.Metadata.Name,
 		Findings:    findings,
 	}

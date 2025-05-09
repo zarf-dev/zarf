@@ -5,6 +5,7 @@
 package lint
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -219,4 +220,31 @@ func TestYqCompat(t *testing.T) {
 		actual := makeFieldPathYqCompat(input)
 		require.Equal(t, input, actual)
 	})
+}
+
+func TestFillObjTemplate(t *testing.T) {
+	SetVariables := map[string]string{
+		"KEY1": "value1",
+		"KEY2": "value2",
+	}
+
+	component := v1alpha1.ZarfComponent{
+		Images: []string{
+			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY1"),
+			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageVariablePrefix, "KEY2"),
+			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY3"),
+		},
+	}
+
+	if err := templateZarfObj(&component, SetVariables); err != nil {
+		require.NoError(t, err)
+	}
+	expectedComponent := v1alpha1.ZarfComponent{
+		Images: []string{
+			"value1",
+			"value2",
+			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY3"),
+		},
+	}
+	require.Equal(t, expectedComponent, component)
 }
