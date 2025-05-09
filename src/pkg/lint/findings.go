@@ -47,12 +47,6 @@ type PackageFinding struct {
 	Description string
 	// Item is the value of a key that is causing an error, for example a bad image name
 	Item string
-	// PackageNameOverride shows the name of the package that the error originated from
-	// If it is not set the base package will be used when displaying the error
-	PackageNameOverride string
-	// PackagePathOverride shows the path to the package that the error originated from
-	// If it is not set the base package will be used when displaying the error
-	PackagePathOverride string
 	// Severity of finding.
 	Severity Severity
 }
@@ -63,22 +57,4 @@ func (f PackageFinding) ItemizedDescription() string {
 		return f.Description
 	}
 	return fmt.Sprintf("%s - %s", f.Description, f.Item)
-}
-
-// GroupFindingsByPath groups findings by their package path
-func GroupFindingsByPath(findings []PackageFinding, packageName string) map[string][]PackageFinding {
-	for i := range findings {
-		if findings[i].PackageNameOverride == "" {
-			findings[i].PackageNameOverride = packageName
-		}
-		if findings[i].PackagePathOverride == "" {
-			findings[i].PackagePathOverride = "."
-		}
-	}
-
-	mapOfFindingsByPath := make(map[string][]PackageFinding)
-	for _, finding := range findings {
-		mapOfFindingsByPath[finding.PackagePathOverride] = append(mapOfFindingsByPath[finding.PackagePathOverride], finding)
-	}
-	return mapOfFindingsByPath
 }
