@@ -95,7 +95,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 			PublicKeyPath:           opts.PublicKeyPath,
 			LayersSelector:          zoci.AllLayers,
 			SkipSignatureValidation: opts.SkipSignatureValidation,
-			Filter:                  opts.Filters,
+			Filter:                  f,
 			Modifiers:               []oci.Modifier{},
 		}
 		l.Info("starting pull from oci source", "source", source)
