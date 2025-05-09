@@ -98,6 +98,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 			Filter:                  opts.Filters,
 			Modifiers:               []oci.Modifier{},
 		}
+		l.Info("starting pull from oci source", "source", source)
 		isPartial, tmpPath, err = pullOCI(ctx, ociOpts)
 		if err != nil {
 			return err
