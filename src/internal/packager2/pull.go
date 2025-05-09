@@ -46,7 +46,7 @@ type PullOptions struct {
 	PublicKeyPath string
 }
 
-// Pull fetches the Zarf package from the given sources.
+// Pull takes a source URL and destination directory and fetches the Zarf package from the given sources.
 func Pull(ctx context.Context, source, destination string, opts PullOptions) error {
 	l := logger.From(ctx)
 	start := time.Now()
