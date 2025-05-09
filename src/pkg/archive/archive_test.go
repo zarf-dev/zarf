@@ -6,13 +6,11 @@ package archive
 
 import (
 	"testing"
-
-	"github.com/open-policy-agent/opa/util/test"
 )
 
 // TODO(mkcp): Unit test Compress
 func TestCompress(t *testing.T) {
-	test.Skip(t)
+	t.Skip()
 	tt := []struct {
 		name string
 		opts CompressOpts
