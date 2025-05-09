@@ -28,17 +28,11 @@ import (
 )
 
 type ResourceType string
-type InspectTarget string
 
 const (
 	ManifestResource   ResourceType = "manifest"
 	ChartResource      ResourceType = "chart"
 	ValuesFileResource ResourceType = "valuesfile"
-
-	NoTarget         InspectTarget = ""
-	SbomTarget       InspectTarget = zoci.SbomLayers
-	MetadataTarget   InspectTarget = zoci.MetadataLayers
-	ComponentsTarget InspectTarget = zoci.ComponentLayers
 )
 
 // Resource contains a Kubernetes Manifest or Chart
@@ -73,7 +67,7 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 		Architecture:            opts.Architecture,
 		PublicKeyPath:           opts.PublicKeyPath,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
-		InspectTarget:           ComponentsTarget,
+		LayersSelector:          zoci.ComponentLayers,
 		Filter:                  filters.BySelectState(opts.Components),
 	}
 
@@ -306,7 +300,7 @@ func InspectPackageSboms(ctx context.Context, source string, opts InspectPackage
 		Architecture:            opts.Architecture,
 		PublicKeyPath:           opts.PublicKeyPath,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
-		InspectTarget:           SbomTarget,
+		LayersSelector:          zoci.SbomLayers,
 		Filter:                  filters.Empty(),
 	}
 	pkgLayout, err := LoadPackage(ctx, loadOpts)

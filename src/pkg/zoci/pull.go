@@ -51,8 +51,8 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 }
 
 // AssembleLayers returns all layers for the given zarf package to pull from OCI.
-func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, isSkeleton bool, inspectTarget string) ([]ocispec.Descriptor, error) {
-	layerMap := make(map[string][]ocispec.Descriptor, 0)
+func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, isSkeleton bool, layersSelector LayersSelector) ([]ocispec.Descriptor, error) {
+	layerMap := make(map[LayersSelector][]ocispec.Descriptor, 0)
 
 	// fetching the root manifest is the common denominator for all layers
 	root, err := r.FetchRoot(ctx)
@@ -100,7 +100,7 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 	}
 	layerMap[SbomLayers] = sbomLayers
 
-	return filterLayers(layerMap, inspectTarget)
+	return filterLayers(layerMap, layersSelector)
 }
 
 // LayersFromComponents returns the layers for the given components to pull from OCI.
@@ -179,11 +179,11 @@ func (r *Remote) LayersFromImages(ctx context.Context, images map[string]bool) (
 	return layers, nil
 }
 
-// FilterLayers filters the layers based on the inspect target.
-func filterLayers(layerMap map[string][]ocispec.Descriptor, inspectTarget string) ([]ocispec.Descriptor, error) {
+// FilterLayers filters the layers based on the LayersSelector.
+func filterLayers(layerMap map[LayersSelector][]ocispec.Descriptor, layersSelector LayersSelector) ([]ocispec.Descriptor, error) {
 	layers := make([]ocispec.Descriptor, 0)
 
-	switch inspectTarget {
+	switch layersSelector {
 	case "":
 		layers = append(layers, layerMap[AllLayers]...)
 	case "sbom":
@@ -201,7 +201,7 @@ func filterLayers(layerMap map[string][]ocispec.Descriptor, inspectTarget string
 		layers = append(layers, layerMap[MetadataLayers]...)
 		layers = append(layers, layerMap[ImageLayers]...)
 	default:
-		return nil, fmt.Errorf("unknown inspect target %s", inspectTarget)
+		return nil, fmt.Errorf("unknown inspect target %s", layersSelector)
 	}
 	return layers, nil
 }

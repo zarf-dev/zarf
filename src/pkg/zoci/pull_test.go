@@ -93,14 +93,14 @@ func TestAssembleLayers(t *testing.T) {
 			// get all layers
 			layers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.AllLayers)
 			require.NoError(t, err)
-			require.NotEmpty(t, layers)
+			require.Len(t, layers, 9)
 
 			nonDeterministicLayers := []string{"zarf.yaml", "checksums.txt"}
 
 			// get sbom layers - it appears as though the sbom layers are not deterministic
 			sbomInspectLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.SbomLayers)
 			require.NoError(t, err)
-			require.NotEmpty(t, sbomInspectLayers)
+			require.Len(t, sbomInspectLayers, 3)
 
 			// get image layers
 			expectedImageLayers := []string{"sha256:eda48e36dc18bbe4547311bdce8878f9e06b4bee032c85c4ff368bd53af6aecb",
@@ -110,7 +110,7 @@ func TestAssembleLayers(t *testing.T) {
 				"sha256:f18232174bc91741fdf3da96d85011092101a032a93a388b79e99e69c2d5c870"}
 			imageInspectLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.ImageLayers)
 			require.NoError(t, err)
-			require.NotEmpty(t, imageInspectLayers)
+			require.Len(t, imageInspectLayers, 7)
 			for _, layer := range imageInspectLayers {
 				if !slices.Contains(nonDeterministicLayers, layer.Annotations["org.opencontainers.image.title"]) {
 					t.Logf("Layer: %s, Title: %s", layer.Digest.String(), layer.Annotations["org.opencontainers.image.title"])
@@ -121,7 +121,7 @@ func TestAssembleLayers(t *testing.T) {
 			// get component layers
 			componentLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.ComponentLayers)
 			require.NoError(t, err)
-			require.NotEmpty(t, componentLayers)
+			require.Len(t, componentLayers, 3)
 		})
 	}
 }

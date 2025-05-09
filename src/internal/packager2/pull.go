@@ -69,7 +69,7 @@ func Pull(ctx context.Context, src, dir, shasum, architecture string, filter fil
 			Shasum:                  shasum,
 			Architecture:            architecture,
 			PublicKeyPath:           publicKeyPath,
-			InspectTarget:           "",
+			LayersSelector:          zoci.AllLayers,
 			SkipSignatureValidation: skipSignatureValidation,
 			Filter:                  filter,
 			Modifiers:               []oci.Modifier{},
@@ -136,7 +136,7 @@ type PullOCIOptions struct {
 	Shasum                  string
 	Architecture            string
 	PublicKeyPath           string
-	InspectTarget           InspectTarget
+	LayersSelector          zoci.LayersSelector
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
 	Modifiers               []oci.Modifier
@@ -178,7 +178,7 @@ func pullOCI(ctx context.Context, opts PullOCIOptions) (bool, string, error) {
 
 	// zarf creates layers around the contents of component primarily
 	// this assembles the layers for the components - whether filtered above or not
-	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, isSkeleton(desc.Platform), string(opts.InspectTarget))
+	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, isSkeleton(desc.Platform), opts.LayersSelector)
 	if err != nil {
 		return false, "", err
 	}

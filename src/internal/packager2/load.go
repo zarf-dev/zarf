@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -35,13 +36,17 @@ type LoadOptions struct {
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
-	InspectTarget           InspectTarget
+	LayersSelector          zoci.LayersSelector
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
 func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, error) {
 	if opt.Filter == nil {
 		opt.Filter = filters.Empty()
+	}
+
+	if opt.LayersSelector == "" {
+		opt.LayersSelector = zoci.AllLayers
 	}
 
 	srcType, err := identifySource(opt.Source)
@@ -57,7 +62,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	defer os.Remove(tmpDir)
 
 	// Fetch or assemble the package tar
-	isPartial, tarPath, err := fetchPackage(ctx, srcType, opt.Source, opt.Shasum, opt.Architecture, opt.InspectTarget, tmpDir, opt.Filter)
+	isPartial, tarPath, err := fetchPackage(ctx, srcType, opt.Source, opt.Shasum, opt.Architecture, opt.LayersSelector, tmpDir, opt.Filter)
 	if err != nil {
 		return nil, err
 	}
@@ -98,17 +103,17 @@ func identifySource(src string) (string, error) {
 }
 
 // fetchPackage fetches or assembles the package tar for different source types.
-func fetchPackage(ctx context.Context, srcType string, source string, shasum string, architecture string, inspectTarget InspectTarget, workDir string, filter filters.ComponentFilterStrategy) (bool, string, error) {
+func fetchPackage(ctx context.Context, srcType string, source string, shasum string, architecture string, layersSelector zoci.LayersSelector, workDir string, filter filters.ComponentFilterStrategy) (bool, string, error) {
 	tarPath := filepath.Join(workDir, "data.tar.zst")
 	switch srcType {
 	case "oci":
 		ociOpts := PullOCIOptions{
-			Source:        source,
-			Directory:     workDir,
-			Shasum:        shasum,
-			Architecture:  config.GetArch(architecture),
-			Filter:        filter,
-			InspectTarget: inspectTarget,
+			Source:         source,
+			Directory:      workDir,
+			Shasum:         shasum,
+			Architecture:   config.GetArch(architecture),
+			Filter:         filter,
+			LayersSelector: layersSelector,
 		}
 
 		return pullOCI(ctx, ociOpts)

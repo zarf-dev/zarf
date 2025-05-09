@@ -15,6 +15,9 @@ import (
 	ociDirectory "oras.land/oras-go/v2/content/oci"
 )
 
+// LayersSelector is a type for selecting subsets of layers in a Zarf package
+type LayersSelector string
+
 const (
 	// ZarfConfigMediaType is the media type for the manifest config
 	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
@@ -24,18 +27,18 @@ const (
 	SkeletonArch = "skeleton"
 	// DefaultConcurrency is the default concurrency used for operations
 	DefaultConcurrency = 3
-	// AllLayers is used to indicate all layers should be referenced
-	AllLayers = ""
-	// MetadataLayers is used to indicate metadata layers (zarf.yaml, signature, checksums.txt) should be referenced
-	MetadataLayers = "metadata"
-	// ImageLayers is used to indicate image layers should be referenced
-	ImageLayers = "images"
-	// ComponentLayers is used to indicate component layers (component.tar) should be referenced
-	ComponentLayers = "components"
-	//  SbomLayers is used to indicate SBOM layers (sbom.tar) should be referenced
-	SbomLayers = "sbom"
 	// ImageCacheDirectory is the directory within the Zarf cache containing an OCI store
 	ImageCacheDirectory = "images"
+	// AllLayers is the default selector for all layers
+	AllLayers LayersSelector = ""
+	//SbomLayers is the selector for SBOM layers including metadata
+	SbomLayers LayersSelector = "sbom"
+	// MetadataLayers is the selector for metadata layers (zarf.yaml, signature, checksums)
+	MetadataLayers LayersSelector = "metadata"
+	// ImageLayers is the selector for image layers including metadata
+	ImageLayers LayersSelector = "images"
+	// ComponentLayers is the selector for component layers including metadata
+	ComponentLayers LayersSelector = "components"
 )
 
 // Remote is a wrapper around the Oras remote repository with zarf specific functions
