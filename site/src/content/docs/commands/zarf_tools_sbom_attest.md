@@ -29,6 +29,7 @@ zarf tools sbom attest --output [FORMAT] <IMAGE> [flags]
   -k, --key string                                the key to use for the attestation
   -o, --output stringArray                        report output format (<format>=<file> to output to a file), formats=[cyclonedx-json cyclonedx-xml github-json spdx-json spdx-tag-value syft-json syft-table syft-text template] (default [syft-json])
       --override-default-catalogers stringArray   set the base set of catalogers to use (defaults to 'image' or 'directory' depending on the scan source)
+      --parallelism int                           number of cataloger workers to run in parallel
       --platform string                           an optional platform specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64', 'linux')
   -s, --scope string                              selection of layers to catalog, options=[squashed all-layers]
       --select-catalogers stringArray             add, remove, and filter the catalogers to be used
