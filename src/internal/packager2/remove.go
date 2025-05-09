@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
@@ -36,7 +37,7 @@ type RemoveOptions struct {
 func Remove(ctx context.Context, opt RemoveOptions) error {
 	l := logger.From(ctx)
 
-	pkg, err := GetPackageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath, zoci.AllLayers)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
