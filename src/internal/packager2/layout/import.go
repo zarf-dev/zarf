@@ -217,7 +217,7 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		name = component.Import.Name
 	}
 
-	skeletonDataDir, err := utils.MakeTempDir(config.CommonOptions.CachePath)
+	skeletonDataDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return "", err
 	}
