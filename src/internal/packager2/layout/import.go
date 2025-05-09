@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -206,7 +207,7 @@ func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
 }
 
 // TODO (phillebaba): Refactor package structure so that pullOCI can be used instead.
-func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string) (string, error) {
+func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string) (_ string, err error) {
 	if component.Import.URL == "" {
 		return component.Import.Path, nil
 	}
@@ -216,14 +217,13 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		name = component.Import.Name
 	}
 
-	absCachePath, err := config.GetAbsCachePath()
+	skeletonDataDir, err := utils.MakeTempDir(config.CommonOptions.CachePath)
 	if err != nil {
 		return "", err
 	}
-	cache := filepath.Join(absCachePath, "oci")
-	if err := helpers.CreateDirectory(cache, helpers.ReadWriteExecuteUser); err != nil {
-		return "", err
-	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(skeletonDataDir))
+	}()
 
 	// Get the descriptor for the component.
 	remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton())
@@ -247,23 +247,17 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		h.Write([]byte(component.Import.URL + name))
 		id := fmt.Sprintf("%x", h.Sum(nil))
 
-		dir = filepath.Join(cache, "dirs", id)
+		dir = filepath.Join(skeletonDataDir, "dirs", id)
 	} else {
-		tarball = filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.Encoded())
-		dir = filepath.Join(cache, "dirs", componentDesc.Digest.Encoded())
-		store, err := ocistore.New(cache)
+		tarball = filepath.Join(skeletonDataDir, "blobs", "sha256", componentDesc.Digest.Encoded())
+		dir = filepath.Join(skeletonDataDir, "dirs", componentDesc.Digest.Encoded())
+		store, err := ocistore.New(skeletonDataDir)
 		if err != nil {
 			return "", err
 		}
-		exists, err := store.Exists(ctx, componentDesc)
+		err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
 		if err != nil {
 			return "", err
-		}
-		if !exists {
-			err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
-			if err != nil {
-				return "", err
-			}
 		}
 	}
 
