@@ -118,6 +118,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		Filter:                  filters.Empty(),
+		Architecture:            config.GetArch(),
 	}
 	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {

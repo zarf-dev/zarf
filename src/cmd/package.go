@@ -243,6 +243,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		Filter:                  filters.Empty(),
+		Architecture:            config.GetArch(),
 	}
 	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {

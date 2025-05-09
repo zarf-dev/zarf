@@ -529,7 +529,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 }
 
 func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkg v1alpha1.ZarfPackage) error {
-	if err := validatePackageArchitecture(ctx, d.c, pkg); err != nil {
+	if err := verifyClusterCompatibility(ctx, d.c, pkg); err != nil {
 		if errors.Is(err, lang.ErrUnableToCheckArch) {
 			logger.From(ctx).Warn("unable to validate package architecture", "error", err)
 		} else {
@@ -583,7 +583,7 @@ func setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackag
 	return s, nil
 }
 
-func validatePackageArchitecture(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackage) error {
+func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackage) error {
 	// Ignore this check if the package contains no images
 	if !pkg.HasImages() {
 		return nil
