@@ -32,17 +32,39 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
-// TODO: Add options struct
-// Pull fetches the Zarf package from the given sources.
-func Pull(ctx context.Context, src, dir, shasum, architecture string, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) error {
-	if filter == nil {
-		filter = filters.Empty()
-	}
+// PullOptions declares optional configuration for a Pull operation.
+type PullOptions struct {
+	// SHASum uniquely identifies a package based on its contents.
+	SHASum string
+	// SkipSignatureValidation flags whether Pull should skip validating the signature.
+	SkipSignatureValidation bool
+	// Architecture is the package architecture.
+	Architecture string
+	// Filters describes a Filter strategy to include or exclude certain components from the package.
+	Filters filters.ComponentFilterStrategy
+	// PublicKeyPath validates the create-time signage of a package.
+	PublicKeyPath string
+}
+
+// Pull takes a source URL and destination directory and fetches the Zarf package from the given sources.
+func Pull(ctx context.Context, source, destination string, opts PullOptions) error {
 	l := logger.From(ctx)
 	start := time.Now()
-	u, err := url.Parse(src)
+
+	// ensure filters are set
+	f := opts.Filters
+	if f == nil {
+		f = filters.Empty()
+	}
+	// ensure architecture is set
+	arch := config.GetArch(opts.Architecture)
+
+	u, err := url.Parse(source)
 	if err != nil {
 		return err
+	}
+	if destination == "" {
+		return fmt.Errorf("no output directory specified")
 	}
 	if u.Scheme == "" {
 		return errors.New("scheme must be either oci:// or http(s)://")
@@ -50,27 +72,29 @@ func Pull(ctx context.Context, src, dir, shasum, architecture string, filter fil
 	if u.Host == "" {
 		return errors.New("host cannot be empty")
 	}
-	// ensure architecture is set
-	architecture = config.GetArch(architecture)
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tmpDir)
+	defer func() {
+		if rErr := os.Remove(tmpDir); rErr != nil {
+			err = fmt.Errorf("cleanup failed: %w", rErr)
+		}
+	}()
 	tmpPath := ""
 
 	isPartial := false
 	switch u.Scheme {
 	case "oci":
-		l.Info("starting pull from oci source", "src", src)
-		isPartial, tmpPath, err = pullOCI(ctx, src, tmpDir, shasum, architecture, filter)
+		l.Info("starting pull from oci source", "source", source)
+		isPartial, tmpPath, err = pullOCI(ctx, source, tmpDir, opts.SHASum, arch, f)
 		if err != nil {
 			return err
 		}
 	case "http", "https":
-		l.Info("starting pull from http(s) source", "src", src, "digest", shasum)
-		tmpPath, err = pullHTTP(ctx, src, tmpDir, shasum)
+		l.Info("starting pull from http(s) source", "src", source, "digest", opts.SHASum)
+		tmpPath, err = pullHTTP(ctx, source, tmpDir, opts.SHASum)
 		if err != nil {
 			return err
 		}
@@ -80,10 +104,10 @@ func Pull(ctx context.Context, src, dir, shasum, architecture string, filter fil
 
 	// This loadFromTar is done so that validatePackageIntegrtiy and validatePackageSignature are called
 	layoutOpt := layout.PackageLayoutOptions{
-		PublicKeyPath:           publicKeyPath,
-		SkipSignatureValidation: skipSignatureValidation,
+		PublicKeyPath:           opts.PublicKeyPath,
+		SkipSignatureValidation: opts.SkipSignatureValidation,
 		IsPartial:               isPartial,
-		Filter:                  filter,
+		Filter:                  f,
 	}
 	_, err = layout.LoadFromTar(ctx, tmpPath, layoutOpt)
 	if err != nil {
@@ -94,7 +118,7 @@ func Pull(ctx context.Context, src, dir, shasum, architecture string, filter fil
 	if err != nil {
 		return err
 	}
-	tarPath := filepath.Join(dir, name)
+	tarPath := filepath.Join(destination, name)
 	err = os.Remove(tarPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -103,18 +127,23 @@ func Pull(ctx context.Context, src, dir, shasum, architecture string, filter fil
 	if err != nil {
 		return err
 	}
-	defer dstFile.Close()
+	defer func() {
+		if dstErr := dstFile.Close(); dstErr != nil {
+			err = fmt.Errorf("unable to cleanup: %w", dstErr)
+		}
+	}()
 	srcFile, err := os.Open(tmpPath)
 	if err != nil {
 		return err
 	}
+	// TODO(mkcp): add to error chain
 	defer srcFile.Close()
 	_, err = io.Copy(dstFile, srcFile)
 	if err != nil {
 		return err
 	}
 
-	l.Debug("done packager2.Pull", "src", src, "dir", dir, "duration", time.Since(start))
+	l.Debug("done packager2.Pull", "source", source, "destination", destination, "duration", time.Since(start))
 	return nil
 }
 
