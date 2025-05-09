@@ -27,4 +27,6 @@ __debug_bin
 .netlify
 !**/testdata/**
 coverage.out
+coverdir
+e2e-coverage.out
 dist

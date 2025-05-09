@@ -3,21 +3,24 @@ description: "Build CLI, agent image, init package and example packages"
 
 inputs:
   init-package:
-    description: 'Build the init package'
+    description: "Build the init package"
     required: false
-    default: 'true'
+    default: "true"
   build-examples:
-    description: 'Build the example packages'
+    description: "Build the example packages"
     required: false
-    default: 'true'
+    default: "true"
   os:
-    description: 'Which OS to build for'
+    description: "Which OS to build for"
     required: false
-    default: 'linux'
+    default: "linux"
   shell:
-    description: 'Which shell to build in'
+    description: "Which shell to build in"
     required: false
-    default: 'bash'
+    default: "bash"
+  build-cli-with-coverage:
+    description: "Whether to build the CLI with coverage reporting NOT FOR PRODUCTION"
+    default: "false"
 
 runs:
   using: composite
