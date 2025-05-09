@@ -4,8 +4,7 @@ metadata:
   description: Testing bad yaml imported
 
 variables:
-  - name: BUSYBOX_IMAGE
-    description: "whatever"
+  - name: BUSYBOX_TAG
 
 components:
   - name: dont-care
@@ -14,7 +13,7 @@ components:
 
   - name: import-test
     images:
-      - busybox:###ZARF_PKG_TMPL_BUSYBOX_IMAGE###
+      - busybox:###ZARF_PKG_TMPL_BUSYBOX_TAG###
       - busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79
 
   - name: oci-games-url

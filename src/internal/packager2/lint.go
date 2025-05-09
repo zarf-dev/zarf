@@ -27,7 +27,6 @@ func Lint(ctx context.Context, packagePath, flavor string, setVariables map[stri
 		return nil
 	}
 	return &lint.LintError{
-		BaseDir:     packagePath,
 		PackageName: pkg.Metadata.Name,
 		Findings:    findings,
 	}

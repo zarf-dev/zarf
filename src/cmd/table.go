@@ -34,7 +34,7 @@ func PrintFindings(ctx context.Context, lintErr *lint.LintError) {
 	}
 
 	// Print table to our OutputWriter
-	logger.From(ctx).Info("linting composed package", "name", lintErr.PackageName, "path", lintErr.BaseDir)
+	logger.From(ctx).Info("linting composed package definition", "name", lintErr.PackageName)
 	message.TableWithWriter(OutputWriter, []string{"Type", "Path", "Message"}, lintData)
 }
 

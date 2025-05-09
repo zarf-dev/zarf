@@ -12,7 +12,6 @@ import (
 //
 //nolint:revive // ignore name
 type LintError struct {
-	BaseDir     string
 	PackageName string
 	Findings    []PackageFinding
 }

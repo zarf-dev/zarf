@@ -17,12 +17,13 @@ import (
 func TestLintPackageWithImports(t *testing.T) {
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 	setVariables := map[string]string{
-		"BUSYBOX_IMAGE": "latest",
-		"UNSET":         "actually-is-set",
+		"BUSYBOX_TAG": "1.0.0",
 	}
 	ctx := context.Background()
 	// TODO: Make cache optional for skeleton pulls https://github.com/zarf-dev/zarf/issues/3774
-	cacheDir, err := os.MkdirTemp("", "zarf-")
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	cacheDir, err := os.MkdirTemp(cwd, "zarf-")
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(cacheDir))
@@ -33,7 +34,7 @@ func TestLintPackageWithImports(t *testing.T) {
 		{
 			YqPath:      ".components.[0].images.[0]",
 			Description: "Image not pinned with digest",
-			Item:        "busybox:latest",
+			Item:        "busybox:1.0.0",
 			Severity:    lint.SevWarn,
 		},
 		// Test imported skeleton package lints properly
