@@ -623,6 +623,7 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(tmpdir)
 
 	filesDir, err := pkgLayout.GetComponentDir(tmpdir, component.Name, layout.FilesComponentDir)
 	if err != nil {
@@ -695,9 +696,6 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 				return fmt.Errorf("unable to create symlink %s->%s: %w", link, file.Target, err)
 			}
 		}
-
-		// Cleanup now to reduce disk pressure
-		_ = os.RemoveAll(fileLocation)
 	}
 
 	l.Debug("done copying files", "duration", time.Since(start))
