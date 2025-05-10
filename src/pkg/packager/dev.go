@@ -84,7 +84,7 @@ func (p *Packager) DevDeploy(ctx context.Context) error {
 
 		// Set default builtin values so they exist in case any helm charts rely on them
 		registryInfo := types.RegistryInfo{Address: p.cfg.DeployOpts.RegistryURL}
-		if err := registryInfo.FillInEmptyValues(); err != nil {
+		if err := registryInfo.FillInEmptyValues("IPv4"); err != nil {
 			return err
 		}
 		gitServer := types.GitServerInfo{}

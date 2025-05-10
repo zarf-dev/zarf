@@ -44,6 +44,11 @@
           "shasum"
         ],
         "workingDir": "/zarf-init",
+        "ports": [
+          {
+            "containerPort": 5000
+          }
+        ],
         "resources": {
           "limits": {
             "cpu": "1",
