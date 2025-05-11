@@ -7,6 +7,7 @@ package test
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,6 +31,9 @@ func TestConnectAndCreds(t *testing.T) {
 	prevAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
 
+	var prevData map[string]string
+	require.NoError(t, json.Unmarshal([]byte(prevAgentSecretData), &prevData))
+
 	c, err := cluster.New(ctx)
 	require.NoError(t, err)
 	// Init the state variable
@@ -43,9 +47,15 @@ func TestConnectAndCreds(t *testing.T) {
 
 	newAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
+
+	var newData map[string]string
+	require.NoError(t, json.Unmarshal([]byte(newAgentSecretData), &newData))
+
 	newState, err := c.LoadState(ctx)
 	require.NoError(t, err)
-	require.NotEqual(t, prevAgentSecretData, newAgentSecretData)
+
+	require.NotEqual(t, prevData["tls.crt"], newData["tls.crt"])
+	require.NotEqual(t, prevData["tls.key"], newData["tls.key"])
 	require.NotEqual(t, oldState.ArtifactServer.PushToken, newState.ArtifactServer.PushToken)
 	require.NotEqual(t, oldState.GitServer.PushPassword, newState.GitServer.PushPassword)
 
