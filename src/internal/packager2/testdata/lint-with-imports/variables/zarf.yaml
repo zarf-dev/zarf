@@ -1,16 +1,8 @@
 kind: ZarfPackageConfig
 metadata:
-  name: linted-import
-  description: Testing bad yaml imported
-
-variables:
-  - name: BUSYBOX_TAG
+  name: variable-lint
 
 components:
-  - name: dont-care
-    images:
-    - image-that-should-not-show-up-in-lint:unpinned
-
   - name: import-test
     images:
       - busybox:###ZARF_PKG_TMPL_BUSYBOX_TAG###

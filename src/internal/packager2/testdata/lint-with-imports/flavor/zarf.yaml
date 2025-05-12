@@ -1,19 +1,8 @@
 kind: ZarfPackageConfig
 metadata:
-  name: lint
+  name: flavor-lint
 
 components:
-  - name: import-test
-    import:
-      path: linted-import
-
-  - name: full-repo
-    images:
-      - busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79
-
-  - name: oci-games-url
-    images:
-    - ghcr.io/zarf-dev/doom-game:0.0.1
 
   - name: import-bad-flavor
     only:

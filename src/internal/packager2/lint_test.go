@@ -14,38 +14,66 @@ import (
 
 func TestLintPackageWithImports(t *testing.T) {
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
-	setVariables := map[string]string{
-		"BUSYBOX_TAG": "1.0.0",
+
+	testCases := []struct {
+		name     string
+		path     string
+		opts     LintOptions
+		findings []lint.PackageFinding
+	}{
+		{
+			name: "compose test ",
+			path: filepath.Join("testdata", "lint-with-imports", "compose"),
+			findings: []lint.PackageFinding{
+				{
+					YqPath:      ".components.[0].images.[0]",
+					Description: "Image not pinned with digest",
+					Item:        "busybox:0.0.1",
+					Severity:    lint.SevWarn,
+				},
+			},
+		},
+		{
+			name: "variables test",
+			path: filepath.Join("testdata", "lint-with-imports", "variables"),
+			opts: LintOptions{
+				SetVariables: map[string]string{
+					"BUSYBOX_TAG": "1.0.0",
+				},
+			},
+			findings: []lint.PackageFinding{
+				{
+					YqPath:      ".components.[0].images.[0]",
+					Description: "Image not pinned with digest",
+					Item:        "busybox:1.0.0",
+					Severity:    lint.SevWarn,
+				},
+			},
+		},
+		{
+			name: "flavor test",
+			path: filepath.Join("testdata", "lint-with-imports", "flavor"),
+			opts: LintOptions{
+				Flavor: "good-flavor",
+			},
+			findings: []lint.PackageFinding{
+				{
+					YqPath:      ".components.[0].images.[0]",
+					Description: "Image not pinned with digest",
+					Item:        "image-in-good-flavor-component:unpinned",
+					Severity:    lint.SevWarn,
+				},
+			},
+		},
 	}
-	ctx := context.Background()
-	findings := []lint.PackageFinding{
-		// Test local import lints properly
-		{
-			YqPath:      ".components.[0].images.[0]",
-			Description: "Image not pinned with digest",
-			Item:        "busybox:1.0.0",
-			Severity:    lint.SevWarn,
-		},
-		// Test imported skeleton package lints properly
-		{
-			YqPath:      ".components.[2].images.[0]",
-			Description: "Image not pinned with digest",
-			Item:        "ghcr.io/zarf-dev/doom-game:0.0.1",
-			Severity:    lint.SevWarn,
-		},
-		// Test flavors
-		{
-			YqPath:      ".components.[3].images.[0]",
-			Description: "Image not pinned with digest",
-			Item:        "image-in-good-flavor-component:unpinned",
-			Severity:    lint.SevWarn,
-		},
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			err := Lint(ctx, tc.path, tc.opts)
+			var lintErr *lint.LintError
+			require.ErrorAs(t, err, &lintErr)
+			require.ElementsMatch(t, tc.findings, lintErr.Findings)
+		})
 	}
-	err := Lint(ctx, filepath.Join("testdata", "lint-with-imports"), LintOptions{
-		Flavor:       "good-flavor",
-		SetVariables: setVariables,
-	})
-	var lintErr *lint.LintError
-	require.ErrorAs(t, err, &lintErr)
-	require.ElementsMatch(t, findings, lintErr.Findings)
 }

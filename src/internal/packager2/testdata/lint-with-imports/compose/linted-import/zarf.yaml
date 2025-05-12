@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: linted-import
+
+components:
+  - name: dont-care
+    images:
+    - image-that-should-not-show-up-in-lint:unpinned
+
+  - name: import-test
+    images:
+      - busybox:0.0.1
+      - busybox@sha256:3fbc632167424a6d997e74f52b878d7cc478225cffac6bc977eedfe51c7f4e79
