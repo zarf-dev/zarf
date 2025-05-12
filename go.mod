@@ -33,7 +33,6 @@ require (
 	github.com/golang-cz/devslog v0.0.13
 	github.com/google/go-containerregistry v0.20.4-0.20250225234217-098045d5e61f
 	github.com/gosuri/uitable v0.0.4
-	github.com/mholt/archiver/v3 v3.5.1
 	github.com/mholt/archives v0.1.1
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/phsym/console-slog v0.3.1
