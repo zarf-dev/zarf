@@ -17,7 +17,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/mholt/archiver/v3"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -26,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/internal/packager/sbom"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
@@ -401,9 +401,10 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 
-				// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-				err = archiver.Extract(compressedFile, file.ExtractPath, destinationDir)
-				if err != nil {
+				decompressOpts := archive.DecompressOpts{
+					Files: []string{file.ExtractPath},
+				}
+				if err := archive.Decompress(ctx, compressedFile, destinationDir, decompressOpts); err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
 				}
 			} else {
@@ -413,8 +414,10 @@ func (pc *PackageCreator) addComponent(ctx context.Context, component v1alpha1.Z
 			}
 		} else {
 			if file.ExtractPath != "" {
-				// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-				if err := archiver.Extract(file.Source, file.ExtractPath, destinationDir); err != nil {
+				decompressOpts := archive.DecompressOpts{
+					Files: []string{file.ExtractPath},
+				}
+				if err := archive.Decompress(ctx, file.Source, destinationDir, decompressOpts); err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
 				}
 			} else {

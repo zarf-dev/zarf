@@ -13,10 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mholt/archiver/v3"
 	"github.com/mholt/archives"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
 )
 
 const rwxPerm = 0o755
@@ -24,10 +22,100 @@ const rwxPerm = 0o755
 // CompressOpts is a placeholder for future optional Compress params
 type CompressOpts struct{}
 
-// Compress takes any number of source files and archives them into a tarball at dest path.
-// TODO(mkcp): Migrate to mholt/archives, see CVE-2024-0406
-func Compress(_ context.Context, sources []string, dest string, _ CompressOpts) error {
-	return archiver.Archive(sources, dest)
+// Compress takes any number of source files and archives them into a compressed archive at dest path.
+func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts) error {
+	out, err := os.Create(dest)
+	if err != nil {
+		return fmt.Errorf("failed to create %s: %w", dest, err)
+	}
+	defer func() {
+		err = errors.Join(err, out.Close())
+	}()
+
+	mapping := make(map[string]string, len(sources))
+	for _, src := range sources {
+		mapping[src] = filepath.Base(src)
+	}
+	files, err := archives.FilesFromDisk(ctx, nil, mapping)
+	if err != nil {
+		return fmt.Errorf("failed to stat sources: %w", err)
+	}
+
+	// Pick formatter based on extension
+	switch {
+	case strings.HasSuffix(dest, ".zip"):
+		err = archives.Zip{}.Archive(ctx, out, files)
+		if err != nil {
+			return fmt.Errorf("zip failed: %w", err)
+		}
+
+	case strings.HasSuffix(dest, ".tar"):
+		err = archives.Tar{}.Archive(ctx, out, files)
+		if err != nil {
+			return fmt.Errorf("tar failed: %w", err)
+		}
+
+	// gzip
+	case strings.HasSuffix(dest, ".tar.gz"), strings.HasSuffix(dest, ".tgz"):
+		gz := archives.CompressedArchive{Compression: archives.Gz{}, Archival: archives.Tar{}}
+		if err = gz.Archive(ctx, out, files); err != nil {
+			return fmt.Errorf("tar.gz failed: %w", err)
+		}
+
+	// bzip2
+	case strings.HasSuffix(dest, ".tar.bz2"), strings.HasSuffix(dest, ".tbz2"), strings.HasSuffix(dest, ".tbz"):
+		bz2 := archives.CompressedArchive{Compression: archives.Bz2{}, Archival: archives.Tar{}}
+		if err = bz2.Archive(ctx, out, files); err != nil {
+			return fmt.Errorf("tar.bz2 failed: %w", err)
+		}
+
+	// xz
+	case strings.HasSuffix(dest, ".tar.xz"), strings.HasSuffix(dest, ".txz"):
+		xz := archives.CompressedArchive{Compression: archives.Xz{}, Archival: archives.Tar{}}
+		if err = xz.Archive(ctx, out, files); err != nil {
+			return fmt.Errorf("tar.xz failed: %w", err)
+		}
+
+	// zstd
+	case strings.HasSuffix(dest, ".tar.zst"), strings.HasSuffix(dest, ".tzst"):
+		zst := archives.CompressedArchive{Compression: archives.Zstd{}, Archival: archives.Tar{}}
+		if err = zst.Archive(ctx, out, files); err != nil {
+			return fmt.Errorf("tar.zst failed: %w", err)
+		}
+
+	// brotli
+	case strings.HasSuffix(dest, ".tar.br"), strings.HasSuffix(dest, ".tbr"):
+		br := archives.CompressedArchive{Compression: archives.Brotli{}, Archival: archives.Tar{}}
+		if err = br.Archive(ctx, out, files); err != nil {
+			return fmt.Errorf("tar.br failed: %w", err)
+		}
+
+	// lz4
+	case strings.HasSuffix(dest, ".tar.lz4"), strings.HasSuffix(dest, ".tlz4"):
+		lz4 := archives.CompressedArchive{Compression: archives.Lz4{}, Archival: archives.Tar{}}
+		if err = lz4.Archive(ctx, out, files); err != nil {
+			return fmt.Errorf("tar.lz4 failed: %w", err)
+		}
+
+	// lzip
+	case strings.HasSuffix(dest, ".tar.lz"):
+		lzip := archives.CompressedArchive{Compression: archives.Lzip{}, Archival: archives.Tar{}}
+		if err = lzip.Archive(ctx, out, files); err != nil {
+			return fmt.Errorf("tar.lz failed: %w", err)
+		}
+
+	// minlz
+	case strings.HasSuffix(dest, ".tar.mz"), strings.HasSuffix(dest, ".tmz"):
+		mz := archives.CompressedArchive{Compression: archives.MinLZ{}, Archival: archives.Tar{}}
+		if err = mz.Archive(ctx, out, files); err != nil {
+			return fmt.Errorf("tar.mz failed: %w", err)
+		}
+
+	default:
+		return fmt.Errorf("unsupported archive extension for %q", dest)
+	}
+
+	return nil
 }
 
 // DecompressOpts provides optional parameters for Decompress
@@ -35,21 +123,122 @@ type DecompressOpts struct {
 	// UnarchiveAll, when enabled, walks the sourceArchive and unarchives everything at the root of the archive.
 	// NOTE(mkcp): This is equivalent to a recursive walk with depth 1.
 	UnarchiveAll bool
+
+	// Files, if non‐empty, is the list of paths *inside* the archive that
+	// should be extracted.  Everything else is skipped.
+	Files []string
 }
 
-// Decompress takes Zarf package or arbitrary archive and decompresses it to the path at dest with options.
+// Decompress takes a Zarf package or arbitrary archive and decompresses it to
+// the path at dst, obeying opts.  If opts.Files is non‐empty, only those
+// entries (exact matches on NameInArchive) will be written.
 func Decompress(ctx context.Context, sourceArchive, dst string, opts DecompressOpts) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	err := unarchive(ctx, sourceArchive, dst)
-	if err != nil {
-		return fmt.Errorf("unable to perform decompression: %w", err)
+
+	// If the user asked for just a subset of files, use a filtered unarchive.
+	if len(opts.Files) > 0 {
+		if err := unarchiveFiltered(ctx, sourceArchive, dst, opts.Files); err != nil {
+			return fmt.Errorf("unable to decompress selected files: %w", err)
+		}
+	} else {
+		if err := unarchive(ctx, sourceArchive, dst); err != nil {
+			return fmt.Errorf("unable to perform decompression: %w", err)
+		}
+		if opts.UnarchiveAll {
+			if err := nestedUnarchive(ctx, dst); err != nil {
+				return err
+			}
+		}
 	}
-	if opts.UnarchiveAll {
-		err = nestedUnarchive(ctx, dst)
-		if err != nil {
+
+	return nil
+}
+
+// unarchiveFiltered extracts only the given list of archive‐internal filenames
+// into dst, and errors if any one of them was not found.
+func unarchiveFiltered(ctx context.Context, src, dst string, want []string) error {
+	file, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("unable to open archive %q: %w", src, err)
+	}
+	defer func() {
+		err = errors.Join(err, file.Close())
+	}()
+
+	format, input, err := archives.Identify(ctx, src, file)
+	if err != nil {
+		return fmt.Errorf("unable to identify archive %q: %w", src, err)
+	}
+
+	extractor, ok := format.(archives.Extractor)
+	if !ok {
+		return fmt.Errorf("unsupported format for extraction: %T", format)
+	}
+
+	// We'll track which ones we actually saw
+	found := make(map[string]bool, len(want))
+	wantSet := make(map[string]bool, len(want))
+	for _, name := range want {
+		wantSet[name] = true
+	}
+
+	// Ensure dst exists
+	if err := os.MkdirAll(dst, rwxPerm); err != nil {
+		return fmt.Errorf("unable to create destination %q: %w", dst, err)
+	}
+
+	handler := func(_ context.Context, f archives.FileInfo) error {
+		// skip anything not in our list
+		if !wantSet[f.NameInArchive] {
+			return nil
+		}
+		found[f.NameInArchive] = true
+
+		target := filepath.Join(dst, f.NameInArchive)
+
+		switch {
+		case f.IsDir():
+			return os.MkdirAll(target, f.Mode())
+
+		case f.LinkTarget != "":
+			linkDest := filepath.Join(dst, f.LinkTarget)
+			return os.Symlink(linkDest, target)
+
+		default:
+			if err := os.MkdirAll(filepath.Dir(target), rwxPerm); err != nil {
+				return err
+			}
+			out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY, f.Mode())
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, out.Close())
+			}()
+
+			in, err := f.Open()
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, in.Close())
+			}()
+
+			_, err = io.Copy(out, in)
 			return err
+		}
+	}
+
+	if err := extractor.Extract(ctx, input, handler); err != nil {
+		return fmt.Errorf("error extracting filtered entries from %q: %w", src, err)
+	}
+
+	// verify we got them all
+	for _, name := range want {
+		if !found[name] {
+			return fmt.Errorf("file %q not found in archive %q", name, src)
 		}
 	}
 	return nil
@@ -64,7 +253,7 @@ func nestedUnarchive(ctx context.Context, dst string) error {
 		if strings.HasSuffix(path, ".tar") {
 			dst := filepath.Join(strings.TrimSuffix(path, ".tar"), "..")
 			// Unpack sboms.tar differently since it has a different folder structure than components
-			if info.Name() == layout.SBOMTar {
+			if info.Name() == "sboms.tar" {
 				dst = strings.TrimSuffix(path, ".tar")
 			}
 			err := unarchive(ctx, path, dst)

@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -212,8 +213,7 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 	for _, file := range files {
 		filePaths = append(filePaths, filepath.Join(p.dirPath, file.Name()))
 	}
-	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-	err = archiver.Archive(filePaths, tarballPath)
+	err = archive.Compress(ctx, filePaths, tarballPath, archive.CompressOpts{})
 	if err != nil {
 		return fmt.Errorf("unable to create package: %w", err)
 	}

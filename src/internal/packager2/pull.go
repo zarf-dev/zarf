@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -200,8 +201,7 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture strin
 	if err != nil {
 		return false, "", err
 	}
-	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-	err = archiver.Archive(allTheLayers, tarPath)
+	err = archive.Compress(ctx, allTheLayers, tarPath, archive.CompressOpts{})
 	if err != nil {
 		return false, "", err
 	}
