@@ -4,7 +4,6 @@
 package layout
 
 import (
-	"archive/tar"
 	"context"
 	"errors"
 	"fmt"
@@ -17,7 +16,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/mholt/archiver/v3"
+	"github.com/mholt/archives"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 
@@ -44,7 +43,7 @@ type PackageLayoutOptions struct {
 	Filter                  filters.ComponentFilterStrategy
 }
 
-// LoadFromTar unpacks the give compressed package and loads it.
+// LoadFromTar unpacks the given archive (any compress/format) and loads it.
 func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) (*PackageLayout, error) {
 	if opt.Filter == nil {
 		opt.Filter = filters.Empty()
@@ -53,30 +52,41 @@ func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
-	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-	err = archiver.Walk(tarPath, func(f archiver.File) error {
-		if f.IsDir() {
-			return nil
-		}
-		header, ok := f.Header.(*tar.Header)
-		if !ok {
-			return fmt.Errorf("expected header to be *tar.Header but was %T", f.Header)
-		}
-		// If path has nested directories we want to create them.
-		dir := filepath.Dir(header.Name)
-		if dir != "." {
-			err := os.MkdirAll(filepath.Join(dirPath, dir), helpers.ReadExecuteAllWriteUser)
-			if err != nil {
-				return err
-			}
-		}
-		dst, err := os.Create(filepath.Join(dirPath, header.Name))
+
+	// 1) Mount the archive as a virtual file system.
+	fsys, err := archives.FileSystem(ctx, tarPath, nil)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open archive %q: %w", tarPath, err)
+	}
+
+	// 2) Walk every entry in the archive.
+	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		defer dst.Close()
-		_, err = io.Copy(dst, f)
+		// skip directories
+		if d.IsDir() {
+			return nil
+		}
+		// ensure parent dirs exist in our temp dir
+		dst := filepath.Join(dirPath, path)
+		if err := os.MkdirAll(filepath.Dir(dst), helpers.ReadExecuteAllWriteUser); err != nil {
+			return err
+		}
+		// copy file contents
+		in, err := fsys.Open(path)
 		if err != nil {
+			return err
+		}
+		defer in.Close()
+
+		out, err := os.Create(dst)
+		if err != nil {
+			return err
+		}
+		defer out.Close()
+
+		if _, err := io.Copy(out, in); err != nil {
 			return err
 		}
 		return nil
@@ -84,11 +94,9 @@ func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
-	p, err := LoadFromDir(ctx, dirPath, opt)
-	if err != nil {
-		return nil, err
-	}
-	return p, nil
+
+	// 3) Delegate to the existing LoadFromDir
+	return LoadFromDir(ctx, dirPath, opt)
 }
 
 // LoadFromDir loads and validates a package from the given directory path.
@@ -141,18 +149,62 @@ func (e *NoSBOMAvailableError) Error() string {
 	return fmt.Sprintf("zarf package %s does not have an SBOM available", e.pkgName)
 }
 
-// GetSBOM outputs the SBOM data from the package to the give destination path.
+// GetSBOM outputs the SBOM data from the package to the given destination path.
 func (p *PackageLayout) GetSBOM(destPath string) (string, error) {
 	if !p.Pkg.IsSBOMAble() {
 		return "", &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
 	}
-	path := filepath.Join(destPath, p.Pkg.Metadata.Name)
-	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-	err := archiver.Extract(filepath.Join(p.dirPath, SBOMTar), "", path)
+
+	// 1) locate the sboms archive under the layout directory
+	sbomArchive := filepath.Join(p.dirPath, SBOMTar)
+
+	// 2) mount it as a virtual filesystem
+	ctx := context.Background()
+	fsys, err := archives.FileSystem(ctx, sbomArchive, nil)
+	if err != nil {
+		return "", fmt.Errorf("unable to open SBOM archive %q: %w", sbomArchive, err)
+	}
+
+	// 3) prepare the real‐disk target directory
+	targetDir := filepath.Join(destPath, p.Pkg.Metadata.Name)
+	if err := os.MkdirAll(targetDir, 0o755); err != nil {
+		return "", fmt.Errorf("unable to create output dir %q: %w", targetDir, err)
+	}
+
+	// 4) copy every file from the virtual FS to disk
+	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		in, err := fsys.Open(path)
+		if err != nil {
+			return err
+		}
+		defer in.Close()
+
+		outPath := filepath.Join(targetDir, path)
+		if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
+			return err
+		}
+		out, err := os.Create(outPath)
+		if err != nil {
+			return err
+		}
+		defer out.Close()
+
+		if _, err := io.Copy(out, in); err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
 		return "", err
 	}
-	return path, nil
+
+	return targetDir, nil
 }
 
 // GetComponentDir returns a path to the directory in the given component.
@@ -170,9 +222,7 @@ func (p *PackageLayout) GetComponentDir(destPath, componentName string, ct Compo
 		return "", err
 	}
 	defer os.RemoveAll(tmpDir)
-	// TODO (phillebaba): We are not using archiver.Extract here because there is a bug in Windows where the files will not be extracted properly from nested directories.
-	// https://github.com/zarf-dev/zarf/issues/3051
-	err = archiver.Unarchive(sourcePath, tmpDir)
+	err = archive.Decompress(context.Background(), sourcePath, tmpDir, archive.DecompressOpts{})
 	if err != nil {
 		return "", err
 	}

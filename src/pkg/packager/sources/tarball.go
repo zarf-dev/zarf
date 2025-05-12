@@ -5,18 +5,19 @@
 package sources
 
 import (
-	"archive/tar"
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/mholt/archiver/v3"
+	"github.com/mholt/archives"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -47,38 +48,43 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 	}
 
 	pathsExtracted := []string{}
+	// 1) Mount the archive as a virtual file system.
+	fsys, err := archives.FileSystem(ctx, s.PackageSource, nil)
+	if err != nil {
+		return pkg, nil, fmt.Errorf("unable to open archive %q: %w", s.PackageSource, err)
+	}
 
-	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-	err = archiver.Walk(s.PackageSource, func(f archiver.File) error {
-		if f.IsDir() {
+	// 2) Walk every entry in the archive.
+	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		// skip directories
+		if d.IsDir() {
 			return nil
 		}
-		header, ok := f.Header.(*tar.Header)
-		if !ok {
-			return fmt.Errorf("expected header to be *tar.Header but was %T", f.Header)
-		}
-		path := header.Name
-
-		dir := filepath.Dir(path)
-		if dir != "." {
-			if err := os.MkdirAll(filepath.Join(dst.Base, dir), helpers.ReadExecuteAllWriteUser); err != nil {
-				return err
-			}
-		}
-
+		// ensure parent dirs exist in our temp dir
 		dstPath := filepath.Join(dst.Base, path)
 		pathsExtracted = append(pathsExtracted, path)
-		dst, err := os.Create(dstPath)
+		if err := os.MkdirAll(filepath.Dir(dstPath), helpers.ReadExecuteAllWriteUser); err != nil {
+			return err
+		}
+		// copy file contents
+		in, err := fsys.Open(path)
 		if err != nil {
 			return err
 		}
-		defer dst.Close()
+		defer in.Close()
 
-		_, err = io.Copy(dst, f)
+		out, err := os.Create(dstPath)
 		if err != nil {
 			return err
 		}
+		defer out.Close()
 
+		if _, err := io.Copy(out, in); err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {
@@ -156,17 +162,13 @@ func (s *TarballSource) LoadPackageMetadata(ctx context.Context, dst *layout.Pac
 	}
 	pathsExtracted := []string{}
 
-	for _, rel := range toExtract {
-		// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-		if err := archiver.Extract(s.PackageSource, rel, dst.Base); err != nil {
-			return pkg, nil, err
-		}
-		// archiver.Extract will not return an error if the file does not exist, so we must manually check
-		if !helpers.InvalidPath(filepath.Join(dst.Base, rel)) {
-			pathsExtracted = append(pathsExtracted, rel)
-		}
+	decompressOpts := archive.DecompressOpts{
+		Files: toExtract,
 	}
-
+	err = archive.Decompress(ctx, s.PackageSource, dst.Base, decompressOpts)
+	if err != nil {
+		return pkg, nil, fmt.Errorf("unable to extract archive %q: %w", s.PackageSource, err)
+	}
 	dst.SetFromPaths(ctx, pathsExtracted)
 
 	pkg, warnings, err = dst.ReadZarfYAML()

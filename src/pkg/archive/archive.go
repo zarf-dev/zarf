@@ -120,39 +120,129 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 
 // DecompressOpts provides optional parameters for Decompress
 type DecompressOpts struct {
-	// UnarchiveAll, when enabled, walks the sourceArchive and unarchives everything at the root of the archive.
-	// NOTE(mkcp): This is equivalent to a recursive walk with depth 1.
+	// UnarchiveAll walks root of the archive and unpacks nested .tar files.
 	UnarchiveAll bool
 
-	// Files, if non‐empty, is the list of paths *inside* the archive that
-	// should be extracted.  Everything else is skipped.
+	// Files, if non-empty, means "only extract these exact archive-paths."
 	Files []string
+
+	// StripComponents drops this many leading path elements from every entry.
+	StripComponents int
+
+	// OverwriteExisting, if true, will truncate existing files instead of failing.
+	OverwriteExisting bool
 }
 
-// Decompress takes a Zarf package or arbitrary archive and decompresses it to
-// the path at dst, obeying opts.  If opts.Files is non‐empty, only those
-// entries (exact matches on NameInArchive) will be written.
+// Decompress takes a Zarf package or arbitrary archive and decompresses it to dst.
 func Decompress(ctx context.Context, sourceArchive, dst string, opts DecompressOpts) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	// If the user asked for just a subset of files, use a filtered unarchive.
 	if len(opts.Files) > 0 {
 		if err := unarchiveFiltered(ctx, sourceArchive, dst, opts.Files); err != nil {
 			return fmt.Errorf("unable to decompress selected files: %w", err)
 		}
+		return nil
+	}
+	var err error
+	if opts.StripComponents > 0 || opts.OverwriteExisting {
+		err = unarchiveWithStrip(ctx, sourceArchive, dst,
+			opts.StripComponents, opts.OverwriteExisting)
 	} else {
-		if err := unarchive(ctx, sourceArchive, dst); err != nil {
-			return fmt.Errorf("unable to perform decompression: %w", err)
+		err = unarchive(ctx, sourceArchive, dst)
+	}
+	if err != nil {
+		return fmt.Errorf("unable to perform decompression: %w", err)
+	}
+	// 3) nested unarchive step remains unchanged
+	if opts.UnarchiveAll {
+		if err := nestedUnarchive(ctx, dst); err != nil {
+			return err
 		}
-		if opts.UnarchiveAll {
-			if err := nestedUnarchive(ctx, dst); err != nil {
+	}
+	return nil
+}
+
+// unarchiveWithStrip unpacks any supported archive, stripping `strip` path elements
+// and opening files with or without truncate based on `overwrite`.
+func unarchiveWithStrip(ctx context.Context, archivePath, dst string, strip int, overwrite bool) error {
+	// open archive
+	f, err := os.Open(archivePath)
+	if err != nil {
+		return fmt.Errorf("opening %q: %w", archivePath, err)
+	}
+	defer func() {
+		err = errors.Join(err, f.Close())
+	}()
+
+	// identify format (tar, tar.zst, zip, etc.)
+	format, input, err := archives.Identify(ctx, filepath.Base(archivePath), f)
+	if err != nil {
+		return fmt.Errorf("identifying archive %q: %w", archivePath, err)
+	}
+	extractor, ok := format.(archives.Extractor)
+	if !ok {
+		return fmt.Errorf("format %T cannot extract", format)
+	}
+
+	// ensure dst exists
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		return fmt.Errorf("creating dest %q: %w", dst, err)
+	}
+
+	// choose flags for file creation
+	flags := os.O_CREATE | os.O_WRONLY
+	if overwrite {
+		flags |= os.O_TRUNC
+	} else {
+		flags |= os.O_EXCL
+	}
+
+	handler := func(_ context.Context, fi archives.FileInfo) error {
+		parts := strings.Split(fi.NameInArchive, "/")
+		if len(parts) <= strip {
+			// nothing left after stripping → skip
+			return nil
+		}
+		rel := filepath.Join(parts[strip:]...)
+		target := filepath.Join(dst, rel)
+
+		switch {
+		case fi.IsDir():
+			return os.MkdirAll(target, fi.Mode())
+
+		case fi.LinkTarget != "":
+			// recreate symlink (we do not strip link targets here)
+			return os.Symlink(fi.LinkTarget, target)
+
+		default:
+			// regular file
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return err
 			}
+			out, err := os.OpenFile(target, flags, fi.Mode())
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, out.Close())
+			}()
+
+			in, err := fi.Open()
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, in.Close())
+			}()
+
+			if _, err := io.Copy(out, in); err != nil {
+				return err
+			}
+			return nil
 		}
 	}
 
+	if err := extractor.Extract(ctx, input, handler); err != nil {
+		return fmt.Errorf("extracting %q: %w", archivePath, err)
+	}
 	return nil
 }
 
