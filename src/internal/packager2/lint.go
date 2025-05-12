@@ -20,15 +20,15 @@ type LintOptions struct {
 }
 
 // Lint lints the given Zarf package
-func Lint(ctx context.Context, packagePath string, options LintOptions) error {
+func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	if packagePath == "" {
 		return errors.New("package path is required")
 	}
-	pkg, err := layout2.LoadPackageDefinition(ctx, packagePath, options.Flavor, options.SetVariables)
+	pkg, err := layout2.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.SetVariables)
 	if err != nil {
 		return err
 	}
-	findings, err := lintComponents(pkg, options.Flavor)
+	findings, err := lintComponents(pkg, opts.Flavor)
 	if err != nil {
 		return err
 	}
