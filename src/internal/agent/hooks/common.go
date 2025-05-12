@@ -13,3 +13,5 @@ func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 	currLabels["zarf-agent"] = "patched"
 	return operations.ReplacePatchOperation("/metadata/labels", currLabels)
 }
+
+const HashingLabel string = "zarf.dev/hashing"
