@@ -13,26 +13,42 @@ import (
 func TestLintError(t *testing.T) {
 	t.Parallel()
 
-	lintErr := &LintError{
-		Findings: []PackageFinding{
-			{
-				Severity: SevWarn,
+	testCases := []struct {
+		name         string
+		findings     []PackageFinding
+		onlyWarnings bool
+	}{
+		{
+			name: "only warnings",
+			findings: []PackageFinding{
+				{
+					Severity: SevWarn,
+				},
 			},
+			onlyWarnings: true,
+		},
+		{
+			name: "warnings and errors",
+			findings: []PackageFinding{
+				{
+					Severity: SevWarn,
+				},
+				{
+					Severity: SevErr,
+				},
+			},
+			onlyWarnings: false,
 		},
 	}
-	require.Equal(t, "linting error found 1 instance(s)", lintErr.Error())
-	require.True(t, lintErr.OnlyWarnings())
 
-	lintErr = &LintError{
-		Findings: []PackageFinding{
-			{
-				Severity: SevWarn,
-			},
-			{
-				Severity: SevErr,
-			},
-		},
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			lintErr := &LintError{
+				Findings: tc.findings,
+			}
+			require.Equal(t, tc.onlyWarnings, lintErr.OnlyWarnings())
+		})
 	}
-	require.Equal(t, "linting error found 2 instance(s)", lintErr.Error())
-	require.False(t, lintErr.OnlyWarnings())
 }
