@@ -223,28 +223,43 @@ func TestYqCompat(t *testing.T) {
 }
 
 func TestFillObjTemplate(t *testing.T) {
-	SetVariables := map[string]string{
-		"KEY1": "value1",
-		"KEY2": "value2",
-	}
-
-	component := v1alpha1.ZarfComponent{
-		Images: []string{
-			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY1"),
-			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageVariablePrefix, "KEY2"),
-			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY3"),
+	testCases := []struct {
+		name              string
+		variables         map[string]string
+		component         v1alpha1.ZarfComponent
+		expectedComponent v1alpha1.ZarfComponent
+	}{
+		{
+			name: "template variables",
+			variables: map[string]string{
+				"KEY1": "value1",
+				"KEY2": "value2",
+			},
+			component: v1alpha1.ZarfComponent{
+				Images: []string{
+					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY1"),
+					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageVariablePrefix, "KEY2"),
+					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY3"),
+				},
+			},
+			expectedComponent: v1alpha1.ZarfComponent{
+				Images: []string{
+					"value1",
+					"value2",
+					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY3"),
+				},
+			},
 		},
 	}
 
-	if err := templateZarfObj(&component, SetVariables); err != nil {
-		require.NoError(t, err)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			component := tc.component
+			if err := templateZarfObj(&component, tc.variables); err != nil {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tc.expectedComponent, component)
+		})
 	}
-	expectedComponent := v1alpha1.ZarfComponent{
-		Images: []string{
-			"value1",
-			"value2",
-			fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY3"),
-		},
-	}
-	require.Equal(t, expectedComponent, component)
 }
