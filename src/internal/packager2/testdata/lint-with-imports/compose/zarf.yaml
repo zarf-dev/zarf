@@ -1,0 +1,8 @@
+kind: ZarfPackageConfig
+metadata:
+  name: compose-lint
+
+components:
+  - name: import-test
+    import:
+      path: linted-import

@@ -1,0 +1,17 @@
+kind: ZarfPackageConfig
+metadata:
+  name: flavor-lint
+
+components:
+
+  - name: import-bad-flavor
+    only:
+      flavor: bad-flavor
+    images:
+      - image-in-bad-flavor-component:unpinned
+
+  - name: import-good-flavor
+    only:
+      flavor: good-flavor
+    images:
+      - image-in-good-flavor-component:unpinned
