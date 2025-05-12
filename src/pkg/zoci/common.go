@@ -46,7 +46,7 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 		if err != nil {
 			return nil, err
 		}
-		mods = append(mods, oci.WithCache(ociCache))
+		mods = append([]oci.Modifier{oci.WithCache(ociCache)}, mods...)
 	}
 
 	modifiers := append([]oci.Modifier{

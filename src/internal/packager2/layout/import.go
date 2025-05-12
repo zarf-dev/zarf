@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -217,16 +216,22 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		name = component.Import.Name
 	}
 
-	skeletonDataDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	absCachePath, err := config.GetAbsCachePath()
 	if err != nil {
 		return "", err
 	}
-	defer func() {
-		err = errors.Join(err, os.RemoveAll(skeletonDataDir))
-	}()
+	if err := helpers.CreateDirectory(absCachePath, helpers.ReadWriteExecuteUser); err != nil {
+		return "", err
+	}
+	ociCachePath := filepath.Join(absCachePath, zoci.ImageCacheDirectory)
+	componentCachePath := filepath.Join(absCachePath, "dirs")
+	store, err := ocistore.NewWithContext(ctx, ociCachePath)
+	if err != nil {
+		return "", err
+	}
 
 	// Get the descriptor for the component.
-	remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton())
+	remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(), oci.WithCache(store))
 	if err != nil {
 		return "", err
 	}
@@ -247,14 +252,10 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		h.Write([]byte(component.Import.URL + name))
 		id := fmt.Sprintf("%x", h.Sum(nil))
 
-		dir = filepath.Join(skeletonDataDir, "dirs", id)
+		dir = filepath.Join(componentCachePath, id)
 	} else {
-		tarball = filepath.Join(skeletonDataDir, "blobs", "sha256", componentDesc.Digest.Encoded())
-		dir = filepath.Join(skeletonDataDir, "dirs", componentDesc.Digest.Encoded())
-		store, err := ocistore.New(skeletonDataDir)
-		if err != nil {
-			return "", err
-		}
+		tarball = filepath.Join(ociCachePath, "blobs", "sha256", componentDesc.Digest.Encoded())
+		dir = filepath.Join(componentCachePath, componentDesc.Digest.Encoded())
 		err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
 		if err != nil {
 			return "", err
