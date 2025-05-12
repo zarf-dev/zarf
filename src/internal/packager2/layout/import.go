@@ -13,7 +13,9 @@ import (
 	"strings"
 	"time"
 
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -246,20 +248,21 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 
 		dir = filepath.Join(absCachePath, "dirs", id)
 	} else {
-		tarball = filepath.Join(absCachePath, "images", "blobs", "sha256", componentDesc.Digest.Encoded())
-		dir = filepath.Join(absCachePath, "dirs", componentDesc.Digest.Encoded())
-		// store, err := ocistore.NewWithContext(ctx, filepath.Join(absCachePath, "images"))
-		// if err != nil {
-		// 	return "", err
-		// }
-		_, err := remote.FetchLayer(ctx, componentDesc)
+		tempDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 		if err != nil {
 			return "", err
 		}
-		// err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
-		// if err != nil {
-		// 	return "", err
-		// }
+		defer os.RemoveAll(tempDir)
+		// FIXME: once oci PR is merged this is unnecessary
+		if err := os.Mkdir(filepath.Join(tempDir, "components"), helpers.ReadWriteExecuteUser); err != nil {
+			return "", err
+		}
+		tarball = filepath.Join(tempDir, componentDesc.Annotations[ocispec.AnnotationTitle])
+		dir = filepath.Join(absCachePath, "dirs", componentDesc.Digest.Encoded())
+		err = remote.PullPath(ctx, tempDir, componentDesc)
+		if err != nil {
+			return "", fmt.Errorf("failed to pull component tarball: %w", err)
+		}
 	}
 
 	if err := helpers.CreateDirectory(dir, helpers.ReadWriteExecuteUser); err != nil {
@@ -288,7 +291,7 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	}
 	err = tu.Unarchive(tarball, dir)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to unarchive component tarball: %w", err)
 	}
 	return rel, nil
 }
