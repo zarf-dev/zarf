@@ -6,11 +6,13 @@ package zoci
 
 import (
 	"context"
+	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	ociDirectory "oras.land/oras-go/v2/content/oci"
 )
 
 const (
@@ -22,6 +24,8 @@ const (
 	SkeletonArch = "skeleton"
 	// DefaultConcurrency is the default concurrency used for operations
 	DefaultConcurrency = 3
+	// ImageCacheDirectory is the directory within the Zarf cache containing an OCI store
+	ImageCacheDirectory = "images"
 )
 
 // Remote is a wrapper around the Oras remote repository with zarf specific functions
@@ -33,6 +37,18 @@ type Remote struct {
 // with zarf opination embedded
 func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {
 	l := logger.From(ctx)
+	if config.CommonOptions.CachePath != "" {
+		absCachePath, err := config.GetAbsCachePath()
+		if err != nil {
+			return nil, err
+		}
+		ociCache, err := ociDirectory.NewWithContext(ctx, filepath.Join(absCachePath, ImageCacheDirectory))
+		if err != nil {
+			return nil, err
+		}
+		mods = append(mods, oci.WithCache(ociCache))
+	}
+
 	modifiers := append([]oci.Modifier{
 		oci.WithPlainHTTP(config.CommonOptions.PlainHTTP),
 		oci.WithInsecureSkipVerify(config.CommonOptions.InsecureSkipTLSVerify),

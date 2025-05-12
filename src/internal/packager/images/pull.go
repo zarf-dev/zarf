@@ -32,9 +32,9 @@ import (
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	orasCache "github.com/defenseunicorns/pkg/oci/cache"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/internal/dns"
-	orasCache "github.com/zarf-dev/zarf/src/internal/packager/images/cache"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	orasRemote "oras.land/oras-go/v2/registry/remote"

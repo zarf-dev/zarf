@@ -145,7 +145,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 			ImageList:             componentImages,
 			Arch:                  pkg.Metadata.Architecture,
 			RegistryOverrides:     opt.RegistryOverrides,
-			CacheDirectory:        filepath.Join(cachePath, ImagesDir),
+			CacheDirectory:        filepath.Join(cachePath, zoci.ImageCacheDirectory),
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}

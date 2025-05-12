@@ -14,7 +14,6 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -38,8 +37,10 @@ func TestPull(t *testing.T) {
 	})
 
 	dir := t.TempDir()
-	shasum := "f9b15b1bc0f760a87bad68196b339a8ce8330e3a0241191a826a8962a88061f1"
-	err := Pull(ctx, srv.URL, dir, shasum, "amd64", filters.Empty(), "", false)
+	err := Pull(ctx, srv.URL, dir, PullOptions{
+		SHASum:       "f9b15b1bc0f760a87bad68196b339a8ce8330e3a0241191a826a8962a88061f1",
+		Architecture: "amd64",
+	})
 	require.NoError(t, err)
 
 	packageData, err := os.ReadFile(packagePath)
@@ -69,8 +70,10 @@ func TestPullUncompressed(t *testing.T) {
 	})
 
 	dir := t.TempDir()
-	shasum := "a118a4d306acc5dd4eab2c161e78fa3dfd1e08ae1e1794a4393be98c79257f5c"
-	err := Pull(ctx, srv.URL, dir, shasum, "amd64", filters.Empty(), "", false)
+	err := Pull(ctx, srv.URL, dir, PullOptions{
+		SHASum:       "a118a4d306acc5dd4eab2c161e78fa3dfd1e08ae1e1794a4393be98c79257f5c",
+		Architecture: "amd64",
+	})
 	require.NoError(t, err)
 
 	packageData, err := os.ReadFile(packagePath)
@@ -100,8 +103,10 @@ func TestPullUnsupported(t *testing.T) {
 	})
 
 	dir := t.TempDir()
-	shasum := "6e9dccce07ba9d3c45b7c872fae863c5415d296fd5e2fb72a2583530aa750ccd"
-	err := Pull(ctx, srv.URL, dir, shasum, "amd64", filters.Empty(), "", false)
+	err := Pull(ctx, srv.URL, dir, PullOptions{
+		SHASum:       "6e9dccce07ba9d3c45b7c872fae863c5415d296fd5e2fb72a2583530aa750ccd",
+		Architecture: "amd64",
+	})
 	require.EqualError(t, err, "unsupported file type: .txt", "unsupported file type: .txt")
 }
 
