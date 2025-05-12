@@ -41,7 +41,10 @@ func TestLintPackageWithImports(t *testing.T) {
 			Severity:    lint.SevWarn,
 		},
 	}
-	err := Lint(ctx, filepath.Join("testdata", "lint-with-imports"), "good-flavor", setVariables)
+	err := Lint(ctx, filepath.Join("testdata", "lint-with-imports"), LintOptions{
+		Flavor:       "good-flavor",
+		SetVariables: setVariables,
+	})
 	var lintErr *lint.LintError
 	require.ErrorAs(t, err, &lintErr)
 	require.ElementsMatch(t, findings, lintErr.Findings)

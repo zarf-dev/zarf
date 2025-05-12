@@ -5,6 +5,7 @@ package packager2
 
 import (
 	"context"
+	"errors"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -13,13 +14,21 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/composer"
 )
 
+type LintOptions struct {
+	SetVariables map[string]string
+	Flavor       string
+}
+
 // Lint lints the given Zarf package
-func Lint(ctx context.Context, packagePath, flavor string, setVariables map[string]string) error {
-	pkg, err := layout2.LoadPackageDefinition(ctx, packagePath, flavor, setVariables)
+func Lint(ctx context.Context, packagePath string, options LintOptions) error {
+	if packagePath == "" {
+		return errors.New("package path is required")
+	}
+	pkg, err := layout2.LoadPackageDefinition(ctx, packagePath, options.Flavor, options.SetVariables)
 	if err != nil {
 		return err
 	}
-	findings, err := lintComponents(pkg, flavor)
+	findings, err := lintComponents(pkg, options.Flavor)
 	if err != nil {
 		return err
 	}
