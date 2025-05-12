@@ -230,23 +230,47 @@ func TestFillObjTemplate(t *testing.T) {
 		expectedComponent v1alpha1.ZarfComponent
 	}{
 		{
-			name: "template variables",
+			name: "basic template",
 			variables: map[string]string{
-				"KEY1": "value1",
-				"KEY2": "value2",
+				"KEY": "value",
 			},
 			component: v1alpha1.ZarfComponent{
 				Images: []string{
-					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY1"),
-					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageVariablePrefix, "KEY2"),
-					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY3"),
+					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY"),
 				},
 			},
 			expectedComponent: v1alpha1.ZarfComponent{
 				Images: []string{
-					"value1",
-					"value2",
-					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY3"),
+					"value",
+				},
+			},
+		},
+		{
+			name: "deprecated template",
+			variables: map[string]string{
+				"KEY": "value",
+			},
+			component: v1alpha1.ZarfComponent{
+				Images: []string{
+					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageVariablePrefix, "KEY"),
+				},
+			},
+			expectedComponent: v1alpha1.ZarfComponent{
+				Images: []string{
+					"value",
+				},
+			},
+		},
+		{
+			name: "template not defined",
+			component: v1alpha1.ZarfComponent{
+				Images: []string{
+					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY"),
+				},
+			},
+			expectedComponent: v1alpha1.ZarfComponent{
+				Images: []string{
+					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY"),
 				},
 			},
 		},
