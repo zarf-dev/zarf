@@ -18,8 +18,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/mholt/archiver/v3"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	ocistore "oras.land/oras-go/v2/content/oci"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -223,15 +221,9 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	if err := helpers.CreateDirectory(absCachePath, helpers.ReadWriteExecuteUser); err != nil {
 		return "", err
 	}
-	ociCachePath := filepath.Join(absCachePath, zoci.ImageCacheDirectory)
-	componentCachePath := filepath.Join(absCachePath, "dirs")
-	store, err := ocistore.NewWithContext(ctx, ociCachePath)
-	if err != nil {
-		return "", err
-	}
 
 	// Get the descriptor for the component.
-	remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(), oci.WithCache(store))
+	remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton())
 	if err != nil {
 		return "", err
 	}
@@ -252,14 +244,22 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		h.Write([]byte(component.Import.URL + name))
 		id := fmt.Sprintf("%x", h.Sum(nil))
 
-		dir = filepath.Join(componentCachePath, id)
+		dir = filepath.Join(absCachePath, "dirs", id)
 	} else {
-		tarball = filepath.Join(ociCachePath, "blobs", "sha256", componentDesc.Digest.Encoded())
-		dir = filepath.Join(componentCachePath, componentDesc.Digest.Encoded())
-		err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
+		tarball = filepath.Join(absCachePath, "images", "blobs", "sha256", componentDesc.Digest.Encoded())
+		dir = filepath.Join(absCachePath, "dirs", componentDesc.Digest.Encoded())
+		// store, err := ocistore.NewWithContext(ctx, filepath.Join(absCachePath, "images"))
+		// if err != nil {
+		// 	return "", err
+		// }
+		_, err := remote.FetchLayer(ctx, componentDesc)
 		if err != nil {
 			return "", err
 		}
+		// err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
+		// if err != nil {
+		// 	return "", err
+		// }
 	}
 
 	if err := helpers.CreateDirectory(dir, helpers.ReadWriteExecuteUser); err != nil {
