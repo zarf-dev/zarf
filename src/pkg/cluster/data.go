@@ -24,7 +24,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
@@ -32,9 +31,9 @@ import (
 
 // HandleDataInjection waits for the target pod(s) to come up and inject the data into them
 // todo:  this currently requires kubectl but we should have enough k8s work to make this native now.
-func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDataInjection, componentPath *layout.ComponentPaths, dataIdx int) error {
+func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDataInjection, dataInjectionPath string, dataIdx int) error {
 	l := logger.From(ctx)
-	injectionCompletionMarker := filepath.Join(componentPath.DataInjections, config.GetDataInjectionMarker())
+	injectionCompletionMarker := filepath.Join(dataInjectionPath, config.GetDataInjectionMarker())
 	if err := os.WriteFile(injectionCompletionMarker, []byte("🦄"), helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("unable to create the data injection completion marker: %w", err)
 	}
@@ -63,10 +62,10 @@ func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDat
 
 	l.Debug("performing data injection", "target", data.Target)
 
-	source := filepath.Join(componentPath.DataInjections, filepath.Base(data.Target.Path))
+	source := filepath.Join(dataInjectionPath, filepath.Base(data.Target.Path))
 	if helpers.InvalidPath(source) {
 		// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
-		source = filepath.Join(componentPath.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+		source = filepath.Join(dataInjectionPath, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 		if helpers.InvalidPath(source) {
 			return fmt.Errorf("could not find the data injection source path %s", source)
 		}
@@ -122,7 +121,7 @@ func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDat
 		// Leave a marker in the target container for pods to track the sync action
 		cpPodCmd = fmt.Sprintf("%s -C %s %s | %s -- %s",
 			tarCmd,
-			componentPath.DataInjections,
+			dataInjectionPath,
 			config.GetDataInjectionMarker(),
 			kubectlCmd,
 			untarCmd,

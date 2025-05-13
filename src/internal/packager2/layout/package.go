@@ -43,6 +43,10 @@ type PackageLayoutOptions struct {
 	Filter                  filters.ComponentFilterStrategy
 }
 
+func (p *PackageLayout) DirPath() string {
+	return p.dirPath
+}
+
 // LoadFromTar unpacks the give compressed package and loads it.
 func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) (*PackageLayout, error) {
 	if opt.Filter == nil {
@@ -99,7 +103,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
-	pkg, err := ParseZarfPackage(b)
+	pkg, err := ParseZarfPackage(ctx, b)
 	if err != nil {
 		return nil, err
 	}
@@ -140,18 +144,24 @@ func (e *NoSBOMAvailableError) Error() string {
 	return fmt.Sprintf("zarf package %s does not have an SBOM available", e.pkgName)
 }
 
-// GetSBOM outputs the SBOM data from the package to the give destination path.
-func (p *PackageLayout) GetSBOM(destPath string) (string, error) {
+func (p *PackageLayout) ContainsSBOM() bool {
 	if !p.Pkg.IsSBOMAble() {
-		return "", &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
+		return false
 	}
-	path := filepath.Join(destPath, p.Pkg.Metadata.Name)
-	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-	err := archiver.Extract(filepath.Join(p.dirPath, SBOMTar), "", path)
+	_, err := os.Stat(filepath.Join(p.dirPath, SBOMTar))
+	return err == nil
+}
+
+// GetSBOM outputs the SBOM data from the package to the give destination path.
+func (p *PackageLayout) GetSBOM(destPath string) error {
+	if !p.ContainsSBOM() {
+		return &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
+	}
+	err := archiver.Extract(filepath.Join(p.dirPath, SBOMTar), "", destPath)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return path, nil
+	return nil
 }
 
 // GetComponentDir returns a path to the directory in the given component.

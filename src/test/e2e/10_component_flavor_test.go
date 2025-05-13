@@ -12,8 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 )
 
 func TestFlavorArchFiltering(t *testing.T) {

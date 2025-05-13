@@ -35,7 +35,8 @@ func TestCreateSBOM(t *testing.T) {
 
 	pkgLayout, err := layout2.LoadFromTar(context.Background(), tarPath, layout2.PackageLayoutOptions{})
 	require.NoError(t, err)
-	getSbomPath, err := pkgLayout.GetSBOM(t.TempDir())
+	getSbomPath := t.TempDir()
+	err = pkgLayout.GetSBOM(getSbomPath)
 	require.NoError(t, err)
 	for _, expectedFile := range expectedFiles {
 		require.FileExists(t, filepath.Join(getSbomPath, expectedFile))

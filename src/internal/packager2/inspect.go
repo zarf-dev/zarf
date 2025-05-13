@@ -55,9 +55,10 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayo
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
 	}
-	variableConfig := template.GetZarfVariableConfig(ctx)
-	variableConfig.SetConstants(pkgLayout.Pkg.Constants)
-	variableConfig.PopulateVariables(pkgLayout.Pkg.Variables, opts.SetVariables)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
+	if err != nil {
+		return InspectPackageResourcesResults{}, err
+	}
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
@@ -92,14 +93,9 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayo
 			}
 
 			for _, chart := range component.Charts {
-				chartOverrides := make(map[string]any)
-				for _, variable := range chart.Variables {
-					if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
-						// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
-						if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
-							return InspectPackageResourcesResults{}, fmt.Errorf("unable to merge path and value into map: %w", err)
-						}
-					}
+				chartOverrides, err := generateValuesOverrides(chart, component.Name, variableConfig, nil)
+				if err != nil {
+					return InspectPackageResourcesResults{}, err
 				}
 				if err := templateValuesFiles(chart, valuesDir, variableConfig); err != nil {
 					return InspectPackageResourcesResults{}, err
