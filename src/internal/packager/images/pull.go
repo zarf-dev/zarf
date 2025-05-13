@@ -32,9 +32,9 @@ import (
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	orasCache "github.com/defenseunicorns/pkg/oci/cache"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/internal/dns"
-	orasCache "github.com/zarf-dev/zarf/src/internal/packager/images/cache"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
@@ -70,6 +70,10 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		return nil, fmt.Errorf("failed to create cache directory %s: %w", cfg.DestinationDirectory, err)
 	}
 
+	if cfg.ResponseHeaderTimeout < 0 {
+		cfg.ResponseHeaderTimeout = 0 // currently allowing infinite timeout
+	}
+
 	imageFetchStart := time.Now()
 	l.Info("fetching info for images", "count", imageCount, "destination", cfg.DestinationDirectory)
 	storeOpts := credentials.StoreOptions{}
@@ -83,7 +87,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		Credential: credentials.Credential(credStore),
 	}
 
-	client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify)
+	client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
 
 	l.Debug("gathering credentials from default Docker config file", "credentials_configured", credStore.IsAuthConfigured())
 	platform := &ocispec.Platform{

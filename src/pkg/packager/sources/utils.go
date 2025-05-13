@@ -51,6 +51,7 @@ func identifyUnknownTarball(path string) (string, error) {
 	if err := os.Rename(path, tzst); err != nil {
 		return "", err
 	}
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	format, err := archiver.ByExtension(tzst)
 	if err != nil {
 		return "", err
@@ -94,6 +95,7 @@ func RenameFromMetadata(path string) (string, error) {
 		ext = ".tar.zst"
 	}
 
+	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
 	if err := archiver.Walk(path, func(f archiver.File) error {
 		if f.Name() == layout.ZarfYAML {
 			b, err := io.ReadAll(f)

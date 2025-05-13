@@ -165,6 +165,7 @@ func TestPackageInspectManifests(t *testing.T) {
 			setVariables: map[string]string{
 				"REPLICAS": "2",
 				"PORT":     "8080",
+				"LABEL":    "httpd",
 			},
 		},
 		{
@@ -238,6 +239,7 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 			setVariables: map[string]string{
 				"REPLICAS":    "2",
 				"DESCRIPTION": ".chart.variables takes priority",
+				"PORT":        "8080",
 			},
 		},
 		{
