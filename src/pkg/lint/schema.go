@@ -11,6 +11,7 @@ import (
 	"regexp"
 
 	"github.com/xeipuuv/gojsonschema"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -28,8 +29,7 @@ func ValidatePackageSchemaAtPath(path string, setVariables map[string]string) ([
 	if err != nil {
 		return nil, err
 	}
-	_, err = templateZarfObj(&untypedZarfPackage, setVariables)
-	if err != nil {
+	if err := templateZarfObj(&untypedZarfPackage, setVariables); err != nil {
 		return nil, err
 	}
 	return getSchemaFindings(jsonSchema, untypedZarfPackage)
@@ -45,8 +45,7 @@ func ValidatePackageSchema(setVariables map[string]string) ([]PackageFinding, er
 	if err != nil {
 		return nil, err
 	}
-	_, err = templateZarfObj(&untypedZarfPackage, setVariables)
-	if err != nil {
+	if err := templateZarfObj(&untypedZarfPackage, setVariables); err != nil {
 		return nil, err
 	}
 	return getSchemaFindings(jsonSchema, untypedZarfPackage)
@@ -96,4 +95,26 @@ func runSchema(jsonSchema []byte, pkg interface{}) ([]gojsonschema.ResultError, 
 		return result.Errors(), nil
 	}
 	return nil, nil
+}
+
+func templateZarfObj(zarfObj any, setVariables map[string]string) error {
+	templateMap := map[string]string{}
+
+	setVars := func(templatePrefix string) error {
+		for key, value := range setVariables {
+			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
+		}
+		return nil
+	}
+
+	if err := setVars(v1alpha1.ZarfPackageTemplatePrefix); err != nil {
+		return err
+	}
+
+	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
+	if err := setVars(v1alpha1.ZarfPackageVariablePrefix); err != nil {
+		return err
+	}
+
+	return utils.ReloadYamlTemplate(zarfObj, templateMap)
 }
