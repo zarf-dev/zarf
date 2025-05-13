@@ -131,12 +131,17 @@ type DecompressOpts struct {
 
 	// OverwriteExisting, if true, will truncate existing files instead of failing.
 	OverwriteExisting bool
+
+	// SkipValidation, if true, will skip the validation of a file being present in the archive.
+	// This is used with unarchiveFiltered to avoid checking for files that are not in the archive.
+	// This was a previous behavior that the new logic does not support.
+	SkipValidation bool
 }
 
 // Decompress takes a Zarf package or arbitrary archive and decompresses it to dst.
 func Decompress(ctx context.Context, sourceArchive, dst string, opts DecompressOpts) error {
 	if len(opts.Files) > 0 {
-		if err := unarchiveFiltered(ctx, sourceArchive, dst, opts.Files); err != nil {
+		if err := unarchiveFiltered(ctx, sourceArchive, dst, opts.Files, opts.SkipValidation); err != nil {
 			return fmt.Errorf("unable to decompress selected files: %w", err)
 		}
 		return nil
@@ -248,13 +253,14 @@ func unarchiveWithStrip(ctx context.Context, archivePath, dst string, strip int,
 
 // unarchiveFiltered extracts only the given list of archive‐internal filenames
 // into dst, and errors if any one of them was not found.
-func unarchiveFiltered(ctx context.Context, src, dst string, want []string) error {
+func unarchiveFiltered(ctx context.Context, src, dst string, want []string, skipValidation bool) error {
 	file, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("unable to open archive %q: %w", src, err)
 	}
 	defer func() {
-		err = errors.Join(err, file.Close())
+		cErr := file.Close()
+		err = errors.Join(err, cErr)
 	}()
 
 	format, input, err := archives.Identify(ctx, src, file)
@@ -305,7 +311,8 @@ func unarchiveFiltered(ctx context.Context, src, dst string, want []string) erro
 				return err
 			}
 			defer func() {
-				err = errors.Join(err, out.Close())
+				cErr := out.Close()
+				err = errors.Join(err, cErr)
 			}()
 
 			in, err := f.Open()
@@ -327,7 +334,7 @@ func unarchiveFiltered(ctx context.Context, src, dst string, want []string) erro
 
 	// verify we got them all
 	for _, name := range want {
-		if !found[name] {
+		if !found[name] && !skipValidation {
 			return fmt.Errorf("file %q not found in archive %q", name, src)
 		}
 	}

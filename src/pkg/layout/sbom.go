@@ -40,7 +40,7 @@ func (s *SBOMs) Unarchive() error {
 	}
 	tb := s.Path
 	dir := filepath.Join(filepath.Dir(tb), SBOMDir)
-	if err := archive.Decompress(context.TODO(), tb, dir, archive.DecompressOpts{}); err != nil {
+	if err := archive.Decompress(context.Background(), tb, dir, archive.DecompressOpts{}); err != nil {
 		return err
 	}
 	s.Path = dir

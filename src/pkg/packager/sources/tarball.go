@@ -163,11 +163,18 @@ func (s *TarballSource) LoadPackageMetadata(ctx context.Context, dst *layout.Pac
 	pathsExtracted := []string{}
 
 	decompressOpts := archive.DecompressOpts{
-		Files: toExtract,
+		Files:          toExtract,
+		SkipValidation: true, // retain the original behavior of not validating the existence of the files
 	}
 	err = archive.Decompress(ctx, s.PackageSource, dst.Base, decompressOpts)
 	if err != nil {
 		return pkg, nil, fmt.Errorf("unable to extract archive %q: %w", s.PackageSource, err)
+	}
+
+	for _, rel := range toExtract {
+		if !helpers.InvalidPath(filepath.Join(dst.Base, rel)) {
+			pathsExtracted = append(pathsExtracted, rel)
+		}
 	}
 	dst.SetFromPaths(ctx, pathsExtracted)
 
