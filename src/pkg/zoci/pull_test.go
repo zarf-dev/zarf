@@ -103,7 +103,7 @@ func TestAssembleLayers(t *testing.T) {
 			require.Len(t, sbomInspectLayers, 3)
 
 			// get image layers
-			expectedImageLayers := []string{"sha256:eda48e36dc18bbe4547311bdce8878f9e06b4bee032c85c4ff368bd53af6aecb",
+			expectedImageLayers := []string{"sha256:da324ac903c3287a9ab7f12d10fea0177251ca5d1aae156b293f042a722c414d",
 				"sha256:18f0797eab35a4597c1e9624aa4f15fd91f6254e5538c1e0d193b2a95dd4acc6",
 				"sha256:1c4eef651f65e2f7daee7ee785882ac164b02b78fb74503052a26dc061c90474",
 				"sha256:aded1e1a5b3705116fa0a92ba074a5e0b0031647d9c315983ccba2ee5428ec8b",
