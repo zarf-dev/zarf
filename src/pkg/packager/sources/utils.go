@@ -75,11 +75,12 @@ func identifyUnknownTarball(path string) (string, error) {
 	}
 
 	// 2) try original path
-	if ok, err := try(path); err != nil {
+	if _, err := try(path); err != nil {
 		return "", err
-	} else if ok {
-		return path, nil
 	}
+	// else if ok {
+	// 	return path, nil
+	// }
 
 	// 3) try each extension in order
 	for _, ext := range []string{".tar.zst", ".tar.gz", ".tar.xz", ".tar"} {
