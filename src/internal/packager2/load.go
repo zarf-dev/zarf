@@ -29,7 +29,6 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
-	Cluster                 *cluster.Cluster
 	Source                  string
 	Shasum                  string
 	Architecture            string
@@ -182,6 +181,7 @@ func assembleSplitTar(src, dest string) error {
 	return nil
 }
 
+// GetPackageFromSourceOrCluster retrieves a Zarf package from a source or cluster.
 func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string, layerSelector zoci.LayersSelector) (v1alpha1.ZarfPackage, error) {
 	srcType, err := identifySource(src)
 	if err != nil {
