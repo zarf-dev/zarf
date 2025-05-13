@@ -61,19 +61,29 @@ type CreateOptions struct {
 	OCIConcurrency          int
 }
 
+// CreatePackage takes a zarf.yaml at the package path and returns a PackageLayout of the final package
 func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (*PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("creating package", "path", packagePath)
-
-	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return nil, err
-	}
 
 	pkg, err := LoadPackageDefinition(ctx, packagePath, opt.Flavor, opt.SetVariables)
 	if err != nil {
 		return nil, err
 	}
+
+	pkgLayout, err := AssemblePackage(ctx, pkg, packagePath, opt)
+	if err != nil {
+		return nil, err
+	}
+
+	l.Info("package created")
+
+	return pkgLayout, nil
+}
+
+// AssemblePackage takes a package definition and returns a package layout with all the resources collected
+func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt CreateOptions) (*PackageLayout, error) {
+	l := logger.From(ctx)
 
 	if opt.DifferentialPackagePath != "" {
 		l.Debug("creating differential package", "differential", opt.DifferentialPackagePath)
@@ -113,6 +123,10 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 		}
 	}
 
+	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
 	for _, component := range pkg.Components {
 		err := assemblePackageComponent(ctx, component, packagePath, buildPath)
 		if err != nil {
@@ -171,7 +185,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 
 	if !opt.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
-		err = generateSBOM(ctx, pkg, buildPath, sbomImageList)
+		err := generateSBOM(ctx, pkg, buildPath, sbomImageList)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
 		}
@@ -208,8 +222,6 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 	if err != nil {
 		return nil, err
 	}
-
-	l.Info("package created")
 
 	return pkgLayout, nil
 }

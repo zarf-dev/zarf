@@ -29,9 +29,28 @@ type DevDeployOptions struct {
 
 // DevDeploy creates + deploys a package in one shot
 func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) error {
+
 	l := logger.From(ctx)
 	start := time.Now()
 	config.CommonOptions.Confirm = true
+
+	pkg, err := layout.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
+	if err != nil {
+		return err
+	}
+
+	// If not building for airgap, strip out all images and repos
+	if !opts.Airgap {
+		for idx := range pkg.Components {
+			pkg.Components[idx].Images = []string{}
+			pkg.Components[idx].Repos = []string{}
+		}
+	}
+
+	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
 
 	createOpt := layout.CreateOptions{
 		Flavor:            opts.Flavor,
@@ -40,25 +59,22 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) e
 		SkipSBOM:          true,
 		OCIConcurrency:    config.CommonOptions.OCIConcurrency,
 	}
-	pkgLayout, err := layout.CreatePackage(ctx, packagePath, createOpt)
+
+	if _, err := layout.AssemblePackage(ctx, pkg, packagePath, createOpt); err != nil {
+		return err
+	}
+
+	pkgLayout, err := layout.LoadFromDir(ctx, buildPath, layout.PackageLayoutOptions{SkipSignatureValidation: true})
 	if err != nil {
 		return err
 	}
+
 	defer pkgLayout.Cleanup()
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.DeploySetVariables)
 	if err != nil {
 		return err
 	}
-
-	// If not building for airgap, strip out all images and repos
-	if !opts.Airgap {
-		for idx := range pkgLayout.Pkg.Components {
-			pkgLayout.Pkg.Components[idx].Images = []string{}
-			pkgLayout.Pkg.Components[idx].Repos = []string{}
-		}
-	}
-	utils.ColorPrintYAML(pkgLayout.Pkg, nil, false)
 
 	l.Info("starting package dev deploy", "name", pkgLayout.Pkg.Metadata.Name)
 
@@ -80,7 +96,6 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) e
 	}
 
 	// Get a list of all the components we are deploying and actually deploy them
-	//FIXME
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, DeployOpts{
 		SetVariables:          opts.DeploySetVariables,
 		Timeout:               opts.Timeout,
