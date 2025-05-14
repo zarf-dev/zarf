@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package archive contains the SDK for Zarf archival and compression.
 package archive
 
 import (
@@ -148,7 +152,7 @@ func TestDecompress_UnarchiveAll(t *testing.T) {
 
 	// Should have extracted foo.txt from the nested tar
 	found := false
-	_ = filepath.Walk(outDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(outDir, func(path string, info os.FileInfo, err error) error {
 		if filepath.Base(path) == "foo.txt" {
 			found = true
 			content := readFile(t, path)
@@ -158,6 +162,7 @@ func TestDecompress_UnarchiveAll(t *testing.T) {
 		}
 		return nil
 	})
+	require.NoError(t, err, "Walk failed")
 	if !found {
 		t.Error("foo.txt not found after UnarchiveAll")
 	}
