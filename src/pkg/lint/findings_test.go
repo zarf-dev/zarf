@@ -10,46 +10,45 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGroupFindingsByPath(t *testing.T) {
+func TestLintError(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name        string
-		findings    []PackageFinding
-		severity    Severity
-		packageName string
-		want        map[string][]PackageFinding
+
+	testCases := []struct {
+		name         string
+		findings     []PackageFinding
+		onlyWarnings bool
 	}{
 		{
-			name: "same package multiple findings",
+			name: "only warnings",
 			findings: []PackageFinding{
-				{Severity: SevWarn, PackageNameOverride: "import", PackagePathOverride: "path"},
-				{Severity: SevWarn, PackageNameOverride: "import", PackagePathOverride: "path"},
-			},
-			packageName: "testPackage",
-			want: map[string][]PackageFinding{
-				"path": {
-					{Severity: SevWarn, PackageNameOverride: "import", PackagePathOverride: "path"},
-					{Severity: SevWarn, PackageNameOverride: "import", PackagePathOverride: "path"},
+				{
+					Severity: SevWarn,
 				},
 			},
+			onlyWarnings: true,
 		},
 		{
-			name: "different packages single finding",
+			name: "warnings and errors",
 			findings: []PackageFinding{
-				{Severity: SevWarn, PackageNameOverride: "import", PackagePathOverride: "path"},
-				{Severity: SevErr, PackageNameOverride: "", PackagePathOverride: ""},
+				{
+					Severity: SevWarn,
+				},
+				{
+					Severity: SevErr,
+				},
 			},
-			packageName: "testPackage",
-			want: map[string][]PackageFinding{
-				"path": {{Severity: SevWarn, PackageNameOverride: "import", PackagePathOverride: "path"}},
-				".":    {{Severity: SevErr, PackageNameOverride: "testPackage", PackagePathOverride: "."}},
-			},
+			onlyWarnings: false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tt.want, GroupFindingsByPath(tt.findings, tt.packageName))
+			lintErr := &LintError{
+				Findings: tc.findings,
+			}
+			require.Equal(t, tc.onlyWarnings, lintErr.OnlyWarnings())
 		})
 	}
 }
