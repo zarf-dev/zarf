@@ -82,7 +82,7 @@ func runAction(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefau
 
 	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates())
 
-	if cmd, err = actionCmdMutation(ctx, cmd, actionDefaults.Shell); err != nil {
+	if cmd, err = actionCmdMutation(ctx, cmd, actionDefaults.Shell, runtime.GOOS); err != nil {
 		l.Error("error mutating command", "cmd", cmdEscaped, "err", err.Error())
 	}
 
@@ -209,7 +209,7 @@ func convertWaitToCmd(_ context.Context, wait v1alpha1.ZarfComponentActionWait, 
 }
 
 // Perform some basic string mutations to make commands more useful.
-func actionCmdMutation(ctx context.Context, cmd string, shellPref v1alpha1.Shell) (string, error) {
+func actionCmdMutation(ctx context.Context, cmd string, shellPref v1alpha1.Shell, goos string) (string, error) {
 	zarfCommand, err := utils.GetFinalExecutableCommand()
 	if err != nil {
 		return cmd, err
@@ -219,7 +219,7 @@ func actionCmdMutation(ctx context.Context, cmd string, shellPref v1alpha1.Shell
 	cmd = strings.ReplaceAll(cmd, "./zarf ", zarfCommand+" ")
 
 	// Make commands 'more' compatible with Windows OS PowerShell
-	if runtime.GOOS == "windows" && (exec.IsPowershell(shellPref.Windows) || shellPref.Windows == "") {
+	if goos == "windows" && (exec.IsPowershell(shellPref.Windows) || shellPref.Windows == "") {
 		// Replace "touch" with "New-Item" on Windows as it's a common command, but not POSIX so not aliased by M$.
 		// See https://mathieubuisson.github.io/powershell-linux-bash/ &
 		// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details.
