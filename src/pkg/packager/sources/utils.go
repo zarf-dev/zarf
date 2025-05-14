@@ -132,7 +132,6 @@ func RenameFromMetadata(path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%s does not contain a %s", path, layout.ZarfYAML)
 	}
-	defer f.Close()
 
 	// 4) read & unmarshal into our package struct
 	data, err := io.ReadAll(f)
@@ -152,6 +151,12 @@ func RenameFromMetadata(path string) (string, error) {
 	name = fmt.Sprintf("%s%s", name, ext)
 
 	tb := filepath.Join(filepath.Dir(path), name)
+
+	// Windows will not allow the rename if open
+	err = f.Close()
+	if err != nil {
+		return "", err
+	}
 
 	return tb, os.Rename(path, tb)
 }
