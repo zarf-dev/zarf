@@ -37,6 +37,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"oras.land/oras-go/v2/registry/remote"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
@@ -85,6 +86,26 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		Client:     retry.DefaultClient,
 		Cache:      auth.NewCache(),
 		Credential: credentials.Credential(credStore),
+	}
+	var uniqueHosts []string
+	for _, v := range cfg.ImageList {
+		uniqueHosts = append(uniqueHosts, v.Host)
+	}
+	// FIXME use a map / set
+	uniqueHosts = helpers.Unique(uniqueHosts)
+	// I'll have to account for registry overrides changing
+	if credStore.IsAuthConfigured() {
+		for _, host := range uniqueHosts {
+			registry, err := remote.NewRegistry(host)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create registry: %w", err)
+			}
+			registry.Client = client
+			// FIXME I believe I can't error here as someone may use a fake registry for docker
+			if err := registry.Ping(ctx); err != nil {
+				return nil, fmt.Errorf("failed to ping registry: %w", err)
+			}
+		}
 	}
 
 	client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
