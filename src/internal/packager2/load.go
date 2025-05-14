@@ -20,8 +20,10 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -33,72 +35,57 @@ type LoadOptions struct {
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
+	LayersSelector          zoci.LayersSelector
 }
 
-// LoadPackage optionally fetches and loads the package from the given source.
+// LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
 func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, error) {
 	if opt.Filter == nil {
 		opt.Filter = filters.Empty()
 	}
+
+	if opt.LayersSelector == "" {
+		opt.LayersSelector = zoci.AllLayers
+	}
+
 	srcType, err := identifySource(opt.Source)
 	if err != nil {
 		return nil, err
 	}
-	architecture := config.GetArch(opt.Architecture)
 
+	// Prepare a temp workspace
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
 	}
 	defer os.Remove(tmpDir)
-	tarPath := filepath.Join(tmpDir, "data.tar.zst")
 
-	isPartial := false
-	switch srcType {
-	case "oci":
-		isPartial, tarPath, err = pullOCI(ctx, opt.Source, tmpDir, opt.Shasum, architecture, opt.Filter)
-		if err != nil {
-			return nil, err
-		}
-	case "http", "https":
-		tarPath, err = pullHTTP(ctx, opt.Source, tmpDir, opt.Shasum)
-		if err != nil {
-			return nil, err
-		}
-	case "split":
-		err = assembleSplitTar(opt.Source, tarPath)
-		if err != nil {
-			return nil, err
-		}
-	case "tarball":
-		tarPath = opt.Source
-	default:
-		return nil, fmt.Errorf("unknown source type: %s", opt.Source)
+	// Fetch or assemble the package tar
+	isPartial, tarPath, err := fetchPackage(ctx, srcType, opt.Source, opt.Shasum, opt.Architecture, opt.LayersSelector, tmpDir, opt.Filter)
+	if err != nil {
+		return nil, err
 	}
+
+	// Verify checksum if provided
 	if srcType != "oci" && opt.Shasum != "" {
-		err := helpers.SHAsMatch(tarPath, opt.Shasum)
-		if err != nil {
-			return nil, err
+		if err := helpers.SHAsMatch(tarPath, opt.Shasum); err != nil {
+			return nil, fmt.Errorf("SHA256 mismatch for %s: %w", tarPath, err)
 		}
 	}
 
+	// Load package layout
 	layoutOpt := layout.PackageLayoutOptions{
 		PublicKeyPath:           opt.PublicKeyPath,
 		SkipSignatureValidation: opt.SkipSignatureValidation,
 		IsPartial:               isPartial,
 		Filter:                  opt.Filter,
 	}
-	pkgLayout, err := layout.LoadFromTar(ctx, tarPath, layoutOpt)
-	if err != nil {
-		return nil, err
-	}
-	return pkgLayout, nil
+	return layout.LoadFromTar(ctx, tarPath, layoutOpt)
 }
 
-// identifySource returns the source type for the given source.
+// identifySource returns the source type for the given source string.
 func identifySource(src string) (string, error) {
-	parsed, err := url.Parse(src)
-	if err == nil && parsed.Scheme != "" && parsed.Host != "" {
+	if parsed, err := url.Parse(src); err == nil && parsed.Scheme != "" && parsed.Host != "" {
 		return parsed.Scheme, nil
 	}
 	if strings.HasSuffix(src, ".tar.zst") || strings.HasSuffix(src, ".tar") {
@@ -107,60 +94,100 @@ func identifySource(src string) (string, error) {
 	if strings.Contains(src, ".part000") {
 		return "split", nil
 	}
+	// match deployed package names: lowercase, digits, hyphens
+	if lint.IsLowercaseNumberHyphenNoStartHyphen(src) {
+		return "cluster", nil
+	}
 	return "", fmt.Errorf("unknown source %s", src)
 }
 
-func assembleSplitTar(src, tarPath string) error {
+// fetchPackage fetches or assembles the package tar for different source types.
+func fetchPackage(ctx context.Context, srcType string, source string, shasum string, architecture string, layersSelector zoci.LayersSelector, workDir string, filter filters.ComponentFilterStrategy) (bool, string, error) {
+	tarPath := filepath.Join(workDir, "data.tar.zst")
+	switch srcType {
+	case "oci":
+		ociOpts := PullOCIOptions{
+			Source:         source,
+			Directory:      workDir,
+			Shasum:         shasum,
+			Architecture:   config.GetArch(architecture),
+			Filter:         filter,
+			LayersSelector: layersSelector,
+		}
+
+		return pullOCI(ctx, ociOpts)
+
+	case "http", "https":
+		path, err := pullHTTP(ctx, source, workDir, shasum)
+		return false, path, err
+
+	case "split":
+		err := assembleSplitTar(source, tarPath)
+		return false, tarPath, err
+
+	case "tarball":
+		return false, source, nil
+
+	default:
+		err := fmt.Errorf("cannot fetch or locate tarball for unsupported source type %s", srcType)
+		return false, "", err
+	}
+}
+
+// assembleSplitTar reconstructs a split tarball into a single archive.
+func assembleSplitTar(src, dest string) error {
 	pattern := strings.Replace(src, ".part000", ".part*", 1)
 	splitFiles, err := filepath.Glob(pattern)
 	if err != nil {
 		return fmt.Errorf("unable to find split tarball files: %w", err)
 	}
-	// Ensure the files are in order so they are appended in the correct order
 	slices.Sort(splitFiles)
 
-	tarFile, err := os.Create(tarPath)
+	out, err := os.Create(dest)
 	if err != nil {
 		return err
 	}
-	defer tarFile.Close()
-	for i, splitFile := range splitFiles {
+	defer out.Close()
+
+	for i, part := range splitFiles {
 		if i == 0 {
-			b, err := os.ReadFile(splitFile)
+			// validate metadata
+			data, err := os.ReadFile(part)
 			if err != nil {
 				return err
 			}
-			var pkgData types.ZarfSplitPackageData
-			err = json.Unmarshal(b, &pkgData)
+			var meta types.ZarfSplitPackageData
+			err = json.Unmarshal(data, &meta)
 			if err != nil {
 				return err
 			}
-			expectedCount := len(splitFiles) - 1
-			if expectedCount != pkgData.Count {
-				return fmt.Errorf("split file count to not match, expected %d but have %d", pkgData.Count, expectedCount)
+			expected := len(splitFiles) - 1
+			if meta.Count != expected {
+				return fmt.Errorf("split parts mismatch: expected %d, got %d", expected, meta.Count)
 			}
 			continue
 		}
-		f, err := os.Open(splitFile)
+
+		f, err := os.Open(part)
 		if err != nil {
 			return err
 		}
-		defer f.Close()
-		_, err = io.Copy(tarFile, f)
-		if err != nil {
+		if _, err := io.Copy(out, f); err != nil {
+			f.Close()
 			return err
 		}
-		err = f.Close()
-		if err != nil {
-			return err
-		}
+		f.Close()
 	}
 	return nil
 }
 
-func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string) (v1alpha1.ZarfPackage, error) {
-	_, err := identifySource(src)
+// GetPackageFromSourceOrCluster retrieves a Zarf package from a source or cluster.
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string, layerSelector zoci.LayersSelector) (v1alpha1.ZarfPackage, error) {
+	srcType, err := identifySource(src)
 	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	if srcType == "cluster" {
 		if cluster == nil {
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
 		}
@@ -177,6 +204,7 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 		Architecture:            config.GetArch(),
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           publicKeyPath,
+		LayersSelector:          layerSelector,
 	}
 	p, err := LoadPackage(ctx, loadOpt)
 	if err != nil {
