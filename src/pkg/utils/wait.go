@@ -174,7 +174,7 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 
 					// If the status code is not in the 2xx range, try again.
 					if resp.StatusCode < 200 || resp.StatusCode > 299 {
-						l.Debug("did not receive 2xx status code", "error", err)
+						l.Debug("did not receive 2xx status code", "response_code", resp.StatusCode)
 						continue
 					}
 
