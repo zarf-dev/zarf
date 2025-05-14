@@ -64,70 +64,37 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 		return fmt.Errorf("failed to stat sources: %w", err)
 	}
 
-	// Pick formatter based on extension
+	var archiver interface {
+		Archive(context.Context, io.Writer, []archives.FileInfo) error
+	}
+
 	switch {
 	case strings.HasSuffix(dest, extensionZip):
-		err = archives.Zip{}.Archive(ctx, out, files)
-		if err != nil {
-			return fmt.Errorf("zip failed: %w", err)
-		}
-
+		archiver = archives.Zip{}
 	case strings.HasSuffix(dest, extensionTar):
-		err = archives.Tar{}.Archive(ctx, out, files)
-		if err != nil {
-			return fmt.Errorf("tar failed: %w", err)
-		}
-
+		archiver = archives.Tar{}
 	case strings.HasSuffix(dest, extensionGz), strings.HasSuffix(dest, extensionTgz):
-		gz := archives.CompressedArchive{Compression: archives.Gz{}, Archival: archives.Tar{}}
-		if err = gz.Archive(ctx, out, files); err != nil {
-			return fmt.Errorf("tar.gz failed: %w", err)
-		}
-
+		archiver = archives.CompressedArchive{Compression: archives.Gz{}, Archival: archives.Tar{}}
 	case strings.HasSuffix(dest, extensionBz2), strings.HasSuffix(dest, extensionTbz2), strings.HasSuffix(dest, extensionTbz):
-		bz2 := archives.CompressedArchive{Compression: archives.Bz2{}, Archival: archives.Tar{}}
-		if err = bz2.Archive(ctx, out, files); err != nil {
-			return fmt.Errorf("tar.bz2 failed: %w", err)
-		}
-
+		archiver = archives.CompressedArchive{Compression: archives.Bz2{}, Archival: archives.Tar{}}
 	case strings.HasSuffix(dest, extensionXz), strings.HasSuffix(dest, extensionTxz):
-		xz := archives.CompressedArchive{Compression: archives.Xz{}, Archival: archives.Tar{}}
-		if err = xz.Archive(ctx, out, files); err != nil {
-			return fmt.Errorf("tar.xz failed: %w", err)
-		}
-
+		archiver = archives.CompressedArchive{Compression: archives.Xz{}, Archival: archives.Tar{}}
 	case strings.HasSuffix(dest, extensionZst), strings.HasSuffix(dest, extensionTzst):
-		zst := archives.CompressedArchive{Compression: archives.Zstd{}, Archival: archives.Tar{}}
-		if err = zst.Archive(ctx, out, files); err != nil {
-			return fmt.Errorf("tar.zst failed: %w", err)
-		}
-
+		archiver = archives.CompressedArchive{Compression: archives.Zstd{}, Archival: archives.Tar{}}
 	case strings.HasSuffix(dest, extensionBr), strings.HasSuffix(dest, extensionTbr):
-		br := archives.CompressedArchive{Compression: archives.Brotli{}, Archival: archives.Tar{}}
-		if err = br.Archive(ctx, out, files); err != nil {
-			return fmt.Errorf("tar.br failed: %w", err)
-		}
-
+		archiver = archives.CompressedArchive{Compression: archives.Brotli{}, Archival: archives.Tar{}}
 	case strings.HasSuffix(dest, extensionLz4), strings.HasSuffix(dest, extensionTlz4):
-		lz4 := archives.CompressedArchive{Compression: archives.Lz4{}, Archival: archives.Tar{}}
-		if err = lz4.Archive(ctx, out, files); err != nil {
-			return fmt.Errorf("tar.lz4 failed: %w", err)
-		}
-
+		archiver = archives.CompressedArchive{Compression: archives.Lz4{}, Archival: archives.Tar{}}
 	case strings.HasSuffix(dest, extensionLzip):
-		lzip := archives.CompressedArchive{Compression: archives.Lzip{}, Archival: archives.Tar{}}
-		if err = lzip.Archive(ctx, out, files); err != nil {
-			return fmt.Errorf("tar.lz failed: %w", err)
-		}
-
+		archiver = archives.CompressedArchive{Compression: archives.Lzip{}, Archival: archives.Tar{}}
 	case strings.HasSuffix(dest, extensionMz), strings.HasSuffix(dest, extensionTmz):
-		mz := archives.CompressedArchive{Compression: archives.MinLZ{}, Archival: archives.Tar{}}
-		if err = mz.Archive(ctx, out, files); err != nil {
-			return fmt.Errorf("tar.mz failed: %w", err)
-		}
-
+		archiver = archives.CompressedArchive{Compression: archives.MinLZ{}, Archival: archives.Tar{}}
 	default:
 		return fmt.Errorf("unsupported archive extension for %q", dest)
+	}
+
+	if err := archiver.Archive(ctx, out, files); err != nil {
+		return fmt.Errorf("archive failed for %q: %w", dest, err)
 	}
 
 	return nil
