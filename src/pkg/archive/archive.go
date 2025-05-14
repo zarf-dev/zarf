@@ -64,30 +64,37 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 		return fmt.Errorf("failed to stat sources: %w", err)
 	}
 
-	var archiver archives.Archiver
+	archivers := map[string]archives.Archiver{
+		extensionZip:  archives.Zip{},
+		extensionTar:  archives.Tar{},
+		extensionGz:   archives.CompressedArchive{Compression: archives.Gz{}, Archival: archives.Tar{}},
+		extensionTgz:  archives.CompressedArchive{Compression: archives.Gz{}, Archival: archives.Tar{}},
+		extensionBz2:  archives.CompressedArchive{Compression: archives.Bz2{}, Archival: archives.Tar{}},
+		extensionTbz2: archives.CompressedArchive{Compression: archives.Bz2{}, Archival: archives.Tar{}},
+		extensionTbz:  archives.CompressedArchive{Compression: archives.Bz2{}, Archival: archives.Tar{}},
+		extensionXz:   archives.CompressedArchive{Compression: archives.Xz{}, Archival: archives.Tar{}},
+		extensionTxz:  archives.CompressedArchive{Compression: archives.Xz{}, Archival: archives.Tar{}},
+		extensionZst:  archives.CompressedArchive{Compression: archives.Zstd{}, Archival: archives.Tar{}},
+		extensionTzst: archives.CompressedArchive{Compression: archives.Zstd{}, Archival: archives.Tar{}},
+		extensionBr:   archives.CompressedArchive{Compression: archives.Brotli{}, Archival: archives.Tar{}},
+		extensionTbr:  archives.CompressedArchive{Compression: archives.Brotli{}, Archival: archives.Tar{}},
+		extensionLz4:  archives.CompressedArchive{Compression: archives.Lz4{}, Archival: archives.Tar{}},
+		extensionTlz4: archives.CompressedArchive{Compression: archives.Lz4{}, Archival: archives.Tar{}},
+		extensionLzip: archives.CompressedArchive{Compression: archives.Lzip{}, Archival: archives.Tar{}},
+		extensionMz:   archives.CompressedArchive{Compression: archives.MinLZ{}, Archival: archives.Tar{}},
+		extensionTmz:  archives.CompressedArchive{Compression: archives.MinLZ{}, Archival: archives.Tar{}},
+	}
 
-	switch {
-	case strings.HasSuffix(dest, extensionZip):
-		archiver = archives.Zip{}
-	case strings.HasSuffix(dest, extensionTar):
-		archiver = archives.Tar{}
-	case strings.HasSuffix(dest, extensionGz), strings.HasSuffix(dest, extensionTgz):
-		archiver = archives.CompressedArchive{Compression: archives.Gz{}, Archival: archives.Tar{}}
-	case strings.HasSuffix(dest, extensionBz2), strings.HasSuffix(dest, extensionTbz2), strings.HasSuffix(dest, extensionTbz):
-		archiver = archives.CompressedArchive{Compression: archives.Bz2{}, Archival: archives.Tar{}}
-	case strings.HasSuffix(dest, extensionXz), strings.HasSuffix(dest, extensionTxz):
-		archiver = archives.CompressedArchive{Compression: archives.Xz{}, Archival: archives.Tar{}}
-	case strings.HasSuffix(dest, extensionZst), strings.HasSuffix(dest, extensionTzst):
-		archiver = archives.CompressedArchive{Compression: archives.Zstd{}, Archival: archives.Tar{}}
-	case strings.HasSuffix(dest, extensionBr), strings.HasSuffix(dest, extensionTbr):
-		archiver = archives.CompressedArchive{Compression: archives.Brotli{}, Archival: archives.Tar{}}
-	case strings.HasSuffix(dest, extensionLz4), strings.HasSuffix(dest, extensionTlz4):
-		archiver = archives.CompressedArchive{Compression: archives.Lz4{}, Archival: archives.Tar{}}
-	case strings.HasSuffix(dest, extensionLzip):
-		archiver = archives.CompressedArchive{Compression: archives.Lzip{}, Archival: archives.Tar{}}
-	case strings.HasSuffix(dest, extensionMz), strings.HasSuffix(dest, extensionTmz):
-		archiver = archives.CompressedArchive{Compression: archives.MinLZ{}, Archival: archives.Tar{}}
-	default:
+	// Find the longest matching extension
+	var archiveExt string
+	for ext := range archivers {
+		if strings.HasSuffix(dest, ext) && len(ext) > len(archiveExt) {
+			archiveExt = ext
+		}
+	}
+
+	archiver, ok := archivers[archiveExt]
+	if !ok {
 		return fmt.Errorf("unsupported archive extension for %q", dest)
 	}
 
