@@ -225,12 +225,18 @@ func actionCmdMutation(ctx context.Context, cmd string, shellPref v1alpha1.Shell
 		// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details.
 		cmd = regexp.MustCompile(`^touch `).ReplaceAllString(cmd, `New-Item `)
 
-		// Convert any ${ZARF_VAR_*} or $ZARF_VAR_* to ${env:ZARF_VAR_*} or $env:ZARF_VAR_* respectively (also TF_VAR_*).
+		// Convert any ${ZARF_VAR_*} or $ZARF_VAR_* to ${env:ZARF_VAR_*} or $env:ZARF_VAR_* respectively
+		// (also TF_VAR_* and ZARF_CONST_).
 		// https://regex101.com/r/xk1rkw/1
-		envVarRegex := regexp.MustCompile(`(?P<envIndicator>\${?(?P<varName>(ZARF|TF)_VAR_([a-zA-Z0-9_-])+)}?)`)
-		get, err := helpers.MatchRegex(envVarRegex, cmd)
+		envVarRegex := regexp.MustCompile(`(?P<envIndicator>\${?(?P<varName>(ZARF|TF)_(VAR|CONST)_([a-zA-Z0-9_-])+)}?)`)
+		getFunctions, err := MatchAllRegex(envVarRegex, cmd)
+
 		if err == nil {
-			newCmd := strings.ReplaceAll(cmd, get("envIndicator"), fmt.Sprintf("$Env:%s", get("varName")))
+			newCmd := cmd
+			for _, get := range getFunctions {
+				newCmd = strings.ReplaceAll(newCmd, get("envIndicator"), fmt.Sprintf("$Env:%s", get("varName")))
+
+			}
 			logger.From(ctx).Debug("converted command", "cmd", cmd, "newCmd", newCmd)
 			cmd = newCmd
 		}
@@ -296,4 +302,25 @@ func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cm
 		l.Debug("action complete", "cmd", cmd, "stdout", stdout, "stderr", stderr)
 	}
 	return stdout, stderr, err
+}
+
+// MatchAllRegex wraps a get function around each substring match, returning all matches.
+func MatchAllRegex(regex *regexp.Regexp, str string) ([]func(string) string, error) {
+	// Validate the string.
+	matches := regex.FindAllStringSubmatch(str, -1)
+
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("unable to match against %s", str)
+	}
+
+	// Parse the string into its components.
+	var funcs []func(string) string
+	for _, match := range matches {
+		funcs = append(funcs, func(name string) string {
+			return match[regex.SubexpIndex(name)]
+
+		})
+	}
+
+	return funcs, nil
 }
