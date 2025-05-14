@@ -58,7 +58,6 @@ func TestIsJSONPathWaitType(t *testing.T) {
 
 func TestWaitForNetworkEndpoint(t *testing.T) {
 	t.Parallel()
-	// Create a test server
 	successServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -72,7 +71,6 @@ func TestWaitForNetworkEndpoint(t *testing.T) {
 	successServerURL := strings.TrimPrefix(successServer.URL, "http://")
 	notFoundServerURL := strings.TrimPrefix(notFoundServer.URL, "http://")
 
-	// Test cases
 	tests := []struct {
 		name      string
 		host      string
