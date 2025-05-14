@@ -58,6 +58,7 @@ type PushConfig struct {
 const (
 	DockerMediaTypeManifest     = "application/vnd.docker.distribution.manifest.v2+json"
 	DockerMediaTypeManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
+	HelmMediaTypeManifest       = "application/vnd.cncf.helm.config.v1+json"
 )
 
 const (
@@ -141,6 +142,13 @@ func isManifest(mediaType string) bool {
 func isIndex(mediaType string) bool {
 	switch mediaType {
 	case ocispec.MediaTypeImageIndex, DockerMediaTypeManifestList:
+		return true
+	}
+	return false
+}
+func isChart(mediaType string) bool {
+	switch mediaType {
+	case HelmMediaTypeManifest:
 		return true
 	}
 	return false

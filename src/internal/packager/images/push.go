@@ -6,7 +6,9 @@ package images
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -202,12 +204,26 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 }
 
 func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int, defaultPlatform *ocispec.Platform) error {
+	l := logger.From(ctx)
 	// Assume no platform to start as it can be nil in non container image situations
 	resolveOpts := oras.DefaultResolveOptions
 	desc, err := oras.Resolve(ctx, src, srcName, resolveOpts)
 	if err != nil {
 		return fmt.Errorf("failed to resolve image: %s: %w", srcName, err)
 	}
+
+	// checking the local package instead of preforming a network call to the remote registry
+	_, b, err := oras.FetchBytes(ctx, src, srcName, oras.DefaultFetchBytesOptions)
+	if err != nil {
+		return fmt.Errorf("failed to resolve image manifest: %s: %w", srcName, err)
+	}
+
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(b, &manifest); err != nil {
+		return err
+	}
+
+	l.Debug("artifact info", "MediaType", manifest.Config.MediaType, "dstName", dstName)
 
 	// If an index is pulled we should try pulling with the default platform
 	if isIndex(desc.MediaType) {
@@ -229,5 +245,26 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 	if err != nil {
 		return fmt.Errorf("failed to push image %s: %w", srcName, err)
 	}
+
+	if isChart(manifest.Config.MediaType) {
+		l.Debug("annotation", "key", ocispec.AnnotationVersion, "value", manifest.Annotations[ocispec.AnnotationVersion])
+
+		// split on the last
+		tag := strings.LastIndex(dstName, ":")
+		if manifest.Annotations[ocispec.AnnotationVersion] != dstName[tag+1:] {
+			manifest.Annotations[ocispec.AnnotationVersion] = dstName[tag+1:]
+			l.Debug("need to change the " + ocispec.AnnotationVersion + " annotation")
+			bytes, err := json.Marshal(manifest)
+			if err != nil {
+				return fmt.Errorf("failed parse %s: %w", srcName, err)
+			}
+			l.Debug(string(bytes))
+			_, err = oras.TagBytes(ctx, remote, ocispec.MediaTypeImageManifest, bytes, dstName)
+			if err != nil {
+				return fmt.Errorf("failed to push image %s: %w", srcName, err)
+			}
+		}
+	}
+
 	return nil
 }
