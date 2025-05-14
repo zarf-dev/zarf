@@ -14,10 +14,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	testDirPerm  = dirPerm
+	testFilePerm = filePerm
+)
+
 // writeFile creates a file at path with given content.
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(content), testFilePerm); err != nil {
 		t.Fatalf("failed to write file %s: %v", path, err)
 	}
 }
@@ -40,14 +45,24 @@ func TestCompressAndDecompress_MultipleFormats(t *testing.T) {
 		name      string
 		extension string
 	}{
-		{"zip", ".zip"},
-		{"tar.gz", ".tar.gz"},
-		{"tar.bz2", ".tar.bz2"},
-		{"tar.xz", ".tar.xz"},
-		{"tar.zst", ".tar.zst"},
-		{"tar.lz4", ".tar.lz4"},
-		{"tar.lz", ".tar.lz"},
-		{"tar.mz", ".tar.mz"},
+		{"tar", extensionTar},
+		{"zip", extensionZip},
+		{"tar.gz", extensionGz},
+		{"tgz", extensionTgz},
+		{"tar.bz2", extensionBz2},
+		{"tbz2", extensionTbz2},
+		{"tbz", extensionTbz},
+		{"tar.xz", extensionXz},
+		{"txz", extensionTxz},
+		{"tar.zst", extensionZst},
+		{"tzst", extensionTzst},
+		{"tar.br", extensionBr},
+		{"tbr", extensionTbr},
+		{"tar.lz4", extensionLz4},
+		{"tlz4", extensionTlz4},
+		{"tar.lz", extensionLzip},
+		{"tar.mz", extensionMz},
+		{"tmz", extensionTmz},
 	}
 
 	for _, tc := range formats {
@@ -67,13 +82,9 @@ func TestCompressAndDecompress_MultipleFormats(t *testing.T) {
 			require.NoError(t, Decompress(ctx, dest, dstDir, DecompressOpts{}), "Decompress failed for %s", tc.name)
 
 			got1 := readFile(t, filepath.Join(dstDir, "file1.txt"))
-			if got1 != "hello world" {
-				t.Errorf("[%s] file1 content = %q; want %q", tc.name, got1, "hello world")
-			}
+			require.Equal(t, "hello world", got1, "[%s] file1 content", tc.name)
 			got2 := readFile(t, filepath.Join(dstDir, "file2.txt"))
-			if got2 != "zarf testing" {
-				t.Errorf("[%s] file2 content = %q; want %q", tc.name, got2, "zarf testing")
-			}
+			require.Equal(t, "zarf testing", got2, "[%s] file2 content", tc.name)
 		})
 	}
 }
@@ -90,112 +101,147 @@ func TestCompressUnsupportedExtension(t *testing.T) {
 	}
 }
 
-func TestDecompressFiltered_NotFound(t *testing.T) {
+func TestDecompressFiltered(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	srcDir := t.TempDir()
-	file := filepath.Join(srcDir, "only.txt")
-	writeFile(t, file, "uniquely present")
-	destZip := filepath.Join(t.TempDir(), "only.zip")
-	require.NoError(t, Compress(ctx, []string{file}, destZip, CompressOpts{}), "Compress failed")
-	dstDir := t.TempDir()
-	opts := DecompressOpts{Files: []string{"absent.txt"}, SkipValidation: false}
-	err := Decompress(ctx, destZip, dstDir, opts)
-	if err == nil || !strings.Contains(err.Error(), "absent.txt") {
-		t.Errorf("expected error for missing file; got %v", err)
+
+	tests := []struct {
+		name        string
+		setup       func(t *testing.T, ctx context.Context) (archivePath, outDir string, opts DecompressOpts)
+		expectError string
+		verify      func(t *testing.T, outDir string)
+	}{
+		{
+			name: "Filtered_NotFound",
+			setup: func(t *testing.T, ctx context.Context) (string, string, DecompressOpts) {
+				srcDir := t.TempDir()
+				file := filepath.Join(srcDir, "only.txt")
+				writeFile(t, file, "uniquely present")
+				destZip := filepath.Join(t.TempDir(), "only.zip")
+				require.NoError(t, Compress(ctx, []string{file}, destZip, CompressOpts{}), "Compress failed")
+				dstDir := t.TempDir()
+				opts := DecompressOpts{Files: []string{"absent.txt"}, SkipValidation: false}
+				return destZip, dstDir, opts
+			},
+			expectError: "absent.txt",
+			verify:      nil,
+		},
+		{
+			name: "Filtered_SkipValidation",
+			setup: func(t *testing.T, ctx context.Context) (string, string, DecompressOpts) {
+				srcDir := t.TempDir()
+				file := filepath.Join(srcDir, "only.txt")
+				writeFile(t, file, "content")
+				destZip := filepath.Join(t.TempDir(), "only.zip")
+				require.NoError(t, Compress(ctx, []string{file}, destZip, CompressOpts{}), "Compress failed")
+				dstDir := t.TempDir()
+				opts := DecompressOpts{Files: []string{"also_missing.txt"}, SkipValidation: true}
+				return destZip, dstDir, opts
+			},
+			expectError: "",
+			verify: func(t *testing.T, outDir string) {
+				entries, err := os.ReadDir(outDir)
+				require.NoError(t, err, "ReadDir failed")
+				require.Empty(t, entries, "expected no files extracted")
+			},
+		},
 	}
-}
 
-func TestDecompressFiltered_SkipValidation(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	srcDir := t.TempDir()
-	file := filepath.Join(srcDir, "only.txt")
-	writeFile(t, file, "content")
-	destZip := filepath.Join(t.TempDir(), "only.zip")
-	require.NoError(t, Compress(ctx, []string{file}, destZip, CompressOpts{}), "Compress failed")
-	dstDir := t.TempDir()
-	opts := DecompressOpts{Files: []string{"also_missing.txt"}, SkipValidation: true}
-	require.NoError(t, Decompress(ctx, destZip, dstDir, opts), "expected no error when skipValidation=true")
-	entries, err := os.ReadDir(dstDir)
-	require.NoError(t, err, "ReadDir failed")
-	if len(entries) != 0 {
-		t.Errorf("expected no files extracted; found %d entries", len(entries))
-	}
-}
-
-func TestDecompress_UnarchiveAll(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	tmp := t.TempDir()
-
-	// Create a nested tar archive inside another directory
-	innerDir := filepath.Join(tmp, "inner")
-	require.NoError(t, os.Mkdir(innerDir, 0o755))
-	innerFile := filepath.Join(innerDir, "foo.txt")
-	writeFile(t, innerFile, "nested content")
-
-	innerTar := filepath.Join(tmp, "inner.tar")
-	require.NoError(t, Compress(ctx, []string{innerFile}, innerTar, CompressOpts{}))
-
-	// Now create an archive containing the inner tar
-	outerDir := filepath.Join(tmp, "outer")
-	require.NoError(t, os.Mkdir(outerDir, 0o755))
-	outerTar := filepath.Join(tmp, "outer.tar")
-	require.NoError(t, os.Rename(innerTar, filepath.Join(outerDir, "inner.tar")))
-	require.NoError(t, Compress(ctx, []string{filepath.Join(outerDir, "inner.tar")}, outerTar, CompressOpts{}))
-
-	// Decompress with UnarchiveAll
-	outDir := filepath.Join(tmp, "out")
-	opts := DecompressOpts{UnarchiveAll: true}
-	require.NoError(t, Decompress(ctx, outerTar, outDir, opts))
-
-	// Should have extracted foo.txt from the nested tar
-	found := false
-	err := filepath.Walk(outDir, func(path string, _ os.FileInfo, _ error) error {
-		if filepath.Base(path) == "foo.txt" {
-			found = true
-			content := readFile(t, path)
-			if content != "nested content" {
-				t.Errorf("expected 'nested content', got %q", content)
+	for _, tc := range tests {
+		tc := tc // capture range variable
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			archivePath, outDir, opts := tc.setup(t, ctx)
+			err := Decompress(ctx, archivePath, outDir, opts)
+			if tc.expectError != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.expectError)
+			} else {
+				require.NoError(t, err)
+				if tc.verify != nil {
+					tc.verify(t, outDir)
+				}
 			}
-		}
-		return nil
-	})
-	require.NoError(t, err, "Walk failed")
-	if !found {
-		t.Error("foo.txt not found after UnarchiveAll")
+		})
 	}
 }
 
-func TestDecompress_OverwriteExisting(t *testing.T) {
+func TestDecompressOptions(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	tmp := t.TempDir()
 
-	// Create a file and archive it
-	origFile := filepath.Join(tmp, "orig.txt")
-	writeFile(t, origFile, "original")
-	archivePath := filepath.Join(tmp, "archive.tar.gz")
-	require.NoError(t, Compress(ctx, []string{origFile}, archivePath, CompressOpts{}))
-
-	// Decompress once
-	outDir := filepath.Join(tmp, "out")
-	require.NoError(t, Decompress(ctx, archivePath, outDir, DecompressOpts{}))
-	outFile := filepath.Join(outDir, "orig.txt")
-	if got := readFile(t, outFile); got != "original" {
-		t.Fatalf("expected original, got %q", got)
+	tests := []struct {
+		name   string
+		setup  func(t *testing.T, ctx context.Context) (archivePath, outDir string, opts DecompressOpts)
+		verify func(t *testing.T, outDir string)
+	}{
+		{
+			name: "UnarchiveAll",
+			setup: func(t *testing.T, ctx context.Context) (string, string, DecompressOpts) {
+				tmp := t.TempDir()
+				innerDir := filepath.Join(tmp, "inner")
+				require.NoError(t, os.Mkdir(innerDir, testDirPerm))
+				innerFile := filepath.Join(innerDir, "foo.txt")
+				writeFile(t, innerFile, "nested content")
+				innerTar := filepath.Join(tmp, "inner.tar")
+				require.NoError(t, Compress(ctx, []string{innerFile}, innerTar, CompressOpts{}))
+				outerDir := filepath.Join(tmp, "outer")
+				require.NoError(t, os.Mkdir(outerDir, testDirPerm))
+				outerTar := filepath.Join(tmp, "outer.tar")
+				require.NoError(t, os.Rename(innerTar, filepath.Join(outerDir, "inner.tar")))
+				require.NoError(t, Compress(ctx, []string{filepath.Join(outerDir, "inner.tar")}, outerTar, CompressOpts{}))
+				outDir := filepath.Join(tmp, "out")
+				opts := DecompressOpts{UnarchiveAll: true}
+				return outerTar, outDir, opts
+			},
+			verify: func(t *testing.T, outDir string) {
+				found := false
+				err := filepath.Walk(outDir, func(path string, _ os.FileInfo, _ error) error {
+					if filepath.Base(path) == "foo.txt" {
+						found = true
+						content := readFile(t, path)
+						require.Equal(t, "nested content", content)
+					}
+					return nil
+				})
+				require.NoError(t, err, "Walk failed")
+				require.True(t, found, "foo.txt not found after UnarchiveAll")
+			},
+		},
+		{
+			name: "OverwriteExisting",
+			setup: func(t *testing.T, ctx context.Context) (string, string, DecompressOpts) {
+				tmp := t.TempDir()
+				origFile := filepath.Join(tmp, "orig.txt")
+				writeFile(t, origFile, "original")
+				archivePath := filepath.Join(tmp, "archive.tar.gz")
+				require.NoError(t, Compress(ctx, []string{origFile}, archivePath, CompressOpts{}))
+				outDir := filepath.Join(tmp, "out")
+				require.NoError(t, Decompress(ctx, archivePath, outDir, DecompressOpts{}))
+				outFile := filepath.Join(outDir, "orig.txt")
+				require.Equal(t, "original", readFile(t, outFile))
+				writeFile(t, origFile, "new content")
+				archivePath2 := filepath.Join(tmp, "archive2.tar.gz")
+				require.NoError(t, Compress(ctx, []string{origFile}, archivePath2, CompressOpts{}))
+				opts := DecompressOpts{OverwriteExisting: true}
+				return archivePath2, outDir, opts
+			},
+			verify: func(t *testing.T, outDir string) {
+				outFile := filepath.Join(outDir, "orig.txt")
+				require.Equal(t, "new content", readFile(t, outFile))
+			},
+		},
 	}
 
-	// Overwrite the file with new content and re-archive
-	writeFile(t, origFile, "new content")
-	archivePath2 := filepath.Join(tmp, "archive2.tar.gz")
-	require.NoError(t, Compress(ctx, []string{origFile}, archivePath2, CompressOpts{}))
-
-	// Decompress with OverwriteExisting
-	opts := DecompressOpts{OverwriteExisting: true}
-	require.NoError(t, Decompress(ctx, archivePath2, outDir, opts))
-	if got := readFile(t, outFile); got != "new content" {
-		t.Errorf("expected overwritten file to have 'new content', got %q", got)
+	for _, tc := range tests {
+		tc := tc // capture range variable
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			archivePath, outDir, opts := tc.setup(t, ctx)
+			require.NoError(t, Decompress(ctx, archivePath, outDir, opts))
+			if tc.verify != nil {
+				tc.verify(t, outDir)
+			}
+		})
 	}
 }
