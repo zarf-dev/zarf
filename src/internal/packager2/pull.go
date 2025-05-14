@@ -87,8 +87,19 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 	isPartial := false
 	switch u.Scheme {
 	case "oci":
+		ociOpts := PullOCIOptions{
+			Source:                  source,
+			Directory:               tmpDir,
+			Shasum:                  opts.SHASum,
+			Architecture:            arch,
+			PublicKeyPath:           opts.PublicKeyPath,
+			LayersSelector:          zoci.AllLayers,
+			SkipSignatureValidation: opts.SkipSignatureValidation,
+			Filter:                  f,
+			Modifiers:               []oci.Modifier{},
+		}
 		l.Info("starting pull from oci source", "source", source)
-		isPartial, tmpPath, err = pullOCI(ctx, source, tmpDir, opts.SHASum, arch, f)
+		isPartial, tmpPath, err = pullOCI(ctx, ociOpts)
 		if err != nil {
 			return err
 		}
@@ -147,27 +158,39 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 	return nil
 }
 
-func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture string, filter filters.ComponentFilterStrategy, mods ...oci.Modifier) (bool, string, error) {
+// PullOptions are the options for PullPackage.
+type PullOCIOptions struct {
+	Source                  string
+	Directory               string
+	Shasum                  string
+	Architecture            string
+	PublicKeyPath           string
+	LayersSelector          zoci.LayersSelector
+	SkipSignatureValidation bool
+	Filter                  filters.ComponentFilterStrategy
+	Modifiers               []oci.Modifier
+}
+
+func pullOCI(ctx context.Context, opts PullOCIOptions) (bool, string, error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return false, "", err
 	}
 	defer os.Remove(tmpDir)
-	if shasum != "" {
-		src = fmt.Sprintf("%s@sha256:%s", src, shasum)
+	if opts.Shasum != "" {
+		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}
-	platform := oci.PlatformForArch(architecture)
-	remote, err := zoci.NewRemote(ctx, src, oci.PlatformForArch(architecture), mods...)
+	platform := oci.PlatformForArch(opts.Architecture)
+	remote, err := zoci.NewRemote(ctx, opts.Source, platform, opts.Modifiers...)
 	if err != nil {
 		return false, "", err
 	}
 	desc, err := remote.ResolveRoot(ctx)
 	if err != nil {
-		return false, "", fmt.Errorf("could not find package %s with architecture %s: %w", src, platform.Architecture, err)
+		return false, "", fmt.Errorf("could not find package %s with architecture %s: %w", opts.Source, platform.Architecture, err)
 	}
-	layersToPull := []ocispec.Descriptor{}
 	isPartial := false
-	tarPath := filepath.Join(tarDir, "data.tar")
+	tarPath := filepath.Join(opts.Directory, "data.tar")
 	pkg, err := remote.FetchZarfYAML(ctx)
 	if err != nil {
 		return false, "", err
@@ -176,22 +199,27 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture strin
 		tarPath = fmt.Sprintf("%s.zst", tarPath)
 	}
 	if supportsFiltering(desc.Platform) {
-		root, err := remote.FetchRoot(ctx)
-		if err != nil {
-			return false, "", err
-		}
-		if len(root.Layers) != len(layersToPull) {
-			isPartial = true
-		}
-		pkg.Components, err = filter.Apply(pkg)
-		if err != nil {
-			return false, "", err
-		}
-		layersToPull, err = remote.LayersFromRequestedComponents(ctx, pkg.Components)
+		pkg.Components, err = opts.Filter.Apply(pkg)
 		if err != nil {
 			return false, "", err
 		}
 	}
+
+	// zarf creates layers around the contents of component primarily
+	// this assembles the layers for the components - whether filtered above or not
+	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, isSkeleton(desc.Platform), opts.LayersSelector)
+	if err != nil {
+		return false, "", err
+	}
+
+	root, err := remote.FetchRoot(ctx)
+	if err != nil {
+		return false, "", err
+	}
+	if len(root.Layers) != len(layersToPull) {
+		isPartial = true
+	}
+
 	_, err = remote.PullPackage(ctx, tmpDir, config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
 		return false, "", err
@@ -327,13 +355,26 @@ func nameFromMetadata(path string) (string, error) {
 	return fmt.Sprintf("%s.tar.zst", name), nil
 }
 
+// supportsFiltering checks if the package supports filtering.
+// This is true if the package is not a skeleton package and the platform is not nil.
 func supportsFiltering(platform *ocispec.Platform) bool {
+	if platform == nil {
+		return false
+	}
+	if isSkeleton(platform) {
+		return false
+	}
+	return true
+}
+
+// isSkeleton checks if the package is explicitly a skeleton package.
+func isSkeleton(platform *ocispec.Platform) bool {
 	if platform == nil {
 		return false
 	}
 	skeletonPlatform := zoci.PlatformForSkeleton()
 	if platform.Architecture == skeletonPlatform.Architecture && platform.OS == skeletonPlatform.OS {
-		return false
+		return true
 	}
-	return true
+	return false
 }
