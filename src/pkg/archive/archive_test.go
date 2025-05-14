@@ -152,7 +152,7 @@ func TestDecompress_UnarchiveAll(t *testing.T) {
 
 	// Should have extracted foo.txt from the nested tar
 	found := false
-	err := filepath.Walk(outDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(outDir, func(path string, _ os.FileInfo, _ error) error {
 		if filepath.Base(path) == "foo.txt" {
 			found = true
 			content := readFile(t, path)
