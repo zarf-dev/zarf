@@ -32,10 +32,11 @@ func isJSONPathWaitType(condition string) bool {
 // ExecuteWait executes the wait-for command.
 func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kind, identifier string, timeout time.Duration) error {
 	l := logger.From(ctx)
+	waitInterval := time.Second
 	// Handle network endpoints.
 	switch kind {
 	case "http", "https", "tcp":
-		return waitForNetworkEndpoint(ctx, kind, identifier, condition, timeout)
+		return waitForNetworkEndpoint(ctx, kind, identifier, condition, timeout, waitInterval)
 	}
 
 	// Type of wait, condition or JSONPath
@@ -84,7 +85,7 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 	l.Info(existMsg)
 	for {
 		// Delay the check for 1 second
-		time.Sleep(time.Second)
+		time.Sleep(waitInterval)
 
 		select {
 		case <-expired:
@@ -135,7 +136,7 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 }
 
 // waitForNetworkEndpoint waits for a network endpoint to respond.
-func waitForNetworkEndpoint(ctx context.Context, resource, name, condition string, timeout time.Duration) error {
+func waitForNetworkEndpoint(ctx context.Context, resource, name, condition string, timeout time.Duration, waitInterval time.Duration) error {
 	l := logger.From(ctx)
 	// Set the timeout for the wait-for command.
 	expired := time.After(timeout)
@@ -149,9 +150,9 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 	delay := 100 * time.Millisecond
 
 	for {
-		// Delay the check for 100ms the first time and then 1 second after that.
+		// Delay the check for 100ms the first time and then the wait interval after that
 		time.Sleep(delay)
-		delay = time.Second
+		delay = waitInterval
 
 		select {
 		case <-expired:
@@ -166,10 +167,14 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 				if condition == "success" {
 					// Try to get the URL and check the status code.
 					resp, err := http.Get(url)
+					if err != nil {
+						l.Debug(err.Error())
+						continue
+					}
 
 					// If the status code is not in the 2xx range, try again.
-					if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
-						l.Debug(err.Error())
+					if resp.StatusCode < 200 || resp.StatusCode > 299 {
+						l.Debug("did not receive 2xx status code", "error", err)
 						continue
 					}
 
@@ -188,8 +193,12 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 
 				// Try to get the URL and check the status code.
 				resp, err := http.Get(url)
-				if err != nil || resp.StatusCode != code {
+				if err != nil {
 					l.Debug(err.Error())
+					continue
+				}
+				if resp.StatusCode != code {
+					l.Debug("did not receive expected status code", "expected", code, "actual", resp.StatusCode)
 					continue
 				}
 			default:

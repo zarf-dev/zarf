@@ -5,7 +5,12 @@
 package utils
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -49,4 +54,76 @@ func (suite *TestIsJSONPathWaitTypeSuite) Test_0_IsJSONPathWaitType() {
 
 func TestIsJSONPathWaitType(t *testing.T) {
 	suite.Run(t, new(TestIsJSONPathWaitTypeSuite))
+}
+
+func TestWaitForNetworkEndpoint(t *testing.T) {
+	t.Parallel()
+	// Create a test server
+	successServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(successServer.Close)
+
+	notFoundServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(notFoundServer.Close)
+
+	successServerURL := strings.TrimPrefix(successServer.URL, "http://")
+	notFoundServerURL := strings.TrimPrefix(notFoundServer.URL, "http://")
+
+	// Test cases
+	tests := []struct {
+		name      string
+		host      string
+		condition string
+		timeout   time.Duration
+		interval  time.Duration
+		expectErr bool
+	}{
+		{
+			name:      "Wait for success, get success",
+			host:      successServerURL,
+			condition: "success",
+			timeout:   time.Millisecond * 500,
+			interval:  time.Millisecond * 10,
+			expectErr: false,
+		},
+		{
+			name:      "Wait for success, get not found",
+			host:      notFoundServerURL,
+			condition: "success",
+			timeout:   time.Millisecond * 500,
+			interval:  time.Millisecond * 10,
+			expectErr: true,
+		},
+		{
+			name:      "Wait for not found, get not found",
+			host:      notFoundServerURL,
+			condition: "404",
+			timeout:   time.Millisecond * 500,
+			interval:  time.Millisecond * 10,
+			expectErr: false,
+		},
+		{
+			name:      "Wait for success, non-existent server",
+			host:      "localhost:1",
+			condition: "success",
+			timeout:   time.Millisecond * 500,
+			interval:  time.Millisecond * 10,
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := waitForNetworkEndpoint(context.Background(), "http", tt.host, tt.condition, tt.timeout, tt.interval)
+			if tt.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
 }
