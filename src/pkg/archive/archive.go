@@ -64,9 +64,7 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 		return fmt.Errorf("failed to stat sources: %w", err)
 	}
 
-	var archiver interface {
-		Archive(context.Context, io.Writer, []archives.FileInfo) error
-	}
+	var archiver archives.Archiver
 
 	switch {
 	case strings.HasSuffix(dest, extensionZip):
