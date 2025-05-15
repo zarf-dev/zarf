@@ -27,7 +27,7 @@ func TestPackageCreatePublishArch(t *testing.T) {
 	}{
 		{
 			name:         "should use pkg.metadata.architecture when global arch not set",
-			path:         filepath.Join("testdata", "create-publish-arch"),
+			path:         filepath.Join("testdata", "create", "create-publish-arch"),
 			packageName:  "create-arch",
 			expectedArch: "amd64",
 		},
