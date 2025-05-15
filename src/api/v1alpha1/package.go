@@ -19,11 +19,9 @@ const (
 	FileVariableType VariableType = "file"
 )
 
-var (
-	// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
-	// https://regex101.com/r/tfsEuZ/1
-	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
-)
+// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
+// https://regex101.com/r/tfsEuZ/1
+var IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
 
 // Zarf looks for these strings in zarf.yaml to make dynamic changes
 const (
