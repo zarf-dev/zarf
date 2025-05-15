@@ -56,7 +56,7 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 		if err != nil {
 			return err
 		}
-		remote, err := layout2.NewRemote(ctx, ref, oci.PlatformForArch(config.GetArch()))
+		remote, err := layout2.NewRemote(ctx, ref, oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture))
 		if err != nil {
 			return err
 		}
