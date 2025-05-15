@@ -164,7 +164,14 @@ func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 		return "", err
 	}
 	defer os.RemoveAll(tmp)
-	fetched, err := s.PullPackage(ctx, tmp, config.CommonOptions.OCIConcurrency)
+
+	root, err := s.FetchRoot(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// Pull all the layers
+	fetched, err := s.PullPackage(ctx, tmp, config.CommonOptions.OCIConcurrency, root.Layers...)
 	if err != nil {
 		return "", err
 	}
