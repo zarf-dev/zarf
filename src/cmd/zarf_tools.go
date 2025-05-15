@@ -17,7 +17,6 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -27,10 +26,10 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -508,15 +507,27 @@ func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 
 		url = zoci.GetInitPackageURL(fmt.Sprintf("v%s", ver.String()))
 	}
-	remote, err := zoci.NewRemote(ctx, url, oci.PlatformForArch(config.GetArch()))
+
+	// Add the oci:// prefix
+	url = fmt.Sprintf("oci://%s", url)
+
+	if outputDirectory == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		outputDirectory = wd
+	}
+
+	pullOptions := packager2.PullOptions{
+		Architecture: config.GetArch(),
+	}
+
+	err := packager2.Pull(ctx, url, outputDirectory, pullOptions)
 	if err != nil {
 		return fmt.Errorf("unable to download the init package: %w", err)
 	}
-	source := &sources.OCISource{Remote: remote}
-	_, err = source.Collect(ctx, outputDirectory)
-	if err != nil {
-		return fmt.Errorf("unable to download the init package: %w", err)
-	}
+
 	return nil
 }
 
