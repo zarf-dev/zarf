@@ -27,6 +27,11 @@ var (
 
 // PullPackage pulls the package from the remote repository and saves it to the given path.
 func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (_ []ocispec.Descriptor, err error) {
+	// layersToPull is an explicit requirement for pulling package layers
+	if len(layersToPull) == 0 {
+		return nil, fmt.Errorf("no layers to pull")
+	}
+
 	layerSize := oci.SumDescsSize(layersToPull)
 	// TODO (@austinabro321) change this and other r.Log() calls to the proper slog format
 	r.Log().Info(fmt.Sprintf("Pulling %s, size: %s", r.Repo().Reference, utils.ByteFormat(float64(layerSize), 2)))
