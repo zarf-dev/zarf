@@ -101,7 +101,7 @@ func TestNewPackageSource(t *testing.T) {
 }
 
 func TestPackageSource(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	// Copy tar to a temp directory, otherwise Collect will delete it.
 	tarName := "zarf-package-wordpress-amd64-16.0.4.tar.zst"
