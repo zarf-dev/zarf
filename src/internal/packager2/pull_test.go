@@ -4,6 +4,7 @@
 package packager2
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -22,9 +23,10 @@ func TestPull(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	packagePath := "./testdata/zarf-package-test-amd64-0.0.1.tar.zst"
+	packagePath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
 	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		file, err := os.Open(packagePath)
+		fmt.Println("error is", err)
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
@@ -55,7 +57,7 @@ func TestPullUncompressed(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	packagePath := "./testdata/uncompressed/zarf-package-test-uncompressed-amd64-0.0.1.tar"
+	packagePath := filepath.Join("testdata", "load-package", "uncompressed", "zarf-package-test-uncompressed-amd64-0.0.1.tar")
 	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		file, err := os.Open(packagePath)
 		if err != nil {
@@ -88,7 +90,7 @@ func TestPullUnsupported(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	packagePath := "./testdata/uncompressed/zarf.yaml"
+	packagePath := filepath.Join("testdata", "load-package", "uncompressed", "zarf.yaml")
 	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		file, err := os.Open(packagePath)
 		if err != nil {

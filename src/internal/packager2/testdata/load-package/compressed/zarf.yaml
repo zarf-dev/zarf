@@ -2,6 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: test
   version: 0.0.1
+  architecture: amd64
 components:
   - name: test
     required: true
