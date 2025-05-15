@@ -66,7 +66,6 @@ func TestCompressAndDecompress_MultipleFormats(t *testing.T) {
 	}
 
 	for _, tc := range formats {
-		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			srcDir := t.TempDir()
@@ -148,7 +147,6 @@ func TestDecompressFiltered(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			archivePath, outDir, opts := tc.setup(t, ctx)
@@ -234,7 +232,6 @@ func TestDecompressOptions(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			archivePath, outDir, opts := tc.setup(t, ctx)

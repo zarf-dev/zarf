@@ -46,7 +46,7 @@ const (
 type CompressOpts struct{}
 
 // Compress takes any number of source files and archives them into a compressed archive at dest path.
-func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts) error {
+func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts) (err error) {
 	out, err := os.Create(dest)
 	if err != nil {
 		return fmt.Errorf("failed to create %s: %w", dest, err)
@@ -126,14 +126,14 @@ type DecompressOpts struct {
 }
 
 // Decompress takes a Zarf package or arbitrary archive and decompresses it to dst.
-func Decompress(ctx context.Context, sourceArchive, dst string, opts DecompressOpts) error {
+func Decompress(ctx context.Context, sourceArchive, dst string, opts DecompressOpts) (err error) {
 	if len(opts.Files) > 0 {
 		if err := unarchiveFiltered(ctx, sourceArchive, dst, opts.Files, opts.SkipValidation); err != nil {
 			return fmt.Errorf("unable to decompress selected files: %w", err)
 		}
 		return nil
 	}
-	var err error
+
 	if opts.StripComponents > 0 || opts.OverwriteExisting {
 		err = unarchiveWithStrip(ctx, sourceArchive, dst,
 			opts.StripComponents, opts.OverwriteExisting)
@@ -154,7 +154,7 @@ func Decompress(ctx context.Context, sourceArchive, dst string, opts DecompressO
 
 // unarchiveWithStrip unpacks any supported archive, stripping `strip` path elements
 // and opening files with or without truncate based on `overwrite`.
-func unarchiveWithStrip(ctx context.Context, archivePath, dst string, strip int, overwrite bool) error {
+func unarchiveWithStrip(ctx context.Context, archivePath, dst string, strip int, overwrite bool) (err error) {
 	// open archive
 	f, err := os.Open(archivePath)
 	if err != nil {
@@ -240,7 +240,7 @@ func unarchiveWithStrip(ctx context.Context, archivePath, dst string, strip int,
 
 // unarchiveFiltered extracts only the given list of archive‐internal filenames
 // into dst, and errors if any one of them was not found.
-func unarchiveFiltered(ctx context.Context, src, dst string, want []string, skipValidation bool) error {
+func unarchiveFiltered(ctx context.Context, src, dst string, want []string, skipValidation bool) (err error) {
 	file, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("unable to open archive %q: %w", src, err)
@@ -358,7 +358,7 @@ func nestedUnarchive(ctx context.Context, dst string) error {
 }
 
 // unarchive opens src, identifies its format, and extracts into dst.
-func unarchive(ctx context.Context, src, dst string) error {
+func unarchive(ctx context.Context, src, dst string) (err error) {
 	// Open the archive file
 	file, err := os.Open(src)
 	if err != nil {

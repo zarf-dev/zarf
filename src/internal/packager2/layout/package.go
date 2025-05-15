@@ -158,47 +158,9 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) (string, e
 	// 1) locate the sboms archive under the layout directory
 	sbomArchive := filepath.Join(p.dirPath, SBOMTar)
 
-	// 2) mount it as a virtual filesystem
-	fsys, err := archives.FileSystem(ctx, sbomArchive, nil)
-	if err != nil {
-		return "", fmt.Errorf("unable to open SBOM archive %q: %w", sbomArchive, err)
-	}
-
-	// 3) prepare the real‐disk target directory
+	// // 2) decompress the archive to destination path
 	targetDir := filepath.Join(destPath, p.Pkg.Metadata.Name)
-	if err := os.MkdirAll(targetDir, 0o755); err != nil {
-		return "", fmt.Errorf("unable to create output dir %q: %w", targetDir, err)
-	}
-
-	// 4) copy every file from the virtual FS to disk
-	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-		in, err := fsys.Open(path)
-		if err != nil {
-			return err
-		}
-		defer in.Close()
-
-		outPath := filepath.Join(targetDir, path)
-		if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-			return err
-		}
-		out, err := os.Create(outPath)
-		if err != nil {
-			return err
-		}
-		defer out.Close()
-
-		if _, err := io.Copy(out, in); err != nil {
-			return err
-		}
-		return nil
-	})
+	err := archive.Decompress(ctx, sbomArchive, targetDir, archive.DecompressOpts{})
 	if err != nil {
 		return "", err
 	}
