@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/fluxcd/pkg/apis/meta"
 	flux "github.com/fluxcd/source-controller/api/v1beta2"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
@@ -19,6 +20,14 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
+	"oras.land/oras-go/v2"
+	orasRemote "oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry/remote/auth"
+	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
+)
+
+const (
+	HelmMediaTypeManifest = "application/vnd.cncf.helm.config.v1+json"
 )
 
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
@@ -97,7 +106,39 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			patchedURL = fmt.Sprintf("%s:%s", patchedURL, src.Spec.Reference.Tag)
 		}
 
-		patchedSrc, err := transform.ImageTransformHost(registryAddress, patchedURL)
+		var (
+			patchedSrc string
+			err        error
+		)
+
+		client := &auth.Client{
+			Client: orasRetry.DefaultClient,
+			Cache:  auth.NewCache(),
+			Credential: auth.StaticCredential(registryAddress, auth.Credential{
+				Username: zarfState.RegistryInfo.PullUsername,
+				Password: zarfState.RegistryInfo.PullPassword,
+			}),
+		}
+
+		registry := &orasRemote.Repository{
+			PlainHTTP: true,
+			Client:    client,
+		}
+
+		// maybe should wrap such that if it can not make the connection to the registry it will still mutate?
+		_, b, err := oras.FetchBytes(ctx, registry, registryAddress, oras.DefaultFetchBytesOptions)
+
+		var manifest ocispec.Manifest
+		if err := json.Unmarshal(b, &manifest); err != nil {
+			return nil, err
+		}
+
+		if isChart(manifest.Config.MediaType) {
+			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, patchedURL)
+		} else {
+			patchedSrc, err = transform.ImageTransformHost(registryAddress, patchedURL)
+		}
+
 		if err != nil {
 			return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
 		}
@@ -146,4 +187,12 @@ func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.O
 	}
 
 	return patches
+}
+
+func isChart(mediaType string) bool {
+	switch mediaType {
+	case HelmMediaTypeManifest:
+		return true
+	}
+	return false
 }
