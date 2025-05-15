@@ -60,8 +60,6 @@ func TestAssembleLayers(t *testing.T) {
 			ctx := testutil.TestContext(t)
 			registryRef := createRegistry(t, ctx)
 			tmpdir := t.TempDir()
-
-			//
 			config.CommonOptions.CachePath = tmpdir
 
 			// create the package
@@ -80,9 +78,9 @@ func TestAssembleLayers(t *testing.T) {
 			// We want to pull the package and sure the content is the same as the local package
 			layoutExpected, err := layout.LoadFromTar(ctx, src, layout.PackageLayoutOptions{Filter: filters.Empty()})
 			require.NoError(t, err)
-			// // Publish creates a local oci manifest file using the package name, delete this to clean up test name
+			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
 			defer os.Remove(layoutExpected.Pkg.Metadata.Name) //nolint:errcheck
-			// // Format url and instantiate remote
+			// Format url and instantiate remote
 			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
 			require.NoError(t, err)
 
