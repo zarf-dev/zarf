@@ -1,9 +1,0 @@
-kind: ZarfPackageConfig
-metadata:
-  name: create-arch
-  architecture: amd64
-  description: Simple package to test architecture
-  version: 0.0.1
-
-components:
-  - name: simple-component

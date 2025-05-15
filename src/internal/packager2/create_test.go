@@ -20,26 +20,29 @@ func TestPackageCreatePublishArch(t *testing.T) {
 	config.CommonOptions.PlainHTTP = true
 	ctx := testutil.TestContext(t)
 	tests := []struct {
-		name string
-		path string
-		arch string
+		name         string
+		path         string
+		expectedArch string
+		packageName  string
 	}{
 		{
-			name: "empty arch; should use pkg.metadata.architecture",
-			path: filepath.Join("testdata/create"),
+			name:         "should use pkg.metadata.architecture when global arch not set",
+			path:         filepath.Join("testdata", "create-publish-arch"),
+			packageName:  "create-arch",
+			expectedArch: "amd64",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reg := createRegistry(t, ctx)
-			config.CLIArch = tt.arch
 			err := Create(ctx, tt.path, CreateOptions{
 				Output: fmt.Sprintf("oci://%s", reg.String()),
 			})
 			require.NoError(t, err)
-			layout := pullFromRemote(t, ctx, fmt.Sprintf("%s/create-arch:0.0.1", reg.String()), tt.arch)
-			require.Equal(t, layout.Pkg.Metadata.Architecture, tt.arch)
+			packageURL := fmt.Sprintf("%s/%s:0.0.1", reg.String(), tt.packageName)
+			layout := pullFromRemote(t, ctx, packageURL, tt.expectedArch)
+			require.Equal(t, layout.Pkg.Metadata.Architecture, tt.expectedArch)
 		})
 	}
 }
