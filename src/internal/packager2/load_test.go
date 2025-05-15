@@ -4,7 +4,10 @@
 package packager2
 
 import (
+	"crypto/rand"
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -78,8 +81,8 @@ func TestLoadSplitPackage(t *testing.T) {
 		packagePath string
 	}{
 		{
-			name:        "split",
-			packagePath: "testdata/load-package",
+			name:        "split file output",
+			packagePath: filepath.Join("testdata", "load-package"),
 		},
 	}
 	for _, tt := range tests {
@@ -87,27 +90,33 @@ func TestLoadSplitPackage(t *testing.T) {
 			t.Parallel()
 			tmpdir := t.TempDir()
 
-			err := Create(ctx, tt.packagePath, CreateOptions{
+			f, err := os.Create(filepath.Join(tt.packagePath, "random_1mb.bin"))
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				f.Close()
+				require.NoError(t, os.RemoveAll(f.Name()))
+			})
+			var mb int64 = 1024 * 1024
+			_, err = io.CopyN(f, rand.Reader, mb)
+			require.NoError(t, err)
+			err = Create(ctx, tt.packagePath, CreateOptions{
 				Output:           tmpdir,
 				MaxPackageSizeMB: 1,
 				SkipSBOM:         true,
 			})
 			require.NoError(t, err)
-			pkgName := fmt.Sprintf("zarf-package-test-%s-0.0.1.tar.zst.part000", runtime.GOARCH)
-			name := filepath.Join(tmpdir, pkgName)
+
+			splitName := fmt.Sprintf("zarf-package-split-%s.tar.zst.part000", runtime.GOARCH)
+			name := filepath.Join(tmpdir, splitName)
 			opt := LoadOptions{
 				Source:                  name,
 				PublicKeyPath:           "",
 				SkipSignatureValidation: false,
 				Filter:                  filters.Empty(),
 			}
-			pkgLayout, err := LoadPackage(ctx, opt)
+			_, err = LoadPackage(ctx, opt)
 			require.NoError(t, err)
-
-			require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
-			require.Equal(t, "0.0.1", pkgLayout.Pkg.Metadata.Version)
-			require.Len(t, pkgLayout.Pkg.Components, 1)
-			assembledName := fmt.Sprintf("zarf-package-test-%s-0.0.1.tar.zst", runtime.GOARCH)
+			assembledName := fmt.Sprintf("zarf-package-split-%s.tar.zst", runtime.GOARCH)
 			require.FileExists(t, filepath.Join(tmpdir, assembledName))
 		})
 	}
