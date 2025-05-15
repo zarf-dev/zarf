@@ -166,7 +166,6 @@ func (suite *PublishCopySkeletonSuite) Test_2_FilePaths() {
 			}
 
 			err = utils.ReadYaml(filepath.Join(unpacked, layout.ZarfYAML), &pkg)
-			fmt.Println("unpackaged at ", unpacked)
 			suite.NoError(err)
 			suite.NotNil(pkg)
 
