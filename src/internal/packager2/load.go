@@ -179,7 +179,7 @@ func assembleSplitTar(src, dest string) error {
 		return fmt.Errorf("unable to find split tarball files: %w", err)
 	}
 	if len(splitFiles) == 0 {
-		return fmt.Errorf("split files with pattern %s not found", pattern)
+		return fmt.Errorf("no split files with pattern %s found", pattern)
 	}
 	slices.Sort(splitFiles)
 
