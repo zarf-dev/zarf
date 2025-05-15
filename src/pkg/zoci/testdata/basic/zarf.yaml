@@ -4,6 +4,7 @@ kind: ZarfPackageConfig
 metadata:
   name: basic-pod
   version: 0.0.1
+  architecture: amd64
 
 components:
   - name: alpine
