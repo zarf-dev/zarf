@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mholt/archiver/v3"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -196,6 +196,5 @@ func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 
 	_ = os.Remove(dstTarball)
 
-	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-	return dstTarball, archiver.Archive(allTheLayers, dstTarball)
+	return dstTarball, archive.Compress(ctx, allTheLayers, dstTarball, archive.CompressOpts{})
 }
