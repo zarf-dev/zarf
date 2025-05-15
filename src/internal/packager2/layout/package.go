@@ -150,7 +150,7 @@ func (e *NoSBOMAvailableError) Error() string {
 }
 
 // GetSBOM outputs the SBOM data from the package to the given destination path.
-func (p *PackageLayout) GetSBOM(destPath string) (string, error) {
+func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) (string, error) {
 	if !p.Pkg.IsSBOMAble() {
 		return "", &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
 	}
@@ -159,7 +159,6 @@ func (p *PackageLayout) GetSBOM(destPath string) (string, error) {
 	sbomArchive := filepath.Join(p.dirPath, SBOMTar)
 
 	// 2) mount it as a virtual filesystem
-	ctx := context.Background()
 	fsys, err := archives.FileSystem(ctx, sbomArchive, nil)
 	if err != nil {
 		return "", fmt.Errorf("unable to open SBOM archive %q: %w", sbomArchive, err)
@@ -208,7 +207,7 @@ func (p *PackageLayout) GetSBOM(destPath string) (string, error) {
 }
 
 // GetComponentDir returns a path to the directory in the given component.
-func (p *PackageLayout) GetComponentDir(destPath, componentName string, ct ComponentDir) (string, error) {
+func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, componentName string, ct ComponentDir) (string, error) {
 	sourcePath := filepath.Join(p.dirPath, ComponentsDir, fmt.Sprintf("%s.tar", componentName))
 	_, err := os.Stat(sourcePath)
 	if errors.Is(err, os.ErrNotExist) {
@@ -222,7 +221,7 @@ func (p *PackageLayout) GetComponentDir(destPath, componentName string, ct Compo
 		return "", err
 	}
 	defer os.RemoveAll(tmpDir)
-	err = archive.Decompress(context.Background(), sourcePath, tmpDir, archive.DecompressOpts{})
+	err = archive.Decompress(ctx, sourcePath, tmpDir, archive.DecompressOpts{})
 	if err != nil {
 		return "", err
 	}
