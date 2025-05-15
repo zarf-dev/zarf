@@ -1,6 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: split
+  architecture: amd64
 components:
   - name: split-test
     required: true

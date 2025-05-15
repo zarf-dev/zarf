@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -90,6 +89,7 @@ func TestLoadSplitPackage(t *testing.T) {
 			t.Parallel()
 			tmpdir := t.TempDir()
 
+			// Generate random binary file, this ensures that the decompressed package will be >1mb and can be split
 			f, err := os.Create(filepath.Join(tt.packagePath, "random_1mb.bin"))
 			require.NoError(t, err)
 			t.Cleanup(func() {
@@ -99,6 +99,8 @@ func TestLoadSplitPackage(t *testing.T) {
 			var mb int64 = 1024 * 1024
 			_, err = io.CopyN(f, rand.Reader, mb)
 			require.NoError(t, err)
+
+			// Create the split package
 			err = Create(ctx, tt.packagePath, CreateOptions{
 				Output:           tmpdir,
 				MaxPackageSizeMB: 1,
@@ -106,7 +108,8 @@ func TestLoadSplitPackage(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			splitName := fmt.Sprintf("zarf-package-split-%s.tar.zst.part000", runtime.GOARCH)
+			// Load the split package, verify that the split package became one
+			splitName := "zarf-package-split-amd64.tar.zst.part000"
 			name := filepath.Join(tmpdir, splitName)
 			opt := LoadOptions{
 				Source:                  name,
@@ -116,7 +119,7 @@ func TestLoadSplitPackage(t *testing.T) {
 			}
 			_, err = LoadPackage(ctx, opt)
 			require.NoError(t, err)
-			assembledName := fmt.Sprintf("zarf-package-split-%s.tar.zst", runtime.GOARCH)
+			assembledName := "zarf-package-split-amd64.tar.zst"
 			require.FileExists(t, filepath.Join(tmpdir, assembledName))
 		})
 	}
