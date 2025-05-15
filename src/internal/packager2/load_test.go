@@ -78,10 +78,12 @@ func TestLoadSplitPackage(t *testing.T) {
 	tests := []struct {
 		name        string
 		packagePath string
+		packageName string
 	}{
 		{
 			name:        "split file output",
 			packagePath: filepath.Join("testdata", "load-package", "split"),
+			packageName: "split",
 		},
 	}
 	for _, tt := range tests {
@@ -109,7 +111,7 @@ func TestLoadSplitPackage(t *testing.T) {
 			require.NoError(t, err)
 
 			// Load the split package, verify that the split package became one
-			splitName := "zarf-package-split-amd64.tar.zst.part000"
+			splitName := fmt.Sprintf("zarf-package-%s-amd64.tar.zst.part000", tt.packageName)
 			name := filepath.Join(tmpdir, splitName)
 			opt := LoadOptions{
 				Source:                  name,
@@ -119,7 +121,7 @@ func TestLoadSplitPackage(t *testing.T) {
 			}
 			_, err = LoadPackage(ctx, opt)
 			require.NoError(t, err)
-			assembledName := "zarf-package-split-amd64.tar.zst"
+			assembledName := fmt.Sprintf("zarf-package-%s-amd64.tar.zst", tt.packageName)
 			require.FileExists(t, filepath.Join(tmpdir, assembledName))
 		})
 	}
