@@ -6,6 +6,7 @@ package packager2
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -36,6 +37,7 @@ type LoadOptions struct {
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
 	LayersSelector          zoci.LayersSelector
+	Output                  string
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
@@ -60,16 +62,48 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	}
 	defer os.Remove(tmpDir)
 
-	// Fetch or assemble the package tar
-	isPartial, tarPath, err := fetchPackage(ctx, srcType, opt.Source, opt.Shasum, opt.Architecture, opt.LayersSelector, tmpDir, opt.Filter)
-	if err != nil {
+	isPartial := false
+	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
+	switch srcType {
+	case "oci":
+		ociOpts := PullOCIOptions{
+			Source:         opt.Source,
+			Directory:      tmpDir,
+			Shasum:         opt.Shasum,
+			Architecture:   config.GetArch(opt.Architecture),
+			Filter:         opt.Filter,
+			LayersSelector: opt.LayersSelector,
+		}
+
+		isPartial, tmpPath, err = pullOCI(ctx, ociOpts)
+		if err != nil {
+			return nil, err
+		}
+	case "http", "https":
+		tmpPath, err = pullHTTP(ctx, opt.Source, tmpDir, opt.Shasum)
+		if err != nil {
+			return nil, err
+		}
+	case "split":
+		// If there is not already a target output, then output to the same directory so the split file can become a single tar
+		if opt.Output == "" {
+			opt.Output = filepath.Dir(opt.Source)
+		}
+		err := assembleSplitTar(opt.Source, tmpPath)
+		if err != nil {
+			return nil, err
+		}
+	case "tarball":
+		tmpPath = opt.Source
+	default:
+		err := fmt.Errorf("cannot fetch or locate tarball for unsupported source type %s", srcType)
 		return nil, err
 	}
 
 	// Verify checksum if provided
 	if srcType != "oci" && opt.Shasum != "" {
-		if err := helpers.SHAsMatch(tarPath, opt.Shasum); err != nil {
-			return nil, fmt.Errorf("SHA256 mismatch for %s: %w", tarPath, err)
+		if err := helpers.SHAsMatch(tmpPath, opt.Shasum); err != nil {
+			return nil, fmt.Errorf("SHA256 mismatch for %s: %w", tmpPath, err)
 		}
 	}
 
@@ -80,7 +114,43 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 		IsPartial:               isPartial,
 		Filter:                  opt.Filter,
 	}
-	return layout.LoadFromTar(ctx, tarPath, layoutOpt)
+	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpt)
+	if err != nil {
+		return nil, err
+	}
+
+	if opt.Output != "" {
+		name, err := nameFromMetadata(tmpPath)
+		if err != nil {
+			return nil, err
+		}
+		tarPath := filepath.Join(opt.Output, name)
+		err = os.Remove(tarPath)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		dstFile, err := os.Create(tarPath)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			if dstErr := dstFile.Close(); dstErr != nil {
+				err = fmt.Errorf("unable to cleanup: %w", dstErr)
+			}
+		}()
+		srcFile, err := os.Open(tmpPath)
+		if err != nil {
+			return nil, err
+		}
+		// TODO(mkcp): add to error chain
+		defer srcFile.Close()
+		_, err = io.Copy(dstFile, srcFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return pkgLayout, nil
 }
 
 // identifySource returns the source type for the given source string.
@@ -101,45 +171,15 @@ func identifySource(src string) (string, error) {
 	return "", fmt.Errorf("unknown source %s", src)
 }
 
-// fetchPackage fetches or assembles the package tar for different source types.
-func fetchPackage(ctx context.Context, srcType string, source string, shasum string, architecture string, layersSelector zoci.LayersSelector, workDir string, filter filters.ComponentFilterStrategy) (bool, string, error) {
-	tarPath := filepath.Join(workDir, "data.tar.zst")
-	switch srcType {
-	case "oci":
-		ociOpts := PullOCIOptions{
-			Source:         source,
-			Directory:      workDir,
-			Shasum:         shasum,
-			Architecture:   config.GetArch(architecture),
-			Filter:         filter,
-			LayersSelector: layersSelector,
-		}
-
-		return pullOCI(ctx, ociOpts)
-
-	case "http", "https":
-		path, err := pullHTTP(ctx, source, workDir, shasum)
-		return false, path, err
-
-	case "split":
-		err := assembleSplitTar(source, tarPath)
-		return false, tarPath, err
-
-	case "tarball":
-		return false, source, nil
-
-	default:
-		err := fmt.Errorf("cannot fetch or locate tarball for unsupported source type %s", srcType)
-		return false, "", err
-	}
-}
-
 // assembleSplitTar reconstructs a split tarball into a single archive.
 func assembleSplitTar(src, dest string) error {
 	pattern := strings.Replace(src, ".part000", ".part*", 1)
 	splitFiles, err := filepath.Glob(pattern)
 	if err != nil {
 		return fmt.Errorf("unable to find split tarball files: %w", err)
+	}
+	if len(splitFiles) == 0 {
+		return fmt.Errorf("split files with pattern %s not found", pattern)
 	}
 	slices.Sort(splitFiles)
 
@@ -178,6 +218,14 @@ func assembleSplitTar(src, dest string) error {
 		}
 		f.Close()
 	}
+
+	for _, file := range splitFiles {
+		err := os.Remove(file)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

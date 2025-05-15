@@ -1,0 +1,10 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test
+  version: 0.0.1
+components:
+  - name: test
+    required: true
+    files:
+      - source: random_1mb.bin
+        target: random_1mb.bin

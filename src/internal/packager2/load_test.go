@@ -5,10 +5,13 @@ package packager2
 
 import (
 	"fmt"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -29,11 +32,6 @@ func TestLoadPackage(t *testing.T) {
 			name:   "tarball",
 			source: "./testdata/zarf-package-test-amd64-0.0.1.tar.zst",
 			shasum: "f9b15b1bc0f760a87bad68196b339a8ce8330e3a0241191a826a8962a88061f1",
-		},
-		{
-			name:   "split",
-			source: "./testdata/zarf-package-test-amd64-0.0.1.tar.zst.part000",
-			shasum: "9c021ef9f62f58cca6dc01641521f372f387cc54c0d959a4f3861c6c636d98f1",
 		},
 	}
 	for _, tt := range tests {
@@ -65,6 +63,52 @@ func TestLoadPackage(t *testing.T) {
 			}
 			_, err := LoadPackage(ctx, opt)
 			require.ErrorContains(t, err, fmt.Sprintf("to be %s, found %s", opt.Shasum, tt.shasum))
+		})
+	}
+}
+
+func TestLoadSplitPackage(t *testing.T) {
+	t.Parallel()
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
+
+	ctx := testutil.TestContext(t)
+
+	tests := []struct {
+		name        string
+		packagePath string
+	}{
+		{
+			name:        "split",
+			packagePath: "testdata/load-package",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			tmpdir := t.TempDir()
+
+			err := Create(ctx, tt.packagePath, CreateOptions{
+				Output:           tmpdir,
+				MaxPackageSizeMB: 1,
+				SkipSBOM:         true,
+			})
+			require.NoError(t, err)
+			pkgName := fmt.Sprintf("zarf-package-test-%s-0.0.1.tar.zst.part000", runtime.GOARCH)
+			name := filepath.Join(tmpdir, pkgName)
+			opt := LoadOptions{
+				Source:                  name,
+				PublicKeyPath:           "",
+				SkipSignatureValidation: false,
+				Filter:                  filters.Empty(),
+			}
+			pkgLayout, err := LoadPackage(ctx, opt)
+			require.NoError(t, err)
+
+			require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
+			require.Equal(t, "0.0.1", pkgLayout.Pkg.Metadata.Version)
+			require.Len(t, pkgLayout.Pkg.Components, 1)
+			assembledName := fmt.Sprintf("zarf-package-test-%s-0.0.1.tar.zst", runtime.GOARCH)
+			require.FileExists(t, filepath.Join(tmpdir, assembledName))
 		})
 	}
 }

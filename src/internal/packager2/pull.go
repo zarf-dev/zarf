@@ -73,83 +73,15 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 		return errors.New("host cannot be empty")
 	}
 
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if rErr := os.Remove(tmpDir); rErr != nil {
-			err = fmt.Errorf("cleanup failed: %w", rErr)
-		}
-	}()
-	tmpPath := ""
-
-	isPartial := false
-	switch u.Scheme {
-	case "oci":
-		ociOpts := PullOCIOptions{
-			Source:                  source,
-			Directory:               tmpDir,
-			Shasum:                  opts.SHASum,
-			Architecture:            arch,
-			PublicKeyPath:           opts.PublicKeyPath,
-			LayersSelector:          zoci.AllLayers,
-			SkipSignatureValidation: opts.SkipSignatureValidation,
-			Filter:                  f,
-			Modifiers:               []oci.Modifier{},
-		}
-		l.Info("starting pull from oci source", "source", source)
-		isPartial, tmpPath, err = pullOCI(ctx, ociOpts)
-		if err != nil {
-			return err
-		}
-	case "http", "https":
-		l.Info("starting pull from http(s) source", "src", source, "digest", opts.SHASum)
-		tmpPath, err = pullHTTP(ctx, source, tmpDir, opts.SHASum)
-		if err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("unknown scheme %s", u.Scheme)
-	}
-
-	// This loadFromTar is done so that validatePackageIntegrtiy and validatePackageSignature are called
-	layoutOpt := layout.PackageLayoutOptions{
+	_, err = LoadPackage(ctx, LoadOptions{
+		Source:                  source,
+		Shasum:                  opts.SHASum,
+		Architecture:            arch,
 		PublicKeyPath:           opts.PublicKeyPath,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
-		IsPartial:               isPartial,
 		Filter:                  f,
-	}
-	_, err = layout.LoadFromTar(ctx, tmpPath, layoutOpt)
-	if err != nil {
-		return err
-	}
-
-	name, err := nameFromMetadata(tmpPath)
-	if err != nil {
-		return err
-	}
-	tarPath := filepath.Join(destination, name)
-	err = os.Remove(tarPath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
-	dstFile, err := os.Create(tarPath)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if dstErr := dstFile.Close(); dstErr != nil {
-			err = fmt.Errorf("unable to cleanup: %w", dstErr)
-		}
-	}()
-	srcFile, err := os.Open(tmpPath)
-	if err != nil {
-		return err
-	}
-	// TODO(mkcp): add to error chain
-	defer srcFile.Close()
-	_, err = io.Copy(dstFile, srcFile)
+		Output:                  destination,
+	})
 	if err != nil {
 		return err
 	}
