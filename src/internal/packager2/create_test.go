@@ -16,15 +16,30 @@ import (
 
 func TestPackageCreatePublishArch(t *testing.T) {
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
-	path := filepath.Join("testdata/create")
-	ctx := testutil.TestContext(t)
-	reg := createRegistry(t, ctx)
+	// TODO set plainHTTP as a create option
 	config.CommonOptions.PlainHTTP = true
-	err := Create(ctx, path, CreateOptions{
-		Output: fmt.Sprintf("oci://%s", reg.String()),
-	})
-	require.NoError(t, err)
-	packageRef := fmt.Sprintf("%s/create-arch:0.0.1", reg.String())
-	layout := pullFromRemote(t, ctx, packageRef, "amd64")
-	require.Equal(t, layout.Pkg.Metadata.Architecture, "amd64")
+	ctx := testutil.TestContext(t)
+	tests := []struct {
+		name string
+		path string
+		arch string
+	}{
+		{
+			name: "empty arch; should use pkg.metadata.architecture",
+			path: filepath.Join("testdata/create"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reg := createRegistry(t, ctx)
+			config.CLIArch = tt.arch
+			err := Create(ctx, tt.path, CreateOptions{
+				Output: fmt.Sprintf("oci://%s", reg.String()),
+			})
+			require.NoError(t, err)
+			layout := pullFromRemote(t, ctx, fmt.Sprintf("%s/create-arch:0.0.1", reg.String()), tt.arch)
+			require.Equal(t, layout.Pkg.Metadata.Architecture, tt.arch)
+		})
+	}
 }
