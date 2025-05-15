@@ -17,7 +17,7 @@ func TestPackageLayout(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	pathToPackage := filepath.Join("../testdata/load-package/compressed")
+	pathToPackage := filepath.Join("..", "testdata", "load-package", "compressed")
 
 	pkgLayout, err := LoadFromTar(ctx, filepath.Join(pathToPackage, "zarf-package-test-amd64-0.0.1.tar.zst"), PackageLayoutOptions{})
 	require.NoError(t, err)
