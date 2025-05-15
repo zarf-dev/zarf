@@ -46,6 +46,7 @@ jobs:
         uses: ./.github/actions/packages
         with:
           build-examples: "false"
+          build-cli-with-coverage: "true"
 
       # Upload the contents of the build directory for later stages to use
       - name: Upload build artifacts
@@ -84,6 +85,11 @@ jobs:
       - name: Run tests
         run: |
           make test-e2e-without-cluster ARCH=amd64
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d # v5.4.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Save logs
         if: always()
@@ -129,6 +135,11 @@ jobs:
         uses: ./.github/actions/debug-cluster
         if: always()
 
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d # v5.4.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
@@ -168,6 +179,11 @@ jobs:
         #       used for each test
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e-with-cluster ARCH=amd64
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d # v5.4.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Save logs
         if: always()
@@ -210,6 +226,11 @@ jobs:
       - name: Run tests
         run: |
           make test-e2e-with-cluster ARCH=amd64
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d # v5.4.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
@@ -254,6 +275,11 @@ jobs:
       - name: Run tests
         run: |
           make test-e2e-with-cluster ARCH=amd64
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d # v5.4.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
