@@ -172,7 +172,7 @@ jobs:
           echo K9S_VERSION=$(go list -f '{{.Version}}' -m github.com/derailed/k9s) >> $GITHUB_ENV
           echo CRANE_VERSION=$(go list -f '{{.Version}}' -m github.com/google/go-containerregistry) >> $GITHUB_ENV
           echo SYFT_VERSION=$(go list -f '{{.Version}}' -m github.com/anchore/syft) >> $GITHUB_ENV
-          echo ARCHIVER_VERSION=$(go list -f '{{.Version}}' -m github.com/mholt/archiver/v3) >> $GITHUB_ENV
+          echo ARCHIVES_VERSION=$(go list -f '{{.Version}}' -m github.com/mholt/archives) >> $GITHUB_ENV
           echo HELM_VERSION=$(go list -f '{{.Version}}' -m helm.sh/helm/v3) >> $GITHUB_ENV
 
       - name: Get Brew tap repo token
