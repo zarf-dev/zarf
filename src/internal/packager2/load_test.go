@@ -33,7 +33,7 @@ func TestLoadPackage(t *testing.T) {
 	}{
 		{
 			name:   "tarball",
-			source: "./testdata/zarf-package-test-amd64-0.0.1.tar.zst",
+			source: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			shasum: "f9b15b1bc0f760a87bad68196b339a8ce8330e3a0241191a826a8962a88061f1",
 		},
 	}
@@ -82,7 +82,7 @@ func TestLoadSplitPackage(t *testing.T) {
 	}{
 		{
 			name:        "split file output",
-			packagePath: filepath.Join("testdata", "load-package"),
+			packagePath: filepath.Join("testdata", "load-package", "split"),
 		},
 	}
 	for _, tt := range tests {
@@ -196,7 +196,8 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	_, err := GetPackageFromSourceOrCluster(ctx, nil, "test", false, "", zoci.AllLayers)
 	require.EqualError(t, err, "cannot get Zarf package from Kubernetes without configuration")
 
-	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, "./testdata/zarf-package-test-amd64-0.0.1.tar.zst", false, "", zoci.AllLayers)
+	pkgPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
+	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, pkgPath, false, "", zoci.AllLayers)
 	require.NoError(t, err)
 	require.Equal(t, "test", pkg.Metadata.Name)
 
