@@ -87,15 +87,9 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 	}
 
 	if chart.Version != "" && chart.Version != loadedChart.Metadata.Version {
-		// warn the user - alternatively we could return an error here if the expectation is improved provenance
-		l.Warn("chart version mismatch",
-			"expected", chart.Version,
-			"actual", loadedChart.Metadata.Version,
-		)
+		// this is important as deploy will use teh chart version to find the chart tarball location
+		return fmt.Errorf("expected chart version %s does not match the actual chart metadata version %s", chart.Version, loadedChart.Metadata.Version)
 	}
-
-	// Explicitly set the chart version to the one in the chart.yaml
-	chart.Version = loadedChart.Metadata.Version
 
 	// Handle the chart directory or tarball
 	var saved string
