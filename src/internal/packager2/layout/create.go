@@ -23,7 +23,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/mholt/archiver/v3"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 
@@ -36,6 +35,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	actions2 "github.com/zarf-dev/zarf/src/internal/packager2/actions"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -228,7 +228,7 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) 
 	}
 
 	for _, component := range pkg.Components {
-		err := assembleSkeletonComponent(component, packagePath, buildPath)
+		err := assembleSkeletonComponent(ctx, component, packagePath, buildPath)
 		if err != nil {
 			return "", err
 		}
@@ -406,8 +406,10 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				if err := utils.DownloadToFile(ctx, file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
-				// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-				err = archiver.Extract(compressedFile, file.ExtractPath, destinationDir)
+				decompressOpts := archive.DecompressOpts{
+					Files: []string{file.ExtractPath},
+				}
+				err = archive.Decompress(ctx, compressedFile, destinationDir, decompressOpts)
 				if err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
 				}
@@ -418,9 +420,12 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 			}
 		} else {
 			if file.ExtractPath != "" {
-				// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-				if err := archiver.Extract(filepath.Join(packagePath, file.Source), file.ExtractPath, destinationDir); err != nil {
-					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
+				decompressOpts := archive.DecompressOpts{
+					Files: []string{file.ExtractPath},
+				}
+				err = archive.Decompress(ctx, filepath.Join(packagePath, file.Source), destinationDir, decompressOpts)
+				if err != nil {
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, filepath.Join(packagePath, file.Source), err.Error())
 				}
 			} else {
 				if filepath.IsAbs(file.Source) {
@@ -552,7 +557,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	return nil
 }
 
-func assembleSkeletonComponent(component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
+func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -611,9 +616,12 @@ func assembleSkeletonComponent(component v1alpha1.ZarfComponent, packagePath, bu
 		destinationDir := filepath.Dir(dst)
 
 		if file.ExtractPath != "" {
-			// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-			if err := archiver.Extract(filepath.Join(packagePath, file.Source), file.ExtractPath, destinationDir); err != nil {
-				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
+			decompressOpts := archive.DecompressOpts{
+				Files: []string{file.ExtractPath},
+			}
+			err = archive.Decompress(ctx, filepath.Join(packagePath, file.Source), destinationDir, decompressOpts)
+			if err != nil {
+				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, filepath.Join(packagePath, file.Source), err.Error())
 			}
 
 			// Make sure dst reflects the actual file or directory.

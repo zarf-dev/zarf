@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/mholt/archiver/v3"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -136,10 +136,8 @@ func (c *Components) Unarchive(ctx context.Context, component v1alpha1.ZarfCompo
 		return nil
 	}
 
-	// TODO(mkcp): Bring in context and port to logger
 	l.Debug("unarchiving", "component", filepath.Base(tb))
-	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-	if err := archiver.Unarchive(tb, c.Base); err != nil {
+	if err := archive.Decompress(ctx, tb, c.Base, archive.DecompressOpts{}); err != nil {
 		return err
 	}
 	return os.Remove(tb)

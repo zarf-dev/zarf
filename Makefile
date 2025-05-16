@@ -38,7 +38,7 @@ K8S_MODULES_PATCH_VER=$(word 3,$(K8S_MODULES_VER))
 K9S_VERSION=$(shell go list -f '{{.Version}}' -m github.com/derailed/k9s)
 CRANE_VERSION=$(shell go list -f '{{.Version}}' -m github.com/google/go-containerregistry)
 SYFT_VERSION=$(shell go list -f '{{.Version}}' -m github.com/anchore/syft)
-ARCHIVER_VERSION=$(shell go list -f '{{.Version}}' -m github.com/mholt/archiver/v3)
+ARCHIVES_VERSION=$(shell go list -f '{{.Version}}' -m github.com/mholt/archives)
 HELM_VERSION=$(shell go list -f '{{.Version}}' -m helm.sh/helm/v3)
 
 BUILD_ARGS += -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
@@ -49,7 +49,7 @@ BUILD_ARGS += -X k8s.io/component-base/version.gitVersion=v$(K8S_MODULES_MAJOR_V
 BUILD_ARGS += -X github.com/derailed/k9s/cmd.version=$(K9S_VERSION)
 BUILD_ARGS += -X github.com/google/go-containerregistry/cmd/crane/cmd.Version=$(CRANE_VERSION)
 BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.syftVersion=$(SYFT_VERSION)
-BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.archiverVersion=$(ARCHIVER_VERSION)
+BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.archivesVersion=$(ARCHIVES_VERSION)
 BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.helmVersion=$(HELM_VERSION)
 
 GIT_SHA := $(if $(shell git rev-parse HEAD),$(shell git rev-parse HEAD),"")
@@ -138,7 +138,7 @@ goreleaser-build:
 	K9S_VERSION="$(K9S_VERSION)" \
 	CRANE_VERSION="$(CRANE_VERSION)" \
 	SYFT_VERSION="$(SYFT_VERSION)" \
-	ARCHIVER_VERSION="$(ARCHIVER_VERSION)" \
+	ARCHIVES_VERSION="$(ARCHIVES_VERSION)" \
 	HELM_VERSION="$(HELM_VERSION)" \
 	goreleaser build --clean --skip=validate
 
