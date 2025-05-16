@@ -8,5 +8,5 @@ components:
     charts:
       - name: chart
         namespace: helm-release-history
-        version: v0.1.0
+        version: 0.1.0
         localPath: chart

@@ -279,7 +279,7 @@ func validateChart(chart v1alpha1.ZarfChart) error {
 		err = errors.Join(err, fmt.Errorf(PkgValidateErrChartURLOrPath, chart.Name))
 	}
 
-	if chart.Version == "" {
+	if chart.Version == "" && chart.LocalPath == "" {
 		err = errors.Join(err, fmt.Errorf(PkgValidateErrChartVersion, chart.Name))
 	}
 
