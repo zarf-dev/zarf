@@ -21,6 +21,10 @@ import (
 	v1 "k8s.io/api/admission/v1"
 )
 
+const (
+	HelmMediaTypeManifest = "application/vnd.cncf.helm.config.v1+json"
+)
+
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
 func NewOCIRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
 	return operations.Hook{
@@ -97,7 +101,24 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			patchedURL = fmt.Sprintf("%s:%s", patchedURL, src.Spec.Reference.Tag)
 		}
 
-		patchedSrc, err := transform.ImageTransformHost(registryAddress, patchedURL)
+		var (
+			patchedSrc string
+			err        error
+		)
+
+		mediaType, err := getManifestMediaType(ctx, zarfState, registryAddress)
+
+		// we want to mutate even if the agent can't talk to the registry
+		if err != nil {
+			mediaType = ""
+		}
+
+		if isChart(mediaType) {
+			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, patchedURL)
+		} else {
+			patchedSrc, err = transform.ImageTransformHost(registryAddress, patchedURL)
+		}
+
 		if err != nil {
 			return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
 		}
@@ -146,4 +167,12 @@ func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.O
 	}
 
 	return patches
+}
+
+func isChart(mediaType string) bool {
+	switch mediaType {
+	case HelmMediaTypeManifest:
+		return true
+	}
+	return false
 }
