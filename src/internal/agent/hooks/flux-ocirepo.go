@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 	"oras.land/oras-go/v2"
@@ -111,29 +112,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			err        error
 		)
 
-		client := &auth.Client{
-			Client: orasRetry.DefaultClient,
-			Cache:  auth.NewCache(),
-			Credential: auth.StaticCredential(registryAddress, auth.Credential{
-				Username: zarfState.RegistryInfo.PullUsername,
-				Password: zarfState.RegistryInfo.PullPassword,
-			}),
-		}
-
-		registry := &orasRemote.Repository{
-			PlainHTTP: true,
-			Client:    client,
-		}
-
-		// maybe should wrap such that if it can not make the connection to the registry it will still mutate?
-		_, b, err := oras.FetchBytes(ctx, registry, registryAddress, oras.DefaultFetchBytesOptions)
-
-		var manifest ocispec.Manifest
-		if err := json.Unmarshal(b, &manifest); err != nil {
-			return nil, err
-		}
-
-		if isChart(manifest.Config.MediaType) {
+		if isChart(ctx, zarfState, registryAddress) {
 			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, patchedURL)
 		} else {
 			patchedSrc, err = transform.ImageTransformHost(registryAddress, patchedURL)
@@ -189,8 +168,33 @@ func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.O
 	return patches
 }
 
-func isChart(mediaType string) bool {
-	switch mediaType {
+func isChart(ctx context.Context, zarfState *state.State, registryAddress string) bool {
+	client := &auth.Client{
+		Client: orasRetry.DefaultClient,
+		Cache:  auth.NewCache(),
+		Credential: auth.StaticCredential(registryAddress, auth.Credential{
+			Username: zarfState.RegistryInfo.PullUsername,
+			Password: zarfState.RegistryInfo.PullPassword,
+		}),
+	}
+
+	registry := &orasRemote.Repository{
+		PlainHTTP: true,
+		Client:    client,
+	}
+
+	_, b, err := oras.FetchBytes(ctx, registry, registryAddress, oras.DefaultFetchBytesOptions)
+
+	if err != nil {
+		return false
+	}
+
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(b, &manifest); err != nil {
+		return false
+	}
+
+	switch manifest.Config.MediaType {
 	case HelmMediaTypeManifest:
 		return true
 	}
