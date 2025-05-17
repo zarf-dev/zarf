@@ -12,19 +12,13 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/fluxcd/pkg/apis/meta"
 	flux "github.com/fluxcd/source-controller/api/v1beta2"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
-	"oras.land/oras-go/v2"
-	orasRemote "oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
-	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 )
 
 const (
@@ -112,7 +106,14 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			err        error
 		)
 
-		if isChart(ctx, zarfState, registryAddress) {
+		mediaType, err := getManifestMediaType(ctx, zarfState, registryAddress)
+
+		// we want to mutate even if the agent can't talk to the registry
+		if err != nil {
+			mediaType = ""
+		}
+
+		if isChart(mediaType) {
 			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, patchedURL)
 		} else {
 			patchedSrc, err = transform.ImageTransformHost(registryAddress, patchedURL)
@@ -168,33 +169,8 @@ func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.O
 	return patches
 }
 
-func isChart(ctx context.Context, zarfState *state.State, registryAddress string) bool {
-	client := &auth.Client{
-		Client: orasRetry.DefaultClient,
-		Cache:  auth.NewCache(),
-		Credential: auth.StaticCredential(registryAddress, auth.Credential{
-			Username: zarfState.RegistryInfo.PullUsername,
-			Password: zarfState.RegistryInfo.PullPassword,
-		}),
-	}
-
-	registry := &orasRemote.Repository{
-		PlainHTTP: true,
-		Client:    client,
-	}
-
-	_, b, err := oras.FetchBytes(ctx, registry, registryAddress, oras.DefaultFetchBytesOptions)
-
-	if err != nil {
-		return false
-	}
-
-	var manifest ocispec.Manifest
-	if err := json.Unmarshal(b, &manifest); err != nil {
-		return false
-	}
-
-	switch manifest.Config.MediaType {
+func isChart(mediaType string) bool {
+	switch mediaType {
 	case HelmMediaTypeManifest:
 		return true
 	}
