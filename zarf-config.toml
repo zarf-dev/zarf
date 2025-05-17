@@ -15,5 +15,10 @@ registry_image_domain = ''
 registry_image = 'library/registry'
 registry_image_tag = '3.0.0'
 
+# The image reference to use for the registry proxy that Zarf deploys
+registry_proxy_image_domain = ''
+registry_proxy_image = 'alpine/socat'
+registry_proxy_image_tag = '1.8.0.1'
+
 # The image reference to use for the optional git-server Zarf deploys
 gitea_image = 'gitea/gitea:1.21.5-rootless'
