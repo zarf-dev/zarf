@@ -45,15 +45,13 @@ const (
 // CompressOpts is a placeholder for future optional Compress params
 type CompressOpts struct{}
 
-// Compress takes any number of source files and archives them into a compressed archive at dest path.
+// Compress archives the given source files into dest, inferring the compression format by extension.
 func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts) (err error) {
 	out, err := os.Create(dest)
 	if err != nil {
 		return fmt.Errorf("failed to create %s: %w", dest, err)
 	}
-	defer func() {
-		err = errors.Join(err, out.Close())
-	}()
+	defer func() { err = errors.Join(err, out.Close()) }()
 
 	mapping := make(map[string]string, len(sources))
 	for _, src := range sources {
@@ -64,86 +62,48 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 		return fmt.Errorf("failed to stat sources: %w", err)
 	}
 
-	archivers := map[string]archives.Archiver{
-		extensionZip:  archives.Zip{},
-		extensionTar:  archives.Tar{},
-		extensionGz:   archives.CompressedArchive{Compression: archives.Gz{}, Archival: archives.Tar{}},
-		extensionTgz:  archives.CompressedArchive{Compression: archives.Gz{}, Archival: archives.Tar{}},
-		extensionBz2:  archives.CompressedArchive{Compression: archives.Bz2{}, Archival: archives.Tar{}},
-		extensionTbz2: archives.CompressedArchive{Compression: archives.Bz2{}, Archival: archives.Tar{}},
-		extensionTbz:  archives.CompressedArchive{Compression: archives.Bz2{}, Archival: archives.Tar{}},
-		extensionXz:   archives.CompressedArchive{Compression: archives.Xz{}, Archival: archives.Tar{}},
-		extensionTxz:  archives.CompressedArchive{Compression: archives.Xz{}, Archival: archives.Tar{}},
-		extensionZst:  archives.CompressedArchive{Compression: archives.Zstd{}, Archival: archives.Tar{}},
-		extensionTzst: archives.CompressedArchive{Compression: archives.Zstd{}, Archival: archives.Tar{}},
-		extensionBr:   archives.CompressedArchive{Compression: archives.Brotli{}, Archival: archives.Tar{}},
-		extensionTbr:  archives.CompressedArchive{Compression: archives.Brotli{}, Archival: archives.Tar{}},
-		extensionLz4:  archives.CompressedArchive{Compression: archives.Lz4{}, Archival: archives.Tar{}},
-		extensionTlz4: archives.CompressedArchive{Compression: archives.Lz4{}, Archival: archives.Tar{}},
-		extensionLzip: archives.CompressedArchive{Compression: archives.Lzip{}, Archival: archives.Tar{}},
-		extensionMz:   archives.CompressedArchive{Compression: archives.MinLZ{}, Archival: archives.Tar{}},
-		extensionTmz:  archives.CompressedArchive{Compression: archives.MinLZ{}, Archival: archives.Tar{}},
-	}
-
-	// Find the longest matching extension
-	var archiveExt string
-	for ext := range archivers {
-		if strings.HasSuffix(dest, ext) && len(ext) > len(archiveExt) {
-			archiveExt = ext
-		}
-	}
-
-	archiver, ok := archivers[archiveExt]
-	if !ok {
+	archiver := selectArchiver(dest)
+	if archiver == nil {
 		return fmt.Errorf("unsupported archive extension for %q", dest)
 	}
-
 	if err := archiver.Archive(ctx, out, files); err != nil {
 		return fmt.Errorf("archive failed for %q: %w", dest, err)
 	}
-
 	return nil
 }
 
-// DecompressOpts provides optional parameters for Decompress
+// DecompressOpts provides optional parameters for Decompress operations.
 type DecompressOpts struct {
-	// UnarchiveAll walks root of the archive and unpacks nested .tar files.
-	UnarchiveAll bool
-
-	// Files, if non-empty, means "only extract these exact archive-paths."
-	Files []string
-
-	// StripComponents drops this many leading path elements from every entry.
-	StripComponents int
-
-	// OverwriteExisting, if true, will truncate existing files instead of failing.
+	UnarchiveAll      bool
+	Files             []string
+	StripComponents   int
 	OverwriteExisting bool
-
-	// SkipValidation, if true, will skip the validation of a file being present in the archive.
-	// This is used with unarchiveFiltered to avoid checking for files that are not in the archive.
-	// This was a previous behavior that the new logic does not support.
-	SkipValidation bool
+	SkipValidation    bool
 }
 
-// Decompress takes a Zarf package or arbitrary archive and decompresses it to dst.
-func Decompress(ctx context.Context, sourceArchive, dst string, opts DecompressOpts) (err error) {
+// Decompress extracts from sourceArchive into dst according to opts.
+func Decompress(ctx context.Context, sourceArchive, dst string, opts DecompressOpts) error {
 	if len(opts.Files) > 0 {
-		if err := unarchiveFiltered(ctx, sourceArchive, dst, opts.Files, opts.SkipValidation); err != nil {
-			return fmt.Errorf("unable to decompress selected files: %w", err)
+		err := extractFiltered(ctx, sourceArchive, dst, opts.Files, opts.SkipValidation)
+		if err != nil {
+			return fmt.Errorf("unable to extract filtered files from %q: %w", sourceArchive, err)
 		}
 		return nil
 	}
 
 	if opts.StripComponents > 0 || opts.OverwriteExisting {
-		err = unarchiveWithStrip(ctx, sourceArchive, dst,
-			opts.StripComponents, opts.OverwriteExisting)
+		err := extract(ctx, sourceArchive, dst,
+			stripHandler(dst, opts.StripComponents, opts.OverwriteExisting))
+		if err != nil {
+			return fmt.Errorf("unable to strip-extract %q: %w", sourceArchive, err)
+		}
 	} else {
-		err = unarchive(ctx, sourceArchive, dst)
+		err := extract(ctx, sourceArchive, dst, basicHandler(dst))
+		if err != nil {
+			return fmt.Errorf("unable to extract %q: %w", sourceArchive, err)
+		}
 	}
-	if err != nil {
-		return fmt.Errorf("unable to perform decompression: %w", err)
-	}
-	// 3) nested unarchive step remains unchanged
+
 	if opts.UnarchiveAll {
 		if err := nestedUnarchive(ctx, dst); err != nil {
 			return err
@@ -152,166 +112,152 @@ func Decompress(ctx context.Context, sourceArchive, dst string, opts DecompressO
 	return nil
 }
 
-// unarchiveWithStrip unpacks any supported archive, stripping `strip` path elements
-// and opening files with or without truncate based on `overwrite`.
-func unarchiveWithStrip(ctx context.Context, archivePath, dst string, strip int, overwrite bool) (err error) {
-	// open archive
-	f, err := os.Open(archivePath)
+// selectArchiver returns an archives.Archiver matching the longest suffix from dest.
+func selectArchiver(dest string) archives.Archiver {
+	var archiveExt string
+	for ext := range archiverMap() {
+		if strings.HasSuffix(dest, ext) && len(ext) > len(archiveExt) {
+			archiveExt = ext
+		}
+	}
+	return archiverMap()[archiveExt]
+}
+
+// archiverMap defines supported extensions to their Archiver implementations.
+func archiverMap() map[string]archives.Archiver {
+	// define common tar+compress combos once
+	tar := func(c archives.Compression) archives.Archiver {
+		return archives.CompressedArchive{Compression: c, Archival: archives.Tar{}}
+	}
+	return map[string]archives.Archiver{
+		extensionZip:  archives.Zip{},
+		extensionTar:  archives.Tar{},
+		extensionTgz:  tar(archives.Gz{}),
+		extensionGz:   tar(archives.Gz{}),
+		extensionTbz:  tar(archives.Bz2{}),
+		extensionBz2:  tar(archives.Bz2{}),
+		extensionTbz2: tar(archives.Bz2{}),
+		extensionTxz:  tar(archives.Xz{}),
+		extensionXz:   tar(archives.Xz{}),
+		extensionTzst: tar(archives.Zstd{}),
+		extensionZst:  tar(archives.Zstd{}),
+		extensionTbr:  tar(archives.Brotli{}),
+		extensionBr:   tar(archives.Brotli{}),
+		extensionTlz4: tar(archives.Lz4{}),
+		extensionLz4:  tar(archives.Lz4{}),
+		extensionTmz:  tar(archives.MinLZ{}),
+		extensionMz:   tar(archives.MinLZ{}),
+		extensionLzip: tar(archives.Lzip{}),
+	}
+}
+
+// extract opens src, identifies format, and runs handler for each entry.
+func extract(ctx context.Context, src, dst string, handler archives.FileHandler) (err error) {
+	file, err := os.Open(src)
 	if err != nil {
-		return fmt.Errorf("opening %q: %w", archivePath, err)
+		return err
 	}
 	defer func() {
-		err = errors.Join(err, f.Close())
+		err = errors.Join(err, file.Close())
 	}()
 
-	// identify format (tar, tar.zst, zip, etc.)
-	format, input, err := archives.Identify(ctx, filepath.Base(archivePath), f)
+	format, input, err := archives.Identify(ctx, src, file)
 	if err != nil {
-		return fmt.Errorf("identifying archive %q: %w", archivePath, err)
+		return err
 	}
 	extractor, ok := format.(archives.Extractor)
 	if !ok {
-		return fmt.Errorf("format %T cannot extract", format)
+		return fmt.Errorf("unsupported format for extraction: %T", format)
 	}
-
-	// ensure dst exists
 	if err := os.MkdirAll(dst, dirPerm); err != nil {
-		return fmt.Errorf("creating dest %q: %w", dst, err)
+		return err
 	}
+	return extractor.Extract(ctx, input, handler)
+}
 
-	// choose flags for file creation
+// basicHandler writes each file/dir/link to dst without modifications.
+func basicHandler(dst string) archives.FileHandler {
+	return func(_ context.Context, f archives.FileInfo) error {
+		target := filepath.Join(dst, f.NameInArchive)
+		switch {
+		case f.IsDir():
+			return os.MkdirAll(target, f.Mode())
+		case f.LinkTarget != "":
+			return os.Symlink(filepath.Join(dst, f.LinkTarget), target)
+		default:
+			return writeFile(target, f, os.O_CREATE|os.O_WRONLY)
+		}
+	}
+}
+
+// stripHandler drops leading paths and respects overwrite flag.
+func stripHandler(dst string, strip int, overwrite bool) archives.FileHandler {
 	flags := os.O_CREATE | os.O_WRONLY
 	if overwrite {
 		flags |= os.O_TRUNC
 	} else {
 		flags |= os.O_EXCL
 	}
-
-	handler := func(_ context.Context, fi archives.FileInfo) error {
+	return func(_ context.Context, fi archives.FileInfo) error {
 		parts := strings.Split(fi.NameInArchive, "/")
 		if len(parts) <= strip {
-			// nothing left after stripping → skip
 			return nil
 		}
 		rel := filepath.Join(parts[strip:]...)
 		target := filepath.Join(dst, rel)
-
 		switch {
 		case fi.IsDir():
 			return os.MkdirAll(target, fi.Mode())
-
 		case fi.LinkTarget != "":
-			// recreate symlink (we do not strip link targets here)
 			return os.Symlink(fi.LinkTarget, target)
-
 		default:
-			// regular file
-			if err := os.MkdirAll(filepath.Dir(target), dirPerm); err != nil {
-				return err
-			}
-			out, err := os.OpenFile(target, flags, fi.Mode())
-			if err != nil {
-				return err
-			}
-			defer func() {
-				err = errors.Join(err, out.Close())
-			}()
-
-			in, err := fi.Open()
-			if err != nil {
-				return err
-			}
-			defer func() {
-				err = errors.Join(err, in.Close())
-			}()
-
-			if _, err := io.Copy(out, in); err != nil {
-				return err
-			}
-			return nil
+			return writeFile(target, fi, flags)
 		}
 	}
-
-	if err := extractor.Extract(ctx, input, handler); err != nil {
-		return fmt.Errorf("extracting %q: %w", archivePath, err)
-	}
-	return nil
 }
 
-// unarchiveFiltered extracts only the given list of archive‐internal filenames
-// into dst, and errors if any one of them was not found.
-func unarchiveFiltered(ctx context.Context, src, dst string, want []string, skipValidation bool) (err error) {
+// extractFiltered handles filtered extraction of specified internal paths.
+func extractFiltered(ctx context.Context, src, dst string, want []string, skipValidation bool) (err error) {
 	file, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("unable to open archive %q: %w", src, err)
 	}
 	defer func() {
-		cErr := file.Close()
-		err = errors.Join(err, cErr)
+		err = errors.Join(err, file.Close())
 	}()
 
 	format, input, err := archives.Identify(ctx, src, file)
 	if err != nil {
 		return fmt.Errorf("unable to identify archive %q: %w", src, err)
 	}
-
 	extractor, ok := format.(archives.Extractor)
 	if !ok {
 		return fmt.Errorf("unsupported format for extraction: %T", format)
 	}
+	if err := os.MkdirAll(dst, dirPerm); err != nil {
+		return fmt.Errorf("unable to create destination %q: %w", dst, err)
+	}
 
-	// We'll track which ones we actually saw
 	found := make(map[string]bool, len(want))
 	wantSet := make(map[string]bool, len(want))
 	for _, name := range want {
 		wantSet[name] = true
 	}
 
-	// Ensure dst exists
-	if err := os.MkdirAll(dst, dirPerm); err != nil {
-		return fmt.Errorf("unable to create destination %q: %w", dst, err)
-	}
-
 	handler := func(_ context.Context, f archives.FileInfo) error {
-		// skip anything not in our list
 		if !wantSet[f.NameInArchive] {
 			return nil
 		}
 		found[f.NameInArchive] = true
 
 		target := filepath.Join(dst, f.NameInArchive)
-
 		switch {
 		case f.IsDir():
 			return os.MkdirAll(target, f.Mode())
-
 		case f.LinkTarget != "":
-			linkDest := filepath.Join(dst, f.LinkTarget)
-			return os.Symlink(linkDest, target)
-
+			return os.Symlink(filepath.Join(dst, f.LinkTarget), target)
 		default:
-			if err := os.MkdirAll(filepath.Dir(target), dirPerm); err != nil {
-				return err
-			}
-			out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY, f.Mode())
-			if err != nil {
-				return err
-			}
-			defer func() {
-				cErr := out.Close()
-				err = errors.Join(err, cErr)
-			}()
-
-			in, err := f.Open()
-			if err != nil {
-				return err
-			}
-			defer func() {
-				err = errors.Join(err, in.Close())
-			}()
-
-			_, err = io.Copy(out, in)
-			return err
+			return writeFile(target, f, os.O_CREATE|os.O_WRONLY)
 		}
 	}
 
@@ -319,13 +265,39 @@ func unarchiveFiltered(ctx context.Context, src, dst string, want []string, skip
 		return fmt.Errorf("error extracting filtered entries from %q: %w", src, err)
 	}
 
-	// verify we got them all
-	for _, name := range want {
-		if !found[name] && !skipValidation {
-			return fmt.Errorf("file %q not found in archive %q", name, src)
+	if !skipValidation {
+		for _, name := range want {
+			if !found[name] {
+				return fmt.Errorf("file %q not found in archive %q", name, src)
+			}
 		}
 	}
 	return nil
+}
+
+// writeFile encapsulates file writing and copying.
+func writeFile(target string, fi archives.FileInfo, flags int) (err error) {
+	if err := os.MkdirAll(filepath.Dir(target), dirPerm); err != nil {
+		return err
+	}
+	out, err := os.OpenFile(target, flags, fi.Mode())
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, out.Close())
+	}()
+
+	in, err := fi.Open()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, in.Close())
+	}()
+
+	_, err = io.Copy(out, in)
+	return err
 }
 
 // nestedUnarchive takes a destination path and walks each file in the directory, unarchiving each.
@@ -340,7 +312,7 @@ func nestedUnarchive(ctx context.Context, dst string) error {
 			if info.Name() == sbomFileName {
 				dst = strings.TrimSuffix(path, extensionTar)
 			}
-			err := unarchive(ctx, path, dst)
+			err := extract(ctx, path, dst, basicHandler(dst))
 			if err != nil {
 				return fmt.Errorf(lang.ErrUnarchive, path, err.Error())
 			}
@@ -353,81 +325,6 @@ func nestedUnarchive(ctx context.Context, dst string) error {
 	})
 	if err != nil {
 		return fmt.Errorf("unable to unarchive all nested tarballs: %w", err)
-	}
-	return nil
-}
-
-// unarchive opens src, identifies its format, and extracts into dst.
-func unarchive(ctx context.Context, src, dst string) (err error) {
-	// Open the archive file
-	file, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("unable to open archive %q: %w", src, err)
-	}
-	defer func() {
-		err = errors.Join(err, file.Close())
-	}()
-
-	// Identify format & get an input stream
-	format, input, err := archives.Identify(ctx, src, file)
-	if err != nil {
-		return fmt.Errorf("unable to identify archive %q: %w", src, err)
-	}
-
-	// Assert that it supports extraction
-	extractor, ok := format.(archives.Extractor)
-	if !ok {
-		return fmt.Errorf("unsupported format for extraction: %T", format)
-	}
-
-	// Ensure dst exists
-	if err := os.MkdirAll(dst, dirPerm); err != nil {
-		return fmt.Errorf("unable to create destination %q: %w", dst, err)
-	}
-
-	// Define how each entry is written to disk
-	handler := func(_ context.Context, f archives.FileInfo) error {
-		target := filepath.Join(dst, f.NameInArchive)
-
-		switch {
-		case f.IsDir():
-			// directory
-			return os.MkdirAll(target, f.Mode())
-
-		case f.LinkTarget != "":
-			// symlink
-			linkDest := filepath.Join(dst, f.LinkTarget)
-			return os.Symlink(linkDest, target)
-
-		default:
-			// regular file
-			if err := os.MkdirAll(filepath.Dir(target), dirPerm); err != nil {
-				return err
-			}
-			out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY, f.Mode())
-			if err != nil {
-				return err
-			}
-			defer func() {
-				err = errors.Join(err, out.Close())
-			}()
-
-			in, err := f.Open()
-			if err != nil {
-				return err
-			}
-			defer func() {
-				err = errors.Join(err, in.Close())
-			}()
-
-			_, err = io.Copy(out, in)
-			return err
-		}
-	}
-
-	// Perform extraction
-	if err := extractor.Extract(ctx, input, handler); err != nil {
-		return fmt.Errorf("unable to extract %q: %w", src, err)
 	}
 	return nil
 }

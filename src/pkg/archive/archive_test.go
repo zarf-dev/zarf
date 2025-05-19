@@ -19,8 +19,8 @@ const (
 	testFilePerm = filePerm
 )
 
-// writeFile creates a file at path with given content.
-func writeFile(t *testing.T, path, content string) {
+// writeTestFile creates a file at path with given content.
+func writeTestFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), testFilePerm); err != nil {
 		t.Fatalf("failed to write file %s: %v", path, err)
@@ -42,27 +42,29 @@ func TestCompressAndDecompress_MultipleFormats(t *testing.T) {
 	ctx := context.Background()
 
 	formats := []struct {
-		name      string
-		extension string
+		name        string
+		extension   string
+		expectedErr string
 	}{
-		{"tar", extensionTar},
-		{"zip", extensionZip},
-		{"tar.gz", extensionGz},
-		{"tgz", extensionTgz},
-		{"tar.bz2", extensionBz2},
-		{"tbz2", extensionTbz2},
-		{"tbz", extensionTbz},
-		{"tar.xz", extensionXz},
-		{"txz", extensionTxz},
-		{"tar.zst", extensionZst},
-		{"tzst", extensionTzst},
-		{"tar.br", extensionBr},
-		{"tbr", extensionTbr},
-		{"tar.lz4", extensionLz4},
-		{"tlz4", extensionTlz4},
-		{"tar.lz", extensionLzip},
-		{"tar.mz", extensionMz},
-		{"tmz", extensionTmz},
+		{"tar", extensionTar, ""},
+		{"zip", extensionZip, ""},
+		{"tar.gz", extensionGz, ""},
+		{"tgz", extensionTgz, ""},
+		{"tar.bz2", extensionBz2, ""},
+		{"tbz2", extensionTbz2, ""},
+		{"tbz", extensionTbz, ""},
+		{"tar.xz", extensionXz, ""},
+		{"txz", extensionTxz, ""},
+		{"tar.zst", extensionZst, ""},
+		{"tzst", extensionTzst, ""},
+		{"tar.br", extensionBr, ""},
+		{"tbr", extensionTbr, ""},
+		{"tar.lz4", extensionLz4, ""},
+		{"tlz4", extensionTlz4, ""},
+		{"tar.lz", extensionLzip, ""},
+		{"tar.mz", extensionMz, ""},
+		{"tmz", extensionTmz, ""},
+		{"package.zarf", ".zarf", "unsupported archive extension for"},
 	}
 
 	for _, tc := range formats {
@@ -71,11 +73,16 @@ func TestCompressAndDecompress_MultipleFormats(t *testing.T) {
 			srcDir := t.TempDir()
 			f1 := filepath.Join(srcDir, "file1.txt")
 			f2 := filepath.Join(srcDir, "file2.txt")
-			writeFile(t, f1, "hello world")
-			writeFile(t, f2, "zarf testing")
+			writeTestFile(t, f1, "hello world")
+			writeTestFile(t, f2, "zarf testing")
 
 			dest := filepath.Join(t.TempDir(), "archive"+tc.extension)
-			require.NoError(t, Compress(ctx, []string{f1, f2}, dest, CompressOpts{}), "Compress failed for %s", tc.name)
+			err := Compress(ctx, []string{f1, f2}, dest, CompressOpts{})
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, tc.expectedErr)
+				return
+			}
+			require.NoError(t, err, "Compress failed for %s", tc.name)
 
 			dstDir := t.TempDir()
 			require.NoError(t, Decompress(ctx, dest, dstDir, DecompressOpts{}), "Decompress failed for %s", tc.name)
@@ -92,7 +99,7 @@ func TestCompressUnsupportedExtension(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	src := filepath.Join(t.TempDir(), "f.txt")
-	writeFile(t, src, "data")
+	writeTestFile(t, src, "data")
 	dest := filepath.Join(t.TempDir(), "archive.foo")
 	err := Compress(ctx, []string{src}, dest, CompressOpts{})
 	if err == nil || !strings.Contains(err.Error(), "unsupported archive extension") {
@@ -115,7 +122,7 @@ func TestDecompressFiltered(t *testing.T) {
 			setup: func(t *testing.T, ctx context.Context) (string, string, DecompressOpts) {
 				srcDir := t.TempDir()
 				file := filepath.Join(srcDir, "only.txt")
-				writeFile(t, file, "uniquely present")
+				writeTestFile(t, file, "uniquely present")
 				destZip := filepath.Join(t.TempDir(), "only.zip")
 				require.NoError(t, Compress(ctx, []string{file}, destZip, CompressOpts{}), "Compress failed")
 				dstDir := t.TempDir()
@@ -130,7 +137,7 @@ func TestDecompressFiltered(t *testing.T) {
 			setup: func(t *testing.T, ctx context.Context) (string, string, DecompressOpts) {
 				srcDir := t.TempDir()
 				file := filepath.Join(srcDir, "only.txt")
-				writeFile(t, file, "content")
+				writeTestFile(t, file, "content")
 				destZip := filepath.Join(t.TempDir(), "only.zip")
 				require.NoError(t, Compress(ctx, []string{file}, destZip, CompressOpts{}), "Compress failed")
 				dstDir := t.TempDir()
@@ -180,7 +187,7 @@ func TestDecompressOptions(t *testing.T) {
 				innerDir := filepath.Join(tmp, "inner")
 				require.NoError(t, os.Mkdir(innerDir, testDirPerm))
 				innerFile := filepath.Join(innerDir, "foo.txt")
-				writeFile(t, innerFile, "nested content")
+				writeTestFile(t, innerFile, "nested content")
 				innerTar := filepath.Join(tmp, "inner.tar")
 				require.NoError(t, Compress(ctx, []string{innerFile}, innerTar, CompressOpts{}))
 				outerDir := filepath.Join(tmp, "outer")
@@ -211,14 +218,14 @@ func TestDecompressOptions(t *testing.T) {
 			setup: func(t *testing.T, ctx context.Context) (string, string, DecompressOpts) {
 				tmp := t.TempDir()
 				origFile := filepath.Join(tmp, "orig.txt")
-				writeFile(t, origFile, "original")
+				writeTestFile(t, origFile, "original")
 				archivePath := filepath.Join(tmp, "archive.tar.gz")
 				require.NoError(t, Compress(ctx, []string{origFile}, archivePath, CompressOpts{}))
 				outDir := filepath.Join(tmp, "out")
 				require.NoError(t, Decompress(ctx, archivePath, outDir, DecompressOpts{}))
 				outFile := filepath.Join(outDir, "orig.txt")
 				require.Equal(t, "original", readFile(t, outFile))
-				writeFile(t, origFile, "new content")
+				writeTestFile(t, origFile, "new content")
 				archivePath2 := filepath.Join(tmp, "archive2.tar.gz")
 				require.NoError(t, Compress(ctx, []string{origFile}, archivePath2, CompressOpts{}))
 				opts := DecompressOpts{OverwriteExisting: true}
