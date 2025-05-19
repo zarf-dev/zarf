@@ -12,10 +12,15 @@ The following diagram shows the order of operations for the `zarf package create
 <Details label="Lifecycle Diagram">
 <Mermaid diagram={`
 
-flowchart LR
+%%{ init: {
+  flowchart: { nodeSpacing: 50, rankSpacing: 60 },
+  themeVariables: { fontSize: '14px', textMargin: 8 }
+} }%%
+
+flowchart TB
   %%=== Setup phase ===%%
   subgraph Setup
-    direction LR
+    direction TB
     A1[Set working directory] --> A2[Parse zarf.yaml]
     A2 --> A3[Filter components by architecture]
     A3 --> A4[Detect init package]
@@ -31,32 +36,32 @@ flowchart LR
   V1 -->|Yes| I1
 
   %%=== Init package choice ===%%
-  subgraph Init Package
-    direction LR
+  subgraph "Init Package"
+    direction TB
     I1{Init package?}
     I1 -->|Yes| I2[Add seed image]
-    I1 -->|No| I2
+    I1 -->|No|  I2
     I2 --> C1
   end
 
   %%=== OnCreate actions ===%%
-  subgraph OnCreate Actions
-    direction LR
-    C1[Add each component] --> C2[Before onCreate]
+  subgraph "OnCreate Actions"
+    direction TB
+    C1[Add each component] --> C2[Before onCreate]:::action
     C2 --> C3[Load .charts]
     C3 --> C4[Load .files]
     C4 --> C5[Load .dataInjections]
     C5 --> C6[Load .manifests]
     C6 --> C7[Load .repos]
-    C7 --> C8[After onCreate]
+    C7 --> C8[After onCreate]:::action
     C8 --> S1{Success?}
-    S1 -->|Yes| S2[onCreate.success]
-    S1 -->|No| S3[onCreate.failure] --> Abort
+    S1 -->|Yes| S2[onCreate.success]:::action
+    S1 -->|No| S3[onCreate.failure]:::action --> Abort
   end
 
   %%=== Finalize package ===%%
-  subgraph Finalize
-    direction LR
+  subgraph "Finalize"
+    direction TB
     S2 --> F1[Load all .images]
     F1 --> F2{Skip SBOM?}
     F2 -->|No| F3[Generate SBOM] --> F4
@@ -64,7 +69,7 @@ flowchart LR
     F4 --> F5[Create package archive]
     F5 --> M1{Is multipart?}
     M1 -->|Yes| M2[Split archive] --> F6[Handle sbom view/out flags]
-    M1 -->|No| F6
+    M1 -->|No|  F6
   end
 
   classDef prompt fill:#4adede,color:#000000
