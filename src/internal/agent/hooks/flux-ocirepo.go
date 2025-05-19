@@ -21,6 +21,10 @@ import (
 	v1 "k8s.io/api/admission/v1"
 )
 
+const (
+	HelmMediaTypeManifest = "application/vnd.cncf.helm.config.v1+json"
+)
+
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
 func NewOCIRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
 	return operations.Hook{
@@ -97,9 +101,27 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			patchedURL = fmt.Sprintf("%s:%s", patchedURL, src.Spec.Reference.Tag)
 		}
 
+		// Always patch with crc32 hashing
 		patchedSrc, err := transform.ImageTransformHost(registryAddress, patchedURL)
 		if err != nil {
 			return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
+		}
+
+		// Get the media type of the oci image
+		mediaType, err := getManifestMediaType(ctx, zarfState, patchedSrc)
+
+		// If we get an error, we fall back to existing mutation logic
+		if err != nil {
+			mediaType = ""
+		}
+
+		l.Debug("Got the following media type", "mediaType", mediaType, "registryAddress", registryAddress)
+
+		if isChart(mediaType) {
+			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, patchedURL)
+			if err != nil {
+				return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
+			}
 		}
 
 		patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
@@ -146,4 +168,12 @@ func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.O
 	}
 
 	return patches
+}
+
+func isChart(mediaType string) bool {
+	switch mediaType {
+	case HelmMediaTypeManifest:
+		return true
+	}
+	return false
 }
