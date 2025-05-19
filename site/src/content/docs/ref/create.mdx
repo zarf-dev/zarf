@@ -11,6 +11,8 @@ The following diagram shows the order of operations for the `zarf package create
 
 <Details label="Lifecycle Diagram">
 <Mermaid diagram={`
+%%{ init: { flowchart: { curve: 'linear' } } }%%
+
 graph TD
     A1(set working directory)-->A2
     A2(parse zarf.yaml)-->A3
