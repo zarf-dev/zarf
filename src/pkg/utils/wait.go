@@ -32,10 +32,11 @@ func isJSONPathWaitType(condition string) bool {
 // ExecuteWait executes the wait-for command.
 func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kind, identifier string, timeout time.Duration) error {
 	l := logger.From(ctx)
+	waitInterval := time.Second
 	// Handle network endpoints.
 	switch kind {
 	case "http", "https", "tcp":
-		return waitForNetworkEndpoint(ctx, kind, identifier, condition, timeout)
+		return waitForNetworkEndpoint(ctx, kind, identifier, condition, timeout, waitInterval)
 	}
 
 	// Type of wait, condition or JSONPath
@@ -74,27 +75,33 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 	}
 
 	// Setup the spinner messages.
-	conditionMsg := fmt.Sprintf("Waiting for %s%s%s to be %s.", kind, identifierMsg, namespaceMsg, condition)
-	existMsg := fmt.Sprintf("Waiting for %s%s to exist.", path.Join(kind, identifierMsg), namespaceMsg)
+	conditionMsg := fmt.Sprintf("waiting for %s%s to be %s.", path.Join(kind, identifierMsg), namespaceMsg, condition)
+	existMsg := fmt.Sprintf("waiting for %s%s to exist.", path.Join(kind, identifierMsg), namespaceMsg)
+	completedMsg := fmt.Sprintf("wait for %s%s complete.", path.Join(kind, identifierMsg), namespaceMsg)
 
 	// Get the OS shell to execute commands in
 	shell, shellArgs := exec.GetOSShell(v1alpha1.Shell{Windows: "cmd"})
 
+	l.Info(existMsg)
 	for {
 		// Delay the check for 1 second
-		time.Sleep(time.Second)
+		time.Sleep(waitInterval)
 
 		select {
 		case <-expired:
 			return errors.New("wait timed out")
 
 		default:
-			l.Info(existMsg)
 			// Check if the resource exists.
 			zarfKubectlGet := fmt.Sprintf("%s tools kubectl get %s %s %s", zarfCommand, namespaceFlag, kind, identifier)
 			_, stderr, err := exec.Cmd(shell, append(shellArgs, zarfKubectlGet)...)
 			if err != nil {
-				l.Debug("resource error", "error", err)
+				if strings.Contains(stderr, "connect: connection refused") {
+					l.Info("api server unavailable")
+					continue
+				}
+				// otherwise just log and retry
+				l.Info("resource error", "error", err)
 				continue
 			}
 
@@ -122,14 +129,14 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 			}
 
 			// And just like that, success!
-			l.Info(conditionMsg)
+			l.Info(completedMsg)
 			return nil
 		}
 	}
 }
 
 // waitForNetworkEndpoint waits for a network endpoint to respond.
-func waitForNetworkEndpoint(ctx context.Context, resource, name, condition string, timeout time.Duration) error {
+func waitForNetworkEndpoint(ctx context.Context, resource, name, condition string, timeout time.Duration, waitInterval time.Duration) error {
 	l := logger.From(ctx)
 	// Set the timeout for the wait-for command.
 	expired := time.After(timeout)
@@ -143,9 +150,9 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 	delay := 100 * time.Millisecond
 
 	for {
-		// Delay the check for 100ms the first time and then 1 second after that.
+		// Delay the check for 100ms the first time and then the wait interval after that
 		time.Sleep(delay)
-		delay = time.Second
+		delay = waitInterval
 
 		select {
 		case <-expired:
@@ -160,10 +167,14 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 				if condition == "success" {
 					// Try to get the URL and check the status code.
 					resp, err := http.Get(url)
+					if err != nil {
+						l.Debug(err.Error())
+						continue
+					}
 
 					// If the status code is not in the 2xx range, try again.
-					if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
-						l.Debug(err.Error())
+					if resp.StatusCode < 200 || resp.StatusCode > 299 {
+						l.Debug("did not receive 2xx status code", "response_code", resp.StatusCode)
 						continue
 					}
 
@@ -182,8 +193,12 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 
 				// Try to get the URL and check the status code.
 				resp, err := http.Get(url)
-				if err != nil || resp.StatusCode != code {
+				if err != nil {
 					l.Debug(err.Error())
+					continue
+				}
+				if resp.StatusCode != code {
+					l.Debug("did not receive expected status code", "expected", code, "actual", resp.StatusCode)
 					continue
 				}
 			default:

@@ -13,9 +13,9 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -127,10 +127,9 @@ func (ic *ImportChain) fetchOCISkeleton(ctx context.Context) error {
 		return nil
 	}
 
-	tu := archiver.Tar{
+	decompressOpts := archive.DecompressOpts{
 		OverwriteExisting: true,
-		// removes /<component-name>/ from the paths
-		StripComponents: 1,
+		StripComponents:   1,
 	}
-	return tu.Unarchive(tb, dir)
+	return archive.Decompress(ctx, tb, dir, decompressOpts)
 }

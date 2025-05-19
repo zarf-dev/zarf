@@ -27,10 +27,10 @@ import (
 	"github.com/anchore/syft/syft/source/stereoscopesource"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/mholt/archiver/v3"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -153,7 +153,7 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 	}
 	defer os.RemoveAll(tmpDir)
 	tarPath := filepath.Join(buildPath, ComponentsDir, component.Name) + ".tar"
-	err = archiver.Unarchive(tarPath, tmpDir)
+	err = archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{})
 	if err != nil {
 		return nil, err
 	}

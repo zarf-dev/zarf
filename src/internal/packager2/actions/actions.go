@@ -140,7 +140,7 @@ retryCmd:
 		}
 
 		// Run the command on repeat until success or timeout.
-		l.Info("waiting for action", "cmd", cmdEscaped, "timeout", actionDefaults.MaxTotalSeconds)
+		l.Info("waiting for action", "cmd", cmdEscaped, "timeout", fmt.Sprintf("%d seconds", actionDefaults.MaxTotalSeconds))
 		select {
 		// On timeout break the loop to abort.
 		case <-timeout:

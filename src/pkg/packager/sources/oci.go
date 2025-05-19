@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mholt/archiver/v3"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -40,12 +40,15 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 	if err != nil {
 		return pkg, nil, err
 	}
+
+	isSkeleton := pkg.Build.Architecture == zoci.SkeletonArch || strings.HasSuffix(s.Repo().Reference.Reference, zoci.SkeletonArch)
+
 	pkg.Components, err = filter.Apply(pkg)
 	if err != nil {
 		return pkg, nil, err
 	}
 
-	layersToPull, err := s.LayersFromRequestedComponents(ctx, pkg.Components)
+	layersToPull, err := s.AssembleLayers(ctx, pkg.Components, isSkeleton, zoci.AllLayers)
 	if err != nil {
 		return pkg, nil, fmt.Errorf("unable to get published component image layers: %s", err.Error())
 	}
@@ -161,7 +164,14 @@ func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 		return "", err
 	}
 	defer os.RemoveAll(tmp)
-	fetched, err := s.PullPackage(ctx, tmp, config.CommonOptions.OCIConcurrency)
+
+	root, err := s.FetchRoot(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// Pull all the layers
+	fetched, err := s.PullPackage(ctx, tmp, config.CommonOptions.OCIConcurrency, root.Layers...)
 	if err != nil {
 		return "", err
 	}
@@ -193,5 +203,5 @@ func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 
 	_ = os.Remove(dstTarball)
 
-	return dstTarball, archiver.Archive(allTheLayers, dstTarball)
+	return dstTarball, archive.Compress(ctx, allTheLayers, dstTarball, archive.CompressOpts{})
 }

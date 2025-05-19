@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -27,6 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -216,9 +216,11 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 	if err != nil {
 		return nil, "", err
 	}
-	if err := archiver.Archive(tarFileList, tarPath); err != nil {
-		return nil, "", err
+
+	if err := archive.Compress(ctx, tarFileList, tarPath, archive.CompressOpts{}); err != nil {
+		return nil, "", fmt.Errorf("failed to compress the payload: %w", err)
 	}
+
 	payloadChunkSize := 1024 * 768
 	chunks, shasum, err := helpers.ReadFileByChunks(tarPath, payloadChunkSize)
 	if err != nil {

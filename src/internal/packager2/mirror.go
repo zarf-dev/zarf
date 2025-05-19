@@ -39,12 +39,16 @@ type MirrorOptions struct {
 }
 
 // Mirror mirrors the package contents to the given registry and git server.
-func Mirror(ctx context.Context, opt MirrorOptions) error {
+func MirrorImages(ctx context.Context, opt MirrorOptions) error {
 	err := pushImagesToRegistry(ctx, opt.PkgLayout, opt.RegistryInfo, opt.NoImageChecksum, opt.PlainHTTP, opt.OCIConcurrency, opt.Retries, opt.InsecureSkipTLSVerify)
 	if err != nil {
 		return err
 	}
-	err = pushReposToRepository(ctx, opt.Cluster, opt.PkgLayout, opt.GitInfo, opt.Retries)
+	return nil
+}
+
+func MirrorRepos(ctx context.Context, opt MirrorOptions) error {
+	err := pushReposToRepository(ctx, opt.Cluster, opt.PkgLayout, opt.GitInfo, opt.Retries)
 	if err != nil {
 		return err
 	}
@@ -92,7 +96,7 @@ func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *l
 				return err
 			}
 			defer os.RemoveAll(tmpDir)
-			reposPath, err := pkgLayout.GetComponentDir(tmpDir, component.Name, layout.RepoComponentDir)
+			reposPath, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.RepoComponentDir)
 			if err != nil {
 				return err
 			}

@@ -224,20 +224,26 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdPackageMirrorLong  = "Unpacks resources and dependencies from a Zarf package archive and mirrors them into the specified\n" +
 		"image registries and git repositories within the target environment"
 	CmdPackageMirrorExample = `
-# Mirror resources to internal Zarf resources
-$ zarf package mirror-resources <your-package.tar.zst> \
-	--registry-url http://zarf-docker-registry.zarf.svc.cluster.local:5000 \
-	--registry-push-username zarf-push \
-	--registry-push-password <generated-registry-push-password> \
-	--git-url http://zarf-gitea-http.zarf.svc.cluster.local:3000 \
-	--git-push-username zarf-git-user \
-	--git-push-password <generated-git-push-password>
+# Mirror resources to internal Zarf resources - by default this will use Zarf state if available
+$ zarf package mirror-resources <your-package.tar.zst>
 
 # Mirror resources to external resources
 $ zarf package mirror-resources <your-package.tar.zst> \
 	--registry-url registry.enterprise.corp \
 	--registry-push-username <registry-push-username> \
 	--registry-push-password <registry-push-password> \
+	--git-url https://git.enterprise.corp \
+	--git-push-username <git-push-username> \
+	--git-push-password <git-push-password>
+
+# Mirroring resources can be specified by artifact type - this will only mirror images
+$ zarf package mirror-resources <your-package.tar.zst> --images \
+	--registry-url registry.enterprise.corp \
+	--registry-push-username <registry-push-username> \
+	--registry-push-password <registry-push-password>
+
+# Mirroring for repositories can be specified by artifact type - this will only mirror git repositories
+$ zarf package mirror-resources <your-package.tar.zst> --repos \
 	--git-url https://git.enterprise.corp \
 	--git-push-username <git-push-username> \
 	--git-push-password <git-push-password>

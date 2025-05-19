@@ -27,7 +27,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
@@ -250,7 +249,10 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-type packageMirrorResourcesOptions struct{}
+type packageMirrorResourcesOptions struct {
+	mirrorImages bool
+	mirrorRepos  bool
+}
 
 func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 	o := &packageMirrorResourcesOptions{}
@@ -291,6 +293,11 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
 
+	// Flags for specifying which resources to mirror
+	cmd.Flags().BoolVar(&o.mirrorImages, "images", false, "mirror only the images")
+	cmd.Flags().BoolVar(&o.mirrorRepos, "repos", false, "mirror only the git repositories")
+	cmd.MarkFlagsMutuallyExclusive("images", "repos")
+
 	return cmd
 }
 
@@ -299,18 +306,17 @@ func (o *packageMirrorResourcesOptions) preRun(_ *cobra.Command, _ []string) {
 	if config.CommonOptions.Insecure {
 		pkgConfig.PkgOpts.SkipSignatureValidation = true
 	}
+
+	// post flag validation - perform both if neither were set
+	if !o.mirrorImages && !o.mirrorRepos {
+		o.mirrorImages = true
+		o.mirrorRepos = true
+	}
 }
 
 func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
-	var c *cluster.Cluster
-	if dns.IsServiceURL(pkgConfig.InitOpts.RegistryInfo.Address) || dns.IsServiceURL(pkgConfig.InitOpts.GitServer.Address) {
-		var err error
-		c, err = cluster.New(ctx)
-		if err != nil {
-			return err
-		}
-	}
+
 	src, err := choosePackage(ctx, args)
 	if err != nil {
 		return err
@@ -336,20 +342,78 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	mirrorOpt := packager2.MirrorOptions{
-		Cluster:               c,
-		PkgLayout:             pkgLayout,
-		RegistryInfo:          pkgConfig.InitOpts.RegistryInfo,
-		GitInfo:               pkgConfig.InitOpts.GitServer,
-		NoImageChecksum:       pkgConfig.MirrorOpts.NoImgChecksum,
-		Retries:               pkgConfig.PkgOpts.Retries,
-		OCIConcurrency:        config.CommonOptions.OCIConcurrency,
-		PlainHTTP:             config.CommonOptions.PlainHTTP,
-		InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+	images, repos := 0, 0
+	// Let's count the images and repos in the package
+	for _, component := range pkgLayout.Pkg.Components {
+		images += len(component.Images)
+		repos += len(component.Repos)
 	}
-	err = packager2.Mirror(ctx, mirrorOpt)
-	if err != nil {
-		return err
+	logger.From(ctx).Debug("package contains images and repos", "images", images, "repos", repos)
+
+	// We don't yet know if the targets are internal or external
+	c, _ := cluster.New(ctx) //nolint:errcheck
+
+	if images == 0 && o.mirrorImages {
+		logger.From(ctx).Warn("no images found in package to mirror")
+	}
+
+	if o.mirrorImages && images > 0 {
+		logger.From(ctx).Info("mirroring images", "images", images)
+		if pkgConfig.InitOpts.RegistryInfo.Address == "" {
+			// if empty flag & zarf state available - execute
+			// otherwise return error
+			state, err := c.LoadState(ctx)
+			if err != nil {
+				return fmt.Errorf("no registry URL provided and no zarf state found")
+			}
+			logger.From(ctx).Debug("no registry URL provided, using zarf state", "address", state.RegistryInfo.Address)
+			pkgConfig.InitOpts.RegistryInfo = state.RegistryInfo
+		}
+		mirrorOpt := packager2.MirrorOptions{
+			Cluster:               c,
+			PkgLayout:             pkgLayout,
+			RegistryInfo:          pkgConfig.InitOpts.RegistryInfo,
+			NoImageChecksum:       pkgConfig.MirrorOpts.NoImgChecksum,
+			Retries:               pkgConfig.PkgOpts.Retries,
+			OCIConcurrency:        config.CommonOptions.OCIConcurrency,
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		}
+		err = packager2.MirrorImages(ctx, mirrorOpt)
+		if err != nil {
+			return err
+		}
+	}
+
+	if repos == 0 && o.mirrorRepos {
+		logger.From(ctx).Warn("no git repositories found in package to mirror")
+	}
+
+	if o.mirrorRepos && repos > 0 {
+		logger.From(ctx).Info("mirroring repos", "repos", repos)
+		if pkgConfig.InitOpts.GitServer.Address == "" {
+			state, err := c.LoadState(ctx)
+			if err != nil {
+				return fmt.Errorf("no git URL provided and no zarf state found")
+			}
+			logger.From(ctx).Debug("no git URL provided, using zarf state", "address", state.GitServer.Address)
+			pkgConfig.InitOpts.GitServer = state.GitServer
+		}
+
+		mirrorOpt := packager2.MirrorOptions{
+			Cluster:               c,
+			PkgLayout:             pkgLayout,
+			GitInfo:               pkgConfig.InitOpts.GitServer,
+			NoImageChecksum:       pkgConfig.MirrorOpts.NoImgChecksum,
+			Retries:               pkgConfig.PkgOpts.Retries,
+			OCIConcurrency:        config.CommonOptions.OCIConcurrency,
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		}
+		err = packager2.MirrorRepos(ctx, mirrorOpt)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -459,23 +523,17 @@ func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) 
 	}
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-	loadOpt := packager2.LoadOptions{
-		Source:                  src,
+
+	resourceOpts := packager2.InspectPackageResourcesOptions{
 		SkipSignatureValidation: o.skipSignatureValidation,
-		Filter:                  filters.BySelectState(o.components),
+		Components:              o.components,
+		Architecture:            config.GetArch(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		SetVariables:            o.setVariables,
+		KubeVersion:             o.kubeVersion,
 	}
-	layout, err := packager2.LoadPackage(ctx, loadOpt)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = errors.Join(err, layout.Cleanup())
-	}()
-	result, err := packager2.InspectPackageResources(ctx, layout, packager2.InspectPackageResourcesOptions{
-		SetVariables: o.setVariables,
-		KubeVersion:  o.kubeVersion,
-	})
+
+	result, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
 	if err != nil {
 		return err
 	}
@@ -533,23 +591,16 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 	}
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-	loadOpt := packager2.LoadOptions{
-		Source:                  src,
+
+	resourceOpts := packager2.InspectPackageResourcesOptions{
 		SkipSignatureValidation: o.skipSignatureValidation,
-		Filter:                  filters.BySelectState(o.components),
+		Architecture:            config.GetArch(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		SetVariables:            o.setVariables,
+		KubeVersion:             o.kubeVersion,
 	}
-	layout, err := packager2.LoadPackage(ctx, loadOpt)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = errors.Join(err, layout.Cleanup())
-	}()
-	result, err := packager2.InspectPackageResources(ctx, layout, packager2.InspectPackageResourcesOptions{
-		SetVariables: o.setVariables,
-		KubeVersion:  o.kubeVersion,
-	})
+
+	result, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
 	if err != nil {
 		return err
 	}
@@ -606,24 +657,20 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	if err != nil {
 		return err
 	}
-	loadOpt := packager2.LoadOptions{
-		Source:                  src,
+
+	inspectOptions := packager2.InspectPackageSbomsOptions{
 		SkipSignatureValidation: o.skipSignatureValidation,
-		Filter:                  filters.Empty(),
+		OutputDir:               o.outputDir,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		Architecture:            config.GetArch(),
 	}
-	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
+
+	result, err := packager2.InspectPackageSboms(ctx, src, inspectOptions)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err = errors.Join(err, pkgLayout.Cleanup())
-	}()
-	outputPath, err := pkgLayout.GetSBOM(o.outputDir)
-	if err != nil {
-		return fmt.Errorf("could not get SBOM: %w", err)
-	}
-	outputPath, err = filepath.Abs(outputPath)
+
+	outputPath, err := filepath.Abs(result.Path)
 	if err != nil {
 		logger.From(ctx).Warn("SBOM successfully extracted, couldn't get output path", "error", err)
 		return nil
@@ -664,23 +711,17 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	// The user may be pulling the package from the cluster or using a built package
-	// since we don't know we don't check this error
-	c, _ := cluster.New(ctx) //nolint:errcheck
+	inspectImageOpts := packager2.InspectPackageImagesOptions{
+		Architecture:            config.GetArch(),
+		SkipSignatureValidation: o.skipSignatureValidation,
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+	}
 
-	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, c, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
+	result, err := packager2.InspectPackageImages(ctx, src, inspectImageOpts)
 	if err != nil {
 		return err
 	}
-	var imageList []string
-	for _, component := range pkg.Components {
-		imageList = append(imageList, component.Images...)
-	}
-	if imageList == nil {
-		return fmt.Errorf("failed listing images: 0 images found in package")
-	}
-	imageList = helpers.Unique(imageList)
-	for _, image := range imageList {
+	for _, image := range result.Images {
 		fmt.Println("-", image)
 	}
 	return nil
@@ -718,15 +759,18 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		return err
 	}
 
-	// The user may be pulling the package from the cluster or using a built package
-	// since we don't know we don't check this error
-	c, _ := cluster.New(ctx) //nolint:errcheck
+	defOpts := packager2.InspectPackageDefinitionOptions{
+		Architecture:            config.GetArch(),
+		SkipSignatureValidation: o.skipSignatureValidation,
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+	}
 
-	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, c, src, o.skipSignatureValidation, pkgConfig.PkgOpts.PublicKeyPath)
+	result, err := packager2.InspectPackageDefinition(ctx, src, defOpts)
 	if err != nil {
 		return err
 	}
-	err = utils.ColorPrintYAML(pkg, nil, false)
+
+	err = utils.ColorPrintYAML(result.Package, nil, false)
 	if err != nil {
 		return err
 	}
@@ -1011,6 +1055,7 @@ func newPackagePullCommand(v *viper.Viper) *cobra.Command {
 }
 
 func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
+	srcURL := args[0]
 	outputDir := pkgConfig.PullOpts.OutputDirectory
 	if outputDir == "" {
 		wd, err := os.Getwd()
@@ -1019,7 +1064,11 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		}
 		outputDir = wd
 	}
-	err := packager2.Pull(cmd.Context(), args[0], outputDir, pkgConfig.PkgOpts.Shasum, config.GetArch(), filters.Empty(), pkgConfig.PkgOpts.PublicKeyPath, pkgConfig.PkgOpts.SkipSignatureValidation)
+	err := packager.Pull(cmd.Context(), srcURL, outputDir, packager.PullOptions{
+		SHASum:                  pkgConfig.PkgOpts.Shasum,
+		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+	})
 	if err != nil {
 		return err
 	}
