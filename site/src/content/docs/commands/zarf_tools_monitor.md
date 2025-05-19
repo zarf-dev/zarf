@@ -32,13 +32,14 @@ zarf tools monitor [flags]
       --insecure-skip-tls-verify       If true, the server's caCertFile will not be checked for validity
       --kubeconfig string              Path to the kubeconfig file to use for CLI requests
       --logFile string                 Specify the log file
-  -l, --logLevel string                Specify a log level (error, warn, info, debug, trace)
+  -l, --logLevel string                Specify a log level (error, warn, info, debug)
       --logoless                       Turn K9s logo off
   -n, --namespace string               If present, the namespace scope for this CLI request
       --readonly                       Sets readOnly mode by overriding readOnly configuration setting
   -r, --refresh int                    Specify the default refresh rate as an integer (sec) (default 2)
       --request-timeout string         The length of time to wait before giving up on a single server request
       --screen-dump-dir string         Sets a path to a dir for a screen dumps
+      --splashless                     Turn K9s splash screen off
       --token string                   Bearer token for authentication to the API server
       --user string                    The name of the kubeconfig user to use
       --write                          Sets write mode by overriding the readOnly configuration setting
