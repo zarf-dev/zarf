@@ -11,7 +11,6 @@ The following diagram shows the order of operations for the `zarf package create
 
 <Details label="Lifecycle Diagram">
 <Mermaid diagram={`
-%%{ init: { flowchart: { curve: 'linear' } } }%%
 
 graph TD
     A1(set working directory)-->A2
@@ -30,14 +29,17 @@ graph TD
     A11 -->|No| A13
 
     subgraph  ""
-    A13(add each component)-->A13
+    A13(add each component)-->A13_loop
+    A13_loop-->A13
+
     A13 --> A14(run each '.actions.onCreate.before'):::action-->A14
     A14 --> A15(load '.charts')-->A16
     A16(load '.files')-->A17
     A17(load '.dataInjections')-->A18
     A18(load '.manifests')-->A19
     A19(load '.repos')-->A20
-    A20(run each '.actions.onCreate.after'):::action-->A20
+    A20(run each '.actions.onCreate.after'):::action-->A20_loop
+    A20_loop --> A20
     A20-->A21{Success?}
     A21-->|Yes|A22(run each\n'.actions.onCreate.success'):::action-->A22
     A21-->|No|A23(run each\n'.actions.onCreate.failure'):::action-->A23-->A999
@@ -60,6 +62,10 @@ graph TD
     classDef prompt fill:#4adede,color:#000000
     classDef action fill:#bd93f9,color:#000000
     classDef fail fill:#aa0000
+
+    classDef hiddenNode fill:none,stroke:none;
+    class A13_loop hiddenNode;
+    class A20_loop hiddenNode;
 `}/>
 </Details>
 
