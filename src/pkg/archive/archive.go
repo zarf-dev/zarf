@@ -138,7 +138,7 @@ func Decompress(ctx context.Context, sourceArchive, dst string, opts DecompressO
 		err = unarchiveWithStrip(ctx, sourceArchive, dst,
 			opts.StripComponents, opts.OverwriteExisting)
 	} else {
-		err = unarchive(ctx, sourceArchive, dst)
+		_, err = Unarchive(ctx, sourceArchive, dst)
 	}
 	if err != nil {
 		return fmt.Errorf("unable to perform decompression: %w", err)
@@ -340,7 +340,7 @@ func nestedUnarchive(ctx context.Context, dst string) error {
 			if info.Name() == sbomFileName {
 				dst = strings.TrimSuffix(path, extensionTar)
 			}
-			err := unarchive(ctx, path, dst)
+			_, err := Unarchive(ctx, path, dst)
 			if err != nil {
 				return fmt.Errorf(lang.ErrUnarchive, path, err.Error())
 			}
@@ -357,12 +357,13 @@ func nestedUnarchive(ctx context.Context, dst string) error {
 	return nil
 }
 
-// unarchive opens src, identifies its format, and extracts into dst.
-func unarchive(ctx context.Context, src, dst string) (err error) {
+// Unarchive opens src, identifies its format, and extracts into dst.
+func Unarchive(ctx context.Context, src, dst string) (pathsExtracted []string, err error) {
+	pathsExtracted = make([]string, 0)
 	// Open the archive file
 	file, err := os.Open(src)
 	if err != nil {
-		return fmt.Errorf("unable to open archive %q: %w", src, err)
+		return []string{}, fmt.Errorf("unable to open archive %q: %w", src, err)
 	}
 	defer func() {
 		err = errors.Join(err, file.Close())
@@ -371,18 +372,18 @@ func unarchive(ctx context.Context, src, dst string) (err error) {
 	// Identify format & get an input stream
 	format, input, err := archives.Identify(ctx, src, file)
 	if err != nil {
-		return fmt.Errorf("unable to identify archive %q: %w", src, err)
+		return []string{}, fmt.Errorf("unable to identify archive %q: %w", src, err)
 	}
 
 	// Assert that it supports extraction
 	extractor, ok := format.(archives.Extractor)
 	if !ok {
-		return fmt.Errorf("unsupported format for extraction: %T", format)
+		return []string{}, fmt.Errorf("unsupported format for extraction: %T", format)
 	}
 
 	// Ensure dst exists
 	if err := os.MkdirAll(dst, dirPerm); err != nil {
-		return fmt.Errorf("unable to create destination %q: %w", dst, err)
+		return []string{}, fmt.Errorf("unable to create destination %q: %w", dst, err)
 	}
 
 	// Define how each entry is written to disk
@@ -411,6 +412,7 @@ func unarchive(ctx context.Context, src, dst string) (err error) {
 			defer func() {
 				err = errors.Join(err, out.Close())
 			}()
+			pathsExtracted = append(pathsExtracted, f.NameInArchive)
 
 			in, err := f.Open()
 			if err != nil {
@@ -427,7 +429,7 @@ func unarchive(ctx context.Context, src, dst string) (err error) {
 
 	// Perform extraction
 	if err := extractor.Extract(ctx, input, handler); err != nil {
-		return fmt.Errorf("unable to extract %q: %w", src, err)
+		return []string{}, fmt.Errorf("unable to extract %q: %w", src, err)
 	}
-	return nil
+	return pathsExtracted, nil
 }

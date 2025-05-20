@@ -9,13 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/mholt/archives"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
@@ -46,47 +44,7 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 			return pkg, nil, err
 		}
 	}
-
-	pathsExtracted := []string{}
-	// 1) Mount the archive as a virtual file system.
-	fsys, err := archives.FileSystem(ctx, s.PackageSource, nil)
-	if err != nil {
-		return pkg, nil, fmt.Errorf("unable to open archive %q: %w", s.PackageSource, err)
-	}
-
-	// 2) Walk every entry in the archive.
-	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		// skip directories
-		if d.IsDir() {
-			return nil
-		}
-		// ensure parent dirs exist in our temp dir
-		dstPath := filepath.Join(dst.Base, path)
-		pathsExtracted = append(pathsExtracted, path)
-		if err := os.MkdirAll(filepath.Dir(dstPath), helpers.ReadExecuteAllWriteUser); err != nil {
-			return err
-		}
-		// copy file contents
-		in, err := fsys.Open(path)
-		if err != nil {
-			return err
-		}
-		defer in.Close()
-
-		out, err := os.Create(dstPath)
-		if err != nil {
-			return err
-		}
-		defer out.Close()
-
-		if _, err := io.Copy(out, in); err != nil {
-			return err
-		}
-		return nil
-	})
+	pathsExtracted, err := archive.Unarchive(ctx, s.PackageSource, dst.Base)
 	if err != nil {
 		return pkg, nil, err
 	}
