@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
@@ -44,7 +45,28 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 			return pkg, nil, err
 		}
 	}
-	pathsExtracted, err := archive.Unarchive(ctx, s.PackageSource, dst.Base)
+	// Decompress the archive
+	err = archive.Decompress(ctx, s.PackageSource, dst.Base, archive.DecompressOpts{})
+	if err != nil {
+		return pkg, nil, err
+	}
+	// Create a slice of extracted paths
+	pathsExtracted := make([]string, 0)
+	err = filepath.WalkDir(dst.Base, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		// DirEntry lets us check IsDir without needing FileInfo
+		if !d.IsDir() {
+			// compute path relative to root
+			rel, err := filepath.Rel(dst.Base, path)
+			if err != nil {
+				return err
+			}
+			pathsExtracted = append(pathsExtracted, rel)
+		}
+		return nil
+	})
 	if err != nil {
 		return pkg, nil, err
 	}

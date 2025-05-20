@@ -50,7 +50,8 @@ func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
-	_, err = archive.Unarchive(ctx, tarPath, dirPath)
+	// Decompress the archive
+	err = archive.Decompress(ctx, tarPath, dirPath, archive.DecompressOpts{})
 	if err != nil {
 		return nil, err
 	}
