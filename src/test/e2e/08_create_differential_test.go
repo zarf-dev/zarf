@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mholt/archiver/v3"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -43,8 +43,10 @@ func TestCreateDifferential(t *testing.T) {
 	defer e2e.CleanFiles(t, differentialPackageName)
 
 	// Extract the yaml of the differential package
-	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-	err = archiver.Extract(differentialPackageName, layout.ZarfYAML, tmpdir)
+	decompressOpts := archive.DecompressOpts{
+		Files: []string{layout.ZarfYAML},
+	}
+	err = archive.Decompress(t.Context(), differentialPackageName, tmpdir, decompressOpts)
 	require.NoError(t, err, "unable to extract zarf.yaml from the differential git package")
 
 	// Load the extracted zarf.yaml specification

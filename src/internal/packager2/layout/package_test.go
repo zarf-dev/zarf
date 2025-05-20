@@ -26,7 +26,7 @@ func TestPackageLayout(t *testing.T) {
 	require.Equal(t, "0.0.1", pkgLayout.Pkg.Metadata.Version)
 
 	tmpDir := t.TempDir()
-	manifestDir, err := pkgLayout.GetComponentDir(tmpDir, "test", ManifestsComponentDir)
+	manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, "test", ManifestsComponentDir)
 	require.NoError(t, err)
 	expected, err := os.ReadFile(filepath.Join(pathToPackage, "deployment.yaml"))
 	require.NoError(t, err)
@@ -34,14 +34,14 @@ func TestPackageLayout(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expected, b)
 
-	_, err = pkgLayout.GetComponentDir(t.TempDir(), "does-not-exist", ManifestsComponentDir)
+	_, err = pkgLayout.GetComponentDir(ctx, t.TempDir(), "does-not-exist", ManifestsComponentDir)
 	require.ErrorContains(t, err, "component does-not-exist does not exist in package")
 
-	_, err = pkgLayout.GetComponentDir(t.TempDir(), "test", FilesComponentDir)
+	_, err = pkgLayout.GetComponentDir(ctx, t.TempDir(), "test", FilesComponentDir)
 	require.ErrorContains(t, err, "component test could not access a files directory")
 
 	tmpDir = t.TempDir()
-	sbomPath, err := pkgLayout.GetSBOM(tmpDir)
+	sbomPath, err := pkgLayout.GetSBOM(ctx, tmpDir)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(sbomPath, "compare.html"))
 

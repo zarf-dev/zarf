@@ -120,7 +120,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	}
 
 	if opt.Output != "" {
-		name, err := nameFromMetadata(tmpPath)
+		name, err := nameFromMetadata(ctx, tmpPath)
 		if err != nil {
 			return nil, err
 		}

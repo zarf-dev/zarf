@@ -17,7 +17,6 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/mholt/archiver/v3"
 	"github.com/pterm/pterm"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
@@ -27,6 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -484,6 +484,7 @@ func newDevSha256SumCommand() *cobra.Command {
 
 func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error) {
 	hashErr := errors.New("unable to compute the SHA256SUM hash")
+	ctx := cmd.Context()
 
 	fileName := args[0]
 
@@ -508,7 +509,7 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 		}
 
 		downloadPath := filepath.Join(tmp, fileBase)
-		err = utils.DownloadToFile(cmd.Context(), fileName, downloadPath, "")
+		err = utils.DownloadToFile(ctx, fileName, downloadPath, "")
 		if err != nil {
 			return errors.Join(hashErr, err)
 		}
@@ -535,8 +536,10 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 
 		extractedFile := filepath.Join(tmp, o.extractPath)
 
-		// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-		err = archiver.Extract(fileName, o.extractPath, tmp)
+		decompressOpts := archive.DecompressOpts{
+			Files: []string{extractedFile},
+		}
+		err = archive.Decompress(ctx, fileName, tmp, decompressOpts)
 		if err != nil {
 			return errors.Join(hashErr, err)
 		}

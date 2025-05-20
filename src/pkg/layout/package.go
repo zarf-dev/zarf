@@ -16,9 +16,9 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/deprecated"
@@ -233,8 +233,8 @@ func (pp *PackagePaths) ArchivePackage(ctx context.Context, destinationTarball s
 
 	// Make the archive
 	archiveSrc := []string{pp.Base + string(os.PathSeparator)}
-	if err := archiver.Archive(archiveSrc, destinationTarball); err != nil {
-		return fmt.Errorf("unable to create package: %w", err)
+	if err := archive.Compress(ctx, archiveSrc, destinationTarball, archive.CompressOpts{}); err != nil {
+		return fmt.Errorf("unable to compress package: %w", err)
 	}
 	l.Debug("ArchivePackage wrote", "base", pp.Base, "destination", destinationTarball)
 
