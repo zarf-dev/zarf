@@ -96,7 +96,7 @@ func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *l
 				return err
 			}
 			defer os.RemoveAll(tmpDir)
-			reposPath, err := pkgLayout.GetComponentDir(tmpDir, component.Name, layout.RepoComponentDir)
+			reposPath, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.RepoComponentDir)
 			if err != nil {
 				return err
 			}

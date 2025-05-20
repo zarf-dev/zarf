@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	ocistore "oras.land/oras-go/v2/content/oci"
 
@@ -285,16 +285,15 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		return rel, nil
 	}
 
-	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-	tu := archiver.Tar{
+	decompressOpts := archive.DecompressOpts{
 		OverwriteExisting: true,
-		// removes /<component-name>/ from the paths
-		StripComponents: 1,
+		StripComponents:   1,
 	}
-	err = tu.Unarchive(tarball, dir)
+	err = archive.Decompress(ctx, tarball, dir, decompressOpts)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unable to extract archive %q: %w", tarball, err)
 	}
+
 	return rel, nil
 }
 

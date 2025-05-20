@@ -360,7 +360,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			return nil, err
 		}
 		defer os.RemoveAll(tmpDir)
-		dataInjectionsPath, err := pkgLayout.GetComponentDir(tmpDir, component.Name, layout2.DataComponentDir)
+		dataInjectionsPath, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout2.DataComponentDir)
 		if err != nil {
 			return nil, err
 		}
@@ -415,11 +415,11 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 	}
 	defer os.RemoveAll(tmpDir)
 
-	chartDir, err := pkgLayout.GetComponentDir(tmpDir, component.Name, layout2.ChartsComponentDir)
+	chartDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout2.ChartsComponentDir)
 	if err != nil {
 		return nil, err
 	}
-	valuesDir, err := pkgLayout.GetComponentDir(tmpDir, component.Name, layout2.ValuesComponentDir)
+	valuesDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout2.ValuesComponentDir)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("failed to get values: %w", err)
 	}
@@ -475,7 +475,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 		return nil, err
 	}
 	defer os.RemoveAll(tmpDir)
-	manifestDir, err := pkgLayout.GetComponentDir(tmpDir, component.Name, layout2.ManifestsComponentDir)
+	manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout2.ManifestsComponentDir)
 	if err != nil {
 		return nil, err
 	}
@@ -625,7 +625,7 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 	}
 	defer os.RemoveAll(tmpdir)
 
-	filesDir, err := pkgLayout.GetComponentDir(tmpdir, component.Name, layout.FilesComponentDir)
+	filesDir, err := pkgLayout.GetComponentDir(ctx, tmpdir, component.Name, layout.FilesComponentDir)
 	if err != nil {
 		return err
 	}

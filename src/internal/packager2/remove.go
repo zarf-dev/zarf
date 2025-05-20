@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
@@ -35,11 +36,11 @@ type RemoveOptions struct {
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
 func Remove(ctx context.Context, opt RemoveOptions) error {
 	l := logger.From(ctx)
-	pkg, err := GetPackageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath)
-	if err != nil {
-		return err
-	}
 
+	pkg, err := GetPackageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath, zoci.AllLayers)
+	if err != nil {
+		return fmt.Errorf("unable to load the package: %w", err)
+	}
 	// If components were provided; just remove the things we were asked to remove
 	components, err := opt.Filter.Apply(pkg)
 	if err != nil {

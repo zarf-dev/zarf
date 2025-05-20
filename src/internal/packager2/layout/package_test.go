@@ -17,30 +17,31 @@ func TestPackageLayout(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
+	pathToPackage := filepath.Join("..", "testdata", "load-package", "compressed")
 
-	pkgLayout, err := LoadFromTar(ctx, "../testdata/zarf-package-test-amd64-0.0.1.tar.zst", PackageLayoutOptions{})
+	pkgLayout, err := LoadFromTar(ctx, filepath.Join(pathToPackage, "zarf-package-test-amd64-0.0.1.tar.zst"), PackageLayoutOptions{})
 	require.NoError(t, err)
 
 	require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
 	require.Equal(t, "0.0.1", pkgLayout.Pkg.Metadata.Version)
 
 	tmpDir := t.TempDir()
-	manifestDir, err := pkgLayout.GetComponentDir(tmpDir, "test", ManifestsComponentDir)
+	manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, "test", ManifestsComponentDir)
 	require.NoError(t, err)
-	expected, err := os.ReadFile("../testdata/deployment.yaml")
+	expected, err := os.ReadFile(filepath.Join(pathToPackage, "deployment.yaml"))
 	require.NoError(t, err)
 	b, err := os.ReadFile(filepath.Join(manifestDir, "deployment-0.yaml"))
 	require.NoError(t, err)
 	require.Equal(t, expected, b)
 
-	_, err = pkgLayout.GetComponentDir(t.TempDir(), "does-not-exist", ManifestsComponentDir)
+	_, err = pkgLayout.GetComponentDir(ctx, t.TempDir(), "does-not-exist", ManifestsComponentDir)
 	require.ErrorContains(t, err, "component does-not-exist does not exist in package")
 
-	_, err = pkgLayout.GetComponentDir(t.TempDir(), "test", FilesComponentDir)
+	_, err = pkgLayout.GetComponentDir(ctx, t.TempDir(), "test", FilesComponentDir)
 	require.ErrorContains(t, err, "component test could not access a files directory")
 
 	tmpDir = t.TempDir()
-	err = pkgLayout.GetSBOM(tmpDir)
+	err = pkgLayout.GetSBOM(ctx, tmpDir)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(tmpDir, "compare.html"))
 

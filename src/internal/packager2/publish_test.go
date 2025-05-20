@@ -29,7 +29,14 @@ func pullFromRemote(t *testing.T, ctx context.Context, packageRef string, archit
 
 	// Generate tmpdir and pull published package from local registry
 	tmpdir := t.TempDir()
-	_, tarPath, err := pullOCI(context.Background(), packageRef, tmpdir, "", architecture, filters.Empty(), oci.WithPlainHTTP(true))
+	pullOCIOpts := PullOCIOptions{
+		Source:       packageRef,
+		Directory:    tmpdir,
+		Architecture: architecture,
+		Filter:       filters.Empty(),
+		Modifiers:    []oci.Modifier{oci.WithPlainHTTP(true)},
+	}
+	_, tarPath, err := pullOCI(context.Background(), pullOCIOpts)
 	require.NoError(t, err)
 
 	layoutActual, err := layout.LoadFromTar(ctx, tarPath, layout.PackageLayoutOptions{Filter: filters.Empty()})
@@ -214,7 +221,7 @@ func TestPublishPackage(t *testing.T) {
 	}{
 		{
 			name: "Publish package",
-			path: "testdata/zarf-package-test-amd64-0.0.1.tar.zst",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOpts{
 				WithPlainHTTP: true,
 			},
@@ -254,7 +261,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 	}{
 		{
 			name: "Publish package",
-			path: "testdata/zarf-package-test-amd64-0.0.1.tar.zst",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOpts{
 				WithPlainHTTP: true,
 				Architecture:  "amd64",
@@ -308,7 +315,7 @@ func TestPublishCopySHA(t *testing.T) {
 	}{
 		{
 			name:             "Publish package",
-			packageToPublish: "testdata/zarf-package-test-amd64-0.0.1.tar.zst",
+			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOpts{
 				WithPlainHTTP: true,
 				Architecture:  "amd64",
@@ -379,7 +386,7 @@ func TestPublishCopyTag(t *testing.T) {
 	}{
 		{
 			name:             "Publish package",
-			packageToPublish: "testdata/zarf-package-test-amd64-0.0.1.tar.zst",
+			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOpts{
 				WithPlainHTTP: true,
 				Architecture:  "amd64",

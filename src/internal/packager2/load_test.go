@@ -4,7 +4,11 @@
 package packager2
 
 import (
+	"crypto/rand"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,6 +16,8 @@ import (
 
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -27,13 +33,8 @@ func TestLoadPackage(t *testing.T) {
 	}{
 		{
 			name:   "tarball",
-			source: "./testdata/zarf-package-test-amd64-0.0.1.tar.zst",
+			source: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			shasum: "f9b15b1bc0f760a87bad68196b339a8ce8330e3a0241191a826a8962a88061f1",
-		},
-		{
-			name:   "split",
-			source: "./testdata/zarf-package-test-amd64-0.0.1.tar.zst.part000",
-			shasum: "9c021ef9f62f58cca6dc01641521f372f387cc54c0d959a4f3861c6c636d98f1",
 		},
 	}
 	for _, tt := range tests {
@@ -65,6 +66,64 @@ func TestLoadPackage(t *testing.T) {
 			}
 			_, err := LoadPackage(ctx, opt)
 			require.ErrorContains(t, err, fmt.Sprintf("to be %s, found %s", opt.Shasum, tt.shasum))
+		})
+	}
+}
+
+func TestLoadSplitPackage(t *testing.T) {
+	t.Parallel()
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
+
+	ctx := testutil.TestContext(t)
+
+	tests := []struct {
+		name        string
+		packagePath string
+		packageName string
+	}{
+		{
+			name:        "split file output",
+			packagePath: filepath.Join("testdata", "load-package", "split"),
+			packageName: "split",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			tmpdir := t.TempDir()
+
+			// Generate random binary file, this ensures that the decompressed package will be >1mb and can be split
+			f, err := os.Create(filepath.Join(tt.packagePath, "random_1mb.bin"))
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				f.Close()
+				require.NoError(t, os.RemoveAll(f.Name()))
+			})
+			var mb int64 = 1024 * 1024
+			_, err = io.CopyN(f, rand.Reader, mb)
+			require.NoError(t, err)
+
+			// Create the split package
+			err = Create(ctx, tt.packagePath, CreateOptions{
+				Output:           tmpdir,
+				MaxPackageSizeMB: 1,
+				SkipSBOM:         true,
+			})
+			require.NoError(t, err)
+
+			// Load the split package, verify that the split package became one
+			splitName := fmt.Sprintf("zarf-package-%s-amd64.tar.zst.part000", tt.packageName)
+			name := filepath.Join(tmpdir, splitName)
+			opt := LoadOptions{
+				Source:                  name,
+				PublicKeyPath:           "",
+				SkipSignatureValidation: false,
+				Filter:                  filters.Empty(),
+			}
+			_, err = LoadPackage(ctx, opt)
+			require.NoError(t, err)
+			assembledName := fmt.Sprintf("zarf-package-%s-amd64.tar.zst", tt.packageName)
+			require.FileExists(t, filepath.Join(tmpdir, assembledName))
 		})
 	}
 }
@@ -140,10 +199,11 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 
-	_, err := GetPackageFromSourceOrCluster(ctx, nil, "test", false, "")
+	_, err := GetPackageFromSourceOrCluster(ctx, nil, "test", false, "", zoci.AllLayers)
 	require.EqualError(t, err, "cannot get Zarf package from Kubernetes without configuration")
 
-	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, "./testdata/zarf-package-test-amd64-0.0.1.tar.zst", false, "")
+	pkgPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
+	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, pkgPath, false, "", zoci.AllLayers)
 	require.NoError(t, err)
 	require.Equal(t, "test", pkg.Metadata.Name)
 
@@ -152,7 +212,7 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	}
 	_, err = c.RecordPackageDeployment(ctx, pkg, nil, 1)
 	require.NoError(t, err)
-	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", false, "")
+	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", false, "", zoci.AllLayers)
 	require.NoError(t, err)
 	require.Equal(t, "test", pkg.Metadata.Name)
 }

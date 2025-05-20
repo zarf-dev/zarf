@@ -57,7 +57,7 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 		if err != nil {
 			return err
 		}
-		remote, err := layout2.NewRemote(ctx, ref, oci.PlatformForArch(config.GetArch()))
+		remote, err := layout2.NewRemote(ctx, ref, oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture))
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,8 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 	}
 
 	if opt.SBOMOut != "" {
-		err := pkgLayout.GetSBOM(filepath.Join(opt.SBOMOut, pkgLayout.Pkg.Metadata.Name))
+		err := pkgLayout.GetSBOM(ctx, filepath.Join(opt.SBOMOut, pkgLayout.Pkg.Metadata.Name))
+		// _, err := pkgLayout.GetSBOM(ctx, opt.SBOMOut)
 		// Don't fail package create if the package doesn't have an sbom
 		var noSBOMErr *layout2.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {

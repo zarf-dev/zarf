@@ -15,6 +15,9 @@ import (
 	ociDirectory "oras.land/oras-go/v2/content/oci"
 )
 
+// LayersSelector is a type for selecting subsets of layers in a Zarf package
+type LayersSelector string
+
 const (
 	// ZarfConfigMediaType is the media type for the manifest config
 	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
@@ -26,6 +29,16 @@ const (
 	DefaultConcurrency = 3
 	// ImageCacheDirectory is the directory within the Zarf cache containing an OCI store
 	ImageCacheDirectory = "images"
+	// AllLayers is the default selector for all layers
+	AllLayers LayersSelector = ""
+	//SbomLayers is the selector for SBOM layers including metadata
+	SbomLayers LayersSelector = "sbom"
+	// MetadataLayers is the selector for metadata layers (zarf.yaml, signature, checksums)
+	MetadataLayers LayersSelector = "metadata"
+	// ImageLayers is the selector for image layers including metadata
+	ImageLayers LayersSelector = "images"
+	// ComponentLayers is the selector for component layers including metadata
+	ComponentLayers LayersSelector = "components"
 )
 
 // Remote is a wrapper around the Oras remote repository with zarf specific functions
