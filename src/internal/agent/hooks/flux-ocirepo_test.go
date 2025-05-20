@@ -6,7 +6,6 @@ package hooks
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -17,15 +16,11 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
-	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/registry/remote"
 )
 
 func createFluxOCIRepoAdmissionRequest(t *testing.T, op v1.Operation, fluxOCIRepo *flux.OCIRepository) *v1.AdmissionRequest {
@@ -38,83 +33,6 @@ func createFluxOCIRepoAdmissionRequest(t *testing.T, op v1.Operation, fluxOCIRep
 			Raw: raw,
 		},
 	}
-}
-
-type OCIArtifact struct {
-	Domain    string
-	Namespace string
-	Tag       string
-}
-
-func populateLocalRegistry(t *testing.T, ctx context.Context, localUrl string, artifact OCIArtifact) error {
-	localReg, err := remote.NewRegistry(localUrl)
-	if err != nil {
-		return err
-	}
-	localReg.PlainHTTP = true
-
-	remoteReg, err := remote.NewRegistry(artifact.Domain)
-	if err != nil {
-		return err
-	}
-
-	src, err := remoteReg.Repository(ctx, artifact.Namespace)
-	if err != nil {
-		return err
-	}
-	dst, err := localReg.Repository(ctx, artifact.Namespace)
-	if err != nil {
-		return err
-	}
-	desc, err := oras.Copy(ctx, src, artifact.Tag, dst, artifact.Tag, oras.DefaultCopyOptions)
-	if err != nil {
-		return err
-	}
-	t.Log(desc)
-
-	hashedTag, err := transform.ImageTransformHost(localUrl, fmt.Sprintf("%s/%s:%s", artifact.Domain, artifact.Namespace, artifact.Tag))
-	if err != nil {
-		return err
-	}
-
-	desc, err = oras.Copy(ctx, src, artifact.Tag, dst, hashedTag, oras.DefaultCopyOptions)
-	if err != nil {
-		return err
-	}
-	t.Log(desc)
-
-	return nil
-}
-
-func setupRegistry(t *testing.T, ctx context.Context) (string, error) {
-	localUrl := testutil.SetupInMemoryRegistry(ctx, t, 5000)
-
-	localReg, err := remote.NewRegistry(localUrl)
-	localReg.PlainHTTP = true
-	if err != nil {
-		return "", err
-	}
-	var artifacts = []OCIArtifact{
-		{
-			Domain:    "ghcr.io",
-			Namespace: "stefanprodan/charts/podinfo",
-			Tag:       "6.9.0",
-		},
-		{
-			Domain:    "ghcr.io",
-			Namespace: "stefanprodan/podinfo",
-			Tag:       "6.9.0",
-		},
-	}
-
-	for _, art := range artifacts {
-		err := populateLocalRegistry(t, ctx, localUrl, art)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	return localUrl, nil
 }
 
 func TestFluxOCIHelmMutationWebhook(t *testing.T) {
