@@ -108,7 +108,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		}
 
 		// Get the media type of the oci image
-		mediaType, err := getManifestMediaType(ctx, zarfState, patchedSrc)
+		mediaType, err := getManifestConfigMediaType(ctx, zarfState, patchedSrc)
 
 		// If we get an error, we fall back to existing mutation logic
 		if err != nil {

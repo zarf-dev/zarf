@@ -28,7 +28,7 @@ func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 	return operations.ReplacePatchOperation("/metadata/labels", currLabels)
 }
 
-func getManifestMediaType(ctx context.Context, zarfState *state.State, imageAddress string) (string, error) {
+func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, imageAddress string) (string, error) {
 	l := logger.From(ctx)
 
 	image, err := transform.ParseImageRef(imageAddress)
