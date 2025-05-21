@@ -367,17 +367,28 @@ func unarchive(ctx context.Context, src, dst string) (err error) {
 	defer func() {
 		err = errors.Join(err, file.Close())
 	}()
+	var (
+		extractor archives.Extractor
+		input     io.Reader = file
+	)
 
-	// Identify format & get an input stream
-	format, input, err := archives.Identify(ctx, src, file)
-	if err != nil {
-		return fmt.Errorf("unable to identify archive %q: %w", src, err)
-	}
-
-	// Assert that it supports extraction
-	extractor, ok := format.(archives.Extractor)
-	if !ok {
-		return fmt.Errorf("unsupported format for extraction: %T", format)
+	// Note(brandtkeller): potential for compression to be misidentified
+	// Given our utilization of .tar extension we can skip auto-detection
+	if strings.HasSuffix(src, ".tar") {
+		extractor = archives.Tar{}
+	} else {
+		// Identify format & get an input stream
+		var format archives.Format
+		format, input, err = archives.Identify(ctx, src, file)
+		if err != nil {
+			return fmt.Errorf("unable to identify archive %q: %w", src, err)
+		}
+		var ok bool
+		// Assert that it supports extraction
+		extractor, ok = format.(archives.Extractor)
+		if !ok {
+			return fmt.Errorf("unsupported format for extraction: %T", format)
+		}
 	}
 
 	// Ensure dst exists
