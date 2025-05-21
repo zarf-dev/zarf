@@ -168,7 +168,7 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 		return &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
 	}
 
-	// 1) locate the sboms archive under the layout directory
+	// locate the sboms archive under the layout directory
 	sbomArchive := filepath.Join(p.dirPath, SBOMTar)
 
 	err := archive.Decompress(ctx, sbomArchive, destPath, archive.DecompressOpts{})
