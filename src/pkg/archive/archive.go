@@ -42,6 +42,94 @@ const (
 	filePerm = 0o644
 )
 
+var archivers = map[string]archives.Archiver{
+	// Plain archives
+	extensionZip: archives.Zip{},
+	extensionTar: archives.Tar{},
+
+	// Compressed TAR-based archives (all need Extraction set)
+	extensionGz: archives.CompressedArchive{
+		Compression: archives.Gz{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionTgz: archives.CompressedArchive{
+		Compression: archives.Gz{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionBz2: archives.CompressedArchive{
+		Compression: archives.Bz2{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionTbz2: archives.CompressedArchive{
+		Compression: archives.Bz2{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionTbz: archives.CompressedArchive{
+		Compression: archives.Bz2{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionXz: archives.CompressedArchive{
+		Compression: archives.Xz{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionTxz: archives.CompressedArchive{
+		Compression: archives.Xz{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionZst: archives.CompressedArchive{
+		Compression: archives.Zstd{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionTzst: archives.CompressedArchive{
+		Compression: archives.Zstd{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionBr: archives.CompressedArchive{
+		Compression: archives.Brotli{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionTbr: archives.CompressedArchive{
+		Compression: archives.Brotli{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionLz4: archives.CompressedArchive{
+		Compression: archives.Lz4{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionTlz4: archives.CompressedArchive{
+		Compression: archives.Lz4{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionLzip: archives.CompressedArchive{
+		Compression: archives.Lzip{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionMz: archives.CompressedArchive{
+		Compression: archives.MinLZ{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+	extensionTmz: archives.CompressedArchive{
+		Compression: archives.MinLZ{},
+		Archival:    archives.Tar{},
+		Extraction:  archives.Tar{},
+	},
+}
+
 // CompressOpts is a placeholder for future optional Compress params
 type CompressOpts struct{}
 
@@ -62,27 +150,6 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 	files, err := archives.FilesFromDisk(ctx, nil, mapping)
 	if err != nil {
 		return fmt.Errorf("failed to stat sources: %w", err)
-	}
-
-	archivers := map[string]archives.Archiver{
-		extensionZip:  archives.Zip{},
-		extensionTar:  archives.Tar{},
-		extensionGz:   archives.CompressedArchive{Compression: archives.Gz{}, Archival: archives.Tar{}},
-		extensionTgz:  archives.CompressedArchive{Compression: archives.Gz{}, Archival: archives.Tar{}},
-		extensionBz2:  archives.CompressedArchive{Compression: archives.Bz2{}, Archival: archives.Tar{}},
-		extensionTbz2: archives.CompressedArchive{Compression: archives.Bz2{}, Archival: archives.Tar{}},
-		extensionTbz:  archives.CompressedArchive{Compression: archives.Bz2{}, Archival: archives.Tar{}},
-		extensionXz:   archives.CompressedArchive{Compression: archives.Xz{}, Archival: archives.Tar{}},
-		extensionTxz:  archives.CompressedArchive{Compression: archives.Xz{}, Archival: archives.Tar{}},
-		extensionZst:  archives.CompressedArchive{Compression: archives.Zstd{}, Archival: archives.Tar{}},
-		extensionTzst: archives.CompressedArchive{Compression: archives.Zstd{}, Archival: archives.Tar{}},
-		extensionBr:   archives.CompressedArchive{Compression: archives.Brotli{}, Archival: archives.Tar{}},
-		extensionTbr:  archives.CompressedArchive{Compression: archives.Brotli{}, Archival: archives.Tar{}},
-		extensionLz4:  archives.CompressedArchive{Compression: archives.Lz4{}, Archival: archives.Tar{}},
-		extensionTlz4: archives.CompressedArchive{Compression: archives.Lz4{}, Archival: archives.Tar{}},
-		extensionLzip: archives.CompressedArchive{Compression: archives.Lzip{}, Archival: archives.Tar{}},
-		extensionMz:   archives.CompressedArchive{Compression: archives.MinLZ{}, Archival: archives.Tar{}},
-		extensionTmz:  archives.CompressedArchive{Compression: archives.MinLZ{}, Archival: archives.Tar{}},
 	}
 
 	// Find the longest matching extension
@@ -367,28 +434,24 @@ func unarchive(ctx context.Context, src, dst string) (err error) {
 	defer func() {
 		err = errors.Join(err, file.Close())
 	}()
-	var (
-		extractor archives.Extractor
-		input     io.Reader = file
-	)
 
-	// Note(brandtkeller): potential for compression to be misidentified
-	// Given our utilization of .tar extension we can skip auto-detection
-	if strings.HasSuffix(src, ".tar") {
-		extractor = archives.Tar{}
-	} else {
-		// Identify format & get an input stream
-		var format archives.Format
-		format, input, err = archives.Identify(ctx, src, file)
-		if err != nil {
-			return fmt.Errorf("unable to identify archive %q: %w", src, err)
+	// Find the longest matching extension
+	var archiveExt string
+	for ext := range archivers {
+		if strings.HasSuffix(src, ext) && len(ext) > len(archiveExt) {
+			archiveExt = ext
 		}
-		var ok bool
-		// Assert that it supports extraction
-		extractor, ok = format.(archives.Extractor)
-		if !ok {
-			return fmt.Errorf("unsupported format for extraction: %T", format)
-		}
+	}
+	// Select appropriate archiver
+	archiver, ok := archivers[archiveExt]
+	if !ok {
+		return fmt.Errorf("unsupported archive extension for %q", src)
+	}
+
+	// Assert that it supports extraction
+	extractor, ok := archiver.(archives.Extractor)
+	if !ok {
+		return fmt.Errorf("unsupported format for extraction: %T", archiver)
 	}
 
 	// Ensure dst exists
@@ -437,7 +500,7 @@ func unarchive(ctx context.Context, src, dst string) (err error) {
 	}
 
 	// Perform extraction
-	if err := extractor.Extract(ctx, input, handler); err != nil {
+	if err := extractor.Extract(ctx, file, handler); err != nil {
 		return fmt.Errorf("unable to extract %q: %w", src, err)
 	}
 	return nil
