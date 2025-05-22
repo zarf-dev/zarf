@@ -489,6 +489,9 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		if pkgConfig.InitOpts.RegistryInfo.Address == "" {
 			// if empty flag & zarf state available - execute
 			// otherwise return error
+			if c == nil {
+				return fmt.Errorf("no cluster connection detected - unable to obtain state")
+			}
 			state, err := c.LoadState(ctx)
 			if err != nil {
 				return fmt.Errorf("no registry URL provided and no zarf state found")
@@ -519,6 +522,9 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	if o.mirrorRepos && repos > 0 {
 		logger.From(ctx).Info("mirroring repos", "repos", repos)
 		if pkgConfig.InitOpts.GitServer.Address == "" {
+			if c == nil {
+				return fmt.Errorf("no cluster connection detected - unable to obtain state")
+			}
 			state, err := c.LoadState(ctx)
 			if err != nil {
 				return fmt.Errorf("no git URL provided and no zarf state found")

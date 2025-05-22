@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/mholt/archives"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
@@ -46,44 +45,25 @@ func (s *TarballSource) LoadPackage(ctx context.Context, dst *layout.PackagePath
 			return pkg, nil, err
 		}
 	}
-
-	pathsExtracted := []string{}
-	// 1) Mount the archive as a virtual file system.
-	fsys, err := archives.FileSystem(ctx, s.PackageSource, nil)
+	// Decompress the archive
+	err = archive.Decompress(ctx, s.PackageSource, dst.Base, archive.DecompressOpts{})
 	if err != nil {
-		return pkg, nil, fmt.Errorf("unable to open archive %q: %w", s.PackageSource, err)
+		return pkg, nil, err
 	}
-
-	// 2) Walk every entry in the archive.
-	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+	// Create a slice of extracted paths
+	pathsExtracted := make([]string, 0)
+	err = filepath.WalkDir(dst.Base, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		// skip directories
-		if d.IsDir() {
-			return nil
-		}
-		// ensure parent dirs exist in our temp dir
-		dstPath := filepath.Join(dst.Base, path)
-		pathsExtracted = append(pathsExtracted, path)
-		if err := os.MkdirAll(filepath.Dir(dstPath), helpers.ReadExecuteAllWriteUser); err != nil {
-			return err
-		}
-		// copy file contents
-		in, err := fsys.Open(path)
-		if err != nil {
-			return err
-		}
-		defer in.Close()
-
-		out, err := os.Create(dstPath)
-		if err != nil {
-			return err
-		}
-		defer out.Close()
-
-		if _, err := io.Copy(out, in); err != nil {
-			return err
+		// DirEntry lets us check IsDir without needing FileInfo
+		if !d.IsDir() {
+			// compute path relative to root
+			rel, err := filepath.Rel(dst.Base, path)
+			if err != nil {
+				return err
+			}
+			pathsExtracted = append(pathsExtracted, rel)
 		}
 		return nil
 	})
