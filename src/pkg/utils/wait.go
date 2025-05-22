@@ -162,6 +162,8 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 		select {
 		case <-expired:
 			return errors.New("wait timed out")
+		case <-ctx.Done():
+			return errors.New("received interrupt")
 		default:
 			switch resource {
 			case "http", "https":
