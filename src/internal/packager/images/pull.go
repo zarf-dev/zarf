@@ -105,7 +105,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	for _, v := range images {
 		uniqueHosts[v.overridden.Host] = struct{}{}
 	}
-	// This is done to authenticate to the registry
+	// We ping registries to pre-authenticate as some auth mechanisms open up a browser
+	// which can cause issues when it happens many times concurrently
 	if credStore.IsAuthConfigured() {
 		for host := range uniqueHosts {
 			registry, err := remote.NewRegistry(host)
