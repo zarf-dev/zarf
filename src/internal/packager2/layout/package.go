@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"maps"
 	"os"
@@ -16,7 +15,6 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/mholt/archives"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 
@@ -52,45 +50,8 @@ func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
-
-	// 1) Mount the archive as a virtual file system.
-	fsys, err := archives.FileSystem(ctx, tarPath, nil)
-	if err != nil {
-		return nil, fmt.Errorf("unable to open archive %q: %w", tarPath, err)
-	}
-
-	// 2) Walk every entry in the archive.
-	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		// skip directories
-		if d.IsDir() {
-			return nil
-		}
-		// ensure parent dirs exist in our temp dir
-		dst := filepath.Join(dirPath, path)
-		if err := os.MkdirAll(filepath.Dir(dst), helpers.ReadExecuteAllWriteUser); err != nil {
-			return err
-		}
-		// copy file contents
-		in, err := fsys.Open(path)
-		if err != nil {
-			return err
-		}
-		defer in.Close()
-
-		out, err := os.Create(dst)
-		if err != nil {
-			return err
-		}
-		defer out.Close()
-
-		if _, err := io.Copy(out, in); err != nil {
-			return err
-		}
-		return nil
-	})
+	// Decompress the archive
+	err = archive.Decompress(ctx, tarPath, dirPath, archive.DecompressOpts{})
 	if err != nil {
 		return nil, err
 	}
