@@ -75,18 +75,18 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		cfg.ResponseHeaderTimeout = 0 // currently allowing infinite timeout
 	}
 
-	images := []imageWithOverride{}
+	imagesWithOverrides := []imageWithOverride{}
 	for _, img := range cfg.ImageList {
+		overriddenImage := img
 		for k, v := range cfg.RegistryOverrides {
-			overriddenImage := img
 			if strings.HasPrefix(img.Reference, k) {
 				overriddenImage.Reference = strings.Replace(img.Reference, k, v, 1)
 			}
-			images = append(images, imageWithOverride{
-				original:   img,
-				overridden: overriddenImage,
-			})
 		}
+		imagesWithOverrides = append(imagesWithOverrides, imageWithOverride{
+			original:   img,
+			overridden: overriddenImage,
+		})
 	}
 
 	imageFetchStart := time.Now()
@@ -102,7 +102,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		Credential: credentials.Credential(credStore),
 	}
 	uniqueHosts := map[string]struct{}{}
-	for _, v := range images {
+	for _, v := range imagesWithOverrides {
 		uniqueHosts[v.overridden.Host] = struct{}{}
 	}
 	// We ping registries to pre-authenticate as some auth mechanisms open up a browser
@@ -138,7 +138,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	// - Mark any images that don't resolve so we can attempt to pull them from the daemon
 	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
-	for _, image := range images {
+	for _, image := range imagesWithOverrides {
 		eg.Go(func() error {
 			repo := &orasRemote.Repository{}
 
