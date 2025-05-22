@@ -14,7 +14,7 @@ require (
 	github.com/agnivade/levenshtein v1.2.1
 	github.com/anchore/clio v0.0.0-20250319180342-2cfe4b0cb716
 	github.com/anchore/stereoscope v0.1.4
-	github.com/anchore/syft v1.23.1
+	github.com/anchore/syft v1.26.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
 	github.com/defenseunicorns/pkg/oci v1.3.0
@@ -79,6 +79,7 @@ require (
 	github.com/anchore/archiver/v3 v3.5.3-0.20241210171143-5b1d8d1c7c51 // indirect
 	github.com/anchore/go-collections v0.0.0-20240216171411-9321230ce537 // indirect
 	github.com/anchore/go-homedir v0.0.0-20250319154043-c29668562e4d // indirect
+	github.com/anchore/go-rpmdb v0.0.0-20250516171929-f77691e1faec // indirect
 	github.com/anchore/go-sync v0.0.0-20250326131806-4eda43a485b6 // indirect
 	github.com/bitnami/go-version v0.0.0-20250131085805-b1f57a8634ef // indirect
 	github.com/blakesmith/ar v0.0.0-20190502131153-809d4375e1fb // indirect
@@ -122,6 +123,7 @@ require (
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
+	github.com/nix-community/go-nix v0.0.0-20250101154619-4bdde671e0a1 // indirect
 	github.com/nwaples/rardecode/v2 v2.1.0 // indirect
 	github.com/onsi/gomega v1.36.1 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
@@ -203,13 +205,12 @@ require (
 	github.com/DataDog/zstd v1.5.5 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.11.7 // indirect
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
-	github.com/ProtonMail/go-crypto v1.1.6 // indirect
+	github.com/ProtonMail/go-crypto v1.2.0 // indirect
 	github.com/ThalesIgnite/crypto11 v1.2.5 // indirect
 	github.com/a8m/envsubst v1.4.3 // indirect
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
@@ -274,7 +275,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/charmbracelet/bubbles v0.21.0 // indirect
-	github.com/charmbracelet/bubbletea v1.3.4 // indirect
+	github.com/charmbracelet/bubbletea v1.3.5 // indirect
 	github.com/charmbracelet/harmonica v0.2.0 // indirect
 	github.com/charmbracelet/lipgloss v1.1.0 // indirect
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20230304212654-82a0ddb27589 // indirect
@@ -327,7 +328,7 @@ require (
 	github.com/fvbommel/sortorder v1.1.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.9
 	github.com/gdamore/encoding v1.0.1 // indirect
-	github.com/github/go-spdx/v2 v2.3.2 // indirect
+	github.com/github/go-spdx/v2 v2.3.3 // indirect
 	github.com/glebarez/go-sqlite v1.21.2 // indirect
 	github.com/glebarez/sqlite v1.11.0 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
@@ -411,7 +412,6 @@ require (
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/knqyf263/go-apk-version v0.0.0-20200609155635-041fdbb8563f // indirect
 	github.com/knqyf263/go-deb-version v0.0.0-20190517075300-09fca494f03d // indirect
-	github.com/knqyf263/go-rpmdb v0.1.1 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
