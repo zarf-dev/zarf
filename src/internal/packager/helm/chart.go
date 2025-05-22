@@ -40,6 +40,7 @@ import (
 // Use same default as Helm CLI does.
 const maxHelmHistory = 10
 
+// InstallUpgradeOpts provide options for the Helm install/upgrade operation
 type InstallUpgradeOpts struct {
 	// AdoptExistingResources is true if the chart should adopt existing namespaces
 	AdoptExistingResources bool

@@ -7,6 +7,7 @@ package images
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -199,7 +200,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 			imagesWithManifests[image] = manifest
 			l.Debug("pulled manifest for image", "name", overriddenRef)
 			return nil
-
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -267,7 +267,7 @@ func getDockerEndpointHost() (string, error) {
 	return endpoint.Host, nil
 }
 
-func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullInfo, dst *oci.Store, arch string, concurrency int) (map[transform.Image]ocispec.Manifest, error) {
+func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullInfo, dst *oci.Store, arch string, concurrency int) (_ map[transform.Image]ocispec.Manifest, err error) {
 	l := logger.From(ctx)
 	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
 	dockerEndPointHost, err := getDockerEndpointHost()
@@ -282,7 +282,9 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Docker client: %w", err)
 	}
-	defer cli.Close()
+	defer func() {
+		err = errors.Join(err, cli.Close())
+	}()
 	cli.NegotiateAPIVersion(ctx)
 	for _, pullInfo := range daemonPullInfo {
 		err := func() error {

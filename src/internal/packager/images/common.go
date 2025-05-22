@@ -56,10 +56,13 @@ type PushConfig struct {
 }
 
 const (
-	DockerMediaTypeManifest     = "application/vnd.docker.distribution.manifest.v2+json"
+	//DockerMediaTypeManifest is the Legacy Docker manifest format, replaced by OCI manifest
+	DockerMediaTypeManifest = "application/vnd.docker.distribution.manifest.v2+json"
+	// DockerMediaTypeManifestList is the legacy Docker manifest list, replaced by OCI index
 	DockerMediaTypeManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
 )
 
+// Legacy Docker image layers
 const (
 	DockerLayer             = "application/vnd.docker.image.rootfs.diff.tar.gzip"
 	DockerUncompressedLayer = "application/vnd.docker.image.rootfs.diff.tar"
@@ -69,6 +72,7 @@ const (
 func isLayer(mediaType string) bool {
 	switch mediaType {
 	// many of these layers are deprecated now, but older images could still be using them
+	// nolint: staticcheck
 	case DockerLayer, DockerUncompressedLayer, ocispec.MediaTypeImageLayerGzip, ocispec.MediaTypeImageLayerZstd, ocispec.MediaTypeImageLayer,
 		DockerForeignLayer, ocispec.MediaTypeImageLayerNonDistributableZstd, ocispec.MediaTypeImageLayerNonDistributable, ocispec.MediaTypeImageLayerNonDistributableGzip:
 		return true
@@ -76,6 +80,7 @@ func isLayer(mediaType string) bool {
 	return false
 }
 
+// OnlyHasImageLayers returns true when an OCI manifest only containers container image layers.
 func OnlyHasImageLayers(manifest ocispec.Manifest) bool {
 	for _, layer := range manifest.Layers {
 		if !isLayer(string(layer.MediaType)) {
@@ -92,7 +97,8 @@ func buildScheme(plainHTTP bool) string {
 	return "https"
 }
 
-func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) error {
+// Ping verifies if a user can connect to a registry
+func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.Client) (err error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	url := fmt.Sprintf("%s://%s/v2/", buildScheme(plainHTTP), registryURL)
@@ -104,7 +110,9 @@ func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err = errors.Join(err, resp.Body.Close())
+	}()
 
 	switch resp.StatusCode {
 	case http.StatusOK, http.StatusUnauthorized, http.StatusForbidden:
@@ -128,7 +136,6 @@ func shouldUsePlainHTTP(ctx context.Context, registryURL string, client *auth.Cl
 		return false, errors.Join(err, err2)
 	}
 	return true, nil
-
 }
 
 func isManifest(mediaType string) bool {
