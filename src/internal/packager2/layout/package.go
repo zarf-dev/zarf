@@ -119,8 +119,7 @@ func (p *PackageLayout) ContainsSBOM() bool {
 	if !p.Pkg.IsSBOMAble() {
 		return false
 	}
-	_, err := os.Stat(filepath.Join(p.dirPath, SBOMTar))
-	return err == nil
+	return !helpers.InvalidPath(filepath.Join(p.dirPath, SBOMTar))
 }
 
 // GetSBOM outputs the SBOM data from the package to the given destination path.
