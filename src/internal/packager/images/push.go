@@ -53,7 +53,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	}
 
 	// The user may or may not have a cluster available, if it's available then use it to connect to the registry
-	c, _ := cluster.New(ctx)
+	c, _ := cluster.New(ctx) //nolint: errcheck
 	err = retry.Do(func() error {
 		// reset concurrency to user-provided value on each component retry
 		ociConcurrency := cfg.OCIConcurrency
@@ -80,7 +80,10 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}),
 		}
 
-		client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+		client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+		if err != nil {
+			return err
+		}
 
 		plainHTTP := cfg.PlainHTTP
 
