@@ -37,14 +37,16 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 	}
 
 	createOpt := layout2.CreateOptions{
-		Flavor:                  opt.Flavor,
-		RegistryOverrides:       opt.RegistryOverrides,
-		SigningKeyPath:          opt.SigningKeyPath,
-		SigningKeyPassword:      opt.SigningKeyPassword,
-		SetVariables:            opt.SetVariables,
-		SkipSBOM:                opt.SkipSBOM,
-		OCIConcurrency:          opt.OCIConcurrency,
-		DifferentialPackagePath: opt.DifferentialPackagePath,
+		AssembleOptions: layout2.AssembleOptions{
+			SkipSBOM:                opt.SkipSBOM,
+			OCIConcurrency:          opt.OCIConcurrency,
+			DifferentialPackagePath: opt.DifferentialPackagePath,
+			Flavor:                  opt.Flavor,
+			RegistryOverrides:       opt.RegistryOverrides,
+			SigningKeyPath:          opt.SigningKeyPath,
+			SigningKeyPassword:      opt.SigningKeyPassword,
+		},
+		SetVariables: opt.SetVariables,
 	}
 	pkgLayout, err := layout2.CreatePackage(ctx, packagePath, createOpt)
 	if err != nil {

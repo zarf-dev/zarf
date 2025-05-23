@@ -31,7 +31,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
@@ -301,13 +300,17 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	pkgClient, err := packager.New(&pkgConfig, packager.WithContext(ctx))
-	if err != nil {
-		return err
-	}
-	defer pkgClient.ClearTempPaths()
-
-	err = pkgClient.DevDeploy(ctx)
+	err := packager2.DevDeploy(ctx, pkgConfig.CreateOpts.BaseDir, packager2.DevDeployOptions{
+		Airgap:             pkgConfig.CreateOpts.NoYOLO,
+		Flavor:             pkgConfig.CreateOpts.Flavor,
+		RegistryURL:        pkgConfig.DeployOpts.RegistryURL,
+		RegistryOverrides:  pkgConfig.CreateOpts.RegistryOverrides,
+		CreateSetVariables: pkgConfig.CreateOpts.SetVariables,
+		DeploySetVariables: pkgConfig.PkgOpts.SetVariables,
+		OptionalComponents: pkgConfig.PkgOpts.OptionalComponents,
+		Timeout:            pkgConfig.DeployOpts.Timeout,
+		Retries:            pkgConfig.PkgOpts.Retries,
+	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)

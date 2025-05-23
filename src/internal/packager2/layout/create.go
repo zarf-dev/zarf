@@ -49,31 +49,46 @@ import (
 // If this format is changed - zarf will need to handle mismatch between older formats and the new format.
 const CreateTimestampFormat = time.RFC1123Z
 
-// CreateOptions are the options for creating a skeleton package.
+// CreateOptions are the options for creating a package from a definition.
 type CreateOptions struct {
-	Flavor                  string
-	RegistryOverrides       map[string]string
-	SigningKeyPath          string
-	SigningKeyPassword      string
-	SetVariables            map[string]string
-	SkipSBOM                bool
-	DifferentialPackagePath string
-	OCIConcurrency          int
+	AssembleOptions
+	SetVariables map[string]string
 }
 
+// CreatePackage takes a zarf.yaml at the package path and returns a PackageLayout of the final package
 func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (*PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("creating package", "path", packagePath)
-
-	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return nil, err
-	}
 
 	pkg, err := LoadPackageDefinition(ctx, packagePath, opt.Flavor, opt.SetVariables)
 	if err != nil {
 		return nil, err
 	}
+
+	pkgLayout, err := AssemblePackage(ctx, pkg, packagePath, opt.AssembleOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	l.Info("package created")
+
+	return pkgLayout, nil
+}
+
+// AssembleOptions are the options for creating a package from a package object
+type AssembleOptions struct {
+	Flavor                  string
+	RegistryOverrides       map[string]string
+	SigningKeyPath          string
+	SigningKeyPassword      string
+	SkipSBOM                bool
+	DifferentialPackagePath string
+	OCIConcurrency          int
+}
+
+// AssemblePackage takes a package definition and returns a package layout with all the resources collected
+func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt AssembleOptions) (*PackageLayout, error) {
+	l := logger.From(ctx)
 
 	if opt.DifferentialPackagePath != "" {
 		l.Debug("creating differential package", "differential", opt.DifferentialPackagePath)
@@ -113,6 +128,10 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 		}
 	}
 
+	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
 	for _, component := range pkg.Components {
 		err := assemblePackageComponent(ctx, component, packagePath, buildPath)
 		if err != nil {
@@ -171,7 +190,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 
 	if !opt.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
-		err = generateSBOM(ctx, pkg, buildPath, sbomImageList)
+		err := generateSBOM(ctx, pkg, buildPath, sbomImageList)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
 		}
@@ -209,14 +228,17 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 		return nil, err
 	}
 
-	l.Info("package created")
-
 	return pkgLayout, nil
 }
 
+type SkeletonCreateOptions struct {
+	SigningKeyPath     string
+	SigningKeyPassword string
+}
+
 // CreateSkeleton creates a skeleton package and returns the path to the created package.
-func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) (string, error) {
-	pkg, err := LoadPackageDefinition(ctx, packagePath, opt.Flavor, nil)
+func CreateSkeleton(ctx context.Context, packagePath string, opt SkeletonCreateOptions) (string, error) {
+	pkg, err := LoadPackageDefinition(ctx, packagePath, "", nil)
 	if err != nil {
 		return "", err
 	}
@@ -245,7 +267,7 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) 
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opt.Flavor, opt.RegistryOverrides)
+	pkg = recordPackageMetadata(pkg, "", nil)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
