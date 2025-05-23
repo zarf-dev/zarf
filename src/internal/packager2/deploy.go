@@ -21,7 +21,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/packager2/actions"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
@@ -368,7 +367,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			return nil, err
 		}
 		defer os.RemoveAll(tmpDir)
-		dataInjectionsPath, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout2.DataComponentDir)
+		dataInjectionsPath, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.DataComponentDir)
 		if err != nil {
 			return nil, err
 		}
@@ -423,11 +422,11 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 	}
 	defer os.RemoveAll(tmpDir)
 
-	chartDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout2.ChartsComponentDir)
+	chartDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.ChartsComponentDir)
 	if err != nil {
 		return nil, err
 	}
-	valuesDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout2.ValuesComponentDir)
+	valuesDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.ValuesComponentDir)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("failed to get values: %w", err)
 	}
@@ -483,7 +482,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 		return nil, err
 	}
 	defer os.RemoveAll(tmpDir)
-	manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout2.ManifestsComponentDir)
+	manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.ManifestsComponentDir)
 	if err != nil {
 		return nil, err
 	}
