@@ -17,9 +17,9 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
@@ -80,9 +80,10 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	variableConfig := template.GetZarfVariableConfig(ctx)
-	variableConfig.SetConstants(pkgLayout.Pkg.Constants)
-	variableConfig.PopulateVariables(pkgLayout.Pkg.Variables, opts.SetVariables)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
+	if err != nil {
+		return InspectPackageResourcesResults{}, err
+	}
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
@@ -117,14 +118,9 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 			}
 
 			for _, chart := range component.Charts {
-				chartOverrides := make(map[string]any)
-				for _, variable := range chart.Variables {
-					if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
-						// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
-						if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
-							return InspectPackageResourcesResults{}, fmt.Errorf("unable to merge path and value into map: %w", err)
-						}
-					}
+				chartOverrides, err := generateValuesOverrides(chart, component.Name, variableConfig, nil)
+				if err != nil {
+					return InspectPackageResourcesResults{}, err
 				}
 				if err := templateValuesFiles(chart, valuesDir, variableConfig); err != nil {
 					return InspectPackageResourcesResults{}, err
@@ -311,7 +307,8 @@ func InspectPackageSboms(ctx context.Context, source string, opts InspectPackage
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	outputPath, err := pkgLayout.GetSBOM(ctx, opts.OutputDir)
+	outputPath := filepath.Join(opts.OutputDir, pkgLayout.Pkg.Metadata.Name)
+	err = pkgLayout.GetSBOM(ctx, outputPath)
 	if err != nil {
 		return InspectPackageSbomsResult{}, fmt.Errorf("could not get SBOM: %w", err)
 	}

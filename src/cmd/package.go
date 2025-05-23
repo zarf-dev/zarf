@@ -23,17 +23,19 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"oras.land/oras-go/v2/registry"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
+	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -225,28 +227,153 @@ func (o *packageDeployOptions) preRun(_ *cobra.Command, _ []string) {
 	}
 }
 
-func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) error {
+func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
 	packageSource, err := choosePackage(ctx, args)
 	if err != nil {
 		return err
 	}
-	pkgConfig.PkgOpts.PackageSource = packageSource
 
 	v := getViper()
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	pkgClient, err := packager.New(&pkgConfig, packager.WithContext(cmd.Context()))
+	loadOpt := packager2.LoadOptions{
+		Source:                  packageSource,
+		Shasum:                  pkgConfig.PkgOpts.Shasum,
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		Filter:                  filters.Empty(),
+		Architecture:            config.GetArch(),
+	}
+	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
+	if err != nil {
+		return fmt.Errorf("unable to load package: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+
+	deployOpts := packager2.DeployOpts{
+		AdoptExistingResources: pkgConfig.DeployOpts.AdoptExistingResources,
+		Timeout:                pkgConfig.DeployOpts.Timeout,
+		Retries:                pkgConfig.PkgOpts.Retries,
+		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
+		PlainHTTP:              config.CommonOptions.PlainHTTP,
+		InsecureTLSSkipVerify:  config.CommonOptions.InsecureSkipTLSVerify,
+		SetVariables:           pkgConfig.PkgOpts.SetVariables,
+	}
+
+	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts)
 	if err != nil {
 		return err
 	}
-	defer pkgClient.ClearTempPaths()
 
-	if err := pkgClient.Deploy(ctx); err != nil {
-		return fmt.Errorf("failed to deploy package: %w", err)
+	if pkgLayout.Pkg.IsInitConfig() {
+		return nil
 	}
+	connectStrings := types.ConnectStrings{}
+	for _, comp := range deployedComponents {
+		for _, chart := range comp.InstalledCharts {
+			for k, v := range chart.ConnectStrings {
+				connectStrings[k] = v
+			}
+		}
+	}
+	message.PrintConnectStringTable(connectStrings)
 	return nil
+}
+
+func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager2.DeployOpts) ([]types.DeployedComponent, error) {
+	err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
+	if err != nil {
+		return nil, err
+	}
+
+	// filter after confirmation to allow users to view the entire package interactively
+	filter := filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+		filters.ForDeploy(pkgConfig.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm),
+	)
+
+	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
+	if err != nil {
+		return nil, err
+	}
+
+	deployedComponents, err := packager2.Deploy(ctx, pkgLayout, opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to deploy package: %w", err)
+	}
+
+	return deployedComponents, nil
+}
+
+func confirmDeploy(ctx context.Context, pkgLayout *layout2.PackageLayout, setVariables map[string]string) (err error) {
+	l := logger.From(ctx)
+
+	err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), true)
+	if err != nil {
+		return fmt.Errorf("unable to print package definition: %w", err)
+	}
+
+	if pkgLayout.Pkg.IsSBOMAble() && !pkgLayout.ContainsSBOM() {
+		l.Warn("this package does NOT contain an SBOM. If you require an SBOM, the package must be built without the --skip-sbom flag")
+	}
+	if pkgLayout.ContainsSBOM() && !config.CommonOptions.Confirm {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		SBOMPath := filepath.Join(cwd, "zarf-sbom")
+		err = pkgLayout.GetSBOM(ctx, SBOMPath)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err = errors.Join(err, os.RemoveAll(SBOMPath))
+		}()
+		l.Info("this package has SBOMs available for review in a temporary directory", "directory", SBOMPath)
+	}
+
+	if config.CommonOptions.Confirm {
+		return nil
+	}
+
+	prompt := &survey.Confirm{
+		Message: "deploy this Zarf package?",
+	}
+	var confirm bool
+	if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
+		return fmt.Errorf("deployment cancelled")
+	}
+
+	return nil
+}
+
+func getPackageYAMLHints(pkg v1alpha1.ZarfPackage, setVariables map[string]string) map[string]string {
+	hints := map[string]string{}
+
+	for _, variable := range pkg.Variables {
+		value, present := setVariables[variable.Name]
+		if !present {
+			value = fmt.Sprintf("'%s' (default)", helpers.Truncate(variable.Default, 20, false))
+		} else {
+			value = fmt.Sprintf("'%s'", helpers.Truncate(value, 20, false))
+		}
+		if variable.Sensitive {
+			value = "'**sanitized**'"
+		}
+		hints = utils.AddRootListHint(hints, "name", variable.Name, fmt.Sprintf("currently set to %s", value))
+	}
+
+	hints = utils.AddRootHint(hints, "metadata", "information about this package\n")
+	hints = utils.AddRootHint(hints, "build", "info about the machine, zarf version, and user that created this package\n")
+	hints = utils.AddRootHint(hints, "components", "components selected for this operation")
+	hints = utils.AddRootHint(hints, "constants", "static values set by the package author")
+	hints = utils.AddRootHint(hints, "variables", "deployment-specific values that are set on each package deployment")
+
+	return hints
 }
 
 type packageMirrorResourcesOptions struct {
@@ -675,7 +802,6 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	if err != nil {
 		return err
 	}
-
 	outputPath, err := filepath.Abs(result.Path)
 	if err != nil {
 		logger.From(ctx).Warn("SBOM successfully extracted, couldn't get output path", "error", err)

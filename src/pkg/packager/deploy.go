@@ -365,7 +365,7 @@ func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfC
 	g, gCtx := errgroup.WithContext(ctx)
 	for idx, data := range component.DataInjections {
 		g.Go(func() error {
-			return p.cluster.HandleDataInjection(gCtx, data, componentPath, idx)
+			return p.cluster.HandleDataInjection(gCtx, data, componentPath.DataInjections, idx)
 		})
 	}
 

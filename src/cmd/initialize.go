@@ -17,8 +17,8 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
+	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -100,15 +100,9 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 
 	// Continue running package deploy for all components like any other package
 	initPackageName := sources.GetInitPackageName()
-	pkgConfig.PkgOpts.PackageSource = initPackageName
 
 	// Try to use an init-package in the executable directory if none exist in current working directory
-	var err error
-	if pkgConfig.PkgOpts.PackageSource, err = findInitPackage(cmd.Context(), initPackageName); err != nil {
-		return err
-	}
-
-	src, err := sources.New(ctx, &pkgConfig.PkgOpts)
+	packageSource, err := findInitPackage(cmd.Context(), initPackageName)
 	if err != nil {
 		return err
 	}
@@ -117,18 +111,40 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src), packager.WithContext(ctx))
-	if err != nil {
-		return err
+	loadOpt := packager2.LoadOptions{
+		Source:                  packageSource,
+		Shasum:                  pkgConfig.PkgOpts.Shasum,
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		Filter:                  filters.Empty(),
+		Architecture:            config.GetArch(),
 	}
-	defer pkgClient.ClearTempPaths()
+	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
+	if err != nil {
+		return fmt.Errorf("unable to load package: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
 
-	err = pkgClient.Deploy(ctx)
+	opts := packager2.DeployOpts{
+		GitServer:              pkgConfig.InitOpts.GitServer,
+		RegistryInfo:           pkgConfig.InitOpts.RegistryInfo,
+		ArtifactServer:         pkgConfig.InitOpts.ArtifactServer,
+		AdoptExistingResources: pkgConfig.DeployOpts.AdoptExistingResources,
+		Timeout:                pkgConfig.DeployOpts.Timeout,
+		Retries:                pkgConfig.PkgOpts.Retries,
+		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
+		PlainHTTP:              config.CommonOptions.PlainHTTP,
+		InsecureTLSSkipVerify:  config.CommonOptions.InsecureSkipTLSVerify,
+		SetVariables:           pkgConfig.PkgOpts.SetVariables,
+		StorageClass:           pkgConfig.InitOpts.StorageClass,
+	}
+	_, err = deploy(ctx, pkgLayout, opts)
 	if err != nil {
 		return err
 	}
-	// Since the new logger ignores pterm output the credential table is no longer printed on init.
-	// This note is the intended replacement, rather than printing creds by default.
+
 	logger.From(ctx).Info("init complete. To get credentials for Zarf deployed services run `zarf tools get-creds`")
 	return nil
 }

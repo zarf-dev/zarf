@@ -41,6 +41,10 @@ type PackageLayoutOptions struct {
 	Filter                  filters.ComponentFilterStrategy
 }
 
+func (p *PackageLayout) DirPath() string {
+	return p.dirPath
+}
+
 // LoadFromTar unpacks the given archive (any compress/format) and loads it.
 func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) (*PackageLayout, error) {
 	if opt.Filter == nil {
@@ -69,7 +73,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
-	pkg, err := ParseZarfPackage(b)
+	pkg, err := ParseZarfPackage(ctx, b)
 	if err != nil {
 		return nil, err
 	}
@@ -110,23 +114,28 @@ func (e *NoSBOMAvailableError) Error() string {
 	return fmt.Sprintf("zarf package %s does not have an SBOM available", e.pkgName)
 }
 
-// GetSBOM outputs the SBOM data from the package to the given destination path.
-func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) (string, error) {
+// Contains SBOM checks if a package includes an SBOM
+func (p *PackageLayout) ContainsSBOM() bool {
 	if !p.Pkg.IsSBOMAble() {
-		return "", &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
+		return false
+	}
+	return !helpers.InvalidPath(filepath.Join(p.dirPath, SBOMTar))
+}
+
+// GetSBOM outputs the SBOM data from the package to the given destination path.
+func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
+	if !p.ContainsSBOM() {
+		return &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
 	}
 
-	// 1) locate the sboms archive under the layout directory
+	// locate the sboms archive under the layout directory
 	sbomArchive := filepath.Join(p.dirPath, SBOMTar)
 
-	// // 2) decompress the archive to destination path
-	targetDir := filepath.Join(destPath, p.Pkg.Metadata.Name)
-	err := archive.Decompress(ctx, sbomArchive, targetDir, archive.DecompressOpts{})
+	err := archive.Decompress(ctx, sbomArchive, destPath, archive.DecompressOpts{})
 	if err != nil {
-		return "", err
+		return err
 	}
-
-	return targetDir, nil
+	return nil
 }
 
 // GetComponentDir returns a path to the directory in the given component.
