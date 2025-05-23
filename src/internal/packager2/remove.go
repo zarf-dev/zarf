@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"slices"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -18,9 +19,9 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager2/actions"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -75,6 +76,11 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 		}
 	}
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+
 	reverseDepComps := slices.Clone(depPkg.DeployedComponents)
 	slices.Reverse(reverseDepComps)
 	for _, depComp := range reverseDepComps {
@@ -85,7 +91,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 		}
 
 		err := func() error {
-			err := actions.Run(ctx, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.Before, nil)
+			err := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.Before, nil)
 			if err != nil {
 				return fmt.Errorf("unable to run the before action: %w", err)
 			}
@@ -126,11 +132,11 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 				}
 			}
 
-			err = actions.Run(ctx, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.After, nil)
+			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.After, nil)
 			if err != nil {
 				return fmt.Errorf("unable to run the after action: %w", err)
 			}
-			err = actions.Run(ctx, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnSuccess, nil)
+			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnSuccess, nil)
 			if err != nil {
 				return fmt.Errorf("unable to run the success action: %w", err)
 			}
@@ -147,7 +153,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 			return nil
 		}()
 		if err != nil {
-			removeErr := actions.Run(ctx, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil)
+			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil)
 			if removeErr != nil {
 				return errors.Join(fmt.Errorf("unable to run the failure action: %w", err), removeErr)
 			}

@@ -19,11 +19,11 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/packager2/actions"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -114,6 +114,10 @@ func (d *deployer) isConnectedToCluster() bool {
 func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpts) ([]types.DeployedComponent, error) {
 	l := logger.From(ctx)
 	deployedComponents := []types.DeployedComponent{}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get working directory: %w", err)
+	}
 
 	for _, component := range pkgLayout.Pkg.Components {
 		packageGeneration := 1
@@ -174,7 +178,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := actions.Run(ctx, onDeploy.Defaults, onDeploy.OnFailure, d.vc); err != nil {
+			if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnFailure, d.vc); err != nil {
 				l.Debug("unable to run component failure action", "error", err.Error())
 			}
 		}
@@ -199,7 +203,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 		}
 
-		if err := actions.Run(ctx, onDeploy.Defaults, onDeploy.OnSuccess, d.vc); err != nil {
+		if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnSuccess, d.vc); err != nil {
 			onFailure()
 			return nil, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -284,6 +288,10 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	hasFiles := len(component.Files) > 0
 
 	onDeploy := component.Actions.OnDeploy
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get working directory: %w", err)
+	}
 
 	if component.RequiresCluster() {
 		// Setup the state in the config
@@ -311,7 +319,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 	d.vc.SetApplicationTemplates(applicationTemplates)
 
-	if err := actions.Run(ctx, onDeploy.Defaults, onDeploy.Before, d.vc); err != nil {
+	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.Before, d.vc); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -386,7 +394,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		charts = append(charts, chartsFromManifests...)
 	}
 
-	if err := actions.Run(ctx, onDeploy.Defaults, onDeploy.After, d.vc); err != nil {
+	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.After, d.vc); err != nil {
 		return nil, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
