@@ -75,7 +75,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		cfg.ResponseHeaderTimeout = 0 // currently allowing infinite timeout
 	}
 
-	imagesWithOverrides := []imageWithOverride{}
+	imagesWithOverride := []imageWithOverride{}
 	for _, img := range cfg.ImageList {
 		overriddenImage := img
 		for k, v := range cfg.RegistryOverrides {
@@ -83,7 +83,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 				overriddenImage.Reference = strings.Replace(img.Reference, k, v, 1)
 			}
 		}
-		imagesWithOverrides = append(imagesWithOverrides, imageWithOverride{
+		imagesWithOverride = append(imagesWithOverride, imageWithOverride{
 			original:   img,
 			overridden: overriddenImage,
 		})
@@ -102,11 +102,12 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		Credential: credentials.Credential(credStore),
 	}
 	uniqueHosts := map[string]struct{}{}
-	for _, v := range imagesWithOverrides {
+	for _, v := range imagesWithOverride {
 		uniqueHosts[v.overridden.Host] = struct{}{}
 	}
-	// We ping registries to pre-authenticate as some auth mechanisms open up a browser
-	// which can cause issues when it happens many times concurrently
+	// We ping registries to pre-authenticate as some auth mechanisms open up a browser.
+	// When this happens concurrently many browser tabs will be open and authenticating to one will not propagate creds.
+	// Instead we auth synchronously so the auth is cached.
 	if credStore.IsAuthConfigured() {
 		for host := range uniqueHosts {
 			registry, err := remote.NewRegistry(host)
@@ -138,7 +139,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	// - Mark any images that don't resolve so we can attempt to pull them from the daemon
 	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
-	for _, image := range imagesWithOverrides {
+	for _, image := range imagesWithOverride {
 		eg.Go(func() error {
 			repo := &orasRemote.Repository{}
 
