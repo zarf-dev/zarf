@@ -7,11 +7,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
-	"github.com/zarf-dev/zarf/src/pkg/packager/composer"
 )
 
 type LintOptions struct {
@@ -28,9 +25,9 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	if err != nil {
 		return err
 	}
-	findings, err := lintComponents(pkg, opts.Flavor)
-	if err != nil {
-		return err
+	findings := []lint.PackageFinding{}
+	for i, component := range pkg.Components {
+		findings = append(findings, lint.CheckComponentValues(component, i)...)
 	}
 	if len(findings) == 0 {
 		return nil
@@ -39,16 +36,4 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 		PackageName: pkg.Metadata.Name,
 		Findings:    findings,
 	}
-}
-
-func lintComponents(pkg v1alpha1.ZarfPackage, flavor string) ([]lint.PackageFinding, error) {
-	findings := []lint.PackageFinding{}
-	for i, component := range pkg.Components {
-		arch := config.GetArch(pkg.Metadata.Architecture)
-		if !composer.CompatibleComponent(component, arch, flavor) {
-			continue
-		}
-		findings = append(findings, lint.CheckComponentValues(component, i)...)
-	}
-	return findings, nil
 }

@@ -19,7 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -98,8 +97,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("invalid command flags were provided: %w", err)
 	}
 
-	// Continue running package deploy for all components like any other package
-	initPackageName := sources.GetInitPackageName()
+	initPackageName := config.GetInitPackageName()
 
 	// Try to use an init-package in the executable directory if none exist in current working directory
 	packageSource, err := findInitPackage(cmd.Context(), initPackageName)

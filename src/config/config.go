@@ -112,3 +112,10 @@ func GetAbsHomePath(path string) (string, error) {
 	}
 	return path, nil
 }
+
+// GetInitPackageName based on the architecture and CLI version
+func GetInitPackageName() string {
+	// No package has been loaded yet so lookup GetArch() with no package info
+	arch := GetArch()
+	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", arch, CLIVersion)
+}

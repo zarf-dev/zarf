@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -63,5 +65,44 @@ func TestPackageLayout(t *testing.T) {
 		path := filepath.Join(pkgLayout.dirPath, filepath.FromSlash(expectedName))
 		name := files[path]
 		require.Equal(t, expectedName, name)
+	}
+}
+
+func TestPackageFileName(t *testing.T) {
+	t.Parallel()
+	config.CLIArch = "amd64"
+	tests := []struct {
+		name     string
+		pkg      v1alpha1.ZarfPackage
+		expected string
+	}{
+		{
+			name: "init package",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfInitConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Version: "v0.55.4",
+				},
+			},
+			expected: "zarf-init-amd64-v0.55.4.tar.zst",
+		},
+		{
+			name: "regular package",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name:    "my-package",
+					Version: "v0.55.4",
+				},
+			},
+			expected: "zarf-package-my-package-amd64-v0.55.4.tar.zst",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			layout := PackageLayout{Pkg: tt.pkg}
+			require.Equal(t, tt.expected, layout.FileName())
+		})
 	}
 }

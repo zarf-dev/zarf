@@ -25,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
 // PackageLayout manages the layout for a package.
@@ -179,7 +180,7 @@ func (p *PackageLayout) GetImageDir() string {
 }
 
 func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
-	packageName := fmt.Sprintf("%s%s", sources.NameFromMetadata(&p.Pkg, false), sources.PkgSuffix(p.Pkg.Metadata.Uncompressed))
+	packageName := fmt.Sprintf("%s%s", p.FileName(), sources.PkgSuffix(p.Pkg.Metadata.Uncompressed))
 	tarballPath := filepath.Join(dirPath, packageName)
 	err := os.Remove(tarballPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -236,6 +237,34 @@ func (p *PackageLayout) Files() (map[string]string, error) {
 		return nil, err
 	}
 	return files, nil
+}
+
+func (p *PackageLayout) FileName() string {
+	arch := config.GetArch(p.Pkg.Build.Architecture, p.Pkg.Metadata.Architecture)
+	if p.Pkg.Build.Architecture == zoci.SkeletonArch {
+		arch = zoci.SkeletonArch
+	}
+
+	var name string
+	switch p.Pkg.Kind {
+	case v1alpha1.ZarfInitConfig:
+		name = fmt.Sprintf("zarf-init-%s", arch)
+	case v1alpha1.ZarfPackageConfig:
+		name = fmt.Sprintf("zarf-package-%s-%s", p.Pkg.Metadata.Name, arch)
+	default:
+		name = fmt.Sprintf("zarf-%s-%s", strings.ToLower(string(p.Pkg.Kind)), arch)
+	}
+	if p.Pkg.Build.Differential {
+		name = fmt.Sprintf("%s-%s-differential-%s",
+			name, p.Pkg.Build.DifferentialPackageVersion, p.Pkg.Metadata.Version)
+	} else if p.Pkg.Metadata.Version != "" {
+		name = fmt.Sprintf("%s-%s", name, p.Pkg.Metadata.Version)
+	}
+
+	if p.Pkg.Metadata.Uncompressed {
+		return name + ".tar"
+	}
+	return name + ".tar.zst"
 }
 
 func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
