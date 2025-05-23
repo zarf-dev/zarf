@@ -120,11 +120,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	}
 
 	if opt.Output != "" {
-		name, err := nameFromMetadata(ctx, tmpPath)
-		if err != nil {
-			return nil, err
-		}
-		tarPath := filepath.Join(opt.Output, name)
+		tarPath := filepath.Join(opt.Output, pkgLayout.FileName())
 		err = os.Remove(tarPath)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return nil, err
