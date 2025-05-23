@@ -31,7 +31,7 @@ require (
 	github.com/goccy/go-yaml v1.17.1
 	github.com/gofrs/flock v0.12.1
 	github.com/golang-cz/devslog v0.0.13
-	github.com/google/go-containerregistry v0.20.4
+	github.com/google/go-containerregistry v0.20.5
 	github.com/gosuri/uitable v0.0.4
 	github.com/mholt/archives v0.1.2
 	github.com/opencontainers/image-spec v1.1.1
