@@ -14,9 +14,9 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
@@ -174,14 +174,14 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 	}
 
 	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
-	downloadCacheTarget, err := downloadInitPackage(ctx, absCachePath)
+	err = downloadInitPackage(ctx, absCachePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to download the init package: %w", err)
 	}
-	return downloadCacheTarget, nil
+	return filepath.Join(absCachePath, initPackageName), nil
 }
 
-func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, error) {
+func downloadInitPackage(ctx context.Context, cacheDirectory string) error {
 	l := logger.From(ctx)
 	url := zoci.GetInitPackageURL(config.CLIVersion)
 
@@ -193,20 +193,27 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, er
 		Message: lang.CmdInitPullConfirm,
 	}
 	if err := survey.AskOne(prompt, &confirmDownload); err != nil {
-		return "", fmt.Errorf("confirm download canceled: %w", err)
+		return fmt.Errorf("confirm download canceled: %w", err)
 	}
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		remote, err := zoci.NewRemote(ctx, url, oci.PlatformForArch(config.GetArch()))
-		if err != nil {
-			return "", err
+		// Add the oci:// prefix
+		url = fmt.Sprintf("oci://%s", url)
+
+		pullOptions := packager2.PullOptions{
+			Architecture: config.GetArch(),
 		}
-		source := &sources.OCISource{Remote: remote}
-		return source.Collect(ctx, cacheDirectory)
+
+		err := packager2.Pull(ctx, url, cacheDirectory, pullOptions)
+		if err != nil {
+			return fmt.Errorf("unable to download the init package: %w", err)
+		}
+
+		return nil
 	}
 	// Otherwise, exit and tell the user to manually download the init-package
-	return "", errors.New(lang.CmdInitPullErrManual)
+	return errors.New(lang.CmdInitPullErrManual)
 }
 
 func validateInitFlags() error {

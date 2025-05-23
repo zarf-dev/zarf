@@ -7,6 +7,7 @@ package images
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -37,7 +38,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"oras.land/oras-go/v2/registry/remote"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
@@ -110,7 +110,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	// Instead we auth synchronously with ping so the auth is cached before concurrent fetch.
 	if credStore.IsAuthConfigured() {
 		for host := range uniqueHosts {
-			registry, err := remote.NewRegistry(host)
+			registry, err := orasRemote.NewRegistry(host)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create registry: %w", err)
 			}
@@ -120,7 +120,10 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		}
 	}
 
-	client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+	client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+	if err != nil {
+		return nil, err
+	}
 
 	l.Debug("gathering credentials from default Docker config file", "credentials_configured", credStore.IsAuthConfigured())
 	platform := &ocispec.Platform{
@@ -218,7 +221,6 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 			imagesWithManifests[image.original] = manifest
 			l.Debug("pulled manifest for image", "name", image.overridden.Reference)
 			return nil
-
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -286,7 +288,7 @@ func getDockerEndpointHost() (string, error) {
 	return endpoint.Host, nil
 }
 
-func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, arch string, concurrency int) (map[transform.Image]ocispec.Manifest, error) {
+func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, arch string, concurrency int) (_ map[transform.Image]ocispec.Manifest, err error) {
 	l := logger.From(ctx)
 	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
 	dockerEndPointHost, err := getDockerEndpointHost()
@@ -301,7 +303,9 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Docker client: %w", err)
 	}
-	defer cli.Close()
+	defer func() {
+		err = errors.Join(err, cli.Close())
+	}()
 	cli.NegotiateAPIVersion(ctx)
 	for _, daemonImage := range daemonImages {
 		err := func() error {
@@ -312,7 +316,9 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 			if err != nil {
 				return fmt.Errorf("failed to make temp directory: %w", err)
 			}
-			defer os.RemoveAll(tmpDir)
+			defer func() {
+				err = errors.Join(err, os.RemoveAll(tmpDir))
+			}()
 			reference, err := name.ParseReference(daemonImage.overridden.Reference)
 			if err != nil {
 				return fmt.Errorf("failed to parse reference: %w", err)

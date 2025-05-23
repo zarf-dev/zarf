@@ -107,11 +107,11 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 		variableConfig.SetApplicationTemplates(applicationTemplates)
 
 		if len(component.Charts) > 0 {
-			chartDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout.ChartsComponentDir)
+			chartDir, err := pkgLayout.GetComponentDir(ctx, tmpComponentPath, component.Name, layout.ChartsComponentDir)
 			if err != nil {
 				return InspectPackageResourcesResults{}, err
 			}
-			valuesDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout.ValuesComponentDir)
+			valuesDir, err := pkgLayout.GetComponentDir(ctx, tmpComponentPath, component.Name, layout.ValuesComponentDir)
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				return InspectPackageResourcesResults{}, fmt.Errorf("failed to get values: %w", err)
 			}
@@ -156,7 +156,7 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 		}
 
 		if len(component.Manifests) > 0 {
-			manifestDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout.ManifestsComponentDir)
+			manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpComponentPath, component.Name, layout.ManifestsComponentDir)
 			if err != nil {
 				return InspectPackageResourcesResults{}, fmt.Errorf("failed to get package manifests: %w", err)
 			}
@@ -311,7 +311,7 @@ func InspectPackageSboms(ctx context.Context, source string, opts InspectPackage
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	outputPath, err := pkgLayout.GetSBOM(opts.OutputDir)
+	outputPath, err := pkgLayout.GetSBOM(ctx, opts.OutputDir)
 	if err != nil {
 		return InspectPackageSbomsResult{}, fmt.Errorf("could not get SBOM: %w", err)
 	}

@@ -59,7 +59,7 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 func (r *Remote) Push(ctx context.Context, pkgLayout *PackageLayout, concurrency int) (err error) {
 	logger.From(ctx).Info("pushing package to registry",
 		"destination", r.orasRemote.Repo().Reference.String(),
-		"architecture", pkgLayout.Pkg.Metadata.Architecture)
+		"architecture", pkgLayout.Pkg.Build.Architecture)
 
 	src, err := file.New("")
 	if err != nil {

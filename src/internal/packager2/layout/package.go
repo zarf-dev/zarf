@@ -4,11 +4,9 @@
 package layout
 
 import (
-	"archive/tar"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"maps"
 	"os"
@@ -17,13 +15,13 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/mholt/archiver/v3"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -43,7 +41,7 @@ type PackageLayoutOptions struct {
 	Filter                  filters.ComponentFilterStrategy
 }
 
-// LoadFromTar unpacks the give compressed package and loads it.
+// LoadFromTar unpacks the given archive (any compress/format) and loads it.
 func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) (*PackageLayout, error) {
 	if opt.Filter == nil {
 		opt.Filter = filters.Empty()
@@ -52,42 +50,14 @@ func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
-	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-	err = archiver.Walk(tarPath, func(f archiver.File) error {
-		if f.IsDir() {
-			return nil
-		}
-		header, ok := f.Header.(*tar.Header)
-		if !ok {
-			return fmt.Errorf("expected header to be *tar.Header but was %T", f.Header)
-		}
-		// If path has nested directories we want to create them.
-		dir := filepath.Dir(header.Name)
-		if dir != "." {
-			err := os.MkdirAll(filepath.Join(dirPath, dir), helpers.ReadExecuteAllWriteUser)
-			if err != nil {
-				return err
-			}
-		}
-		dst, err := os.Create(filepath.Join(dirPath, header.Name))
-		if err != nil {
-			return err
-		}
-		defer dst.Close()
-		_, err = io.Copy(dst, f)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	// Decompress the archive
+	err = archive.Decompress(ctx, tarPath, dirPath, archive.DecompressOpts{})
 	if err != nil {
 		return nil, err
 	}
-	p, err := LoadFromDir(ctx, dirPath, opt)
-	if err != nil {
-		return nil, err
-	}
-	return p, nil
+
+	// 3) Delegate to the existing LoadFromDir
+	return LoadFromDir(ctx, dirPath, opt)
 }
 
 // LoadFromDir loads and validates a package from the given directory path.
@@ -140,22 +110,27 @@ func (e *NoSBOMAvailableError) Error() string {
 	return fmt.Sprintf("zarf package %s does not have an SBOM available", e.pkgName)
 }
 
-// GetSBOM outputs the SBOM data from the package to the give destination path.
-func (p *PackageLayout) GetSBOM(destPath string) (string, error) {
+// GetSBOM outputs the SBOM data from the package to the given destination path.
+func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) (string, error) {
 	if !p.Pkg.IsSBOMAble() {
 		return "", &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
 	}
-	path := filepath.Join(destPath, p.Pkg.Metadata.Name)
-	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-	err := archiver.Extract(filepath.Join(p.dirPath, SBOMTar), "", path)
+
+	// 1) locate the sboms archive under the layout directory
+	sbomArchive := filepath.Join(p.dirPath, SBOMTar)
+
+	// // 2) decompress the archive to destination path
+	targetDir := filepath.Join(destPath, p.Pkg.Metadata.Name)
+	err := archive.Decompress(ctx, sbomArchive, targetDir, archive.DecompressOpts{})
 	if err != nil {
 		return "", err
 	}
-	return path, nil
+
+	return targetDir, nil
 }
 
 // GetComponentDir returns a path to the directory in the given component.
-func (p *PackageLayout) GetComponentDir(destPath, componentName string, ct ComponentDir) (string, error) {
+func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, componentName string, ct ComponentDir) (string, error) {
 	sourcePath := filepath.Join(p.dirPath, ComponentsDir, fmt.Sprintf("%s.tar", componentName))
 	_, err := os.Stat(sourcePath)
 	if errors.Is(err, os.ErrNotExist) {
@@ -169,9 +144,7 @@ func (p *PackageLayout) GetComponentDir(destPath, componentName string, ct Compo
 		return "", err
 	}
 	defer os.RemoveAll(tmpDir)
-	// TODO (phillebaba): We are not using archiver.Extract here because there is a bug in Windows where the files will not be extracted properly from nested directories.
-	// https://github.com/zarf-dev/zarf/issues/3051
-	err = archiver.Unarchive(sourcePath, tmpDir)
+	err = archive.Decompress(ctx, sourcePath, tmpDir, archive.DecompressOpts{})
 	if err != nil {
 		return "", err
 	}
@@ -212,8 +185,7 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 	for _, file := range files {
 		filePaths = append(filePaths, filepath.Join(p.dirPath, file.Name()))
 	}
-	// TODO(mkcp): See https://github.com/zarf-dev/zarf/issues/3051
-	err = archiver.Archive(filePaths, tarballPath)
+	err = archive.Compress(ctx, filePaths, tarballPath, archive.CompressOpts{})
 	if err != nil {
 		return fmt.Errorf("unable to create package: %w", err)
 	}
