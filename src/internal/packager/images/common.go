@@ -72,7 +72,7 @@ const (
 func isLayer(mediaType string) bool {
 	switch mediaType {
 	// many of these layers are deprecated now, but older images could still be using them
-	// nolint: staticcheck
+	//nolint: staticcheck
 	case DockerLayer, DockerUncompressedLayer, ocispec.MediaTypeImageLayerGzip, ocispec.MediaTypeImageLayerZstd, ocispec.MediaTypeImageLayer,
 		DockerForeignLayer, ocispec.MediaTypeImageLayerNonDistributableZstd, ocispec.MediaTypeImageLayerNonDistributable, ocispec.MediaTypeImageLayerNonDistributableGzip:
 		return true
@@ -179,13 +179,17 @@ func saveIndexToOCILayout(dir string, idx ocispec.Index) error {
 	return nil
 }
 
-func orasTransport(insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration) *retry.Transport {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+func orasTransport(insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration) (*retry.Transport, error) {
+	transport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, errors.New("could not get default transport")
+	}
+	transport = transport.Clone()
 	// Enable / Disable TLS verification based on the config
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecureSkipTLSVerify}
 	// Users frequently run into servers hanging indefinitely, if the server doesn't send headers in 10 seconds then we timeout to avoid this
 	transport.ResponseHeaderTimeout = responseHeaderTimeout
-	return retry.NewTransport(transport)
+	return retry.NewTransport(transport), nil
 }
 
 // NoopOpt is a no-op option for crane.

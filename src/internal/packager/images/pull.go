@@ -88,7 +88,10 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		Credential: credentials.Credential(credStore),
 	}
 
-	client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+	client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+	if err != nil {
+		return nil, err
+	}
 
 	l.Debug("gathering credentials from default Docker config file", "credentials_configured", credStore.IsAuthConfigured())
 	platform := &ocispec.Platform{
@@ -295,7 +298,9 @@ func pullFromDockerDaemon(ctx context.Context, daemonPullInfo []imageDaemonPullI
 			if err != nil {
 				return fmt.Errorf("failed to make temp directory: %w", err)
 			}
-			defer os.RemoveAll(tmpDir)
+			defer func() {
+				err = errors.Join(err, os.RemoveAll(tmpDir))
+			}()
 			reference, err := name.ParseReference(pullInfo.registryOverrideRef)
 			if err != nil {
 				return fmt.Errorf("failed to parse reference: %w", err)
