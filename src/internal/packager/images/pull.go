@@ -106,8 +106,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		uniqueHosts[v.overridden.Host] = struct{}{}
 	}
 	// We ping registries to pre-authenticate as some auth mechanisms open up a browser.
-	// When this happens concurrently many browser tabs will be open and authenticating to one will not propagate creds.
-	// Instead we auth synchronously so the auth is cached.
+	// When this happens concurrently a browser tab is opened for each image from that host and authenticating to one tab will not propagate creds
+	// Instead we auth synchronously with ping so the auth is cached before concurrent fetch.
 	if credStore.IsAuthConfigured() {
 		for host := range uniqueHosts {
 			registry, err := remote.NewRegistry(host)
