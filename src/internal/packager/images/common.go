@@ -71,8 +71,7 @@ const (
 
 func isLayer(mediaType string) bool {
 	switch mediaType {
-	// many of these layers are deprecated now, but older images could still be using them
-	//nolint: staticcheck
+	//nolint: staticcheck // some of these layers are deprecated now, but they're included in this check since older images could still be using them
 	case DockerLayer, DockerUncompressedLayer, ocispec.MediaTypeImageLayerGzip, ocispec.MediaTypeImageLayerZstd, ocispec.MediaTypeImageLayer,
 		DockerForeignLayer, ocispec.MediaTypeImageLayerNonDistributableZstd, ocispec.MediaTypeImageLayerNonDistributable, ocispec.MediaTypeImageLayerNonDistributableGzip:
 		return true
