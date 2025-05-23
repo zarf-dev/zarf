@@ -29,7 +29,6 @@ type DevDeployOptions struct {
 
 // DevDeploy creates + deploys a package in one shot
 func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) error {
-
 	l := logger.From(ctx)
 	start := time.Now()
 	config.CommonOptions.Confirm = true
