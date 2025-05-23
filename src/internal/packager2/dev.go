@@ -5,9 +5,11 @@ package packager2
 
 import (
 	"context"
+	"runtime"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -21,7 +23,6 @@ type DevDeployOptions struct {
 	CreateSetVariables map[string]string
 	DeploySetVariables map[string]string
 	OptionalComponents string
-	Architecture       string
 	Timeout            time.Duration
 	Retries            int
 }
@@ -34,6 +35,15 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) e
 	config.CommonOptions.Confirm = true
 
 	pkg, err := layout.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
+	if err != nil {
+		return err
+	}
+
+	filter := filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+		filters.ForDeploy(opts.OptionalComponents, false),
+	)
+	pkg.Components, err = filter.Apply(pkg)
 	if err != nil {
 		return err
 	}
@@ -70,11 +80,11 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) e
 	d.vc = variableConfig
 	if !opts.Airgap {
 		pkgLayout.Pkg.Metadata.YOLO = true
+		// Set default builtin values so they exist in case any helm charts rely on them
 		defaultState, err := state.Default()
 		if err != nil {
 			return err
 		}
-		// Set default builtin values so they exist in case any helm charts rely on them
 		defaultState.RegistryInfo.Address = opts.RegistryURL
 		d.s = defaultState
 	} else {
