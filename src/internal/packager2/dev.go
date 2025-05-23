@@ -23,14 +23,12 @@ type DevDeployOptions struct {
 	CreateSetVariables map[string]string
 	DeploySetVariables map[string]string
 	OptionalComponents string
-	Architecture       string
 	Timeout            time.Duration
 	Retries            int
 }
 
 // DevDeploy creates + deploys a package in one shot
 func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) error {
-
 	l := logger.From(ctx)
 	start := time.Now()
 	config.CommonOptions.Confirm = true
@@ -86,10 +84,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) e
 		if err != nil {
 			return err
 		}
-
-		if opts.RegistryURL != "" {
-			defaultState.RegistryInfo.Address = opts.RegistryURL
-		}
+		defaultState.RegistryInfo.Address = opts.RegistryURL
 		d.s = defaultState
 	} else {
 		d.hpaModified = false
