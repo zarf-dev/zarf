@@ -35,6 +35,111 @@ func createFluxOCIRepoAdmissionRequest(t *testing.T, op v1.Operation, fluxOCIRep
 	}
 }
 
+func TestFluxOCIHelmMutationWebhook(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	url, err := setupRegistry(t, ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	tests := []admissionTest{
+		{
+			name: "should be mutated but not the tag",
+			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Create, &flux.OCIRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mutate-this",
+				},
+				Spec: flux.OCIRepositorySpec{
+					URL: "oci://ghcr.io/stefanprodan/charts/podinfo",
+					Reference: &flux.OCIRepositoryRef{
+						Tag: "6.9.0",
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://localhost:5000/stefanprodan/charts/podinfo",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/spec/ref/tag",
+					"6.9.0",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should be mutated",
+			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Create, &flux.OCIRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mutate-this",
+				},
+				Spec: flux.OCIRepositorySpec{
+					URL: "oci://ghcr.io/stefanprodan/podinfo",
+					Reference: &flux.OCIRepositoryRef{
+						Tag: "6.9.0",
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://localhost:5000/stefanprodan/podinfo",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/spec/ref/tag",
+					"6.9.0-zarf-2985051089",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+	}
+
+	s := &state.State{RegistryInfo: types.RegistryInfo{
+		Address:      url,
+		PushUsername: "",
+		PushPassword: "",
+		PullUsername: "",
+		PullPassword: "",
+	}}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := createTestClientWithZarfState(ctx, t, s)
+			handler := admission.NewHandler().Serve(ctx, NewOCIRepositoryMutationHook(ctx, c))
+			if tt.svc != nil {
+				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
+			verifyAdmission(t, rr, tt)
+		})
+	}
+}
+
 func TestFluxOCIMutationWebhook(t *testing.T) {
 	t.Parallel()
 
