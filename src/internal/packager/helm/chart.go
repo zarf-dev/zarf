@@ -40,6 +40,7 @@ import (
 // Use same default as Helm CLI does.
 const maxHelmHistory = 10
 
+// InstallUpgradeOpts provide options for the Helm install/upgrade operation
 type InstallUpgradeOpts struct {
 	// AdoptExistingResources is true if the chart should adopt existing namespaces
 	AdoptExistingResources bool
@@ -124,7 +125,10 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		removeMsg := "if you need to remove the failed chart, use `zarf package remove`"
 		installErr := fmt.Errorf("unable to install chart after %d attempts: %w: %s", opts.Retries, err, removeMsg)
 
-		releases, _ := histClient.Run(zarfChart.ReleaseName)
+		releases, err := histClient.Run(zarfChart.ReleaseName)
+		if err != nil {
+			return nil, "", errors.Join(err, installErr)
+		}
 		previouslyDeployedVersion := 0
 
 		// Check for previous releases that successfully deployed
@@ -367,7 +371,11 @@ func migrateDeprecatedAPIs(ctx context.Context, c *cluster.Cluster, actionConfig
 			return fmt.Errorf("failed to unmarshal manifest: %w", err)
 		}
 
-		rawData, manifestModified, _ := handleDeprecations(rawData, *kubeGitVersion)
+		rawData, manifestModified, err := handleDeprecations(rawData, *kubeGitVersion)
+		if err != nil {
+			// avoid returning the err here in case pluto uses an invalid semver
+			logger.From(ctx).Error("unable to update deprecated resource", "name", resource.Name, "err", err.Error())
+		}
 		manifestContent, err := yaml.Marshal(rawData)
 		if err != nil {
 			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %w", err)
