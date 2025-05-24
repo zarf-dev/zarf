@@ -427,6 +427,14 @@ $ zarf tools registry manifest 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
 $ zarf tools registry manifest ghcr.io/stefanprodan/podinfo:6.4.0
 `
 
+	CmdToolsRegistryExportExample = `
+# Write tarball to stdout from the internal repo in Zarf
+$ zarf tools registry export 127.0.0.1:31999/stefanprodan/podinfo:6.4.0 -
+
+# Write tarball to file from the registry from a repo hosted at ghcr.io
+$ zarf tools registry export ghcr.io/stefanprodan/podinfo:6.4.0 podinfo.6.4.0.tar
+`
+
 	CmdToolsRegistryPruneShort       = "Prunes images from the registry that are not currently being used by any Zarf packages."
 	CmdToolsRegistryPruneFlagConfirm = "Confirm the image prune action to prevent accidental deletions"
 	CmdToolsRegistryPruneImageList   = "The following image digests will be pruned from the registry:"
