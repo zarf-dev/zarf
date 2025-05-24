@@ -36,6 +36,7 @@ Tools for working with container registries using go-containertools
 * [zarf tools registry digest](/commands/zarf_tools_registry_digest/)	 - Get the digest of an image
 * [zarf tools registry login](/commands/zarf_tools_registry_login/)	 - Log in to a registry
 * [zarf tools registry ls](/commands/zarf_tools_registry_ls/)	 - List the tags in a repo
+* [zarf tools registry manifest](/commands/zarf_tools_registry_manifest/)	 - Get the manifest of an image
 * [zarf tools registry prune](/commands/zarf_tools_registry_prune/)	 - Prunes images from the registry that are not currently being used by any Zarf packages.
 * [zarf tools registry pull](/commands/zarf_tools_registry_pull/)	 - Pull remote images by reference and store their contents locally
 * [zarf tools registry push](/commands/zarf_tools_registry_push/)	 - Push local image contents to a remote registry

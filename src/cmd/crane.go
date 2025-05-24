@@ -92,6 +92,7 @@ func newRegistryCommand() *cobra.Command {
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPull, &craneOptions, lang.CmdToolsRegistryPullExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, &craneOptions, lang.CmdToolsRegistryDigestExample, 0))
+	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdManifest, &craneOptions, lang.CmdToolsRegistryManifestExample, 0))
 
 	cmd.AddCommand(craneCmd.NewCmdVersion())
 
