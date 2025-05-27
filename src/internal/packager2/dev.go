@@ -24,8 +24,10 @@ type DevDeployOptions struct {
 	// RegistryURL allows for an override to the Zarf state registry URL when not in airgap mode. Important for setting the ###ZARF_REGISTRY### template
 	RegistryURL string
 	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry during package assembly
-	RegistryOverrides  map[string]string
+	RegistryOverrides map[string]string
+	// CreateSetVariables are for package templates
 	CreateSetVariables map[string]string
+	// DeploySetVariables are for package variables
 	DeploySetVariables map[string]string
 	// OptionalComponents to be deployed
 	OptionalComponents string
@@ -92,7 +94,9 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) e
 		if err != nil {
 			return err
 		}
-		defaultState.RegistryInfo.Address = opts.RegistryURL
+		if opts.RegistryURL != "" {
+			defaultState.RegistryInfo.Address = opts.RegistryURL
+		}
 		d.s = defaultState
 	} else {
 		d.hpaModified = false
