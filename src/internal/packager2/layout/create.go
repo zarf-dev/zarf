@@ -77,11 +77,14 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 
 // AssembleOptions are the options for creating a package from a package object
 type AssembleOptions struct {
-	Flavor                  string
-	RegistryOverrides       map[string]string
-	SigningKeyPath          string
-	SigningKeyPassword      string
-	SkipSBOM                bool
+	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified
+	Flavor string
+	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry
+	RegistryOverrides  map[string]string
+	SigningKeyPath     string
+	SigningKeyPassword string
+	SkipSBOM           bool
+	// DifferentialPackagePath causes a differential package to be created that only contains images and repos not included in the package at the given path
 	DifferentialPackagePath string
 	OCIConcurrency          int
 }
