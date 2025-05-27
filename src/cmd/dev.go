@@ -301,7 +301,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
 	err := packager2.DevDeploy(ctx, pkgConfig.CreateOpts.BaseDir, packager2.DevDeployOptions{
-		Airgap:             pkgConfig.CreateOpts.NoYOLO,
+		AirgapMode:         pkgConfig.CreateOpts.NoYOLO,
 		Flavor:             pkgConfig.CreateOpts.Flavor,
 		RegistryURL:        pkgConfig.DeployOpts.RegistryURL,
 		RegistryOverrides:  pkgConfig.CreateOpts.RegistryOverrides,

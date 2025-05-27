@@ -16,15 +16,23 @@ import (
 )
 
 type DevDeployOptions struct {
-	Airgap             bool
-	Flavor             string
-	RegistryURL        string
+	// When true packs images and repos into the package and uses the cluster Zarf state
+	// When false deploys package without repos or images and uses the default Zarf state
+	AirgapMode bool
+	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified
+	Flavor string
+	// RegistryURL allows for an override to the Zarf state registry URL when not in airgap mode. Important for setting the ###ZARF_REGISTRY### template
+	RegistryURL string
+	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry during package assembly
 	RegistryOverrides  map[string]string
 	CreateSetVariables map[string]string
 	DeploySetVariables map[string]string
+	// OptionalComponents to be deployed
 	OptionalComponents string
-	Timeout            time.Duration
-	Retries            int
+	// Timeout for Helm operations
+	Timeout time.Duration
+	// Retries to preform for operations like git and image pushes
+	Retries int
 }
 
 // DevDeploy creates + deploys a package in one shot
@@ -48,7 +56,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) e
 	}
 
 	// If not building for airgap, strip out all images and repos
-	if !opts.Airgap {
+	if !opts.AirgapMode {
 		for idx := range pkg.Components {
 			pkg.Components[idx].Images = []string{}
 			pkg.Components[idx].Repos = []string{}
@@ -77,7 +85,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) e
 
 	var d deployer
 	d.vc = variableConfig
-	if !opts.Airgap {
+	if !opts.AirgapMode {
 		pkgLayout.Pkg.Metadata.YOLO = true
 		// Set default builtin values so they exist in case any helm charts rely on them
 		defaultState, err := state.Default()
