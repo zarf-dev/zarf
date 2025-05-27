@@ -24,7 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
 // PackageLayout manages the layout for a package.
@@ -179,8 +178,12 @@ func (p *PackageLayout) GetImageDir() string {
 }
 
 func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
-	tarballPath := filepath.Join(dirPath, p.FileName())
-	err := os.Remove(tarballPath)
+	filename, err := p.FileName()
+	if err != nil {
+		return err
+	}
+	tarballPath := filepath.Join(dirPath, filename)
+	err = os.Remove(tarballPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -237,11 +240,11 @@ func (p *PackageLayout) Files() (map[string]string, error) {
 	return files, nil
 }
 
-func (p *PackageLayout) FileName() string {
-	arch := config.GetArch(p.Pkg.Build.Architecture, p.Pkg.Metadata.Architecture)
-	if p.Pkg.Build.Architecture == zoci.SkeletonArch {
-		arch = zoci.SkeletonArch
+func (p *PackageLayout) FileName() (string, error) {
+	if p.Pkg.Build.Architecture == "" {
+		return "", errors.New("package must include a build architecture")
 	}
+	arch := p.Pkg.Build.Architecture
 
 	var name string
 	switch p.Pkg.Kind {
@@ -260,9 +263,9 @@ func (p *PackageLayout) FileName() string {
 	}
 
 	if p.Pkg.Metadata.Uncompressed {
-		return name + ".tar"
+		return name + ".tar", nil
 	}
-	return name + ".tar.zst"
+	return name + ".tar.zst", nil
 }
 
 func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
