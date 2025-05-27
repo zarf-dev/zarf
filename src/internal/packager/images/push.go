@@ -89,7 +89,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 		if dns.IsLocalhost(registryURL) && !cfg.PlainHTTP {
 			var err error
-			plainHTTP, err = shouldUsePlainHTTP(ctx, registryURL, client)
+			plainHTTP, err = ShouldUsePlainHTTP(ctx, registryURL, client)
 			if err != nil {
 				return err
 			}
