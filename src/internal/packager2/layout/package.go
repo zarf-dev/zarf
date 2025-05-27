@@ -23,7 +23,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
@@ -180,8 +179,7 @@ func (p *PackageLayout) GetImageDir() string {
 }
 
 func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
-	packageName := fmt.Sprintf("%s%s", p.FileName(), sources.PkgSuffix(p.Pkg.Metadata.Uncompressed))
-	tarballPath := filepath.Join(dirPath, packageName)
+	tarballPath := filepath.Join(dirPath, p.FileName())
 	err := os.Remove(tarballPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
