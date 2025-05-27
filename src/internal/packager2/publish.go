@@ -177,7 +177,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		return fmt.Errorf("unable to load skeleton: %w", err)
 	}
 
-	// TODO: check examine UX of this
+	// TODO: need to print version too
 	err = pushToRemote(ctx, pkgLayout, ref, opts.Concurrency, opts.WithPlainHTTP)
 	if err != nil {
 		return err

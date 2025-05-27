@@ -342,7 +342,7 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	if err := lint.ValidatePackage(pkg); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
-	findings, err := lint.ValidatePackageSchemaAtPath(packagePath, setVariables)
+	findings, err := lint.ValidatePackageSchemaAtPath(filepath.Join(packagePath, ZarfYAML), setVariables)
 	if err != nil {
 		return fmt.Errorf("unable to check schema: %w", err)
 	}
