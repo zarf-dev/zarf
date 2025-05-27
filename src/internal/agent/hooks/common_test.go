@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -139,12 +140,8 @@ func TestConfigMediaTypes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			mediaType, err := getManifestConfigMediaType(ctx, s, tt.image)
-			if err != nil {
-				panic(err)
-			}
-			if mediaType != tt.expected {
-				t.Errorf("invalid Media type, expected \"%s\", got \"%s\"", tt.expected, mediaType)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, mediaType)
 		})
 	}
 }

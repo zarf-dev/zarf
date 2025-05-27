@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/fluxcd/pkg/apis/meta"
@@ -23,6 +24,7 @@ import (
 
 const (
 	HelmMediaTypeManifest = "application/vnd.cncf.helm.config.v1+json"
+	WebhookTimeout        = 20 * time.Second
 )
 
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
@@ -107,15 +109,19 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
 		}
 
+		timeoutCtx, cancel := context.WithTimeout(ctx, WebhookTimeout)
+		defer cancel()
+
 		// Get the media type of the oci image
-		mediaType, err := getManifestConfigMediaType(ctx, zarfState, patchedSrc)
+		mediaType, err := getManifestConfigMediaType(timeoutCtx, zarfState, patchedSrc)
 
 		// If we get an error, we fall back to existing mutation logic
 		if err != nil {
+			l.Error("got the following error", "error", err)
 			mediaType = ""
 		}
 
-		l.Debug("Got the following media type", "mediaType", mediaType, "registryAddress", registryAddress)
+		l.Debug("got the following media type", "mediaType", mediaType, "registryAddress", registryAddress)
 
 		if isChart(mediaType) {
 			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, patchedURL)

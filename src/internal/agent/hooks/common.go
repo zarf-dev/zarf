@@ -7,12 +7,12 @@ package hooks
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
@@ -29,41 +29,40 @@ func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 }
 
 func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, imageAddress string) (string, error) {
-	l := logger.From(ctx)
+	client := &auth.Client{
+		Client: orasRetry.DefaultClient,
+		Cache:  auth.NewCache(),
+		Credential: auth.StaticCredential(imageAddress, auth.Credential{
+			Username: zarfState.RegistryInfo.PullUsername,
+			Password: zarfState.RegistryInfo.PullPassword,
+		}),
+	}
 
-	image, err := transform.ParseImageRef(imageAddress)
+	ref, err := registry.ParseReference(imageAddress)
+	if err != nil {
+		return "", err
+	}
+
+	http, err := images.ShouldUsePlainHTTP(ctx, ref.Registry, client)
 	if err != nil {
 		return "", err
 	}
 
 	registry := &orasRemote.Repository{
-		PlainHTTP: true,
-		Reference: registry.Reference{
-			Registry:   image.Host,
-			Repository: image.Path,
-			Reference:  image.Reference,
-		},
-		Client: &auth.Client{
-			Client: orasRetry.DefaultClient,
-			Cache:  auth.NewCache(),
-			Credential: auth.StaticCredential(imageAddress, auth.Credential{
-				Username: zarfState.RegistryInfo.PullUsername,
-				Password: zarfState.RegistryInfo.PullPassword,
-			}),
-		},
+		PlainHTTP: http,
+		Reference: ref,
+		Client:    client,
 	}
 
 	_, b, err := oras.FetchBytes(ctx, registry, imageAddress, oras.DefaultFetchBytesOptions)
 
 	if err != nil {
-		l.Debug("Got the following error when trying to fetch manifest", "imageAddress", imageAddress, "error", err)
-		return "", err
+		return "", fmt.Errorf("got an error when trying to access the manifest for %s, error %v", imageAddress, err)
 	}
 
 	var manifest ocispec.Manifest
 	if err := json.Unmarshal(b, &manifest); err != nil {
-		l.Debug("Unable to unmarshal the manifest json", "manifest", imageAddress, "error", err)
-		return "", err
+		return "", fmt.Errorf("unable to unmarshal the manifest json for %s", imageAddress)
 	}
 
 	return manifest.Config.MediaType, nil
