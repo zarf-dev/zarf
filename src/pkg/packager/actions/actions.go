@@ -229,17 +229,17 @@ func actionCmdMutation(ctx context.Context, cmd string, shellPref v1alpha1.Shell
 		// (also TF_VAR_* and ZARF_CONST_).
 		// https://regex101.com/r/xk1rkw/1
 		envVarRegex := regexp.MustCompile(`(?P<envIndicator>\${?(?P<varName>(ZARF|TF)_(VAR|CONST)_([a-zA-Z0-9_-])+)}?)`)
-		getFunctions, err := MatchAllRegex(envVarRegex, cmd)
+		getFunctions := MatchAllRegex(envVarRegex, cmd)
 
-		if err == nil {
-			newCmd := cmd
-			for _, get := range getFunctions {
-				newCmd = strings.ReplaceAll(newCmd, get("envIndicator"), fmt.Sprintf("$Env:%s", get("varName")))
+		newCmd := cmd
+		for _, get := range getFunctions {
+			newCmd = strings.ReplaceAll(newCmd, get("envIndicator"), fmt.Sprintf("$Env:%s", get("varName")))
 
-			}
-			logger.From(ctx).Debug("converted command", "cmd", cmd, "newCmd", newCmd)
-			cmd = newCmd
 		}
+		if newCmd != cmd {
+			logger.From(ctx).Debug("converted command", "cmd", cmd, "newCmd", newCmd)
+		}
+		cmd = newCmd
 	}
 
 	return cmd, nil
@@ -305,13 +305,9 @@ func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cm
 }
 
 // MatchAllRegex wraps a get function around each substring match, returning all matches.
-func MatchAllRegex(regex *regexp.Regexp, str string) ([]func(string) string, error) {
+func MatchAllRegex(regex *regexp.Regexp, str string) []func(string) string {
 	// Validate the string.
 	matches := regex.FindAllStringSubmatch(str, -1)
-
-	if len(matches) == 0 {
-		return nil, fmt.Errorf("unable to match against %s", str)
-	}
 
 	// Parse the string into its components.
 	var funcs []func(string) string
@@ -322,5 +318,5 @@ func MatchAllRegex(regex *regexp.Regexp, str string) ([]func(string) string, err
 		})
 	}
 
-	return funcs, nil
+	return funcs
 }

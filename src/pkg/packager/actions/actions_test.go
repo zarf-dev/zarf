@@ -3,6 +3,7 @@ package actions
 import (
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -17,7 +18,7 @@ func Test_actionCmdMutation(t *testing.T) {
 		shellPref v1alpha1.Shell
 		goos      string
 		want      string
-		wantErr   bool
+		wantErr   error
 	}{
 		{
 			name:      "linux without zarf",
@@ -25,7 +26,7 @@ func Test_actionCmdMutation(t *testing.T) {
 			shellPref: v1alpha1.Shell{},
 			goos:      "linux",
 			want:      "echo \"this is zarf\"",
-			wantErr:   false,
+			wantErr:   nil,
 		},
 		{
 			name:      "linux including zarf",
@@ -33,7 +34,7 @@ func Test_actionCmdMutation(t *testing.T) {
 			shellPref: v1alpha1.Shell{},
 			goos:      "linux",
 			want:      fmt.Sprintf("%s deploy", zarfCmd),
-			wantErr:   false,
+			wantErr:   nil,
 		},
 		{
 			name:      "windows including zarf",
@@ -41,7 +42,7 @@ func Test_actionCmdMutation(t *testing.T) {
 			shellPref: v1alpha1.Shell{},
 			goos:      "windows",
 			want:      fmt.Sprintf("%s deploy", zarfCmd),
-			wantErr:   false,
+			wantErr:   nil,
 		},
 		{
 			name:      "windows env",
@@ -49,7 +50,7 @@ func Test_actionCmdMutation(t *testing.T) {
 			shellPref: v1alpha1.Shell{},
 			goos:      "windows",
 			want:      "echo $Env:ZARF_VAR_ENV1",
-			wantErr:   false,
+			wantErr:   nil,
 		},
 		{
 			name: "windows env pwsh",
@@ -59,7 +60,7 @@ func Test_actionCmdMutation(t *testing.T) {
 			},
 			goos:    "windows",
 			want:    "echo $Env:ZARF_VAR_ENV1",
-			wantErr: false,
+			wantErr: nil,
 		},
 		{
 			name: "windows env powershell",
@@ -69,7 +70,7 @@ func Test_actionCmdMutation(t *testing.T) {
 			},
 			goos:    "windows",
 			want:    "echo $Env:ZARF_VAR_ENV1",
-			wantErr: false,
+			wantErr: nil,
 		},
 		{
 			name:      "windows multiple env",
@@ -77,7 +78,7 @@ func Test_actionCmdMutation(t *testing.T) {
 			shellPref: v1alpha1.Shell{},
 			goos:      "windows",
 			want:      "echo $Env:ZARF_VAR_ENV1 $Env:ZARF_VAR_ENV2",
-			wantErr:   false,
+			wantErr:   nil,
 		},
 		{
 			name:      "windows constants",
@@ -85,19 +86,14 @@ func Test_actionCmdMutation(t *testing.T) {
 			shellPref: v1alpha1.Shell{},
 			goos:      "windows",
 			want:      "echo $Env:ZARF_CONST_ENV1",
-			wantErr:   false,
+			wantErr:   nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := actionCmdMutation(context.Background(), tt.cmd, tt.shellPref, tt.goos)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("actionCmdMutation() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("actionCmdMutation() got = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.wantErr, err)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
