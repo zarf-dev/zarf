@@ -7,6 +7,7 @@ package lint
 import (
 	"fmt"
 	"io/fs"
+	"path/filepath"
 	"regexp"
 
 	"github.com/xeipuuv/gojsonschema"
@@ -21,7 +22,7 @@ var ZarfSchema fs.ReadFileFS
 // ValidatePackageSchemaAtPath checks the zarf.yaml at the definitionPath against the Zarf schema
 func ValidatePackageSchemaAtPath(definitionPath string, setVariables map[string]string) ([]PackageFinding, error) {
 	var untypedZarfPackage interface{}
-	if err := utils.ReadYaml(definitionPath, &untypedZarfPackage); err != nil {
+	if err := utils.ReadYaml(filepath.Join(definitionPath, layout.ZarfYAML), &untypedZarfPackage); err != nil {
 		return nil, err
 	}
 	jsonSchema, err := ZarfSchema.ReadFile("zarf.schema.json")
