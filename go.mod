@@ -14,7 +14,7 @@ require (
 	github.com/agnivade/levenshtein v1.2.1
 	github.com/anchore/clio v0.0.0-20250319180342-2cfe4b0cb716
 	github.com/anchore/stereoscope v0.1.4
-	github.com/anchore/syft v1.26.0
+	github.com/anchore/syft v1.26.1
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
 	github.com/defenseunicorns/pkg/oci v1.3.0
@@ -22,7 +22,7 @@ require (
 	github.com/distribution/distribution/v3 v3.0.1-0.20250417064513-e016d9595f53
 	github.com/distribution/reference v0.6.0
 	github.com/docker/docker v28.1.1+incompatible
-	github.com/fairwindsops/pluto/v5 v5.21.6
+	github.com/fairwindsops/pluto/v5 v5.21.7
 	github.com/fatih/color v1.18.0
 	github.com/fluxcd/gitkit v0.6.0
 	github.com/fluxcd/pkg/apis/meta v1.12.0
