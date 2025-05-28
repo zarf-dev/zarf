@@ -25,7 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -97,7 +97,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
-	pkg, err := layout2.LoadPackageDefinition(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
+	pkg, err := layout.LoadPackageDefinition(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
 	if err != nil {
 		return err
 	}
@@ -356,10 +356,10 @@ func newDevGenerateCommand() *cobra.Command {
 func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) {
 	l := logger.From(cmd.Context())
 	name := args[0]
-	generatedZarfYAMLPath := filepath.Join(o.output, layout2.ZarfYAML)
+	generatedZarfYAMLPath := filepath.Join(o.output, layout.ZarfYAML)
 
 	if !helpers.InvalidPath(generatedZarfYAMLPath) {
-		prefixed := filepath.Join(o.output, fmt.Sprintf("%s-%s", name, layout2.ZarfYAML))
+		prefixed := filepath.Join(o.output, fmt.Sprintf("%s-%s", name, layout.ZarfYAML))
 		l.Warn("using a prefixed name since zarf.yaml already exists in the output directory",
 			"output-directory", o.output,
 			"name", prefixed)
