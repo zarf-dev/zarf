@@ -273,7 +273,6 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 			suite.FileExists(filepath.Join(base, filepath.Base(component.DeprecatedCosignKeyPath)))
 		}
 
-		var chartDir string
 		var containsChart bool
 		for _, chart := range component.Charts {
 			if isSkeleton && chart.URL != "" {
@@ -281,6 +280,7 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 			}
 			containsChart = true
 		}
+		var chartDir string
 		if containsChart {
 			chartDir, err = pkgLayout.GetComponentDir(ctx, tmpdir, component.Name, layout.ChartsComponentDir)
 			suite.NoError(err)
@@ -297,8 +297,15 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 			suite.FileExists(filepath.Join(chartDir, tgz))
 		}
 
+		var containsFiles bool
+		for _, file := range component.Files {
+			if isSkeleton && helpers.IsURL(file.Source) {
+				continue
+			}
+			containsFiles = true
+		}
 		var filesDir string
-		if len(component.Files) > 0 {
+		if containsFiles {
 			filesDir, err = pkgLayout.GetComponentDir(ctx, tmpdir, component.Name, layout.FilesComponentDir)
 			suite.NoError(err)
 		}
@@ -310,8 +317,15 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 			suite.DirOrFileExists(path)
 		}
 
+		var containsDataInjections bool
+		for _, data := range component.DataInjections {
+			if isSkeleton && helpers.IsURL(data.Source) {
+				continue
+			}
+			containsDataInjections = true
+		}
 		var dataInjectionsDir string
-		if len(component.DataInjections) > 0 {
+		if containsDataInjections {
 			dataInjectionsDir, err = pkgLayout.GetComponentDir(ctx, tmpdir, component.Name, layout.DataComponentDir)
 			suite.NoError(err)
 		}
