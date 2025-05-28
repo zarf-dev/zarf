@@ -117,7 +117,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 
 		// If we get an error, we fall back to existing mutation logic
 		if err != nil {
-			l.Error("got the following error", "error", err)
+			l.Error(err)
 			mediaType = ""
 		}
 
