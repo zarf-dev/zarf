@@ -179,12 +179,30 @@ func (p *PackageLayout) GetImageDir() string {
 }
 
 func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
-	packageName := fmt.Sprintf("%s%s", sources.NameFromMetadata(&p.Pkg, false), sources.PkgSuffix(p.Pkg.Metadata.Uncompressed))
+	// Ensure output path exists
+	// NOTE(mkcp): We may want to move this behavior to archive.Compress
+	isPresent, err := exists(dirPath)
+	if err != nil {
+		return err
+	}
+	if !isPresent {
+		err = os.MkdirAll(dirPath, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+	// Generate path to package tarball
+	name := sources.NameFromMetadata(&p.Pkg, false)
+	suffix := sources.PkgSuffix(p.Pkg.Metadata.Uncompressed)
+	packageName := fmt.Sprintf("%s%s", name, suffix)
 	tarballPath := filepath.Join(dirPath, packageName)
-	err := os.Remove(tarballPath)
+
+	// Overwrite package tarball if it already exists
+	err = os.Remove(tarballPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
+
 	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
 	files, err := os.ReadDir(p.dirPath)
 	if err != nil {
@@ -339,4 +357,16 @@ func validatePackageSignature(ctx context.Context, pkgLayout *PackageLayout, pub
 		return fmt.Errorf("package signature did not match the provided key: %w", err)
 	}
 	return nil
+}
+
+// exists checks if a file is present at the given path.
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	return false, err
 }
