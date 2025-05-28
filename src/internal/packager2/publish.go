@@ -177,8 +177,11 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		return fmt.Errorf("unable to load skeleton: %w", err)
 	}
 
-	// TODO: need to print version too
 	err = pushToRemote(ctx, pkgLayout, ref, opts.Concurrency, opts.WithPlainHTTP)
+	if err != nil {
+		return err
+	}
+	packageRef, err := layout2.ReferenceFromMetadata(ref.String(), pkgLayout.Pkg)
 	if err != nil {
 		return err
 	}
@@ -189,7 +192,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 			Name: fmt.Sprintf("import-%s", c.Name),
 			Import: v1alpha1.ZarfComponentImport{
 				Name: c.Name,
-				URL:  helpers.OCIURLPrefix + ref.String(),
+				URL:  helpers.OCIURLPrefix + packageRef,
 			},
 		})
 	}
