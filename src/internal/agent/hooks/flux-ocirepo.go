@@ -24,7 +24,7 @@ import (
 
 const (
 	HelmMediaTypeManifest = "application/vnd.cncf.helm.config.v1+json"
-	WebhookTimeout        = 20 * time.Second
+	WebhookTimeout        = 10 * time.Second
 )
 
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
