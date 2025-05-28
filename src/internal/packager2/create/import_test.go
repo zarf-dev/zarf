@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package layout
+package create
 
 import (
 	"os"
@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -23,9 +24,9 @@ func TestResolveImportsCircular(t *testing.T) {
 
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
-	b, err := os.ReadFile(filepath.Join("./testdata/import/circular/first", ZarfYAML))
+	b, err := os.ReadFile(filepath.Join("./testdata/import/circular/first", layout.ZarfYAML))
 	require.NoError(t, err)
-	pkg, err := ParseZarfPackage(ctx, b)
+	pkg, err := layout.ParseZarfPackage(ctx, b)
 	require.NoError(t, err)
 
 	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{})
@@ -64,9 +65,9 @@ func TestResolveImports(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			b, err := os.ReadFile(filepath.Join(tc.path, ZarfYAML))
+			b, err := os.ReadFile(filepath.Join(tc.path, layout.ZarfYAML))
 			require.NoError(t, err)
-			pkg, err := ParseZarfPackage(ctx, b)
+			pkg, err := layout.ParseZarfPackage(ctx, b)
 			require.NoError(t, err)
 
 			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{})
@@ -74,7 +75,7 @@ func TestResolveImports(t *testing.T) {
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
 			require.NoError(t, err)
-			expectedPkg, err := ParseZarfPackage(ctx, b)
+			expectedPkg, err := layout.ParseZarfPackage(ctx, b)
 
 			require.NoError(t, err)
 			require.Equal(t, expectedPkg, resolvedPkg)

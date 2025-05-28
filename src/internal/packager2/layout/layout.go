@@ -6,6 +6,7 @@ package layout
 
 import (
 	"context"
+	"path/filepath"
 
 	goyaml "github.com/goccy/go-yaml"
 
@@ -27,6 +28,15 @@ const (
 
 	IndexJSON = "index.json"
 	OCILayout = "oci-layout"
+)
+
+var (
+	// IndexPath is the path to the index.json file
+	IndexPath = filepath.Join(ImagesDir, IndexJSON)
+	// ImagesBlobsDir is the path to the directory containing the image blobs in the OCI package.
+	ImagesBlobsDir = filepath.Join(ImagesDir, "blobs", "sha256")
+	// OCILayoutPath is the path to the oci-layout file
+	OCILayoutPath = filepath.Join(ImagesDir, OCILayout)
 )
 
 // ComponentDir is the type for the different directories in a component.

@@ -13,8 +13,10 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager2/create"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
 type CreateOptions struct {
@@ -36,8 +38,8 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 		return fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
 
-	createOpt := layout2.CreateOptions{
-		AssembleOptions: layout2.AssembleOptions{
+	createOpt := create.CreateOptions{
+		AssembleOptions: create.AssembleOptions{
 			SkipSBOM:                opt.SkipSBOM,
 			OCIConcurrency:          opt.OCIConcurrency,
 			DifferentialPackagePath: opt.DifferentialPackagePath,
@@ -48,22 +50,22 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 		},
 		SetVariables: opt.SetVariables,
 	}
-	pkgLayout, err := layout2.CreatePackage(ctx, packagePath, createOpt)
+	pkgLayout, err := create.CreatePackageLayout(ctx, packagePath, createOpt)
 	if err != nil {
 		return err
 	}
 	defer pkgLayout.Cleanup()
 
 	if helpers.IsOCIURL(opt.Output) {
-		ref, err := layout2.ReferenceFromMetadata(opt.Output, pkgLayout.Pkg)
+		ref, err := referenceFromMetadata(opt.Output, pkgLayout.Pkg)
 		if err != nil {
 			return err
 		}
-		remote, err := layout2.NewRemote(ctx, ref, oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture))
+		remote, err := zoci.NewRemote(ctx, ref, oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture))
 		if err != nil {
 			return err
 		}
-		err = remote.Push(ctx, pkgLayout, config.CommonOptions.OCIConcurrency)
+		err = remote.PushPackage(ctx, pkgLayout, config.CommonOptions.OCIConcurrency)
 		if err != nil {
 			return err
 		}

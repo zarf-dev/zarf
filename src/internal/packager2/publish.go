@@ -5,6 +5,7 @@ package packager2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
+	"github.com/zarf-dev/zarf/src/internal/packager2/create"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 
 	"oras.land/oras-go/v2/registry"
@@ -159,11 +161,11 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
 	// Create skeleton buildpath
-	createOpts := layout2.SkeletonCreateOptions{
+	createOpts := create.SkeletonCreateOptions{
 		SigningKeyPath:     opts.SigningKeyPath,
 		SigningKeyPassword: opts.SigningKeyPassword,
 	}
-	buildPath, err := layout2.CreateSkeleton(ctx, path, createOpts)
+	buildPath, err := create.CreateSkeleton(ctx, path, createOpts)
 	if err != nil {
 		return fmt.Errorf("unable to create skeleton: %w", err)
 	}
@@ -204,7 +206,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 // pushToRemote pushes a package to a remote at ref.
 func pushToRemote(ctx context.Context, layout *layout2.PackageLayout, ref registry.Reference, concurrency int, plainHTTP bool) error {
 	// Build Reference for remote from registry location and pkg
-	r, err := layout2.ReferenceFromMetadata(ref.String(), layout.Pkg)
+	r, err := referenceFromMetadata(ref.String(), layout.Pkg)
 	if err != nil {
 		return err
 	}
@@ -213,11 +215,31 @@ func pushToRemote(ctx context.Context, layout *layout2.PackageLayout, ref regist
 	// Set platform
 	p := oci.PlatformForArch(arch)
 
-	// Set up remote repo client
-	rem, err := layout2.NewRemote(ctx, r, p, oci.WithPlainHTTP(plainHTTP))
+	remote, err := zoci.NewRemote(ctx, r, p, oci.WithPlainHTTP(plainHTTP))
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
 
-	return rem.Push(ctx, layout, concurrency)
+	return remote.PushPackage(ctx, layout, concurrency)
+}
+
+func referenceFromMetadata(registryLocation string, pkg v1alpha1.ZarfPackage) (string, error) {
+	if len(pkg.Metadata.Version) == 0 {
+		return "", errors.New("version is required for publishing")
+	}
+	if !strings.HasSuffix(registryLocation, "/") {
+		registryLocation = registryLocation + "/"
+	}
+	registryLocation = strings.TrimPrefix(registryLocation, helpers.OCIURLPrefix)
+
+	raw := fmt.Sprintf("%s%s:%s", registryLocation, pkg.Metadata.Name, pkg.Metadata.Version)
+	if pkg.Build.Flavor != "" {
+		raw = fmt.Sprintf("%s-%s", raw, pkg.Build.Flavor)
+	}
+
+	ref, err := registry.ParseReference(raw)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse %s: %w", raw, err)
+	}
+	return ref.String(), nil
 }
