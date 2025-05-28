@@ -155,7 +155,14 @@ func (suite *PublishCopySkeletonSuite) Test_2_FilePaths() {
 					"kustomization-connect-service-1.yaml",
 					"kustomization-connect-service-two-0.yaml",
 				}
-				manifestDir := filepath.Join(unpacked, "components", "test-compose-package", "manifests")
+				ctx := context.Background()
+				pkgLayout, err := layout.LoadFromDir(ctx, unpacked, layout.PackageLayoutOptions{
+					IsPartial: true,
+				})
+				suite.NoError(err)
+				tmpdir := suite.T().TempDir()
+				manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpdir, "test-compose-package", layout.ManifestsComponentDir)
+				suite.NoError(err)
 				for _, manifest := range kustomizeGeneratedManifests {
 					manifestPath := filepath.Join(manifestDir, manifest)
 					suite.FileExists(manifestPath, "expected to find kustomize-generated manifest: %q", manifestPath)
@@ -267,7 +274,14 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 		}
 
 		var chartDir string
-		if len(component.Charts) > 0 {
+		var containsChart bool
+		for _, chart := range component.Charts {
+			if isSkeleton && chart.URL != "" {
+				continue
+			}
+			containsChart = true
+		}
+		if containsChart {
 			chartDir, err = pkgLayout.GetComponentDir(ctx, tmpdir, component.Name, layout.ChartsComponentDir)
 			suite.NoError(err)
 		}
@@ -292,11 +306,6 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 			if isSkeleton && helpers.IsURL(file.Source) {
 				continue
 			}
-			// } else if isSkeleton {
-			// 	fmt.Println("here")
-			// 	suite.FileExists(filepath.Join(filesDir, file.Source))
-			// 	continue
-			// }
 			path := filepath.Join(filesDir, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 			suite.DirOrFileExists(path)
 		}
@@ -308,9 +317,6 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 		}
 		for dataIdx, data := range component.DataInjections {
 			if isSkeleton && helpers.IsURL(data.Source) {
-				continue
-			} else if isSkeleton {
-				suite.DirOrFileExists(filepath.Join(dataInjectionsDir, data.Source))
 				continue
 			}
 			path := filepath.Join(dataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
@@ -328,9 +334,6 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 			}
 			for filesIdx, path := range manifest.Files {
 				if isSkeleton && helpers.IsURL(path) {
-					continue
-				} else if isSkeleton {
-					suite.FileExists(filepath.Join(manifestsDir, path))
 					continue
 				}
 				suite.FileExists(filepath.Join(manifestsDir, fmt.Sprintf("%s-%d.yaml", manifest.Name, filesIdx)))
