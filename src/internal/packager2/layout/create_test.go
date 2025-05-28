@@ -135,7 +135,7 @@ func TestCreateSkeleton(t *testing.T) {
 
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
-	opt := CreateOptions{}
+	opt := SkeletonCreateOptions{}
 	path, err := CreateSkeleton(ctx, "./testdata/zarf-skeleton-package", opt)
 	require.NoError(t, err)
 
