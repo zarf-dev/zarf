@@ -36,7 +36,7 @@ const (
 	extensionLzip = ".tar.lz"
 	extensionMz   = ".tar.mz"
 	extensionTmz  = ".tmz"
-	sbomFileName  = "sbom.tar"
+	sbomFileName  = "sboms.tar"
 
 	dirPerm  = 0o755
 	filePerm = 0o644
