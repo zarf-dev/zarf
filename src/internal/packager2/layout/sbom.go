@@ -7,6 +7,7 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"os"
@@ -209,17 +210,21 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 
 		for pkg := range sbom.Artifacts.Packages.Enumerate() {
 			containsSource := false
+			fileMetadata, ok := fileSrc.Describe().Metadata.(source.FileMetadata)
+			if !ok {
+				return nil, errors.New("failed to get file metadata from SBOM source")
+			}
 
 			// See if the source locations for this package contain the file Zarf indexed
 			for _, location := range pkg.Locations.ToSlice() {
-				if location.RealPath == fileSrc.Describe().Metadata.(source.FileMetadata).Path {
+				if location.RealPath == fileMetadata.Path {
 					containsSource = true
 				}
 			}
 
 			// If the locations do not contain the source file (i.e. the package was inside a tarball), add the file source
 			if !containsSource {
-				sourceLocation := syftFile.NewLocation(fileSrc.Describe().Metadata.(source.FileMetadata).Path)
+				sourceLocation := syftFile.NewLocation(fileMetadata.Path)
 				pkg.Locations.Add(sourceLocation)
 			}
 
@@ -277,6 +282,30 @@ func createSBOMHTML(outputDir, filename, goTemplate string, jsonData, jsonList [
 		return err
 	}
 	defer file.Close()
+	themeCSS, err := loadFileCSS("theme.css")
+	if err != nil {
+		return err
+	}
+	viewerCSS, err := loadFileCSS("styles.css")
+	if err != nil {
+		return err
+	}
+	libraryJS, err := loadFileJS("library.js")
+	if err != nil {
+		return err
+	}
+	commonJS, err := loadFileJS("common.js")
+	if err != nil {
+		return err
+	}
+	viewerJS, err := loadFileJS("viewer.js")
+	if err != nil {
+		return err
+	}
+	compareJS, err := loadFileJS("compare.js")
+	if err != nil {
+		return err
+	}
 	tplData := struct {
 		ThemeCSS  template.CSS
 		ViewerCSS template.CSS
@@ -287,14 +316,14 @@ func createSBOMHTML(outputDir, filename, goTemplate string, jsonData, jsonList [
 		ViewerJS  template.JS
 		CompareJS template.JS
 	}{
-		ThemeCSS:  loadFileCSS("theme.css"),
-		ViewerCSS: loadFileCSS("styles.css"),
+		ThemeCSS:  themeCSS,
+		ViewerCSS: viewerCSS,
 		List:      template.JS(jsonList),
 		Data:      template.JS(jsonData),
-		LibraryJS: loadFileJS("library.js"),
-		CommonJS:  loadFileJS("common.js"),
-		ViewerJS:  loadFileJS("viewer.js"),
-		CompareJS: loadFileJS("compare.js"),
+		LibraryJS: libraryJS,
+		CommonJS:  commonJS,
+		ViewerJS:  viewerJS,
+		CompareJS: compareJS,
 	}
 	tpl, err := template.ParseFS(viewerAssets, goTemplate)
 	if err != nil {
@@ -303,14 +332,20 @@ func createSBOMHTML(outputDir, filename, goTemplate string, jsonData, jsonList [
 	return tpl.Execute(file, tplData)
 }
 
-func loadFileCSS(name string) template.CSS {
-	data, _ := viewerAssets.ReadFile("viewer/" + name)
-	return template.CSS(data)
+func loadFileCSS(name string) (template.CSS, error) {
+	data, err := viewerAssets.ReadFile("viewer/" + name)
+	if err != nil {
+		return "", err
+	}
+	return template.CSS(data), nil
 }
 
-func loadFileJS(name string) template.JS {
-	data, _ := viewerAssets.ReadFile("viewer/" + name)
-	return template.JS(data)
+func loadFileJS(name string) (template.JS, error) {
+	data, err := viewerAssets.ReadFile("viewer/" + name)
+	if err != nil {
+		return "", err
+	}
+	return template.JS(data), nil
 }
 
 func getNormalizedFileName(identifier string) string {

@@ -373,12 +373,14 @@ func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
 	return false
 }
 
-func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
+func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmpBuildPath)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpBuildPath))
+	}()
 	compBuildPath := filepath.Join(tmpBuildPath, component.Name)
 	err = os.MkdirAll(compBuildPath, 0o700)
 	if err != nil {
@@ -425,7 +427,9 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				if err != nil {
 					return err
 				}
-				defer os.RemoveAll(tmpDir)
+				defer func() {
+					err = errors.Join(err, os.RemoveAll(tmpDir))
+				}()
 				compressedFile := filepath.Join(tmpDir, compressedFileName)
 
 				// If the file is an archive, download it to the componentPath.Temp

@@ -363,8 +363,8 @@ func TestPublishCopySHA(t *testing.T) {
 			// We want to pull the package and sure the content is the same as the local package
 			layoutExpected, err := layout.LoadFromTar(ctx, tc.packageToPublish, layout.PackageLayoutOptions{})
 			require.NoError(t, err)
-			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
-			defer os.Remove(layoutExpected.Pkg.Metadata.Name)
+			// This verifies that publish deletes the manifest that is auto created by oras
+			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
 			// Format url and instantiate remote
 			packageRef, err := zoci.ReferenceFromMetadata(dstRegistryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
 			require.NoError(t, err)
@@ -425,8 +425,8 @@ func TestPublishCopyTag(t *testing.T) {
 			// We want to pull the package and sure the content is the same as the local package
 			layoutExpected, err := layout.LoadFromTar(ctx, tc.packageToPublish, layout.PackageLayoutOptions{})
 			require.NoError(t, err)
-			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
-			defer os.Remove(layoutExpected.Pkg.Metadata.Name)
+			// This verifies that publish deletes the manifest that is auto created by oras
+			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
 			// Format url and instantiate remote
 			packageRef, err := zoci.ReferenceFromMetadata(dstRegistryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
 			require.NoError(t, err)

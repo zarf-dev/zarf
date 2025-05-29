@@ -5,6 +5,7 @@ package packager2
 
 import (
 	"context"
+	"errors"
 	"runtime"
 	"time"
 
@@ -39,7 +40,7 @@ type DevDeployOptions struct {
 }
 
 // DevDeploy creates + deploys a package in one shot
-func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) error {
+func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	config.CommonOptions.Confirm = true
@@ -77,7 +78,9 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) e
 	if err != nil {
 		return err
 	}
-	defer pkgLayout.Cleanup()
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.DeploySetVariables)
 	if err != nil {
