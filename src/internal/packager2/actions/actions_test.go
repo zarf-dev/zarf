@@ -3,15 +3,17 @@ package actions
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 func Test_actionCmdMutation(t *testing.T) {
-	zarfCmd, _ := utils.GetFinalExecutableCommand()
+	zarfCmd, err := utils.GetFinalExecutableCommand()
+	require.NoError(t, err)
 	tests := []struct {
 		name      string
 		cmd       string

@@ -35,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// DeployOpts are optional parameters to packager2.Deploy
 type DeployOpts struct {
 	// Deploy time set variables
 	SetVariables map[string]string

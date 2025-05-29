@@ -29,6 +29,7 @@ import (
 
 type ResourceType string
 
+// The different types of resources that can be inspected
 const (
 	ManifestResource   ResourceType = "manifest"
 	ChartResource      ResourceType = "chart"
@@ -373,7 +374,6 @@ func InspectPackageImages(ctx context.Context, source string, opts InspectPackag
 	return InspectPackageImageResult{
 		Images: images,
 	}, nil
-
 }
 
 func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig) ([]Resource, error) {

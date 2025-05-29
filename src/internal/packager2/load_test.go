@@ -96,7 +96,7 @@ func TestLoadSplitPackage(t *testing.T) {
 			f, err := os.Create(filepath.Join(tt.packagePath, "random_1mb.bin"))
 			require.NoError(t, err)
 			t.Cleanup(func() {
-				f.Close()
+				require.NoError(t, f.Close())
 				require.NoError(t, os.RemoveAll(f.Name()))
 			})
 			var mb int64 = 1024 * 1024

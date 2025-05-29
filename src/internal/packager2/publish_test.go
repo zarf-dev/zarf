@@ -207,7 +207,7 @@ func TestPublishSkeleton(t *testing.T) {
 
 			// NOTE(mkcp): In future schema version move ZarfPackage.Metadata.AggregateChecksum
 			// to ZarfPackage.Build.AggregateChecksum. See ADR #26
-			require.Equal(t, pkg, expectedPkg)
+			require.Equal(t, expectedPkg, pkg)
 		})
 	}
 }
@@ -253,7 +253,6 @@ func TestPublishPackage(t *testing.T) {
 }
 
 func TestPublishPackageDeterministic(t *testing.T) {
-
 	tt := []struct {
 		name string
 		path string
