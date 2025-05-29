@@ -144,6 +144,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				}
 			}
 			// If this package has been deployed before, increment the package generation within the secret
+			//nolint: errcheck // this may be the first time deploying the package therefore it will not exist
 			if existingDeployedPackage, _ := d.c.GetDeployedPackage(ctx, pkgLayout.Pkg.Metadata.Name); existingDeployedPackage != nil {
 				packageGeneration = existingDeployedPackage.Generation + 1
 			}

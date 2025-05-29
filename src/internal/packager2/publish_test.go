@@ -191,7 +191,7 @@ func TestPublishSkeleton(t *testing.T) {
 			err = goyaml.Unmarshal(data, &expectedPkg)
 			require.NoError(t, err)
 			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
-			defer os.Remove(expectedPkg.Metadata.Name)
+			require.NoFileExists(t, expectedPkg.Metadata.Name)
 
 			// Format url and instantiate remote
 			ref, err := zoci.ReferenceFromMetadata(registryRef.String(), &expectedPkg.Metadata, &expectedPkg.Build)
@@ -280,8 +280,6 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			// We want to pull the package and sure the content is the same as the local package
 			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{Filter: filters.Empty()})
 			require.NoError(t, err)
-			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
-			defer os.Remove(layoutExpected.Pkg.Metadata.Name)
 			// Format url and instantiate remote
 			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
 			require.NoError(t, err)
@@ -297,6 +295,8 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			// Re-publish the package to ensure the digest does not change
 			err = PublishPackage(ctx, tc.path, registryRef, tc.opts)
 			require.NoError(t, err)
+			// Publish creates a local oci manifest file using the package name, which gets deleted
+			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
 
 			latestDesc, err := remote.ResolveRoot(ctx)
 			require.NoError(t, err)

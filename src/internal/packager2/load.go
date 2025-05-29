@@ -172,7 +172,7 @@ func identifySource(src string) (string, error) {
 }
 
 // assembleSplitTar reconstructs a split tarball into a single archive.
-func assembleSplitTar(src, dest string) error {
+func assembleSplitTar(src, dest string) (err error) {
 	pattern := strings.Replace(src, ".part000", ".part*", 1)
 	splitFiles, err := filepath.Glob(pattern)
 	if err != nil {
@@ -187,7 +187,9 @@ func assembleSplitTar(src, dest string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() {
+		err = errors.Join(err, out.Close())
+	}()
 
 	for i, part := range splitFiles {
 		if i == 0 {

@@ -771,7 +771,7 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	}
 
 	// Record the hostname of the package creation terminal.
-	// The error here is ignored because the hostname is not critical to the package creation.
+	//nolint: errcheck // The error here is ignored because the hostname is not critical to the package creation.
 	hostname, _ := os.Hostname()
 	pkg.Build.Terminal = hostname
 
