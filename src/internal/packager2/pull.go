@@ -210,12 +210,14 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 	return "", fmt.Errorf("unsupported file type: %s", mtype.Extension())
 }
 
-func pullHTTPFile(ctx context.Context, src, tarPath string) error {
+func pullHTTPFile(ctx context.Context, src, tarPath string) (err error) {
 	f, err := os.Create(tarPath)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		err = errors.Join(err, f.Close())
+	}()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
 	if err != nil {
 		return err
@@ -224,7 +226,9 @@ func pullHTTPFile(ctx context.Context, src, tarPath string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err = errors.Join(err, resp.Body.Close())
+	}()
 	if resp.StatusCode != http.StatusOK {
 		_, err := io.Copy(io.Discard, resp.Body)
 		if err != nil {

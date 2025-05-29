@@ -44,7 +44,7 @@ type Resource struct {
 	ResourceType ResourceType
 }
 
-// InspectPackageResourceOptions are the optional parameters to InspectPackageResources
+// InspectPackageResourcesOptions are the optional parameters to InspectPackageResources
 type InspectPackageResourcesOptions struct {
 	Architecture            string
 	Components              string
