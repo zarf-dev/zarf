@@ -221,9 +221,10 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	if err != nil {
 		return InspectDefinitionResourcesResults{}, err
 	}
-	variableConfig := template.GetZarfVariableConfig(ctx)
-	variableConfig.SetConstants(pkg.Constants)
-	variableConfig.PopulateVariables(pkg.Variables, opts.DeploySetVariables)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables)
+	if err != nil {
+		return InspectDefinitionResourcesResults{}, err
+	}
 
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
