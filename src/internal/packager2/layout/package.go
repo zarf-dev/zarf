@@ -41,6 +41,7 @@ type PackageLayoutOptions struct {
 	Filter                  filters.ComponentFilterStrategy
 }
 
+// DirPath returns base directory of the package layout
 func (p *PackageLayout) DirPath() string {
 	return p.dirPath
 }
@@ -114,7 +115,7 @@ func (e *NoSBOMAvailableError) Error() string {
 	return fmt.Sprintf("zarf package %s does not have an SBOM available", e.pkgName)
 }
 
-// Contains SBOM checks if a package includes an SBOM
+// ContainsSBOM checks if a package includes an SBOM
 func (p *PackageLayout) ContainsSBOM() bool {
 	if !p.Pkg.IsSBOMAble() {
 		return false
@@ -173,11 +174,13 @@ func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, component
 	return outPath, nil
 }
 
+// GetImageDir returns the path to the images directory
 func (p *PackageLayout) GetImageDir() string {
 	// Use the manifest within the index.json to load the specific image we want
 	return filepath.Join(p.dirPath, ImagesDir)
 }
 
+// Archive creates a tarball from the package layout
 func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
 	packageName := fmt.Sprintf("%s%s", sources.NameFromMetadata(&p.Pkg, false), sources.PkgSuffix(p.Pkg.Metadata.Uncompressed))
 	tarballPath := filepath.Join(dirPath, packageName)
@@ -217,7 +220,7 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 	return nil
 }
 
-// Files returns a map off all the files in the package.
+// Files returns a map of all the files in the package.
 func (p *PackageLayout) Files() (map[string]string, error) {
 	files := map[string]string{}
 	err := filepath.Walk(p.dirPath, func(path string, info fs.FileInfo, _ error) error {

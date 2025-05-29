@@ -132,6 +132,7 @@ func (r *Remote) Push(ctx context.Context, pkgLayout *PackageLayout, concurrency
 	return nil
 }
 
+// ReferenceFromMetadata creates an OCI reference using the package metadata
 func ReferenceFromMetadata(registryLocation string, pkg v1alpha1.ZarfPackage) (string, error) {
 	if len(pkg.Metadata.Version) == 0 {
 		return "", errors.New("version is required for publishing")

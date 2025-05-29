@@ -27,6 +27,7 @@ import (
 	"helm.sh/helm/v3/pkg/chartutil"
 )
 
+// ResourceType is 
 type ResourceType string
 
 // The different types of resources that can be inspected
@@ -279,10 +280,12 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	return InspectDefinitionResourcesResults{Resources: resources}, nil
 }
 
+// InspectPackageSbomsResult includes the path to the retrieved SBOM
 type InspectPackageSbomsResult struct {
 	Path string
 }
 
+// InspectPackageSbomsOptions are optional parameters to InspectPackageSboms
 type InspectPackageSbomsOptions struct {
 	Architecture            string
 	PublicKeyPath           string
@@ -290,8 +293,8 @@ type InspectPackageSbomsOptions struct {
 	OutputDir               string
 }
 
-func InspectPackageSboms(ctx context.Context, source string, opts InspectPackageSbomsOptions) (InspectPackageSbomsResult, error) {
-
+// InspectPackageSBOM retrieves the SBOM from the package if it exists and places it in the returned path
+func InspectPackageSBOM(ctx context.Context, source string, opts InspectPackageSbomsOptions) (InspectPackageSbomsResult, error) {
 	loadOpts := LoadOptions{
 		Source:                  source,
 		Architecture:            opts.Architecture,
@@ -318,10 +321,12 @@ func InspectPackageSboms(ctx context.Context, source string, opts InspectPackage
 	}, nil
 }
 
+// InspectPackageDefinitionResult is returned by InspectPackageDefinition
 type InspectPackageDefinitionResult struct {
 	Package v1alpha1.ZarfPackage
 }
 
+// InspectPackageDefinitionOptions are the options for InspectPackageDefinition
 type InspectPackageDefinitionOptions struct {
 	Architecture            string
 	PublicKeyPath           string
@@ -341,7 +346,7 @@ func InspectPackageDefinition(ctx context.Context, source string, opts InspectPa
 	}, nil
 }
 
-// Each result contains an image. This allows expansion to other metadata
+// InspectPackageImageResult is returned by InspectPackageImages
 type InspectPackageImageResult struct {
 	Images []string
 }
@@ -352,8 +357,8 @@ type InspectPackageImagesOptions struct {
 	SkipSignatureValidation bool
 }
 
+// InspectPackageImages returns a list of the package images
 func InspectPackageImages(ctx context.Context, source string, opts InspectPackageImagesOptions) (InspectPackageImageResult, error) {
-
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
 	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, zoci.MetadataLayers)
