@@ -75,8 +75,14 @@ func TestCompress(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			name:      "errors when given sources but empty dest",
+			name:      "errors when given sources but no destination file",
 			sources:   []string{"foo.txt", "bar.txt"},
+			expectErr: true,
+		},
+		{
+			name:      "errors when given valid sources but invalid destination (directory, not a file)",
+			sources:   []string{"foo.txt", "bar.txt"},
+			dest:      "test-archives-not-a-file/",
 			expectErr: true,
 		},
 		{
@@ -94,6 +100,11 @@ func TestCompress(t *testing.T) {
 			name:    "can compress an archive to a dest with a parent directory",
 			sources: []string{"foo.txt", "bar.txt", "qux.txt"},
 			dest:    "nested/archive.tar.gz",
+		},
+		{
+			name:    "can compress an archive to a dest with arbitrarily nested parent directories",
+			sources: []string{"foo.txt", "bar.txt", "qux.txt"},
+			dest:    "nestedA/nestedB/nestedC/archive.tar.gz",
 		},
 	}
 
