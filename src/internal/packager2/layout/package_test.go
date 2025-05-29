@@ -17,8 +17,9 @@ func TestPackageLayout(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
+	pathToPackage := filepath.Join("..", "testdata", "load-package", "compressed")
 
-	pkgLayout, err := LoadFromTar(ctx, "../testdata/zarf-package-test-amd64-0.0.1.tar.zst", PackageLayoutOptions{})
+	pkgLayout, err := LoadFromTar(ctx, filepath.Join(pathToPackage, "zarf-package-test-amd64-0.0.1.tar.zst"), PackageLayoutOptions{})
 	require.NoError(t, err)
 
 	require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
@@ -27,7 +28,7 @@ func TestPackageLayout(t *testing.T) {
 	tmpDir := t.TempDir()
 	manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, "test", ManifestsComponentDir)
 	require.NoError(t, err)
-	expected, err := os.ReadFile("../testdata/deployment.yaml")
+	expected, err := os.ReadFile(filepath.Join(pathToPackage, "deployment.yaml"))
 	require.NoError(t, err)
 	b, err := os.ReadFile(filepath.Join(manifestDir, "deployment-0.yaml"))
 	require.NoError(t, err)
@@ -40,9 +41,9 @@ func TestPackageLayout(t *testing.T) {
 	require.ErrorContains(t, err, "component test could not access a files directory")
 
 	tmpDir = t.TempDir()
-	sbomPath, err := pkgLayout.GetSBOM(ctx, tmpDir)
+	err = pkgLayout.GetSBOM(ctx, tmpDir)
 	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(sbomPath, "compare.html"))
+	require.FileExists(t, filepath.Join(tmpDir, "compare.html"))
 
 	files, err := pkgLayout.Files()
 	require.NoError(t, err)

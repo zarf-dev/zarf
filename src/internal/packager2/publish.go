@@ -156,10 +156,9 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
 	// Create skeleton buildpath
-	createOpts := layout2.CreateOptions{
+	createOpts := layout2.SkeletonCreateOptions{
 		SigningKeyPath:     opts.SigningKeyPath,
 		SigningKeyPassword: opts.SigningKeyPassword,
-		SetVariables:       map[string]string{},
 	}
 	buildPath, err := layout2.CreateSkeleton(ctx, path, createOpts)
 	if err != nil {

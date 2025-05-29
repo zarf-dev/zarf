@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -36,14 +37,16 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 	}
 
 	createOpt := layout2.CreateOptions{
-		Flavor:                  opt.Flavor,
-		RegistryOverrides:       opt.RegistryOverrides,
-		SigningKeyPath:          opt.SigningKeyPath,
-		SigningKeyPassword:      opt.SigningKeyPassword,
-		SetVariables:            opt.SetVariables,
-		SkipSBOM:                opt.SkipSBOM,
-		OCIConcurrency:          opt.OCIConcurrency,
-		DifferentialPackagePath: opt.DifferentialPackagePath,
+		AssembleOptions: layout2.AssembleOptions{
+			SkipSBOM:                opt.SkipSBOM,
+			OCIConcurrency:          opt.OCIConcurrency,
+			DifferentialPackagePath: opt.DifferentialPackagePath,
+			Flavor:                  opt.Flavor,
+			RegistryOverrides:       opt.RegistryOverrides,
+			SigningKeyPath:          opt.SigningKeyPath,
+			SigningKeyPassword:      opt.SigningKeyPassword,
+		},
+		SetVariables: opt.SetVariables,
 	}
 	pkgLayout, err := layout2.CreatePackage(ctx, packagePath, createOpt)
 	if err != nil {
@@ -72,7 +75,7 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 	}
 
 	if opt.SBOMOut != "" {
-		_, err := pkgLayout.GetSBOM(ctx, opt.SBOMOut)
+		err := pkgLayout.GetSBOM(ctx, filepath.Join(opt.SBOMOut, pkgLayout.Pkg.Metadata.Name))
 		// Don't fail package create if the package doesn't have an sbom
 		var noSBOMErr *layout2.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {

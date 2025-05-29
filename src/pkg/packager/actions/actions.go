@@ -82,7 +82,7 @@ func runAction(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefau
 
 	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates())
 
-	if cmd, err = actionCmdMutation(ctx, cmd, actionDefaults.Shell); err != nil {
+	if cmd, err = actionCmdMutation(ctx, cmd, actionDefaults.Shell, runtime.GOOS); err != nil {
 		l.Error("error mutating command", "cmd", cmdEscaped, "err", err.Error())
 	}
 
@@ -209,7 +209,7 @@ func convertWaitToCmd(_ context.Context, wait v1alpha1.ZarfComponentActionWait, 
 }
 
 // Perform some basic string mutations to make commands more useful.
-func actionCmdMutation(ctx context.Context, cmd string, shellPref v1alpha1.Shell) (string, error) {
+func actionCmdMutation(ctx context.Context, cmd string, shellPref v1alpha1.Shell, goos string) (string, error) {
 	zarfCommand, err := utils.GetFinalExecutableCommand()
 	if err != nil {
 		return cmd, err
@@ -219,21 +219,27 @@ func actionCmdMutation(ctx context.Context, cmd string, shellPref v1alpha1.Shell
 	cmd = strings.ReplaceAll(cmd, "./zarf ", zarfCommand+" ")
 
 	// Make commands 'more' compatible with Windows OS PowerShell
-	if runtime.GOOS == "windows" && (exec.IsPowershell(shellPref.Windows) || shellPref.Windows == "") {
+	if goos == "windows" && (exec.IsPowershell(shellPref.Windows) || shellPref.Windows == "") {
 		// Replace "touch" with "New-Item" on Windows as it's a common command, but not POSIX so not aliased by M$.
 		// See https://mathieubuisson.github.io/powershell-linux-bash/ &
 		// http://web.cs.ucla.edu/~miryung/teaching/EE461L-Spring2012/labs/posix.html for more details.
 		cmd = regexp.MustCompile(`^touch `).ReplaceAllString(cmd, `New-Item `)
 
-		// Convert any ${ZARF_VAR_*} or $ZARF_VAR_* to ${env:ZARF_VAR_*} or $env:ZARF_VAR_* respectively (also TF_VAR_*).
+		// Convert any ${ZARF_VAR_*} or $ZARF_VAR_* to ${env:ZARF_VAR_*} or $env:ZARF_VAR_* respectively
+		// (also TF_VAR_* and ZARF_CONST_).
 		// https://regex101.com/r/xk1rkw/1
-		envVarRegex := regexp.MustCompile(`(?P<envIndicator>\${?(?P<varName>(ZARF|TF)_VAR_([a-zA-Z0-9_-])+)}?)`)
-		get, err := helpers.MatchRegex(envVarRegex, cmd)
-		if err == nil {
-			newCmd := strings.ReplaceAll(cmd, get("envIndicator"), fmt.Sprintf("$Env:%s", get("varName")))
-			logger.From(ctx).Debug("converted command", "cmd", cmd, "newCmd", newCmd)
-			cmd = newCmd
+		envVarRegex := regexp.MustCompile(`(?P<envIndicator>\${?(?P<varName>(ZARF|TF)_(VAR|CONST)_([a-zA-Z0-9_-])+)}?)`)
+		getFunctions := MatchAllRegex(envVarRegex, cmd)
+
+		newCmd := cmd
+		for _, get := range getFunctions {
+			newCmd = strings.ReplaceAll(newCmd, get("envIndicator"), fmt.Sprintf("$Env:%s", get("varName")))
+
 		}
+		if newCmd != cmd {
+			logger.From(ctx).Debug("converted command", "cmd", cmd, "newCmd", newCmd)
+		}
+		cmd = newCmd
 	}
 
 	return cmd, nil
@@ -296,4 +302,21 @@ func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cm
 		l.Debug("action complete", "cmd", cmd, "stdout", stdout, "stderr", stderr)
 	}
 	return stdout, stderr, err
+}
+
+// MatchAllRegex wraps a get function around each substring match, returning all matches.
+func MatchAllRegex(regex *regexp.Regexp, str string) []func(string) string {
+	// Validate the string.
+	matches := regex.FindAllStringSubmatch(str, -1)
+
+	// Parse the string into its components.
+	var funcs []func(string) string
+	for _, match := range matches {
+		funcs = append(funcs, func(name string) string {
+			return match[regex.SubexpIndex(name)]
+
+		})
+	}
+
+	return funcs
 }

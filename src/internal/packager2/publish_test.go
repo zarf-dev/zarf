@@ -13,9 +13,9 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2"
@@ -221,7 +221,7 @@ func TestPublishPackage(t *testing.T) {
 	}{
 		{
 			name: "Publish package",
-			path: "testdata/zarf-package-test-amd64-0.0.1.tar.zst",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOpts{
 				WithPlainHTTP: true,
 			},
@@ -261,7 +261,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 	}{
 		{
 			name: "Publish package",
-			path: "testdata/zarf-package-test-amd64-0.0.1.tar.zst",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOpts{
 				WithPlainHTTP: true,
 				Architecture:  "amd64",
@@ -315,7 +315,7 @@ func TestPublishCopySHA(t *testing.T) {
 	}{
 		{
 			name:             "Publish package",
-			packageToPublish: "testdata/zarf-package-test-amd64-0.0.1.tar.zst",
+			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOpts{
 				WithPlainHTTP: true,
 				Architecture:  "amd64",
@@ -386,7 +386,7 @@ func TestPublishCopyTag(t *testing.T) {
 	}{
 		{
 			name:             "Publish package",
-			packageToPublish: "testdata/zarf-package-test-amd64-0.0.1.tar.zst",
+			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOpts{
 				WithPlainHTTP: true,
 				Architecture:  "amd64",
