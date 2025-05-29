@@ -245,7 +245,7 @@ func pullHTTPFile(ctx context.Context, src, tarPath string) (err error) {
 
 // nameFromMetadata reads the zarf.yaml inside the archive at "path"
 // (which may be plain, .tar, .tar.zst, .zip, etc) and builds its package name.
-func nameFromMetadata(ctx context.Context, path string) (string, error) {
+func nameFromMetadata(ctx context.Context, path string) (_ string, err error) {
 	// 1) quick invalid‐path check
 	if helpers.InvalidPath(path) {
 		return "", &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
@@ -265,7 +265,9 @@ func nameFromMetadata(ctx context.Context, path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%s does not contain a %s", path, layout.ZarfYAML)
 	}
-	defer f.Close()
+	defer func() {
+		err = errors.Join(err, f.Close())
+	}()
 
 	// 4) read & unmarshal into our package struct
 	data, err := io.ReadAll(f)
