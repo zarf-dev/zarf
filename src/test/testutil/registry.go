@@ -32,19 +32,5 @@ func SetupInMemoryRegistry(ctx context.Context, t *testing.T, port int) string {
 	//nolint:errcheck // ignore
 	go ref.ListenAndServe()
 
-	// client := &http.Client{Timeout: 1 * time.Second}
-	// maxRetries := 10
-	// for i := 0; i < maxRetries; i++ {
-	// 	resp, err := client.Get(fmt.Sprintf("http://localhost:%d/v2/", port))
-	// 	if err == nil && resp.StatusCode == http.StatusOK {
-	// 		resp.Body.Close()
-	// 		break
-	// 	}
-	// 	if i == maxRetries-1 {
-	// 		t.Fatalf("Registry failed to start after %d retries", maxRetries)
-	// 	}
-	// 	time.Sleep(100 * time.Millisecond)
-	// }
-
 	return fmt.Sprintf("localhost:%d", port)
 }
