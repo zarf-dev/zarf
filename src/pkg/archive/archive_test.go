@@ -37,6 +37,94 @@ func readFile(t *testing.T, path string) string {
 	return string(data)
 }
 
+func generateAndCleanupSources(t *testing.T, sources []string) []string {
+	t.Helper()
+	paths := make([]string, len(sources))
+	root := t.TempDir()
+	for i, src := range sources {
+		path := filepath.Join(root, src)
+		content := strings.Join([]string{"test-data", src}, "-")
+		writeTestFile(t, path, content)
+		t.Cleanup(func() {
+			err := os.Remove(path)
+			if err != nil {
+				t.Fatalf("failed to remove file %s: %v", path, err)
+			}
+		})
+		paths[i] = path
+	}
+	return paths
+}
+
+func TestCompress(t *testing.T) {
+	t.Parallel()
+
+	tt := []struct {
+		name      string
+		sources   []string
+		dest      string
+		expectErr bool
+	}{
+		{
+			name:      "errors when both sources and dest are empty",
+			expectErr: true,
+		},
+		{
+			name:      "errors when given a dest but empty sources",
+			dest:      "err-archive.tar.gz",
+			expectErr: true,
+		},
+		{
+			name:      "errors when given sources but no destination file",
+			sources:   []string{"foo.txt", "bar.txt"},
+			expectErr: true,
+		},
+		{
+			name:      "errors when given valid sources but invalid destination (directory, not a file)",
+			sources:   []string{"foo.txt", "bar.txt"},
+			dest:      "test-archives-not-a-file/",
+			expectErr: true,
+		},
+		{
+			name:      "errors on unsupported extension",
+			sources:   []string{"foo.txt", "bar.txt", "qux.txt"},
+			dest:      "archive.not.an.extension.actually",
+			expectErr: true,
+		},
+		{
+			name:    "can compress an archive from sources",
+			sources: []string{"foo.txt", "bar.txt", "qux.txt"},
+			dest:    "archive.tar.gz",
+		},
+		{
+			name:    "can compress an archive to a dest with a parent directory",
+			sources: []string{"foo.txt", "bar.txt", "qux.txt"},
+			dest:    "nested/archive.tar.gz",
+		},
+		{
+			name:    "can compress an archive to a dest with arbitrarily nested parent directories",
+			sources: []string{"foo.txt", "bar.txt", "qux.txt"},
+			dest:    "nestedA/nestedB/nestedC/archive.tar.gz",
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			// localize source and dest paths to test environment
+			paths := generateAndCleanupSources(t, tc.sources)
+			testDest := filepath.Join(t.TempDir(), tc.dest)
+
+			// compress all sources to destination
+			err := Compress(t.Context(), paths, testDest, CompressOpts{})
+			if tc.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestCompressAndDecompress_MultipleFormats(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
