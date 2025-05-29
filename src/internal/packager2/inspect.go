@@ -145,7 +145,7 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 					return InspectPackageResourcesResults{}, fmt.Errorf("failed to get values: %w", err)
 				}
 				resources = append(resources, Resource{
-					Content:      fmt.Sprintf("%s", valuesYaml),
+					Content:      string(valuesYaml),
 					Name:         chart.Name,
 					ResourceType: ValuesFileResource,
 				})

@@ -24,7 +24,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-func pullFromRemote(t *testing.T, ctx context.Context, packageRef string, architecture string) *layout.PackageLayout {
+func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string) *layout.PackageLayout {
 	t.Helper()
 
 	// Generate tmpdir and pull published package from local registry
@@ -245,7 +245,7 @@ func TestPublishPackage(t *testing.T) {
 			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
 			require.NoError(t, err)
 
-			layoutActual := pullFromRemote(t, ctx, packageRef, "amd64")
+			layoutActual := pullFromRemote(ctx, t, packageRef, "amd64")
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})
 	}
@@ -370,7 +370,7 @@ func TestPublishCopySHA(t *testing.T) {
 
 			pkgRefsha := fmt.Sprintf("%s@%s", packageRef, indexDesc.Digest)
 
-			layoutActual := pullFromRemote(t, ctx, pkgRefsha, tc.opts.Architecture)
+			layoutActual := pullFromRemote(ctx, t, pkgRefsha, tc.opts.Architecture)
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})
 	}
@@ -430,7 +430,7 @@ func TestPublishCopyTag(t *testing.T) {
 			packageRef, err := zoci.ReferenceFromMetadata(dstRegistryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
 			require.NoError(t, err)
 
-			layoutActual := pullFromRemote(t, ctx, packageRef, tc.opts.Architecture)
+			layoutActual := pullFromRemote(ctx, t, packageRef, tc.opts.Architecture)
 
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})
