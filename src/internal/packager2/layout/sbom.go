@@ -46,13 +46,15 @@ const componentPrefix = "zarf-component-"
 var viewerAssets embed.FS
 var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
-func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath string, images []transform.Image) error {
+func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath string, images []transform.Image) (err error) {
 	l := logger.From(ctx)
 	outputPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(outputPath)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(outputPath))
+	}()
 
 	cachePath, err := config.GetAbsCachePath()
 	if err != nil {
@@ -149,13 +151,15 @@ func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.I
 	return jsonData, nil
 }
 
-func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outputPath, buildPath string) ([]byte, error) {
+func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outputPath, buildPath string) (_ []byte, err error) {
 	l := logger.From(ctx)
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 	tarPath := filepath.Join(buildPath, ComponentsDir, component.Name) + ".tar"
 	err = archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{})
 	if err != nil {

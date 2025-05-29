@@ -633,7 +633,7 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkg v1a
 	return nil
 }
 
-func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, variableConfig *variables.VariableConfig) error {
+func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, variableConfig *variables.VariableConfig) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Info("copying files", "count", len(component.Files))
@@ -642,7 +642,9 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpdir))
+	}()
 
 	filesDir, err := pkgLayout.GetComponentDir(ctx, tmpdir, component.Name, layout.FilesComponentDir)
 	if err != nil {

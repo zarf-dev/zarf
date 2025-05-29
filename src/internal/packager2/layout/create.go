@@ -587,12 +587,14 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	return nil
 }
 
-func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
+func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmpBuildPath)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpBuildPath))
+	}()
 	compBuildPath := filepath.Join(tmpBuildPath, component.Name)
 	err = os.MkdirAll(compBuildPath, 0o700)
 	if err != nil {

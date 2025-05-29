@@ -140,9 +140,9 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 }
 
 // GetComponentDir returns a path to the directory in the given component.
-func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, componentName string, ct ComponentDir) (string, error) {
+func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, componentName string, ct ComponentDir) (_ string, err error) {
 	sourcePath := filepath.Join(p.dirPath, ComponentsDir, fmt.Sprintf("%s.tar", componentName))
-	_, err := os.Stat(sourcePath)
+	_, err = os.Stat(sourcePath)
 	if errors.Is(err, os.ErrNotExist) {
 		return "", fmt.Errorf("component %s does not exist in package: %w", componentName, err)
 	}
@@ -153,7 +153,9 @@ func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, component
 	if err != nil {
 		return "", err
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 	err = archive.Decompress(ctx, sourcePath, tmpDir, archive.DecompressOpts{})
 	if err != nil {
 		return "", err
