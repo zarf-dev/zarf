@@ -7,6 +7,7 @@ package lint
 import (
 	"fmt"
 	"io/fs"
+	"path/filepath"
 	"regexp"
 
 	"github.com/xeipuuv/gojsonschema"
@@ -18,10 +19,10 @@ import (
 // ZarfSchema is exported so main.go can embed the schema file
 var ZarfSchema fs.ReadFileFS
 
-// ValidatePackageSchemaAtPath checks the zarf.yaml at the definitionPath against the Zarf schema
-func ValidatePackageSchemaAtPath(definitionPath string, setVariables map[string]string) ([]PackageFinding, error) {
+// ValidatePackageSchemaAtPath checks the Zarf package in the current directory against the Zarf schema
+func ValidatePackageSchemaAtPath(path string, setVariables map[string]string) ([]PackageFinding, error) {
 	var untypedZarfPackage interface{}
-	if err := utils.ReadYaml(definitionPath, &untypedZarfPackage); err != nil {
+	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &untypedZarfPackage); err != nil {
 		return nil, err
 	}
 	jsonSchema, err := ZarfSchema.ReadFile("zarf.schema.json")

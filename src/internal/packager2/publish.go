@@ -19,7 +19,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/internal/packager2/create"
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 
 	"oras.land/oras-go/v2/registry"
 )
@@ -121,11 +121,11 @@ func PublishPackage(ctx context.Context, path string, dst registry.Reference, op
 
 	// Load package layout
 	l.Info("loading package", "path", path)
-	layoutOpts := layout2.PackageLayoutOptions{
+	layoutOpts := layout.PackageLayoutOptions{
 		PublicKeyPath:           opts.PublicKeyPath,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
 	}
-	pkgLayout, err := layout2.LoadFromTar(ctx, path, layoutOpts)
+	pkgLayout, err := layout.LoadFromTar(ctx, path, layoutOpts)
 	if err != nil {
 		return fmt.Errorf("unable to load package: %w", err)
 	}
@@ -170,17 +170,20 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		return fmt.Errorf("unable to create skeleton: %w", err)
 	}
 
-	layoutOpts := layout2.PackageLayoutOptions{
+	layoutOpts := layout.PackageLayoutOptions{
 		SkipSignatureValidation: true,
 		IsPartial:               false,
 	}
-	pkgLayout, err := layout2.LoadFromDir(ctx, buildPath, layoutOpts)
+	pkgLayout, err := layout.LoadFromDir(ctx, buildPath, layoutOpts)
 	if err != nil {
 		return fmt.Errorf("unable to load skeleton: %w", err)
 	}
 
-	// TODO: need to print version too
 	err = pushToRemote(ctx, pkgLayout, ref, opts.Concurrency, opts.WithPlainHTTP)
+	if err != nil {
+		return err
+	}
+	packageRef, err := referenceFromMetadata(ref.String(), pkgLayout.Pkg)
 	if err != nil {
 		return err
 	}
@@ -191,7 +194,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 			Name: fmt.Sprintf("import-%s", c.Name),
 			Import: v1alpha1.ZarfComponentImport{
 				Name: c.Name,
-				URL:  helpers.OCIURLPrefix + ref.String(),
+				URL:  helpers.OCIURLPrefix + packageRef,
 			},
 		})
 	}
@@ -204,7 +207,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 }
 
 // pushToRemote pushes a package to a remote at ref.
-func pushToRemote(ctx context.Context, layout *layout2.PackageLayout, ref registry.Reference, concurrency int, plainHTTP bool) error {
+func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, plainHTTP bool) error {
 	// Build Reference for remote from registry location and pkg
 	r, err := referenceFromMetadata(ref.String(), layout.Pkg)
 	if err != nil {
