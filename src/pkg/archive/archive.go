@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/mholt/archives"
 	"github.com/zarf-dev/zarf/src/config/lang"
 )
@@ -135,6 +136,19 @@ type CompressOpts struct{}
 
 // Compress takes any number of source files and archives them into a compressed archive at dest path.
 func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts) (err error) {
+	if len(sources) == 0 {
+		return fmt.Errorf("sources cannot be empty")
+	}
+	if dest == "" {
+		return fmt.Errorf("dest cannot be empty")
+	}
+
+	// Ensure dest parent directories exist
+	err = os.MkdirAll(filepath.Dir(dest), helpers.ReadExecuteAllWriteUser)
+	if err != nil {
+		return fmt.Errorf("failed to create parent directory for %s: %w", dest, err)
+	}
+
 	out, err := os.Create(dest)
 	if err != nil {
 		return fmt.Errorf("failed to create %s: %w", dest, err)

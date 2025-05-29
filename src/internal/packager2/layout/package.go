@@ -179,18 +179,6 @@ func (p *PackageLayout) GetImageDir() string {
 }
 
 func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
-	// Ensure output path exists
-	// NOTE(mkcp): We may want to move this behavior to archive.Compress
-	isPresent, err := exists(dirPath)
-	if err != nil {
-		return err
-	}
-	if !isPresent {
-		err = os.MkdirAll(dirPath, os.ModePerm)
-		if err != nil {
-			return err
-		}
-	}
 	// Generate path to package tarball
 	name := sources.NameFromMetadata(&p.Pkg, false)
 	suffix := sources.PkgSuffix(p.Pkg.Metadata.Uncompressed)
@@ -198,7 +186,7 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 	tarballPath := filepath.Join(dirPath, packageName)
 
 	// Overwrite package tarball if it already exists
-	err = os.Remove(tarballPath)
+	err := os.Remove(tarballPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
