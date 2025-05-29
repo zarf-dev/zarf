@@ -35,7 +35,7 @@ func TestPackageCreatePublishArch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reg := createRegistry(t, ctx)
+			reg := createRegistry(ctx, t)
 			err := Create(ctx, tt.path, CreateOptions{
 				Output: fmt.Sprintf("oci://%s", reg.String()),
 			})

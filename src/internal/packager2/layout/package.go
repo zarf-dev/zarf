@@ -220,7 +220,7 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 // Files returns a map off all the files in the package.
 func (p *PackageLayout) Files() (map[string]string, error) {
 	files := map[string]string{}
-	err := filepath.Walk(p.dirPath, func(path string, info fs.FileInfo, err error) error {
+	err := filepath.Walk(p.dirPath, func(path string, info fs.FileInfo, _ error) error {
 		if info.IsDir() {
 			return nil
 		}

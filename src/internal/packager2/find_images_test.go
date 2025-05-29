@@ -164,7 +164,7 @@ func TestFindImages(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, len(tt.expectedImages), len(results.ComponentImageScans))
+			require.Len(t, tt.expectedImages, len(results.ComponentImageScans))
 			for i, expected := range tt.expectedImages {
 				require.Equal(t, expected.ComponentName, results.ComponentImageScans[i].ComponentName)
 				require.ElementsMatch(t, expected.Matches, results.ComponentImageScans[i].Matches)

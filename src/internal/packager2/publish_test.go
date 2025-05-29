@@ -45,7 +45,7 @@ func pullFromRemote(t *testing.T, ctx context.Context, packageRef string, archit
 	return layoutActual
 }
 
-func createRegistry(t *testing.T, ctx context.Context) registry.Reference {
+func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
 	// Setup destination registry
 	dstPort, err := helpers.GetAvailablePort()
 	require.NoError(t, err)
@@ -175,7 +175,7 @@ func TestPublishSkeleton(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := testutil.TestContext(t)
-			registryRef := createRegistry(t, ctx)
+			registryRef := createRegistry(ctx, t)
 
 			// Publish test package
 			err := PublishSkeleton(ctx, tc.path, registryRef, tc.opts)
@@ -213,7 +213,6 @@ func TestPublishSkeleton(t *testing.T) {
 }
 
 func TestPublishPackage(t *testing.T) {
-
 	tt := []struct {
 		name string
 		path string
@@ -231,7 +230,7 @@ func TestPublishPackage(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := testutil.TestContext(t)
-			registryRef := createRegistry(t, ctx)
+			registryRef := createRegistry(ctx, t)
 
 			// Publish test package
 			err := PublishPackage(ctx, tc.path, registryRef, tc.opts)
@@ -271,7 +270,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := testutil.TestContext(t)
-			registryRef := createRegistry(t, ctx)
+			registryRef := createRegistry(ctx, t)
 
 			// Publish test package
 			err := PublishPackage(ctx, tc.path, registryRef, tc.opts)
@@ -326,14 +325,14 @@ func TestPublishCopySHA(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := testutil.TestContext(t)
-			registryRef := createRegistry(t, ctx)
+			registryRef := createRegistry(ctx, t)
 
 			// Publish test package
 			err := PublishPackage(ctx, tc.packageToPublish, registryRef, tc.opts)
 			require.NoError(t, err)
 
 			// Setup destination registry
-			dstRegistryRef := createRegistry(t, ctx)
+			dstRegistryRef := createRegistry(ctx, t)
 
 			// This gets the test package digest from the first package publish
 			localRepo := &remote.Repository{PlainHTTP: true}
@@ -397,13 +396,13 @@ func TestPublishCopyTag(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := testutil.TestContext(t)
-			registryRef := createRegistry(t, ctx)
+			registryRef := createRegistry(ctx, t)
 
 			// Publish test package
 			err := PublishPackage(ctx, tc.packageToPublish, registryRef, tc.opts)
 			require.NoError(t, err)
 
-			dstRegistryRef := createRegistry(t, ctx)
+			dstRegistryRef := createRegistry(ctx, t)
 
 			src := fmt.Sprintf("%s/%s", registryRef.String(), "test:0.0.1")
 			srcRegistry, err := registry.ParseReference(src)

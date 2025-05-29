@@ -90,7 +90,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 	return nil
 }
 
-// PullOptions are the options for PullPackage.
+// PullOCIOptions are the options for PullOCI.
 type PullOCIOptions struct {
 	Source                  string
 	Directory               string

@@ -254,7 +254,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 				return InspectDefinitionResourcesResults{}, err
 			}
 			resources = append(resources, Resource{
-				Content:      fmt.Sprintf("%s", valuesYaml),
+				Content:      string(valuesYaml),
 				Name:         zarfChart.Name,
 				ResourceType: ValuesFileResource,
 			})
@@ -316,7 +316,6 @@ func InspectPackageSboms(ctx context.Context, source string, opts InspectPackage
 	return InspectPackageSbomsResult{
 		Path: outputPath,
 	}, nil
-
 }
 
 type InspectPackageDefinitionResult struct {

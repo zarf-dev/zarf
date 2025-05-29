@@ -315,9 +315,7 @@ func MatchAllRegex(regex *regexp.Regexp, str string) []func(string) string {
 	for _, match := range matches {
 		funcs = append(funcs, func(name string) string {
 			return match[regex.SubexpIndex(name)]
-
 		})
 	}
-
 	return funcs
 }
