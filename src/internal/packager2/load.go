@@ -211,15 +211,22 @@ func assembleSplitTar(src, dest string) (err error) {
 			continue
 		}
 
-		f, err := os.Open(part)
+		// Create a new scope for the file so the defer close happens during each loop rather than once the function completes
+		err := func() (err error) {
+			f, err := os.Open(part)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, f.Close())
+			}()
+
+			_, err = io.Copy(out, f)
+			return err
+		}()
 		if err != nil {
 			return err
 		}
-		if _, err := io.Copy(out, f); err != nil {
-			f.Close()
-			return err
-		}
-		f.Close()
 	}
 
 	for _, file := range splitFiles {

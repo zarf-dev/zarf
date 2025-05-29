@@ -938,7 +938,9 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 			if err != nil {
 				return fmt.Errorf("error opening file: %w", err)
 			}
-			defer file.Close()
+			defer func() {
+				err = errors.Join(err, file.Close())
+			}()
 
 			if _, err := io.Copy(tw, file); err != nil {
 				return fmt.Errorf("error writing file to tarball: %w", err)
