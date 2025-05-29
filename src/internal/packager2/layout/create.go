@@ -234,6 +234,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	return pkgLayout, nil
 }
 
+// SkeletonCreateOptions are the options for creating a skeleton package
 type SkeletonCreateOptions struct {
 	SigningKeyPath     string
 	SigningKeyPassword string

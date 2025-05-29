@@ -32,6 +32,7 @@ const (
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
 )
 
+// OCITimestampFormat is the format for OCI timestamp annotations
 const OCITimestampFormat = time.RFC3339
 
 // Remote is a wrapper around the Oras remote repository with zarf specific functions

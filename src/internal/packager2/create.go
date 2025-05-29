@@ -17,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// CreateOptions are the optional parameters to create
 type CreateOptions struct {
 	Flavor                  string
 	RegistryOverrides       map[string]string
@@ -31,6 +32,7 @@ type CreateOptions struct {
 	OCIConcurrency          int
 }
 
+// Create the Zarf package
 func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 	if opt.SkipSBOM && opt.SBOMOut != "" {
 		return fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")

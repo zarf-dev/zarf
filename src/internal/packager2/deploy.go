@@ -73,6 +73,7 @@ type deployer struct {
 	hpaModified bool
 }
 
+// Deploy the Zarf package
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpts) ([]types.DeployedComponent, error) {
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)

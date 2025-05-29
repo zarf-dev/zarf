@@ -15,6 +15,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
+// DevDeployOptions are the optionalParameters to DevDeploy
 type DevDeployOptions struct {
 	// When true packs images and repos into the package and uses the cluster Zarf state
 	// When false deploys package without repos or images and uses the default Zarf state

@@ -27,7 +27,7 @@ import (
 	"helm.sh/helm/v3/pkg/chartutil"
 )
 
-// ResourceType is 
+// ResourceType represents the different types of Zarf resources that can be inspected
 type ResourceType string
 
 // The different types of resources that can be inspected
@@ -44,6 +44,7 @@ type Resource struct {
 	ResourceType ResourceType
 }
 
+// InspectPackageResourceOptions are the optional parameters to InspectPackageResources
 type InspectPackageResourcesOptions struct {
 	Architecture            string
 	Components              string
@@ -53,6 +54,7 @@ type InspectPackageResourcesOptions struct {
 	KubeVersion             string
 }
 
+// InspectPackageResourcesResults contains the resources returned by InspectPackageResources
 type InspectPackageResourcesResults struct {
 	Resources []Resource
 }
@@ -196,6 +198,7 @@ func templateValuesFiles(chart v1alpha1.ZarfChart, valuesDir string, variableCon
 	return nil
 }
 
+// InspectDefinitionResourcesOptions are the optional parameters to InspectDefinitionResources
 type InspectDefinitionResourcesOptions struct {
 	CreateSetVariables map[string]string
 	DeploySetVariables map[string]string
@@ -203,6 +206,7 @@ type InspectDefinitionResourcesOptions struct {
 	KubeVersion        string
 }
 
+// InspectDefinitionResourcesResults returns the inspected resources
 type InspectDefinitionResourcesResults struct {
 	Resources []Resource
 }
@@ -333,6 +337,7 @@ type InspectPackageDefinitionOptions struct {
 	SkipSignatureValidation bool
 }
 
+// InspectPackageDefinition gets the package definition from the given source: local, remote, or in cluster
 func InspectPackageDefinition(ctx context.Context, source string, opts InspectPackageDefinitionOptions) (InspectPackageDefinitionResult, error) {
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
@@ -351,6 +356,7 @@ type InspectPackageImageResult struct {
 	Images []string
 }
 
+// InspectPackageImagesOptions are optional parameters to InspectPackageImages
 type InspectPackageImagesOptions struct {
 	Architecture            string
 	PublicKeyPath           string
