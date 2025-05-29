@@ -41,7 +41,7 @@ type LoadOptions struct {
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
-func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, error) {
+func LoadPackage(ctx context.Context, opt LoadOptions) (_ *layout.PackageLayout, err error) {
 	if opt.Filter == nil {
 		opt.Filter = filters.Empty()
 	}
@@ -60,7 +60,9 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(tmpDir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 
 	isPartial := false
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
@@ -134,16 +136,15 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 			return nil, err
 		}
 		defer func() {
-			if dstErr := dstFile.Close(); dstErr != nil {
-				err = fmt.Errorf("unable to cleanup: %w", dstErr)
-			}
+			err = errors.Join(err, dstFile.Close())
 		}()
 		srcFile, err := os.Open(tmpPath)
 		if err != nil {
 			return nil, err
 		}
-		// TODO(mkcp): add to error chain
-		defer srcFile.Close()
+		defer func() {
+			err = errors.Join(err, srcFile.Close())
+		}()
 		_, err = io.Copy(dstFile, srcFile)
 		if err != nil {
 			return nil, err

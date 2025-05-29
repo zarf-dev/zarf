@@ -280,7 +280,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	return charts, nil
 }
 
-func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOpts) ([]types.InstalledChart, error) {
+func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOpts) (_ []types.InstalledChart, err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -372,7 +372,9 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		if err != nil {
 			return nil, err
 		}
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			err = errors.Join(err, os.RemoveAll(tmpDir))
+		}()
 		dataInjectionsPath, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.DataComponentDir)
 		if err != nil {
 			return nil, err
@@ -419,14 +421,16 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	return charts, nil
 }
 
-func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) ([]types.InstalledChart, error) {
+func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) (_ []types.InstalledChart, err error) {
 	installedCharts := []types.InstalledChart{}
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 
 	chartDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.ChartsComponentDir)
 	if err != nil {
@@ -482,12 +486,14 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 	return installedCharts, nil
 }
 
-func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) ([]types.InstalledChart, error) {
+func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) (_ []types.InstalledChart, err error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 	manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.ManifestsComponentDir)
 	if err != nil {
 		return nil, err

@@ -281,7 +281,9 @@ func createSBOMHTML(outputDir, filename, goTemplate string, jsonData, jsonList [
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		err = errors.Join(err, file.Close())
+	}()
 	themeCSS, err := loadFileCSS("theme.css")
 	if err != nil {
 		return err

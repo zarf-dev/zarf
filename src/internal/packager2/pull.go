@@ -103,12 +103,14 @@ type PullOCIOptions struct {
 	Modifiers               []oci.Modifier
 }
 
-func pullOCI(ctx context.Context, opts PullOCIOptions) (bool, string, error) {
+func pullOCI(ctx context.Context, opts PullOCIOptions) (_ bool, _ string, err error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return false, "", err
 	}
-	defer os.Remove(tmpDir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 	if opts.Shasum != "" {
 		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}

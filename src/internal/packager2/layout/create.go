@@ -861,15 +861,19 @@ func signPackage(dirPath, signingKeyPath, signingKeyPassword string) error {
 	return nil
 }
 
-func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, overrideMode bool) error {
+func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, overrideMode bool) (err error) {
 	tb, err := os.Create(tarballPath)
 	if err != nil {
 		return fmt.Errorf("error creating tarball: %w", err)
 	}
-	defer tb.Close()
+	defer func() {
+		err = errors.Join(err, tb.Close())
+	}()
 
 	tw := tar.NewWriter(tb)
-	defer tw.Close()
+	defer func() {
+		err = errors.Join(err, tw.Close())
+	}()
 
 	// Walk through the directory and process each file
 	return filepath.Walk(dirPath, func(filePath string, info os.FileInfo, err error) error {
