@@ -108,7 +108,7 @@ func TestCompressUnsupportedExtension(t *testing.T) {
 }
 
 func TestDecompressFiltered(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 	ctx := context.Background()
 
 	tests := []struct {
@@ -149,6 +149,25 @@ func TestDecompressFiltered(t *testing.T) {
 				entries, err := os.ReadDir(outDir)
 				require.NoError(t, err, "ReadDir failed")
 				require.Empty(t, entries, "expected no files extracted")
+			},
+		},
+		{
+			name: "Filtered_ValidFile",
+			setup: func(t *testing.T, ctx context.Context) (string, string, DecompressOpts) {
+				srcDir := t.TempDir()
+				file := filepath.Join(srcDir, "only.txt")
+				writeTestFile(t, file, "content")
+				destZip := filepath.Join(t.TempDir(), "only.zip")
+				require.NoError(t, Compress(ctx, []string{file}, destZip, CompressOpts{}), "Compress failed")
+				dstDir := t.TempDir()
+				opts := DecompressOpts{Files: []string{"only.txt"}, SkipValidation: true}
+				return destZip, dstDir, opts
+			},
+			expectError: "",
+			verify: func(t *testing.T, outDir string) {
+				entries, err := os.ReadDir(outDir)
+				require.NoError(t, err, "ReadDir failed")
+				require.Len(t, entries, 1, "expected one file extracted")
 			},
 		},
 	}
