@@ -251,7 +251,6 @@ func unarchiveFiltered(ctx context.Context, src, dst string, want []string, skip
 }
 
 // nestedUnarchive walks dst and unarchives each .tar file it finds.
-// It handles 'sbomFileName' specially, removing the original archive after extraction.
 func nestedUnarchive(ctx context.Context, dst string) error {
 	return filepath.Walk(dst, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -284,21 +283,7 @@ func defaultHandler(dst string) func(_ context.Context, f archives.FileInfo) (er
 		case f.LinkTarget != "":
 			return os.Symlink(filepath.Join(dst, f.LinkTarget), target)
 		default:
-			if err := os.MkdirAll(filepath.Dir(target), dirPerm); err != nil {
-				return err
-			}
-			out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY, f.Mode())
-			if err != nil {
-				return err
-			}
-			defer func() { err = errors.Join(err, out.Close()) }()
-			in, err := f.Open()
-			if err != nil {
-				return err
-			}
-			defer func() { err = errors.Join(err, in.Close()) }()
-			_, err = io.Copy(out, in)
-			return err
+			return writeFile(target, f, os.O_CREATE|os.O_WRONLY)
 		}
 	}
 }
@@ -320,27 +305,13 @@ func stripHandler(dst string, strip int, overwrite bool) func(_ context.Context,
 		case f.LinkTarget != "":
 			return os.Symlink(f.LinkTarget, target)
 		default:
-			if err := os.MkdirAll(filepath.Dir(target), dirPerm); err != nil {
-				return err
-			}
 			flags := os.O_CREATE | os.O_WRONLY
 			if overwrite {
 				flags |= os.O_TRUNC
 			} else {
 				flags |= os.O_EXCL
 			}
-			out, err := os.OpenFile(target, flags, f.Mode())
-			if err != nil {
-				return err
-			}
-			defer func() { err = errors.Join(err, out.Close()) }()
-			in, err := f.Open()
-			if err != nil {
-				return err
-			}
-			defer func() { err = errors.Join(err, in.Close()) }()
-			_, err = io.Copy(out, in)
-			return err
+			return writeFile(target, f, flags)
 		}
 	}
 }
@@ -362,21 +333,32 @@ func filterHandler(dst string, wantSet, found map[string]bool) func(_ context.Co
 		case f.LinkTarget != "":
 			return os.Symlink(filepath.Join(dst, f.LinkTarget), target)
 		default:
-			if err := os.MkdirAll(filepath.Dir(target), dirPerm); err != nil {
-				return err
-			}
-			out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY, f.Mode())
-			if err != nil {
-				return err
-			}
-			defer func() { err = errors.Join(err, out.Close()) }()
-			in, err := f.Open()
-			if err != nil {
-				return err
-			}
-			defer func() { err = errors.Join(err, in.Close()) }()
-			_, err = io.Copy(out, in)
-			return err
+			return writeFile(target, f, os.O_CREATE|os.O_WRONLY)
 		}
 	}
+}
+
+// writeFile encapsulates file writing and copying.
+func writeFile(target string, fi archives.FileInfo, flags int) (err error) {
+	if err := os.MkdirAll(filepath.Dir(target), dirPerm); err != nil {
+		return err
+	}
+	out, err := os.OpenFile(target, flags, fi.Mode())
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, out.Close())
+	}()
+
+	in, err := fi.Open()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, in.Close())
+	}()
+
+	_, err = io.Copy(out, in)
+	return err
 }
