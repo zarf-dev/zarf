@@ -371,13 +371,10 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 	}
 	l.Info("generating package", "name", name, "path", generatedZarfYAMLPath)
 	opts := &packager2.GenerateOptions{
-		PackageName: name,
-		Version:     o.version,
-		URL:         o.url,
 		GitPath:     o.gitPath,
 		KubeVersion: o.kubeVersion,
 	}
-	pkg, err := packager2.Generate(cmd.Context(), opts)
+	pkg, err := packager2.Generate(cmd.Context(), name, o.url, o.version, opts)
 	if err != nil {
 		return err
 	}
