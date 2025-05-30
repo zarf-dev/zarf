@@ -43,13 +43,12 @@ func TestLoadPackage(t *testing.T) {
 
 			for _, shasum := range []string{tt.shasum, ""} {
 				opt := LoadOptions{
-					Source:                  tt.source,
 					Shasum:                  shasum,
 					PublicKeyPath:           "",
 					SkipSignatureValidation: false,
 					Filter:                  filters.Empty(),
 				}
-				pkgLayout, err := LoadPackage(ctx, opt)
+				pkgLayout, err := LoadPackage(ctx, tt.source, opt)
 				require.NoError(t, err)
 
 				require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
@@ -58,13 +57,12 @@ func TestLoadPackage(t *testing.T) {
 			}
 
 			opt := LoadOptions{
-				Source:                  tt.source,
 				Shasum:                  "foo",
 				PublicKeyPath:           "",
 				SkipSignatureValidation: false,
 				Filter:                  filters.Empty(),
 			}
-			_, err := LoadPackage(ctx, opt)
+			_, err := LoadPackage(ctx, tt.source, opt)
 			require.ErrorContains(t, err, fmt.Sprintf("to be %s, found %s", opt.Shasum, tt.shasum))
 		})
 	}
@@ -115,12 +113,11 @@ func TestLoadSplitPackage(t *testing.T) {
 			splitName := fmt.Sprintf("zarf-package-%s-amd64.tar.zst.part000", tt.packageName)
 			name := filepath.Join(tmpdir, splitName)
 			opt := LoadOptions{
-				Source:                  name,
 				PublicKeyPath:           "",
 				SkipSignatureValidation: false,
 				Filter:                  filters.Empty(),
 			}
-			_, err = LoadPackage(ctx, opt)
+			_, err = LoadPackage(ctx, name, opt)
 			require.NoError(t, err)
 			assembledName := fmt.Sprintf("zarf-package-%s-amd64.tar.zst", tt.packageName)
 			require.FileExists(t, filepath.Join(tmpdir, assembledName))

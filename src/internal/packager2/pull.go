@@ -74,8 +74,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 		return errors.New("host cannot be empty")
 	}
 
-	_, err = LoadPackage(ctx, LoadOptions{
-		Source:                  source,
+	_, err = LoadPackage(ctx, source, LoadOptions{
 		Shasum:                  opts.SHASum,
 		Architecture:            arch,
 		PublicKeyPath:           opts.PublicKeyPath,

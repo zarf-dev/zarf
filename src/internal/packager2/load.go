@@ -30,7 +30,6 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
-	Source                  string
 	Shasum                  string
 	Architecture            string
 	PublicKeyPath           string
@@ -41,7 +40,10 @@ type LoadOptions struct {
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
-func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, error) {
+func LoadPackage(ctx context.Context, source string, opt LoadOptions) (*layout.PackageLayout, error) {
+	if source == "" {
+		return nil, fmt.Errorf("must provide a package source")
+	}
 	if opt.Filter == nil {
 		opt.Filter = filters.Empty()
 	}
@@ -50,7 +52,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 		opt.LayersSelector = zoci.AllLayers
 	}
 
-	srcType, err := identifySource(opt.Source)
+	srcType, err := identifySource(source)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +69,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	switch srcType {
 	case "oci":
 		ociOpts := PullOCIOptions{
-			Source:         opt.Source,
+			Source:         source,
 			Directory:      tmpDir,
 			Shasum:         opt.Shasum,
 			Architecture:   config.GetArch(opt.Architecture),
@@ -80,21 +82,21 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 			return nil, err
 		}
 	case "http", "https":
-		tmpPath, err = pullHTTP(ctx, opt.Source, tmpDir, opt.Shasum)
+		tmpPath, err = pullHTTP(ctx, source, tmpDir, opt.Shasum)
 		if err != nil {
 			return nil, err
 		}
 	case "split":
 		// If there is not already a target output, then output to the same directory so the split file can become a single tar
 		if opt.Output == "" {
-			opt.Output = filepath.Dir(opt.Source)
+			opt.Output = filepath.Dir(source)
 		}
-		err := assembleSplitTar(opt.Source, tmpPath)
+		err := assembleSplitTar(source, tmpPath)
 		if err != nil {
 			return nil, err
 		}
 	case "tarball":
-		tmpPath = opt.Source
+		tmpPath = source
 	default:
 		err := fmt.Errorf("cannot fetch or locate tarball for unsupported source type %s", srcType)
 		return nil, err
@@ -247,14 +249,13 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 	}
 
 	loadOpt := LoadOptions{
-		Source:                  src,
 		SkipSignatureValidation: skipSignatureValidation,
 		Architecture:            config.GetArch(),
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           publicKeyPath,
 		LayersSelector:          layerSelector,
 	}
-	p, err := LoadPackage(ctx, loadOpt)
+	p, err := LoadPackage(ctx, src, loadOpt)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}

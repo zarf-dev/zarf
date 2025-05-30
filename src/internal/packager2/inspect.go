@@ -63,7 +63,6 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 	}
 
 	loadOpts := LoadOptions{
-		Source:                  source,
 		Architecture:            opts.Architecture,
 		PublicKeyPath:           opts.PublicKeyPath,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
@@ -71,7 +70,7 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 		Filter:                  filters.BySelectState(opts.Components),
 	}
 
-	pkgLayout, err := LoadPackage(ctx, loadOpts)
+	pkgLayout, err := LoadPackage(ctx, source, loadOpts)
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
 	}
@@ -293,14 +292,13 @@ type InspectPackageSbomsOptions struct {
 func InspectPackageSboms(ctx context.Context, source string, opts InspectPackageSbomsOptions) (InspectPackageSbomsResult, error) {
 
 	loadOpts := LoadOptions{
-		Source:                  source,
 		Architecture:            opts.Architecture,
 		PublicKeyPath:           opts.PublicKeyPath,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
 		LayersSelector:          zoci.SbomLayers,
 		Filter:                  filters.Empty(),
 	}
-	pkgLayout, err := LoadPackage(ctx, loadOpts)
+	pkgLayout, err := LoadPackage(ctx, source, loadOpts)
 	if err != nil {
 		return InspectPackageSbomsResult{}, fmt.Errorf("unable to load the package: %w", err)
 	}
