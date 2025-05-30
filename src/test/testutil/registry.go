@@ -31,6 +31,5 @@ func SetupInMemoryRegistry(ctx context.Context, t *testing.T, port int) string {
 	require.NoError(t, err)
 	//nolint:errcheck // ignore
 	go ref.ListenAndServe()
-
 	return fmt.Sprintf("localhost:%d", port)
 }

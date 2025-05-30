@@ -190,7 +190,7 @@ func TestPublishSkeleton(t *testing.T) {
 			var expectedPkg v1alpha1.ZarfPackage
 			err = goyaml.Unmarshal(data, &expectedPkg)
 			require.NoError(t, err)
-			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
+			// This verifies that publish deletes the manifest that is auto created by oras
 			require.NoFileExists(t, expectedPkg.Metadata.Name)
 
 			// Format url and instantiate remote
