@@ -1,4 +1,4 @@
-package layout
+package create
 
 import (
 	"context"
@@ -30,6 +30,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -67,7 +68,7 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 	}
 
 	for _, refInfo := range images {
-		img, err := utils.LoadOCIImage(filepath.Join(buildPath, string(ImagesDir)), refInfo)
+		img, err := utils.LoadOCIImage(filepath.Join(buildPath, string(layout.ImagesDir)), refInfo)
 		if err != nil {
 			return fmt.Errorf("failed to load OCI image: %w", err)
 		}
@@ -112,7 +113,7 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 }
 
 func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, src string) ([]byte, error) {
-	imageCachePath := filepath.Join(cachePath, ImagesDir)
+	imageCachePath := filepath.Join(cachePath, layout.ImagesDir)
 
 	refInfo, err := transform.ParseImageRef(src)
 	if err != nil {
@@ -152,7 +153,7 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 		return nil, err
 	}
 	defer os.RemoveAll(tmpDir)
-	tarPath := filepath.Join(buildPath, ComponentsDir, component.Name) + ".tar"
+	tarPath := filepath.Join(buildPath, layout.ComponentsDir, component.Name) + ".tar"
 	err = archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{})
 	if err != nil {
 		return nil, err
@@ -171,14 +172,14 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 		return nil
 	}
 	for i, file := range component.Files {
-		path := filepath.Join(tmpDir, component.Name, string(FilesComponentDir), strconv.Itoa(i), filepath.Base(file.Target))
+		path := filepath.Join(tmpDir, component.Name, string(layout.FilesComponentDir), strconv.Itoa(i), filepath.Base(file.Target))
 		err := appendSBOMFiles(path)
 		if err != nil {
 			return nil, err
 		}
 	}
 	for i, data := range component.DataInjections {
-		path := filepath.Join(tmpDir, component.Name, string(DataComponentDir), strconv.Itoa(i), filepath.Base(data.Target.Path))
+		path := filepath.Join(tmpDir, component.Name, string(layout.DataComponentDir), strconv.Itoa(i), filepath.Base(data.Target.Path))
 		err := appendSBOMFiles(path)
 		if err != nil {
 			return nil, err

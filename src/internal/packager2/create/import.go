@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package layout
+package create
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
@@ -23,7 +24,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
@@ -84,7 +84,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
-			importedPkg, err = ParseZarfPackage(ctx, b)
+			importedPkg, err = layout.ParseZarfPackage(ctx, b)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}

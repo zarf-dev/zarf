@@ -17,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/packager2/create"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -211,7 +212,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	if err != nil {
 		return InspectDefinitionResourcesResults{}, err
 	}
-	pkg, err := layout.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
+	pkg, err := create.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
 	if err != nil {
 		return InspectDefinitionResourcesResults{}, err
 	}

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package layout
+package create
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,117 +15,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"github.com/zarf-dev/zarf/src/types"
 )
-
-func TestSplitFile(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name                 string
-		fileSize             int
-		chunkSize            int
-		expectedFileSize     int64
-		expectedLastFileSize int64
-		expectedFileCount    int
-		expectedSha256Sum    string
-	}{
-		{
-			name:                 "split evenly",
-			fileSize:             2048,
-			chunkSize:            16,
-			expectedFileSize:     16,
-			expectedLastFileSize: 16,
-			expectedFileCount:    128,
-			expectedSha256Sum:    "93ecad679eff0df493aaf5d7d615211b0f1d7a919016efb15c98f0b8efb1ba43",
-		},
-		{
-			name:                 "split with remainder",
-			fileSize:             2048,
-			chunkSize:            10,
-			expectedFileSize:     10,
-			expectedLastFileSize: 8,
-			expectedFileCount:    205,
-			expectedSha256Sum:    "fe8460f4d53d3578aa37191acf55b3db7bbcb706056f4b6b02a0c70f24b0d95a",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			dir := t.TempDir()
-			name := "random"
-			p := filepath.Join(dir, name)
-			f, err := os.Create(p)
-			require.NoError(t, err)
-			b := make([]byte, tt.fileSize)
-			for i := range tt.fileSize {
-				b[i] = byte(tt.chunkSize)
-			}
-			require.NoError(t, err)
-			_, err = f.Write(b)
-			require.NoError(t, err)
-			err = f.Close()
-			require.NoError(t, err)
-
-			err = splitFile(context.Background(), p, tt.chunkSize)
-			require.NoError(t, err)
-
-			_, err = os.Stat(p)
-			require.ErrorIs(t, err, os.ErrNotExist)
-			entries, err := os.ReadDir(dir)
-			require.NoError(t, err)
-			require.Len(t, entries, tt.expectedFileCount+1)
-			for i, entry := range entries[1:] {
-				require.Equal(t, fmt.Sprintf("%s.part%03d", name, i+1), entry.Name())
-
-				fi, err := entry.Info()
-				require.NoError(t, err)
-				if i == len(entries)-2 {
-					require.Equal(t, tt.expectedLastFileSize, fi.Size())
-				} else {
-					require.Equal(t, tt.expectedFileSize, fi.Size())
-				}
-			}
-
-			b, err = os.ReadFile(filepath.Join(dir, fmt.Sprintf("%s.part000", name)))
-			require.NoError(t, err)
-			var data types.ZarfSplitPackageData
-			err = json.Unmarshal(b, &data)
-			require.NoError(t, err)
-			require.Equal(t, tt.expectedFileCount, data.Count)
-			require.Equal(t, int64(tt.fileSize), data.Bytes)
-			require.Equal(t, tt.expectedSha256Sum, data.Sha256Sum)
-		})
-	}
-}
-
-func TestSplitDeleteExistingFiles(t *testing.T) {
-	t.Parallel()
-	tempDir := t.TempDir()
-	inputFilename := filepath.Join(tempDir, "testfile.txt")
-	data := make([]byte, 50)
-	err := os.WriteFile(inputFilename, data, 0644)
-	require.NoError(t, err)
-	// Create many fake split files
-	for i := range 15 {
-		f, err := os.Create(fmt.Sprintf("%s.part%03d", inputFilename, i))
-		require.NoError(t, err)
-		require.NoError(t, f.Close())
-	}
-
-	chunkSize := 20
-	err = splitFile(context.Background(), inputFilename, chunkSize)
-	require.NoError(t, err)
-
-	entries, err := os.ReadDir(tempDir)
-	require.NoError(t, err)
-	// Verify only header file + 3 data files remain, and not the 15 test split files
-	require.Len(t, entries, 4)
-}
 
 func TestCreateSkeleton(t *testing.T) {
 	t.Parallel()
@@ -139,11 +31,9 @@ func TestCreateSkeleton(t *testing.T) {
 	path, err := CreateSkeleton(ctx, "./testdata/zarf-skeleton-package", opt)
 	require.NoError(t, err)
 
-	pkgPath := layout.New(path)
-	_, warnings, err := pkgPath.ReadZarfYAML()
+	pkgLayout, err := layout.LoadFromDir(ctx, path, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
-	require.Empty(t, warnings)
-	b, err := os.ReadFile(filepath.Join(pkgPath.Base, "checksums.txt"))
+	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
 	require.NoError(t, err)
 	expectedChecksum := `0fea7403536c0c0e2a2d9b235d4b3716e86eefd8e78e7b14412dd5a750b77474 components/kustomizations.tar
 54f657b43323e1ebecb0758835b8d01a0113b61b7bab0f4a8156f031128d00f9 components/data-injections.tar
@@ -259,7 +149,7 @@ func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 	t.Helper()
 	b, err := goyaml.Marshal(pkg)
 	require.NoError(t, err)
-	path := filepath.Join(dir, ZarfYAML)
+	path := filepath.Join(dir, layout.ZarfYAML)
 	err = os.WriteFile(path, b, 0700)
 	require.NoError(t, err)
 }
@@ -347,14 +237,14 @@ func TestGetSBOM(t *testing.T) {
 	}
 	writePackageToDisk(t, pkg, tmpdir)
 
-	pkgLayout, err := CreatePackage(ctx, tmpdir, CreateOptions{})
+	pkgLayout, err := CreatePackageLayout(ctx, tmpdir, CreateOptions{})
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
-	require.NoFileExists(t, filepath.Join(pkgLayout.dirPath, SBOMTar))
+	require.NoFileExists(t, filepath.Join(pkgLayout.DirPath(), layout.SBOMTar))
 	// Ensure Zarf errors correctly
 	err = pkgLayout.GetSBOM(ctx, tmpdir)
-	var noSBOMErr *NoSBOMAvailableError
+	var noSBOMErr *layout.NoSBOMAvailableError
 	require.ErrorAs(t, err, &noSBOMErr)
 }
 
@@ -396,11 +286,11 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		// Create the zarf.yaml file in the tmpdir
 		writePackageToDisk(t, pkg, tmpdir)
 
-		pkgLayout, err := CreatePackage(ctx, tmpdir, CreateOptions{})
+		pkgLayout, err := CreatePackageLayout(ctx, tmpdir, CreateOptions{})
 		require.NoError(t, err)
 
 		// Ensure the components have the correct file
-		fileComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, "file", FilesComponentDir)
+		fileComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, "file", layout.FilesComponentDir)
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(fileComponent, "0", "file.txt"))
 	})
@@ -448,11 +338,11 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		require.NoError(t, err)
 		writePackageToDisk(t, childPkg, childDir)
 		// create the package
-		pkgLayout, err := CreatePackage(context.Background(), tmpdir, CreateOptions{})
+		pkgLayout, err := CreatePackageLayout(context.Background(), tmpdir, CreateOptions{})
 		require.NoError(t, err)
 
 		// Ensure the component has the correct file
-		importedFileComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, "file-import", FilesComponentDir)
+		importedFileComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, "file-import", layout.FilesComponentDir)
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(importedFileComponent, "0", "file.txt"))
 	})
