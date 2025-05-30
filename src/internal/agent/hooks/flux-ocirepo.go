@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/fluxcd/pkg/apis/meta"
@@ -19,6 +20,11 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
+)
+
+const (
+	HelmMediaTypeManifest = "application/vnd.cncf.helm.config.v1+json"
+	WebhookTimeout        = 10 * time.Second
 )
 
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
@@ -97,9 +103,31 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			patchedURL = fmt.Sprintf("%s:%s", patchedURL, src.Spec.Reference.Tag)
 		}
 
+		// Always patch with crc32 hashing
 		patchedSrc, err := transform.ImageTransformHost(registryAddress, patchedURL)
 		if err != nil {
 			return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
+		}
+
+		timeoutCtx, cancel := context.WithTimeout(ctx, WebhookTimeout)
+		defer cancel()
+
+		// Get the media type of the oci image
+		mediaType, err := getManifestConfigMediaType(timeoutCtx, zarfState, patchedSrc)
+
+		// If we get an error, we fall back to existing mutation logic
+		if err != nil {
+			l.Error("unable to determine mediaType", "error", err.Error())
+			mediaType = ""
+		}
+
+		l.Debug("got the following media type", "mediaType", mediaType, "registryAddress", registryAddress)
+
+		if isChart(mediaType) {
+			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, patchedURL)
+			if err != nil {
+				return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
+			}
 		}
 
 		patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
@@ -146,4 +174,12 @@ func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.O
 	}
 
 	return patches
+}
+
+func isChart(mediaType string) bool {
+	switch mediaType {
+	case HelmMediaTypeManifest:
+		return true
+	}
+	return false
 }
