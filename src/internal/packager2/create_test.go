@@ -35,14 +35,14 @@ func TestPackageCreatePublishArch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reg := createRegistry(t, ctx)
+			reg := createRegistry(ctx, t)
 			err := Create(ctx, tt.path, CreateOptions{
 				Output: fmt.Sprintf("oci://%s", reg.String()),
 			})
 			require.NoError(t, err)
 			packageURL := fmt.Sprintf("%s/%s:0.0.1", reg.String(), tt.packageName)
-			layout := pullFromRemote(t, ctx, packageURL, tt.expectedArch)
-			require.Equal(t, layout.Pkg.Metadata.Architecture, tt.expectedArch)
+			layout := pullFromRemote(ctx, t, packageURL, tt.expectedArch)
+			require.Equal(t, tt.expectedArch, layout.Pkg.Metadata.Architecture)
 		})
 	}
 }
