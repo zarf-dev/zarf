@@ -41,6 +41,7 @@ type PackageLayoutOptions struct {
 	Filter                  filters.ComponentFilterStrategy
 }
 
+// DirPath returns base directory of the package layout
 func (p *PackageLayout) DirPath() string {
 	return p.dirPath
 }
@@ -114,7 +115,7 @@ func (e *NoSBOMAvailableError) Error() string {
 	return fmt.Sprintf("zarf package %s does not have an SBOM available", e.pkgName)
 }
 
-// Contains SBOM checks if a package includes an SBOM
+// ContainsSBOM checks if a package includes an SBOM
 func (p *PackageLayout) ContainsSBOM() bool {
 	if !p.Pkg.IsSBOMAble() {
 		return false
@@ -139,9 +140,9 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 }
 
 // GetComponentDir returns a path to the directory in the given component.
-func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, componentName string, ct ComponentDir) (string, error) {
+func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, componentName string, ct ComponentDir) (_ string, err error) {
 	sourcePath := filepath.Join(p.dirPath, ComponentsDir, fmt.Sprintf("%s.tar", componentName))
-	_, err := os.Stat(sourcePath)
+	_, err = os.Stat(sourcePath)
 	if errors.Is(err, os.ErrNotExist) {
 		return "", fmt.Errorf("component %s does not exist in package: %w", componentName, err)
 	}
@@ -152,7 +153,9 @@ func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, component
 	if err != nil {
 		return "", err
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 	err = archive.Decompress(ctx, sourcePath, tmpDir, archive.DecompressOpts{})
 	if err != nil {
 		return "", err
@@ -173,11 +176,13 @@ func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, component
 	return outPath, nil
 }
 
+// GetImageDir returns the path to the images directory
 func (p *PackageLayout) GetImageDir() string {
 	// Use the manifest within the index.json to load the specific image we want
 	return filepath.Join(p.dirPath, ImagesDir)
 }
 
+// Archive creates a tarball from the package layout
 func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
 	// Generate path to package tarball
 	name := sources.NameFromMetadata(&p.Pkg, false)
@@ -223,10 +228,10 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 	return nil
 }
 
-// Files returns a map off all the files in the package.
+// Files returns a map of all the files in the package.
 func (p *PackageLayout) Files() (map[string]string, error) {
 	files := map[string]string{}
-	err := filepath.Walk(p.dirPath, func(path string, info fs.FileInfo, err error) error {
+	err := filepath.Walk(p.dirPath, func(path string, info fs.FileInfo, _ error) error {
 		if info.IsDir() {
 			return nil
 		}

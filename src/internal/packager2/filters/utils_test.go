@@ -5,6 +5,7 @@
 package filters
 
 import (
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,6 +18,7 @@ func Test_includedOrExcluded(t *testing.T) {
 		requestedComponentNames []string
 		wantState               selectState
 		wantRequestedComponent  string
+		expectedErr             error
 	}{
 		{
 			name:                    "Test when component is excluded",
@@ -75,11 +77,28 @@ func Test_includedOrExcluded(t *testing.T) {
 			wantState:               unknown,
 			wantRequestedComponent:  "",
 		},
+		{
+			name:                    "Test error",
+			componentName:           "example",
+			requestedComponentNames: []string{"["},
+			wantState:               unknown,
+			wantRequestedComponent:  "",
+			expectedErr:             path.ErrBadPattern,
+		},
+		{
+			name:                    "Test error",
+			componentName:           "example",
+			requestedComponentNames: []string{"-["},
+			wantState:               unknown,
+			wantRequestedComponent:  "",
+			expectedErr:             path.ErrBadPattern,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gotState, gotRequestedComponent := includedOrExcluded(tc.componentName, tc.requestedComponentNames)
+			gotState, gotRequestedComponent, err := includedOrExcluded(tc.componentName, tc.requestedComponentNames)
+			require.ErrorIs(t, err, tc.expectedErr)
 			require.Equal(t, tc.wantState, gotState)
 			require.Equal(t, tc.wantRequestedComponent, gotRequestedComponent)
 		})

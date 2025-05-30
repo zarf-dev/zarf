@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
 package packager2
 
 import (
@@ -24,7 +27,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-func pullFromRemote(t *testing.T, ctx context.Context, packageRef string, architecture string) *layout.PackageLayout {
+func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string) *layout.PackageLayout {
 	t.Helper()
 
 	// Generate tmpdir and pull published package from local registry
@@ -45,7 +48,7 @@ func pullFromRemote(t *testing.T, ctx context.Context, packageRef string, archit
 	return layoutActual
 }
 
-func createRegistry(t *testing.T, ctx context.Context) registry.Reference {
+func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
 	// Setup destination registry
 	dstPort, err := helpers.GetAvailablePort()
 	require.NoError(t, err)
@@ -175,7 +178,7 @@ func TestPublishSkeleton(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := testutil.TestContext(t)
-			registryRef := createRegistry(t, ctx)
+			registryRef := createRegistry(ctx, t)
 
 			// Publish test package
 			err := PublishSkeleton(ctx, tc.path, registryRef, tc.opts)
@@ -187,8 +190,8 @@ func TestPublishSkeleton(t *testing.T) {
 			var expectedPkg v1alpha1.ZarfPackage
 			err = goyaml.Unmarshal(data, &expectedPkg)
 			require.NoError(t, err)
-			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
-			defer os.Remove(expectedPkg.Metadata.Name)
+			// This verifies that publish deletes the manifest that is auto created by oras
+			require.NoFileExists(t, expectedPkg.Metadata.Name)
 
 			// Format url and instantiate remote
 			ref, err := zoci.ReferenceFromMetadata(registryRef.String(), &expectedPkg.Metadata, &expectedPkg.Build)
@@ -207,13 +210,12 @@ func TestPublishSkeleton(t *testing.T) {
 
 			// NOTE(mkcp): In future schema version move ZarfPackage.Metadata.AggregateChecksum
 			// to ZarfPackage.Build.AggregateChecksum. See ADR #26
-			require.Equal(t, pkg, expectedPkg)
+			require.Equal(t, expectedPkg, pkg)
 		})
 	}
 }
 
 func TestPublishPackage(t *testing.T) {
-
 	tt := []struct {
 		name string
 		path string
@@ -231,7 +233,7 @@ func TestPublishPackage(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := testutil.TestContext(t)
-			registryRef := createRegistry(t, ctx)
+			registryRef := createRegistry(ctx, t)
 
 			// Publish test package
 			err := PublishPackage(ctx, tc.path, registryRef, tc.opts)
@@ -240,20 +242,17 @@ func TestPublishPackage(t *testing.T) {
 			// We want to pull the package and sure the content is the same as the local package
 			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{Filter: filters.Empty()})
 			require.NoError(t, err)
-			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
-			defer os.Remove(layoutExpected.Pkg.Metadata.Name)
 			// Format url and instantiate remote
 			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
 			require.NoError(t, err)
 
-			layoutActual := pullFromRemote(t, ctx, packageRef, "amd64")
+			layoutActual := pullFromRemote(ctx, t, packageRef, "amd64")
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})
 	}
 }
 
 func TestPublishPackageDeterministic(t *testing.T) {
-
 	tt := []struct {
 		name string
 		path string
@@ -272,7 +271,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := testutil.TestContext(t)
-			registryRef := createRegistry(t, ctx)
+			registryRef := createRegistry(ctx, t)
 
 			// Publish test package
 			err := PublishPackage(ctx, tc.path, registryRef, tc.opts)
@@ -281,8 +280,6 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			// We want to pull the package and sure the content is the same as the local package
 			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{Filter: filters.Empty()})
 			require.NoError(t, err)
-			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
-			defer os.Remove(layoutExpected.Pkg.Metadata.Name)
 			// Format url and instantiate remote
 			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
 			require.NoError(t, err)
@@ -298,6 +295,8 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			// Re-publish the package to ensure the digest does not change
 			err = PublishPackage(ctx, tc.path, registryRef, tc.opts)
 			require.NoError(t, err)
+			// Publish creates a local oci manifest file using the package name, which gets deleted
+			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
 
 			latestDesc, err := remote.ResolveRoot(ctx)
 			require.NoError(t, err)
@@ -327,14 +326,14 @@ func TestPublishCopySHA(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := testutil.TestContext(t)
-			registryRef := createRegistry(t, ctx)
+			registryRef := createRegistry(ctx, t)
 
 			// Publish test package
 			err := PublishPackage(ctx, tc.packageToPublish, registryRef, tc.opts)
 			require.NoError(t, err)
 
 			// Setup destination registry
-			dstRegistryRef := createRegistry(t, ctx)
+			dstRegistryRef := createRegistry(ctx, t)
 
 			// This gets the test package digest from the first package publish
 			localRepo := &remote.Repository{PlainHTTP: true}
@@ -364,15 +363,15 @@ func TestPublishCopySHA(t *testing.T) {
 			// We want to pull the package and sure the content is the same as the local package
 			layoutExpected, err := layout.LoadFromTar(ctx, tc.packageToPublish, layout.PackageLayoutOptions{})
 			require.NoError(t, err)
-			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
-			defer os.Remove(layoutExpected.Pkg.Metadata.Name)
+			// This verifies that publish deletes the manifest that is auto created by oras
+			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
 			// Format url and instantiate remote
 			packageRef, err := zoci.ReferenceFromMetadata(dstRegistryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
 			require.NoError(t, err)
 
 			pkgRefsha := fmt.Sprintf("%s@%s", packageRef, indexDesc.Digest)
 
-			layoutActual := pullFromRemote(t, ctx, pkgRefsha, tc.opts.Architecture)
+			layoutActual := pullFromRemote(ctx, t, pkgRefsha, tc.opts.Architecture)
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})
 	}
@@ -398,13 +397,13 @@ func TestPublishCopyTag(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := testutil.TestContext(t)
-			registryRef := createRegistry(t, ctx)
+			registryRef := createRegistry(ctx, t)
 
 			// Publish test package
 			err := PublishPackage(ctx, tc.packageToPublish, registryRef, tc.opts)
 			require.NoError(t, err)
 
-			dstRegistryRef := createRegistry(t, ctx)
+			dstRegistryRef := createRegistry(ctx, t)
 
 			src := fmt.Sprintf("%s/%s", registryRef.String(), "test:0.0.1")
 			srcRegistry, err := registry.ParseReference(src)
@@ -426,13 +425,13 @@ func TestPublishCopyTag(t *testing.T) {
 			// We want to pull the package and sure the content is the same as the local package
 			layoutExpected, err := layout.LoadFromTar(ctx, tc.packageToPublish, layout.PackageLayoutOptions{})
 			require.NoError(t, err)
-			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
-			defer os.Remove(layoutExpected.Pkg.Metadata.Name)
+			// This verifies that publish deletes the manifest that is auto created by oras
+			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
 			// Format url and instantiate remote
 			packageRef, err := zoci.ReferenceFromMetadata(dstRegistryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
 			require.NoError(t, err)
 
-			layoutActual := pullFromRemote(t, ctx, packageRef, tc.opts.Architecture)
+			layoutActual := pullFromRemote(ctx, t, packageRef, tc.opts.Architecture)
 
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})

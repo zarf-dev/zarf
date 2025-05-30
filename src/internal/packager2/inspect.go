@@ -27,8 +27,10 @@ import (
 	"helm.sh/helm/v3/pkg/chartutil"
 )
 
+// ResourceType represents the different types of Zarf resources that can be inspected
 type ResourceType string
 
+// The different types of resources that can be inspected
 const (
 	ManifestResource   ResourceType = "manifest"
 	ChartResource      ResourceType = "chart"
@@ -42,6 +44,7 @@ type Resource struct {
 	ResourceType ResourceType
 }
 
+// InspectPackageResourcesOptions are the optional parameters to InspectPackageResources
 type InspectPackageResourcesOptions struct {
 	Architecture            string
 	Components              string
@@ -51,6 +54,7 @@ type InspectPackageResourcesOptions struct {
 	KubeVersion             string
 }
 
+// InspectPackageResourcesResults contains the resources returned by InspectPackageResources
 type InspectPackageResourcesResults struct {
 	Resources []Resource
 }
@@ -144,7 +148,7 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 					return InspectPackageResourcesResults{}, fmt.Errorf("failed to get values: %w", err)
 				}
 				resources = append(resources, Resource{
-					Content:      fmt.Sprintf("%s", valuesYaml),
+					Content:      string(valuesYaml),
 					Name:         chart.Name,
 					ResourceType: ValuesFileResource,
 				})
@@ -194,6 +198,7 @@ func templateValuesFiles(chart v1alpha1.ZarfChart, valuesDir string, variableCon
 	return nil
 }
 
+// InspectDefinitionResourcesOptions are the optional parameters to InspectDefinitionResources
 type InspectDefinitionResourcesOptions struct {
 	CreateSetVariables map[string]string
 	DeploySetVariables map[string]string
@@ -201,6 +206,7 @@ type InspectDefinitionResourcesOptions struct {
 	KubeVersion        string
 }
 
+// InspectDefinitionResourcesResults returns the inspected resources
 type InspectDefinitionResourcesResults struct {
 	Resources []Resource
 }
@@ -254,7 +260,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 				return InspectDefinitionResourcesResults{}, err
 			}
 			resources = append(resources, Resource{
-				Content:      fmt.Sprintf("%s", valuesYaml),
+				Content:      string(valuesYaml),
 				Name:         zarfChart.Name,
 				ResourceType: ValuesFileResource,
 			})
@@ -279,10 +285,12 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	return InspectDefinitionResourcesResults{Resources: resources}, nil
 }
 
+// InspectPackageSbomsResult includes the path to the retrieved SBOM
 type InspectPackageSbomsResult struct {
 	Path string
 }
 
+// InspectPackageSbomsOptions are optional parameters to InspectPackageSboms
 type InspectPackageSbomsOptions struct {
 	Architecture            string
 	PublicKeyPath           string
@@ -290,8 +298,8 @@ type InspectPackageSbomsOptions struct {
 	OutputDir               string
 }
 
-func InspectPackageSboms(ctx context.Context, source string, opts InspectPackageSbomsOptions) (InspectPackageSbomsResult, error) {
-
+// InspectPackageSBOM retrieves the SBOM from the package if it exists and places it in the returned path
+func InspectPackageSBOM(ctx context.Context, source string, opts InspectPackageSbomsOptions) (InspectPackageSbomsResult, error) {
 	loadOpts := LoadOptions{
 		Source:                  source,
 		Architecture:            opts.Architecture,
@@ -316,19 +324,21 @@ func InspectPackageSboms(ctx context.Context, source string, opts InspectPackage
 	return InspectPackageSbomsResult{
 		Path: outputPath,
 	}, nil
-
 }
 
+// InspectPackageDefinitionResult is returned by InspectPackageDefinition
 type InspectPackageDefinitionResult struct {
 	Package v1alpha1.ZarfPackage
 }
 
+// InspectPackageDefinitionOptions are the options for InspectPackageDefinition
 type InspectPackageDefinitionOptions struct {
 	Architecture            string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 }
 
+// InspectPackageDefinition gets the package definition from the given source: local, remote, or in cluster
 func InspectPackageDefinition(ctx context.Context, source string, opts InspectPackageDefinitionOptions) (InspectPackageDefinitionResult, error) {
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
@@ -342,19 +352,20 @@ func InspectPackageDefinition(ctx context.Context, source string, opts InspectPa
 	}, nil
 }
 
-// Each result contains an image. This allows expansion to other metadata
+// InspectPackageImageResult is returned by InspectPackageImages
 type InspectPackageImageResult struct {
 	Images []string
 }
 
+// InspectPackageImagesOptions are optional parameters to InspectPackageImages
 type InspectPackageImagesOptions struct {
 	Architecture            string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 }
 
+// InspectPackageImages returns a list of the package images
 func InspectPackageImages(ctx context.Context, source string, opts InspectPackageImagesOptions) (InspectPackageImageResult, error) {
-
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
 	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, zoci.MetadataLayers)
@@ -374,7 +385,6 @@ func InspectPackageImages(ctx context.Context, source string, opts InspectPackag
 	return InspectPackageImageResult{
 		Images: images,
 	}, nil
-
 }
 
 func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig) ([]Resource, error) {
