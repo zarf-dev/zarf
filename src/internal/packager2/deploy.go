@@ -73,7 +73,7 @@ type deployer struct {
 	hpaModified bool
 }
 
-// Deploy the Zarf package
+// Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpts) ([]types.DeployedComponent, error) {
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
