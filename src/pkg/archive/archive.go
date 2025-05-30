@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/mholt/archives"
 	"github.com/zarf-dev/zarf/src/config/lang"
 )
@@ -118,7 +117,7 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 	}
 
 	// Ensure dest parent directories exist
-	err = os.MkdirAll(filepath.Dir(dest), helpers.ReadExecuteAllWriteUser)
+	err = os.MkdirAll(filepath.Dir(dest), dirPerm)
 	if err != nil {
 		return fmt.Errorf("failed to create parent directory for %s: %w", dest, err)
 	}

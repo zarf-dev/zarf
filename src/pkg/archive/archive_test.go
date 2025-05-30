@@ -196,7 +196,7 @@ func TestCompressUnsupportedExtension(t *testing.T) {
 }
 
 func TestDecompressFiltered(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	ctx := context.Background()
 
 	tests := []struct {
