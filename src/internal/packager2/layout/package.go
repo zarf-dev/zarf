@@ -184,12 +184,18 @@ func (p *PackageLayout) GetImageDir() string {
 
 // Archive creates a tarball from the package layout
 func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
-	packageName := fmt.Sprintf("%s%s", sources.NameFromMetadata(&p.Pkg, false), sources.PkgSuffix(p.Pkg.Metadata.Uncompressed))
+	// Generate path to package tarball
+	name := sources.NameFromMetadata(&p.Pkg, false)
+	suffix := sources.PkgSuffix(p.Pkg.Metadata.Uncompressed)
+	packageName := fmt.Sprintf("%s%s", name, suffix)
 	tarballPath := filepath.Join(dirPath, packageName)
+
+	// Overwrite package tarball if it already exists
 	err := os.Remove(tarballPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
+
 	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
 	files, err := os.ReadDir(p.dirPath)
 	if err != nil {
