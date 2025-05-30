@@ -32,7 +32,7 @@ type CreateOptions struct {
 	OCIConcurrency          int
 }
 
-// Create the Zarf package
+// Create takes a path to a directory containing a ZarfPackageConfig and produces an archived Zarf package
 func Create(ctx context.Context, packagePath string, opt CreateOptions) (err error) {
 	if opt.SkipSBOM && opt.SBOMOut != "" {
 		return fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
