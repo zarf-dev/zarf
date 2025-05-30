@@ -85,7 +85,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 	return nil
 }
 
-// PullOptions are the options for PullPackage.
+// PullOCIOptions are the options for PullOCI.
 type PullOCIOptions struct {
 	Source                  string
 	Directory               string
@@ -98,12 +98,14 @@ type PullOCIOptions struct {
 	Modifiers               []oci.Modifier
 }
 
-func pullOCI(ctx context.Context, opts PullOCIOptions) (bool, string, error) {
+func pullOCI(ctx context.Context, opts PullOCIOptions) (_ bool, _ string, err error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return false, "", err
 	}
-	defer os.Remove(tmpDir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 	if opts.Shasum != "" {
 		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}
@@ -205,12 +207,14 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 	return "", fmt.Errorf("unsupported file type: %s", mtype.Extension())
 }
 
-func pullHTTPFile(ctx context.Context, src, tarPath string) error {
+func pullHTTPFile(ctx context.Context, src, tarPath string) (err error) {
 	f, err := os.Create(tarPath)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		err = errors.Join(err, f.Close())
+	}()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
 	if err != nil {
 		return err
@@ -219,7 +223,9 @@ func pullHTTPFile(ctx context.Context, src, tarPath string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err = errors.Join(err, resp.Body.Close())
+	}()
 	if resp.StatusCode != http.StatusOK {
 		_, err := io.Copy(io.Discard, resp.Body)
 		if err != nil {

@@ -167,7 +167,7 @@ func migrateSetVariableToSetVariables(c v1alpha1.ZarfComponent) (v1alpha1.ZarfCo
 }
 
 func clearSetVariables(c v1alpha1.ZarfComponent) v1alpha1.ZarfComponent {
-	clear := func(actions []v1alpha1.ZarfComponentAction) []v1alpha1.ZarfComponentAction {
+	clearVar := func(actions []v1alpha1.ZarfComponentAction) []v1alpha1.ZarfComponentAction {
 		for i := range actions {
 			actions[i].DeprecatedSetVariable = ""
 		}
@@ -176,22 +176,22 @@ func clearSetVariables(c v1alpha1.ZarfComponent) v1alpha1.ZarfComponent {
 	}
 
 	// Clear OnCreate SetVariables
-	c.Actions.OnCreate.After = clear(c.Actions.OnCreate.After)
-	c.Actions.OnCreate.Before = clear(c.Actions.OnCreate.Before)
-	c.Actions.OnCreate.OnSuccess = clear(c.Actions.OnCreate.OnSuccess)
-	c.Actions.OnCreate.OnFailure = clear(c.Actions.OnCreate.OnFailure)
+	c.Actions.OnCreate.After = clearVar(c.Actions.OnCreate.After)
+	c.Actions.OnCreate.Before = clearVar(c.Actions.OnCreate.Before)
+	c.Actions.OnCreate.OnSuccess = clearVar(c.Actions.OnCreate.OnSuccess)
+	c.Actions.OnCreate.OnFailure = clearVar(c.Actions.OnCreate.OnFailure)
 
 	// Clear OnDeploy SetVariables
-	c.Actions.OnDeploy.After = clear(c.Actions.OnDeploy.After)
-	c.Actions.OnDeploy.Before = clear(c.Actions.OnDeploy.Before)
-	c.Actions.OnDeploy.OnSuccess = clear(c.Actions.OnDeploy.OnSuccess)
-	c.Actions.OnDeploy.OnFailure = clear(c.Actions.OnDeploy.OnFailure)
+	c.Actions.OnDeploy.After = clearVar(c.Actions.OnDeploy.After)
+	c.Actions.OnDeploy.Before = clearVar(c.Actions.OnDeploy.Before)
+	c.Actions.OnDeploy.OnSuccess = clearVar(c.Actions.OnDeploy.OnSuccess)
+	c.Actions.OnDeploy.OnFailure = clearVar(c.Actions.OnDeploy.OnFailure)
 
 	// Clear OnRemove SetVariables
-	c.Actions.OnRemove.After = clear(c.Actions.OnRemove.After)
-	c.Actions.OnRemove.Before = clear(c.Actions.OnRemove.Before)
-	c.Actions.OnRemove.OnSuccess = clear(c.Actions.OnRemove.OnSuccess)
-	c.Actions.OnRemove.OnFailure = clear(c.Actions.OnRemove.OnFailure)
+	c.Actions.OnRemove.After = clearVar(c.Actions.OnRemove.After)
+	c.Actions.OnRemove.Before = clearVar(c.Actions.OnRemove.Before)
+	c.Actions.OnRemove.OnSuccess = clearVar(c.Actions.OnRemove.OnSuccess)
+	c.Actions.OnRemove.OnFailure = clearVar(c.Actions.OnRemove.OnFailure)
 
 	return c
 }

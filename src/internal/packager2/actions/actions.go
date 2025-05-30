@@ -234,7 +234,6 @@ func actionCmdMutation(ctx context.Context, cmd string, shellPref v1alpha1.Shell
 		newCmd := cmd
 		for _, get := range getFunctions {
 			newCmd = strings.ReplaceAll(newCmd, get("envIndicator"), fmt.Sprintf("$Env:%s", get("varName")))
-
 		}
 		if newCmd != cmd {
 			logger.From(ctx).Debug("converted command", "cmd", cmd, "newCmd", newCmd)
@@ -315,9 +314,7 @@ func MatchAllRegex(regex *regexp.Regexp, str string) []func(string) string {
 	for _, match := range matches {
 		funcs = append(funcs, func(name string) string {
 			return match[regex.SubexpIndex(name)]
-
 		})
 	}
-
 	return funcs
 }
