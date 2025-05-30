@@ -17,14 +17,18 @@ const (
 	excluded
 )
 
-func includedOrExcluded(componentName string, requestedComponentNames []string) (selectState, string) {
+func includedOrExcluded(componentName string, requestedComponentNames []string) (selectState, string, error) {
 	// Check if the component has a leading dash indicating it should be excluded - this is done first so that exclusions precede inclusions
 	for _, requestedComponent := range requestedComponentNames {
 		if strings.HasPrefix(requestedComponent, "-") {
 			// If the component glob matches one of the requested components, then return true
 			// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
-			if matched, _ := path.Match(strings.TrimPrefix(requestedComponent, "-"), componentName); matched {
-				return excluded, requestedComponent
+			matched, err := path.Match(strings.TrimPrefix(requestedComponent, "-"), componentName)
+			if err != nil {
+				return unknown, "", err
+			}
+			if matched {
+				return excluded, requestedComponent, nil
 			}
 		}
 	}
@@ -32,11 +36,15 @@ func includedOrExcluded(componentName string, requestedComponentNames []string) 
 	for _, requestedComponent := range requestedComponentNames {
 		// If the component glob matches one of the requested components, then return true
 		// This supports globbing with "path" in order to have the same behavior across OSes (if we ever allow namespaced components with /)
-		if matched, _ := path.Match(requestedComponent, componentName); matched {
-			return included, requestedComponent
+		matched, err := path.Match(requestedComponent, componentName)
+		if err != nil {
+			return unknown, "", err
+		}
+		if matched {
+			return included, requestedComponent, nil
 		}
 	}
 
 	// All other cases we don't know if we should include or exclude yet
-	return unknown, ""
+	return unknown, "", nil
 }
