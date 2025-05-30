@@ -27,8 +27,8 @@ func writeTestFile(t *testing.T, path, content string) {
 	}
 }
 
-// readFile returns the content of the file at path.
-func readFile(t *testing.T, path string) string {
+// readTestFile returns the content of the file at path.
+func readTestFile(t *testing.T, path string) string {
 	t.Helper()
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -175,9 +175,9 @@ func TestCompressAndDecompress_MultipleFormats(t *testing.T) {
 			dstDir := t.TempDir()
 			require.NoError(t, Decompress(ctx, dest, dstDir, DecompressOpts{}), "Decompress failed for %s", tc.name)
 
-			got1 := readFile(t, filepath.Join(dstDir, "file1.txt"))
+			got1 := readTestFile(t, filepath.Join(dstDir, "file1.txt"))
 			require.Equal(t, "hello world", got1, "[%s] file1 content", tc.name)
-			got2 := readFile(t, filepath.Join(dstDir, "file2.txt"))
+			got2 := readTestFile(t, filepath.Join(dstDir, "file2.txt"))
 			require.Equal(t, "zarf testing", got2, "[%s] file2 content", tc.name)
 		})
 	}
@@ -311,7 +311,7 @@ func TestDecompressOptions(t *testing.T) {
 				err := filepath.Walk(outDir, func(path string, _ os.FileInfo, _ error) error {
 					if filepath.Base(path) == "foo.txt" {
 						found = true
-						content := readFile(t, path)
+						content := readTestFile(t, path)
 						require.Equal(t, "nested content", content)
 					}
 					return nil
@@ -331,7 +331,7 @@ func TestDecompressOptions(t *testing.T) {
 				outDir := filepath.Join(tmp, "out")
 				require.NoError(t, Decompress(ctx, archivePath, outDir, DecompressOpts{}))
 				outFile := filepath.Join(outDir, "orig.txt")
-				require.Equal(t, "original", readFile(t, outFile))
+				require.Equal(t, "original", readTestFile(t, outFile))
 				writeTestFile(t, origFile, "new content")
 				archivePath2 := filepath.Join(tmp, "archive2.tar.gz")
 				require.NoError(t, Compress(ctx, []string{origFile}, archivePath2, CompressOpts{}))
@@ -340,7 +340,7 @@ func TestDecompressOptions(t *testing.T) {
 			},
 			verify: func(t *testing.T, outDir string) {
 				outFile := filepath.Join(outDir, "orig.txt")
-				require.Equal(t, "new content", readFile(t, outFile))
+				require.Equal(t, "new content", readTestFile(t, outFile))
 			},
 		},
 	}
