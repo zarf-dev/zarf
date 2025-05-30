@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -139,11 +138,9 @@ func TestCreateSkeleton(t *testing.T) {
 	path, err := CreateSkeleton(ctx, "./testdata/zarf-skeleton-package", opt)
 	require.NoError(t, err)
 
-	pkgPath := layout.New(path)
-	_, warnings, err := pkgPath.ReadZarfYAML()
+	pkgLayout, err := LoadFromDir(ctx, path, PackageLayoutOptions{})
 	require.NoError(t, err)
-	require.Empty(t, warnings)
-	b, err := os.ReadFile(filepath.Join(pkgPath.Base, "checksums.txt"))
+	b, err := os.ReadFile(filepath.Join(pkgLayout.dirPath, "checksums.txt"))
 	require.NoError(t, err)
 	expectedChecksum := `0fea7403536c0c0e2a2d9b235d4b3716e86eefd8e78e7b14412dd5a750b77474 components/kustomizations.tar
 54f657b43323e1ebecb0758835b8d01a0113b61b7bab0f4a8156f031128d00f9 components/data-injections.tar

@@ -14,7 +14,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )

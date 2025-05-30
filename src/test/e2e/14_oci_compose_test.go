@@ -5,6 +5,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -135,7 +136,7 @@ func (suite *PublishCopySkeletonSuite) Test_2_FilePaths() {
 			var pkg v1alpha1.ZarfPackage
 
 			unpacked := strings.TrimSuffix(pkgTar, ".tar.zst")
-			_, _, err := e2e.Zarf(suite.T(), "tools", "archiver", "decompress", pkgTar, unpacked, "--unarchive-all")
+			_, _, err := e2e.Zarf(suite.T(), "tools", "archiver", "decompress", pkgTar, unpacked)
 			suite.NoError(err)
 			suite.DirExists(unpacked)
 
@@ -154,7 +155,14 @@ func (suite *PublishCopySkeletonSuite) Test_2_FilePaths() {
 					"kustomization-connect-service-1.yaml",
 					"kustomization-connect-service-two-0.yaml",
 				}
-				manifestDir := filepath.Join(unpacked, "components", "test-compose-package", "manifests")
+				ctx := context.Background()
+				pkgLayout, err := layout.LoadFromDir(ctx, unpacked, layout.PackageLayoutOptions{
+					IsPartial: true,
+				})
+				suite.NoError(err)
+				tmpdir := suite.T().TempDir()
+				manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpdir, "test-compose-package", layout.ManifestsComponentDir)
+				suite.NoError(err)
 				for _, manifest := range kustomizeGeneratedManifests {
 					manifestPath := filepath.Join(manifestDir, manifest)
 					suite.FileExists(manifestPath, "expected to find kustomize-generated manifest: %q", manifestPath)
@@ -238,10 +246,16 @@ func (suite *PublishCopySkeletonSuite) DirOrFileExists(path string) {
 }
 
 func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string, components []v1alpha1.ZarfComponent, isSkeleton bool) {
+	suite.T().Helper()
 	if isSkeleton {
 		suite.NoDirExists(filepath.Join(unpackedPath, "images"))
 		suite.NoDirExists(filepath.Join(unpackedPath, "sboms"))
 	}
+	ctx := context.Background()
+	pkgLayout, err := layout.LoadFromDir(ctx, unpackedPath, layout.PackageLayoutOptions{
+		IsPartial: isSkeleton,
+	})
+	suite.NoError(err)
 
 	for _, component := range components {
 		if len(component.Charts) == 0 && len(component.Files) == 0 && len(component.Manifests) == 0 && len(component.DataInjections) == 0 && len(component.Repos) == 0 {
@@ -249,53 +263,85 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 			continue
 		}
 
-		base := filepath.Join(unpackedPath, "components", component.Name)
-		componentPaths := layout.ComponentPaths{
-			Files:          filepath.Join(base, layout.FilesDir),
-			Charts:         filepath.Join(base, layout.ChartsDir),
-			Repos:          filepath.Join(base, layout.ReposDir),
-			Manifests:      filepath.Join(base, layout.ManifestsDir),
-			DataInjections: filepath.Join(base, layout.DataInjectionsDir),
-		}
+		tmpdir := suite.T().TempDir()
 
 		if isSkeleton && component.DeprecatedCosignKeyPath != "" {
+			componentsPath := filepath.Join(unpackedPath, "components")
+			base := filepath.Join(unpackedPath, "components", component.Name)
+			_, _, err = e2e.Zarf(suite.T(), "tools", "archiver", "decompress", fmt.Sprintf("%s.tar", base), componentsPath)
+			suite.NoError(err)
 			suite.FileExists(filepath.Join(base, filepath.Base(component.DeprecatedCosignKeyPath)))
 		}
 
+		var containsChart bool
+		for _, chart := range component.Charts {
+			if isSkeleton && chart.URL != "" {
+				continue
+			}
+			containsChart = true
+		}
+		var chartDir string
+		if containsChart {
+			chartDir, err = pkgLayout.GetComponentDir(ctx, tmpdir, component.Name, layout.ChartsComponentDir)
+			suite.NoError(err)
+		}
 		for chartIdx, chart := range component.Charts {
 			if isSkeleton && chart.URL != "" {
 				continue
 			} else if isSkeleton {
 				dir := fmt.Sprintf("%s-%d", chart.Name, chartIdx)
-				suite.DirExists(filepath.Join(componentPaths.Charts, dir))
+				suite.DirExists(filepath.Join(chartDir, dir))
 				continue
 			}
 			tgz := fmt.Sprintf("%s-%s.tgz", chart.Name, chart.Version)
-			suite.FileExists(filepath.Join(componentPaths.Charts, tgz))
+			suite.FileExists(filepath.Join(chartDir, tgz))
 		}
 
+		var containsFiles bool
+		for _, file := range component.Files {
+			if isSkeleton && helpers.IsURL(file.Source) {
+				continue
+			}
+			containsFiles = true
+		}
+		var filesDir string
+		if containsFiles {
+			filesDir, err = pkgLayout.GetComponentDir(ctx, tmpdir, component.Name, layout.FilesComponentDir)
+			suite.NoError(err)
+		}
 		for filesIdx, file := range component.Files {
 			if isSkeleton && helpers.IsURL(file.Source) {
 				continue
-			} else if isSkeleton {
-				suite.FileExists(filepath.Join(base, file.Source))
-				continue
 			}
-			path := filepath.Join(componentPaths.Files, strconv.Itoa(filesIdx), filepath.Base(file.Target))
+			path := filepath.Join(filesDir, strconv.Itoa(filesIdx), filepath.Base(file.Target))
 			suite.DirOrFileExists(path)
 		}
 
+		var containsDataInjections bool
+		for _, data := range component.DataInjections {
+			if isSkeleton && helpers.IsURL(data.Source) {
+				continue
+			}
+			containsDataInjections = true
+		}
+		var dataInjectionsDir string
+		if containsDataInjections {
+			dataInjectionsDir, err = pkgLayout.GetComponentDir(ctx, tmpdir, component.Name, layout.DataComponentDir)
+			suite.NoError(err)
+		}
 		for dataIdx, data := range component.DataInjections {
 			if isSkeleton && helpers.IsURL(data.Source) {
 				continue
-			} else if isSkeleton {
-				suite.DirOrFileExists(filepath.Join(base, data.Source))
-				continue
 			}
-			path := filepath.Join(componentPaths.DataInjections, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+			path := filepath.Join(dataInjectionsDir, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 			suite.DirOrFileExists(path)
 		}
 
+		var manifestsDir string
+		if len(component.Manifests) > 0 {
+			manifestsDir, err = pkgLayout.GetComponentDir(ctx, tmpdir, component.Name, layout.ManifestsComponentDir)
+			suite.NoError(err)
+		}
 		for _, manifest := range component.Manifests {
 			if isSkeleton {
 				suite.Nil(manifest.Kustomizations)
@@ -303,23 +349,25 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 			for filesIdx, path := range manifest.Files {
 				if isSkeleton && helpers.IsURL(path) {
 					continue
-				} else if isSkeleton {
-					suite.FileExists(filepath.Join(base, path))
-					continue
 				}
-				suite.FileExists(filepath.Join(componentPaths.Manifests, fmt.Sprintf("%s-%d.yaml", manifest.Name, filesIdx)))
+				suite.FileExists(filepath.Join(manifestsDir, fmt.Sprintf("%s-%d.yaml", manifest.Name, filesIdx)))
 			}
 			for kustomizeIdx := range manifest.Kustomizations {
-				path := filepath.Join(componentPaths.Manifests, fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx))
+				path := filepath.Join(manifestsDir, fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx))
 				suite.FileExists(path)
 			}
 		}
 
 		if !isSkeleton {
+			var reposDir string
+			if len(component.Repos) > 0 {
+				reposDir, err = pkgLayout.GetComponentDir(ctx, tmpdir, component.Name, layout.RepoComponentDir)
+				suite.NoError(err)
+			}
 			for _, repo := range component.Repos {
 				dir, err := transform.GitURLtoFolderName(repo)
 				suite.NoError(err)
-				suite.DirExists(filepath.Join(componentPaths.Repos, dir))
+				suite.DirExists(filepath.Join(reposDir, dir))
 			}
 		}
 	}

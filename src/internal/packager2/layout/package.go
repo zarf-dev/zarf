@@ -23,7 +23,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
@@ -184,14 +183,12 @@ func (p *PackageLayout) GetImageDir() string {
 
 // Archive creates a tarball from the package layout
 func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
-	// Generate path to package tarball
-	name := sources.NameFromMetadata(&p.Pkg, false)
-	suffix := sources.PkgSuffix(p.Pkg.Metadata.Uncompressed)
-	packageName := fmt.Sprintf("%s%s", name, suffix)
-	tarballPath := filepath.Join(dirPath, packageName)
-
-	// Overwrite package tarball if it already exists
-	err := os.Remove(tarballPath)
+	filename, err := p.FileName()
+	if err != nil {
+		return err
+	}
+	tarballPath := filepath.Join(dirPath, filename)
+	err = os.Remove(tarballPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -247,6 +244,35 @@ func (p *PackageLayout) Files() (map[string]string, error) {
 		return nil, err
 	}
 	return files, nil
+}
+
+// FileName returns the name of the Zarf package should have when exported to the file system
+func (p *PackageLayout) FileName() (string, error) {
+	if p.Pkg.Build.Architecture == "" {
+		return "", errors.New("package must include a build architecture")
+	}
+	arch := p.Pkg.Build.Architecture
+
+	var name string
+	switch p.Pkg.Kind {
+	case v1alpha1.ZarfInitConfig:
+		name = fmt.Sprintf("zarf-init-%s", arch)
+	case v1alpha1.ZarfPackageConfig:
+		name = fmt.Sprintf("zarf-package-%s-%s", p.Pkg.Metadata.Name, arch)
+	default:
+		name = fmt.Sprintf("zarf-%s-%s", strings.ToLower(string(p.Pkg.Kind)), arch)
+	}
+	if p.Pkg.Build.Differential {
+		name = fmt.Sprintf("%s-%s-differential-%s",
+			name, p.Pkg.Build.DifferentialPackageVersion, p.Pkg.Metadata.Version)
+	} else if p.Pkg.Metadata.Version != "" {
+		name = fmt.Sprintf("%s-%s", name, p.Pkg.Metadata.Version)
+	}
+
+	if p.Pkg.Metadata.Uncompressed {
+		return name + ".tar", nil
+	}
+	return name + ".tar.zst", nil
 }
 
 func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
