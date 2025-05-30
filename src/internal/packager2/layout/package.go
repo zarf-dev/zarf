@@ -191,6 +191,7 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
+
 	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
 	files, err := os.ReadDir(p.dirPath)
 	if err != nil {
