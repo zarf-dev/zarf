@@ -676,7 +676,10 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 
 		fileList := []string{}
 		if helpers.IsDir(fileLocation) {
-			files, _ := helpers.RecursiveFileList(fileLocation, nil, false)
+			files, err := helpers.RecursiveFileList(fileLocation, nil, false)
+			if err != nil {
+				return err
+			}
 			fileList = append(fileList, files...)
 		} else {
 			fileList = append(fileList, fileLocation)
@@ -708,9 +711,13 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 		// Loop over all symlinks and create them
 		for _, link := range file.Symlinks {
 			// Try to remove the filepath if it exists
-			_ = os.RemoveAll(link)
+			if err := os.RemoveAll(link); err != nil {
+				return fmt.Errorf("failed to existing file at symlink location %s: %w", link, err)
+			}
 			// Make sure the parent directory exists
-			_ = helpers.CreateParentDirectory(link)
+			if err := helpers.CreateParentDirectory(link); err != nil {
+				return fmt.Errorf("failed to create parent directory for %s: %w", link, err)
+			}
 			// Create the symlink
 			err := os.Symlink(file.Target, link)
 			if err != nil {
