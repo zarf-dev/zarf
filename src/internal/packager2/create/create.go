@@ -36,6 +36,7 @@ import (
 	actions2 "github.com/zarf-dev/zarf/src/internal/packager2/actions"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
@@ -309,7 +310,7 @@ func LoadPackageDefinition(ctx context.Context, packagePath, flavor string, setV
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	pkg, err := layout.ParseZarfPackage(ctx, b)
+	pkg, err := load.ParseZarfPackage(ctx, b)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
