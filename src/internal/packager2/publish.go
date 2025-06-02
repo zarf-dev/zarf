@@ -165,18 +165,9 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		SigningKeyPath:     opts.SigningKeyPath,
 		SigningKeyPassword: opts.SigningKeyPassword,
 	}
-	buildPath, err := create.CreateSkeleton(ctx, path, createOpts)
+	pkgLayout, err := create.CreateSkeletonLayout(ctx, path, createOpts)
 	if err != nil {
 		return fmt.Errorf("unable to create skeleton: %w", err)
-	}
-
-	layoutOpts := layout.PackageLayoutOptions{
-		SkipSignatureValidation: true,
-		IsPartial:               false,
-	}
-	pkgLayout, err := layout.LoadFromDir(ctx, buildPath, layoutOpts)
-	if err != nil {
-		return fmt.Errorf("unable to load skeleton: %w", err)
 	}
 
 	err = pushToRemote(ctx, pkgLayout, ref, opts.Concurrency, opts.WithPlainHTTP)

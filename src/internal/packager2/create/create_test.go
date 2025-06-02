@@ -28,11 +28,9 @@ func TestCreateSkeleton(t *testing.T) {
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
 	opt := SkeletonCreateOptions{}
-	path, err := CreateSkeleton(ctx, "./testdata/zarf-skeleton-package", opt)
+	pkgLayout, err := CreateSkeletonLayout(ctx, "./testdata/zarf-skeleton-package", opt)
 	require.NoError(t, err)
 
-	pkgLayout, err := layout.LoadFromDir(ctx, path, layout.PackageLayoutOptions{})
-	require.NoError(t, err)
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
 	require.NoError(t, err)
 	expectedChecksum := `0fea7403536c0c0e2a2d9b235d4b3716e86eefd8e78e7b14412dd5a750b77474 components/kustomizations.tar

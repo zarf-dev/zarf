@@ -240,34 +240,34 @@ type SkeletonCreateOptions struct {
 	SigningKeyPassword string
 }
 
-// CreateSkeleton creates a skeleton package and returns the path to the created package.
-func CreateSkeleton(ctx context.Context, packagePath string, opt SkeletonCreateOptions) (string, error) {
+// CreateSkeletonLayout creates a skeleton package and returns the path to the created package.
+func CreateSkeletonLayout(ctx context.Context, packagePath string, opt SkeletonCreateOptions) (*layout.PackageLayout, error) {
 	pkg, err := LoadPackageDefinition(ctx, packagePath, "", nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	pkg.Metadata.Architecture = zoci.SkeletonArch
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	for _, component := range pkg.Components {
 		err := assembleSkeletonComponent(ctx, component, packagePath, buildPath)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
 	checksumContent, checksumSha, err := getChecksum(buildPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	checksumPath := filepath.Join(buildPath, layout.Checksums)
 	err = os.WriteFile(checksumPath, []byte(checksumContent), helpers.ReadWriteUser)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
@@ -275,19 +275,28 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt SkeletonCreateO
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	err = os.WriteFile(filepath.Join(buildPath, layout.ZarfYAML), b, helpers.ReadWriteUser)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	err = signPackage(buildPath, opt.SigningKeyPath, opt.SigningKeyPassword)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return buildPath, nil
+	layoutOpts := layout.PackageLayoutOptions{
+		SkipSignatureValidation: true,
+		IsPartial:               false,
+	}
+	pkgLayout, err := layout.LoadFromDir(ctx, buildPath, layoutOpts)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load skeleton: %w", err)
+	}
+
+	return pkgLayout, nil
 }
 
 // LoadPackageDefinition returns a validated package definition after flavors, imports, and variables are applied.
