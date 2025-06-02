@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package load parses zarf.yaml files into Zarf objects
-package load
+// Package parse parses zarf.yaml files into Zarf objects
+package parse
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// ParseZarfPackage parses the yaml passed as a byte slice and applies potential schema migrations.
-func ParseZarfPackage(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
+// ZarfPackage parses the yaml passed as a byte slice and applies potential schema migrations.
+func ZarfPackage(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	var pkg v1alpha1.ZarfPackage
 	err := goyaml.Unmarshal(b, &pkg)
 	if err != nil {

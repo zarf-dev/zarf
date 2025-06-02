@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
-	"github.com/zarf-dev/zarf/src/internal/packager2/load"
+	"github.com/zarf-dev/zarf/src/internal/packager2/parse"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
@@ -85,7 +85,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
-			importedPkg, err = load.ParseZarfPackage(ctx, b)
+			importedPkg, err = parse.ZarfPackage(ctx, b)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
