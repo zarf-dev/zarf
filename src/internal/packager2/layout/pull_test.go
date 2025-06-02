@@ -37,7 +37,7 @@ func createRegistry(t *testing.T, ctx context.Context) registry.Reference { //no
 }
 
 func TestAssembleLayers(t *testing.T) {
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 	tt := []struct {
 		name string
 		path string
@@ -45,7 +45,7 @@ func TestAssembleLayers(t *testing.T) {
 	}{
 		{
 			name: "Assemble layers from a package",
-			path: "testdata/basic",
+			path: "testdata/pull/basic",
 			opts: packager2.PublishPackageOpts{
 				WithPlainHTTP: true,
 				Architecture:  "amd64",
