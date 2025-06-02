@@ -11,7 +11,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/fluxcd/pkg/apis/meta"
-	flux "github.com/fluxcd/source-controller/api/v1beta2"
+	flux "github.com/fluxcd/source-controller/api/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"

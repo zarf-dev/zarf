@@ -17,7 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
 	"github.com/distribution/reference"
-	sourcev1beta2 "github.com/fluxcd/source-controller/api/v1beta2"
+	flux "github.com/fluxcd/source-controller/api/v1"
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -362,7 +362,7 @@ func processUnstructuredImages(ctx context.Context, resource *unstructured.Unstr
 		matchedImages = appendToImageMap(matchedImages, job.Spec.Template.Spec)
 
 	case "OCIRepository":
-		var ociRepo sourcev1beta2.OCIRepository
+		var ociRepo flux.OCIRepository
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &ociRepo); err != nil {
 			return nil, nil, fmt.Errorf("could not parse ocirepo: %w", err)
 		}
@@ -407,7 +407,7 @@ func appendToImageMap(imgMap map[string]bool, pod corev1.PodSpec) map[string]boo
 	return imgMap
 }
 
-func appendToImageMapOCIRepo(ctx context.Context, imgMap map[string]bool, repo sourcev1beta2.OCIRepository) map[string]bool {
+func appendToImageMapOCIRepo(ctx context.Context, imgMap map[string]bool, repo flux.OCIRepository) map[string]bool {
 	var url = strings.TrimPrefix(repo.Spec.URL, "oci://")
 
 	if repo.Spec.Reference.Tag != "" {

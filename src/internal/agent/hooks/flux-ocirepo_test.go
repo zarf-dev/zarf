@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	fluxmeta "github.com/fluxcd/pkg/apis/meta"
-	flux "github.com/fluxcd/source-controller/api/v1beta2"
+	flux "github.com/fluxcd/source-controller/api/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"

@@ -792,12 +792,12 @@ github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/fluxcd/gitkit v0.6.0 h1:iNg5LTx6ePo+Pl0ZwqHTAkhbUHxGVSY3YCxCdw7VIFg=
 github.com/fluxcd/gitkit v0.6.0/go.mod h1:svOHuKi0fO9HoawdK4HfHAJJseZDHHjk7I3ihnCIqNo=
-github.com/fluxcd/pkg/apis/acl v0.6.0 h1:rllf5uQLzTow81ZCslkQ6LPpDNqVQr6/fWaNksdUEtc=
-github.com/fluxcd/pkg/apis/acl v0.6.0/go.mod h1:IVDZx3MAoDWjlLrJHMF9Z27huFuXAEQlnbWw0M6EcTs=
+github.com/fluxcd/pkg/apis/acl v0.7.0 h1:dMhZJH+g6ZRPjs4zVOAN9vHBd1DcavFgcIFkg5ooOE0=
+github.com/fluxcd/pkg/apis/acl v0.7.0/go.mod h1:uv7pXXR/gydiX4MUwlQa7vS8JONEDztynnjTvY3JxKQ=
 github.com/fluxcd/pkg/apis/meta v1.12.0 h1:XW15TKZieC2b7MN8VS85stqZJOx+/b8jATQ/xTUhVYg=
 github.com/fluxcd/pkg/apis/meta v1.12.0/go.mod h1:+son1Va60x2eiDcTwd7lcctbI6C+K3gM7R+ULmEq1SI=
-github.com/fluxcd/source-controller/api v1.5.0 h1:caSR+u/r2Vh0jq/0pNR0r1zLxyvgatWuGSV2mxgTB/I=
-github.com/fluxcd/source-controller/api v1.5.0/go.mod h1:OZPuHMlLH2E2mnj6Q5DLkWfUOmJ20zA1LIvUVfNsYl8=
+github.com/fluxcd/source-controller/api v1.6.0 h1:IxfjUczJ2pzbXIef6iQ0RHEH4AYA9anJfTGK8dzwODM=
+github.com/fluxcd/source-controller/api v1.6.0/go.mod h1:ZJcAi0nemsnBxjVgmJl0WQzNvB0rMETxQMTdoFosmMw=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/foxcpp/go-mockdns v1.1.0 h1:jI0rD8M0wuYAxL7r/ynTrCQQq0BVqfB99Vgk7DlmewI=
