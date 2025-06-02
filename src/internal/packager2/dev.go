@@ -67,7 +67,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		}
 	}
 
-	createOpt := create.AssembleOptions{
+	createOpt := create.AssembleLayoutOptions{
 		Flavor:            opts.Flavor,
 		RegistryOverrides: opts.RegistryOverrides,
 		SkipSBOM:          true,

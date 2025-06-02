@@ -161,11 +161,11 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
 	// Create skeleton buildpath
-	createOpts := create.SkeletonCreateOptions{
+	createOpts := create.SkeletonLayoutOptions{
 		SigningKeyPath:     opts.SigningKeyPath,
 		SigningKeyPassword: opts.SigningKeyPassword,
 	}
-	pkgLayout, err := create.CreateSkeletonLayout(ctx, path, createOpts)
+	pkgLayout, err := create.SkeletonLayout(ctx, path, createOpts)
 	if err != nil {
 		return fmt.Errorf("unable to create skeleton: %w", err)
 	}

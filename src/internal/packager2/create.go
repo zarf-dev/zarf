@@ -40,8 +40,8 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) (err err
 		return fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
 
-	createOpt := create.CreateOptions{
-		AssembleOptions: create.AssembleOptions{
+	createOpt := create.PackageLayoutOptions{
+		AssembleLayoutOptions: create.AssembleLayoutOptions{
 			SkipSBOM:                opt.SkipSBOM,
 			OCIConcurrency:          opt.OCIConcurrency,
 			DifferentialPackagePath: opt.DifferentialPackagePath,
@@ -52,7 +52,7 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) (err err
 		},
 		SetVariables: opt.SetVariables,
 	}
-	pkgLayout, err := create.CreatePackageLayout(ctx, packagePath, createOpt)
+	pkgLayout, err := create.PackageLayout(ctx, packagePath, createOpt)
 	if err != nil {
 		return err
 	}

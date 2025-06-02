@@ -45,18 +45,14 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
-// CreateTimestampFormat is the format used for the build data timestamp.
-// If this format is changed - zarf will need to handle mismatch between older formats and the new format.
-const CreateTimestampFormat = time.RFC1123Z
-
-// CreateOptions are the options for creating a package from a definition.
-type CreateOptions struct {
-	AssembleOptions
+// PackageLayoutOptions are the options for creating a package from a definition.
+type PackageLayoutOptions struct {
+	AssembleLayoutOptions
 	SetVariables map[string]string
 }
 
-// CreatePackageLayout takes a zarf.yaml at the package path and returns a PackageLayout of the final package
-func CreatePackageLayout(ctx context.Context, packagePath string, opt CreateOptions) (*layout.PackageLayout, error) {
+// PackageLayout takes a zarf.yaml at the package path and returns a PackageLayout of the final package
+func PackageLayout(ctx context.Context, packagePath string, opt PackageLayoutOptions) (*layout.PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("creating package", "path", packagePath)
 
@@ -65,7 +61,7 @@ func CreatePackageLayout(ctx context.Context, packagePath string, opt CreateOpti
 		return nil, err
 	}
 
-	pkgLayout, err := AssemblePackageLayout(ctx, pkg, packagePath, opt.AssembleOptions)
+	pkgLayout, err := AssemblePackageLayout(ctx, pkg, packagePath, opt.AssembleLayoutOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +71,8 @@ func CreatePackageLayout(ctx context.Context, packagePath string, opt CreateOpti
 	return pkgLayout, nil
 }
 
-// AssembleOptions are the options for creating a package from a package object
-type AssembleOptions struct {
+// AssembleLayoutOptions are the options for creating a package from a package object
+type AssembleLayoutOptions struct {
 	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified
 	Flavor string
 	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry
@@ -90,7 +86,7 @@ type AssembleOptions struct {
 }
 
 // AssemblePackageLayout takes a package definition and returns a package layout with all the resources collected
-func AssemblePackageLayout(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt AssembleOptions) (*layout.PackageLayout, error) {
+func AssemblePackageLayout(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt AssembleLayoutOptions) (*layout.PackageLayout, error) {
 	l := logger.From(ctx)
 
 	if opt.DifferentialPackagePath != "" {
@@ -234,14 +230,14 @@ func AssemblePackageLayout(ctx context.Context, pkg v1alpha1.ZarfPackage, packag
 	return pkgLayout, nil
 }
 
-// SkeletonCreateOptions are the options for creating a skeleton package
-type SkeletonCreateOptions struct {
+// SkeletonLayoutOptions are the options for creating a skeleton package
+type SkeletonLayoutOptions struct {
 	SigningKeyPath     string
 	SigningKeyPassword string
 }
 
-// CreateSkeletonLayout creates a skeleton package and returns the path to the created package.
-func CreateSkeletonLayout(ctx context.Context, packagePath string, opt SkeletonCreateOptions) (*layout.PackageLayout, error) {
+// SkeletonLayout creates a skeleton package and returns the path to the created package.
+func SkeletonLayout(ctx context.Context, packagePath string, opt SkeletonLayoutOptions) (*layout.PackageLayout, error) {
 	pkg, err := LoadPackageDefinition(ctx, packagePath, "", nil)
 	if err != nil {
 		return nil, err

@@ -27,8 +27,8 @@ func TestCreateSkeleton(t *testing.T) {
 
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
-	opt := SkeletonCreateOptions{}
-	pkgLayout, err := CreateSkeletonLayout(ctx, "./testdata/zarf-skeleton-package", opt)
+	opt := SkeletonLayoutOptions{}
+	pkgLayout, err := SkeletonLayout(ctx, "./testdata/zarf-skeleton-package", opt)
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
@@ -235,7 +235,7 @@ func TestGetSBOM(t *testing.T) {
 	}
 	writePackageToDisk(t, pkg, tmpdir)
 
-	pkgLayout, err := CreatePackageLayout(ctx, tmpdir, CreateOptions{})
+	pkgLayout, err := PackageLayout(ctx, tmpdir, PackageLayoutOptions{})
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
@@ -284,7 +284,7 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		// Create the zarf.yaml file in the tmpdir
 		writePackageToDisk(t, pkg, tmpdir)
 
-		pkgLayout, err := CreatePackageLayout(ctx, tmpdir, CreateOptions{})
+		pkgLayout, err := PackageLayout(ctx, tmpdir, PackageLayoutOptions{})
 		require.NoError(t, err)
 
 		// Ensure the components have the correct file
@@ -336,7 +336,7 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		require.NoError(t, err)
 		writePackageToDisk(t, childPkg, childDir)
 		// create the package
-		pkgLayout, err := CreatePackageLayout(context.Background(), tmpdir, CreateOptions{})
+		pkgLayout, err := PackageLayout(context.Background(), tmpdir, PackageLayoutOptions{})
 		require.NoError(t, err)
 
 		// Ensure the component has the correct file
