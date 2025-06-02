@@ -41,7 +41,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -167,7 +166,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			ImageList:             componentImages,
 			Arch:                  pkg.Metadata.Architecture,
 			RegistryOverrides:     opt.RegistryOverrides,
-			CacheDirectory:        filepath.Join(cachePath, zoci.ImageCacheDirectory),
+			CacheDirectory:        filepath.Join(cachePath, ImageCacheDirectory),
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
@@ -246,7 +245,7 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt SkeletonCreateO
 	if err != nil {
 		return "", err
 	}
-	pkg.Metadata.Architecture = zoci.SkeletonArch
+	pkg.Metadata.Architecture = SkeletonArch
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {

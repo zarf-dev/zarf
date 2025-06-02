@@ -23,7 +23,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
 func getComponentToImportName(component v1alpha1.ZarfComponent) string {
@@ -99,7 +98,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				return v1alpha1.ZarfPackage{}, err
 			}
 		} else if component.Import.URL != "" {
-			remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton())
+			remote, err := NewRemote(ctx, component.Import.URL, PlatformForSkeleton())
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -225,7 +224,7 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	}
 
 	// Get the descriptor for the component.
-	remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton())
+	remote, err := NewRemote(ctx, component.Import.URL, PlatformForSkeleton())
 	if err != nil {
 		return "", err
 	}

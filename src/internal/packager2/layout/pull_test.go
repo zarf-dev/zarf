@@ -18,7 +18,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2/registry"
 )
@@ -80,22 +79,22 @@ func TestAssembleLayers(t *testing.T) {
 			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
 			defer os.Remove(layoutExpected.Pkg.Metadata.Name) //nolint:errcheck
 			// Format url and instantiate remote
-			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
+			packageRef, err := layout.ReferenceFromMetadata(registryRef.String(), layoutExpected.Pkg)
 			require.NoError(t, err)
 
 			platform := oci.PlatformForArch(tc.opts.Architecture)
-			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.WithPlainHTTP))
+			remote, err := layout.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.WithPlainHTTP))
 			require.NoError(t, err)
 
 			// get all layers
-			layers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.AllLayers)
+			layers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, layout.AllLayers)
 			require.NoError(t, err)
 			require.Len(t, layers, 9)
 
 			nonDeterministicLayers := []string{"zarf.yaml", "checksums.txt"}
 
 			// get sbom layers - it appears as though the sbom layers are not deterministic
-			sbomInspectLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.SbomLayers)
+			sbomInspectLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, layout.SbomLayers)
 			require.NoError(t, err)
 			require.Len(t, sbomInspectLayers, 3)
 
@@ -105,7 +104,7 @@ func TestAssembleLayers(t *testing.T) {
 				"sha256:1c4eef651f65e2f7daee7ee785882ac164b02b78fb74503052a26dc061c90474",
 				"sha256:aded1e1a5b3705116fa0a92ba074a5e0b0031647d9c315983ccba2ee5428ec8b",
 				"sha256:f18232174bc91741fdf3da96d85011092101a032a93a388b79e99e69c2d5c870"}
-			imageInspectLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.ImageLayers)
+			imageInspectLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, layout.ImageLayers)
 			require.NoError(t, err)
 			require.Len(t, imageInspectLayers, 7)
 			for _, layer := range imageInspectLayers {
@@ -116,7 +115,7 @@ func TestAssembleLayers(t *testing.T) {
 			}
 
 			// get component layers
-			componentLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.ComponentLayers)
+			componentLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, layout.ComponentLayers)
 			require.NoError(t, err)
 			require.Len(t, componentLayers, 3)
 		})

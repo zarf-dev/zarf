@@ -26,7 +26,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
 // PullOptions declares optional configuration for a Pull operation.
@@ -258,7 +257,7 @@ func isSkeleton(platform *ocispec.Platform) bool {
 	if platform == nil {
 		return false
 	}
-	skeletonPlatform := zoci.PlatformForSkeleton()
+	skeletonPlatform := layout.PlatformForSkeleton()
 	if platform.Architecture == skeletonPlatform.Architecture && platform.OS == skeletonPlatform.OS {
 		return true
 	}
