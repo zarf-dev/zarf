@@ -1,6 +1,6 @@
 # Community
 
-Come say hello! We're on the OpenSSF Slack workspace and hold a community
+Come say hello! We're on the OpenSSF/Kubernetes Slack workspaces and hold a community
 meeting on the **every other Tuesday at 2:30 PM ET**.
 
 | Reference                     | Link                                                                                                                                                                                                    |
