@@ -17,7 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
 	"github.com/distribution/reference"
-	sourcev1beta2 "github.com/fluxcd/source-controller/api/v1beta2"
+	sourcev1beta2 "github.com/fluxcd/source-controller/api/v1"
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
