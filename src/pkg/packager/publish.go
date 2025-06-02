@@ -90,7 +90,7 @@ func (p *Packager) Publish(ctx context.Context) (err error) {
 	}
 
 	// Get a reference to the registry for this package
-	ref, err := zoci.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, &p.cfg.Pkg.Metadata, &p.cfg.Pkg.Build)
+	ref, err := zoci.ReferenceFromMetadata(p.cfg.PublishOpts.PackageDestination, p.cfg.Pkg)
 	if err != nil {
 		return err
 	}

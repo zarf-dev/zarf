@@ -5,7 +5,6 @@ package packager2
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -174,7 +173,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if err != nil {
 		return err
 	}
-	packageRef, err := referenceFromMetadata(ref.String(), pkgLayout.Pkg)
+	packageRef, err := zoci.ReferenceFromMetadata(ref.String(), pkgLayout.Pkg)
 	if err != nil {
 		return err
 	}
@@ -200,7 +199,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 // pushToRemote pushes a package to a remote at ref.
 func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, plainHTTP bool) error {
 	// Build Reference for remote from registry location and pkg
-	r, err := referenceFromMetadata(ref.String(), layout.Pkg)
+	r, err := zoci.ReferenceFromMetadata(ref.String(), layout.Pkg)
 	if err != nil {
 		return err
 	}
@@ -215,25 +214,4 @@ func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registr
 	}
 
 	return remote.PushPackage(ctx, layout, concurrency)
-}
-
-func referenceFromMetadata(registryLocation string, pkg v1alpha1.ZarfPackage) (string, error) {
-	if len(pkg.Metadata.Version) == 0 {
-		return "", errors.New("version is required for publishing")
-	}
-	if !strings.HasSuffix(registryLocation, "/") {
-		registryLocation = registryLocation + "/"
-	}
-	registryLocation = strings.TrimPrefix(registryLocation, helpers.OCIURLPrefix)
-
-	raw := fmt.Sprintf("%s%s:%s", registryLocation, pkg.Metadata.Name, pkg.Metadata.Version)
-	if pkg.Build.Flavor != "" {
-		raw = fmt.Sprintf("%s-%s", raw, pkg.Build.Flavor)
-	}
-
-	ref, err := registry.ParseReference(raw)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse %s: %w", raw, err)
-	}
-	return ref.String(), nil
 }

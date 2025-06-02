@@ -61,7 +61,7 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) (err err
 	}()
 
 	if helpers.IsOCIURL(opt.Output) {
-		ref, err := referenceFromMetadata(opt.Output, pkgLayout.Pkg)
+		ref, err := zoci.ReferenceFromMetadata(opt.Output, pkgLayout.Pkg)
 		if err != nil {
 			return err
 		}
