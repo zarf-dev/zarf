@@ -11,6 +11,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 )
 
+// LintOptions are the optional parameters to Lint
 type LintOptions struct {
 	SetVariables map[string]string
 	Flavor       string

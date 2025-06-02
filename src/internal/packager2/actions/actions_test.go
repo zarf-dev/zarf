@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
 package actions
 
 import (
@@ -12,7 +15,8 @@ import (
 )
 
 func Test_actionCmdMutation(t *testing.T) {
-	zarfCmd, _ := utils.GetFinalExecutableCommand()
+	zarfCmd, err := utils.GetFinalExecutableCommand()
+	require.NoError(t, err)
 	tests := []struct {
 		name      string
 		cmd       string

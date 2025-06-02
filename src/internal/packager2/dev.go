@@ -5,6 +5,7 @@ package packager2
 
 import (
 	"context"
+	"errors"
 	"runtime"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
+// DevDeployOptions are the optionalParameters to DevDeploy
 type DevDeployOptions struct {
 	// When true packs images and repos into the package and uses the cluster Zarf state
 	// When false deploys package without repos or images and uses the default Zarf state
@@ -38,7 +40,7 @@ type DevDeployOptions struct {
 }
 
 // DevDeploy creates + deploys a package in one shot
-func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) error {
+func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	config.CommonOptions.Confirm = true
@@ -76,7 +78,9 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) e
 	if err != nil {
 		return err
 	}
-	defer pkgLayout.Cleanup()
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.DeploySetVariables)
 	if err != nil {

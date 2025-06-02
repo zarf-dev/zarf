@@ -5,6 +5,7 @@ package packager2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -81,7 +82,7 @@ type ComponentImageScan struct {
 
 // FindImages iterates over the manifests and charts within each component to find any container images
 // It returns a FindImageResults which contains a scan result for each component
-func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (FindImagesResult, error) {
+func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ FindImagesResult, err error) {
 	l := logger.From(ctx)
 	pkg, err := create.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
 	if err != nil {
@@ -103,7 +104,9 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	if err != nil {
 		return FindImagesResult{}, err
 	}
-	defer os.RemoveAll(tmpBuildPath)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpBuildPath))
+	}()
 
 	componentImageScans := []ComponentImageScan{}
 	for _, component := range pkg.Components {

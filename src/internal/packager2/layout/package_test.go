@@ -64,7 +64,7 @@ func TestPackageLayout(t *testing.T) {
 		"sboms.tar",
 		"zarf.yaml",
 	}
-	require.Equal(t, len(expectedNames), len(files))
+	require.Len(t, expectedNames, len(files))
 	for _, expectedName := range expectedNames {
 		path := filepath.Join(pkgLayout.dirPath, filepath.FromSlash(expectedName))
 		name := files[path]

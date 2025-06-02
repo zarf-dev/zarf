@@ -19,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
+// CreateOptions are the optional parameters to create
 type CreateOptions struct {
 	Flavor                  string
 	RegistryOverrides       map[string]string
@@ -33,7 +34,8 @@ type CreateOptions struct {
 	OCIConcurrency          int
 }
 
-func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
+// Create takes a path to a directory containing a ZarfPackageConfig and produces an archived Zarf package
+func Create(ctx context.Context, packagePath string, opt CreateOptions) (err error) {
 	if opt.SkipSBOM && opt.SBOMOut != "" {
 		return fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
@@ -54,7 +56,9 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 	if err != nil {
 		return err
 	}
-	defer pkgLayout.Cleanup()
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
 
 	if helpers.IsOCIURL(opt.Output) {
 		ref, err := referenceFromMetadata(opt.Output, pkgLayout.Pkg)

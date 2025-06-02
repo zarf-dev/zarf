@@ -234,6 +234,7 @@ func AssemblePackageLayout(ctx context.Context, pkg v1alpha1.ZarfPackage, packag
 	return pkgLayout, nil
 }
 
+// SkeletonCreateOptions are the options for creating a skeleton package
 type SkeletonCreateOptions struct {
 	SigningKeyPath     string
 	SigningKeyPassword string
@@ -372,12 +373,14 @@ func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
 	return false
 }
 
-func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
+func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmpBuildPath)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpBuildPath))
+	}()
 	compBuildPath := filepath.Join(tmpBuildPath, component.Name)
 	err = os.MkdirAll(compBuildPath, 0o700)
 	if err != nil {
@@ -424,7 +427,9 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				if err != nil {
 					return err
 				}
-				defer os.RemoveAll(tmpDir)
+				defer func() {
+					err = errors.Join(err, os.RemoveAll(tmpDir))
+				}()
 				compressedFile := filepath.Join(tmpDir, compressedFileName)
 
 				// If the file is an archive, download it to the componentPath.Temp
@@ -582,12 +587,14 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	return nil
 }
 
-func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
+func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmpBuildPath)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpBuildPath))
+	}()
 	compBuildPath := filepath.Join(tmpBuildPath, component.Name)
 	err = os.MkdirAll(compBuildPath, 0o700)
 	if err != nil {
@@ -770,7 +777,7 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	}
 
 	// Record the hostname of the package creation terminal.
-	// The error here is ignored because the hostname is not critical to the package creation.
+	//nolint: errcheck // The error here is ignored because the hostname is not critical to the package creation.
 	hostname, _ := os.Hostname()
 	pkg.Build.Terminal = hostname
 
@@ -856,15 +863,19 @@ func signPackage(dirPath, signingKeyPath, signingKeyPassword string) error {
 	return nil
 }
 
-func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, overrideMode bool) error {
+func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, overrideMode bool) (err error) {
 	tb, err := os.Create(tarballPath)
 	if err != nil {
 		return fmt.Errorf("error creating tarball: %w", err)
 	}
-	defer tb.Close()
+	defer func() {
+		err = errors.Join(err, tb.Close())
+	}()
 
 	tw := tar.NewWriter(tb)
-	defer tw.Close()
+	defer func() {
+		err = errors.Join(err, tw.Close())
+	}()
 
 	// Walk through the directory and process each file
 	return filepath.Walk(dirPath, func(filePath string, info os.FileInfo, err error) error {
@@ -927,7 +938,9 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 			if err != nil {
 				return fmt.Errorf("error opening file: %w", err)
 			}
-			defer file.Close()
+			defer func() {
+				err = errors.Join(err, file.Close())
+			}()
 
 			if _, err := io.Copy(tw, file); err != nil {
 				return fmt.Errorf("error writing file to tarball: %w", err)

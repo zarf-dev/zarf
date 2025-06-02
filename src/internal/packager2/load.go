@@ -41,7 +41,7 @@ type LoadOptions struct {
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
-func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, error) {
+func LoadPackage(ctx context.Context, opt LoadOptions) (_ *layout.PackageLayout, err error) {
 	if opt.Filter == nil {
 		opt.Filter = filters.Empty()
 	}
@@ -60,7 +60,9 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(tmpDir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 
 	isPartial := false
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
@@ -134,16 +136,15 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (*layout.PackageLayout, e
 			return nil, err
 		}
 		defer func() {
-			if dstErr := dstFile.Close(); dstErr != nil {
-				err = fmt.Errorf("unable to cleanup: %w", dstErr)
-			}
+			err = errors.Join(err, dstFile.Close())
 		}()
 		srcFile, err := os.Open(tmpPath)
 		if err != nil {
 			return nil, err
 		}
-		// TODO(mkcp): add to error chain
-		defer srcFile.Close()
+		defer func() {
+			err = errors.Join(err, srcFile.Close())
+		}()
 		_, err = io.Copy(dstFile, srcFile)
 		if err != nil {
 			return nil, err
@@ -172,7 +173,7 @@ func identifySource(src string) (string, error) {
 }
 
 // assembleSplitTar reconstructs a split tarball into a single archive.
-func assembleSplitTar(src, dest string) error {
+func assembleSplitTar(src, dest string) (err error) {
 	pattern := strings.Replace(src, ".part000", ".part*", 1)
 	splitFiles, err := filepath.Glob(pattern)
 	if err != nil {
@@ -187,7 +188,9 @@ func assembleSplitTar(src, dest string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() {
+		err = errors.Join(err, out.Close())
+	}()
 
 	for i, part := range splitFiles {
 		if i == 0 {
@@ -208,15 +211,22 @@ func assembleSplitTar(src, dest string) error {
 			continue
 		}
 
-		f, err := os.Open(part)
+		// Create a new scope for the file so the defer close happens during each loop rather than once the function completes
+		err := func() (err error) {
+			f, err := os.Open(part)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errors.Join(err, f.Close())
+			}()
+
+			_, err = io.Copy(out, f)
+			return err
+		}()
 		if err != nil {
 			return err
 		}
-		if _, err := io.Copy(out, f); err != nil {
-			f.Close()
-			return err
-		}
-		f.Close()
 	}
 
 	for _, file := range splitFiles {
