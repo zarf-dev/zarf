@@ -24,7 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -36,7 +35,7 @@ type LoadOptions struct {
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
-	LayersSelector          zoci.LayersSelector
+	LayersSelector          layout.LayersSelector
 	Output                  string
 }
 
@@ -47,7 +46,7 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (_ *layout.PackageLayout,
 	}
 
 	if opt.LayersSelector == "" {
-		opt.LayersSelector = zoci.AllLayers
+		opt.LayersSelector = layout.AllLayers
 	}
 
 	srcType, err := identifySource(opt.Source)
@@ -240,7 +239,7 @@ func assembleSplitTar(src, dest string) (err error) {
 }
 
 // GetPackageFromSourceOrCluster retrieves a Zarf package from a source or cluster.
-func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string, layerSelector zoci.LayersSelector) (v1alpha1.ZarfPackage, error) {
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string, layerSelector layout.LayersSelector) (v1alpha1.ZarfPackage, error) {
 	srcType, err := identifySource(src)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err

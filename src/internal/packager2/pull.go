@@ -24,6 +24,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
@@ -92,7 +93,7 @@ type PullOCIOptions struct {
 	Shasum                  string
 	Architecture            string
 	PublicKeyPath           string
-	LayersSelector          zoci.LayersSelector
+	LayersSelector          layout.LayersSelector
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
 	Modifiers               []oci.Modifier
@@ -110,7 +111,7 @@ func pullOCI(ctx context.Context, opts PullOCIOptions) (_ bool, _ string, err er
 		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}
 	platform := oci.PlatformForArch(opts.Architecture)
-	remote, err := zoci.NewRemote(ctx, opts.Source, platform, opts.Modifiers...)
+	remote, err := layout.NewRemote(ctx, opts.Source, platform, opts.Modifiers...)
 	if err != nil {
 		return false, "", err
 	}

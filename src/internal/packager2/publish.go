@@ -13,18 +13,17 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 
 	"oras.land/oras-go/v2/registry"
 )
 
 // PublishFromOCIOpts declares the parameters to publish a package.
 type PublishFromOCIOpts struct {
-	// Concurrency configures the zoci push concurrency if empty defaults to 3.
+	// Concurrency configures the layout push concurrency if empty defaults to 3.
 	Concurrency int
 	// SigningKeyPath points to a signing key on the local disk.
 	SigningKeyPath string
@@ -67,17 +66,17 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	p := oci.PlatformForArch(arch)
 
 	// Set up remote repo client
-	srcRemote, err := zoci.NewRemote(ctx, src.String(), p, oci.WithPlainHTTP(opts.WithPlainHTTP))
+	srcRemote, err := layout.NewRemote(ctx, src.String(), p, oci.WithPlainHTTP(opts.WithPlainHTTP))
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
-	dstRemote, err := zoci.NewRemote(ctx, dst.String(), p, oci.WithPlainHTTP(opts.WithPlainHTTP))
+	dstRemote, err := layout.NewRemote(ctx, dst.String(), p, oci.WithPlainHTTP(opts.WithPlainHTTP))
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
 
 	// Execute copy
-	err = zoci.CopyPackage(ctx, srcRemote, dstRemote, opts.Concurrency)
+	err = layout.CopyPackage(ctx, srcRemote, dstRemote, opts.Concurrency)
 	if err != nil {
 		return fmt.Errorf("could not copy package: %w", err)
 	}
@@ -88,7 +87,7 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 
 // PublishPackageOpts declares the parameters to publish a package.
 type PublishPackageOpts struct {
-	// Concurrency configures the zoci push concurrency if empty defaults to 3.
+	// Concurrency configures the layout push concurrency if empty defaults to 3.
 	Concurrency int
 	// SigningKeyPath points to a signing key on the local disk.
 	SigningKeyPath string
@@ -119,11 +118,11 @@ func PublishPackage(ctx context.Context, path string, dst registry.Reference, op
 
 	// Load package layout
 	l.Info("loading package", "path", path)
-	layoutOpts := layout2.PackageLayoutOptions{
+	layoutOpts := layout.PackageLayoutOptions{
 		PublicKeyPath:           opts.PublicKeyPath,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
 	}
-	pkgLayout, err := layout2.LoadFromTar(ctx, path, layoutOpts)
+	pkgLayout, err := layout.LoadFromTar(ctx, path, layoutOpts)
 	if err != nil {
 		return fmt.Errorf("unable to load package: %w", err)
 	}
@@ -133,7 +132,7 @@ func PublishPackage(ctx context.Context, path string, dst registry.Reference, op
 
 // PublishSkeletonOpts declares the parameters to publish a skeleton package.
 type PublishSkeletonOpts struct {
-	// Concurrency configures the zoci push concurrency if empty defaults to 3.
+	// Concurrency configures the layout push concurrency if empty defaults to 3.
 	Concurrency int
 	// SigningKeyPath points to a signing key on the local disk.
 	SigningKeyPath string
@@ -159,20 +158,20 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
 	// Create skeleton buildpath
-	createOpts := layout2.SkeletonCreateOptions{
+	createOpts := layout.SkeletonCreateOptions{
 		SigningKeyPath:     opts.SigningKeyPath,
 		SigningKeyPassword: opts.SigningKeyPassword,
 	}
-	buildPath, err := layout2.CreateSkeleton(ctx, path, createOpts)
+	buildPath, err := layout.CreateSkeleton(ctx, path, createOpts)
 	if err != nil {
 		return fmt.Errorf("unable to create skeleton: %w", err)
 	}
 
-	layoutOpts := layout2.PackageLayoutOptions{
+	layoutOpts := layout.PackageLayoutOptions{
 		SkipSignatureValidation: true,
 		IsPartial:               false,
 	}
-	pkgLayout, err := layout2.LoadFromDir(ctx, buildPath, layoutOpts)
+	pkgLayout, err := layout.LoadFromDir(ctx, buildPath, layoutOpts)
 	if err != nil {
 		return fmt.Errorf("unable to load skeleton: %w", err)
 	}
@@ -181,7 +180,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if err != nil {
 		return err
 	}
-	packageRef, err := layout2.ReferenceFromMetadata(ref.String(), pkgLayout.Pkg)
+	packageRef, err := layout.ReferenceFromMetadata(ref.String(), pkgLayout.Pkg)
 	if err != nil {
 		return err
 	}
@@ -205,22 +204,22 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 }
 
 // pushToRemote pushes a package to a remote at ref.
-func pushToRemote(ctx context.Context, layout *layout2.PackageLayout, ref registry.Reference, concurrency int, plainHTTP bool) error {
+func pushToRemote(ctx context.Context, pkgLayout *layout.PackageLayout, ref registry.Reference, concurrency int, plainHTTP bool) error {
 	// Build Reference for remote from registry location and pkg
-	r, err := layout2.ReferenceFromMetadata(ref.String(), layout.Pkg)
+	r, err := layout.ReferenceFromMetadata(ref.String(), pkgLayout.Pkg)
 	if err != nil {
 		return err
 	}
 
-	arch := layout.Pkg.Metadata.Architecture
+	arch := pkgLayout.Pkg.Metadata.Architecture
 	// Set platform
 	p := oci.PlatformForArch(arch)
 
 	// Set up remote repo client
-	rem, err := layout2.NewRemote(ctx, r, p, oci.WithPlainHTTP(plainHTTP))
+	rem, err := layout.NewRemote(ctx, r, p, oci.WithPlainHTTP(plainHTTP))
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
 
-	return rem.Push(ctx, layout, concurrency)
+	return rem.Push(ctx, pkgLayout, concurrency)
 }

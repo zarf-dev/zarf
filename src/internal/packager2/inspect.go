@@ -23,7 +23,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"helm.sh/helm/v3/pkg/chartutil"
 )
 
@@ -71,7 +70,7 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 		Architecture:            opts.Architecture,
 		PublicKeyPath:           opts.PublicKeyPath,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
-		LayersSelector:          zoci.ComponentLayers,
+		LayersSelector:          layout.ComponentLayers,
 		Filter:                  filters.BySelectState(opts.Components),
 	}
 
@@ -305,7 +304,7 @@ func InspectPackageSBOM(ctx context.Context, source string, opts InspectPackageS
 		Architecture:            opts.Architecture,
 		PublicKeyPath:           opts.PublicKeyPath,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
-		LayersSelector:          zoci.SbomLayers,
+		LayersSelector:          layout.SbomLayers,
 		Filter:                  filters.Empty(),
 	}
 	pkgLayout, err := LoadPackage(ctx, loadOpts)
@@ -342,7 +341,7 @@ type InspectPackageDefinitionOptions struct {
 func InspectPackageDefinition(ctx context.Context, source string, opts InspectPackageDefinitionOptions) (InspectPackageDefinitionResult, error) {
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
-	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, zoci.MetadataLayers)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, layout.MetadataLayers)
 	if err != nil {
 		return InspectPackageDefinitionResult{}, fmt.Errorf("unable to load the package: %w", err)
 	}
@@ -368,7 +367,7 @@ type InspectPackageImagesOptions struct {
 func InspectPackageImages(ctx context.Context, source string, opts InspectPackageImagesOptions) (InspectPackageImageResult, error) {
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
-	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, zoci.MetadataLayers)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, layout.MetadataLayers)
 	if err != nil {
 		return InspectPackageImageResult{}, fmt.Errorf("unable to load the package: %w", err)
 	}

@@ -15,9 +15,9 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -199,11 +199,11 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 
-	_, err := GetPackageFromSourceOrCluster(ctx, nil, "test", false, "", zoci.AllLayers)
+	_, err := GetPackageFromSourceOrCluster(ctx, nil, "test", false, "", layout.AllLayers)
 	require.EqualError(t, err, "cannot get Zarf package from Kubernetes without configuration")
 
 	pkgPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
-	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, pkgPath, false, "", zoci.AllLayers)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, pkgPath, false, "", layout.AllLayers)
 	require.NoError(t, err)
 	require.Equal(t, "test", pkg.Metadata.Name)
 
@@ -212,7 +212,7 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	}
 	_, err = c.RecordPackageDeployment(ctx, pkg, nil, 1)
 	require.NoError(t, err)
-	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", false, "", zoci.AllLayers)
+	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", false, "", layout.AllLayers)
 	require.NoError(t, err)
 	require.Equal(t, "test", pkg.Metadata.Name)
 }
