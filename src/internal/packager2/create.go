@@ -17,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// CreateOptions are the optional parameters to create
 type CreateOptions struct {
 	Flavor                  string
 	RegistryOverrides       map[string]string
@@ -31,26 +32,31 @@ type CreateOptions struct {
 	OCIConcurrency          int
 }
 
-func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
+// Create takes a path to a directory containing a ZarfPackageConfig and produces an archived Zarf package
+func Create(ctx context.Context, packagePath string, opt CreateOptions) (err error) {
 	if opt.SkipSBOM && opt.SBOMOut != "" {
 		return fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
 
 	createOpt := layout2.CreateOptions{
-		Flavor:                  opt.Flavor,
-		RegistryOverrides:       opt.RegistryOverrides,
-		SigningKeyPath:          opt.SigningKeyPath,
-		SigningKeyPassword:      opt.SigningKeyPassword,
-		SetVariables:            opt.SetVariables,
-		SkipSBOM:                opt.SkipSBOM,
-		OCIConcurrency:          opt.OCIConcurrency,
-		DifferentialPackagePath: opt.DifferentialPackagePath,
+		AssembleOptions: layout2.AssembleOptions{
+			SkipSBOM:                opt.SkipSBOM,
+			OCIConcurrency:          opt.OCIConcurrency,
+			DifferentialPackagePath: opt.DifferentialPackagePath,
+			Flavor:                  opt.Flavor,
+			RegistryOverrides:       opt.RegistryOverrides,
+			SigningKeyPath:          opt.SigningKeyPath,
+			SigningKeyPassword:      opt.SigningKeyPassword,
+		},
+		SetVariables: opt.SetVariables,
 	}
 	pkgLayout, err := layout2.CreatePackage(ctx, packagePath, createOpt)
 	if err != nil {
 		return err
 	}
-	defer pkgLayout.Cleanup()
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
 
 	if helpers.IsOCIURL(opt.Output) {
 		ref, err := layout2.ReferenceFromMetadata(opt.Output, pkgLayout.Pkg)

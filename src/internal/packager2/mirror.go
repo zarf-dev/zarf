@@ -38,7 +38,7 @@ type MirrorOptions struct {
 	InsecureSkipTLSVerify bool
 }
 
-// Mirror mirrors the package contents to the given registry and git server.
+// MirrorImages mirrors the package images to the Zarf registry
 func MirrorImages(ctx context.Context, opt MirrorOptions) error {
 	err := pushImagesToRegistry(ctx, opt.PkgLayout, opt.RegistryInfo, opt.NoImageChecksum, opt.PlainHTTP, opt.OCIConcurrency, opt.Retries, opt.InsecureSkipTLSVerify)
 	if err != nil {
@@ -47,6 +47,7 @@ func MirrorImages(ctx context.Context, opt MirrorOptions) error {
 	return nil
 }
 
+// MirrorRepos mirrors the package repos to the Zarf git server
 func MirrorRepos(ctx context.Context, opt MirrorOptions) error {
 	err := pushReposToRepository(ctx, opt.Cluster, opt.PkgLayout, opt.GitInfo, opt.Retries)
 	if err != nil {
@@ -87,7 +88,7 @@ func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	return nil
 }
 
-func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, gitInfo types.GitServerInfo, retries int) error {
+func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, gitInfo types.GitServerInfo, retries int) (err error) {
 	l := logger.From(ctx)
 	for _, component := range pkgLayout.Pkg.Components {
 		for _, repoURL := range component.Repos {
@@ -95,7 +96,9 @@ func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *l
 			if err != nil {
 				return err
 			}
-			defer os.RemoveAll(tmpDir)
+			defer func() {
+				err = errors.Join(err, os.RemoveAll(tmpDir))
+			}()
 			reposPath, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.RepoComponentDir)
 			if err != nil {
 				return err

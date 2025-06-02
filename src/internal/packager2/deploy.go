@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
 package packager2
 
 import (
@@ -21,7 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/packager2/actions"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
@@ -36,6 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// DeployOpts are optional parameters to packager2.Deploy
 type DeployOpts struct {
 	// Deploy time set variables
 	SetVariables map[string]string
@@ -70,6 +73,7 @@ type deployer struct {
 	hpaModified bool
 }
 
+// Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpts) ([]types.DeployedComponent, error) {
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
@@ -140,6 +144,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				}
 			}
 			// If this package has been deployed before, increment the package generation within the secret
+			//nolint: errcheck // this may be the first time deploying the package therefore it will not exist
 			if existingDeployedPackage, _ := d.c.GetDeployedPackage(ctx, pkgLayout.Pkg.Metadata.Name); existingDeployedPackage != nil {
 				packageGeneration = existingDeployedPackage.Generation + 1
 			}
@@ -275,7 +280,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	return charts, nil
 }
 
-func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOpts) ([]types.InstalledChart, error) {
+func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOpts) (_ []types.InstalledChart, err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -367,8 +372,10 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		if err != nil {
 			return nil, err
 		}
-		defer os.RemoveAll(tmpDir)
-		dataInjectionsPath, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout2.DataComponentDir)
+		defer func() {
+			err = errors.Join(err, os.RemoveAll(tmpDir))
+		}()
+		dataInjectionsPath, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.DataComponentDir)
 		if err != nil {
 			return nil, err
 		}
@@ -414,20 +421,22 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	return charts, nil
 }
 
-func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) ([]types.InstalledChart, error) {
+func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) (_ []types.InstalledChart, err error) {
 	installedCharts := []types.InstalledChart{}
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 
-	chartDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout2.ChartsComponentDir)
+	chartDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.ChartsComponentDir)
 	if err != nil {
 		return nil, err
 	}
-	valuesDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout2.ValuesComponentDir)
+	valuesDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.ValuesComponentDir)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("failed to get values: %w", err)
 	}
@@ -477,13 +486,15 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 	return installedCharts, nil
 }
 
-func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) ([]types.InstalledChart, error) {
+func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) (_ []types.InstalledChart, err error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(tmpDir)
-	manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout2.ManifestsComponentDir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+	manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.ManifestsComponentDir)
 	if err != nil {
 		return nil, err
 	}
@@ -622,7 +633,7 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkg v1a
 	return nil
 }
 
-func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, variableConfig *variables.VariableConfig) error {
+func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, variableConfig *variables.VariableConfig) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Info("copying files", "count", len(component.Files))
@@ -631,7 +642,9 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmpdir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpdir))
+	}()
 
 	filesDir, err := pkgLayout.GetComponentDir(ctx, tmpdir, component.Name, layout.FilesComponentDir)
 	if err != nil {
@@ -663,7 +676,10 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 
 		fileList := []string{}
 		if helpers.IsDir(fileLocation) {
-			files, _ := helpers.RecursiveFileList(fileLocation, nil, false)
+			files, err := helpers.RecursiveFileList(fileLocation, nil, false)
+			if err != nil {
+				return err
+			}
 			fileList = append(fileList, files...)
 		} else {
 			fileList = append(fileList, fileLocation)
@@ -695,9 +711,13 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 		// Loop over all symlinks and create them
 		for _, link := range file.Symlinks {
 			// Try to remove the filepath if it exists
-			_ = os.RemoveAll(link)
+			if err := os.RemoveAll(link); err != nil {
+				return fmt.Errorf("failed to existing file at symlink location %s: %w", link, err)
+			}
 			// Make sure the parent directory exists
-			_ = helpers.CreateParentDirectory(link)
+			if err := helpers.CreateParentDirectory(link); err != nil {
+				return fmt.Errorf("failed to create parent directory for %s: %w", link, err)
+			}
 			// Create the symlink
 			err := os.Symlink(file.Target, link)
 			if err != nil {

@@ -17,7 +17,9 @@ import (
 func getPopulatedVariableConfig(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariables map[string]string) (*variables.VariableConfig, error) {
 	variableConfig := template.GetZarfVariableConfig(ctx)
 	variableConfig.SetConstants(pkg.Constants)
-	variableConfig.PopulateVariables(pkg.Variables, setVariables)
+	if err := variableConfig.PopulateVariables(pkg.Variables, setVariables); err != nil {
+		return nil, err
+	}
 	return variableConfig, nil
 }
 
