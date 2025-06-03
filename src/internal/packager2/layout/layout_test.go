@@ -71,7 +71,6 @@ func TestGetSBOM(t *testing.T) {
 		},
 	}
 	writePackageToDisk(t, pkg, tmpdir)
-	// FIXME add
 	pkg, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOpts{})
 	require.NoError(t, err)
 
