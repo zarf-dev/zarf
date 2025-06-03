@@ -1,0 +1,3 @@
+package:
+  deploy:
+    namespace: test3
