@@ -198,7 +198,6 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	if err != nil {
 		return nil, err
 	}
-	l.Info("package created")
 
 	return pkgLayout, nil
 }
