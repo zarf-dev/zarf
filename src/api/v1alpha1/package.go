@@ -121,9 +121,8 @@ func (pkg *ZarfPackage) ValidateNamespaces(maxNamespaces int) error {
 
 // SetPackageNamespace updates all existing namespaces to the provided one
 func (pkg *ZarfPackage) SetPackageNamespace(namespace string) {
-	// Update all existing namespaces to the provided one.
 	for i := range pkg.Components {
-		comp := &pkg.Components[i]
+		comp := pkg.Components[i]
 		for j := range comp.Charts {
 			comp.Charts[j].Namespace = namespace
 		}
