@@ -49,7 +49,7 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) (err err
 		return err
 	}
 
-	assembleOpt := layout.AssembleLayoutOptions{
+	assembleOpt := layout.AssembleOptions{
 		SkipSBOM:                opt.SkipSBOM,
 		OCIConcurrency:          opt.OCIConcurrency,
 		DifferentialPackagePath: opt.DifferentialPackagePath,

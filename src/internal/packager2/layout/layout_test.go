@@ -74,7 +74,7 @@ func TestGetSBOM(t *testing.T) {
 	pkg, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOpts{})
 	require.NoError(t, err)
 
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, tmpdir, layout.AssembleLayoutOptions{})
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, tmpdir, layout.AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
@@ -126,7 +126,7 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		pkg, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOpts{})
 		require.NoError(t, err)
 
-		pkgLayout, err := layout.AssemblePackage(ctx, pkg, tmpdir, layout.AssembleLayoutOptions{})
+		pkgLayout, err := layout.AssemblePackage(ctx, pkg, tmpdir, layout.AssembleOptions{})
 		require.NoError(t, err)
 
 		// Ensure the components have the correct file
@@ -180,7 +180,7 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		pkg, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOpts{})
 		require.NoError(t, err)
 		// create the package
-		pkgLayout, err := layout.AssemblePackage(context.Background(), pkg, tmpdir, layout.AssembleLayoutOptions{})
+		pkgLayout, err := layout.AssemblePackage(context.Background(), pkg, tmpdir, layout.AssembleOptions{})
 		require.NoError(t, err)
 
 		// Ensure the component has the correct file

@@ -42,8 +42,8 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// AssembleLayoutOptions are the options for creating a package from a package object
-type AssembleLayoutOptions struct {
+// AssembleOptions are the options for creating a package from a package object
+type AssembleOptions struct {
 	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified
 	Flavor string
 	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry
@@ -57,7 +57,7 @@ type AssembleLayoutOptions struct {
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
-func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt AssembleLayoutOptions) (*PackageLayout, error) {
+func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt AssembleOptions) (*PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
