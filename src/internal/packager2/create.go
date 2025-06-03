@@ -13,8 +13,7 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager2/create"
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -46,7 +45,7 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) (err err
 		return err
 	}
 
-	assembleOpt := create.AssembleLayoutOptions{
+	assembleOpt := layout.AssembleLayoutOptions{
 		SkipSBOM:                opt.SkipSBOM,
 		OCIConcurrency:          opt.OCIConcurrency,
 		DifferentialPackagePath: opt.DifferentialPackagePath,
@@ -55,7 +54,7 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) (err err
 		SigningKeyPath:          opt.SigningKeyPath,
 		SigningKeyPassword:      opt.SigningKeyPassword,
 	}
-	pkgLayout, err := create.AssemblePackage(ctx, pkg, packagePath, assembleOpt)
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, assembleOpt)
 	if err != nil {
 		return err
 	}
@@ -86,7 +85,7 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) (err err
 	if opt.SBOMOut != "" {
 		err := pkgLayout.GetSBOM(ctx, filepath.Join(opt.SBOMOut, pkgLayout.Pkg.Metadata.Name))
 		// Don't fail package create if the package doesn't have an sbom
-		var noSBOMErr *layout2.NoSBOMAvailableError
+		var noSBOMErr *layout.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {
 			logger.From(ctx).Error(fmt.Sprintf("cannot output sbom: %s", err.Error()))
 			return nil

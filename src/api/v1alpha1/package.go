@@ -49,6 +49,9 @@ const (
 	APIVersion string = "zarf.dev/v1alpha1"
 )
 
+// SkeletonArch is a special architecture used for skeleton packages
+const SkeletonArch = "skeleton"
+
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
 	// The API version of the Zarf package.

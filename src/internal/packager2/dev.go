@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager2/create"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -68,14 +68,14 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		}
 	}
 
-	createOpt := create.AssembleLayoutOptions{
+	createOpt := layout.AssembleLayoutOptions{
 		Flavor:            opts.Flavor,
 		RegistryOverrides: opts.RegistryOverrides,
 		SkipSBOM:          true,
 		OCIConcurrency:    config.CommonOptions.OCIConcurrency,
 	}
 
-	pkgLayout, err := create.AssemblePackage(ctx, pkg, packagePath, createOpt)
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, createOpt)
 	if err != nil {
 		return err
 	}

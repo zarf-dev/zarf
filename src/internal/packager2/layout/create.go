@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package create builds package layouts from package definitions
-package create
+package layout
 
 import (
 	"archive/tar"
@@ -35,19 +34,11 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	actions2 "github.com/zarf-dev/zarf/src/internal/packager2/actions"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
-	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
-
-// PackageLayoutOptions are the options for creating a package from a definition.
-type PackageLayoutOptions struct {
-	AssembleLayoutOptions
-	SetVariables map[string]string
-}
 
 // AssembleLayoutOptions are the options for creating a package from a package object
 type AssembleLayoutOptions struct {
@@ -64,16 +55,16 @@ type AssembleLayoutOptions struct {
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
-func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt AssembleLayoutOptions) (*layout.PackageLayout, error) {
+func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt AssembleLayoutOptions) (*PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
 	if opt.DifferentialPackagePath != "" {
 		l.Debug("creating differential package", "differential", opt.DifferentialPackagePath)
-		layoutOpt := layout.PackageLayoutOptions{
+		layoutOpt := PackageLayoutOptions{
 			SkipSignatureValidation: true,
 		}
-		diffPkgLayout, err := layout.LoadFromTar(ctx, opt.DifferentialPackagePath, layoutOpt)
+		diffPkgLayout, err := LoadFromTar(ctx, opt.DifferentialPackagePath, layoutOpt)
 		if err != nil {
 			return nil, err
 		}
@@ -138,11 +129,11 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 		pullCfg := images.PullConfig{
 			OCIConcurrency:        opt.OCIConcurrency,
-			DestinationDirectory:  filepath.Join(buildPath, layout.ImagesDir),
+			DestinationDirectory:  filepath.Join(buildPath, ImagesDir),
 			ImageList:             componentImages,
 			Arch:                  pkg.Metadata.Architecture,
 			RegistryOverrides:     opt.RegistryOverrides,
-			CacheDirectory:        filepath.Join(cachePath, zoci.ImageCacheDirectory),
+			CacheDirectory:        filepath.Join(cachePath, ImagesDir),
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
@@ -158,7 +149,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 
 		// Sort images index to make build reproducible.
-		err = utils.SortImagesIndex(filepath.Join(buildPath, layout.ImagesDir))
+		err = utils.SortImagesIndex(filepath.Join(buildPath, ImagesDir))
 		if err != nil {
 			return nil, err
 		}
@@ -178,7 +169,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	if err != nil {
 		return nil, err
 	}
-	checksumPath := filepath.Join(buildPath, layout.Checksums)
+	checksumPath := filepath.Join(buildPath, Checksums)
 	err = os.WriteFile(checksumPath, []byte(checksumContent), helpers.ReadWriteUser)
 	if err != nil {
 		return nil, err
@@ -191,7 +182,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	if err != nil {
 		return nil, err
 	}
-	err = os.WriteFile(filepath.Join(buildPath, layout.ZarfYAML), b, helpers.ReadWriteUser)
+	err = os.WriteFile(filepath.Join(buildPath, ZarfYAML), b, helpers.ReadWriteUser)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +192,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
-	pkgLayout, err := layout.LoadFromDir(ctx, buildPath, layout.PackageLayoutOptions{SkipSignatureValidation: true})
+	pkgLayout, err := LoadFromDir(ctx, buildPath, PackageLayoutOptions{SkipSignatureValidation: true})
 	if err != nil {
 		return nil, err
 	}
@@ -217,8 +208,8 @@ type SkeletonLayoutOptions struct {
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
-func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt SkeletonLayoutOptions) (*layout.PackageLayout, error) {
-	pkg.Metadata.Architecture = zoci.SkeletonArch
+func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt SkeletonLayoutOptions) (*PackageLayout, error) {
+	pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -236,7 +227,7 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	if err != nil {
 		return nil, err
 	}
-	checksumPath := filepath.Join(buildPath, layout.Checksums)
+	checksumPath := filepath.Join(buildPath, Checksums)
 	err = os.WriteFile(checksumPath, []byte(checksumContent), helpers.ReadWriteUser)
 	if err != nil {
 		return nil, err
@@ -249,7 +240,7 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	if err != nil {
 		return nil, err
 	}
-	err = os.WriteFile(filepath.Join(buildPath, layout.ZarfYAML), b, helpers.ReadWriteUser)
+	err = os.WriteFile(filepath.Join(buildPath, ZarfYAML), b, helpers.ReadWriteUser)
 	if err != nil {
 		return nil, err
 	}
@@ -259,11 +250,11 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 		return nil, err
 	}
 
-	layoutOpts := layout.PackageLayoutOptions{
+	layoutOpts := PackageLayoutOptions{
 		SkipSignatureValidation: true,
 		IsPartial:               false,
 	}
-	pkgLayout, err := layout.LoadFromDir(ctx, buildPath, layoutOpts)
+	pkgLayout, err := LoadFromDir(ctx, buildPath, layoutOpts)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load skeleton: %w", err)
 	}
@@ -301,8 +292,8 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 			valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
 		}
 		chart.ValuesFiles = valuesFiles
-		chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
-		valuesFilePath := filepath.Join(compBuildPath, string(layout.ValuesComponentDir))
+		chartPath := filepath.Join(compBuildPath, string(ChartsComponentDir))
+		valuesFilePath := filepath.Join(compBuildPath, string(ValuesComponentDir))
 		if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath); err != nil {
 			return err
 		}
@@ -310,7 +301,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	}
 
 	for filesIdx, file := range component.Files {
-		rel := filepath.Join(string(layout.FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		rel := filepath.Join(string(FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(compBuildPath, rel)
 		destinationDir := filepath.Dir(dst)
 
@@ -399,7 +390,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	}
 
 	for dataIdx, data := range component.DataInjections {
-		rel := filepath.Join(string(layout.DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+		rel := filepath.Join(string(DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 		dst := filepath.Join(compBuildPath, rel)
 
 		if helpers.IsURL(data.Source) {
@@ -415,14 +406,14 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 
 	// Iterate over all manifests.
 	if len(component.Manifests) > 0 {
-		err := os.MkdirAll(filepath.Join(compBuildPath, string(layout.ManifestsComponentDir)), 0o700)
+		err := os.MkdirAll(filepath.Join(compBuildPath, string(ManifestsComponentDir)), 0o700)
 		if err != nil {
 			return err
 		}
 	}
 	for _, manifest := range component.Manifests {
 		for fileIdx, path := range manifest.Files {
-			rel := filepath.Join(string(layout.ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+			rel := filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
 			dst := filepath.Join(compBuildPath, rel)
 
 			// Copy manifests without any processing.
@@ -440,7 +431,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		for kustomizeIdx, path := range manifest.Kustomizations {
 			// Generate manifests from kustomizations and place in the package.
 			kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
-			rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
+			rel := filepath.Join(string(ManifestsComponentDir), kname)
 			dst := filepath.Join(compBuildPath, rel)
 
 			if !helpers.IsURL(path) {
@@ -455,7 +446,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	// Load all specified git repos.
 	for _, url := range component.Repos {
 		// Pull all the references if there is no `@` in the string.
-		_, err := git.Clone(ctx, filepath.Join(compBuildPath, string(layout.RepoComponentDir)), url, false)
+		_, err := git.Clone(ctx, filepath.Join(compBuildPath, string(RepoComponentDir)), url, false)
 		if err != nil {
 			return fmt.Errorf("unable to pull git repo %s: %w", url, err)
 		}
@@ -511,7 +502,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 
 	for chartIdx, chart := range component.Charts {
 		if chart.LocalPath != "" {
-			rel := filepath.Join(string(layout.ChartsComponentDir), fmt.Sprintf("%s-%d", chart.Name, chartIdx))
+			rel := filepath.Join(string(ChartsComponentDir), fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			dst := filepath.Join(compBuildPath, rel)
 
 			err := helpers.CreatePathAndCopy(filepath.Join(packagePath, chart.LocalPath), dst)
@@ -527,7 +518,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 				continue
 			}
 
-			rel := fmt.Sprintf("%s-%d", helm.StandardName(string(layout.ValuesComponentDir), chart), valuesIdx)
+			rel := fmt.Sprintf("%s-%d", helm.StandardName(string(ValuesComponentDir), chart), valuesIdx)
 			component.Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 
 			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, path), filepath.Join(compBuildPath, rel)); err != nil {
@@ -541,7 +532,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			continue
 		}
 
-		rel := filepath.Join(string(layout.FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		rel := filepath.Join(string(FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(compBuildPath, rel)
 		destinationDir := filepath.Dir(dst)
 
@@ -594,7 +585,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	}
 
 	for dataIdx, data := range component.DataInjections {
-		rel := filepath.Join(string(layout.DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+		rel := filepath.Join(string(DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 		dst := filepath.Join(compBuildPath, rel)
 
 		if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, data.Source), dst); err != nil {
@@ -605,14 +596,14 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	}
 	// Iterate over all manifests.
 	if len(component.Manifests) > 0 {
-		err := os.MkdirAll(filepath.Join(compBuildPath, string(layout.ManifestsComponentDir)), 0o700)
+		err := os.MkdirAll(filepath.Join(compBuildPath, string(ManifestsComponentDir)), 0o700)
 		if err != nil {
 			return err
 		}
 	}
 	for manifestIdx, manifest := range component.Manifests {
 		for fileIdx, path := range manifest.Files {
-			rel := filepath.Join(string(layout.ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+			rel := filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
 			dst := filepath.Join(compBuildPath, rel)
 
 			// Copy manifests without any processing.
@@ -626,7 +617,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 		for kustomizeIdx, path := range manifest.Kustomizations {
 			// Generate manifests from kustomizations and place in the package.
 			kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
-			rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
+			rel := filepath.Join(string(ManifestsComponentDir), kname)
 			dst := filepath.Join(compBuildPath, rel)
 
 			// Build() requires the path be present - otherwise will throw an error.
@@ -712,7 +703,7 @@ func getChecksum(dirPath string) (string, string, error) {
 		if err != nil {
 			return err
 		}
-		if rel == layout.ZarfYAML || rel == layout.Checksums {
+		if rel == ZarfYAML || rel == Checksums {
 			return nil
 		}
 		sum, err := helpers.GetSHA256OfFile(path)
@@ -750,9 +741,9 @@ func signPackage(dirPath, signingKeyPath, signingKeyPassword string) error {
 	_, err := sign.SignBlobCmd(
 		rootOpts,
 		keyOpts,
-		filepath.Join(dirPath, layout.ZarfYAML),
+		filepath.Join(dirPath, ZarfYAML),
 		true,
-		filepath.Join(dirPath, layout.Signature),
+		filepath.Join(dirPath, Signature),
 		"",
 		false)
 	if err != nil {
