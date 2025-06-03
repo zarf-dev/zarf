@@ -180,8 +180,8 @@ func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, component
 	return outPath, nil
 }
 
-// GetImageDir returns the path to the images directory
-func (p *PackageLayout) GetImageDir() string {
+// GetImageDirPath returns the path to the images directory
+func (p *PackageLayout) GetImageDirPath() string {
 	// Use the manifest within the index.json to load the specific image we want
 	return filepath.Join(p.dirPath, ImagesDir)
 }
