@@ -5,11 +5,8 @@ package layout
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"maps"
 	"os"
@@ -28,7 +25,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // PackageLayout manages the layout for a package.
@@ -380,116 +376,5 @@ func validatePackageSignature(ctx context.Context, pkgLayout *PackageLayout, pub
 	if err != nil {
 		return fmt.Errorf("package signature did not match the provided key: %w", err)
 	}
-	return nil
-}
-
-func splitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
-	// Remove any existing split files
-	existingChunks, err := filepath.Glob(srcPath + ".part*")
-	if err != nil {
-		return err
-	}
-	for _, chunk := range existingChunks {
-		err := os.Remove(chunk)
-		if err != nil {
-			return err
-		}
-	}
-	srcFile, err := os.Open(srcPath)
-	if err != nil {
-		return err
-	}
-	// Ensure we close our sourcefile, even if we error out.
-	defer func() {
-		err2 := srcFile.Close()
-		// Ignore if file is already closed
-		if !errors.Is(err2, os.ErrClosed) {
-			err = errors.Join(err, err2)
-		}
-	}()
-
-	fi, err := srcFile.Stat()
-	if err != nil {
-		return err
-	}
-
-	hash := sha256.New()
-	fileCount := 0
-	// TODO(mkcp): The inside of this loop should be wrapped in a closure so we can close the destination file each
-	//   iteration as soon as we're done writing.
-	for {
-		path := fmt.Sprintf("%s.part%03d", srcPath, fileCount+1)
-		dstFile, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
-		if err != nil {
-			return err
-		}
-		defer func(dstFile *os.File) {
-			err2 := dstFile.Close()
-			// Ignore if file is already closed
-			if !errors.Is(err2, os.ErrClosed) {
-				err = errors.Join(err, err2)
-			}
-		}(dstFile)
-
-		written, copyErr := io.CopyN(dstFile, srcFile, int64(chunkSize))
-		if copyErr != nil && !errors.Is(copyErr, io.EOF) {
-			return err
-		}
-
-		_, err = dstFile.Seek(0, io.SeekStart)
-		if err != nil {
-			return err
-		}
-		_, err = io.Copy(hash, dstFile)
-		if err != nil {
-			return err
-		}
-
-		// EOF error could be returned on 0 bytes written.
-		if written == 0 {
-			// NOTE(mkcp): We have to close the file before removing it or windows will break with a file-in-use err.
-			err = dstFile.Close()
-			if err != nil {
-				return err
-			}
-			err = os.Remove(path)
-			if err != nil {
-				return err
-			}
-			break
-		}
-
-		fileCount++
-		if errors.Is(copyErr, io.EOF) {
-			break
-		}
-	}
-
-	// Remove original file
-	// NOTE(mkcp): We have to close the file before removing or windows can break with a file-in-use err.
-	err = srcFile.Close()
-	if err != nil {
-		return err
-	}
-	err = os.Remove(srcPath)
-	if err != nil {
-		return err
-	}
-
-	// Write header file
-	data := types.ZarfSplitPackageData{
-		Count:     fileCount,
-		Bytes:     fi.Size(),
-		Sha256Sum: fmt.Sprintf("%x", hash.Sum(nil)),
-	}
-	b, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("unable to marshal the split package data: %w", err)
-	}
-	path := fmt.Sprintf("%s.part000", srcPath)
-	if err := os.WriteFile(path, b, 0644); err != nil {
-		return fmt.Errorf("unable to write the file %s: %w", path, err)
-	}
-	logger.From(ctx).Info("package split across files", "count", fileCount+1)
 	return nil
 }
