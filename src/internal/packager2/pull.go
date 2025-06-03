@@ -12,23 +12,18 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/mholt/archives"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/gabriel-vasile/mimetype"
-	goyaml "github.com/goccy/go-yaml"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
-	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
@@ -89,7 +84,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 	return nil
 }
 
-// PullOptions are the options for PullPackage.
+// PullOCIOptions are the options for PullOCI.
 type PullOCIOptions struct {
 	Source                  string
 	Directory               string
@@ -102,12 +97,14 @@ type PullOCIOptions struct {
 	Modifiers               []oci.Modifier
 }
 
-func pullOCI(ctx context.Context, opts PullOCIOptions) (bool, string, error) {
+func pullOCI(ctx context.Context, opts PullOCIOptions) (_ bool, _ string, err error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return false, "", err
 	}
-	defer os.Remove(tmpDir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 	if opts.Shasum != "" {
 		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}
@@ -209,12 +206,14 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 	return "", fmt.Errorf("unsupported file type: %s", mtype.Extension())
 }
 
-func pullHTTPFile(ctx context.Context, src, tarPath string) error {
+func pullHTTPFile(ctx context.Context, src, tarPath string) (err error) {
 	f, err := os.Create(tarPath)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		err = errors.Join(err, f.Close())
+	}()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
 	if err != nil {
 		return err
@@ -223,7 +222,9 @@ func pullHTTPFile(ctx context.Context, src, tarPath string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err = errors.Join(err, resp.Body.Close())
+	}()
 	if resp.StatusCode != http.StatusOK {
 		_, err := io.Copy(io.Discard, resp.Body)
 		if err != nil {
@@ -236,72 +237,6 @@ func pullHTTPFile(ctx context.Context, src, tarPath string) error {
 		return err
 	}
 	return nil
-}
-
-// nameFromMetadata reads the zarf.yaml inside the archive at "path"
-// (which may be plain, .tar, .tar.zst, .zip, etc) and builds its package name.
-func nameFromMetadata(ctx context.Context, path string) (string, error) {
-	// 1) quick invalid‐path check
-	if helpers.InvalidPath(path) {
-		return "", &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
-	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	// 2) mount the archive as a virtual file system
-	fsys, err := archives.FileSystem(ctx, path, nil)
-	if err != nil {
-		return "", fmt.Errorf("unable to open archive %q: %w", path, err)
-	}
-
-	// 3) open just the zarf.yaml entry
-	f, err := fsys.Open(layout.ZarfYAML)
-	if err != nil {
-		return "", fmt.Errorf("%s does not contain a %s", path, layout.ZarfYAML)
-	}
-	defer f.Close()
-
-	// 4) read & unmarshal into our package struct
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return "", err
-	}
-	var pkg v1alpha1.ZarfPackage
-	if err := goyaml.Unmarshal(data, &pkg); err != nil {
-		return "", err
-	}
-	if pkg.Metadata.Name == "" {
-		return "", fmt.Errorf("%s does not contain a zarf.yaml", path)
-	}
-
-	// 5) build the output name exactly as before
-	arch := config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
-	if pkg.Build.Architecture == zoci.SkeletonArch {
-		arch = zoci.SkeletonArch
-	}
-
-	var name string
-	switch pkg.Kind {
-	case v1alpha1.ZarfInitConfig:
-		name = fmt.Sprintf("zarf-init-%s", arch)
-	case v1alpha1.ZarfPackageConfig:
-		name = fmt.Sprintf("zarf-package-%s-%s", pkg.Metadata.Name, arch)
-	default:
-		name = fmt.Sprintf("zarf-%s-%s", strings.ToLower(string(pkg.Kind)), arch)
-	}
-	if pkg.Build.Differential {
-		name = fmt.Sprintf("%s-%s-differential-%s",
-			name, pkg.Build.DifferentialPackageVersion, pkg.Metadata.Version)
-	} else if pkg.Metadata.Version != "" {
-		name = fmt.Sprintf("%s-%s", name, pkg.Metadata.Version)
-	}
-
-	// 6) choose tar vs tar.zst
-	if pkg.Metadata.Uncompressed {
-		return name + ".tar", nil
-	}
-	return name + ".tar.zst", nil
 }
 
 // supportsFiltering checks if the package supports filtering.

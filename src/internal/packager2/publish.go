@@ -9,10 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 
@@ -174,7 +177,31 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		return fmt.Errorf("unable to load skeleton: %w", err)
 	}
 
-	return pushToRemote(ctx, pkgLayout, ref, opts.Concurrency, opts.WithPlainHTTP)
+	err = pushToRemote(ctx, pkgLayout, ref, opts.Concurrency, opts.WithPlainHTTP)
+	if err != nil {
+		return err
+	}
+	packageRef, err := layout2.ReferenceFromMetadata(ref.String(), pkgLayout.Pkg)
+	if err != nil {
+		return err
+	}
+	l.Info("skeleton packages contain metadata and local resources to allow for remote component imports")
+	ex := []v1alpha1.ZarfComponent{}
+	for _, c := range pkgLayout.Pkg.Components {
+		ex = append(ex, v1alpha1.ZarfComponent{
+			Name: fmt.Sprintf("import-%s", c.Name),
+			Import: v1alpha1.ZarfComponentImport{
+				Name: c.Name,
+				URL:  helpers.OCIURLPrefix + packageRef,
+			},
+		})
+	}
+	err = utils.ColorPrintYAML(ex, nil, true)
+	if err != nil {
+		return err
+	}
+	l.Info("find more info on skeleton packages at https://docs.zarf.dev/faq/#what-is-a-skeleton-zarf-package")
+	return nil
 }
 
 // pushToRemote pushes a package to a remote at ref.

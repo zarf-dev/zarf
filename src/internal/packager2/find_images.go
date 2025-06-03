@@ -5,6 +5,7 @@ package packager2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,7 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
 	"github.com/distribution/reference"
-	sourcev1beta2 "github.com/fluxcd/source-controller/api/v1beta2"
+	flux "github.com/fluxcd/source-controller/api/v1"
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -80,7 +81,7 @@ type ComponentImageScan struct {
 
 // FindImages iterates over the manifests and charts within each component to find any container images
 // It returns a FindImageResults which contains a scan result for each component
-func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (FindImagesResult, error) {
+func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ FindImagesResult, err error) {
 	l := logger.From(ctx)
 	pkg, err := layout.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
 	if err != nil {
@@ -102,7 +103,9 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	if err != nil {
 		return FindImagesResult{}, err
 	}
-	defer os.RemoveAll(tmpBuildPath)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpBuildPath))
+	}()
 
 	componentImageScans := []ComponentImageScan{}
 	for _, component := range pkg.Components {
@@ -359,7 +362,7 @@ func processUnstructuredImages(ctx context.Context, resource *unstructured.Unstr
 		matchedImages = appendToImageMap(matchedImages, job.Spec.Template.Spec)
 
 	case "OCIRepository":
-		var ociRepo sourcev1beta2.OCIRepository
+		var ociRepo flux.OCIRepository
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &ociRepo); err != nil {
 			return nil, nil, fmt.Errorf("could not parse ocirepo: %w", err)
 		}
@@ -404,7 +407,7 @@ func appendToImageMap(imgMap map[string]bool, pod corev1.PodSpec) map[string]boo
 	return imgMap
 }
 
-func appendToImageMapOCIRepo(ctx context.Context, imgMap map[string]bool, repo sourcev1beta2.OCIRepository) map[string]bool {
+func appendToImageMapOCIRepo(ctx context.Context, imgMap map[string]bool, repo flux.OCIRepository) map[string]bool {
 	var url = strings.TrimPrefix(repo.Spec.URL, "oci://")
 
 	if repo.Spec.Reference.Tag != "" {

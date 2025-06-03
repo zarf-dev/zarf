@@ -796,7 +796,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		Architecture:            config.GetArch(),
 	}
 
-	result, err := packager2.InspectPackageSboms(ctx, src, inspectOptions)
+	result, err := packager2.InspectPackageSBOM(ctx, src, inspectOptions)
 	if err != nil {
 		return err
 	}
