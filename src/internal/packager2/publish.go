@@ -164,7 +164,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		return err
 	}
 	// Create skeleton buildpath
-	createOpts := layout.SkeletonLayoutOptions{
+	createOpts := layout.AssembleSkeletonOptions{
 		SigningKeyPath:     opts.SigningKeyPath,
 		SigningKeyPassword: opts.SigningKeyPassword,
 	}

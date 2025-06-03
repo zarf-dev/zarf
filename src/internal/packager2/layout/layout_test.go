@@ -27,7 +27,7 @@ func TestCreateSkeleton(t *testing.T) {
 	pkg, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", load.DefinitionOpts{})
 	require.NoError(t, err)
 
-	opt := layout.SkeletonLayoutOptions{}
+	opt := layout.AssembleSkeletonOptions{}
 	pkgLayout, err := layout.AssembleSkeleton(ctx, pkg, "./testdata/zarf-skeleton-package", opt)
 	require.NoError(t, err)
 

@@ -203,14 +203,14 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	return pkgLayout, nil
 }
 
-// SkeletonLayoutOptions are the options for creating a skeleton package
-type SkeletonLayoutOptions struct {
+// AssembleSkeletonOptions are the options for creating a skeleton package
+type AssembleSkeletonOptions struct {
 	SigningKeyPath     string
 	SigningKeyPassword string
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
-func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt SkeletonLayoutOptions) (*PackageLayout, error) {
+func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt AssembleSkeletonOptions) (*PackageLayout, error) {
 	pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
