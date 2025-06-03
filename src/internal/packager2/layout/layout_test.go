@@ -24,7 +24,7 @@ func TestCreateSkeleton(t *testing.T) {
 	ctx := testutil.TestContext(t)
 
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
-	pkg, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", "", nil)
+	pkg, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", load.DefinitionOpts{})
 	require.NoError(t, err)
 
 	opt := layout.SkeletonLayoutOptions{}
@@ -72,7 +72,7 @@ func TestGetSBOM(t *testing.T) {
 	}
 	writePackageToDisk(t, pkg, tmpdir)
 	// FIXME add
-	pkg, err := load.PackageDefinition(ctx, tmpdir, "", nil)
+	pkg, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOpts{})
 	require.NoError(t, err)
 
 	pkgLayout, err := layout.AssemblePackage(ctx, pkg, tmpdir, layout.AssembleLayoutOptions{})
@@ -124,7 +124,7 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		// Create the zarf.yaml file in the tmpdir
 		writePackageToDisk(t, pkg, tmpdir)
 
-		pkg, err := load.PackageDefinition(ctx, tmpdir, "", nil)
+		pkg, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOpts{})
 		require.NoError(t, err)
 
 		pkgLayout, err := layout.AssemblePackage(ctx, pkg, tmpdir, layout.AssembleLayoutOptions{})
@@ -178,7 +178,7 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		err := os.Mkdir(childDir, 0700)
 		require.NoError(t, err)
 		writePackageToDisk(t, childPkg, childDir)
-		pkg, err := load.PackageDefinition(ctx, tmpdir, "", nil)
+		pkg, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOpts{})
 		require.NoError(t, err)
 		// create the package
 		pkgLayout, err := layout.AssemblePackage(context.Background(), pkg, tmpdir, layout.AssembleLayoutOptions{})

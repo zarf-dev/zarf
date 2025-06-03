@@ -159,7 +159,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
-	pkg, err := load.PackageDefinition(ctx, path, "", nil)
+	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOpts{})
 	if err != nil {
 		return err
 	}

@@ -98,7 +98,11 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
-	pkg, err := load.PackageDefinition(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
+	loadOpts := load.DefinitionOpts{
+		Flavor:       o.flavor,
+		SetVariables: o.setVariables,
+	}
+	pkg, err := load.PackageDefinition(ctx, setBaseDirectory(args), loadOpts)
 	if err != nil {
 		return err
 	}

@@ -218,7 +218,11 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	if err != nil {
 		return InspectDefinitionResourcesResults{}, err
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
+	loadOpts := load.DefinitionOpts{
+		Flavor:       opts.Flavor,
+		SetVariables: opts.CreateSetVariables,
+	}
+	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return InspectDefinitionResourcesResults{}, err
 	}

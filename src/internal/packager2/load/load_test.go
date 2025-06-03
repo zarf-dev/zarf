@@ -38,7 +38,10 @@ func TestLoadPackageWithFlavors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := PackageDefinition(context.Background(), filepath.Join("testdata", "package-with-flavors"), tt.flavor, map[string]string{})
+			opts := DefinitionOpts{
+				Flavor: tt.flavor,
+			}
+			_, err := PackageDefinition(context.Background(), filepath.Join("testdata", "package-with-flavors"), opts)
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
 				return

@@ -22,14 +22,20 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
+// DefinitionOpts are the optional parameters to load.PackageDefinition
+type DefinitionOpts struct {
+	Flavor       string
+	SetVariables map[string]string
+}
+
 // PackageDefinition returns a validated package definition after flavors, imports, and variables are applied.
-func PackageDefinition(ctx context.Context, packagePath, flavor string, setVariables map[string]string) (v1alpha1.ZarfPackage, error) {
+func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOpts) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.LoadPackage",
 		"path", packagePath,
-		"flavor", flavor,
-		"setVariables", setVariables)
+		"flavor", opts.Flavor,
+		"setVariables", opts.SetVariables)
 
 	// Load PackageConfig from disk
 	b, err := os.ReadFile(filepath.Join(packagePath, layout.ZarfYAML))
@@ -41,17 +47,17 @@ func PackageDefinition(ctx context.Context, packagePath, flavor string, setVaria
 		return v1alpha1.ZarfPackage{}, err
 	}
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-	pkg, err = resolveImports(ctx, pkg, packagePath, pkg.Metadata.Architecture, flavor, []string{})
+	pkg, err = resolveImports(ctx, pkg, packagePath, pkg.Metadata.Architecture, opts.Flavor, []string{})
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	if setVariables != nil {
-		pkg, _, err = fillActiveTemplate(ctx, pkg, setVariables)
+	if opts.SetVariables != nil {
+		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, packagePath, setVariables, flavor)
+	err = validate(ctx, pkg, packagePath, opts.SetVariables, opts.Flavor)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
