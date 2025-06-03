@@ -5,7 +5,6 @@ package create
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -26,9 +26,11 @@ func TestCreateSkeleton(t *testing.T) {
 	ctx := testutil.TestContext(t)
 
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+	pkg, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", "", nil)
+	require.NoError(t, err)
 
 	opt := SkeletonLayoutOptions{}
-	pkgLayout, err := SkeletonLayout(ctx, "./testdata/zarf-skeleton-package", opt)
+	pkgLayout, err := AssembleSkeleton(ctx, pkg, "./testdata/zarf-skeleton-package", opt)
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
@@ -110,39 +112,6 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	require.Equal(t, "c09d17f612f241cdf549e5fb97c9e063a8ad18ae7a9f3af066332ed6b38556ad", shaSum)
 }
 
-func TestLoadPackageWithFlavors(t *testing.T) {
-	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
-
-	tests := []struct {
-		name        string
-		flavor      string
-		expectedErr string
-	}{
-		{
-			name:        "when all components have a flavor, inputting no flavor should error",
-			flavor:      "",
-			expectedErr: fmt.Sprintf("package validation failed: %s", lint.PkgValidateErrNoComponents),
-		},
-		{
-			name:   "flavors work",
-			flavor: "cashew",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			_, err := LoadPackageDefinition(context.Background(), filepath.Join("testdata", "package-with-flavors"), tt.flavor, map[string]string{})
-			if tt.expectedErr != "" {
-				require.ErrorContains(t, err, tt.expectedErr)
-				return
-			}
-			require.NoError(t, err)
-		})
-	}
-}
-
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 	t.Helper()
 	b, err := goyaml.Marshal(pkg)
@@ -150,69 +119,6 @@ func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 	path := filepath.Join(dir, layout.ZarfYAML)
 	err = os.WriteFile(path, b, 0700)
 	require.NoError(t, err)
-}
-
-func TestPackageUsesFlavor(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		pkg      v1alpha1.ZarfPackage
-		flavor   string
-		expected bool
-	}{
-		{
-			name: "when flavor is not set",
-			pkg: v1alpha1.ZarfPackage{
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Name: "do-nothing",
-					},
-					{
-						Name: "do-nothing-flavored",
-						Only: v1alpha1.ZarfComponentOnlyTarget{
-							Flavor: "cashew",
-						},
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "when flavor is not used",
-			pkg: v1alpha1.ZarfPackage{
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Name: "do-nothing",
-					},
-				},
-			},
-			flavor:   "cashew",
-			expected: false,
-		},
-		{
-			name: "when flavor is used",
-			pkg: v1alpha1.ZarfPackage{
-				Components: []v1alpha1.ZarfComponent{
-					{
-						Name: "do-nothing",
-						Only: v1alpha1.ZarfComponentOnlyTarget{
-							Flavor: "cashew",
-						},
-					},
-				},
-			},
-			flavor:   "cashew",
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			require.Equal(t, tt.expected, hasFlavoredComponent(tt.pkg, tt.flavor))
-		})
-	}
 }
 
 func TestGetSBOM(t *testing.T) {
@@ -234,8 +140,11 @@ func TestGetSBOM(t *testing.T) {
 		},
 	}
 	writePackageToDisk(t, pkg, tmpdir)
+	// FIXME add
+	pkg, err := load.PackageDefinition(ctx, tmpdir, "", nil)
+	require.NoError(t, err)
 
-	pkgLayout, err := PackageLayout(ctx, tmpdir, PackageLayoutOptions{})
+	pkgLayout, err := AssemblePackage(ctx, pkg, tmpdir, AssembleLayoutOptions{})
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
@@ -284,7 +193,10 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		// Create the zarf.yaml file in the tmpdir
 		writePackageToDisk(t, pkg, tmpdir)
 
-		pkgLayout, err := PackageLayout(ctx, tmpdir, PackageLayoutOptions{})
+		pkg, err := load.PackageDefinition(ctx, tmpdir, "", nil)
+		require.NoError(t, err)
+
+		pkgLayout, err := AssemblePackage(ctx, pkg, tmpdir, AssembleLayoutOptions{})
 		require.NoError(t, err)
 
 		// Ensure the components have the correct file
@@ -335,8 +247,10 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		err := os.Mkdir(childDir, 0700)
 		require.NoError(t, err)
 		writePackageToDisk(t, childPkg, childDir)
+		pkg, err := load.PackageDefinition(ctx, tmpdir, "", nil)
+		require.NoError(t, err)
 		// create the package
-		pkgLayout, err := PackageLayout(context.Background(), tmpdir, PackageLayoutOptions{})
+		pkgLayout, err := AssemblePackage(context.Background(), pkg, tmpdir, AssembleLayoutOptions{})
 		require.NoError(t, err)
 
 		// Ensure the component has the correct file

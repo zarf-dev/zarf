@@ -12,6 +12,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/create"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
+	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
@@ -45,7 +46,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	start := time.Now()
 	config.CommonOptions.Confirm = true
 
-	pkg, err := create.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
+	pkg, err := load.PackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
 	if err != nil {
 		return err
 	}
@@ -74,7 +75,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		OCIConcurrency:    config.CommonOptions.OCIConcurrency,
 	}
 
-	pkgLayout, err := create.AssemblePackageLayout(ctx, pkg, packagePath, createOpt)
+	pkgLayout, err := create.AssemblePackage(ctx, pkg, packagePath, createOpt)
 	if err != nil {
 		return err
 	}

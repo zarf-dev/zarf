@@ -19,6 +19,7 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/internal/packager2/create"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 
 	"oras.land/oras-go/v2/registry"
 )
@@ -159,12 +160,16 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
+	pkg, err := load.PackageDefinition(ctx, path, "", nil)
+	if err != nil {
+		return err
+	}
 	// Create skeleton buildpath
 	createOpts := create.SkeletonLayoutOptions{
 		SigningKeyPath:     opts.SigningKeyPath,
 		SigningKeyPassword: opts.SigningKeyPassword,
 	}
-	pkgLayout, err := create.SkeletonLayout(ctx, path, createOpts)
+	pkgLayout, err := create.AssembleSkeleton(ctx, pkg, path, createOpts)
 	if err != nil {
 		return fmt.Errorf("unable to create skeleton: %w", err)
 	}

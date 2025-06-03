@@ -15,6 +15,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/create"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
@@ -40,19 +41,21 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) (err err
 		return fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
 
-	createOpt := create.PackageLayoutOptions{
-		AssembleLayoutOptions: create.AssembleLayoutOptions{
-			SkipSBOM:                opt.SkipSBOM,
-			OCIConcurrency:          opt.OCIConcurrency,
-			DifferentialPackagePath: opt.DifferentialPackagePath,
-			Flavor:                  opt.Flavor,
-			RegistryOverrides:       opt.RegistryOverrides,
-			SigningKeyPath:          opt.SigningKeyPath,
-			SigningKeyPassword:      opt.SigningKeyPassword,
-		},
-		SetVariables: opt.SetVariables,
+	pkg, err := load.PackageDefinition(ctx, packagePath, opt.Flavor, opt.SetVariables)
+	if err != nil {
+		return err
 	}
-	pkgLayout, err := create.PackageLayout(ctx, packagePath, createOpt)
+
+	assembleOpt := create.AssembleLayoutOptions{
+		SkipSBOM:                opt.SkipSBOM,
+		OCIConcurrency:          opt.OCIConcurrency,
+		DifferentialPackagePath: opt.DifferentialPackagePath,
+		Flavor:                  opt.Flavor,
+		RegistryOverrides:       opt.RegistryOverrides,
+		SigningKeyPath:          opt.SigningKeyPath,
+		SigningKeyPassword:      opt.SigningKeyPassword,
+	}
+	pkgLayout, err := create.AssemblePackage(ctx, pkg, packagePath, assembleOpt)
 	if err != nil {
 		return err
 	}
