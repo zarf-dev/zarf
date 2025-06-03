@@ -248,6 +248,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
+		Namespace:               o.namespace,
 	}
 	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {
@@ -265,7 +266,6 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		PlainHTTP:              config.CommonOptions.PlainHTTP,
 		InsecureTLSSkipVerify:  config.CommonOptions.InsecureSkipTLSVerify,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
-		Namespace:              o.namespace,
 	}
 
 	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts)
@@ -289,19 +289,6 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 }
 
 func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager2.DeployOpts) ([]types.DeployedComponent, error) {
-	// check for namespace override before confirmation message is rendered
-	if opts.Namespace != "" {
-		// Update the name as it is used for secrets
-		logger.From(ctx).Debug("using namespace", "namespace", opts.Namespace)
-		pkgLayout.Pkg.Metadata.Name = fmt.Sprintf("%s-%s", pkgLayout.Pkg.Metadata.Name, opts.Namespace)
-
-		if err := pkgLayout.ValidateNamespaces(1); err != nil {
-			return nil, err
-		}
-		if err := pkgLayout.SetPackageNamespace(opts.Namespace); err != nil {
-			return nil, err
-		}
-	}
 	err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
 	if err != nil {
 		return nil, err

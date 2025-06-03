@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -39,6 +38,7 @@ type PackageLayoutOptions struct {
 	SkipSignatureValidation bool
 	IsPartial               bool
 	Filter                  filters.ComponentFilterStrategy
+	Namespace               string
 }
 
 // DirPath returns base directory of the package layout
@@ -81,6 +81,13 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 	pkg.Components, err = opt.Filter.Apply(pkg)
 	if err != nil {
 		return nil, err
+	}
+	if opt.Namespace != "" {
+		if err := pkg.ValidateNamespaces(1); err != nil {
+			return nil, err
+		}
+		pkg.SetPackageNamespace(opt.Namespace)
+		pkg.Metadata.Name = fmt.Sprintf("%s-%s", pkg.Metadata.Name, opt.Namespace)
 	}
 	pkgLayout := &PackageLayout{
 		dirPath: dirPath,
@@ -274,50 +281,6 @@ func (p *PackageLayout) FileName() (string, error) {
 		return name + ".tar", nil
 	}
 	return name + ".tar.zst", nil
-}
-
-// ValidateNamespaces checks if a package includes more than the specified number of namespaces
-func (p *PackageLayout) ValidateNamespaces(maxNamespaces int) error {
-	// Collect all non‐empty existing namespaces without mutating anything.
-	seen := make(map[string]struct{})
-	for _, comp := range p.Pkg.Components {
-		for _, chart := range comp.Charts {
-			if chart.Namespace != "" {
-				seen[chart.Namespace] = struct{}{}
-			}
-		}
-		for _, manifest := range comp.Manifests {
-			if manifest.Namespace != "" {
-				seen[manifest.Namespace] = struct{}{}
-			}
-		}
-	}
-
-	// If more than one distinct namespace was found, return an error.
-	if len(seen) > maxNamespaces {
-		oldList := make([]string, 0, len(seen))
-		for ns := range seen {
-			oldList = append(oldList, ns)
-		}
-		sort.Strings(oldList) // deterministic order
-		return fmt.Errorf("package contains more than %d distinct namespaces: %s", maxNamespaces, strings.Join(oldList, ", "))
-	}
-	return nil
-}
-
-// SetPackageNamespace updates all existing namespaces to the provided one
-func (p *PackageLayout) SetPackageNamespace(namespace string) error {
-	// Update all existing namespaces to the provided one.
-	for i := range p.Pkg.Components {
-		comp := &p.Pkg.Components[i]
-		for j := range comp.Charts {
-			comp.Charts[j].Namespace = namespace
-		}
-		for k := range comp.Manifests {
-			comp.Manifests[k].Namespace = namespace
-		}
-	}
-	return nil
 }
 
 func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {

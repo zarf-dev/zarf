@@ -54,8 +54,6 @@ type DeployOpts struct {
 	PlainHTTP bool
 	// Whether or not to skipTLSVerify when connecting to the registry
 	InsecureTLSSkipVerify bool
-	// Namespace determines the namespace to override for single-namespace packages
-	Namespace string
 	// How to configure Zarf state if it's not already been configured
 	GitServer      types.GitServerInfo
 	RegistryInfo   types.RegistryInfo
