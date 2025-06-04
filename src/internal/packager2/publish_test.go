@@ -198,7 +198,7 @@ func TestPublishSkeleton(t *testing.T) {
 			require.NoFileExists(t, expectedPkg.Metadata.Name)
 
 			// Format url and instantiate remote
-			ref, err := zoci.ReferenceFromMetadata(registryRef.String(), &expectedPkg.Metadata, &expectedPkg.Build)
+			ref, err := zoci.ReferenceFromMetadata(registryRef.String(), expectedPkg)
 			require.NoError(t, err)
 			rmt, err := zoci.NewRemote(ctx, ref, zoci.PlatformForSkeleton(), oci.WithPlainHTTP(true))
 			require.NoError(t, err)
@@ -249,7 +249,7 @@ func TestPublishPackage(t *testing.T) {
 			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{Filter: filters.Empty()})
 			require.NoError(t, err)
 			// Format url and instantiate remote
-			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
+			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), layoutExpected.Pkg)
 			require.NoError(t, err)
 
 			layoutActual := pullFromRemote(ctx, t, packageRef, "amd64")
@@ -289,7 +289,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{Filter: filters.Empty()})
 			require.NoError(t, err)
 			// Format url and instantiate remote
-			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
+			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), layoutExpected.Pkg)
 			require.NoError(t, err)
 
 			// Attempt to get the digest
@@ -378,7 +378,7 @@ func TestPublishCopySHA(t *testing.T) {
 			// This verifies that publish deletes the manifest that is auto created by oras
 			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
 			// Format url and instantiate remote
-			packageRef, err := zoci.ReferenceFromMetadata(dstRegistryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
+			packageRef, err := zoci.ReferenceFromMetadata(dstRegistryRef.String(), layoutExpected.Pkg)
 			require.NoError(t, err)
 
 			pkgRefsha := fmt.Sprintf("%s@%s", packageRef, indexDesc.Digest)
@@ -444,7 +444,7 @@ func TestPublishCopyTag(t *testing.T) {
 			// This verifies that publish deletes the manifest that is auto created by oras
 			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
 			// Format url and instantiate remote
-			packageRef, err := zoci.ReferenceFromMetadata(dstRegistryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
+			packageRef, err := zoci.ReferenceFromMetadata(dstRegistryRef.String(), layoutExpected.Pkg)
 			require.NoError(t, err)
 
 			layoutActual := pullFromRemote(ctx, t, packageRef, tc.opts.Architecture)

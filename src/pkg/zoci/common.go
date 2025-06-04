@@ -10,6 +10,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	ociDirectory "oras.land/oras-go/v2/content/oci"
@@ -23,8 +24,6 @@ const (
 	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
 	// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
-	// SkeletonArch is the architecture used for skeleton packages
-	SkeletonArch = "skeleton"
 	// DefaultConcurrency is the default concurrency used for operations
 	DefaultConcurrency = 3
 	// ImageCacheDirectory is the directory within the Zarf cache containing an OCI store
@@ -79,6 +78,6 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 func PlatformForSkeleton() ocispec.Platform {
 	return ocispec.Platform{
 		OS:           oci.MultiOS,
-		Architecture: SkeletonArch,
+		Architecture: v1alpha1.SkeletonArch,
 	}
 }

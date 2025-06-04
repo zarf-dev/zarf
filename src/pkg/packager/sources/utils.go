@@ -18,7 +18,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
 // GetValidPackageExtensions returns the valid package extensions.
@@ -165,7 +164,7 @@ func NameFromMetadata(pkg *v1alpha1.ZarfPackage, isSkeleton bool) string {
 	arch := config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
 
 	if isSkeleton {
-		arch = zoci.SkeletonArch
+		arch = v1alpha1.SkeletonArch
 	}
 
 	switch pkg.Kind {

@@ -21,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -73,7 +74,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	if err != nil {
 		return nil, err
 	}
-	pkg, err := ParseZarfPackage(ctx, b)
+	pkg, err := pkgcfg.Parse(ctx, b)
 	if err != nil {
 		return nil, err
 	}
@@ -175,8 +176,8 @@ func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, component
 	return outPath, nil
 }
 
-// GetImageDir returns the path to the images directory
-func (p *PackageLayout) GetImageDir() string {
+// GetImageDirPath returns the path to the images directory
+func (p *PackageLayout) GetImageDirPath() string {
 	// Use the manifest within the index.json to load the specific image we want
 	return filepath.Join(p.dirPath, ImagesDir)
 }

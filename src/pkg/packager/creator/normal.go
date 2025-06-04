@@ -292,7 +292,7 @@ func (pc *PackageCreator) Output(ctx context.Context, dst *layout.PackagePaths, 
 	// Create a remote ref + client for the package (if output is OCI)
 	// then publish the package to the remote.
 	if helpers.IsOCIURL(pc.createOpts.Output) {
-		ref, err := zoci.ReferenceFromMetadata(pc.createOpts.Output, &pkg.Metadata, &pkg.Build)
+		ref, err := zoci.ReferenceFromMetadata(pc.createOpts.Output, *pkg)
 		if err != nil {
 			return err
 		}

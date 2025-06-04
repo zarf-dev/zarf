@@ -12,8 +12,10 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
 // CreateOptions are the optional parameters to create
@@ -39,19 +41,25 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		return fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
 
-	createOpts := layout2.CreateOptions{
-		AssembleOptions: layout2.AssembleOptions{
-			SkipSBOM:                opts.SkipSBOM,
-			OCIConcurrency:          opts.OCIConcurrency,
-			DifferentialPackagePath: opts.DifferentialPackagePath,
-			Flavor:                  opts.Flavor,
-			RegistryOverrides:       opts.RegistryOverrides,
-			SigningKeyPath:          opts.SigningKeyPath,
-			SigningKeyPassword:      opts.SigningKeyPassword,
-		},
+	loadOpts := load.DefinitionOpts{
+		Flavor:       opts.Flavor,
 		SetVariables: opts.SetVariables,
 	}
-	pkgLayout, err := layout2.CreatePackage(ctx, packagePath, createOpts)
+	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	if err != nil {
+		return err
+	}
+
+	assembleOpt := layout.AssembleOptions{
+		SkipSBOM:                opts.SkipSBOM,
+		OCIConcurrency:          opts.OCIConcurrency,
+		DifferentialPackagePath: opts.DifferentialPackagePath,
+		Flavor:                  opts.Flavor,
+		RegistryOverrides:       opts.RegistryOverrides,
+		SigningKeyPath:          opts.SigningKeyPath,
+		SigningKeyPassword:      opts.SigningKeyPassword,
+	}
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, assembleOpt)
 	if err != nil {
 		return err
 	}
@@ -60,16 +68,16 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	}()
 
 	if helpers.IsOCIURL(output) {
-		ref, err := layout2.ReferenceFromMetadata(output, pkgLayout.Pkg)
+		ref, err := zoci.ReferenceFromMetadata(output, pkgLayout.Pkg)
 		if err != nil {
 			return err
 		}
-		remote, err := layout2.NewRemote(ctx, ref, oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture),
+		remote, err := zoci.NewRemote(ctx, ref, oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture),
 			oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
 		if err != nil {
 			return err
 		}
-		err = remote.Push(ctx, pkgLayout, opts.OCIConcurrency)
+		err = remote.PushPackage(ctx, pkgLayout, opts.OCIConcurrency)
 		if err != nil {
 			return err
 		}
@@ -83,7 +91,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	if opts.SBOMOut != "" {
 		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, pkgLayout.Pkg.Metadata.Name))
 		// Don't fail package create if the package doesn't have an sbom
-		var noSBOMErr *layout2.NoSBOMAvailableError
+		var noSBOMErr *layout.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {
 			logger.From(ctx).Error(fmt.Sprintf("cannot output sbom: %s", err.Error()))
 			return nil

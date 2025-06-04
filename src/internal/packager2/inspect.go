@@ -19,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -212,7 +213,11 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	if err != nil {
 		return nil, err
 	}
-	pkg, err := layout.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
+	loadOpts := load.DefinitionOpts{
+		Flavor:       opts.Flavor,
+		SetVariables: opts.CreateSetVariables,
+	}
+	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
