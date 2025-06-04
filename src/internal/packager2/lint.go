@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 )
 
@@ -22,7 +22,11 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	if packagePath == "" {
 		return errors.New("package path is required")
 	}
-	pkg, err := layout2.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.SetVariables)
+	loadOpts := load.DefinitionOpts{
+		Flavor:       opts.Flavor,
+		SetVariables: opts.SetVariables,
+	}
+	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return err
 	}

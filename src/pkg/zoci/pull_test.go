@@ -81,7 +81,7 @@ func TestAssembleLayers(t *testing.T) {
 			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
 			defer os.Remove(layoutExpected.Pkg.Metadata.Name) //nolint:errcheck
 			// Format url and instantiate remote
-			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
+			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), layoutExpected.Pkg)
 			require.NoError(t, err)
 
 			platform := oci.PlatformForArch(tc.opts.Architecture)

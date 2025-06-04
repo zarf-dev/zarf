@@ -26,6 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	v1 "k8s.io/api/apps/v1"
@@ -83,7 +84,11 @@ type ComponentImageScan struct {
 // It returns a FindImageResults which contains a scan result for each component
 func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ FindImagesResult, err error) {
 	l := logger.From(ctx)
-	pkg, err := layout.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
+	loadOpts := load.DefinitionOpts{
+		Flavor:       opts.Flavor,
+		SetVariables: opts.CreateSetVariables,
+	}
+	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return FindImagesResult{}, err
 	}

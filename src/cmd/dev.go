@@ -26,6 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -97,7 +98,11 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
-	pkg, err := layout.LoadPackageDefinition(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
+	loadOpts := load.DefinitionOpts{
+		Flavor:       o.flavor,
+		SetVariables: o.setVariables,
+	}
+	pkg, err := load.PackageDefinition(ctx, setBaseDirectory(args), loadOpts)
 	if err != nil {
 		return err
 	}

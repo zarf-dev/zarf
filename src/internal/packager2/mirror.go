@@ -72,7 +72,7 @@ func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	}
 	pushConfig := images.PushConfig{
 		OCIConcurrency:        concurrency,
-		SourceDirectory:       pkgLayout.GetImageDir(),
+		SourceDirectory:       pkgLayout.GetImageDirPath(),
 		RegistryInfo:          registryInfo,
 		ImageList:             refs,
 		PlainHTTP:             plainHTTP,
