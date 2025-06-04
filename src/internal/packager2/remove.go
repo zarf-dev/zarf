@@ -35,6 +35,7 @@ type RemoveOptions struct {
 	PublicKeyPath           string
 	Architecture            string
 	Timeout                 time.Duration
+	RemoteOptions
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
@@ -47,6 +48,7 @@ func Remove(ctx context.Context, opts RemoveOptions) error {
 		Filter:                  opts.Filter,
 		PublicKeyPath:           opts.PublicKeyPath,
 		LayersSelector:          zoci.AllLayers,
+		RemoteOptions:           opts.RemoteOptions,
 	}
 	pkg, err := GetPackageFromSourceOrCluster(ctx, opts.Cluster, opts.Source, loadOpts)
 	if err != nil {
