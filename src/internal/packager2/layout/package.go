@@ -20,8 +20,8 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
-	"github.com/zarf-dev/zarf/src/internal/packager2/parse"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -74,7 +74,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
-	pkg, err := parse.ZarfPackage(ctx, b)
+	pkg, err := pkgcfg.Parse(ctx, b)
 	if err != nil {
 		return nil, err
 	}
