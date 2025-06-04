@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package pkgcfg applies schema migrations to zarf.yaml files and applies
+// Package pkgcfg loads and applies schema migrations to zarf.yaml files.
 package pkgcfg
 
 import (
