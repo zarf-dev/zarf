@@ -27,15 +27,14 @@ import (
 
 // MirrorOptions are the options for Mirror.
 type MirrorOptions struct {
-	Cluster               *cluster.Cluster
-	PkgLayout             *layout.PackageLayout
-	RegistryInfo          types.RegistryInfo
-	GitInfo               types.GitServerInfo
-	NoImageChecksum       bool
-	Retries               int
-	PlainHTTP             bool
-	OCIConcurrency        int
-	InsecureSkipTLSVerify bool
+	Cluster         *cluster.Cluster
+	PkgLayout       *layout.PackageLayout
+	RegistryInfo    types.RegistryInfo
+	GitInfo         types.GitServerInfo
+	NoImageChecksum bool
+	Retries         int
+	OCIConcurrency  int
+	RemoteOptions
 }
 
 // MirrorImages mirrors the package images to the Zarf registry

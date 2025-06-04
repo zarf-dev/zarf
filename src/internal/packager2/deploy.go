@@ -50,10 +50,8 @@ type DeployOpts struct {
 	Retries int
 	// Number of layers to push concurrently per image
 	OCIConcurrency int
-	// Whether to use plainHTTP when connecting to the registry
-	PlainHTTP bool
-	// Whether or not to skipTLSVerify when connecting to the registry
-	InsecureTLSSkipVerify bool
+	// Remote Options for git server and image server pushes
+	RemoteOptions
 	// How to configure Zarf state if it's not already been configured
 	GitServer      types.GitServerInfo
 	RegistryInfo   types.RegistryInfo
@@ -352,7 +350,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			NoChecksum:            noImgChecksum,
 			Arch:                  pkgLayout.Pkg.Build.Architecture,
 			Retries:               opts.Retries,
-			InsecureSkipTLSVerify: opts.InsecureTLSSkipVerify,
+			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		}
 		err := images.Push(ctx, pushConfig)
 		if err != nil {

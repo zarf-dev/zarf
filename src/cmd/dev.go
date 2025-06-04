@@ -300,17 +300,19 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
 	err := packager2.DevDeploy(ctx, pkgConfig.CreateOpts.BaseDir, packager2.DevDeployOptions{
-		AirgapMode:            pkgConfig.CreateOpts.NoYOLO,
-		Flavor:                pkgConfig.CreateOpts.Flavor,
-		RegistryURL:           pkgConfig.DeployOpts.RegistryURL,
-		RegistryOverrides:     pkgConfig.CreateOpts.RegistryOverrides,
-		CreateSetVariables:    pkgConfig.CreateOpts.SetVariables,
-		DeploySetVariables:    pkgConfig.PkgOpts.SetVariables,
-		OptionalComponents:    pkgConfig.PkgOpts.OptionalComponents,
-		Timeout:               pkgConfig.DeployOpts.Timeout,
-		Retries:               pkgConfig.PkgOpts.Retries,
-		PlainHTTP:             config.CommonOptions.PlainHTTP,
-		InsecureTLSSkipVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		AirgapMode:         pkgConfig.CreateOpts.NoYOLO,
+		Flavor:             pkgConfig.CreateOpts.Flavor,
+		RegistryURL:        pkgConfig.DeployOpts.RegistryURL,
+		RegistryOverrides:  pkgConfig.CreateOpts.RegistryOverrides,
+		CreateSetVariables: pkgConfig.CreateOpts.SetVariables,
+		DeploySetVariables: pkgConfig.PkgOpts.SetVariables,
+		OptionalComponents: pkgConfig.PkgOpts.OptionalComponents,
+		Timeout:            pkgConfig.DeployOpts.Timeout,
+		Retries:            pkgConfig.PkgOpts.Retries,
+		RemoteOptions: packager2.RemoteOptions{
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		},
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {

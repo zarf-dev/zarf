@@ -172,7 +172,9 @@ func TestPublishSkeleton(t *testing.T) {
 			name: "Publish skeleton package",
 			path: "testdata/skeleton",
 			opts: PublishSkeletonOpts{
-				WithPlainHTTP: true,
+				RemoteOptions: RemoteOptions{
+					PlainHTTP: true,
+				},
 			},
 		},
 	}
@@ -227,7 +229,9 @@ func TestPublishPackage(t *testing.T) {
 			name: "Publish package",
 			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOpts{
-				WithPlainHTTP: true,
+				RemoteOptions: RemoteOptions{
+					PlainHTTP: true,
+				},
 			},
 		},
 	}
@@ -264,8 +268,10 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			name: "Publish package",
 			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOpts{
-				WithPlainHTTP: true,
-				Architecture:  "amd64",
+				RemoteOptions: RemoteOptions{
+					PlainHTTP: true,
+				},
+				Architecture: "amd64",
 			},
 		},
 	}
@@ -288,7 +294,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 
 			// Attempt to get the digest
 			platform := oci.PlatformForArch(tc.opts.Architecture)
-			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.WithPlainHTTP))
+			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.PlainHTTP))
 			require.NoError(t, err)
 			desc, err := remote.ResolveRoot(ctx)
 			require.NoError(t, err)
@@ -318,9 +324,11 @@ func TestPublishCopySHA(t *testing.T) {
 			name:             "Publish package",
 			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOpts{
-				WithPlainHTTP: true,
-				Architecture:  "amd64",
-				Concurrency:   3,
+				RemoteOptions: RemoteOptions{
+					PlainHTTP: true,
+				},
+				Architecture: "amd64",
+				Concurrency:  3,
 			},
 		},
 	}
@@ -353,9 +361,11 @@ func TestPublishCopySHA(t *testing.T) {
 			require.NoError(t, err)
 
 			opts := PublishFromOCIOpts{
-				WithPlainHTTP: tc.opts.WithPlainHTTP,
-				Architecture:  tc.opts.Architecture,
-				Concurrency:   tc.opts.Concurrency,
+				RemoteOptions: RemoteOptions{
+					PlainHTTP: true,
+				},
+				Architecture: tc.opts.Architecture,
+				Concurrency:  tc.opts.Concurrency,
 			}
 
 			// Publish test package to the destination registry
@@ -389,9 +399,11 @@ func TestPublishCopyTag(t *testing.T) {
 			name:             "Publish package",
 			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOpts{
-				WithPlainHTTP: true,
-				Architecture:  "amd64",
-				Concurrency:   3,
+				RemoteOptions: RemoteOptions{
+					PlainHTTP: true,
+				},
+				Architecture: "amd64",
+				Concurrency:  3,
 			},
 		},
 	}
@@ -415,9 +427,11 @@ func TestPublishCopyTag(t *testing.T) {
 			require.NoError(t, err)
 
 			opts := PublishFromOCIOpts{
-				WithPlainHTTP: tc.opts.WithPlainHTTP,
-				Architecture:  tc.opts.Architecture,
-				Concurrency:   tc.opts.Concurrency,
+				RemoteOptions: RemoteOptions{
+					PlainHTTP: true,
+				},
+				Architecture: tc.opts.Architecture,
+				Concurrency:  tc.opts.Concurrency,
 			}
 
 			// Publish test package

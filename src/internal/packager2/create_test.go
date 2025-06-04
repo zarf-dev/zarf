@@ -34,7 +34,9 @@ func TestPackageCreatePublishArch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			reg := createRegistry(ctx, t)
 			err := Create(ctx, tt.path, fmt.Sprintf("oci://%s", reg.String()), CreateOptions{
-				PlainHTTP: true,
+				RemoteOptions: RemoteOptions{
+					PlainHTTP: true,
+				},
 			})
 			require.NoError(t, err)
 			packageURL := fmt.Sprintf("%s/%s:0.0.1", reg.String(), tt.packageName)

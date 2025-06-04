@@ -48,9 +48,11 @@ func TestAssembleLayers(t *testing.T) {
 			name: "Assemble layers from a package",
 			path: "testdata/basic",
 			opts: packager2.PublishPackageOpts{
-				WithPlainHTTP: true,
-				Architecture:  "amd64",
-				Concurrency:   3,
+				RemoteOptions: packager2.RemoteOptions{
+					PlainHTTP: true,
+				},
+				Architecture: "amd64",
+				Concurrency:  3,
 			},
 		},
 	}
@@ -84,7 +86,7 @@ func TestAssembleLayers(t *testing.T) {
 			require.NoError(t, err)
 
 			platform := oci.PlatformForArch(tc.opts.Architecture)
-			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.WithPlainHTTP))
+			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.PlainHTTP))
 			require.NoError(t, err)
 
 			// get all layers

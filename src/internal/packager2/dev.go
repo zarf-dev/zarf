@@ -38,9 +38,8 @@ type DevDeployOptions struct {
 	// Retries to preform for operations like git and image pushes
 	Retries int
 	// These fields are only used if in airgap mode as they are relevant to requests from the git-server / registry
-	OCIConcurrency        int
-	PlainHTTP             bool
-	InsecureTLSSkipVerify bool
+	OCIConcurrency int
+	RemoteOptions
 }
 
 // DevDeploy creates + deploys a package in one shot
@@ -114,12 +113,14 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, DeployOpts{
-		SetVariables:          opts.DeploySetVariables,
-		Timeout:               opts.Timeout,
-		Retries:               opts.Retries,
-		OCIConcurrency:        opts.OCIConcurrency,
-		PlainHTTP:             opts.PlainHTTP,
-		InsecureTLSSkipVerify: opts.InsecureTLSSkipVerify,
+		SetVariables:   opts.DeploySetVariables,
+		Timeout:        opts.Timeout,
+		Retries:        opts.Retries,
+		OCIConcurrency: opts.OCIConcurrency,
+		RemoteOptions: RemoteOptions{
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		},
 	})
 	if err != nil {
 		return err
