@@ -12,7 +12,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 
-	"github.com/zarf-dev/zarf/src/config"
 	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -66,7 +65,7 @@ func Create(ctx context.Context, packagePath string, output string, opt CreateOp
 		if err != nil {
 			return err
 		}
-		err = remote.Push(ctx, pkgLayout, config.CommonOptions.OCIConcurrency)
+		err = remote.Push(ctx, pkgLayout, opt.OCIConcurrency)
 		if err != nil {
 			return err
 		}
