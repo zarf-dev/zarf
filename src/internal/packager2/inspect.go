@@ -52,6 +52,10 @@ type InspectPackageResourcesOptions struct {
 	SkipSignatureValidation bool
 	SetVariables            map[string]string
 	KubeVersion             string
+	// number of layers to pull in parallel
+	OCIConcurrency int
+	// Only applicable to OCI + HTTP
+	RemoteOptions
 }
 
 // InspectPackageResources templates and returns the manifests, charts, and values files in the package as they would be on deploy
@@ -67,6 +71,8 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 		SkipSignatureValidation: opts.SkipSignatureValidation,
 		LayersSelector:          zoci.ComponentLayers,
 		Filter:                  filters.BySelectState(opts.Components),
+		OCIConcurrency:          opts.OCIConcurrency,
+		RemoteOptions:           opts.RemoteOptions,
 	}
 
 	pkgLayout, err := LoadPackage(ctx, source, loadOpts)
@@ -280,6 +286,8 @@ type InspectPackageSbomsOptions struct {
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	OutputDir               string
+	OCIConcurrency          int
+	RemoteOptions
 }
 
 // InspectPackageSBOM retrieves the SBOM from the package if it exists and places it in the returned path
@@ -312,6 +320,8 @@ type InspectPackageDefinitionOptions struct {
 	Architecture            string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
+	OCIConcurrency          int
+	RemoteOptions
 }
 
 // InspectPackageDefinition gets the package definition from the given source: local, remote, or in cluster
@@ -324,6 +334,8 @@ func InspectPackageDefinition(ctx context.Context, source string, opts InspectPa
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           opts.PublicKeyPath,
 		LayersSelector:          zoci.MetadataLayers,
+		OCIConcurrency:          opts.OCIConcurrency,
+		RemoteOptions:           opts.RemoteOptions,
 	}
 	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, loadOpt)
 	if err != nil {
@@ -338,6 +350,8 @@ type InspectPackageImagesOptions struct {
 	Architecture            string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
+	OCIConcurrency          int
+	RemoteOptions
 }
 
 // InspectPackageImages returns a list of the package images
@@ -350,6 +364,8 @@ func InspectPackageImages(ctx context.Context, source string, opts InspectPackag
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           opts.PublicKeyPath,
 		LayersSelector:          zoci.MetadataLayers,
+		OCIConcurrency:          opts.OCIConcurrency,
+		RemoteOptions:           opts.RemoteOptions,
 	}
 	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, loadOpt)
 	if err != nil {

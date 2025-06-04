@@ -14,6 +14,12 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
+// RemoteOptions are common options when calling a remote
+type RemoteOptions struct {
+	PlainHTTP             bool
+	InsecureSkipTLSVerify bool
+}
+
 func getPopulatedVariableConfig(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariables map[string]string) (*variables.VariableConfig, error) {
 	variableConfig := template.GetZarfVariableConfig(ctx)
 	variableConfig.SetConstants(pkg.Constants)

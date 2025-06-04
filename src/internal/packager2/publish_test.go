@@ -37,7 +37,9 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 		Directory:    tmpdir,
 		Architecture: architecture,
 		Filter:       filters.Empty(),
-		Modifiers:    []oci.Modifier{oci.WithPlainHTTP(true)},
+		RemoteOptions: RemoteOptions{
+			PlainHTTP: true,
+		},
 	}
 	_, tarPath, err := pullOCI(context.Background(), pullOCIOpts)
 	require.NoError(t, err)

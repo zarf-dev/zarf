@@ -5,6 +5,7 @@ package packager2
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -36,10 +37,11 @@ type PullOptions struct {
 	SkipSignatureValidation bool
 	// Architecture is the package architecture.
 	Architecture string
-	// Filters describes a Filter strategy to include or exclude certain components from the package.
-	Filters filters.ComponentFilterStrategy
 	// PublicKeyPath validates the create-time signage of a package.
 	PublicKeyPath string
+	// OCIConcurrency is the number of layers pulled in parallel
+	OCIConcurrency int
+	RemoteOptions
 }
 
 // Pull takes a source URL and destination directory and fetches the Zarf package from the given sources.
@@ -47,11 +49,6 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 	l := logger.From(ctx)
 	start := time.Now()
 
-	// ensure filters are set
-	f := opts.Filters
-	if f == nil {
-		f = filters.Empty()
-	}
 	// ensure architecture is set
 	arch := config.GetArch(opts.Architecture)
 
@@ -74,8 +71,9 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 		Architecture:            arch,
 		PublicKeyPath:           opts.PublicKeyPath,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
-		Filter:                  f,
 		Output:                  destination,
+		OCIConcurrency:          opts.OCIConcurrency,
+		RemoteOptions:           opts.RemoteOptions,
 	})
 	if err != nil {
 		return err
@@ -86,15 +84,14 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 
 // PullOCIOptions are the options for PullOCI.
 type PullOCIOptions struct {
-	Source                  string
-	Directory               string
-	Shasum                  string
-	Architecture            string
-	PublicKeyPath           string
-	LayersSelector          zoci.LayersSelector
-	SkipSignatureValidation bool
-	Filter                  filters.ComponentFilterStrategy
-	Modifiers               []oci.Modifier
+	Source         string
+	Directory      string
+	Shasum         string
+	Architecture   string
+	LayersSelector zoci.LayersSelector
+	Filter         filters.ComponentFilterStrategy
+	OCIConcurrency int
+	RemoteOptions
 }
 
 func pullOCI(ctx context.Context, opts PullOCIOptions) (_ bool, _ string, err error) {
@@ -109,7 +106,7 @@ func pullOCI(ctx context.Context, opts PullOCIOptions) (_ bool, _ string, err er
 		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}
 	platform := oci.PlatformForArch(opts.Architecture)
-	remote, err := zoci.NewRemote(ctx, opts.Source, platform, opts.Modifiers...)
+	remote, err := zoci.NewRemote(ctx, opts.Source, platform, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
 	if err != nil {
 		return false, "", err
 	}
@@ -148,7 +145,7 @@ func pullOCI(ctx context.Context, opts PullOCIOptions) (_ bool, _ string, err er
 		isPartial = true
 	}
 
-	_, err = remote.PullPackage(ctx, tmpDir, config.CommonOptions.OCIConcurrency, layersToPull...)
+	_, err = remote.PullPackage(ctx, tmpDir, opts.OCIConcurrency, layersToPull...)
 	if err != nil {
 		return false, "", err
 	}
@@ -163,13 +160,13 @@ func pullOCI(ctx context.Context, opts PullOCIOptions) (_ bool, _ string, err er
 	return isPartial, tarPath, nil
 }
 
-func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
+func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVerify bool) (string, error) {
 	if shasum == "" {
 		return "", errors.New("shasum cannot be empty")
 	}
 	tarPath := filepath.Join(tarDir, "data")
 
-	err := pullHTTPFile(ctx, src, tarPath)
+	err := pullHTTPFile(ctx, src, tarPath, insecureTLSSkipVerify)
 	if err != nil {
 		return "", err
 	}
@@ -206,7 +203,7 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 	return "", fmt.Errorf("unsupported file type: %s", mtype.Extension())
 }
 
-func pullHTTPFile(ctx context.Context, src, tarPath string) (err error) {
+func pullHTTPFile(ctx context.Context, src, tarPath string, insecureTLSSkipVerify bool) (err error) {
 	f, err := os.Create(tarPath)
 	if err != nil {
 		return err
@@ -218,7 +215,14 @@ func pullHTTPFile(ctx context.Context, src, tarPath string) (err error) {
 	if err != nil {
 		return err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	transport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return errors.New("could not get default transport")
+	}
+	transport = transport.Clone()
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecureTLSSkipVerify}
+	client := &http.Client{Transport: transport}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}

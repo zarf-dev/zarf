@@ -215,7 +215,8 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) error {
 		url = fmt.Sprintf("oci://%s", url)
 
 		pullOptions := packager2.PullOptions{
-			Architecture: config.GetArch(),
+			Architecture:   config.GetArch(),
+			OCIConcurrency: config.CommonOptions.OCIConcurrency,
 		}
 
 		err := packager2.Pull(ctx, url, cacheDirectory, pullOptions)

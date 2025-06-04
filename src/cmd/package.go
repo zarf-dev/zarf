@@ -245,6 +245,11 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions: packager2.RemoteOptions{
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		},
 	}
 	pkgLayout, err := packager2.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
@@ -458,6 +463,12 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		Filter:                  filter,
+		Architecture:            config.GetArch(),
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions: packager2.RemoteOptions{
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		},
 	}
 	pkgLayout, err := packager2.LoadPackage(ctx, src, loadOpt)
 	if err != nil {
@@ -663,6 +674,11 @@ func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) 
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SetVariables:            o.setVariables,
 		KubeVersion:             o.kubeVersion,
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions: packager2.RemoteOptions{
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		},
 	}
 
 	resources, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
@@ -730,6 +746,11 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SetVariables:            o.setVariables,
 		KubeVersion:             o.kubeVersion,
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions: packager2.RemoteOptions{
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		},
 	}
 
 	resources, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
@@ -795,6 +816,11 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		OutputDir:               o.outputDir,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		Architecture:            config.GetArch(),
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions: packager2.RemoteOptions{
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		},
 	}
 
 	path, err := packager2.InspectPackageSBOM(ctx, src, inspectOptions)
@@ -846,6 +872,10 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		Architecture:            config.GetArch(),
 		SkipSignatureValidation: o.skipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		RemoteOptions: packager2.RemoteOptions{
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		},
 	}
 
 	images, err := packager2.InspectPackageImages(ctx, src, inspectImageOpts)
@@ -894,6 +924,11 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		Architecture:            config.GetArch(),
 		SkipSignatureValidation: o.skipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions: packager2.RemoteOptions{
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		},
 	}
 
 	pkg, err := packager2.InspectPackageDefinition(ctx, src, defOpts)
@@ -1200,6 +1235,11 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		SHASum:                  pkgConfig.PkgOpts.Shasum,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		Architecture:            config.GetArch(),
+		RemoteOptions: packager2.RemoteOptions{
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		},
 	})
 	if err != nil {
 		return err

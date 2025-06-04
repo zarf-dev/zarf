@@ -35,8 +35,13 @@ type LoadOptions struct {
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
-	LayersSelector          zoci.LayersSelector
 	Output                  string
+	// number of layers to pull in parallel
+	OCIConcurrency int
+	// Layers to pull during OCI pull
+	LayersSelector zoci.LayersSelector
+	// Only applicable to OCI + HTTP
+	RemoteOptions
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
@@ -77,6 +82,8 @@ func LoadPackage(ctx context.Context, source string, opt LoadOptions) (_ *layout
 			Architecture:   config.GetArch(opt.Architecture),
 			Filter:         opt.Filter,
 			LayersSelector: opt.LayersSelector,
+			OCIConcurrency: opt.OCIConcurrency,
+			RemoteOptions:  opt.RemoteOptions,
 		}
 
 		isPartial, tmpPath, err = pullOCI(ctx, ociOpts)
@@ -84,7 +91,7 @@ func LoadPackage(ctx context.Context, source string, opt LoadOptions) (_ *layout
 			return nil, err
 		}
 	case "http", "https":
-		tmpPath, err = pullHTTP(ctx, source, tmpDir, opt.Shasum)
+		tmpPath, err = pullHTTP(ctx, source, tmpDir, opt.Shasum, opt.InsecureSkipTLSVerify)
 		if err != nil {
 			return nil, err
 		}
