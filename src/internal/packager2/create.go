@@ -30,7 +30,6 @@ type CreateOptions struct {
 	SkipSBOM                bool
 	DifferentialPackagePath string
 	OCIConcurrency          int
-
 	// applicable when output is an OCI registry
 	RemoteOptions
 }

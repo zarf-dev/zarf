@@ -314,6 +314,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		OptionalComponents: pkgConfig.PkgOpts.OptionalComponents,
 		Timeout:            pkgConfig.DeployOpts.Timeout,
 		Retries:            pkgConfig.PkgOpts.Retries,
+		OCIConcurrency:     config.CommonOptions.OCIConcurrency,
 		RemoteOptions: packager2.RemoteOptions{
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
@@ -378,7 +379,7 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 		}
 	}
 	l.Info("generating package", "name", name, "path", generatedZarfYAMLPath)
-	opts := &packager2.GenerateOptions{
+	opts := packager2.GenerateOptions{
 		GitPath:     o.gitPath,
 		KubeVersion: o.kubeVersion,
 	}

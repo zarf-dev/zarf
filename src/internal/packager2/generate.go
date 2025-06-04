@@ -29,7 +29,7 @@ type GenerateOptions struct {
 }
 
 // Generate a Zarf package definition using information about a Helm chart.
-func Generate(ctx context.Context, packageName, url, version string, opts *GenerateOptions) (pkg v1alpha1.ZarfPackage, err error) {
+func Generate(ctx context.Context, packageName, url, version string, opts GenerateOptions) (pkg v1alpha1.ZarfPackage, err error) {
 	if packageName == "" {
 		return v1alpha1.ZarfPackage{}, fmt.Errorf("must provide a package name")
 	}
