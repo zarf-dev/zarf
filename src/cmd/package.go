@@ -894,12 +894,12 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 	}
 
-	result, err := packager2.InspectPackageDefinition(ctx, src, defOpts)
+	pkg, err := packager2.InspectPackageDefinition(ctx, src, defOpts)
 	if err != nil {
 		return err
 	}
 
-	err = utils.ColorPrintYAML(result.Package, nil, false)
+	err = utils.ColorPrintYAML(pkg, nil, false)
 	if err != nil {
 		return err
 	}

@@ -312,11 +312,6 @@ func InspectPackageSBOM(ctx context.Context, source string, opts InspectPackageS
 	return outputPath, nil
 }
 
-// InspectPackageDefinitionResult is returned by InspectPackageDefinition
-type InspectPackageDefinitionResult struct {
-	Package v1alpha1.ZarfPackage
-}
-
 // InspectPackageDefinitionOptions are the options for InspectPackageDefinition
 type InspectPackageDefinitionOptions struct {
 	Architecture            string
@@ -325,17 +320,15 @@ type InspectPackageDefinitionOptions struct {
 }
 
 // InspectPackageDefinition gets the package definition from the given source: local, remote, or in cluster
-func InspectPackageDefinition(ctx context.Context, source string, opts InspectPackageDefinitionOptions) (InspectPackageDefinitionResult, error) {
+func InspectPackageDefinition(ctx context.Context, source string, opts InspectPackageDefinitionOptions) (v1alpha1.ZarfPackage, error) {
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
 	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, zoci.MetadataLayers)
 	if err != nil {
-		return InspectPackageDefinitionResult{}, fmt.Errorf("unable to load the package: %w", err)
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to load the package: %w", err)
 	}
 
-	return InspectPackageDefinitionResult{
-		Package: pkg,
-	}, nil
+	return pkg, nil
 }
 
 // InspectPackageImageResult is returned by InspectPackageImages
