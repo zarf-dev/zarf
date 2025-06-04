@@ -27,12 +27,18 @@ import (
 
 // RemoveOptions are the options for Remove.
 type RemoveOptions struct {
-	Source                  string
-	Cluster                 *cluster.Cluster
-	Filter                  filters.ComponentFilterStrategy
+	// Source is the source of the package
+	Source string
+	// Cluster is the cluster to remove the package from
+	Cluster *cluster.Cluster
+	// Filter is the filter used to determine which components to remove
+	Filter filters.ComponentFilterStrategy
+	// SkipSignatureValidation skips signature validation
 	SkipSignatureValidation bool
-	PublicKeyPath           string
-	Namespace               string
+	// PublicKeyPath is the path to the public key to use for signature validation
+	PublicKeyPath string
+	// Namespace is the targeted namespace for a package to be removed when deployed with a namespace override
+	Namespace string
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
