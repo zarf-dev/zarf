@@ -102,8 +102,7 @@ func TestLoadSplitPackage(t *testing.T) {
 			require.NoError(t, err)
 
 			// Create the split package
-			err = Create(ctx, tt.packagePath, CreateOptions{
-				Output:           tmpdir,
+			err = Create(ctx, tt.packagePath, tmpdir, CreateOptions{
 				MaxPackageSizeMB: 1,
 				SkipSBOM:         true,
 			})

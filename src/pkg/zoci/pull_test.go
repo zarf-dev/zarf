@@ -64,10 +64,9 @@ func TestAssembleLayers(t *testing.T) {
 
 			// create the package
 			opt := packager2.CreateOptions{
-				Output:         tmpdir,
 				OCIConcurrency: tc.opts.Concurrency,
 			}
-			err := packager2.Create(ctx, tc.path, opt)
+			err := packager2.Create(ctx, tc.path, tmpdir, opt)
 			require.NoError(t, err)
 			src := fmt.Sprintf("%s/%s-%s-0.0.1.tar.zst", tmpdir, "zarf-package-basic-pod", tc.opts.Architecture)
 

@@ -167,11 +167,10 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		MaxPackageSizeMB:        o.maxPackageSizeMB,
 		SBOMOut:                 o.sbomOutput,
 		SkipSBOM:                o.skipSBOM,
-		Output:                  o.output,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		DifferentialPackagePath: o.differentialPackagePath,
 	}
-	err := packager2.Create(ctx, baseDir, opt)
+	err := packager2.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {

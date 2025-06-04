@@ -27,13 +27,12 @@ type CreateOptions struct {
 	MaxPackageSizeMB        int
 	SBOMOut                 string
 	SkipSBOM                bool
-	Output                  string
 	DifferentialPackagePath string
 	OCIConcurrency          int
 }
 
-// Create takes a path to a directory containing a ZarfPackageConfig and produces an archived Zarf package
-func Create(ctx context.Context, packagePath string, opt CreateOptions) (err error) {
+// Create takes a path to a directory containing a ZarfPackageConfig and creates an archived Zarf package in the output directory
+func Create(ctx context.Context, packagePath string, output string, opt CreateOptions) (err error) {
 	if opt.SkipSBOM && opt.SBOMOut != "" {
 		return fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
@@ -58,8 +57,8 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) (err err
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	if helpers.IsOCIURL(opt.Output) {
-		ref, err := layout2.ReferenceFromMetadata(opt.Output, pkgLayout.Pkg)
+	if helpers.IsOCIURL(output) {
+		ref, err := layout2.ReferenceFromMetadata(output, pkgLayout.Pkg)
 		if err != nil {
 			return err
 		}
@@ -72,7 +71,7 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) (err err
 			return err
 		}
 	} else {
-		err = pkgLayout.Archive(ctx, opt.Output, opt.MaxPackageSizeMB)
+		err = pkgLayout.Archive(ctx, output, opt.MaxPackageSizeMB)
 		if err != nil {
 			return err
 		}
