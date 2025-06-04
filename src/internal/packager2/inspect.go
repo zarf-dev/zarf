@@ -339,7 +339,6 @@ func InspectPackageDefinition(ctx context.Context, source string, opts InspectPa
 		Architecture:            config.GetArch(opts.Architecture),
 		Filter:                  filters.Empty(),
 		PublicKeyPath:           opts.PublicKeyPath,
-		LayersSelector:          zoci.MetadataLayers,
 		OCIConcurrency:          opts.OCIConcurrency,
 		RemoteOptions:           opts.RemoteOptions,
 	}

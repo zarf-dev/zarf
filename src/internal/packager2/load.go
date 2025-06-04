@@ -249,7 +249,7 @@ func assembleSplitTar(src, dest string) (err error) {
 }
 
 // GetPackageFromSourceOrCluster retrieves a Zarf package from a source or cluster.
-func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, opts LoadOptions) (v1alpha1.ZarfPackage, error) {
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, opts LoadOptions) (_ v1alpha1.ZarfPackage, err error) {
 	srcType, err := identifySource(src)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
@@ -264,12 +264,14 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 		}
 		return depPkg.Data, nil
 	}
-
-	p, err := LoadPackage(ctx, src, opts)
+	// This function only returns the ZarfPackageConfig so we only need the metadata
+	opts.LayersSelector = zoci.MetadataLayers
+	pkgLayout, err := LoadPackage(ctx, src, opts)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	//nolint: errcheck // ignore
-	defer p.Cleanup()
-	return p.Pkg, nil
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+	return pkgLayout.Pkg, nil
 }

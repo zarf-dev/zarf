@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
@@ -46,7 +45,6 @@ func Remove(ctx context.Context, source string, opts RemoveOptions) error {
 		Architecture:            config.GetArch(opts.Architecture),
 		Filter:                  opts.Filter,
 		PublicKeyPath:           opts.PublicKeyPath,
-		LayersSelector:          zoci.AllLayers,
 		RemoteOptions:           opts.RemoteOptions,
 	}
 	pkg, err := GetPackageFromSourceOrCluster(ctx, opts.Cluster, source, loadOpts)
