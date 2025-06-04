@@ -38,7 +38,6 @@ type LoadOptions struct {
 	Filter                  filters.ComponentFilterStrategy
 	LayersSelector          zoci.LayersSelector
 	Output                  string
-	Namespace               string
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
@@ -116,7 +115,6 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (_ *layout.PackageLayout,
 		SkipSignatureValidation: opt.SkipSignatureValidation,
 		IsPartial:               isPartial,
 		Filter:                  opt.Filter,
-		Namespace:               opt.Namespace,
 	}
 	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpt)
 	if err != nil {

@@ -248,7 +248,6 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
-		Namespace:               o.namespace,
 	}
 	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
 	if err != nil {
@@ -266,6 +265,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		PlainHTTP:              config.CommonOptions.PlainHTTP,
 		InsecureTLSSkipVerify:  config.CommonOptions.InsecureSkipTLSVerify,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
+		Namespace:              o.namespace,
 	}
 
 	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts)
@@ -289,6 +289,14 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 }
 
 func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager2.DeployOpts) ([]types.DeployedComponent, error) {
+	// Update component namespaces here prior to confirmation when overriding
+	if opts.Namespace != "" {
+		nsCount := pkgLayout.Pkg.GetUniqueNamespaceCount()
+		if nsCount > 1 {
+			return nil, fmt.Errorf("package contains %d namespaces, cannot override namespace to %s", nsCount, opts.Namespace)
+		}
+		pkgLayout.Pkg.SetPackageNamespace(opts.Namespace)
+	}
 	err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
 	if err != nil {
 		return nil, err

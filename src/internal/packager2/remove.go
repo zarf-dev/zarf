@@ -70,10 +70,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 	// Get or build the secret for the deployed package
 	depPkg := &types.DeployedPackage{}
 	if requiresCluster {
-		if opt.Namespace != "" {
-			pkg.Metadata.Name = fmt.Sprintf("%s-%s", pkg.Metadata.Name, opt.Namespace)
-		}
-		depPkg, err = opt.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name)
+		depPkg, err = opt.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name, cluster.WithNamespaceOverride(opt.Namespace))
 		if err != nil {
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %s", err.Error())
 		}
@@ -134,7 +131,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 					installedCharts := depPkg.DeployedComponents[len(depPkg.DeployedComponents)-1].InstalledCharts
 					installedCharts = installedCharts[:len(installedCharts)-1]
 					depPkg.DeployedComponents[len(depPkg.DeployedComponents)-1].InstalledCharts = installedCharts
-					err = opt.Cluster.UpdateDeployedPackage(ctx, *depPkg)
+					err = opt.Cluster.UpdateDeployedPackage(ctx, *depPkg, cluster.WithNamespaceOverride(opt.Namespace))
 					if err != nil {
 						// We warn and ignore errors because we may have removed the cluster that this package was inside of
 						l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
@@ -154,7 +151,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 			// Pop the removed component from deploy components slice.
 			if opt.Cluster != nil {
 				depPkg.DeployedComponents = depPkg.DeployedComponents[:len(depPkg.DeployedComponents)-1]
-				err = opt.Cluster.UpdateDeployedPackage(ctx, *depPkg)
+				err = opt.Cluster.UpdateDeployedPackage(ctx, *depPkg, cluster.WithNamespaceOverride(opt.Namespace))
 				if err != nil {
 					// We warn and ignore errors because we may have removed the cluster that this package was inside of
 					l.Warn("unable to update secret package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
@@ -173,7 +170,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 
 	// All the installed components were deleted, therefore this package is no longer actually deployed
 	if opt.Cluster != nil && len(depPkg.DeployedComponents) == 0 {
-		err := opt.Cluster.DeleteDeployedPackage(ctx, depPkg.Name)
+		err := opt.Cluster.DeleteDeployedPackage(ctx, depPkg.Name, cluster.WithNamespaceOverride(opt.Namespace))
 		if err != nil {
 			l.Warn("unable to delete secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
 		}

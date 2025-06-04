@@ -38,7 +38,6 @@ type PackageLayoutOptions struct {
 	SkipSignatureValidation bool
 	IsPartial               bool
 	Filter                  filters.ComponentFilterStrategy
-	Namespace               string
 }
 
 // DirPath returns base directory of the package layout
@@ -81,14 +80,6 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 	pkg.Components, err = opt.Filter.Apply(pkg)
 	if err != nil {
 		return nil, err
-	}
-	if opt.Namespace != "" {
-		nsCount := pkg.GetUniqueNamespaceCount()
-		if nsCount > 1 {
-			return nil, fmt.Errorf("package contains %d namespaces, cannot override namespace to %s", nsCount, opt.Namespace)
-		}
-		pkg.SetPackageNamespace(opt.Namespace)
-		pkg.Metadata.Name = fmt.Sprintf("%s-%s", pkg.Metadata.Name, opt.Namespace)
 	}
 	pkgLayout := &PackageLayout{
 		dirPath: dirPath,

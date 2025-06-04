@@ -60,10 +60,35 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 	return deployedPackages, nil
 }
 
+type deployedPackageOptions struct {
+	namespaceOverride string
+}
+
+// DeployedPackageOptions are options for the GetDeployedPackage function
+type DeployedPackageOptions func(*deployedPackageOptions)
+
+// WithNamespaceOverride sets the namespace override
+func WithNamespaceOverride(namespaceOverride string) DeployedPackageOptions {
+	return func(o *deployedPackageOptions) {
+		o.namespaceOverride = namespaceOverride
+	}
+}
+
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
-func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string) (*types.DeployedPackage, error) {
-	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, config.ZarfPackagePrefix+packageName, metav1.GetOptions{})
+func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string, opts ...DeployedPackageOptions) (*types.DeployedPackage, error) {
+	cfg := deployedPackageOptions{
+		namespaceOverride: "",
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	secretName := config.ZarfPackagePrefix + packageName
+	if cfg.namespaceOverride != "" {
+		secretName = fmt.Sprintf("%s-%s", secretName, cfg.namespaceOverride)
+	}
+
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -76,8 +101,18 @@ func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string) (*
 }
 
 // UpdateDeployedPackage updates the deployed package metadata.
-func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg types.DeployedPackage) error {
+func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg types.DeployedPackage, opts ...DeployedPackageOptions) error {
+	cfg := deployedPackageOptions{
+		namespaceOverride: "",
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 	secretName := config.ZarfPackagePrefix + depPkg.Name
+	if cfg.namespaceOverride != "" {
+		secretName = fmt.Sprintf("%s-%s", secretName, cfg.namespaceOverride)
+	}
+
 	packageSecretData, err := json.Marshal(depPkg)
 	if err != nil {
 		return err
@@ -97,8 +132,17 @@ func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg types.Deploy
 }
 
 // DeleteDeployedPackage removes the metadata for the deployed package.
-func (c *Cluster) DeleteDeployedPackage(ctx context.Context, packageName string) error {
+func (c *Cluster) DeleteDeployedPackage(ctx context.Context, packageName string, opts ...DeployedPackageOptions) error {
+	cfg := deployedPackageOptions{
+		namespaceOverride: "",
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 	secretName := config.ZarfPackagePrefix + packageName
+	if cfg.namespaceOverride != "" {
+		secretName = fmt.Sprintf("%s-%s", secretName, cfg.namespaceOverride)
+	}
 	err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Delete(ctx, secretName, metav1.DeleteOptions{})
 	if err != nil {
 		return err
@@ -148,7 +192,7 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, generation int) (*types.DeployedPackage, error) {
+func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, generation int, opts ...DeployedPackageOptions) (*types.DeployedPackage, error) {
 	packageName := pkg.Metadata.Name
 
 	// TODO: This is done for backwards compatibility and could be removed in the future.
@@ -173,6 +217,16 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 	packageData, err := json.Marshal(deployedPackage)
 	if err != nil {
 		return nil, err
+	}
+
+	cfg := deployedPackageOptions{
+		namespaceOverride: "",
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	if cfg.namespaceOverride != "" {
+		packageName = fmt.Sprintf("%s-%s", packageName, cfg.namespaceOverride)
 	}
 
 	packageSecretName := fmt.Sprintf("%s%s", config.ZarfPackagePrefix, packageName)
@@ -225,8 +279,8 @@ func (c *Cluster) DisableRegHPAScaleDown(ctx context.Context) error {
 }
 
 // GetInstalledChartsForComponent returns any installed Helm Charts for the provided package component.
-func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component v1alpha1.ZarfComponent) ([]types.InstalledChart, error) {
-	deployedPackage, err := c.GetDeployedPackage(ctx, packageName)
+func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component v1alpha1.ZarfComponent, opts ...DeployedPackageOptions) ([]types.InstalledChart, error) {
+	deployedPackage, err := c.GetDeployedPackage(ctx, packageName, opts...)
 	if err != nil {
 		return nil, err
 	}
