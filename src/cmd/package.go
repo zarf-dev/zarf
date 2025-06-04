@@ -1095,7 +1095,6 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	)
 	c, _ := cluster.New(ctx) //nolint:errcheck
 	removeOpt := packager2.RemoveOptions{
-		Source:                  packageSource,
 		Cluster:                 c,
 		Filter:                  filter,
 		Architecture:            config.GetArch(),
@@ -1107,7 +1106,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		},
 	}
-	err = packager2.Remove(ctx, removeOpt)
+	err = packager2.Remove(ctx, packageSource, removeOpt)
 	if err != nil {
 		return err
 	}

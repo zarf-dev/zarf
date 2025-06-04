@@ -28,7 +28,6 @@ import (
 
 // RemoveOptions are the options for Remove.
 type RemoveOptions struct {
-	Source                  string
 	Cluster                 *cluster.Cluster
 	Filter                  filters.ComponentFilterStrategy
 	SkipSignatureValidation bool
@@ -39,7 +38,7 @@ type RemoveOptions struct {
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
-func Remove(ctx context.Context, opts RemoveOptions) error {
+func Remove(ctx context.Context, source string, opts RemoveOptions) error {
 	l := logger.From(ctx)
 
 	loadOpts := LoadOptions{
@@ -50,7 +49,7 @@ func Remove(ctx context.Context, opts RemoveOptions) error {
 		LayersSelector:          zoci.AllLayers,
 		RemoteOptions:           opts.RemoteOptions,
 	}
-	pkg, err := GetPackageFromSourceOrCluster(ctx, opts.Cluster, opts.Source, loadOpts)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, opts.Cluster, source, loadOpts)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
