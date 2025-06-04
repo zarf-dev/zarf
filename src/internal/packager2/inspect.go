@@ -54,16 +54,11 @@ type InspectPackageResourcesOptions struct {
 	KubeVersion             string
 }
 
-// InspectPackageResourcesResults contains the resources returned by InspectPackageResources
-type InspectPackageResourcesResults struct {
-	Resources []Resource
-}
-
 // InspectPackageResources templates and returns the manifests, charts, and values files in the package as they would be on deploy
-func InspectPackageResources(ctx context.Context, source string, opts InspectPackageResourcesOptions) (results InspectPackageResourcesResults, err error) {
+func InspectPackageResources(ctx context.Context, source string, opts InspectPackageResourcesOptions) (_ []Resource, err error) {
 	s, err := state.Default()
 	if err != nil {
-		return InspectPackageResourcesResults{}, err
+		return nil, err
 	}
 
 	loadOpts := LoadOptions{
@@ -76,7 +71,7 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 
 	pkgLayout, err := LoadPackage(ctx, source, loadOpts)
 	if err != nil {
-		return InspectPackageResourcesResults{}, err
+		return nil, err
 	}
 
 	defer func() {
@@ -85,11 +80,11 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
 	if err != nil {
-		return InspectPackageResourcesResults{}, err
+		return nil, err
 	}
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return InspectPackageResourcesResults{}, err
+		return nil, err
 	}
 	defer func(path string) {
 		errRemove := os.RemoveAll(path)
@@ -101,41 +96,41 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 		tmpComponentPath := filepath.Join(tmpPackagePath, component.Name)
 		err := os.MkdirAll(tmpComponentPath, helpers.ReadWriteExecuteUser)
 		if err != nil {
-			return InspectPackageResourcesResults{}, err
+			return nil, err
 		}
 
 		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, s)
 		if err != nil {
-			return InspectPackageResourcesResults{}, err
+			return nil, err
 		}
 		variableConfig.SetApplicationTemplates(applicationTemplates)
 
 		if len(component.Charts) > 0 {
 			chartDir, err := pkgLayout.GetComponentDir(ctx, tmpComponentPath, component.Name, layout.ChartsComponentDir)
 			if err != nil {
-				return InspectPackageResourcesResults{}, err
+				return nil, err
 			}
 			valuesDir, err := pkgLayout.GetComponentDir(ctx, tmpComponentPath, component.Name, layout.ValuesComponentDir)
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
-				return InspectPackageResourcesResults{}, fmt.Errorf("failed to get values: %w", err)
+				return nil, fmt.Errorf("failed to get values: %w", err)
 			}
 
 			for _, chart := range component.Charts {
 				chartOverrides, err := generateValuesOverrides(chart, component.Name, variableConfig, nil)
 				if err != nil {
-					return InspectPackageResourcesResults{}, err
+					return nil, err
 				}
 				if err := templateValuesFiles(chart, valuesDir, variableConfig); err != nil {
-					return InspectPackageResourcesResults{}, err
+					return nil, err
 				}
 
 				helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, chartOverrides)
 				if err != nil {
-					return InspectPackageResourcesResults{}, fmt.Errorf("failed to load chart data: %w", err)
+					return nil, fmt.Errorf("failed to load chart data: %w", err)
 				}
 				chartTemplate, err := helm.TemplateChart(ctx, chart, helmChart, values, opts.KubeVersion, variableConfig)
 				if err != nil {
-					return InspectPackageResourcesResults{}, fmt.Errorf("could not render the Helm template for chart %s: %w", chart.Name, err)
+					return nil, fmt.Errorf("could not render the Helm template for chart %s: %w", chart.Name, err)
 				}
 				resources = append(resources, Resource{
 					Content:      fmt.Sprintf("%s\n", chartTemplate),
@@ -144,7 +139,7 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 				})
 				valuesYaml, err := values.YAML()
 				if err != nil {
-					return InspectPackageResourcesResults{}, fmt.Errorf("failed to get values: %w", err)
+					return nil, fmt.Errorf("failed to get values: %w", err)
 				}
 				resources = append(resources, Resource{
 					Content:      string(valuesYaml),
@@ -157,11 +152,11 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 		if len(component.Manifests) > 0 {
 			manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpComponentPath, component.Name, layout.ManifestsComponentDir)
 			if err != nil {
-				return InspectPackageResourcesResults{}, fmt.Errorf("failed to get package manifests: %w", err)
+				return nil, fmt.Errorf("failed to get package manifests: %w", err)
 			}
 			manifestFiles, err := os.ReadDir(manifestDir)
 			if err != nil {
-				return InspectPackageResourcesResults{}, fmt.Errorf("failed to read manifest directory: %w", err)
+				return nil, fmt.Errorf("failed to read manifest directory: %w", err)
 			}
 			for _, file := range manifestFiles {
 				path := filepath.Join(manifestDir, file.Name())
@@ -169,11 +164,11 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 					continue
 				}
 				if err := variableConfig.ReplaceTextTemplate(path); err != nil {
-					return InspectPackageResourcesResults{}, fmt.Errorf("error templating the manifest: %w", err)
+					return nil, fmt.Errorf("error templating the manifest: %w", err)
 				}
 				contents, err := os.ReadFile(path)
 				if err != nil {
-					return InspectPackageResourcesResults{}, fmt.Errorf("could not read the file %s: %w", path, err)
+					return nil, fmt.Errorf("could not read the file %s: %w", path, err)
 				}
 				resources = append(resources, Resource{
 					Content:      string(contents),
@@ -184,7 +179,7 @@ func InspectPackageResources(ctx context.Context, source string, opts InspectPac
 		}
 	}
 
-	return InspectPackageResourcesResults{Resources: resources}, nil
+	return resources, nil
 }
 
 func templateValuesFiles(chart v1alpha1.ZarfChart, valuesDir string, variableConfig *variables.VariableConfig) error {

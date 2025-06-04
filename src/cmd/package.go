@@ -663,17 +663,17 @@ func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) 
 		KubeVersion:             o.kubeVersion,
 	}
 
-	result, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
+	resources, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
 	if err != nil {
 		return err
 	}
-	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
+	resources = slices.DeleteFunc(resources, func(r packager2.Resource) bool {
 		return r.ResourceType != packager2.ValuesFileResource
 	})
-	if len(result.Resources) == 0 {
+	if len(resources) == 0 {
 		return fmt.Errorf("0 values files found")
 	}
-	for _, resource := range result.Resources {
+	for _, resource := range resources {
 		fmt.Fprintf(o.outputWriter, "# associated chart: %s\n", resource.Name)
 		fmt.Fprintf(o.outputWriter, "%s---\n", resource.Content)
 	}
@@ -730,17 +730,17 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 		KubeVersion:             o.kubeVersion,
 	}
 
-	result, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
+	resources, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
 	if err != nil {
 		return err
 	}
-	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
+	resources = slices.DeleteFunc(resources, func(r packager2.Resource) bool {
 		return r.ResourceType == packager2.ValuesFileResource
 	})
-	if len(result.Resources) == 0 {
+	if len(resources) == 0 {
 		return fmt.Errorf("0 manifests found")
 	}
-	for _, resource := range result.Resources {
+	for _, resource := range resources {
 		fmt.Fprintf(o.outputWriter, "#type: %s\n", resource.ResourceType)
 		// Helm charts already provide a comment on the source when templated
 		if resource.ResourceType == packager2.ManifestResource {
