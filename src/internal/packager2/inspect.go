@@ -205,29 +205,24 @@ type InspectDefinitionResourcesOptions struct {
 	KubeVersion        string
 }
 
-// InspectDefinitionResourcesResults returns the inspected resources
-type InspectDefinitionResourcesResults struct {
-	Resources []Resource
-}
-
 // InspectDefinitionResources templates and returns the manifests and Helm chart manifests found in the zarf.yaml at the given path
-func InspectDefinitionResources(ctx context.Context, packagePath string, opts InspectDefinitionResourcesOptions) (results InspectDefinitionResourcesResults, err error) {
+func InspectDefinitionResources(ctx context.Context, packagePath string, opts InspectDefinitionResourcesOptions) (_ []Resource, err error) {
 	s, err := state.Default()
 	if err != nil {
-		return InspectDefinitionResourcesResults{}, err
+		return nil, err
 	}
 	pkg, err := layout.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
 	if err != nil {
-		return InspectDefinitionResourcesResults{}, err
+		return nil, err
 	}
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables)
 	if err != nil {
-		return InspectDefinitionResourcesResults{}, err
+		return nil, err
 	}
 
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return InspectDefinitionResourcesResults{}, err
+		return nil, err
 	}
 	defer func(path string) {
 		errRemove := os.RemoveAll(path)
@@ -238,25 +233,25 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	for _, component := range pkg.Components {
 		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, s)
 		if err != nil {
-			return InspectDefinitionResourcesResults{}, err
+			return nil, err
 		}
 		variableConfig.SetApplicationTemplates(applicationTemplates)
 
 		compBuildPath := filepath.Join(tmpPackagePath, component.Name)
 		err = os.MkdirAll(compBuildPath, 0o700)
 		if err != nil {
-			return InspectDefinitionResourcesResults{}, err
+			return nil, err
 		}
 
 		for _, zarfChart := range component.Charts {
 			chartResource, values, err := getTemplatedChart(ctx, zarfChart, packagePath, compBuildPath, variableConfig, opts.KubeVersion)
 			if err != nil {
-				return InspectDefinitionResourcesResults{}, err
+				return nil, err
 			}
 			resources = append(resources, chartResource)
 			valuesYaml, err := values.YAML()
 			if err != nil {
-				return InspectDefinitionResourcesResults{}, err
+				return nil, err
 			}
 			resources = append(resources, Resource{
 				Content:      string(valuesYaml),
@@ -269,24 +264,19 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		if len(component.Manifests) > 0 {
 			err := os.MkdirAll(manifestDir, 0o700)
 			if err != nil {
-				return InspectDefinitionResourcesResults{}, err
+				return nil, err
 			}
 		}
 		for _, manifest := range component.Manifests {
 			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig)
 			if err != nil {
-				return InspectDefinitionResourcesResults{}, err
+				return nil, err
 			}
 			resources = append(resources, manifestResources...)
 		}
 	}
 
-	return InspectDefinitionResourcesResults{Resources: resources}, nil
-}
-
-// InspectPackageSbomsResult includes the path to the retrieved SBOM
-type InspectPackageSbomsResult struct {
-	Path string
+	return resources, nil
 }
 
 // InspectPackageSbomsOptions are optional parameters to InspectPackageSboms
@@ -298,7 +288,7 @@ type InspectPackageSbomsOptions struct {
 }
 
 // InspectPackageSBOM retrieves the SBOM from the package if it exists and places it in the returned path
-func InspectPackageSBOM(ctx context.Context, source string, opts InspectPackageSbomsOptions) (InspectPackageSbomsResult, error) {
+func InspectPackageSBOM(ctx context.Context, source string, opts InspectPackageSbomsOptions) (string, error) {
 	loadOpts := LoadOptions{
 		Architecture:            opts.Architecture,
 		PublicKeyPath:           opts.PublicKeyPath,
@@ -308,7 +298,7 @@ func InspectPackageSBOM(ctx context.Context, source string, opts InspectPackageS
 	}
 	pkgLayout, err := LoadPackage(ctx, source, loadOpts)
 	if err != nil {
-		return InspectPackageSbomsResult{}, fmt.Errorf("unable to load the package: %w", err)
+		return "", fmt.Errorf("unable to load the package: %w", err)
 	}
 
 	defer func() {
@@ -317,11 +307,9 @@ func InspectPackageSBOM(ctx context.Context, source string, opts InspectPackageS
 	outputPath := filepath.Join(opts.OutputDir, pkgLayout.Pkg.Metadata.Name)
 	err = pkgLayout.GetSBOM(ctx, outputPath)
 	if err != nil {
-		return InspectPackageSbomsResult{}, fmt.Errorf("could not get SBOM: %w", err)
+		return "", fmt.Errorf("could not get SBOM: %w", err)
 	}
-	return InspectPackageSbomsResult{
-		Path: outputPath,
-	}, nil
+	return outputPath, nil
 }
 
 // InspectPackageDefinitionResult is returned by InspectPackageDefinition

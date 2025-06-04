@@ -60,11 +60,6 @@ type FindImagesOptions struct {
 	SkipCosign bool
 }
 
-// FindImagesResult contains the results of FindImages for a package
-type FindImagesResult struct {
-	ComponentImageScans []ComponentImageScan
-}
-
 // ComponentImageScan contains the results of FindImages for a component
 type ComponentImageScan struct {
 	// ComponentName is the name of the component where the images were found
@@ -81,27 +76,27 @@ type ComponentImageScan struct {
 
 // FindImages iterates over the manifests and charts within each component to find any container images
 // It returns a FindImageResults which contains a scan result for each component
-func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ FindImagesResult, err error) {
+func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
 	pkg, err := layout.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
 	if err != nil {
-		return FindImagesResult{}, err
+		return nil, err
 	}
 
 	s, err := state.Default()
 	if err != nil {
-		return FindImagesResult{}, err
+		return nil, err
 	}
 	if opts.RegistryURL != "" {
 		s.RegistryInfo.Address = opts.RegistryURL
 	}
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables)
 	if err != nil {
-		return FindImagesResult{}, err
+		return nil, err
 	}
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return FindImagesResult{}, err
+		return nil, err
 	}
 	defer func() {
 		err = errors.Join(err, os.RemoveAll(tmpBuildPath))
@@ -117,14 +112,14 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 
 		applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, s)
 		if err != nil {
-			return FindImagesResult{}, err
+			return nil, err
 		}
 		variableConfig.SetApplicationTemplates(applicationTemplates)
 
 		compBuildPath := filepath.Join(tmpBuildPath, component.Name)
 		err = os.MkdirAll(compBuildPath, 0o700)
 		if err != nil {
-			return FindImagesResult{}, err
+			return nil, err
 		}
 
 		if opts.RepoHelmChartPath != "" {
@@ -132,7 +127,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 			for idx, repo := range component.Repos {
 				matches := strings.Split(repo, "@")
 				if len(matches) < 2 {
-					return FindImagesResult{}, fmt.Errorf("cannot convert the Git repository %s to a Helm chart without a version tag", repo)
+					return nil, fmt.Errorf("cannot convert the Git repository %s to a Helm chart without a version tag", repo)
 				}
 				// If a repo helm chart path is specified,
 				component.Charts = append(component.Charts, v1alpha1.ZarfChart{
@@ -151,20 +146,20 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		for _, zarfChart := range component.Charts {
 			chartResource, values, err := getTemplatedChart(ctx, zarfChart, packagePath, compBuildPath, variableConfig, opts.KubeVersionOverride)
 			if err != nil {
-				return FindImagesResult{}, err
+				return nil, err
 			}
 
 			// Break the template into separate resources
 			yamls, err := utils.SplitYAML([]byte(chartResource.Content))
 			if err != nil {
-				return FindImagesResult{}, err
+				return nil, err
 			}
 			resources = append(resources, yamls...)
 			chartPath := filepath.Join(compBuildPath, string(layout.ChartsComponentDir))
 			chartTarball := helm.StandardName(chartPath, zarfChart) + ".tgz"
 			annotatedImages, err := helm.FindAnnotatedImagesForChart(chartTarball, values)
 			if err != nil {
-				return FindImagesResult{}, fmt.Errorf("could not look up image annotations for chart URL %s: %w", zarfChart.URL, err)
+				return nil, fmt.Errorf("could not look up image annotations for chart URL %s: %w", zarfChart.URL, err)
 			}
 			for _, image := range annotatedImages {
 				matchedImages[image] = true
@@ -175,7 +170,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 				var err error
 				whyResources, err := findWhyResources(yamls, opts.Why, zarfChart.Name)
 				if err != nil {
-					return FindImagesResult{}, fmt.Errorf("could not determine why resource for the chart %s: %w", zarfChart.Name, err)
+					return nil, fmt.Errorf("could not determine why resource for the chart %s: %w", zarfChart.Name, err)
 				}
 				for _, w := range whyResources {
 					w.ResourceType = ChartResource
@@ -188,19 +183,19 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		if len(component.Manifests) > 0 {
 			err := os.MkdirAll(manifestDir, 0o700)
 			if err != nil {
-				return FindImagesResult{}, err
+				return nil, err
 			}
 		}
 		for _, manifest := range component.Manifests {
 			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig)
 			if err != nil {
-				return FindImagesResult{}, err
+				return nil, err
 			}
 			for _, manifestResource := range manifestResources {
 				// Break the manifest into separate objects
 				yamls, err := utils.SplitYAML([]byte(manifestResource.Content))
 				if err != nil {
-					return FindImagesResult{}, err
+					return nil, err
 				}
 				resources = append(resources, yamls...)
 
@@ -208,7 +203,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 				if opts.Why != "" {
 					whyResources, err := findWhyResources(yamls, opts.Why, manifest.Name)
 					if err != nil {
-						return FindImagesResult{}, fmt.Errorf("could not find why resources for manifest %s: %w", manifest.Name, err)
+						return nil, fmt.Errorf("could not find why resources for manifest %s: %w", manifest.Name, err)
 					}
 					for _, w := range whyResources {
 						w.ResourceType = ManifestResource
@@ -223,7 +218,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 
 		for _, resource := range resources {
 			if matchedImages, maybeImages, err = processUnstructuredImages(ctx, resource, matchedImages, maybeImages); err != nil {
-				return FindImagesResult{}, fmt.Errorf("could not process the Kubernetes resource %s: %w", resource.GetName(), err)
+				return nil, fmt.Errorf("could not process the Kubernetes resource %s: %w", resource.GetName(), err)
 			}
 		}
 
@@ -261,7 +256,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 					l.Debug("looking up cosign artifacts for image", "name", image)
 					cosignArtifacts, err := utils.GetCosignArtifacts(image)
 					if err != nil {
-						return FindImagesResult{}, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
+						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}
 					scan.CosignArtifacts = append(scan.CosignArtifacts, cosignArtifacts...)
 				}
@@ -270,7 +265,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 					l.Debug("looking up cosign artifacts for image", "name", image)
 					cosignArtifacts, err := utils.GetCosignArtifacts(image)
 					if err != nil {
-						return FindImagesResult{}, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
+						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}
 					scan.CosignArtifacts = append(scan.CosignArtifacts, cosignArtifacts...)
 				}
@@ -289,11 +284,11 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 			}
 		}
 		if !foundWhyResource {
-			return FindImagesResult{}, fmt.Errorf("image %s not found in any charts or manifests", opts.Why)
+			return nil, fmt.Errorf("image %s not found in any charts or manifests", opts.Why)
 		}
 	}
 
-	return FindImagesResult{ComponentImageScans: componentImageScans}, nil
+	return componentImageScans, nil
 }
 
 // processUnstructuredImages processes a Kubernetes resource and extracts container images

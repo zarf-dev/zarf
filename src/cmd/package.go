@@ -795,11 +795,11 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		Architecture:            config.GetArch(),
 	}
 
-	result, err := packager2.InspectPackageSBOM(ctx, src, inspectOptions)
+	path, err := packager2.InspectPackageSBOM(ctx, src, inspectOptions)
 	if err != nil {
 		return err
 	}
-	outputPath, err := filepath.Abs(result.Path)
+	outputPath, err := filepath.Abs(path)
 	if err != nil {
 		logger.From(ctx).Warn("SBOM successfully extracted, couldn't get output path", "error", err)
 		return nil

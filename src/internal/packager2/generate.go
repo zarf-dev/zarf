@@ -80,17 +80,17 @@ func Generate(ctx context.Context, packageName, url, version string, opts *Gener
 	if err := os.WriteFile(filepath.Join(tmpGeneratePath, layout.ZarfYAML), b, helpers.ReadAllWriteUser); err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	results, err := FindImages(ctx, tmpGeneratePath, FindImagesOptions{
+	imagesScans, err := FindImages(ctx, tmpGeneratePath, FindImagesOptions{
 		KubeVersionOverride: opts.KubeVersion,
 	})
 	if err != nil {
 		// purposefully not returning error here, as we can still generate the package without images
 		l.Error("failed to find images", "error", err.Error())
 	}
-	for i, component := range results.ComponentImageScans {
-		pkg.Components[i].Images = append(pkg.Components[i].Images, component.Matches...)
-		pkg.Components[i].Images = append(pkg.Components[i].Images, component.PotentialMatches...)
-		pkg.Components[i].Images = append(pkg.Components[i].Images, component.CosignArtifacts...)
+	for i, imageScan := range imagesScans {
+		pkg.Components[i].Images = append(pkg.Components[i].Images, imageScan.Matches...)
+		pkg.Components[i].Images = append(pkg.Components[i].Images, imageScan.PotentialMatches...)
+		pkg.Components[i].Images = append(pkg.Components[i].Images, imageScan.CosignArtifacts...)
 	}
 
 	if err := lint.ValidatePackage(pkg); err != nil {

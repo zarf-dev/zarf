@@ -158,19 +158,19 @@ func TestFindImages(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			results, err := FindImages(ctx, tt.packagePath, tt.opts)
+			imagesScans, err := FindImages(ctx, tt.packagePath, tt.opts)
 			if tt.expectedErr != "" {
 				require.EqualError(t, err, tt.expectedErr)
 				return
 			}
 			require.NoError(t, err)
-			require.Len(t, tt.expectedImages, len(results.ComponentImageScans))
+			require.Len(t, tt.expectedImages, len(imagesScans))
 			for i, expected := range tt.expectedImages {
-				require.Equal(t, expected.ComponentName, results.ComponentImageScans[i].ComponentName)
-				require.ElementsMatch(t, expected.Matches, results.ComponentImageScans[i].Matches)
-				require.ElementsMatch(t, expected.PotentialMatches, results.ComponentImageScans[i].PotentialMatches)
-				require.ElementsMatch(t, expected.CosignArtifacts, results.ComponentImageScans[i].CosignArtifacts)
-				require.ElementsMatch(t, expected.WhyResources, results.ComponentImageScans[i].WhyResources)
+				require.Equal(t, expected.ComponentName, imagesScans[i].ComponentName)
+				require.ElementsMatch(t, expected.Matches, imagesScans[i].Matches)
+				require.ElementsMatch(t, expected.PotentialMatches, imagesScans[i].PotentialMatches)
+				require.ElementsMatch(t, expected.CosignArtifacts, imagesScans[i].CosignArtifacts)
+				require.ElementsMatch(t, expected.WhyResources, imagesScans[i].WhyResources)
 			}
 		})
 	}
