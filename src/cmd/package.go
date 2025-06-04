@@ -1014,7 +1014,9 @@ func (o *packageListOptions) run(ctx context.Context) error {
 	return nil
 }
 
-type packageRemoveOptions struct{}
+type packageRemoveOptions struct {
+	namespace string
+}
 
 func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	o := &packageRemoveOptions{}
@@ -1033,6 +1035,7 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageRemoveFlagConfirm)
 	_ = cmd.MarkFlagRequired("confirm")
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
+	cmd.Flags().StringVar(&o.namespace, "namespace", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
@@ -1062,6 +1065,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		Filter:                  filter,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		Namespace:               o.namespace,
 	}
 	err = packager2.Remove(ctx, removeOpt)
 	if err != nil {

@@ -32,6 +32,7 @@ type RemoveOptions struct {
 	Filter                  filters.ComponentFilterStrategy
 	SkipSignatureValidation bool
 	PublicKeyPath           string
+	Namespace               string
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
@@ -63,6 +64,9 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 	// Get or build the secret for the deployed package
 	depPkg := &types.DeployedPackage{}
 	if requiresCluster {
+		if opt.Namespace != "" {
+			pkg.Metadata.Name = fmt.Sprintf("%s-%s", pkg.Metadata.Name, opt.Namespace)
+		}
 		depPkg, err = opt.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name)
 		if err != nil {
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %s", err.Error())

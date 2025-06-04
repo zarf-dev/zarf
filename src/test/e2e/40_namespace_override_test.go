@@ -50,11 +50,15 @@ func TestSingleNamespaceOverride(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdOut, "test-package-test3")
 
-	// Remove each zarf package
-	for _, pkg := range []string{"test-package", "test-package-test2", "test-package-test3"} {
+	// Remove the baseline and original override packages via deployed package name
+	for _, pkg := range []string{"test-package", "test-package-test2"} {
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", pkg, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 	}
+
+	// Remove the remaining package via tarball with namespace flag
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", singlePackage, "--namespace", "test3", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }
 
 func TestMultiNamespaceOverride(t *testing.T) {
