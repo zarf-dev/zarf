@@ -94,9 +94,12 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOpts) error {
 		return fmt.Errorf("unable to list helm releases: %w", err)
 	}
 
+	found := false
 	for _, release := range releases {
 		// Update the Zarf Agent release with the new values
-		if release.Chart.Name() == "raw-init-zarf-agent-zarf-agent" {
+		// Maintaining the "raw-init" release name for backwards compatibility
+		if release.Chart.Name() == "raw-init-zarf-agent-zarf-agent" || release.Chart.Name() == "zarf-agent" {
+			found = true
 			chart := v1alpha1.ZarfChart{
 				Namespace:   "zarf",
 				ReleaseName: release.Name,
@@ -122,6 +125,10 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOpts) error {
 				return fmt.Errorf("error updating the release values: %w", err)
 			}
 		}
+	}
+
+	if !found {
+		return fmt.Errorf("unable to find the Zarf Agent release")
 	}
 
 	// Trigger a rolling update for the TLS secret update to take effect.
