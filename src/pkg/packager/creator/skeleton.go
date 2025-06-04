@@ -21,7 +21,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -57,7 +56,7 @@ func (sc *SkeletonCreator) LoadPackageDefinition(ctx context.Context, src *layou
 		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
-	pkg.Metadata.Architecture = zoci.SkeletonArch
+	pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 
 	warnings = append(warnings, composeWarnings...)
 

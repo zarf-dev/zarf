@@ -14,7 +14,7 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -125,7 +125,7 @@ func TestSupportsFiltering(t *testing.T) {
 		},
 		{
 			name:     "skeleton platform",
-			platform: &ocispec.Platform{OS: oci.MultiOS, Architecture: zoci.SkeletonArch},
+			platform: &ocispec.Platform{OS: oci.MultiOS, Architecture: v1alpha1.SkeletonArch},
 			expected: false,
 		},
 		{

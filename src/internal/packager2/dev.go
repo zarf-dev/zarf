@@ -12,6 +12,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
@@ -45,7 +46,11 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	start := time.Now()
 	config.CommonOptions.Confirm = true
 
-	pkg, err := layout.LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.CreateSetVariables)
+	loadOpts := load.DefinitionOpts{
+		Flavor:       opts.Flavor,
+		SetVariables: opts.CreateSetVariables,
+	}
+	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return err
 	}
