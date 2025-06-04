@@ -6,19 +6,32 @@ package packager
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/zarf-dev/zarf/src/internal/packager2"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 )
 
-// Pull pulls a Zarf package and saves it as a compressed tarball.
-func (p *Packager) Pull(ctx context.Context) error {
-	if p.cfg.PkgOpts.OptionalComponents != "" {
-		return fmt.Errorf("pull does not support optional components")
-	}
+// PullOptions declares optional configuration for a Pull operation.
+type PullOptions struct {
+	// SHASum uniquely identifies a package based on its contents.
+	SHASum string
+	// SkipSignatureValidation flags whether Pull should skip validating the signature.
+	SkipSignatureValidation bool
+	// Architecture is the package architecture.
+	Architecture string
+	// Filters describes a Filter strategy to include or exclude certain components from the package.
+	Filters filters.ComponentFilterStrategy
+	// PublicKeyPath validates the create-time signage of a package.
+	PublicKeyPath string
+}
 
-	_, err := p.source.Collect(ctx, p.cfg.PullOpts.OutputDirectory)
-	if err != nil {
-		return err
-	}
-
-	return nil
+// Pull takes a source URL and destination directory and fetches the Zarf package from the given sources.
+func Pull(ctx context.Context, source, destination string, opts PullOptions) error {
+	return packager2.Pull(ctx, source, destination, packager2.PullOptions{
+		SHASum:                  opts.SHASum,
+		SkipSignatureValidation: opts.SkipSignatureValidation,
+		Architecture:            opts.Architecture,
+		Filters:                 opts.Filters,
+		PublicKeyPath:           opts.PublicKeyPath,
+	})
 }

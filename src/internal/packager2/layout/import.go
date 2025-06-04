@@ -13,17 +13,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	ocistore "oras.land/oras-go/v2/content/oci"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
@@ -80,11 +79,11 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(packagePath), component.Name)
 				}
 			}
-			b, err := os.ReadFile(filepath.Join(importPath, layout.ZarfYAML))
+			b, err := os.ReadFile(filepath.Join(importPath, ZarfYAML))
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
-			importedPkg, err = ParseZarfPackage(b)
+			importedPkg, err = ParseZarfPackage(ctx, b)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -238,7 +237,7 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	if err != nil {
 		return "", err
 	}
-	componentDesc := manifest.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf("%s.tar", name)))
+	componentDesc := manifest.Locate(filepath.Join(ComponentsDir, fmt.Sprintf("%s.tar", name)))
 	var tarball, dir string
 	// If the descriptor for the component tarball was not found then all resources in the component are remote
 	// In this case, we represent the component with an empty directory
@@ -285,15 +284,15 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		return rel, nil
 	}
 
-	tu := archiver.Tar{
+	decompressOpts := archive.DecompressOpts{
 		OverwriteExisting: true,
-		// removes /<component-name>/ from the paths
-		StripComponents: 1,
+		StripComponents:   1,
 	}
-	err = tu.Unarchive(tarball, dir)
+	err = archive.Decompress(ctx, tarball, dir, decompressOpts)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unable to extract archive %q: %w", tarball, err)
 	}
+
 	return rel, nil
 }
 

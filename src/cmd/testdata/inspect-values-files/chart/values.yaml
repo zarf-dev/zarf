@@ -1,3 +1,4 @@
 image:
   pullPolicy: IfNotPresent
 description: "this should be overwritten by .chart.variables"
+port: ###ZARF_VAR_PORT###

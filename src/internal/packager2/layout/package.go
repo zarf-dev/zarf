@@ -4,11 +4,9 @@
 package layout
 
 import (
-	"archive/tar"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"maps"
 	"os"
@@ -17,15 +15,14 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/mholt/archiver/v3"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
@@ -43,7 +40,12 @@ type PackageLayoutOptions struct {
 	Filter                  filters.ComponentFilterStrategy
 }
 
-// LoadFromTar unpacks the give compressed package and loads it.
+// DirPath returns base directory of the package layout
+func (p *PackageLayout) DirPath() string {
+	return p.dirPath
+}
+
+// LoadFromTar unpacks the given archive (any compress/format) and loads it.
 func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) (*PackageLayout, error) {
 	if opt.Filter == nil {
 		opt.Filter = filters.Empty()
@@ -52,41 +54,14 @@ func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
-	err = archiver.Walk(tarPath, func(f archiver.File) error {
-		if f.IsDir() {
-			return nil
-		}
-		header, ok := f.Header.(*tar.Header)
-		if !ok {
-			return fmt.Errorf("expected header to be *tar.Header but was %T", f.Header)
-		}
-		// If path has nested directories we want to create them.
-		dir := filepath.Dir(header.Name)
-		if dir != "." {
-			err := os.MkdirAll(filepath.Join(dirPath, dir), helpers.ReadExecuteAllWriteUser)
-			if err != nil {
-				return err
-			}
-		}
-		dst, err := os.Create(filepath.Join(dirPath, header.Name))
-		if err != nil {
-			return err
-		}
-		defer dst.Close()
-		_, err = io.Copy(dst, f)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	// Decompress the archive
+	err = archive.Decompress(ctx, tarPath, dirPath, archive.DecompressOpts{})
 	if err != nil {
 		return nil, err
 	}
-	p, err := LoadFromDir(ctx, dirPath, opt)
-	if err != nil {
-		return nil, err
-	}
-	return p, nil
+
+	// 3) Delegate to the existing LoadFromDir
+	return LoadFromDir(ctx, dirPath, opt)
 }
 
 // LoadFromDir loads and validates a package from the given directory path.
@@ -98,7 +73,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
-	pkg, err := ParseZarfPackage(b)
+	pkg, err := ParseZarfPackage(ctx, b)
 	if err != nil {
 		return nil, err
 	}
@@ -139,23 +114,34 @@ func (e *NoSBOMAvailableError) Error() string {
 	return fmt.Sprintf("zarf package %s does not have an SBOM available", e.pkgName)
 }
 
-// GetSBOM outputs the SBOM data from the package to the give destination path.
-func (p *PackageLayout) GetSBOM(destPath string) (string, error) {
+// ContainsSBOM checks if a package includes an SBOM
+func (p *PackageLayout) ContainsSBOM() bool {
 	if !p.Pkg.IsSBOMAble() {
-		return "", &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
+		return false
 	}
-	path := filepath.Join(destPath, p.Pkg.Metadata.Name)
-	err := archiver.Extract(filepath.Join(p.dirPath, SBOMTar), "", path)
+	return !helpers.InvalidPath(filepath.Join(p.dirPath, SBOMTar))
+}
+
+// GetSBOM outputs the SBOM data from the package to the given destination path.
+func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
+	if !p.ContainsSBOM() {
+		return &NoSBOMAvailableError{pkgName: p.Pkg.Metadata.Name}
+	}
+
+	// locate the sboms archive under the layout directory
+	sbomArchive := filepath.Join(p.dirPath, SBOMTar)
+
+	err := archive.Decompress(ctx, sbomArchive, destPath, archive.DecompressOpts{})
 	if err != nil {
-		return "", err
+		return err
 	}
-	return path, nil
+	return nil
 }
 
 // GetComponentDir returns a path to the directory in the given component.
-func (p *PackageLayout) GetComponentDir(destPath, componentName string, ct ComponentDir) (string, error) {
+func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, componentName string, ct ComponentDir) (_ string, err error) {
 	sourcePath := filepath.Join(p.dirPath, ComponentsDir, fmt.Sprintf("%s.tar", componentName))
-	_, err := os.Stat(sourcePath)
+	_, err = os.Stat(sourcePath)
 	if errors.Is(err, os.ErrNotExist) {
 		return "", fmt.Errorf("component %s does not exist in package: %w", componentName, err)
 	}
@@ -166,10 +152,10 @@ func (p *PackageLayout) GetComponentDir(destPath, componentName string, ct Compo
 	if err != nil {
 		return "", err
 	}
-	defer os.RemoveAll(tmpDir)
-	// TODO (phillebaba): We are not using archiver.Extract here because there is a bug in Windows where the files will not be extracted properly from nested directories.
-	// https://github.com/zarf-dev/zarf/issues/3051
-	err = archiver.Unarchive(sourcePath, tmpDir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+	err = archive.Decompress(ctx, sourcePath, tmpDir, archive.DecompressOpts{})
 	if err != nil {
 		return "", err
 	}
@@ -189,18 +175,24 @@ func (p *PackageLayout) GetComponentDir(destPath, componentName string, ct Compo
 	return outPath, nil
 }
 
+// GetImageDir returns the path to the images directory
 func (p *PackageLayout) GetImageDir() string {
 	// Use the manifest within the index.json to load the specific image we want
 	return filepath.Join(p.dirPath, ImagesDir)
 }
 
+// Archive creates a tarball from the package layout
 func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
-	packageName := fmt.Sprintf("%s%s", sources.NameFromMetadata(&p.Pkg, false), sources.PkgSuffix(p.Pkg.Metadata.Uncompressed))
-	tarballPath := filepath.Join(dirPath, packageName)
-	err := os.Remove(tarballPath)
+	filename, err := p.FileName()
+	if err != nil {
+		return err
+	}
+	tarballPath := filepath.Join(dirPath, filename)
+	err = os.Remove(tarballPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
+
 	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
 	files, err := os.ReadDir(p.dirPath)
 	if err != nil {
@@ -210,7 +202,7 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 	for _, file := range files {
 		filePaths = append(filePaths, filepath.Join(p.dirPath, file.Name()))
 	}
-	err = archiver.Archive(filePaths, tarballPath)
+	err = archive.Compress(ctx, filePaths, tarballPath, archive.CompressOpts{})
 	if err != nil {
 		return fmt.Errorf("unable to create package: %w", err)
 	}
@@ -233,10 +225,10 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 	return nil
 }
 
-// Files returns a map off all the files in the package.
+// Files returns a map of all the files in the package.
 func (p *PackageLayout) Files() (map[string]string, error) {
 	files := map[string]string{}
-	err := filepath.Walk(p.dirPath, func(path string, info fs.FileInfo, err error) error {
+	err := filepath.Walk(p.dirPath, func(path string, info fs.FileInfo, _ error) error {
 		if info.IsDir() {
 			return nil
 		}
@@ -252,6 +244,35 @@ func (p *PackageLayout) Files() (map[string]string, error) {
 		return nil, err
 	}
 	return files, nil
+}
+
+// FileName returns the name of the Zarf package should have when exported to the file system
+func (p *PackageLayout) FileName() (string, error) {
+	if p.Pkg.Build.Architecture == "" {
+		return "", errors.New("package must include a build architecture")
+	}
+	arch := p.Pkg.Build.Architecture
+
+	var name string
+	switch p.Pkg.Kind {
+	case v1alpha1.ZarfInitConfig:
+		name = fmt.Sprintf("zarf-init-%s", arch)
+	case v1alpha1.ZarfPackageConfig:
+		name = fmt.Sprintf("zarf-package-%s-%s", p.Pkg.Metadata.Name, arch)
+	default:
+		name = fmt.Sprintf("zarf-%s-%s", strings.ToLower(string(p.Pkg.Kind)), arch)
+	}
+	if p.Pkg.Build.Differential {
+		name = fmt.Sprintf("%s-%s-differential-%s",
+			name, p.Pkg.Build.DifferentialPackageVersion, p.Pkg.Metadata.Version)
+	} else if p.Pkg.Metadata.Version != "" {
+		name = fmt.Sprintf("%s-%s", name, p.Pkg.Metadata.Version)
+	}
+
+	if p.Pkg.Metadata.Uncompressed {
+		return name + ".tar", nil
+	}
+	return name + ".tar.zst", nil
 }
 
 func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {

@@ -45,7 +45,7 @@ func TestCraneToORAS(t *testing.T) {
 	_, _, err = e2e.Zarf(t, "package", "deploy", cranePkgPath, "--confirm")
 	require.NoError(t, err)
 	cranePkgMirrorResourcesArgs := []string{"package", "mirror-resources", cranePkgPath, "--confirm"}
-	cranePkgMirrorResourcesArgs = append(cranePkgMirrorResourcesArgs, mirrorResourcesCreds...)
+	// mirror-resources now detects internal registry from state when resourcesCreds are not provided
 	_, _, err = e2e.Zarf(t, cranePkgMirrorResourcesArgs...)
 	require.NoError(t, err)
 

@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/zarf-dev/zarf/v0.54.0/zarf.schema.json
+kind: ZarfPackageConfig
+
+metadata:
+  name: basic-pod
+  version: 0.0.1
+  architecture: amd64
+
+components:
+  - name: alpine
+    required: true
+    manifests:
+      - name: alpine
+        namespace: test
+        files:
+          - pod.yaml
+    images:
+      - ghcr.io/zarf-dev/images/alpine:3.21.3

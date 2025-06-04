@@ -12,37 +12,55 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/gabriel-vasile/mimetype"
-	goyaml "github.com/goccy/go-yaml"
-	"github.com/mholt/archiver/v3"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
-// TODO: Add options struct
-// Pull fetches the Zarf package from the given sources.
-func Pull(ctx context.Context, src, dir, shasum, architecture string, filter filters.ComponentFilterStrategy, publicKeyPath string, skipSignatureValidation bool) error {
-	if filter == nil {
-		filter = filters.Empty()
-	}
+// PullOptions declares optional configuration for a Pull operation.
+type PullOptions struct {
+	// SHASum uniquely identifies a package based on its contents.
+	SHASum string
+	// SkipSignatureValidation flags whether Pull should skip validating the signature.
+	SkipSignatureValidation bool
+	// Architecture is the package architecture.
+	Architecture string
+	// Filters describes a Filter strategy to include or exclude certain components from the package.
+	Filters filters.ComponentFilterStrategy
+	// PublicKeyPath validates the create-time signage of a package.
+	PublicKeyPath string
+}
+
+// Pull takes a source URL and destination directory and fetches the Zarf package from the given sources.
+func Pull(ctx context.Context, source, destination string, opts PullOptions) error {
 	l := logger.From(ctx)
 	start := time.Now()
-	u, err := url.Parse(src)
+
+	// ensure filters are set
+	f := opts.Filters
+	if f == nil {
+		f = filters.Empty()
+	}
+	// ensure architecture is set
+	arch := config.GetArch(opts.Architecture)
+
+	u, err := url.Parse(source)
 	if err != nil {
 		return err
+	}
+	if destination == "" {
+		return fmt.Errorf("no output directory specified")
 	}
 	if u.Scheme == "" {
 		return errors.New("scheme must be either oci:// or http(s)://")
@@ -50,95 +68,58 @@ func Pull(ctx context.Context, src, dir, shasum, architecture string, filter fil
 	if u.Host == "" {
 		return errors.New("host cannot be empty")
 	}
-	// ensure architecture is set
-	architecture = config.GetArch(architecture)
 
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	_, err = LoadPackage(ctx, LoadOptions{
+		Source:                  source,
+		Shasum:                  opts.SHASum,
+		Architecture:            arch,
+		PublicKeyPath:           opts.PublicKeyPath,
+		SkipSignatureValidation: opts.SkipSignatureValidation,
+		Filter:                  f,
+		Output:                  destination,
+	})
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tmpDir)
-	tmpPath := ""
-
-	isPartial := false
-	switch u.Scheme {
-	case "oci":
-		l.Info("starting pull from oci source", "src", src)
-		isPartial, tmpPath, err = pullOCI(ctx, src, tmpDir, shasum, architecture, filter)
-		if err != nil {
-			return err
-		}
-	case "http", "https":
-		l.Info("starting pull from http(s) source", "src", src, "digest", shasum)
-		tmpPath, err = pullHTTP(ctx, src, tmpDir, shasum)
-		if err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("unknown scheme %s", u.Scheme)
-	}
-
-	// This loadFromTar is done so that validatePackageIntegrtiy and validatePackageSignature are called
-	layoutOpt := layout.PackageLayoutOptions{
-		PublicKeyPath:           publicKeyPath,
-		SkipSignatureValidation: skipSignatureValidation,
-		IsPartial:               isPartial,
-		Filter:                  filter,
-	}
-	_, err = layout.LoadFromTar(ctx, tmpPath, layoutOpt)
-	if err != nil {
-		return err
-	}
-
-	name, err := nameFromMetadata(tmpPath)
-	if err != nil {
-		return err
-	}
-	tarPath := filepath.Join(dir, name)
-	err = os.Remove(tarPath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
-	dstFile, err := os.Create(tarPath)
-	if err != nil {
-		return err
-	}
-	defer dstFile.Close()
-	srcFile, err := os.Open(tmpPath)
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-	_, err = io.Copy(dstFile, srcFile)
-	if err != nil {
-		return err
-	}
-
-	l.Debug("done packager2.Pull", "src", src, "dir", dir, "duration", time.Since(start))
+	l.Debug("done packager2.Pull", "source", source, "destination", destination, "duration", time.Since(start))
 	return nil
 }
 
-func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture string, filter filters.ComponentFilterStrategy, mods ...oci.Modifier) (bool, string, error) {
+// PullOCIOptions are the options for PullOCI.
+type PullOCIOptions struct {
+	Source                  string
+	Directory               string
+	Shasum                  string
+	Architecture            string
+	PublicKeyPath           string
+	LayersSelector          zoci.LayersSelector
+	SkipSignatureValidation bool
+	Filter                  filters.ComponentFilterStrategy
+	Modifiers               []oci.Modifier
+}
+
+func pullOCI(ctx context.Context, opts PullOCIOptions) (_ bool, _ string, err error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return false, "", err
 	}
-	defer os.Remove(tmpDir)
-	if shasum != "" {
-		src = fmt.Sprintf("%s@sha256:%s", src, shasum)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+	if opts.Shasum != "" {
+		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}
-	platform := oci.PlatformForArch(architecture)
-	remote, err := zoci.NewRemote(ctx, src, oci.PlatformForArch(architecture), mods...)
+	platform := oci.PlatformForArch(opts.Architecture)
+	remote, err := zoci.NewRemote(ctx, opts.Source, platform, opts.Modifiers...)
 	if err != nil {
 		return false, "", err
 	}
 	desc, err := remote.ResolveRoot(ctx)
 	if err != nil {
-		return false, "", fmt.Errorf("could not find package %s with architecture %s: %w", src, platform.Architecture, err)
+		return false, "", fmt.Errorf("could not find package %s with architecture %s: %w", opts.Source, platform.Architecture, err)
 	}
-	layersToPull := []ocispec.Descriptor{}
 	isPartial := false
-	tarPath := filepath.Join(tarDir, "data.tar")
+	tarPath := filepath.Join(opts.Directory, "data.tar")
 	pkg, err := remote.FetchZarfYAML(ctx)
 	if err != nil {
 		return false, "", err
@@ -147,22 +128,27 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture strin
 		tarPath = fmt.Sprintf("%s.zst", tarPath)
 	}
 	if supportsFiltering(desc.Platform) {
-		root, err := remote.FetchRoot(ctx)
-		if err != nil {
-			return false, "", err
-		}
-		if len(root.Layers) != len(layersToPull) {
-			isPartial = true
-		}
-		pkg.Components, err = filter.Apply(pkg)
-		if err != nil {
-			return false, "", err
-		}
-		layersToPull, err = remote.LayersFromRequestedComponents(ctx, pkg.Components)
+		pkg.Components, err = opts.Filter.Apply(pkg)
 		if err != nil {
 			return false, "", err
 		}
 	}
+
+	// zarf creates layers around the contents of component primarily
+	// this assembles the layers for the components - whether filtered above or not
+	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, isSkeleton(desc.Platform), opts.LayersSelector)
+	if err != nil {
+		return false, "", err
+	}
+
+	root, err := remote.FetchRoot(ctx)
+	if err != nil {
+		return false, "", err
+	}
+	if len(root.Layers) != len(layersToPull) {
+		isPartial = true
+	}
+
 	_, err = remote.PullPackage(ctx, tmpDir, config.CommonOptions.OCIConcurrency, layersToPull...)
 	if err != nil {
 		return false, "", err
@@ -171,7 +157,7 @@ func pullOCI(ctx context.Context, src, tarDir, shasum string, architecture strin
 	if err != nil {
 		return false, "", err
 	}
-	err = archiver.Archive(allTheLayers, tarPath)
+	err = archive.Compress(ctx, allTheLayers, tarPath, archive.CompressOpts{})
 	if err != nil {
 		return false, "", err
 	}
@@ -221,12 +207,14 @@ func pullHTTP(ctx context.Context, src, tarDir, shasum string) (string, error) {
 	return "", fmt.Errorf("unsupported file type: %s", mtype.Extension())
 }
 
-func pullHTTPFile(ctx context.Context, src, tarPath string) error {
+func pullHTTPFile(ctx context.Context, src, tarPath string) (err error) {
 	f, err := os.Create(tarPath)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		err = errors.Join(err, f.Close())
+	}()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
 	if err != nil {
 		return err
@@ -235,7 +223,9 @@ func pullHTTPFile(ctx context.Context, src, tarPath string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err = errors.Join(err, resp.Body.Close())
+	}()
 	if resp.StatusCode != http.StatusOK {
 		_, err := io.Copy(io.Discard, resp.Body)
 		if err != nil {
@@ -250,59 +240,26 @@ func pullHTTPFile(ctx context.Context, src, tarPath string) error {
 	return nil
 }
 
-func nameFromMetadata(path string) (string, error) {
-	var pkg v1alpha1.ZarfPackage
-	err := archiver.Walk(path, func(f archiver.File) error {
-		if f.Name() == layout.ZarfYAML {
-			b, err := io.ReadAll(f)
-			if err != nil {
-				return err
-			}
-			if err := goyaml.Unmarshal(b, &pkg); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return "", err
+// supportsFiltering checks if the package supports filtering.
+// This is true if the package is not a skeleton package and the platform is not nil.
+func supportsFiltering(platform *ocispec.Platform) bool {
+	if platform == nil {
+		return false
 	}
-	if pkg.Metadata.Name == "" {
-		return "", fmt.Errorf("%s does not contain a zarf.yaml", path)
+	if isSkeleton(platform) {
+		return false
 	}
-
-	arch := config.GetArch(pkg.Metadata.Architecture, pkg.Build.Architecture)
-	if pkg.Build.Architecture == zoci.SkeletonArch {
-		arch = zoci.SkeletonArch
-	}
-
-	var name string
-	switch pkg.Kind {
-	case v1alpha1.ZarfInitConfig:
-		name = fmt.Sprintf("zarf-init-%s", arch)
-	case v1alpha1.ZarfPackageConfig:
-		name = fmt.Sprintf("zarf-package-%s-%s", pkg.Metadata.Name, arch)
-	default:
-		name = fmt.Sprintf("zarf-%s-%s", strings.ToLower(string(pkg.Kind)), arch)
-	}
-	if pkg.Build.Differential {
-		name = fmt.Sprintf("%s-%s-differential-%s", name, pkg.Build.DifferentialPackageVersion, pkg.Metadata.Version)
-	} else if pkg.Metadata.Version != "" {
-		name = fmt.Sprintf("%s-%s", name, pkg.Metadata.Version)
-	}
-	if pkg.Metadata.Uncompressed {
-		return fmt.Sprintf("%s.tar", name), nil
-	}
-	return fmt.Sprintf("%s.tar.zst", name), nil
+	return true
 }
 
-func supportsFiltering(platform *ocispec.Platform) bool {
+// isSkeleton checks if the package is explicitly a skeleton package.
+func isSkeleton(platform *ocispec.Platform) bool {
 	if platform == nil {
 		return false
 	}
 	skeletonPlatform := zoci.PlatformForSkeleton()
 	if platform.Architecture == skeletonPlatform.Architecture && platform.OS == skeletonPlatform.OS {
-		return false
+		return true
 	}
-	return true
+	return false
 }

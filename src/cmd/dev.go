@@ -17,7 +17,6 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/mholt/archiver/v3"
 	"github.com/pterm/pterm"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
@@ -26,12 +25,11 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
@@ -99,7 +97,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
-	pkg, err := layout2.LoadPackageDefinition(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
+	pkg, err := layout.LoadPackageDefinition(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
 	if err != nil {
 		return err
 	}
@@ -301,13 +299,17 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	pkgClient, err := packager.New(&pkgConfig, packager.WithContext(ctx))
-	if err != nil {
-		return err
-	}
-	defer pkgClient.ClearTempPaths()
-
-	err = pkgClient.DevDeploy(ctx)
+	err := packager2.DevDeploy(ctx, pkgConfig.CreateOpts.BaseDir, packager2.DevDeployOptions{
+		AirgapMode:         pkgConfig.CreateOpts.NoYOLO,
+		Flavor:             pkgConfig.CreateOpts.Flavor,
+		RegistryURL:        pkgConfig.DeployOpts.RegistryURL,
+		RegistryOverrides:  pkgConfig.CreateOpts.RegistryOverrides,
+		CreateSetVariables: pkgConfig.CreateOpts.SetVariables,
+		DeploySetVariables: pkgConfig.PkgOpts.SetVariables,
+		OptionalComponents: pkgConfig.PkgOpts.OptionalComponents,
+		Timeout:            pkgConfig.DeployOpts.Timeout,
+		Retries:            pkgConfig.PkgOpts.Retries,
+	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -484,6 +486,7 @@ func newDevSha256SumCommand() *cobra.Command {
 
 func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error) {
 	hashErr := errors.New("unable to compute the SHA256SUM hash")
+	ctx := cmd.Context()
 
 	fileName := args[0]
 
@@ -508,7 +511,7 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 		}
 
 		downloadPath := filepath.Join(tmp, fileBase)
-		err = utils.DownloadToFile(cmd.Context(), fileName, downloadPath, "")
+		err = utils.DownloadToFile(ctx, fileName, downloadPath, "")
 		if err != nil {
 			return errors.Join(hashErr, err)
 		}
@@ -535,7 +538,10 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 
 		extractedFile := filepath.Join(tmp, o.extractPath)
 
-		err = archiver.Extract(fileName, o.extractPath, tmp)
+		decompressOpts := archive.DecompressOpts{
+			Files: []string{extractedFile},
+		}
+		err = archive.Decompress(ctx, fileName, tmp, decompressOpts)
 		if err != nil {
 			return errors.Join(hashErr, err)
 		}
@@ -728,12 +734,15 @@ func newDevLintCommand(v *viper.Viper) *cobra.Command {
 func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	config.CommonOptions.Confirm = true
-	pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
+	baseDir := setBaseDirectory(args)
 	v := getViper()
 	pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
 
-	err := lint.Validate(ctx, pkgConfig.CreateOpts.BaseDir, pkgConfig.CreateOpts.Flavor, pkgConfig.CreateOpts.SetVariables)
+	err := packager2.Lint(ctx, baseDir, packager2.LintOptions{
+		Flavor:       pkgConfig.CreateOpts.Flavor,
+		SetVariables: pkgConfig.CreateOpts.SetVariables,
+	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)

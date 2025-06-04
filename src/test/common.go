@@ -5,21 +5,18 @@
 package test
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
-	"regexp"
 	"runtime"
 	"strings"
 	"testing"
 
 	"slices"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -116,10 +113,14 @@ func (e2e *ZarfE2ETest) Zarf(t *testing.T, args ...string) (_ string, _ string, 
 
 // ZarfInDir executes a Zarf command in specific directory.
 func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ string, _ string, err error) {
-	if !slices.Contains(args, "tools") {
+	isToolCall := slices.Contains(args, "tools")
+	isCI := os.Getenv("CI") == "true"
+	isWindows := runtime.GOOS == "windows"
+
+	if !isToolCall {
 		args = append(args, "--log-format=console", "--no-color")
 	}
-	if !slices.Contains(args, "--tmpdir") && !slices.Contains(args, "tools") {
+	if !slices.Contains(args, "--tmpdir") && !isToolCall {
 		tmpdir, err := os.MkdirTemp("", "zarf-")
 		if err != nil {
 			return "", "", err
@@ -130,7 +131,7 @@ func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ s
 		}(tmpdir)
 		args = append(args, "--tmpdir", tmpdir)
 	}
-	if !slices.Contains(args, "--zarf-cache") && !slices.Contains(args, "tools") && os.Getenv("CI") == "true" && runtime.GOOS == "windows" {
+	if !slices.Contains(args, "--zarf-cache") && !isToolCall && isCI && isWindows {
 		// We make the cache dir relative to the working directory to make it work on the Windows Runners
 		// - they use two drives which filepath.Rel cannot cope with.
 		cwd, err := os.Getwd()
@@ -154,9 +155,7 @@ func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ s
 
 // Kubectl executes `zarf tools kubectl ...`
 func (e2e *ZarfE2ETest) Kubectl(t *testing.T, args ...string) (string, string, error) {
-	tk := []string{"tools", "kubectl"}
-	args = append(tk, args...)
-	return e2e.Zarf(t, args...)
+	return e2e.Zarf(t, append([]string{"tools", "kubectl"}, args...)...)
 }
 
 // CleanFiles removes files and directories that have been created during the test.
@@ -180,32 +179,7 @@ func (e2e *ZarfE2ETest) GetMismatchedArch() string {
 
 // GetZarfVersion returns the current build/zarf version
 func (e2e *ZarfE2ETest) GetZarfVersion(t *testing.T) string {
-	// Get the version of the CLI
 	stdOut, stdErr, err := e2e.Zarf(t, "version")
 	require.NoError(t, err, stdOut, stdErr)
 	return strings.Trim(stdOut, "\n")
-}
-
-// NormalizeYAMLFilenames normalizes YAML filenames / paths across Operating Systems (i.e Windows vs Linux)
-func (e2e *ZarfE2ETest) NormalizeYAMLFilenames(input string) string {
-	if runtime.GOOS != "windows" {
-		return input
-	}
-
-	// Match YAML lines that have files in them https://regex101.com/r/C78kRD/1
-	fileMatcher := regexp.MustCompile(`^(?P<start>.* )(?P<file>[^:\n]+\/.*)$`)
-	scanner := bufio.NewScanner(strings.NewReader(input))
-
-	output := ""
-	for scanner.Scan() {
-		line := scanner.Text()
-		get, err := helpers.MatchRegex(fileMatcher, line)
-		if err != nil {
-			output += line + "\n"
-			continue
-		}
-		output += fmt.Sprintf("%s\"%s\"\n", get("start"), strings.ReplaceAll(get("file"), "/", "\\\\"))
-	}
-
-	return output
 }

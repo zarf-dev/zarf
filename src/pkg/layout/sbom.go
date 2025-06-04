@@ -5,13 +5,14 @@
 package layout
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/mholt/archiver/v3"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 )
 
 // ComponentSBOM contains paths for a component's SBOM.
@@ -39,7 +40,7 @@ func (s *SBOMs) Unarchive() error {
 	}
 	tb := s.Path
 	dir := filepath.Join(filepath.Dir(tb), SBOMDir)
-	if err := archiver.Unarchive(tb, dir); err != nil {
+	if err := archive.Decompress(context.Background(), tb, dir, archive.DecompressOpts{}); err != nil {
 		return err
 	}
 	s.Path = dir

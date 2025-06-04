@@ -5,31 +5,25 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-
-	"github.com/mholt/archiver/v3"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 )
 
-// ldflags github.com/zarf-dev/zarf/src/cmd.archiverVersion=x.x.x
-var archiverVersion string
+// ldflags github.com/zarf-dev/zarf/src/cmd.archivesVersion=x.x.x
+var archivesVersion string
 
 func newArchiverCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "archiver",
 		Aliases: []string{"a"},
 		Short:   lang.CmdToolsArchiverShort,
-		Version: archiverVersion,
+		Version: archivesVersion,
 	}
 
 	cmd.AddCommand(newArchiverCompressCommand())
 	cmd.AddCommand(newArchiverDecompressCommand())
-	cmd.AddCommand(newToolsVersionCmd("mholt/archiver", archiverVersion))
+	cmd.AddCommand(newToolsVersionCmd("mholt/archives", archivesVersion))
 
 	return cmd
 }
@@ -50,13 +44,9 @@ func newArchiverCompressCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *archiverCompressOptions) run(_ *cobra.Command, args []string) error {
+func (o *archiverCompressOptions) run(cmd *cobra.Command, args []string) error {
 	sourceFiles, destinationArchive := args[:len(args)-1], args[len(args)-1]
-	err := archiver.Archive(sourceFiles, destinationArchive)
-	if err != nil {
-		return fmt.Errorf("unable to perform compression: %w", err)
-	}
-	return err
+	return archive.Compress(cmd.Context(), sourceFiles, destinationArchive, archive.CompressOpts{})
 }
 
 type archiverDecompressOptions struct {
@@ -82,38 +72,8 @@ func newArchiverDecompressCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *archiverDecompressOptions) run(_ *cobra.Command, args []string) error {
-	sourceArchive, destinationPath := args[0], args[1]
-	err := archiver.Unarchive(sourceArchive, destinationPath)
-	if err != nil {
-		return fmt.Errorf("unable to perform decompression: %w", err)
-	}
-	if !o.unarchiveAll {
-		return nil
-	}
-	err = filepath.Walk(destinationPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if strings.HasSuffix(path, ".tar") {
-			dst := filepath.Join(strings.TrimSuffix(path, ".tar"), "..")
-			// Unpack sboms.tar differently since it has a different folder structure than components
-			if info.Name() == layout.SBOMTar {
-				dst = strings.TrimSuffix(path, ".tar")
-			}
-			err := archiver.Unarchive(path, dst)
-			if err != nil {
-				return fmt.Errorf(lang.ErrUnarchive, path, err.Error())
-			}
-			err = os.Remove(path)
-			if err != nil {
-				return fmt.Errorf(lang.ErrRemoveFile, path, err.Error())
-			}
-		}
-		return nil
+func (o *archiverDecompressOptions) run(cmd *cobra.Command, args []string) error {
+	return archive.Decompress(cmd.Context(), args[0], args[1], archive.DecompressOpts{
+		UnarchiveAll: o.unarchiveAll,
 	})
-	if err != nil {
-		return fmt.Errorf("unable to unarchive all nested tarballs: %w", err)
-	}
-	return nil
 }

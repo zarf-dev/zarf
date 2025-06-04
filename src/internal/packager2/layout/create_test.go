@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -135,15 +134,13 @@ func TestCreateSkeleton(t *testing.T) {
 
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
-	opt := CreateOptions{}
+	opt := SkeletonCreateOptions{}
 	path, err := CreateSkeleton(ctx, "./testdata/zarf-skeleton-package", opt)
 	require.NoError(t, err)
 
-	pkgPath := layout.New(path)
-	_, warnings, err := pkgPath.ReadZarfYAML()
+	pkgLayout, err := LoadFromDir(ctx, path, PackageLayoutOptions{})
 	require.NoError(t, err)
-	require.Empty(t, warnings)
-	b, err := os.ReadFile(filepath.Join(pkgPath.Base, "checksums.txt"))
+	b, err := os.ReadFile(filepath.Join(pkgLayout.dirPath, "checksums.txt"))
 	require.NoError(t, err)
 	expectedChecksum := `0fea7403536c0c0e2a2d9b235d4b3716e86eefd8e78e7b14412dd5a750b77474 components/kustomizations.tar
 54f657b43323e1ebecb0758835b8d01a0113b61b7bab0f4a8156f031128d00f9 components/data-injections.tar
@@ -331,6 +328,8 @@ func TestGetSBOM(t *testing.T) {
 	t.Parallel()
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
+	ctx := testutil.TestContext(t)
+
 	tmpdir := t.TempDir()
 	pkg := v1alpha1.ZarfPackage{
 		Kind: v1alpha1.ZarfPackageConfig,
@@ -345,13 +344,13 @@ func TestGetSBOM(t *testing.T) {
 	}
 	writePackageToDisk(t, pkg, tmpdir)
 
-	pkgLayout, err := CreatePackage(context.Background(), tmpdir, CreateOptions{})
+	pkgLayout, err := CreatePackage(ctx, tmpdir, CreateOptions{})
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
 	require.NoFileExists(t, filepath.Join(pkgLayout.dirPath, SBOMTar))
 	// Ensure Zarf errors correctly
-	_, err = pkgLayout.GetSBOM(tmpdir)
+	err = pkgLayout.GetSBOM(ctx, tmpdir)
 	var noSBOMErr *NoSBOMAvailableError
 	require.ErrorAs(t, err, &noSBOMErr)
 }
@@ -359,6 +358,7 @@ func TestGetSBOM(t *testing.T) {
 func TestCreateAbsolutePathFileSource(t *testing.T) {
 	t.Parallel()
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+	ctx := testutil.TestContext(t)
 
 	createFileToImport := func(t *testing.T, dir string) string {
 		t.Helper()
@@ -393,11 +393,11 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		// Create the zarf.yaml file in the tmpdir
 		writePackageToDisk(t, pkg, tmpdir)
 
-		pkgLayout, err := CreatePackage(context.Background(), tmpdir, CreateOptions{})
+		pkgLayout, err := CreatePackage(ctx, tmpdir, CreateOptions{})
 		require.NoError(t, err)
 
 		// Ensure the components have the correct file
-		fileComponent, err := pkgLayout.GetComponentDir(tmpdir, "file", FilesComponentDir)
+		fileComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, "file", FilesComponentDir)
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(fileComponent, "0", "file.txt"))
 	})
@@ -449,7 +449,7 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		require.NoError(t, err)
 
 		// Ensure the component has the correct file
-		importedFileComponent, err := pkgLayout.GetComponentDir(tmpdir, "file-import", FilesComponentDir)
+		importedFileComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, "file-import", FilesComponentDir)
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(importedFileComponent, "0", "file.txt"))
 	})

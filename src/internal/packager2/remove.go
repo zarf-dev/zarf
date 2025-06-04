@@ -7,9 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"slices"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
@@ -17,9 +19,9 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager2/actions"
+	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -35,11 +37,11 @@ type RemoveOptions struct {
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
 func Remove(ctx context.Context, opt RemoveOptions) error {
 	l := logger.From(ctx)
-	pkg, err := GetPackageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath)
-	if err != nil {
-		return err
-	}
 
+	pkg, err := GetPackageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath, zoci.AllLayers)
+	if err != nil {
+		return fmt.Errorf("unable to load the package: %w", err)
+	}
 	// If components were provided; just remove the things we were asked to remove
 	components, err := opt.Filter.Apply(pkg)
 	if err != nil {
@@ -74,6 +76,11 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 		}
 	}
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+
 	reverseDepComps := slices.Clone(depPkg.DeployedComponents)
 	slices.Reverse(reverseDepComps)
 	for _, depComp := range reverseDepComps {
@@ -84,7 +91,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 		}
 
 		err := func() error {
-			err := actions.Run(ctx, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.Before, nil)
+			err := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.Before, nil)
 			if err != nil {
 				return fmt.Errorf("unable to run the before action: %w", err)
 			}
@@ -125,11 +132,11 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 				}
 			}
 
-			err = actions.Run(ctx, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.After, nil)
+			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.After, nil)
 			if err != nil {
 				return fmt.Errorf("unable to run the after action: %w", err)
 			}
-			err = actions.Run(ctx, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnSuccess, nil)
+			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnSuccess, nil)
 			if err != nil {
 				return fmt.Errorf("unable to run the success action: %w", err)
 			}
@@ -146,7 +153,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 			return nil
 		}()
 		if err != nil {
-			removeErr := actions.Run(ctx, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil)
+			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil)
 			if removeErr != nil {
 				return errors.Join(fmt.Errorf("unable to run the failure action: %w", err), removeErr)
 			}

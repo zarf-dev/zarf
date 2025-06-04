@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -16,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// CreateOptions are the optional parameters to create
 type CreateOptions struct {
 	Flavor                  string
 	RegistryOverrides       map[string]string
@@ -30,33 +32,38 @@ type CreateOptions struct {
 	OCIConcurrency          int
 }
 
-func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
+// Create takes a path to a directory containing a ZarfPackageConfig and produces an archived Zarf package
+func Create(ctx context.Context, packagePath string, opt CreateOptions) (err error) {
 	if opt.SkipSBOM && opt.SBOMOut != "" {
 		return fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
 
 	createOpt := layout2.CreateOptions{
-		Flavor:                  opt.Flavor,
-		RegistryOverrides:       opt.RegistryOverrides,
-		SigningKeyPath:          opt.SigningKeyPath,
-		SigningKeyPassword:      opt.SigningKeyPassword,
-		SetVariables:            opt.SetVariables,
-		SkipSBOM:                opt.SkipSBOM,
-		OCIConcurrency:          opt.OCIConcurrency,
-		DifferentialPackagePath: opt.DifferentialPackagePath,
+		AssembleOptions: layout2.AssembleOptions{
+			SkipSBOM:                opt.SkipSBOM,
+			OCIConcurrency:          opt.OCIConcurrency,
+			DifferentialPackagePath: opt.DifferentialPackagePath,
+			Flavor:                  opt.Flavor,
+			RegistryOverrides:       opt.RegistryOverrides,
+			SigningKeyPath:          opt.SigningKeyPath,
+			SigningKeyPassword:      opt.SigningKeyPassword,
+		},
+		SetVariables: opt.SetVariables,
 	}
 	pkgLayout, err := layout2.CreatePackage(ctx, packagePath, createOpt)
 	if err != nil {
 		return err
 	}
-	defer pkgLayout.Cleanup()
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
 
 	if helpers.IsOCIURL(opt.Output) {
 		ref, err := layout2.ReferenceFromMetadata(opt.Output, pkgLayout.Pkg)
 		if err != nil {
 			return err
 		}
-		remote, err := layout2.NewRemote(ctx, ref, oci.PlatformForArch(config.GetArch()))
+		remote, err := layout2.NewRemote(ctx, ref, oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture))
 		if err != nil {
 			return err
 		}
@@ -72,7 +79,7 @@ func Create(ctx context.Context, packagePath string, opt CreateOptions) error {
 	}
 
 	if opt.SBOMOut != "" {
-		_, err := pkgLayout.GetSBOM(opt.SBOMOut)
+		err := pkgLayout.GetSBOM(ctx, filepath.Join(opt.SBOMOut, pkgLayout.Pkg.Metadata.Name))
 		// Don't fail package create if the package doesn't have an sbom
 		var noSBOMErr *layout2.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {

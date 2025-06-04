@@ -17,16 +17,20 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"helm.sh/helm/v3/pkg/chartutil"
 )
 
+// ResourceType represents the different types of Zarf resources that can be inspected
 type ResourceType string
 
+// The different types of resources that can be inspected
 const (
 	ManifestResource   ResourceType = "manifest"
 	ChartResource      ResourceType = "chart"
@@ -40,24 +44,50 @@ type Resource struct {
 	ResourceType ResourceType
 }
 
+// InspectPackageResourcesOptions are the optional parameters to InspectPackageResources
 type InspectPackageResourcesOptions struct {
-	SetVariables map[string]string
-	KubeVersion  string
+	Architecture            string
+	Components              string
+	PublicKeyPath           string
+	SkipSignatureValidation bool
+	SetVariables            map[string]string
+	KubeVersion             string
 }
 
+// InspectPackageResourcesResults contains the resources returned by InspectPackageResources
 type InspectPackageResourcesResults struct {
 	Resources []Resource
 }
 
 // InspectPackageResources templates and returns the manifests, charts, and values files in the package as they would be on deploy
-func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayout, opts InspectPackageResourcesOptions) (results InspectPackageResourcesResults, err error) {
+func InspectPackageResources(ctx context.Context, source string, opts InspectPackageResourcesOptions) (results InspectPackageResourcesResults, err error) {
 	s, err := state.Default()
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
 	}
-	variableConfig := template.GetZarfVariableConfig(ctx)
-	variableConfig.SetConstants(pkgLayout.Pkg.Constants)
-	variableConfig.PopulateVariables(pkgLayout.Pkg.Variables, opts.SetVariables)
+
+	loadOpts := LoadOptions{
+		Source:                  source,
+		Architecture:            opts.Architecture,
+		PublicKeyPath:           opts.PublicKeyPath,
+		SkipSignatureValidation: opts.SkipSignatureValidation,
+		LayersSelector:          zoci.ComponentLayers,
+		Filter:                  filters.BySelectState(opts.Components),
+	}
+
+	pkgLayout, err := LoadPackage(ctx, loadOpts)
+	if err != nil {
+		return InspectPackageResourcesResults{}, err
+	}
+
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
+	if err != nil {
+		return InspectPackageResourcesResults{}, err
+	}
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return InspectPackageResourcesResults{}, err
@@ -82,25 +112,24 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayo
 		variableConfig.SetApplicationTemplates(applicationTemplates)
 
 		if len(component.Charts) > 0 {
-			chartDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout2.ChartsComponentDir)
+			chartDir, err := pkgLayout.GetComponentDir(ctx, tmpComponentPath, component.Name, layout.ChartsComponentDir)
 			if err != nil {
 				return InspectPackageResourcesResults{}, err
 			}
-			valuesDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout2.ValuesComponentDir)
+			valuesDir, err := pkgLayout.GetComponentDir(ctx, tmpComponentPath, component.Name, layout.ValuesComponentDir)
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				return InspectPackageResourcesResults{}, fmt.Errorf("failed to get values: %w", err)
 			}
 
 			for _, chart := range component.Charts {
-				chartOverrides := make(map[string]any)
-				for _, variable := range chart.Variables {
-					if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
-						// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
-						if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
-							return InspectPackageResourcesResults{}, fmt.Errorf("unable to merge path and value into map: %w", err)
-						}
-					}
+				chartOverrides, err := generateValuesOverrides(chart, component.Name, variableConfig, nil)
+				if err != nil {
+					return InspectPackageResourcesResults{}, err
 				}
+				if err := templateValuesFiles(chart, valuesDir, variableConfig); err != nil {
+					return InspectPackageResourcesResults{}, err
+				}
+
 				helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, chartOverrides)
 				if err != nil {
 					return InspectPackageResourcesResults{}, fmt.Errorf("failed to load chart data: %w", err)
@@ -119,7 +148,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayo
 					return InspectPackageResourcesResults{}, fmt.Errorf("failed to get values: %w", err)
 				}
 				resources = append(resources, Resource{
-					Content:      fmt.Sprintf("%s", valuesYaml),
+					Content:      string(valuesYaml),
 					Name:         chart.Name,
 					ResourceType: ValuesFileResource,
 				})
@@ -127,7 +156,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayo
 		}
 
 		if len(component.Manifests) > 0 {
-			manifestDir, err := pkgLayout.GetComponentDir(tmpComponentPath, component.Name, layout2.ManifestsComponentDir)
+			manifestDir, err := pkgLayout.GetComponentDir(ctx, tmpComponentPath, component.Name, layout.ManifestsComponentDir)
 			if err != nil {
 				return InspectPackageResourcesResults{}, fmt.Errorf("failed to get package manifests: %w", err)
 			}
@@ -159,6 +188,17 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout2.PackageLayo
 	return InspectPackageResourcesResults{Resources: resources}, nil
 }
 
+func templateValuesFiles(chart v1alpha1.ZarfChart, valuesDir string, variableConfig *variables.VariableConfig) error {
+	for idx := range chart.ValuesFiles {
+		valueFilePath := helm.StandardValuesName(valuesDir, chart, idx)
+		if err := variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
+			return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
+		}
+	}
+	return nil
+}
+
+// InspectDefinitionResourcesOptions are the optional parameters to InspectDefinitionResources
 type InspectDefinitionResourcesOptions struct {
 	CreateSetVariables map[string]string
 	DeploySetVariables map[string]string
@@ -166,6 +206,7 @@ type InspectDefinitionResourcesOptions struct {
 	KubeVersion        string
 }
 
+// InspectDefinitionResourcesResults returns the inspected resources
 type InspectDefinitionResourcesResults struct {
 	Resources []Resource
 }
@@ -180,9 +221,10 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	if err != nil {
 		return InspectDefinitionResourcesResults{}, err
 	}
-	variableConfig := template.GetZarfVariableConfig(ctx)
-	variableConfig.SetConstants(pkg.Constants)
-	variableConfig.PopulateVariables(pkg.Variables, opts.DeploySetVariables)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables)
+	if err != nil {
+		return InspectDefinitionResourcesResults{}, err
+	}
 
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -218,7 +260,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 				return InspectDefinitionResourcesResults{}, err
 			}
 			resources = append(resources, Resource{
-				Content:      fmt.Sprintf("%s", valuesYaml),
+				Content:      string(valuesYaml),
 				Name:         zarfChart.Name,
 				ResourceType: ValuesFileResource,
 			})
@@ -241,6 +283,108 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	}
 
 	return InspectDefinitionResourcesResults{Resources: resources}, nil
+}
+
+// InspectPackageSbomsResult includes the path to the retrieved SBOM
+type InspectPackageSbomsResult struct {
+	Path string
+}
+
+// InspectPackageSbomsOptions are optional parameters to InspectPackageSboms
+type InspectPackageSbomsOptions struct {
+	Architecture            string
+	PublicKeyPath           string
+	SkipSignatureValidation bool
+	OutputDir               string
+}
+
+// InspectPackageSBOM retrieves the SBOM from the package if it exists and places it in the returned path
+func InspectPackageSBOM(ctx context.Context, source string, opts InspectPackageSbomsOptions) (InspectPackageSbomsResult, error) {
+	loadOpts := LoadOptions{
+		Source:                  source,
+		Architecture:            opts.Architecture,
+		PublicKeyPath:           opts.PublicKeyPath,
+		SkipSignatureValidation: opts.SkipSignatureValidation,
+		LayersSelector:          zoci.SbomLayers,
+		Filter:                  filters.Empty(),
+	}
+	pkgLayout, err := LoadPackage(ctx, loadOpts)
+	if err != nil {
+		return InspectPackageSbomsResult{}, fmt.Errorf("unable to load the package: %w", err)
+	}
+
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+	outputPath := filepath.Join(opts.OutputDir, pkgLayout.Pkg.Metadata.Name)
+	err = pkgLayout.GetSBOM(ctx, outputPath)
+	if err != nil {
+		return InspectPackageSbomsResult{}, fmt.Errorf("could not get SBOM: %w", err)
+	}
+	return InspectPackageSbomsResult{
+		Path: outputPath,
+	}, nil
+}
+
+// InspectPackageDefinitionResult is returned by InspectPackageDefinition
+type InspectPackageDefinitionResult struct {
+	Package v1alpha1.ZarfPackage
+}
+
+// InspectPackageDefinitionOptions are the options for InspectPackageDefinition
+type InspectPackageDefinitionOptions struct {
+	Architecture            string
+	PublicKeyPath           string
+	SkipSignatureValidation bool
+}
+
+// InspectPackageDefinition gets the package definition from the given source: local, remote, or in cluster
+func InspectPackageDefinition(ctx context.Context, source string, opts InspectPackageDefinitionOptions) (InspectPackageDefinitionResult, error) {
+	cluster, _ := cluster.New(ctx) //nolint:errcheck
+
+	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, zoci.MetadataLayers)
+	if err != nil {
+		return InspectPackageDefinitionResult{}, fmt.Errorf("unable to load the package: %w", err)
+	}
+
+	return InspectPackageDefinitionResult{
+		Package: pkg,
+	}, nil
+}
+
+// InspectPackageImageResult is returned by InspectPackageImages
+type InspectPackageImageResult struct {
+	Images []string
+}
+
+// InspectPackageImagesOptions are optional parameters to InspectPackageImages
+type InspectPackageImagesOptions struct {
+	Architecture            string
+	PublicKeyPath           string
+	SkipSignatureValidation bool
+}
+
+// InspectPackageImages returns a list of the package images
+func InspectPackageImages(ctx context.Context, source string, opts InspectPackageImagesOptions) (InspectPackageImageResult, error) {
+	cluster, _ := cluster.New(ctx) //nolint:errcheck
+
+	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, zoci.MetadataLayers)
+	if err != nil {
+		return InspectPackageImageResult{}, fmt.Errorf("unable to load the package: %w", err)
+	}
+
+	images := make([]string, 0)
+	for _, component := range pkg.Components {
+		images = append(images, component.Images...)
+	}
+	images = helpers.Unique(images)
+	if len(images) == 0 {
+		return InspectPackageImageResult{}, fmt.Errorf("no images found in package")
+	}
+
+	return InspectPackageImageResult{
+		Images: images,
+	}, nil
 }
 
 func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig) ([]Resource, error) {

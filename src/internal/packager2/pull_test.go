@@ -14,7 +14,6 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -23,7 +22,7 @@ func TestPull(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	packagePath := "./testdata/zarf-package-test-amd64-0.0.1.tar.zst"
+	packagePath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
 	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		file, err := os.Open(packagePath)
 		if err != nil {
@@ -38,8 +37,10 @@ func TestPull(t *testing.T) {
 	})
 
 	dir := t.TempDir()
-	shasum := "f9b15b1bc0f760a87bad68196b339a8ce8330e3a0241191a826a8962a88061f1"
-	err := Pull(ctx, srv.URL, dir, shasum, "amd64", filters.Empty(), "", false)
+	err := Pull(ctx, srv.URL, dir, PullOptions{
+		SHASum:       "f9b15b1bc0f760a87bad68196b339a8ce8330e3a0241191a826a8962a88061f1",
+		Architecture: "amd64",
+	})
 	require.NoError(t, err)
 
 	packageData, err := os.ReadFile(packagePath)
@@ -54,7 +55,7 @@ func TestPullUncompressed(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	packagePath := "./testdata/uncompressed/zarf-package-test-uncompressed-amd64-0.0.1.tar"
+	packagePath := filepath.Join("testdata", "load-package", "uncompressed", "zarf-package-test-uncompressed-amd64-0.0.1.tar")
 	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		file, err := os.Open(packagePath)
 		if err != nil {
@@ -69,8 +70,10 @@ func TestPullUncompressed(t *testing.T) {
 	})
 
 	dir := t.TempDir()
-	shasum := "a118a4d306acc5dd4eab2c161e78fa3dfd1e08ae1e1794a4393be98c79257f5c"
-	err := Pull(ctx, srv.URL, dir, shasum, "amd64", filters.Empty(), "", false)
+	err := Pull(ctx, srv.URL, dir, PullOptions{
+		SHASum:       "a118a4d306acc5dd4eab2c161e78fa3dfd1e08ae1e1794a4393be98c79257f5c",
+		Architecture: "amd64",
+	})
 	require.NoError(t, err)
 
 	packageData, err := os.ReadFile(packagePath)
@@ -85,7 +88,7 @@ func TestPullUnsupported(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-	packagePath := "./testdata/uncompressed/zarf.yaml"
+	packagePath := filepath.Join("testdata", "load-package", "uncompressed", "zarf.yaml")
 	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 		file, err := os.Open(packagePath)
 		if err != nil {
@@ -100,8 +103,10 @@ func TestPullUnsupported(t *testing.T) {
 	})
 
 	dir := t.TempDir()
-	shasum := "6e9dccce07ba9d3c45b7c872fae863c5415d296fd5e2fb72a2583530aa750ccd"
-	err := Pull(ctx, srv.URL, dir, shasum, "amd64", filters.Empty(), "", false)
+	err := Pull(ctx, srv.URL, dir, PullOptions{
+		SHASum:       "6e9dccce07ba9d3c45b7c872fae863c5415d296fd5e2fb72a2583530aa750ccd",
+		Architecture: "amd64",
+	})
 	require.EqualError(t, err, "unsupported file type: .txt", "unsupported file type: .txt")
 }
 

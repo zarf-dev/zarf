@@ -32,6 +32,7 @@ const (
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
 )
 
+// OCITimestampFormat is the format for OCI timestamp annotations
 const OCITimestampFormat = time.RFC3339
 
 // Remote is a wrapper around the Oras remote repository with zarf specific functions
@@ -59,7 +60,7 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 func (r *Remote) Push(ctx context.Context, pkgLayout *PackageLayout, concurrency int) (err error) {
 	logger.From(ctx).Info("pushing package to registry",
 		"destination", r.orasRemote.Repo().Reference.String(),
-		"architecture", pkgLayout.Pkg.Metadata.Architecture)
+		"architecture", pkgLayout.Pkg.Build.Architecture)
 
 	src, err := file.New("")
 	if err != nil {
@@ -132,6 +133,7 @@ func (r *Remote) Push(ctx context.Context, pkgLayout *PackageLayout, concurrency
 	return nil
 }
 
+// ReferenceFromMetadata creates an OCI reference using the package metadata
 func ReferenceFromMetadata(registryLocation string, pkg v1alpha1.ZarfPackage) (string, error) {
 	if len(pkg.Metadata.Version) == 0 {
 		return "", errors.New("version is required for publishing")

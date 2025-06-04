@@ -23,7 +23,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/mholt/archiver/v3"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
 
@@ -36,6 +35,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	actions2 "github.com/zarf-dev/zarf/src/internal/packager2/actions"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -49,31 +49,49 @@ import (
 // If this format is changed - zarf will need to handle mismatch between older formats and the new format.
 const CreateTimestampFormat = time.RFC1123Z
 
-// CreateOptions are the options for creating a skeleton package.
+// CreateOptions are the options for creating a package from a definition.
 type CreateOptions struct {
-	Flavor                  string
-	RegistryOverrides       map[string]string
-	SigningKeyPath          string
-	SigningKeyPassword      string
-	SetVariables            map[string]string
-	SkipSBOM                bool
-	DifferentialPackagePath string
-	OCIConcurrency          int
+	AssembleOptions
+	SetVariables map[string]string
 }
 
+// CreatePackage takes a zarf.yaml at the package path and returns a PackageLayout of the final package
 func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (*PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("creating package", "path", packagePath)
-
-	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return nil, err
-	}
 
 	pkg, err := LoadPackageDefinition(ctx, packagePath, opt.Flavor, opt.SetVariables)
 	if err != nil {
 		return nil, err
 	}
+
+	pkgLayout, err := AssemblePackage(ctx, pkg, packagePath, opt.AssembleOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	l.Info("package created")
+
+	return pkgLayout, nil
+}
+
+// AssembleOptions are the options for creating a package from a package object
+type AssembleOptions struct {
+	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified
+	Flavor string
+	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry
+	RegistryOverrides  map[string]string
+	SigningKeyPath     string
+	SigningKeyPassword string
+	SkipSBOM           bool
+	// DifferentialPackagePath causes a differential package to be created that only contains images and repos not included in the package at the given path
+	DifferentialPackagePath string
+	OCIConcurrency          int
+}
+
+// AssemblePackage takes a package definition and returns a package layout with all the resources collected
+func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt AssembleOptions) (*PackageLayout, error) {
+	l := logger.From(ctx)
 
 	if opt.DifferentialPackagePath != "" {
 		l.Debug("creating differential package", "differential", opt.DifferentialPackagePath)
@@ -113,6 +131,10 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 		}
 	}
 
+	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
 	for _, component := range pkg.Components {
 		err := assemblePackageComponent(ctx, component, packagePath, buildPath)
 		if err != nil {
@@ -145,7 +167,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 			ImageList:             componentImages,
 			Arch:                  pkg.Metadata.Architecture,
 			RegistryOverrides:     opt.RegistryOverrides,
-			CacheDirectory:        filepath.Join(cachePath, ImagesDir),
+			CacheDirectory:        filepath.Join(cachePath, zoci.ImageCacheDirectory),
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
@@ -171,7 +193,7 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 
 	if !opt.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
-		err = generateSBOM(ctx, pkg, buildPath, sbomImageList)
+		err := generateSBOM(ctx, pkg, buildPath, sbomImageList)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
 		}
@@ -209,14 +231,18 @@ func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (
 		return nil, err
 	}
 
-	l.Info("package created")
-
 	return pkgLayout, nil
 }
 
+// SkeletonCreateOptions are the options for creating a skeleton package
+type SkeletonCreateOptions struct {
+	SigningKeyPath     string
+	SigningKeyPassword string
+}
+
 // CreateSkeleton creates a skeleton package and returns the path to the created package.
-func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) (string, error) {
-	pkg, err := LoadPackageDefinition(ctx, packagePath, opt.Flavor, nil)
+func CreateSkeleton(ctx context.Context, packagePath string, opt SkeletonCreateOptions) (string, error) {
+	pkg, err := LoadPackageDefinition(ctx, packagePath, "", nil)
 	if err != nil {
 		return "", err
 	}
@@ -228,7 +254,7 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) 
 	}
 
 	for _, component := range pkg.Components {
-		err := assembleSkeletonComponent(component, packagePath, buildPath)
+		err := assembleSkeletonComponent(ctx, component, packagePath, buildPath)
 		if err != nil {
 			return "", err
 		}
@@ -245,7 +271,7 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt CreateOptions) 
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opt.Flavor, opt.RegistryOverrides)
+	pkg = recordPackageMetadata(pkg, "", nil)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -278,7 +304,7 @@ func LoadPackageDefinition(ctx context.Context, packagePath, flavor string, setV
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	pkg, err := ParseZarfPackage(b)
+	pkg, err := ParseZarfPackage(ctx, b)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -323,7 +349,6 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	}
 	if len(findings) != 0 {
 		return &lint.LintError{
-			BaseDir:     packagePath,
 			PackageName: pkg.Metadata.Name,
 			Findings:    findings,
 		}
@@ -348,12 +373,14 @@ func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
 	return false
 }
 
-func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
+func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmpBuildPath)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpBuildPath))
+	}()
 	compBuildPath := filepath.Join(tmpBuildPath, component.Name)
 	err = os.MkdirAll(compBuildPath, 0o700)
 	if err != nil {
@@ -400,14 +427,19 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				if err != nil {
 					return err
 				}
-				defer os.RemoveAll(tmpDir)
+				defer func() {
+					err = errors.Join(err, os.RemoveAll(tmpDir))
+				}()
 				compressedFile := filepath.Join(tmpDir, compressedFileName)
 
 				// If the file is an archive, download it to the componentPath.Temp
 				if err := utils.DownloadToFile(ctx, file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
-				err = archiver.Extract(compressedFile, file.ExtractPath, destinationDir)
+				decompressOpts := archive.DecompressOpts{
+					Files: []string{file.ExtractPath},
+				}
+				err = archive.Decompress(ctx, compressedFile, destinationDir, decompressOpts)
 				if err != nil {
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
 				}
@@ -418,8 +450,12 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 			}
 		} else {
 			if file.ExtractPath != "" {
-				if err := archiver.Extract(filepath.Join(packagePath, file.Source), file.ExtractPath, destinationDir); err != nil {
-					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
+				decompressOpts := archive.DecompressOpts{
+					Files: []string{file.ExtractPath},
+				}
+				err = archive.Decompress(ctx, filepath.Join(packagePath, file.Source), destinationDir, decompressOpts)
+				if err != nil {
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, filepath.Join(packagePath, file.Source), err.Error())
 				}
 			} else {
 				if filepath.IsAbs(file.Source) {
@@ -551,12 +587,14 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	return nil
 }
 
-func assembleSkeletonComponent(component v1alpha1.ZarfComponent, packagePath, buildPath string) error {
+func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmpBuildPath)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpBuildPath))
+	}()
 	compBuildPath := filepath.Join(tmpBuildPath, component.Name)
 	err = os.MkdirAll(compBuildPath, 0o700)
 	if err != nil {
@@ -610,8 +648,12 @@ func assembleSkeletonComponent(component v1alpha1.ZarfComponent, packagePath, bu
 		destinationDir := filepath.Dir(dst)
 
 		if file.ExtractPath != "" {
-			if err := archiver.Extract(filepath.Join(packagePath, file.Source), file.ExtractPath, destinationDir); err != nil {
-				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
+			decompressOpts := archive.DecompressOpts{
+				Files: []string{file.ExtractPath},
+			}
+			err = archive.Decompress(ctx, filepath.Join(packagePath, file.Source), destinationDir, decompressOpts)
+			if err != nil {
+				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, filepath.Join(packagePath, file.Source), err.Error())
 			}
 
 			// Make sure dst reflects the actual file or directory.
@@ -735,7 +777,7 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	}
 
 	// Record the hostname of the package creation terminal.
-	// The error here is ignored because the hostname is not critical to the package creation.
+	//nolint: errcheck // The error here is ignored because the hostname is not critical to the package creation.
 	hostname, _ := os.Hostname()
 	pkg.Build.Terminal = hostname
 
@@ -821,15 +863,19 @@ func signPackage(dirPath, signingKeyPath, signingKeyPassword string) error {
 	return nil
 }
 
-func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, overrideMode bool) error {
+func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, overrideMode bool) (err error) {
 	tb, err := os.Create(tarballPath)
 	if err != nil {
 		return fmt.Errorf("error creating tarball: %w", err)
 	}
-	defer tb.Close()
+	defer func() {
+		err = errors.Join(err, tb.Close())
+	}()
 
 	tw := tar.NewWriter(tb)
-	defer tw.Close()
+	defer func() {
+		err = errors.Join(err, tw.Close())
+	}()
 
 	// Walk through the directory and process each file
 	return filepath.Walk(dirPath, func(filePath string, info os.FileInfo, err error) error {
@@ -892,7 +938,9 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 			if err != nil {
 				return fmt.Errorf("error opening file: %w", err)
 			}
-			defer file.Close()
+			defer func() {
+				err = errors.Join(err, file.Close())
+			}()
 
 			if _, err := io.Copy(tw, file); err != nil {
 				return fmt.Errorf("error writing file to tarball: %w", err)

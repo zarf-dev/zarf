@@ -12,12 +12,12 @@ import (
 	"strconv"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/mholt/archiver/v3"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -193,7 +193,10 @@ func (sc *SkeletonCreator) addComponent(ctx context.Context, component v1alpha1.
 		destinationDir := filepath.Dir(dst)
 
 		if file.ExtractPath != "" {
-			if err := archiver.Extract(file.Source, file.ExtractPath, destinationDir); err != nil {
+			decompressOpts := archive.DecompressOpts{
+				Files: []string{file.ExtractPath},
+			}
+			if err := archive.Decompress(ctx, file.Source, destinationDir, decompressOpts); err != nil {
 				return nil, fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, file.Source, err.Error())
 			}
 
