@@ -45,16 +45,16 @@ type LoadOptions struct {
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
-func LoadPackage(ctx context.Context, source string, opt LoadOptions) (_ *layout.PackageLayout, err error) {
+func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layout.PackageLayout, err error) {
 	if source == "" {
 		return nil, fmt.Errorf("must provide a package source")
 	}
-	if opt.Filter == nil {
-		opt.Filter = filters.Empty()
+	if opts.Filter == nil {
+		opts.Filter = filters.Empty()
 	}
 
-	if opt.LayersSelector == "" {
-		opt.LayersSelector = zoci.AllLayers
+	if opts.LayersSelector == "" {
+		opts.LayersSelector = zoci.AllLayers
 	}
 
 	srcType, err := identifySource(source)
@@ -78,12 +78,12 @@ func LoadPackage(ctx context.Context, source string, opt LoadOptions) (_ *layout
 		ociOpts := PullOCIOptions{
 			Source:         source,
 			Directory:      tmpDir,
-			Shasum:         opt.Shasum,
-			Architecture:   config.GetArch(opt.Architecture),
-			Filter:         opt.Filter,
-			LayersSelector: opt.LayersSelector,
-			OCIConcurrency: opt.OCIConcurrency,
-			RemoteOptions:  opt.RemoteOptions,
+			Shasum:         opts.Shasum,
+			Architecture:   config.GetArch(opts.Architecture),
+			Filter:         opts.Filter,
+			LayersSelector: opts.LayersSelector,
+			OCIConcurrency: opts.OCIConcurrency,
+			RemoteOptions:  opts.RemoteOptions,
 		}
 
 		isPartial, tmpPath, err = pullOCI(ctx, ociOpts)
@@ -91,14 +91,14 @@ func LoadPackage(ctx context.Context, source string, opt LoadOptions) (_ *layout
 			return nil, err
 		}
 	case "http", "https":
-		tmpPath, err = pullHTTP(ctx, source, tmpDir, opt.Shasum, opt.InsecureSkipTLSVerify)
+		tmpPath, err = pullHTTP(ctx, source, tmpDir, opts.Shasum, opts.InsecureSkipTLSVerify)
 		if err != nil {
 			return nil, err
 		}
 	case "split":
 		// If there is not already a target output, then output to the same directory so the split file can become a single tar
-		if opt.Output == "" {
-			opt.Output = filepath.Dir(source)
+		if opts.Output == "" {
+			opts.Output = filepath.Dir(source)
 		}
 		err := assembleSplitTar(source, tmpPath)
 		if err != nil {
@@ -112,30 +112,30 @@ func LoadPackage(ctx context.Context, source string, opt LoadOptions) (_ *layout
 	}
 
 	// Verify checksum if provided
-	if srcType != "oci" && opt.Shasum != "" {
-		if err := helpers.SHAsMatch(tmpPath, opt.Shasum); err != nil {
+	if srcType != "oci" && opts.Shasum != "" {
+		if err := helpers.SHAsMatch(tmpPath, opts.Shasum); err != nil {
 			return nil, fmt.Errorf("SHA256 mismatch for %s: %w", tmpPath, err)
 		}
 	}
 
 	// Load package layout
-	layoutOpt := layout.PackageLayoutOptions{
-		PublicKeyPath:           opt.PublicKeyPath,
-		SkipSignatureValidation: opt.SkipSignatureValidation,
+	layoutOpts := layout.PackageLayoutOptions{
+		PublicKeyPath:           opts.PublicKeyPath,
+		SkipSignatureValidation: opts.SkipSignatureValidation,
 		IsPartial:               isPartial,
-		Filter:                  opt.Filter,
+		Filter:                  opts.Filter,
 	}
-	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpt)
+	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpts)
 	if err != nil {
 		return nil, err
 	}
 
-	if opt.Output != "" {
+	if opts.Output != "" {
 		filename, err := pkgLayout.FileName()
 		if err != nil {
 			return nil, err
 		}
-		tarPath := filepath.Join(opt.Output, filename)
+		tarPath := filepath.Join(opts.Output, filename)
 		err = os.Remove(tarPath)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return nil, err

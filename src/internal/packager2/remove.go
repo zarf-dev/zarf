@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -33,21 +34,21 @@ type RemoveOptions struct {
 	SkipSignatureValidation bool
 	PublicKeyPath           string
 	Architecture            string
+	Timeout                 time.Duration
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
-func Remove(ctx context.Context, opt RemoveOptions) error {
+func Remove(ctx context.Context, opts RemoveOptions) error {
 	l := logger.From(ctx)
 
-	// FIXME make sure this filter works as intended
-	loadOpt := LoadOptions{
-		SkipSignatureValidation: opt.SkipSignatureValidation,
-		Architecture:            config.GetArch(opt.Architecture),
-		Filter:                  opt.Filter,
-		PublicKeyPath:           opt.PublicKeyPath,
+	loadOpts := LoadOptions{
+		SkipSignatureValidation: opts.SkipSignatureValidation,
+		Architecture:            config.GetArch(opts.Architecture),
+		Filter:                  opts.Filter,
+		PublicKeyPath:           opts.PublicKeyPath,
 		LayersSelector:          zoci.AllLayers,
 	}
-	pkg, err := GetPackageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, loadOpt)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, opts.Cluster, opts.Source, loadOpts)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
@@ -57,7 +58,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 	for _, component := range pkg.Components {
 		componentIdx[component.Name] = component
 		if component.RequiresCluster() {
-			if opt.Cluster == nil {
+			if opts.Cluster == nil {
 				return fmt.Errorf("component %s requires cluster access but none was configured", component.Name)
 			}
 			requiresCluster = true
@@ -67,7 +68,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 	// Get or build the secret for the deployed package
 	depPkg := &types.DeployedPackage{}
 	if requiresCluster {
-		depPkg, err = opt.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name)
+		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name)
 		if err != nil {
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %s", err.Error())
 		}
@@ -102,7 +103,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 
 			reverseInstalledCharts := slices.Clone(depComp.InstalledCharts)
 			slices.Reverse(reverseInstalledCharts)
-			if opt.Cluster != nil {
+			if opts.Cluster != nil {
 				for _, chart := range reverseInstalledCharts {
 					settings := cli.New()
 					settings.SetNamespace(chart.Namespace)
@@ -115,7 +116,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 					client := action.NewUninstall(actionConfig)
 					client.KeepHistory = false
 					client.Wait = true
-					client.Timeout = config.ZarfDefaultTimeout
+					client.Timeout = opts.Timeout
 					_, err = client.Run(chart.ChartName)
 					if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
 						return fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w", chart.ChartName, chart.Namespace, err)
@@ -128,7 +129,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 					installedCharts := depPkg.DeployedComponents[len(depPkg.DeployedComponents)-1].InstalledCharts
 					installedCharts = installedCharts[:len(installedCharts)-1]
 					depPkg.DeployedComponents[len(depPkg.DeployedComponents)-1].InstalledCharts = installedCharts
-					err = opt.Cluster.UpdateDeployedPackage(ctx, *depPkg)
+					err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
 					if err != nil {
 						// We warn and ignore errors because we may have removed the cluster that this package was inside of
 						l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
@@ -146,9 +147,9 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 			}
 
 			// Pop the removed component from deploy components slice.
-			if opt.Cluster != nil {
+			if opts.Cluster != nil {
 				depPkg.DeployedComponents = depPkg.DeployedComponents[:len(depPkg.DeployedComponents)-1]
-				err = opt.Cluster.UpdateDeployedPackage(ctx, *depPkg)
+				err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
 				if err != nil {
 					// We warn and ignore errors because we may have removed the cluster that this package was inside of
 					l.Warn("unable to update secret package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
@@ -166,8 +167,8 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 	}
 
 	// All the installed components were deleted, therefore this package is no longer actually deployed
-	if opt.Cluster != nil && len(depPkg.DeployedComponents) == 0 {
-		err := opt.Cluster.DeleteDeployedPackage(ctx, depPkg.Name)
+	if opts.Cluster != nil && len(depPkg.DeployedComponents) == 0 {
+		err := opts.Cluster.DeleteDeployedPackage(ctx, depPkg.Name)
 		if err != nil {
 			l.Warn("unable to delete secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
 		}

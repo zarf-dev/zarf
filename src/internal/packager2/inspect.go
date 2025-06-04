@@ -328,7 +328,7 @@ type InspectPackageDefinitionOptions struct {
 func InspectPackageDefinition(ctx context.Context, source string, opts InspectPackageDefinitionOptions) (v1alpha1.ZarfPackage, error) {
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
-	loadOpt := LoadOptions{
+	loadOpts := LoadOptions{
 		SkipSignatureValidation: opts.SkipSignatureValidation,
 		Architecture:            config.GetArch(opts.Architecture),
 		Filter:                  filters.Empty(),
@@ -337,7 +337,7 @@ func InspectPackageDefinition(ctx context.Context, source string, opts InspectPa
 		OCIConcurrency:          opts.OCIConcurrency,
 		RemoteOptions:           opts.RemoteOptions,
 	}
-	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, loadOpt)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, loadOpts)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to load the package: %w", err)
 	}
@@ -358,7 +358,7 @@ type InspectPackageImagesOptions struct {
 func InspectPackageImages(ctx context.Context, source string, opts InspectPackageImagesOptions) ([]string, error) {
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
-	loadOpt := LoadOptions{
+	loadOpts := LoadOptions{
 		SkipSignatureValidation: opts.SkipSignatureValidation,
 		Architecture:            config.GetArch(opts.Architecture),
 		Filter:                  filters.Empty(),
@@ -367,7 +367,7 @@ func InspectPackageImages(ctx context.Context, source string, opts InspectPackag
 		OCIConcurrency:          opts.OCIConcurrency,
 		RemoteOptions:           opts.RemoteOptions,
 	}
-	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, loadOpt)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, loadOpts)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load the package: %w", err)
 	}

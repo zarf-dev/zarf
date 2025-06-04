@@ -1101,6 +1101,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		Architecture:            config.GetArch(),
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		Timeout:                 config.ZarfDefaultTimeout,
 	}
 	err = packager2.Remove(ctx, removeOpt)
 	if err != nil {

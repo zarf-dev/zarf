@@ -70,14 +70,13 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		}
 	}
 
-	createOpt := layout.AssembleOptions{
+	createOpts := layout.AssembleOptions{
 		Flavor:            opts.Flavor,
 		RegistryOverrides: opts.RegistryOverrides,
 		SkipSBOM:          true,
 		OCIConcurrency:    opts.OCIConcurrency,
 	}
-
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, createOpt)
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, createOpts)
 	if err != nil {
 		return err
 	}

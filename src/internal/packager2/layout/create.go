@@ -56,16 +56,16 @@ type CreateOptions struct {
 }
 
 // CreatePackage takes a zarf.yaml at the package path and returns a PackageLayout of the final package
-func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (*PackageLayout, error) {
+func CreatePackage(ctx context.Context, packagePath string, opts CreateOptions) (*PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("creating package", "path", packagePath)
 
-	pkg, err := LoadPackageDefinition(ctx, packagePath, opt.Flavor, opt.SetVariables)
+	pkg, err := LoadPackageDefinition(ctx, packagePath, opts.Flavor, opts.SetVariables)
 	if err != nil {
 		return nil, err
 	}
 
-	pkgLayout, err := AssemblePackage(ctx, pkg, packagePath, opt.AssembleOptions)
+	pkgLayout, err := AssemblePackage(ctx, pkg, packagePath, opts.AssembleOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -90,15 +90,15 @@ type AssembleOptions struct {
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
-func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt AssembleOptions) (*PackageLayout, error) {
+func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleOptions) (*PackageLayout, error) {
 	l := logger.From(ctx)
 
-	if opt.DifferentialPackagePath != "" {
-		l.Debug("creating differential package", "differential", opt.DifferentialPackagePath)
-		layoutOpt := PackageLayoutOptions{
+	if opts.DifferentialPackagePath != "" {
+		l.Debug("creating differential package", "differential", opts.DifferentialPackagePath)
+		layoutOpts := PackageLayoutOptions{
 			SkipSignatureValidation: true,
 		}
-		diffPkgLayout, err := LoadFromTar(ctx, opt.DifferentialPackagePath, layoutOpt)
+		diffPkgLayout, err := LoadFromTar(ctx, opts.DifferentialPackagePath, layoutOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -162,11 +162,11 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			return nil, err
 		}
 		pullCfg := images.PullConfig{
-			OCIConcurrency:        opt.OCIConcurrency,
+			OCIConcurrency:        opts.OCIConcurrency,
 			DestinationDirectory:  filepath.Join(buildPath, ImagesDir),
 			ImageList:             componentImages,
 			Arch:                  pkg.Metadata.Architecture,
-			RegistryOverrides:     opt.RegistryOverrides,
+			RegistryOverrides:     opts.RegistryOverrides,
 			CacheDirectory:        filepath.Join(cachePath, zoci.ImageCacheDirectory),
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
@@ -191,7 +191,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 	l.Info("composed components successfully")
 
-	if !opt.SkipSBOM && pkg.IsSBOMAble() {
+	if !opts.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
 		err := generateSBOM(ctx, pkg, buildPath, sbomImageList)
 		if err != nil {
@@ -210,7 +210,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opt.Flavor, opt.RegistryOverrides)
+	pkg = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -221,7 +221,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
-	err = signPackage(buildPath, opt.SigningKeyPath, opt.SigningKeyPassword)
+	err = signPackage(buildPath, opts.SigningKeyPath, opts.SigningKeyPassword)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +241,7 @@ type SkeletonCreateOptions struct {
 }
 
 // CreateSkeleton creates a skeleton package and returns the path to the created package.
-func CreateSkeleton(ctx context.Context, packagePath string, opt SkeletonCreateOptions) (string, error) {
+func CreateSkeleton(ctx context.Context, packagePath string, opts SkeletonCreateOptions) (string, error) {
 	pkg, err := LoadPackageDefinition(ctx, packagePath, "", nil)
 	if err != nil {
 		return "", err
@@ -282,7 +282,7 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt SkeletonCreateO
 		return "", err
 	}
 
-	err = signPackage(buildPath, opt.SigningKeyPath, opt.SigningKeyPassword)
+	err = signPackage(buildPath, opts.SigningKeyPath, opts.SigningKeyPassword)
 	if err != nil {
 		return "", err
 	}

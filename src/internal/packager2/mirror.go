@@ -38,8 +38,8 @@ type MirrorOptions struct {
 }
 
 // MirrorImages mirrors the package images to the Zarf registry
-func MirrorImages(ctx context.Context, opt MirrorOptions) error {
-	err := pushImagesToRegistry(ctx, opt.PkgLayout, opt.RegistryInfo, opt.NoImageChecksum, opt.PlainHTTP, opt.OCIConcurrency, opt.Retries, opt.InsecureSkipTLSVerify)
+func MirrorImages(ctx context.Context, opts MirrorOptions) error {
+	err := pushImagesToRegistry(ctx, opts.PkgLayout, opts.RegistryInfo, opts.NoImageChecksum, opts.PlainHTTP, opts.OCIConcurrency, opts.Retries, opts.InsecureSkipTLSVerify)
 	if err != nil {
 		return err
 	}
@@ -47,8 +47,8 @@ func MirrorImages(ctx context.Context, opt MirrorOptions) error {
 }
 
 // MirrorRepos mirrors the package repos to the Zarf git server
-func MirrorRepos(ctx context.Context, opt MirrorOptions) error {
-	err := pushReposToRepository(ctx, opt.Cluster, opt.PkgLayout, opt.GitInfo, opt.Retries)
+func MirrorRepos(ctx context.Context, opts MirrorOptions) error {
+	err := pushReposToRepository(ctx, opts.Cluster, opts.PkgLayout, opts.GitInfo, opts.Retries)
 	if err != nil {
 		return err
 	}

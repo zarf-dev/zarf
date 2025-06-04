@@ -34,24 +34,24 @@ type CreateOptions struct {
 }
 
 // Create takes a path to a directory containing a ZarfPackageConfig and creates an archived Zarf package in the output directory
-func Create(ctx context.Context, packagePath string, output string, opt CreateOptions) (err error) {
-	if opt.SkipSBOM && opt.SBOMOut != "" {
+func Create(ctx context.Context, packagePath string, output string, opts CreateOptions) (err error) {
+	if opts.SkipSBOM && opts.SBOMOut != "" {
 		return fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
 
-	createOpt := layout2.CreateOptions{
+	createOpts := layout2.CreateOptions{
 		AssembleOptions: layout2.AssembleOptions{
-			SkipSBOM:                opt.SkipSBOM,
-			OCIConcurrency:          opt.OCIConcurrency,
-			DifferentialPackagePath: opt.DifferentialPackagePath,
-			Flavor:                  opt.Flavor,
-			RegistryOverrides:       opt.RegistryOverrides,
-			SigningKeyPath:          opt.SigningKeyPath,
-			SigningKeyPassword:      opt.SigningKeyPassword,
+			SkipSBOM:                opts.SkipSBOM,
+			OCIConcurrency:          opts.OCIConcurrency,
+			DifferentialPackagePath: opts.DifferentialPackagePath,
+			Flavor:                  opts.Flavor,
+			RegistryOverrides:       opts.RegistryOverrides,
+			SigningKeyPath:          opts.SigningKeyPath,
+			SigningKeyPassword:      opts.SigningKeyPassword,
 		},
-		SetVariables: opt.SetVariables,
+		SetVariables: opts.SetVariables,
 	}
-	pkgLayout, err := layout2.CreatePackage(ctx, packagePath, createOpt)
+	pkgLayout, err := layout2.CreatePackage(ctx, packagePath, createOpts)
 	if err != nil {
 		return err
 	}
@@ -65,23 +65,23 @@ func Create(ctx context.Context, packagePath string, output string, opt CreateOp
 			return err
 		}
 		remote, err := layout2.NewRemote(ctx, ref, oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture),
-			oci.WithPlainHTTP(opt.PlainHTTP), oci.WithInsecureSkipVerify(opt.InsecureSkipTLSVerify))
+			oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
 		if err != nil {
 			return err
 		}
-		err = remote.Push(ctx, pkgLayout, opt.OCIConcurrency)
+		err = remote.Push(ctx, pkgLayout, opts.OCIConcurrency)
 		if err != nil {
 			return err
 		}
 	} else {
-		err = pkgLayout.Archive(ctx, output, opt.MaxPackageSizeMB)
+		err = pkgLayout.Archive(ctx, output, opts.MaxPackageSizeMB)
 		if err != nil {
 			return err
 		}
 	}
 
-	if opt.SBOMOut != "" {
-		err := pkgLayout.GetSBOM(ctx, filepath.Join(opt.SBOMOut, pkgLayout.Pkg.Metadata.Name))
+	if opts.SBOMOut != "" {
+		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, pkgLayout.Pkg.Metadata.Name))
 		// Don't fail package create if the package doesn't have an sbom
 		var noSBOMErr *layout2.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {

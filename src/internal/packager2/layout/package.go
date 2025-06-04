@@ -46,9 +46,9 @@ func (p *PackageLayout) DirPath() string {
 }
 
 // LoadFromTar unpacks the given archive (any compress/format) and loads it.
-func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) (*PackageLayout, error) {
-	if opt.Filter == nil {
-		opt.Filter = filters.Empty()
+func LoadFromTar(ctx context.Context, tarPath string, opts PackageLayoutOptions) (*PackageLayout, error) {
+	if opts.Filter == nil {
+		opts.Filter = filters.Empty()
 	}
 	dirPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -61,13 +61,13 @@ func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) 
 	}
 
 	// 3) Delegate to the existing LoadFromDir
-	return LoadFromDir(ctx, dirPath, opt)
+	return LoadFromDir(ctx, dirPath, opts)
 }
 
 // LoadFromDir loads and validates a package from the given directory path.
-func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) (*PackageLayout, error) {
-	if opt.Filter == nil {
-		opt.Filter = filters.Empty()
+func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions) (*PackageLayout, error) {
+	if opts.Filter == nil {
+		opts.Filter = filters.Empty()
 	}
 	b, err := os.ReadFile(filepath.Join(dirPath, ZarfYAML))
 	if err != nil {
@@ -77,7 +77,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 	if err != nil {
 		return nil, err
 	}
-	pkg.Components, err = opt.Filter.Apply(pkg)
+	pkg.Components, err = opts.Filter.Apply(pkg)
 	if err != nil {
 		return nil, err
 	}
@@ -85,11 +85,11 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 		dirPath: dirPath,
 		Pkg:     pkg,
 	}
-	err = validatePackageIntegrity(pkgLayout, opt.IsPartial)
+	err = validatePackageIntegrity(pkgLayout, opts.IsPartial)
 	if err != nil {
 		return nil, err
 	}
-	err = validatePackageSignature(ctx, pkgLayout, opt.PublicKeyPath, opt.SkipSignatureValidation)
+	err = validatePackageSignature(ctx, pkgLayout, opts.PublicKeyPath, opts.SkipSignatureValidation)
 	if err != nil {
 		return nil, err
 	}
