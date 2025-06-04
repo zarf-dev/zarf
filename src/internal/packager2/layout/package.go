@@ -83,8 +83,9 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 		return nil, err
 	}
 	if opt.Namespace != "" {
-		if err := pkg.ValidateNamespaces(1); err != nil {
-			return nil, err
+		nsCount := pkg.GetUniqueNamespaceCount()
+		if nsCount > 1 {
+			return nil, fmt.Errorf("package contains %d namespaces, cannot override namespace to %s", nsCount, opt.Namespace)
 		}
 		pkg.SetPackageNamespace(opt.Namespace)
 		pkg.Metadata.Name = fmt.Sprintf("%s-%s", pkg.Metadata.Name, opt.Namespace)

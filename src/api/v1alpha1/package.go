@@ -7,8 +7,6 @@ package v1alpha1
 import (
 	"fmt"
 	"regexp"
-	"sort"
-	"strings"
 )
 
 // VariableType represents a type of a Zarf package variable
@@ -90,37 +88,22 @@ func (pkg ZarfPackage) IsSBOMAble() bool {
 	return false
 }
 
-// ValidateNamespaces checks to ensure the package has no more than the specified number of namespaces
-func (pkg *ZarfPackage) ValidateNamespaces(maxNamespaces int) error {
-	// Collect all non‐empty existing namespaces without mutating anything.
-	seen := make(map[string]struct{})
-	for _, comp := range pkg.Components {
-		for _, chart := range comp.Charts {
-			if chart.Namespace != "" {
-				seen[chart.Namespace] = struct{}{}
-			}
+// GetUniqueNamespaceCount returns the number of unique namespaces in the package.
+func (pkg ZarfPackage) GetUniqueNamespaceCount() int {
+	uniqueNamespaces := make(map[string]struct{})
+	for _, component := range pkg.Components {
+		for _, chart := range component.Charts {
+			uniqueNamespaces[chart.Namespace] = struct{}{}
 		}
-		for _, manifest := range comp.Manifests {
-			if manifest.Namespace != "" {
-				seen[manifest.Namespace] = struct{}{}
-			}
+		for _, manifest := range component.Manifests {
+			uniqueNamespaces[manifest.Namespace] = struct{}{}
 		}
 	}
-
-	// If more than one distinct namespace was found, return an error.
-	if len(seen) > maxNamespaces {
-		oldList := make([]string, 0, len(seen))
-		for ns := range seen {
-			oldList = append(oldList, ns)
-		}
-		sort.Strings(oldList) // deterministic order
-		return fmt.Errorf("package contains more than %d distinct namespaces: %s", maxNamespaces, strings.Join(oldList, ", "))
-	}
-	return nil
+	return len(uniqueNamespaces)
 }
 
 // SetPackageNamespace updates all existing namespaces to the provided one
-func (pkg *ZarfPackage) SetPackageNamespace(namespace string) {
+func (pkg ZarfPackage) SetPackageNamespace(namespace string) {
 	for i := range pkg.Components {
 		comp := pkg.Components[i]
 		for j := range comp.Charts {
