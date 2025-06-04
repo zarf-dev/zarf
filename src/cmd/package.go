@@ -169,6 +169,8 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		SkipSBOM:                o.skipSBOM,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		DifferentialPackagePath: o.differentialPackagePath,
+		PlainHTTP:               config.CommonOptions.PlainHTTP,
+		InsecureTLSSkipVerify:   config.CommonOptions.InsecureSkipTLSVerify,
 	}
 	err := packager2.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table

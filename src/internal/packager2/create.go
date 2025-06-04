@@ -28,6 +28,10 @@ type CreateOptions struct {
 	SkipSBOM                bool
 	DifferentialPackagePath string
 	OCIConcurrency          int
+
+	// Only applicable if output is an OCI registry
+	PlainHTTP             bool
+	InsecureTLSSkipVerify bool
 }
 
 // Create takes a path to a directory containing a ZarfPackageConfig and creates an archived Zarf package in the output directory
@@ -61,7 +65,8 @@ func Create(ctx context.Context, packagePath string, output string, opt CreateOp
 		if err != nil {
 			return err
 		}
-		remote, err := layout2.NewRemote(ctx, ref, oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture))
+		remote, err := layout2.NewRemote(ctx, ref, oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture),
+			oci.WithPlainHTTP(opt.PlainHTTP), oci.WithInsecureSkipVerify(opt.InsecureTLSSkipVerify))
 		if err != nil {
 			return err
 		}
