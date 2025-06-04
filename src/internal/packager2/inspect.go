@@ -318,17 +318,19 @@ type InspectPackageDefinitionOptions struct {
 func InspectPackageDefinition(ctx context.Context, source string, opts InspectPackageDefinitionOptions) (v1alpha1.ZarfPackage, error) {
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
-	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, zoci.MetadataLayers)
+	loadOpt := LoadOptions{
+		SkipSignatureValidation: opts.SkipSignatureValidation,
+		Architecture:            config.GetArch(opts.Architecture),
+		Filter:                  filters.Empty(),
+		PublicKeyPath:           opts.PublicKeyPath,
+		LayersSelector:          zoci.MetadataLayers,
+	}
+	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, loadOpt)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to load the package: %w", err)
 	}
 
 	return pkg, nil
-}
-
-// InspectPackageImageResult is returned by InspectPackageImages
-type InspectPackageImageResult struct {
-	Images []string
 }
 
 // InspectPackageImagesOptions are optional parameters to InspectPackageImages
@@ -339,12 +341,19 @@ type InspectPackageImagesOptions struct {
 }
 
 // InspectPackageImages returns a list of the package images
-func InspectPackageImages(ctx context.Context, source string, opts InspectPackageImagesOptions) (InspectPackageImageResult, error) {
+func InspectPackageImages(ctx context.Context, source string, opts InspectPackageImagesOptions) ([]string, error) {
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
-	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, zoci.MetadataLayers)
+	loadOpt := LoadOptions{
+		SkipSignatureValidation: opts.SkipSignatureValidation,
+		Architecture:            config.GetArch(opts.Architecture),
+		Filter:                  filters.Empty(),
+		PublicKeyPath:           opts.PublicKeyPath,
+		LayersSelector:          zoci.MetadataLayers,
+	}
+	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, loadOpt)
 	if err != nil {
-		return InspectPackageImageResult{}, fmt.Errorf("unable to load the package: %w", err)
+		return nil, fmt.Errorf("unable to load the package: %w", err)
 	}
 
 	images := make([]string, 0)
@@ -353,12 +362,10 @@ func InspectPackageImages(ctx context.Context, source string, opts InspectPackag
 	}
 	images = helpers.Unique(images)
 	if len(images) == 0 {
-		return InspectPackageImageResult{}, fmt.Errorf("no images found in package")
+		return nil, fmt.Errorf("no images found in package")
 	}
 
-	return InspectPackageImageResult{
-		Images: images,
-	}, nil
+	return images, nil
 }
 
 func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig) ([]Resource, error) {

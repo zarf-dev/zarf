@@ -37,6 +37,10 @@ type DevDeployOptions struct {
 	Timeout time.Duration
 	// Retries to preform for operations like git and image pushes
 	Retries int
+	// These fields are only used if in airgap mode as they are relevant to requests from the git-server / registry
+	OCIConcurrency        int
+	PlainHTTP             bool
+	InsecureTLSSkipVerify bool
 }
 
 // DevDeploy creates + deploys a package in one shot
@@ -71,7 +75,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		Flavor:            opts.Flavor,
 		RegistryOverrides: opts.RegistryOverrides,
 		SkipSBOM:          true,
-		OCIConcurrency:    config.CommonOptions.OCIConcurrency,
+		OCIConcurrency:    opts.OCIConcurrency,
 	}
 
 	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, createOpt)
@@ -113,9 +117,9 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		SetVariables:          opts.DeploySetVariables,
 		Timeout:               opts.Timeout,
 		Retries:               opts.Retries,
-		OCIConcurrency:        config.CommonOptions.OCIConcurrency,
-		PlainHTTP:             config.CommonOptions.PlainHTTP,
-		InsecureTLSSkipVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		OCIConcurrency:        opts.OCIConcurrency,
+		PlainHTTP:             opts.PlainHTTP,
+		InsecureTLSSkipVerify: opts.InsecureTLSSkipVerify,
 	})
 	if err != nil {
 		return err

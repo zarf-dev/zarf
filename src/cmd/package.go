@@ -848,11 +848,11 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 	}
 
-	result, err := packager2.InspectPackageImages(ctx, src, inspectImageOpts)
+	images, err := packager2.InspectPackageImages(ctx, src, inspectImageOpts)
 	if err != nil {
 		return err
 	}
-	for _, image := range result.Images {
+	for _, image := range images {
 		fmt.Println("-", image)
 	}
 	return nil
@@ -1055,6 +1055,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		Source:                  packageSource,
 		Cluster:                 c,
 		Filter:                  filter,
+		Architecture:            config.GetArch(),
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 	}

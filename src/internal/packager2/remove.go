@@ -32,25 +32,29 @@ type RemoveOptions struct {
 	Filter                  filters.ComponentFilterStrategy
 	SkipSignatureValidation bool
 	PublicKeyPath           string
+	Architecture            string
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
 func Remove(ctx context.Context, opt RemoveOptions) error {
 	l := logger.From(ctx)
 
-	pkg, err := GetPackageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath, zoci.AllLayers)
+	// FIXME make sure this filter works as intended
+	loadOpt := LoadOptions{
+		SkipSignatureValidation: opt.SkipSignatureValidation,
+		Architecture:            config.GetArch(opt.Architecture),
+		Filter:                  opt.Filter,
+		PublicKeyPath:           opt.PublicKeyPath,
+		LayersSelector:          zoci.AllLayers,
+	}
+	pkg, err := GetPackageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, loadOpt)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
-	}
-	// If components were provided; just remove the things we were asked to remove
-	components, err := opt.Filter.Apply(pkg)
-	if err != nil {
-		return err
 	}
 	// Check that cluster is configured if required.
 	requiresCluster := false
 	componentIdx := map[string]v1alpha1.ZarfComponent{}
-	for _, component := range components {
+	for _, component := range pkg.Components {
 		componentIdx[component.Name] = component
 		if component.RequiresCluster() {
 			if opt.Cluster == nil {
@@ -71,7 +75,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 		// If we do not need the cluster, create a deployed components object based on the info we have
 		depPkg.Name = pkg.Metadata.Name
 		depPkg.Data = pkg
-		for _, component := range components {
+		for _, component := range pkg.Components {
 			depPkg.DeployedComponents = append(depPkg.DeployedComponents, types.DeployedComponent{Name: component.Name})
 		}
 	}
