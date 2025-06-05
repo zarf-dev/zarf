@@ -880,6 +880,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		Architecture:            config.GetArch(),
 		SkipSignatureValidation: o.skipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions: packager2.RemoteOptions{
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
