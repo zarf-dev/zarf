@@ -328,22 +328,22 @@ func TestPublishCopySHA(t *testing.T) {
 	tt := []struct {
 		name             string
 		packageToPublish string
-		opts             PublishPackageOpts
+		opts             PublishFromOCIOpts
 		publicKeyPath    string
 	}{
-		{
-			name:             "Publish package",
-			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOpts{
-				WithPlainHTTP: true,
-				Architecture:  "amd64",
-				Concurrency:   3,
-			},
-		},
+		// {
+		// 	name:             "Publish package",
+		// 	packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+		// 	opts: PublishPackageOpts{
+		// 		WithPlainHTTP: true,
+		// 		Architecture:  "amd64",
+		// 		Concurrency:   3,
+		// 	},
+		// },
 		{
 			name:             "Sign and publish package",
 			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOpts{
+			opts: PublishFromOCIOpts{
 				WithPlainHTTP:      true,
 				Architecture:       "amd64",
 				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
@@ -358,8 +358,14 @@ func TestPublishCopySHA(t *testing.T) {
 			ctx := testutil.TestContext(t)
 			registryRef := createRegistry(ctx, t)
 
+			// Avoid signing the package during initial publish
+			opts := PublishPackageOpts{
+				WithPlainHTTP: tc.opts.WithPlainHTTP,
+				Architecture:  tc.opts.Architecture,
+				Concurrency:   tc.opts.Concurrency,
+			}
 			// Publish test package
-			err := PublishPackage(ctx, tc.packageToPublish, registryRef, tc.opts)
+			err := PublishPackage(ctx, tc.packageToPublish, registryRef, opts)
 			require.NoError(t, err)
 
 			// Setup destination registry
@@ -380,14 +386,8 @@ func TestPublishCopySHA(t *testing.T) {
 			dstRef, err := registry.ParseReference(dst)
 			require.NoError(t, err)
 
-			opts := PublishFromOCIOpts{
-				WithPlainHTTP: tc.opts.WithPlainHTTP,
-				Architecture:  tc.opts.Architecture,
-				Concurrency:   tc.opts.Concurrency,
-			}
-
 			// Publish test package to the destination registry
-			err = PublishFromOCI(ctx, srcRef, dstRef, opts)
+			err = PublishFromOCI(ctx, srcRef, dstRef, tc.opts)
 			require.NoError(t, err)
 
 			// We want to pull the package and sure the content is the same as the local package

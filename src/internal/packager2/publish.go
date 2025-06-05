@@ -70,7 +70,7 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	arch := config.GetArch(opts.Architecture)
 
 	if opts.SigningKeyPath != "" {
-		l.Info("pulling package locally to sign")
+		l.Info("pulling package locally to sign", "reference", src.String())
 		tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 		if err != nil {
 			return err
@@ -78,7 +78,7 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 		defer func() {
 			err = errors.Join(err, os.RemoveAll(tmpdir))
 		}()
-		packagePath, err := Pull(ctx, src.String(), tmpdir, PullOptions{
+		packagePath, err := Pull(ctx, fmt.Sprintf("oci://%s", src.String()), tmpdir, PullOptions{
 			SkipSignatureValidation: opts.SkipSignatureValidation,
 			Architecture:            arch,
 			PublicKeyPath:           opts.PublicKeyPath,
