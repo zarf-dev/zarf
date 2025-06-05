@@ -303,6 +303,7 @@ func InspectPackageSBOM(ctx context.Context, source string, opts InspectPackageS
 		SkipSignatureValidation: opts.SkipSignatureValidation,
 		LayersSelector:          zoci.SbomLayers,
 		Filter:                  filters.Empty(),
+		OCIConcurrency:          opts.OCIConcurrency,
 		RemoteOptions:           opts.RemoteOptions,
 	}
 	pkgLayout, err := LoadPackage(ctx, source, loadOpts)
