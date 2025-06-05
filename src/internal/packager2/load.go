@@ -75,7 +75,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
 	switch srcType {
 	case "oci":
-		ociOpts := PullOCIOptions{
+		ociOpts := pullOCIOptions{
 			Source:         source,
 			Directory:      tmpDir,
 			Shasum:         opts.Shasum,

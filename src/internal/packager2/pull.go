@@ -82,8 +82,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 	return nil
 }
 
-// PullOCIOptions are the options for PullOCI.
-type PullOCIOptions struct {
+type pullOCIOptions struct {
 	Source         string
 	Directory      string
 	Shasum         string
@@ -94,7 +93,7 @@ type PullOCIOptions struct {
 	RemoteOptions
 }
 
-func pullOCI(ctx context.Context, opts PullOCIOptions) (_ bool, _ string, err error) {
+func pullOCI(ctx context.Context, opts pullOCIOptions) (_ bool, _ string, err error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return false, "", err
