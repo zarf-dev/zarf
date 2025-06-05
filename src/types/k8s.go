@@ -75,6 +75,16 @@ func DefaultZarfState() (*ZarfState, error) {
 	return state, nil
 }
 
+// DeployedPackageOptions are options for the DeployedPackage function
+type DeployedPackageOptions func(*DeployedPackage)
+
+// WithNamespaceOverride sets the namespace override
+func WithNamespaceOverride(namespaceOverride string) DeployedPackageOptions {
+	return func(o *DeployedPackage) {
+		o.NamespaceOverride = namespaceOverride
+	}
+}
+
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
@@ -84,6 +94,15 @@ type DeployedPackage struct {
 	Generation         int                  `json:"generation"`
 	DeployedComponents []DeployedComponent  `json:"deployedComponents"`
 	ConnectStrings     ConnectStrings       `json:"connectStrings,omitempty"`
+	NamespaceOverride  string               `json:"namespaceOverride,omitempty"`
+}
+
+// GetSecretName returns the k8s secret name for the deployed package
+func (d *DeployedPackage) GetSecretName() string {
+	if d.NamespaceOverride != "" {
+		return fmt.Sprintf("%s-%s-%s", "zarf-package", d.Name, d.NamespaceOverride)
+	}
+	return fmt.Sprintf("%s-%s", "zarf-package", d.Name)
 }
 
 // ConnectString contains information about a connection made with Zarf connect.

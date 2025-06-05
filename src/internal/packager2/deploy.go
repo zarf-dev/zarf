@@ -147,7 +147,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 			// If this package has been deployed before, increment the package generation within the secret
 			//nolint: errcheck // this may be the first time deploying the package therefore it will not exist
-			if existingDeployedPackage, _ := d.c.GetDeployedPackage(ctx, pkgLayout.Pkg.Metadata.Name, cluster.WithNamespaceOverride(opts.Namespace)); existingDeployedPackage != nil {
+			if existingDeployedPackage, _ := d.c.GetDeployedPackage(ctx, pkgLayout.Pkg.Metadata.Name, types.WithNamespaceOverride(opts.Namespace)); existingDeployedPackage != nil {
 				packageGeneration = existingDeployedPackage.Generation + 1
 			}
 		}
@@ -170,7 +170,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		deployedComponents = append(deployedComponents, deployedComponent)
 		idx := len(deployedComponents) - 1
 		if d.isConnectedToCluster() {
-			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, cluster.WithNamespaceOverride(opts.Namespace)); err != nil {
+			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, types.WithNamespaceOverride(opts.Namespace)); err != nil {
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
 		}
@@ -194,7 +194,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			onFailure()
 			deployedComponents[idx].Status = types.ComponentStatusFailed
 			if d.isConnectedToCluster() {
-				if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, cluster.WithNamespaceOverride(opts.Namespace)); err != nil {
+				if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, types.WithNamespaceOverride(opts.Namespace)); err != nil {
 					l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 				}
 			}
@@ -205,7 +205,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		deployedComponents[idx].InstalledCharts = charts
 		deployedComponents[idx].Status = types.ComponentStatusSucceeded
 		if d.isConnectedToCluster() {
-			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, cluster.WithNamespaceOverride(opts.Namespace)); err != nil {
+			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, types.WithNamespaceOverride(opts.Namespace)); err != nil {
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
 		}

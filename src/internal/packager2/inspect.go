@@ -342,7 +342,7 @@ type InspectPackageDefinitionOptions struct {
 func InspectPackageDefinition(ctx context.Context, source string, opts InspectPackageDefinitionOptions) (InspectPackageDefinitionResult, error) {
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
-	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, zoci.MetadataLayers)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, zoci.MetadataLayers, "")
 	if err != nil {
 		return InspectPackageDefinitionResult{}, fmt.Errorf("unable to load the package: %w", err)
 	}
@@ -368,7 +368,7 @@ type InspectPackageImagesOptions struct {
 func InspectPackageImages(ctx context.Context, source string, opts InspectPackageImagesOptions) (InspectPackageImageResult, error) {
 	cluster, _ := cluster.New(ctx) //nolint:errcheck
 
-	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, zoci.MetadataLayers)
+	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, opts.SkipSignatureValidation, opts.PublicKeyPath, zoci.MetadataLayers, "")
 	if err != nil {
 		return InspectPackageImageResult{}, fmt.Errorf("unable to load the package: %w", err)
 	}

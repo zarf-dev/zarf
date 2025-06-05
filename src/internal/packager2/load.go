@@ -240,7 +240,7 @@ func assembleSplitTar(src, dest string) (err error) {
 }
 
 // GetPackageFromSourceOrCluster retrieves a Zarf package from a source or cluster.
-func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string, layerSelector zoci.LayersSelector) (v1alpha1.ZarfPackage, error) {
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string, layerSelector zoci.LayersSelector, namespaceOverride string) (v1alpha1.ZarfPackage, error) {
 	srcType, err := identifySource(src)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
@@ -249,7 +249,7 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 		if cluster == nil {
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
 		}
-		depPkg, err := cluster.GetDeployedPackage(ctx, src)
+		depPkg, err := cluster.GetDeployedPackage(ctx, src, types.WithNamespaceOverride(namespaceOverride))
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}

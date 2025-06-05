@@ -38,13 +38,15 @@ func TestSingleNamespaceOverride(t *testing.T) {
 	// Query the state of the package - now includes the namespace-override package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "list")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "test-package-test2")
+	require.Contains(t, stdOut, "test2")
 
-	// Remove the baseline and original override packages via deployed package name
-	for _, pkg := range []string{"test-package", "test-package-test2"} {
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", pkg, "--confirm")
-		require.NoError(t, err, stdOut, stdErr)
-	}
+	// remove the baseline by package name
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-package", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// remove the namespace-override package by package name
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-package", "--namespace", "test2", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	// Redeploy the test2 package override to test tarball removal with namespace flag
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", singlePackage, "--namespace", "test2", "--confirm")
@@ -53,7 +55,7 @@ func TestSingleNamespaceOverride(t *testing.T) {
 	// Query the state of the package - now includes the namespace-override package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "list")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "test-package-test2")
+	require.Contains(t, stdOut, "test2")
 
 	// Remove the remaining package via tarball using the config file namespace override
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", singlePackage, "--namespace", "test2", "--confirm")
@@ -67,7 +69,7 @@ func TestSingleNamespaceOverride(t *testing.T) {
 	// Query the state of the package - now includes the namespace-override package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "list")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdOut, "test-package-test3")
+	require.Contains(t, stdOut, "test3")
 
 	// Remove the remaining package via tarball using the config file namespace override
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", singlePackage, "--confirm")
