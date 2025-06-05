@@ -26,7 +26,7 @@ type PullOptions struct {
 }
 
 // Pull takes a source URL and destination directory and fetches the Zarf package from the given sources.
-func Pull(ctx context.Context, source, destination string, opts PullOptions) error {
+func Pull(ctx context.Context, source, destination string, opts PullOptions) (string, error) {
 	return packager2.Pull(ctx, source, destination, packager2.PullOptions{
 		SHASum:                  opts.SHASum,
 		SkipSignatureValidation: opts.SkipSignatureValidation,

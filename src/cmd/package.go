@@ -1196,7 +1196,7 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		}
 		outputDir = wd
 	}
-	err := packager.Pull(cmd.Context(), srcURL, outputDir, packager.PullOptions{
+	packagePath, err := packager.Pull(cmd.Context(), srcURL, outputDir, packager.PullOptions{
 		SHASum:                  pkgConfig.PkgOpts.Shasum,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
@@ -1204,6 +1204,7 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	logger.From(cmd.Context()).Info("package downloaded successful", "path", packagePath)
 	return nil
 }
 

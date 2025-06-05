@@ -17,6 +17,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
+	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 
@@ -65,6 +66,25 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	}
 
 	arch := config.GetArch(opts.Architecture)
+
+	if opts.SigningKeyPath != "" {
+		tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return err
+		}
+		l.Info("pulling package locally for sign operation")
+		packagePath, err := Pull(ctx, src.String(), tmpdir, PullOptions{
+			SkipSignatureValidation: opts.SkipSignatureValidation,
+			Architecture:            arch,
+			PublicKeyPath:           opts.PublicKeyPath,
+			Filters:                 filters.Empty(),
+		})
+		if err != nil {
+			return err
+		}
+		return PublishPackage(ctx, packagePath, dst, PublishPackageOpts(opts))
+	}
+
 	p := oci.PlatformForArch(arch)
 
 	// Set up remote repo client

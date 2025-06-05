@@ -43,7 +43,7 @@ type PullOptions struct {
 }
 
 // Pull takes a source URL and destination directory and fetches the Zarf package from the given sources.
-func Pull(ctx context.Context, source, destination string, opts PullOptions) error {
+func Pull(ctx context.Context, source, destination string, opts PullOptions) (string, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -57,19 +57,19 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 
 	u, err := url.Parse(source)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if destination == "" {
-		return fmt.Errorf("no output directory specified")
+		return "", fmt.Errorf("no output directory specified")
 	}
 	if u.Scheme == "" {
-		return errors.New("scheme must be either oci:// or http(s)://")
+		return "", errors.New("scheme must be either oci:// or http(s)://")
 	}
 	if u.Host == "" {
-		return errors.New("host cannot be empty")
+		return "", errors.New("host cannot be empty")
 	}
 
-	_, err = LoadPackage(ctx, LoadOptions{
+	pkgLayout, err := LoadPackage(ctx, LoadOptions{
 		Source:                  source,
 		Shasum:                  opts.SHASum,
 		Architecture:            arch,
@@ -79,10 +79,15 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) err
 		Output:                  destination,
 	})
 	if err != nil {
-		return err
+		return "", err
 	}
+	filename, err := pkgLayout.FileName()
+	if err != nil {
+		return "", err
+	}
+	filepath := filepath.Join(destination, filename)
 	l.Debug("done packager2.Pull", "source", source, "destination", destination, "duration", time.Since(start))
-	return nil
+	return filepath, nil
 }
 
 // PullOCIOptions are the options for PullOCI.

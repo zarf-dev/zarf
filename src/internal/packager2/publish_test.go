@@ -220,9 +220,10 @@ func TestPublishSkeleton(t *testing.T) {
 
 func TestPublishPackage(t *testing.T) {
 	tt := []struct {
-		name string
-		path string
-		opts PublishPackageOpts
+		name          string
+		path          string
+		opts          PublishPackageOpts
+		publicKeyPath string
 	}{
 		{
 			name: "Publish package",
@@ -230,6 +231,17 @@ func TestPublishPackage(t *testing.T) {
 			opts: PublishPackageOpts{
 				WithPlainHTTP: true,
 			},
+		},
+		{
+			name: "Sign and publish package",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOpts{
+				WithPlainHTTP:      true,
+				Architecture:       "amd64",
+				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
+				SigningKeyPassword: "password",
+			},
+			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
 		},
 	}
 
@@ -249,8 +261,11 @@ func TestPublishPackage(t *testing.T) {
 			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), layoutExpected.Pkg)
 			require.NoError(t, err)
 
-			layoutActual := pullFromRemote(ctx, t, packageRef, "amd64", "")
+			layoutActual := pullFromRemote(ctx, t, packageRef, "amd64", tc.publicKeyPath)
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
+			if tc.publicKeyPath != "" {
+				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Signature))
+			}
 		})
 	}
 }
@@ -305,46 +320,6 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(t, expectedDigest, latestDesc.Digest.String(), "Original digest is not the same as the latest")
-		})
-	}
-}
-
-func TestSignPublishPackage(t *testing.T) {
-	tt := []struct {
-		name          string
-		path          string
-		opts          PublishPackageOpts
-		publicKeyPath string
-	}{
-		{
-			name: "Publish package",
-			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOpts{
-				WithPlainHTTP:      true,
-				Architecture:       "amd64",
-				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
-				SigningKeyPassword: "password",
-			},
-			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
-		},
-	}
-
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := testutil.TestContext(t)
-			registryRef := createRegistry(ctx, t)
-
-			// Publish test package
-			err := PublishPackage(ctx, tc.path, registryRef, tc.opts)
-			require.NoError(t, err)
-
-			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{Filter: filters.Empty()})
-			require.NoError(t, err)
-			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), layoutExpected.Pkg)
-			require.NoError(t, err)
-
-			pkgLayout := pullFromRemote(ctx, t, packageRef, tc.opts.Architecture, tc.publicKeyPath)
-			require.FileExists(t, filepath.Join(pkgLayout.DirPath(), layout.Signature))
 		})
 	}
 }

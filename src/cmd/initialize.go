@@ -219,7 +219,7 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) error {
 			Architecture: config.GetArch(),
 		}
 
-		err := packager2.Pull(ctx, url, cacheDirectory, pullOptions)
+		_, err := packager2.Pull(ctx, url, cacheDirectory, pullOptions)
 		if err != nil {
 			return fmt.Errorf("unable to download the init package: %w", err)
 		}
