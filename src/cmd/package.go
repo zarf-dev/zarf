@@ -167,11 +167,11 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		MaxPackageSizeMB:        o.maxPackageSizeMB,
 		SBOMOut:                 o.sbomOutput,
 		SkipSBOM:                o.skipSBOM,
-		Output:                  o.output,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		DifferentialPackagePath: o.differentialPackagePath,
+		RemoteOptions:           defaultRemoteOptions(),
 	}
-	err := packager2.Create(ctx, baseDir, opt)
+	err := packager2.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -239,14 +239,15 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
 	loadOpt := packager2.LoadOptions{
-		Source:                  packageSource,
 		Shasum:                  pkgConfig.PkgOpts.Shasum,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
 	}
-	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
+	pkgLayout, err := packager2.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
 		return fmt.Errorf("unable to load package: %w", err)
 	}
@@ -259,9 +260,8 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		Timeout:                pkgConfig.DeployOpts.Timeout,
 		Retries:                pkgConfig.PkgOpts.Retries,
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
-		PlainHTTP:              config.CommonOptions.PlainHTTP,
-		InsecureTLSSkipVerify:  config.CommonOptions.InsecureSkipTLSVerify,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
+		RemoteOptions:          defaultRemoteOptions(),
 	}
 
 	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts)
@@ -454,13 +454,15 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	)
 
 	loadOpt := packager2.LoadOptions{
-		Source:                  src,
 		Shasum:                  pkgConfig.PkgOpts.Shasum,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		Filter:                  filter,
+		Architecture:            config.GetArch(),
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
 	}
-	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
+	pkgLayout, err := packager2.LoadPackage(ctx, src, loadOpt)
 	if err != nil {
 		return err
 	}
@@ -500,14 +502,13 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 			pkgConfig.InitOpts.RegistryInfo = state.RegistryInfo
 		}
 		mirrorOpt := packager2.MirrorOptions{
-			Cluster:               c,
-			PkgLayout:             pkgLayout,
-			RegistryInfo:          pkgConfig.InitOpts.RegistryInfo,
-			NoImageChecksum:       pkgConfig.MirrorOpts.NoImgChecksum,
-			Retries:               pkgConfig.PkgOpts.Retries,
-			OCIConcurrency:        config.CommonOptions.OCIConcurrency,
-			PlainHTTP:             config.CommonOptions.PlainHTTP,
-			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+			Cluster:         c,
+			PkgLayout:       pkgLayout,
+			RegistryInfo:    pkgConfig.InitOpts.RegistryInfo,
+			NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
+			Retries:         pkgConfig.PkgOpts.Retries,
+			OCIConcurrency:  config.CommonOptions.OCIConcurrency,
+			RemoteOptions:   defaultRemoteOptions(),
 		}
 		err = packager2.MirrorImages(ctx, mirrorOpt)
 		if err != nil {
@@ -534,14 +535,13 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		}
 
 		mirrorOpt := packager2.MirrorOptions{
-			Cluster:               c,
-			PkgLayout:             pkgLayout,
-			GitInfo:               pkgConfig.InitOpts.GitServer,
-			NoImageChecksum:       pkgConfig.MirrorOpts.NoImgChecksum,
-			Retries:               pkgConfig.PkgOpts.Retries,
-			OCIConcurrency:        config.CommonOptions.OCIConcurrency,
-			PlainHTTP:             config.CommonOptions.PlainHTTP,
-			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+			Cluster:         c,
+			PkgLayout:       pkgLayout,
+			GitInfo:         pkgConfig.InitOpts.GitServer,
+			NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
+			Retries:         pkgConfig.PkgOpts.Retries,
+			OCIConcurrency:  config.CommonOptions.OCIConcurrency,
+			RemoteOptions:   defaultRemoteOptions(),
 		}
 		err = packager2.MirrorRepos(ctx, mirrorOpt)
 		if err != nil {
@@ -664,19 +664,21 @@ func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) 
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SetVariables:            o.setVariables,
 		KubeVersion:             o.kubeVersion,
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
 	}
 
-	result, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
+	resources, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
 	if err != nil {
 		return err
 	}
-	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
+	resources = slices.DeleteFunc(resources, func(r packager2.Resource) bool {
 		return r.ResourceType != packager2.ValuesFileResource
 	})
-	if len(result.Resources) == 0 {
+	if len(resources) == 0 {
 		return fmt.Errorf("0 values files found")
 	}
-	for _, resource := range result.Resources {
+	for _, resource := range resources {
 		fmt.Fprintf(o.outputWriter, "# associated chart: %s\n", resource.Name)
 		fmt.Fprintf(o.outputWriter, "%s---\n", resource.Content)
 	}
@@ -731,19 +733,22 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SetVariables:            o.setVariables,
 		KubeVersion:             o.kubeVersion,
+		Components:              o.components,
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
 	}
 
-	result, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
+	resources, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
 	if err != nil {
 		return err
 	}
-	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
+	resources = slices.DeleteFunc(resources, func(r packager2.Resource) bool {
 		return r.ResourceType == packager2.ValuesFileResource
 	})
-	if len(result.Resources) == 0 {
+	if len(resources) == 0 {
 		return fmt.Errorf("0 manifests found")
 	}
-	for _, resource := range result.Resources {
+	for _, resource := range resources {
 		fmt.Fprintf(o.outputWriter, "#type: %s\n", resource.ResourceType)
 		// Helm charts already provide a comment on the source when templated
 		if resource.ResourceType == packager2.ManifestResource {
@@ -796,13 +801,15 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		OutputDir:               o.outputDir,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		Architecture:            config.GetArch(),
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
 	}
 
-	result, err := packager2.InspectPackageSBOM(ctx, src, inspectOptions)
+	path, err := packager2.InspectPackageSBOM(ctx, src, inspectOptions)
 	if err != nil {
 		return err
 	}
-	outputPath, err := filepath.Abs(result.Path)
+	outputPath, err := filepath.Abs(path)
 	if err != nil {
 		logger.From(ctx).Warn("SBOM successfully extracted, couldn't get output path", "error", err)
 		return nil
@@ -847,13 +854,15 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		Architecture:            config.GetArch(),
 		SkipSignatureValidation: o.skipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
 	}
 
-	result, err := packager2.InspectPackageImages(ctx, src, inspectImageOpts)
+	images, err := packager2.InspectPackageImages(ctx, src, inspectImageOpts)
 	if err != nil {
 		return err
 	}
-	for _, image := range result.Images {
+	for _, image := range images {
 		fmt.Println("-", image)
 	}
 	return nil
@@ -895,14 +904,16 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		Architecture:            config.GetArch(),
 		SkipSignatureValidation: o.skipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
 	}
 
-	result, err := packager2.InspectPackageDefinition(ctx, src, defOpts)
+	pkg, err := packager2.InspectPackageDefinition(ctx, src, defOpts)
 	if err != nil {
 		return err
 	}
 
-	err = utils.ColorPrintYAML(result.Package, nil, false)
+	err = utils.ColorPrintYAML(pkg, nil, false)
 	if err != nil {
 		return err
 	}
@@ -1053,13 +1064,15 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	)
 	c, _ := cluster.New(ctx) //nolint:errcheck
 	removeOpt := packager2.RemoveOptions{
-		Source:                  packageSource,
 		Cluster:                 c,
 		Filter:                  filter,
+		Architecture:            config.GetArch(),
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		Timeout:                 config.ZarfDefaultTimeout,
+		RemoteOptions:           defaultRemoteOptions(),
 	}
-	err = packager2.Remove(ctx, removeOpt)
+	err = packager2.Remove(ctx, packageSource, removeOpt)
 	if err != nil {
 		return err
 	}
@@ -1119,7 +1132,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			Concurrency:        config.CommonOptions.OCIConcurrency,
 			SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
 			SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
-			WithPlainHTTP:      config.CommonOptions.PlainHTTP,
+			RemoteOptions:      defaultRemoteOptions(),
 		}
 
 		return packager2.PublishSkeleton(cmd.Context(), packageSource, ref, skeletonOpts)
@@ -1131,9 +1144,9 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			SigningKeyPath:          pkgConfig.PublishOpts.SigningKeyPath,
 			SigningKeyPassword:      pkgConfig.PublishOpts.SigningKeyPassword,
 			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
-			WithPlainHTTP:           config.CommonOptions.PlainHTTP,
 			PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 			Architecture:            config.GetArch(),
+			RemoteOptions:           defaultRemoteOptions(),
 		}
 
 		// source registry reference
@@ -1158,9 +1171,9 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		SigningKeyPath:          pkgConfig.PublishOpts.SigningKeyPath,
 		SigningKeyPassword:      pkgConfig.PublishOpts.SigningKeyPassword,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
-		WithPlainHTTP:           config.CommonOptions.PlainHTTP,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		Architecture:            config.GetArch(),
+		RemoteOptions:           defaultRemoteOptions(),
 	}
 
 	return packager2.PublishPackage(cmd.Context(), packageSource, ref, publishPackageOpts)
@@ -1200,6 +1213,9 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		SHASum:                  pkgConfig.PkgOpts.Shasum,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		Architecture:            config.GetArch(),
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
 	})
 	if err != nil {
 		return err

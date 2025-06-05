@@ -33,12 +33,11 @@ type PublishFromOCIOpts struct {
 	SigningKeyPassword string
 	// SkipSignatureValidation flags whether Publish should skip validating the signature.
 	SkipSignatureValidation bool
-	// WithPlainHTTP falls back to plain HTTP for the registry calls instead of TLS.
-	WithPlainHTTP bool
 	// PublicKeyPath validates the create time signage of a package.
 	PublicKeyPath string
 	// Architecture is the architecture we are publishing to
 	Architecture string
+	RemoteOptions
 }
 
 // PublishFromOCI takes a source and destination registry reference and a PublishFromOCIOpts and copies the package from the source to the destination.
@@ -68,11 +67,11 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	p := oci.PlatformForArch(arch)
 
 	// Set up remote repo client
-	srcRemote, err := zoci.NewRemote(ctx, src.String(), p, oci.WithPlainHTTP(opts.WithPlainHTTP))
+	srcRemote, err := zoci.NewRemote(ctx, src.String(), p, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
-	dstRemote, err := zoci.NewRemote(ctx, dst.String(), p, oci.WithPlainHTTP(opts.WithPlainHTTP))
+	dstRemote, err := zoci.NewRemote(ctx, dst.String(), p, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
@@ -97,12 +96,11 @@ type PublishPackageOpts struct {
 	SigningKeyPassword string
 	// SkipSignatureValidation flags whether Publish should skip validating the signature.
 	SkipSignatureValidation bool
-	// WithPlainHTTP falls back to plain HTTP for the registry calls instead of TLS.
-	WithPlainHTTP bool
 	// PublicKeyPath validates the create time signage of a package.
 	PublicKeyPath string
 	// Architecture is the architecture we are publishing to
 	Architecture string
+	RemoteOptions
 }
 
 // PublishPackage takes a Path to the location of the built package, a ref to a registry, and a PublishOpts and uploads to the target OCI registry.
@@ -129,7 +127,7 @@ func PublishPackage(ctx context.Context, path string, dst registry.Reference, op
 		return fmt.Errorf("unable to load package: %w", err)
 	}
 
-	return pushToRemote(ctx, pkgLayout, dst, opts.Concurrency, opts.WithPlainHTTP)
+	return pushToRemote(ctx, pkgLayout, dst, opts.Concurrency, opts.RemoteOptions)
 }
 
 // PublishSkeletonOpts declares the parameters to publish a skeleton package.
@@ -140,8 +138,7 @@ type PublishSkeletonOpts struct {
 	SigningKeyPath string
 	// SigningKeyPassword holds a password to use the key at SigningKeyPath.
 	SigningKeyPassword string
-	// WithPlainHTTP falls back to plain HTTP for the registry calls instead of TLS.
-	WithPlainHTTP bool
+	RemoteOptions
 }
 
 // PublishSkeleton takes a Path to the location of the build package, a ref to a registry, and a PublishOpts and uploads the skeleton package to the target OCI registry.
@@ -173,7 +170,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		return fmt.Errorf("unable to create skeleton: %w", err)
 	}
 
-	err = pushToRemote(ctx, pkgLayout, ref, opts.Concurrency, opts.WithPlainHTTP)
+	err = pushToRemote(ctx, pkgLayout, ref, opts.Concurrency, opts.RemoteOptions)
 	if err != nil {
 		return err
 	}
@@ -201,7 +198,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 }
 
 // pushToRemote pushes a package to a remote at ref.
-func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, plainHTTP bool) error {
+func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, remoteOpts RemoteOptions) error {
 	// Build Reference for remote from registry location and pkg
 	r, err := zoci.ReferenceFromMetadata(ref.String(), layout.Pkg)
 	if err != nil {
@@ -212,7 +209,7 @@ func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registr
 	// Set platform
 	p := oci.PlatformForArch(arch)
 
-	remote, err := zoci.NewRemote(ctx, r, p, oci.WithPlainHTTP(plainHTTP))
+	remote, err := zoci.NewRemote(ctx, r, p, oci.WithPlainHTTP(remoteOpts.PlainHTTP), oci.WithInsecureSkipVerify(remoteOpts.InsecureSkipTLSVerify))
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
