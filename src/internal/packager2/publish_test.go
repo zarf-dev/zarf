@@ -238,17 +238,6 @@ func TestPublishPackage(t *testing.T) {
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
 		},
-		{
-			name: "Sign and publish package",
-			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOpts{
-				RemoteOptions:      defaultTestRemoteOptions(),
-				Architecture:       "amd64",
-				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
-				SigningKeyPassword: "password",
-			},
-			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
-		},
 	}
 
 	for _, tc := range tt {
@@ -415,18 +404,6 @@ func TestPublishCopyTag(t *testing.T) {
 				Architecture:  "amd64",
 				Concurrency:   3,
 			},
-		},
-		{
-			name:             "Sign and publish package",
-			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishFromOCIOpts{
-				RemoteOptions:      defaultTestRemoteOptions(),
-				Architecture:       "amd64",
-				Concurrency:        3,
-				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
-				SigningKeyPassword: "password",
-			},
-			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
 		},
 	}
 

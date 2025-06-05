@@ -27,10 +27,6 @@ import (
 type PublishFromOCIOpts struct {
 	// Concurrency configures the zoci push concurrency if empty defaults to 3.
 	Concurrency int
-	// SigningKeyPath points to a signing key on the local disk.
-	SigningKeyPath string
-	// SigningKeyPassword holds a password to use the key at SigningKeyPath.
-	SigningKeyPassword string
 	// SkipSignatureValidation flags whether Publish should skip validating the signature.
 	SkipSignatureValidation bool
 	// PublicKeyPath validates the create time signage of a package.
@@ -64,32 +60,6 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	}
 
 	arch := config.GetArch(opts.Architecture)
-
-	// if opts.SigningKeyPath != "" {
-	// 	l.Info("pulling package locally to sign", "reference", src.String())
-	// 	tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	defer func() {
-	// 		err = errors.Join(err, os.RemoveAll(tmpdir))
-	// 	}()
-	// 	packagePath, err := Pull(ctx, fmt.Sprintf("%s%s", helpers.OCIURLPrefix, src.String()), tmpdir, PullOptions{
-	// 		SkipSignatureValidation: opts.SkipSignatureValidation,
-	// 		Architecture:            arch,
-	// 		PublicKeyPath:           opts.PublicKeyPath,
-	// 		RemoteOptions:           opts.RemoteOptions,
-	// 	})
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to pull package: %w", err)
-	// 	}
-	// 	refRepo, err := registry.ParseReference(dst.Registry)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	return PublishPackage(ctx, packagePath, refRepo, PublishPackageOpts(opts))
-	// }
-
 	p := oci.PlatformForArch(arch)
 
 	// Set up remote repo client
