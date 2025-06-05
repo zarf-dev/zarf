@@ -315,10 +315,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		Timeout:            pkgConfig.DeployOpts.Timeout,
 		Retries:            pkgConfig.PkgOpts.Retries,
 		OCIConcurrency:     config.CommonOptions.OCIConcurrency,
-		RemoteOptions: packager2.RemoteOptions{
-			PlainHTTP:             config.CommonOptions.PlainHTTP,
-			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
-		},
+		RemoteOptions:      defaultRemoteOptions(),
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
