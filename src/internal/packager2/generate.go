@@ -6,6 +6,7 @@ package packager2
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -21,12 +22,6 @@ import (
 
 // GenerateOptions are the options for generating a Zarf package.
 type GenerateOptions struct {
-	// Name of the package
-	PackageName string
-	// Version of the Helm chart
-	Version string
-	// URL to the Helm chart
-	URL string
 	// Path to the Helm chart in the git repository
 	GitPath string
 	// Kube version to provide to the Helm chart
@@ -34,17 +29,26 @@ type GenerateOptions struct {
 }
 
 // Generate a Zarf package definition using information about a Helm chart.
-func Generate(ctx context.Context, opts *GenerateOptions) (pkg v1alpha1.ZarfPackage, err error) {
+func Generate(ctx context.Context, packageName, url, version string, opts GenerateOptions) (pkg v1alpha1.ZarfPackage, err error) {
+	if packageName == "" {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("must provide a package name")
+	}
+	if url == "" {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("must provide a URL")
+	}
+	if version == "" {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("must provide a version")
+	}
 	l := logger.From(ctx)
 	generatedComponent := v1alpha1.ZarfComponent{
-		Name:     opts.PackageName,
+		Name:     packageName,
 		Required: helpers.BoolPtr(true),
 		Charts: []v1alpha1.ZarfChart{
 			{
-				Name:      opts.PackageName,
-				Version:   opts.Version,
-				Namespace: opts.PackageName,
-				URL:       opts.URL,
+				Name:      packageName,
+				Version:   version,
+				Namespace: packageName,
+				URL:       url,
 				GitPath:   opts.GitPath,
 			},
 		},
@@ -53,8 +57,8 @@ func Generate(ctx context.Context, opts *GenerateOptions) (pkg v1alpha1.ZarfPack
 	pkg = v1alpha1.ZarfPackage{
 		Kind: v1alpha1.ZarfPackageConfig,
 		Metadata: v1alpha1.ZarfMetadata{
-			Name:        opts.PackageName,
-			Version:     opts.Version,
+			Name:        packageName,
+			Version:     version,
 			Description: "auto-generated using `zarf dev generate`",
 		},
 		Components: []v1alpha1.ZarfComponent{
@@ -76,17 +80,17 @@ func Generate(ctx context.Context, opts *GenerateOptions) (pkg v1alpha1.ZarfPack
 	if err := os.WriteFile(filepath.Join(tmpGeneratePath, layout.ZarfYAML), b, helpers.ReadAllWriteUser); err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	results, err := FindImages(ctx, tmpGeneratePath, FindImagesOptions{
+	imagesScans, err := FindImages(ctx, tmpGeneratePath, FindImagesOptions{
 		KubeVersionOverride: opts.KubeVersion,
 	})
 	if err != nil {
 		// purposefully not returning error here, as we can still generate the package without images
 		l.Error("failed to find images", "error", err.Error())
 	}
-	for i, component := range results.ComponentImageScans {
-		pkg.Components[i].Images = append(pkg.Components[i].Images, component.Matches...)
-		pkg.Components[i].Images = append(pkg.Components[i].Images, component.PotentialMatches...)
-		pkg.Components[i].Images = append(pkg.Components[i].Images, component.CosignArtifacts...)
+	for i, imageScan := range imagesScans {
+		pkg.Components[i].Images = append(pkg.Components[i].Images, imageScan.Matches...)
+		pkg.Components[i].Images = append(pkg.Components[i].Images, imageScan.PotentialMatches...)
+		pkg.Components[i].Images = append(pkg.Components[i].Images, imageScan.CosignArtifacts...)
 	}
 
 	if err := lint.ValidatePackage(pkg); err != nil {

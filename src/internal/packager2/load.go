@@ -30,27 +30,34 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
-	Source                  string
 	Shasum                  string
 	Architecture            string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
-	LayersSelector          zoci.LayersSelector
 	Output                  string
+	// number of layers to pull in parallel
+	OCIConcurrency int
+	// Layers to pull during OCI pull
+	LayersSelector zoci.LayersSelector
+	// Only applicable to OCI + HTTP
+	RemoteOptions
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
-func LoadPackage(ctx context.Context, opt LoadOptions) (_ *layout.PackageLayout, err error) {
-	if opt.Filter == nil {
-		opt.Filter = filters.Empty()
+func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layout.PackageLayout, err error) {
+	if source == "" {
+		return nil, fmt.Errorf("must provide a package source")
+	}
+	if opts.Filter == nil {
+		opts.Filter = filters.Empty()
 	}
 
-	if opt.LayersSelector == "" {
-		opt.LayersSelector = zoci.AllLayers
+	if opts.LayersSelector == "" {
+		opts.LayersSelector = zoci.AllLayers
 	}
 
-	srcType, err := identifySource(opt.Source)
+	srcType, err := identifySource(source)
 	if err != nil {
 		return nil, err
 	}
@@ -68,13 +75,15 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (_ *layout.PackageLayout,
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
 	switch srcType {
 	case "oci":
-		ociOpts := PullOCIOptions{
-			Source:         opt.Source,
+		ociOpts := pullOCIOptions{
+			Source:         source,
 			Directory:      tmpDir,
-			Shasum:         opt.Shasum,
-			Architecture:   config.GetArch(opt.Architecture),
-			Filter:         opt.Filter,
-			LayersSelector: opt.LayersSelector,
+			Shasum:         opts.Shasum,
+			Architecture:   config.GetArch(opts.Architecture),
+			Filter:         opts.Filter,
+			LayersSelector: opts.LayersSelector,
+			OCIConcurrency: opts.OCIConcurrency,
+			RemoteOptions:  opts.RemoteOptions,
 		}
 
 		isPartial, tmpPath, err = pullOCI(ctx, ociOpts)
@@ -82,51 +91,51 @@ func LoadPackage(ctx context.Context, opt LoadOptions) (_ *layout.PackageLayout,
 			return nil, err
 		}
 	case "http", "https":
-		tmpPath, err = pullHTTP(ctx, opt.Source, tmpDir, opt.Shasum)
+		tmpPath, err = pullHTTP(ctx, source, tmpDir, opts.Shasum, opts.InsecureSkipTLSVerify)
 		if err != nil {
 			return nil, err
 		}
 	case "split":
 		// If there is not already a target output, then output to the same directory so the split file can become a single tar
-		if opt.Output == "" {
-			opt.Output = filepath.Dir(opt.Source)
+		if opts.Output == "" {
+			opts.Output = filepath.Dir(source)
 		}
-		err := assembleSplitTar(opt.Source, tmpPath)
+		err := assembleSplitTar(source, tmpPath)
 		if err != nil {
 			return nil, err
 		}
 	case "tarball":
-		tmpPath = opt.Source
+		tmpPath = source
 	default:
 		err := fmt.Errorf("cannot fetch or locate tarball for unsupported source type %s", srcType)
 		return nil, err
 	}
 
 	// Verify checksum if provided
-	if srcType != "oci" && opt.Shasum != "" {
-		if err := helpers.SHAsMatch(tmpPath, opt.Shasum); err != nil {
+	if srcType != "oci" && opts.Shasum != "" {
+		if err := helpers.SHAsMatch(tmpPath, opts.Shasum); err != nil {
 			return nil, fmt.Errorf("SHA256 mismatch for %s: %w", tmpPath, err)
 		}
 	}
 
 	// Load package layout
-	layoutOpt := layout.PackageLayoutOptions{
-		PublicKeyPath:           opt.PublicKeyPath,
-		SkipSignatureValidation: opt.SkipSignatureValidation,
+	layoutOpts := layout.PackageLayoutOptions{
+		PublicKeyPath:           opts.PublicKeyPath,
+		SkipSignatureValidation: opts.SkipSignatureValidation,
 		IsPartial:               isPartial,
-		Filter:                  opt.Filter,
+		Filter:                  opts.Filter,
 	}
-	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpt)
+	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpts)
 	if err != nil {
 		return nil, err
 	}
 
-	if opt.Output != "" {
+	if opts.Output != "" {
 		filename, err := pkgLayout.FileName()
 		if err != nil {
 			return nil, err
 		}
-		tarPath := filepath.Join(opt.Output, filename)
+		tarPath := filepath.Join(opts.Output, filename)
 		err = os.Remove(tarPath)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return nil, err
@@ -240,7 +249,7 @@ func assembleSplitTar(src, dest string) (err error) {
 }
 
 // GetPackageFromSourceOrCluster retrieves a Zarf package from a source or cluster.
-func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, skipSignatureValidation bool, publicKeyPath string, layerSelector zoci.LayersSelector) (v1alpha1.ZarfPackage, error) {
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, opts LoadOptions) (_ v1alpha1.ZarfPackage, err error) {
 	srcType, err := identifySource(src)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
@@ -255,20 +264,14 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 		}
 		return depPkg.Data, nil
 	}
-
-	loadOpt := LoadOptions{
-		Source:                  src,
-		SkipSignatureValidation: skipSignatureValidation,
-		Architecture:            config.GetArch(),
-		Filter:                  filters.Empty(),
-		PublicKeyPath:           publicKeyPath,
-		LayersSelector:          layerSelector,
-	}
-	p, err := LoadPackage(ctx, loadOpt)
+	// This function only returns the ZarfPackageConfig so we only need the metadata
+	opts.LayersSelector = zoci.MetadataLayers
+	pkgLayout, err := LoadPackage(ctx, src, opts)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	//nolint: errcheck // ignore
-	defer p.Cleanup()
-	return p.Pkg, nil
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+	return pkgLayout.Pkg, nil
 }

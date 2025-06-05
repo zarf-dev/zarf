@@ -38,6 +38,9 @@ type DevDeployOptions struct {
 	Timeout time.Duration
 	// Retries to preform for operations like git and image pushes
 	Retries int
+	// These fields are only used if in airgap mode as they are relevant to requests from the git-server / registry
+	OCIConcurrency int
+	RemoteOptions
 }
 
 // DevDeploy creates + deploys a package in one shot
@@ -72,14 +75,13 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		}
 	}
 
-	createOpt := layout.AssembleOptions{
+	createOpts := layout.AssembleOptions{
 		Flavor:            opts.Flavor,
 		RegistryOverrides: opts.RegistryOverrides,
 		SkipSBOM:          true,
-		OCIConcurrency:    config.CommonOptions.OCIConcurrency,
+		OCIConcurrency:    opts.OCIConcurrency,
 	}
-
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, createOpt)
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, createOpts)
 	if err != nil {
 		return err
 	}
@@ -115,12 +117,14 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 
 	// Get a list of all the components we are deploying and actually deploy them
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, DeployOpts{
-		SetVariables:          opts.DeploySetVariables,
-		Timeout:               opts.Timeout,
-		Retries:               opts.Retries,
-		OCIConcurrency:        config.CommonOptions.OCIConcurrency,
-		PlainHTTP:             config.CommonOptions.PlainHTTP,
-		InsecureTLSSkipVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		SetVariables:   opts.DeploySetVariables,
+		Timeout:        opts.Timeout,
+		Retries:        opts.Retries,
+		OCIConcurrency: opts.OCIConcurrency,
+		RemoteOptions: RemoteOptions{
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		},
 	})
 	if err != nil {
 		return err

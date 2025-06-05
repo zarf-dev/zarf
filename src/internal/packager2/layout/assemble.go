@@ -57,16 +57,16 @@ type AssembleOptions struct {
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
-func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt AssembleOptions) (*PackageLayout, error) {
+func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleOptions) (*PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
-	if opt.DifferentialPackagePath != "" {
-		l.Debug("creating differential package", "differential", opt.DifferentialPackagePath)
-		layoutOpt := PackageLayoutOptions{
+	if opts.DifferentialPackagePath != "" {
+		l.Debug("creating differential package", "differential", opts.DifferentialPackagePath)
+		layoutOpts := PackageLayoutOptions{
 			SkipSignatureValidation: true,
 		}
-		diffPkgLayout, err := LoadFromTar(ctx, opt.DifferentialPackagePath, layoutOpt)
+		diffPkgLayout, err := LoadFromTar(ctx, opts.DifferentialPackagePath, layoutOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -130,11 +130,11 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			return nil, err
 		}
 		pullCfg := images.PullConfig{
-			OCIConcurrency:        opt.OCIConcurrency,
+			OCIConcurrency:        opts.OCIConcurrency,
 			DestinationDirectory:  filepath.Join(buildPath, ImagesDir),
 			ImageList:             componentImages,
 			Arch:                  pkg.Metadata.Architecture,
-			RegistryOverrides:     opt.RegistryOverrides,
+			RegistryOverrides:     opts.RegistryOverrides,
 			CacheDirectory:        filepath.Join(cachePath, ImagesDir),
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
@@ -159,7 +159,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 	l.Info("composed components successfully")
 
-	if !opt.SkipSBOM && pkg.IsSBOMAble() {
+	if !opts.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
 		err := generateSBOM(ctx, pkg, buildPath, sbomImageList)
 		if err != nil {
@@ -178,7 +178,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opt.Flavor, opt.RegistryOverrides)
+	pkg = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -189,7 +189,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
-	err = signPackage(buildPath, opt.SigningKeyPath, opt.SigningKeyPassword)
+	err = signPackage(buildPath, opts.SigningKeyPath, opts.SigningKeyPassword)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +209,7 @@ type AssembleSkeletonOptions struct {
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
-func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt AssembleSkeletonOptions) (*PackageLayout, error) {
+func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleSkeletonOptions) (*PackageLayout, error) {
 	pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -246,7 +246,7 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 		return nil, err
 	}
 
-	err = signPackage(buildPath, opt.SigningKeyPath, opt.SigningKeyPassword)
+	err = signPackage(buildPath, opts.SigningKeyPath, opts.SigningKeyPassword)
 	if err != nil {
 		return nil, err
 	}
