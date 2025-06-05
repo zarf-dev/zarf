@@ -649,7 +649,7 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 
 	message.Successf(lang.CmdToolsGenKeySuccess, prvKeyFileName, pubKeyFileName)
 	logger.From(cmd.Context()).Info("Successfully generated key pair",
-		"private-key-path", prvKeyExistsErr,
+		"private-key-path", prvKeyFileName,
 		"public-key-path", pubKeyFileName)
 
 	return nil

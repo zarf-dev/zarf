@@ -123,6 +123,11 @@ func (p *PackageLayout) ContainsSBOM() bool {
 	return !helpers.InvalidPath(filepath.Join(p.dirPath, SBOMTar))
 }
 
+// SignPackage signs the zarf package
+func (p *PackageLayout) SignPackage(signingKeyPath, signingKeyPassword string) error {
+	return signPackage(p.dirPath, signingKeyPath, signingKeyPassword)
+}
+
 // GetSBOM outputs the SBOM data from the package to the given destination path.
 func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 	if !p.ContainsSBOM() {

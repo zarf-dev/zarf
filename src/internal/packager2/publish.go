@@ -128,6 +128,9 @@ func PublishPackage(ctx context.Context, path string, dst registry.Reference, op
 	if err != nil {
 		return fmt.Errorf("unable to load package: %w", err)
 	}
+	if err := pkgLayout.SignPackage(opts.SigningKeyPath, opts.SigningKeyPassword); err != nil {
+		return fmt.Errorf("unable to sign package: %w", err)
+	}
 
 	return pushToRemote(ctx, pkgLayout, dst, opts.Concurrency, opts.WithPlainHTTP)
 }
