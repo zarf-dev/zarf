@@ -34,7 +34,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Use same default as Helm CLI does.
@@ -58,7 +57,7 @@ type InstallUpgradeOpts struct {
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
-func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chart.Chart, values chartutil.Values, opts InstallUpgradeOpts) (types.ConnectStrings, string, error) {
+func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chart.Chart, values chartutil.Values, opts InstallUpgradeOpts) (state.ConnectStrings, string, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	source := zarfChart.URL

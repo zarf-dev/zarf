@@ -29,7 +29,7 @@ import (
 // GetDeployedZarfPackages gets metadata information about packages that have been deployed to the cluster.
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
 // Returns a list of DeployedPackage structs and a list of errors.
-func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.DeployedPackage, error) {
+func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]state.DeployedPackage, error) {
 	// Get the secrets that describe the deployed packages
 	listOpts := metav1.ListOptions{LabelSelector: state.ZarfPackageInfoLabel}
 	secrets, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).List(ctx, listOpts)
@@ -38,12 +38,12 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 	}
 
 	errs := []error{}
-	deployedPackages := []types.DeployedPackage{}
+	deployedPackages := []state.DeployedPackage{}
 	for _, secret := range secrets.Items {
 		if !strings.HasPrefix(secret.Name, config.ZarfPackagePrefix) {
 			continue
 		}
-		var deployedPackage types.DeployedPackage
+		var deployedPackage state.DeployedPackage
 		// Process the k8s secret into our internal structs
 		err := json.Unmarshal(secret.Data["data"], &deployedPackage)
 		if err != nil {
@@ -62,8 +62,8 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
-func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string, opts ...types.DeployedPackageOptions) (*types.DeployedPackage, error) {
-	deployedPackage := &types.DeployedPackage{
+func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {
+	deployedPackage := &state.DeployedPackage{
 		Name: packageName,
 	}
 	for _, opt := range opts {
@@ -83,7 +83,7 @@ func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string, op
 }
 
 // UpdateDeployedPackage updates the deployed package metadata.
-func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg types.DeployedPackage) error {
+func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg state.DeployedPackage) error {
 	packageSecretData, err := json.Marshal(depPkg)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg types.Deploy
 }
 
 // DeleteDeployedPackage removes the metadata for the deployed package.
-func (c *Cluster) DeleteDeployedPackage(ctx context.Context, depPkg types.DeployedPackage) error {
+func (c *Cluster) DeleteDeployedPackage(ctx context.Context, depPkg state.DeployedPackage) error {
 	err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Delete(ctx, depPkg.GetSecretName(), metav1.DeleteOptions{})
 	if err != nil {
 		return err
@@ -153,11 +153,11 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, generation int, opts ...types.DeployedPackageOptions) (*types.DeployedPackage, error) {
+func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []state.DeployedComponent, generation int, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {
 	packageName := pkg.Metadata.Name
 
 	// TODO: This is done for backwards compatibility and could be removed in the future.
-	connectStrings := types.ConnectStrings{}
+	connectStrings := state.ConnectStrings{}
 	for _, comp := range components {
 		for _, chart := range comp.InstalledCharts {
 			for k, v := range chart.ConnectStrings {
@@ -166,7 +166,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		}
 	}
 
-	deployedPackage := &types.DeployedPackage{
+	deployedPackage := &state.DeployedPackage{
 		Name:               packageName,
 		CLIVersion:         config.CLIVersion,
 		Data:               pkg,
@@ -233,13 +233,13 @@ func (c *Cluster) DisableRegHPAScaleDown(ctx context.Context) error {
 }
 
 // GetInstalledChartsForComponent returns any installed Helm Charts for the provided package component.
-func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component v1alpha1.ZarfComponent, opts ...types.DeployedPackageOptions) ([]types.InstalledChart, error) {
+func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component v1alpha1.ZarfComponent, opts ...state.DeployedPackageOptions) ([]state.InstalledChart, error) {
 	deployedPackage, err := c.GetDeployedPackage(ctx, packageName, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	installedCharts := make([]types.InstalledChart, 0)
+	installedCharts := make([]state.InstalledChart, 0)
 	for _, deployedComponent := range deployedPackage.DeployedComponents {
 		if deployedComponent.Name == component.Name {
 			installedCharts = append(installedCharts, deployedComponent.InstalledCharts...)

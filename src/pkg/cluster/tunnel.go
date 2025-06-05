@@ -59,7 +59,7 @@ type TunnelInfo struct {
 }
 
 // ListConnections will return a list of all Zarf connect matches found in the cluster.
-func (c *Cluster) ListConnections(ctx context.Context) (types.ConnectStrings, error) {
+func (c *Cluster) ListConnections(ctx context.Context) (state.ConnectStrings, error) {
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{{
 			Operator: metav1.LabelSelectorOpExists,
@@ -73,10 +73,10 @@ func (c *Cluster) ListConnections(ctx context.Context) (types.ConnectStrings, er
 	if err != nil {
 		return nil, err
 	}
-	connections := types.ConnectStrings{}
+	connections := state.ConnectStrings{}
 	for _, svc := range serviceList.Items {
 		name := svc.Labels[ZarfConnectLabelName]
-		connections[name] = types.ConnectString{
+		connections[name] = state.ConnectString{
 			Description: svc.Annotations[ZarfConnectAnnotationDescription],
 			URL:         svc.Annotations[ZarfConnectAnnotationURL],
 		}

@@ -22,7 +22,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"github.com/zarf-dev/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -55,7 +54,7 @@ func TestPackageList(t *testing.T) {
 				Clientset: fake.NewClientset(),
 			}
 
-			packages := []types.DeployedPackage{
+			packages := []state.DeployedPackage{
 				{
 					Name: "package1",
 					Data: v1alpha1.ZarfPackage{
@@ -63,7 +62,7 @@ func TestPackageList(t *testing.T) {
 							Version: "0.42.0",
 						},
 					},
-					DeployedComponents: []types.DeployedComponent{
+					DeployedComponents: []state.DeployedComponent{
 						{
 							Name: "component1",
 						},
@@ -79,7 +78,7 @@ func TestPackageList(t *testing.T) {
 							Version: "1.0.0",
 						},
 					},
-					DeployedComponents: []types.DeployedComponent{
+					DeployedComponents: []state.DeployedComponent{
 						{
 							Name: "component3",
 						},

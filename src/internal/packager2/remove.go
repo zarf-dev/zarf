@@ -11,6 +11,7 @@ import (
 	"slices"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"helm.sh/helm/v3/pkg/action"
@@ -22,7 +23,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2/actions"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // RemoveOptions are the options for Remove.
@@ -68,9 +68,9 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 	}
 
 	// Get or build the secret for the deployed package
-	depPkg := &types.DeployedPackage{}
+	depPkg := &state.DeployedPackage{}
 	if requiresCluster {
-		depPkg, err = opt.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name, types.WithNamespaceOverride(opt.Namespace))
+		depPkg, err = opt.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opt.Namespace))
 		if err != nil {
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %s", err.Error())
 		}
@@ -79,7 +79,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 		depPkg.Name = pkg.Metadata.Name
 		depPkg.Data = pkg
 		for _, component := range components {
-			depPkg.DeployedComponents = append(depPkg.DeployedComponents, types.DeployedComponent{Name: component.Name})
+			depPkg.DeployedComponents = append(depPkg.DeployedComponents, state.DeployedComponent{Name: component.Name})
 		}
 	}
 

@@ -18,7 +18,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestGetDeployedPackage(t *testing.T) {
@@ -28,7 +27,7 @@ func TestGetDeployedPackage(t *testing.T) {
 		Clientset: fake.NewClientset(),
 	}
 
-	packages := []types.DeployedPackage{
+	packages := []state.DeployedPackage{
 		{Name: "package1"},
 		{Name: "package2"},
 	}

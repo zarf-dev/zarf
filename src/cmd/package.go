@@ -36,6 +36,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -276,7 +277,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	if pkgLayout.Pkg.IsInitConfig() {
 		return nil
 	}
-	connectStrings := types.ConnectStrings{}
+	connectStrings := state.ConnectStrings{}
 	for _, comp := range deployedComponents {
 		for _, chart := range comp.InstalledCharts {
 			for k, v := range chart.ConnectStrings {
@@ -288,7 +289,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	return nil
 }
 
-func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager2.DeployOpts) ([]types.DeployedComponent, error) {
+func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager2.DeployOpts) ([]state.DeployedComponent, error) {
 	// Update component namespaces here prior to confirmation when overriding
 	if opts.Namespace != "" {
 		nsCount := pkgLayout.Pkg.GetUniqueNamespaceCount()
