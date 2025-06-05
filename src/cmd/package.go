@@ -754,6 +754,7 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SetVariables:            o.setVariables,
 		KubeVersion:             o.kubeVersion,
+		Components:              o.components,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions: packager2.RemoteOptions{
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
