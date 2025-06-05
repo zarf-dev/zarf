@@ -44,7 +44,7 @@ type PullOptions struct {
 	RemoteOptions
 }
 
-// Pull takes a source URL and destination directory and fetches the Zarf package from the given sources.
+// Pull takes a source URL and destination directory, fetches the Zarf package from the given sources, and returns the path to the fetched package.
 func Pull(ctx context.Context, source, destination string, opts PullOptions) (string, error) {
 	l := logger.From(ctx)
 	start := time.Now()
