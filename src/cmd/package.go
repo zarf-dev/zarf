@@ -1063,16 +1063,24 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		filters.BySelectState(pkgConfig.PkgOpts.OptionalComponents),
 	)
 	c, _ := cluster.New(ctx) //nolint:errcheck
-	removeOpt := packager2.RemoveOptions{
-		Cluster:                 c,
-		Filter:                  filter,
-		Architecture:            config.GetArch(),
+	loadOpts := packager2.LoadOptions{
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		Architecture:            config.GetArch(),
+		Filter:                  filter,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		Timeout:                 config.ZarfDefaultTimeout,
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 	}
-	err = packager2.Remove(ctx, packageSource, removeOpt)
+	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, c, packageSource, loadOpts)
+	if err != nil {
+		return fmt.Errorf("unable to load the package: %w", err)
+	}
+	removeOpt := packager2.RemoveOptions{
+		Cluster:       c,
+		Timeout:       config.ZarfDefaultTimeout,
+		RemoteOptions: defaultRemoteOptions(),
+	}
+	err = packager2.Remove(ctx, pkg, removeOpt)
 	if err != nil {
 		return err
 	}
