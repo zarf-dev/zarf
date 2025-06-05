@@ -135,6 +135,7 @@ func TestPackageInspectManifests(t *testing.T) {
 	tests := []struct {
 		name           string
 		definitionDir  string
+		components     string
 		expectedOutput string
 		packageName    string
 		setVariables   map[string]string
@@ -146,6 +147,16 @@ func TestPackageInspectManifests(t *testing.T) {
 			packageName:    "manifests",
 			definitionDir:  filepath.Join("testdata", "inspect-manifests", "manifest"),
 			expectedOutput: filepath.Join("testdata", "inspect-manifests", "manifest", "expected.yaml"),
+			setVariables: map[string]string{
+				"REPLICAS": "2",
+			},
+		},
+		{
+			name:           "manifest inspect, select component",
+			components:     "httpd-local",
+			packageName:    "manifests",
+			definitionDir:  filepath.Join("testdata", "inspect-manifests", "manifest"),
+			expectedOutput: filepath.Join("testdata", "inspect-manifests", "manifest", "expected-httpd-component.yaml"),
 			setVariables: map[string]string{
 				"REPLICAS": "2",
 			},
@@ -195,6 +206,7 @@ func TestPackageInspectManifests(t *testing.T) {
 				outputWriter: buf,
 				kubeVersion:  tc.kubeVersion,
 				setVariables: tc.setVariables,
+				components:   tc.components,
 			}
 			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
 			err = opts.run(context.Background(), []string{packagePath})
