@@ -1136,7 +1136,6 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
 			RemoteOptions:      defaultRemoteOptions(),
 		}
-
 		return packager2.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
 	}
 
