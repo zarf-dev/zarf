@@ -5,7 +5,9 @@ package packager2
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -43,7 +45,7 @@ type PublishFromOCIOpts struct {
 }
 
 // PublishFromOCI takes a source and destination registry reference and a PublishFromOCIOpts and copies the package from the source to the destination.
-func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Reference, opts PublishFromOCIOpts) error {
+func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Reference, opts PublishFromOCIOpts) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -68,11 +70,14 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	arch := config.GetArch(opts.Architecture)
 
 	if opts.SigningKeyPath != "" {
+		l.Info("pulling package locally to sign")
 		tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 		if err != nil {
 			return err
 		}
-		l.Info("pulling package locally for sign operation")
+		defer func() {
+			err = errors.Join(err, os.RemoveAll(tmpdir))
+		}()
 		packagePath, err := Pull(ctx, src.String(), tmpdir, PullOptions{
 			SkipSignatureValidation: opts.SkipSignatureValidation,
 			Architecture:            arch,

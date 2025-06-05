@@ -329,6 +329,7 @@ func TestPublishCopySHA(t *testing.T) {
 		name             string
 		packageToPublish string
 		opts             PublishPackageOpts
+		publicKeyPath    string
 	}{
 		{
 			name:             "Publish package",
@@ -338,6 +339,17 @@ func TestPublishCopySHA(t *testing.T) {
 				Architecture:  "amd64",
 				Concurrency:   3,
 			},
+		},
+		{
+			name:             "Sign and publish package",
+			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOpts{
+				WithPlainHTTP:      true,
+				Architecture:       "amd64",
+				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
+				SigningKeyPassword: "password",
+			},
+			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
 		},
 	}
 
@@ -389,8 +401,11 @@ func TestPublishCopySHA(t *testing.T) {
 
 			pkgRefsha := fmt.Sprintf("%s@%s", packageRef, indexDesc.Digest)
 
-			layoutActual := pullFromRemote(ctx, t, pkgRefsha, tc.opts.Architecture, "")
+			layoutActual := pullFromRemote(ctx, t, pkgRefsha, tc.opts.Architecture, tc.publicKeyPath)
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
+			if tc.publicKeyPath != "" {
+				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Signature))
+			}
 		})
 	}
 }
