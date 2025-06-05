@@ -523,10 +523,11 @@ func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 		Architecture: config.GetArch(),
 	}
 
-	err := packager2.Pull(ctx, url, outputDirectory, pullOptions)
+	packagePath, err := packager2.Pull(ctx, url, outputDirectory, pullOptions)
 	if err != nil {
 		return fmt.Errorf("unable to download the init package: %w", err)
 	}
+	logger.From(ctx).Info("package downloaded successful", "path", packagePath)
 
 	return nil
 }
@@ -649,7 +650,7 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 
 	message.Successf(lang.CmdToolsGenKeySuccess, prvKeyFileName, pubKeyFileName)
 	logger.From(cmd.Context()).Info("Successfully generated key pair",
-		"private-key-path", prvKeyExistsErr,
+		"private-key-path", prvKeyFileName,
 		"public-key-path", pubKeyFileName)
 
 	return nil

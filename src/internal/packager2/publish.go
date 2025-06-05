@@ -27,10 +27,6 @@ import (
 type PublishFromOCIOpts struct {
 	// Concurrency configures the zoci push concurrency if empty defaults to 3.
 	Concurrency int
-	// SigningKeyPath points to a signing key on the local disk.
-	SigningKeyPath string
-	// SigningKeyPassword holds a password to use the key at SigningKeyPath.
-	SigningKeyPassword string
 	// SkipSignatureValidation flags whether Publish should skip validating the signature.
 	SkipSignatureValidation bool
 	// PublicKeyPath validates the create time signage of a package.
@@ -41,16 +37,16 @@ type PublishFromOCIOpts struct {
 }
 
 // PublishFromOCI takes a source and destination registry reference and a PublishFromOCIOpts and copies the package from the source to the destination.
-func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Reference, opts PublishFromOCIOpts) error {
+func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Reference, opts PublishFromOCIOpts) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
 	if err := src.Validate(); err != nil {
-		return err
+		return fmt.Errorf("failed to validate source registry: %w", err)
 	}
 
 	if err := dst.Validate(); err != nil {
-		return err
+		return fmt.Errorf("failed to validate destination registry: %w", err)
 	}
 
 	srcParts := strings.Split(src.Repository, "/")
@@ -125,6 +121,9 @@ func PublishPackage(ctx context.Context, path string, dst registry.Reference, op
 	pkgLayout, err := layout.LoadFromTar(ctx, path, layoutOpts)
 	if err != nil {
 		return fmt.Errorf("unable to load package: %w", err)
+	}
+	if err := pkgLayout.SignPackage(opts.SigningKeyPath, opts.SigningKeyPassword); err != nil {
+		return fmt.Errorf("unable to sign package: %w", err)
 	}
 
 	return pushToRemote(ctx, pkgLayout, dst, opts.Concurrency, opts.RemoteOptions)

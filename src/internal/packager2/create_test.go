@@ -38,7 +38,7 @@ func TestPackageCreatePublishArch(t *testing.T) {
 			})
 			require.NoError(t, err)
 			packageURL := fmt.Sprintf("%s/%s:0.0.1", reg.String(), tt.packageName)
-			layout := pullFromRemote(ctx, t, packageURL, tt.expectedArch)
+			layout := pullFromRemote(ctx, t, packageURL, tt.expectedArch, "")
 			require.Equal(t, tt.expectedArch, layout.Pkg.Metadata.Architecture)
 		})
 	}
