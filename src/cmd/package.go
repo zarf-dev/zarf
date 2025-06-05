@@ -1258,6 +1258,7 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		Architecture:            config.GetArch(),
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions: packager2.RemoteOptions{
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
