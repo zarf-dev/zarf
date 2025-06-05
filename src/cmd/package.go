@@ -1110,6 +1110,8 @@ func (o *packagePublishOptions) preRun(_ *cobra.Command, _ []string) {
 
 func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	packageSource := args[0]
+	ctx := cmd.Context()
+	l := logger.From(ctx)
 
 	if !helpers.IsOCIURL(args[1]) {
 		return errors.New("registry must be prefixed with 'oci://'")
@@ -1138,7 +1140,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		return packager2.PublishSkeleton(cmd.Context(), packageSource, dstRef, skeletonOpts)
 	}
 
-	if helpers.IsOCIURL(packageSource) {
+	if helpers.IsOCIURL(packageSource) && pkgConfig.PublishOpts.SigningKeyPath == "" {
 		ociOpts := packager2.PublishFromOCIOpts{
 			Concurrency:             config.CommonOptions.OCIConcurrency,
 			SigningKeyPath:          pkgConfig.PublishOpts.SigningKeyPath,
@@ -1163,7 +1165,29 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		dstRef.Repository = path.Join(dstRef.Repository, srcPackageName)
 		dstRef.Reference = srcRef.Reference
 
-		return packager2.PublishFromOCI(cmd.Context(), srcRef, dstRef, ociOpts)
+		return packager2.PublishFromOCI(ctx, srcRef, dstRef, ociOpts)
+	}
+
+	if helpers.IsOCIURL(packageSource) && pkgConfig.PublishOpts.SigningKeyPath != "" {
+		l.Info("pulling source package locally to sign", "reference", packageSource)
+		tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err = errors.Join(err, os.RemoveAll(tmpdir))
+		}()
+		packagePath, err := packager.Pull(ctx, packageSource, tmpdir, packager.PullOptions{
+			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+			PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+			Architecture:            config.GetArch(),
+			OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+			RemoteOptions:           defaultRemoteOptions(),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to pull package: %w", err)
+		}
+		packageSource = packagePath
 	}
 
 	publishPackageOpts := packager2.PublishPackageOpts{
