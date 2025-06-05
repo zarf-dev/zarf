@@ -50,7 +50,7 @@ type DeployOpts struct {
 	Retries int
 	// Number of layers to push concurrently per image
 	OCIConcurrency int
-	// Remote Options for git server and image server pushes
+	// Remote Options for image pushes
 	RemoteOptions
 	// How to configure Zarf state if it's not already been configured
 	GitServer      types.GitServerInfo
