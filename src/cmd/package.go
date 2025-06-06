@@ -185,7 +185,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 }
 
 type packageDeployOptions struct {
-	namespace string
+	namespaceOverride string
 }
 
 func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
@@ -213,7 +213,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.SGetKeyPath, "sget", v.GetString(VPkgDeploySget), lang.CmdPackageDeployFlagSget)
-	cmd.Flags().StringVar(&o.namespace, "namespace", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
+	cmd.Flags().StringVar(&o.namespaceOverride, "namespace", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	err := cmd.Flags().MarkHidden("sget")
@@ -265,7 +265,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		Retries:                pkgConfig.PkgOpts.Retries,
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
-		Namespace:              o.namespace,
+		NamespaceOverride:      o.namespaceOverride,
 		RemoteOptions:          defaultRemoteOptions(),
 	}
 
@@ -291,12 +291,12 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 
 func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager2.DeployOpts) ([]state.DeployedComponent, error) {
 	// Update component namespaces here prior to confirmation when overriding
-	if opts.Namespace != "" {
+	if opts.NamespaceOverride != "" {
 		nsCount := pkgLayout.Pkg.GetUniqueNamespaceCount()
 		if nsCount > 1 {
-			return nil, fmt.Errorf("package contains %d namespaces, cannot override namespace to %s", nsCount, opts.Namespace)
+			return nil, fmt.Errorf("package contains %d namespaces, cannot override namespace to %s", nsCount, opts.NamespaceOverride)
 		}
-		pkgLayout.Pkg.SetPackageNamespace(opts.Namespace)
+		pkgLayout.Pkg.SetPackageNamespace(opts.NamespaceOverride)
 	}
 	err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
 	if err != nil {
