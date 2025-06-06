@@ -22,8 +22,8 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
@@ -46,7 +46,7 @@ type PushConfig struct {
 	OCIConcurrency        int
 	SourceDirectory       string
 	ImageList             []transform.Image
-	RegistryInfo          types.RegistryInfo
+	RegistryInfo          state.RegistryInfo
 	NoChecksum            bool
 	Arch                  string
 	Retries               int
@@ -234,12 +234,12 @@ func WithBasicAuth(username, password string) crane.Option {
 }
 
 // WithPullAuth returns an option for crane that sets pull auth from a given registry info.
-func WithPullAuth(ri types.RegistryInfo) crane.Option {
+func WithPullAuth(ri state.RegistryInfo) crane.Option {
 	return WithBasicAuth(ri.PullUsername, ri.PullPassword)
 }
 
 // WithPushAuth returns an option for crane that sets push auth from a given registry info.
-func WithPushAuth(ri types.RegistryInfo) crane.Option {
+func WithPushAuth(ri state.RegistryInfo) crane.Option {
 	return WithBasicAuth(ri.PushUsername, ri.PushPassword)
 }
 

@@ -14,8 +14,8 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -102,7 +102,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	}, nil
 }
 
-func getPatchedRepoURL(ctx context.Context, repoURL string, gs types.GitServerInfo, r *v1.AdmissionRequest) (string, error) {
+func getPatchedRepoURL(ctx context.Context, repoURL string, gs state.GitServerInfo, r *v1.AdmissionRequest) (string, error) {
 	l := logger.From(ctx)
 	isCreate := r.Operation == v1.Create
 	isUpdate := r.Operation == v1.Update

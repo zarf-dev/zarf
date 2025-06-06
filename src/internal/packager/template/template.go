@@ -13,7 +13,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
@@ -108,7 +107,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 }
 
 // generateHtpasswd returns an htpasswd string for the current state's RegistryInfo.
-func generateHtpasswd(regInfo *types.RegistryInfo) (string, error) {
+func generateHtpasswd(regInfo *state.RegistryInfo) (string, error) {
 	// Only calculate this for internal registries to allow longer external passwords
 	if regInfo.IsInternal() {
 		pushUser, err := utils.GetHtpasswdString(regInfo.PushUsername, regInfo.PushPassword)
