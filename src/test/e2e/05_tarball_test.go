@@ -46,7 +46,7 @@ func TestMultiPartPackage(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(20000000), part2FileInfo.Size())
 	// Check the package data is correct
-	pkgData := split.FileData{}
+	pkgData := split.SplitFileMetadata{}
 	part0File, err := os.ReadFile(parts[0])
 	require.NoError(t, err)
 	err = json.Unmarshal(part0File, &pkgData)

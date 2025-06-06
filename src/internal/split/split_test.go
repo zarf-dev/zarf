@@ -63,7 +63,7 @@ func TestSplitFile(t *testing.T) {
 			err = f.Close()
 			require.NoError(t, err)
 
-			err = File(context.Background(), p, tt.chunkSize)
+			err = SplitFile(context.Background(), p, tt.chunkSize)
 			require.NoError(t, err)
 
 			_, err = os.Stat(p)
@@ -85,7 +85,7 @@ func TestSplitFile(t *testing.T) {
 
 			b, err = os.ReadFile(filepath.Join(dir, fmt.Sprintf("%s.part000", name)))
 			require.NoError(t, err)
-			var data FileData
+			var data SplitFileMetadata
 			err = json.Unmarshal(b, &data)
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedFileCount, data.Count)
@@ -110,7 +110,7 @@ func TestSplitDeleteExistingFiles(t *testing.T) {
 	}
 
 	chunkSize := 20
-	err = File(context.Background(), inputFilename, chunkSize)
+	err = SplitFile(context.Background(), inputFilename, chunkSize)
 	require.NoError(t, err)
 
 	entries, err := os.ReadDir(tempDir)

@@ -19,8 +19,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// FileData contains info about a split file.
-type FileData struct {
+// SplitFileMetadata contains info about a split file.
+type SplitFileMetadata struct {
 	// The sha256sum of the file
 	Sha256Sum string
 	// The size of the file in bytes
@@ -29,9 +29,9 @@ type FileData struct {
 	Count int
 }
 
-// File splits a file into several parts. part000 always holds the split.FileData.
+// SplitFile splits a file into several parts. part000 always holds the split.FileData.
 // The remaining parts hold a chunkSize number of bytes of the original file.
-func File(ctx context.Context, srcPath string, chunkSize int) (err error) {
+func SplitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 	// Remove any existing split files
 	existingChunks, err := filepath.Glob(srcPath + ".part*")
 	if err != nil {
@@ -125,7 +125,7 @@ func File(ctx context.Context, srcPath string, chunkSize int) (err error) {
 	}
 
 	// Write header file
-	data := FileData{
+	data := SplitFileMetadata{
 		Count:     fileCount,
 		Bytes:     fi.Size(),
 		Sha256Sum: fmt.Sprintf("%x", hash.Sum(nil)),
@@ -169,7 +169,7 @@ func ReassembleFile(src, dest string) (err error) {
 			if err != nil {
 				return err
 			}
-			var meta FileData
+			var meta SplitFileMetadata
 			err = json.Unmarshal(data, &meta)
 			if err != nil {
 				return err
