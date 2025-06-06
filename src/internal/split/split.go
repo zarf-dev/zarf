@@ -142,8 +142,8 @@ func File(ctx context.Context, srcPath string, chunkSize int) (err error) {
 	return nil
 }
 
-// ReAssembleFile reconstructs many split files into a single file then deletes the split files
-func ReAssembleFile(src, dest string) (err error) {
+// ReassembleFile takes a directory containing split files, reassembles those files into the destination, then the split files.
+func ReassembleFile(src, dest string) (err error) {
 	pattern := strings.Replace(src, ".part000", ".part*", 1)
 	splitFiles, err := filepath.Glob(pattern)
 	if err != nil {

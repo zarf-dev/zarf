@@ -98,7 +98,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		if opts.Output == "" {
 			opts.Output = filepath.Dir(source)
 		}
-		err := split.ReAssembleFile(source, tmpPath)
+		err := split.ReassembleFile(source, tmpPath)
 		if err != nil {
 			return nil, err
 		}
