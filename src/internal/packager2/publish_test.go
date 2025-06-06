@@ -84,19 +84,19 @@ func TestPublishError(t *testing.T) {
 		name          string
 		packageLayout *layout.PackageLayout
 		ref           registry.Reference
-		opts          PublishPackageOpts
+		opts          PublishPackageOptions
 		expectErr     error
 	}{
 		{
 			name:      "Test empty publish opts",
-			opts:      PublishPackageOpts{},
+			opts:      PublishPackageOptions{},
 			expectErr: errors.New("invalid registry"),
 		},
 		{
 			name:          "Test empty path",
 			packageLayout: nil,
 			ref:           defaultRef,
-			opts:          PublishPackageOpts{},
+			opts:          PublishPackageOptions{},
 			expectErr:     errors.New("package layout must be specified"),
 		},
 	}
@@ -117,7 +117,7 @@ func TestPublishFromOCIValidation(t *testing.T) {
 		name      string
 		src       registry.Reference
 		dst       registry.Reference
-		opts      PublishFromOCIOpts
+		opts      PublishFromOCIOptions
 		expectErr error
 	}{
 		{
@@ -127,7 +127,7 @@ func TestPublishFromOCIValidation(t *testing.T) {
 				Repository: "my-namespace",
 			},
 			dst:       registry.Reference{},
-			opts:      PublishFromOCIOpts{},
+			opts:      PublishFromOCIOptions{},
 			expectErr: errdef.ErrInvalidReference,
 		},
 		{
@@ -137,7 +137,7 @@ func TestPublishFromOCIValidation(t *testing.T) {
 				Repository: "my-namespace",
 			},
 			dst:       registry.Reference{},
-			opts:      PublishFromOCIOpts{},
+			opts:      PublishFromOCIOptions{},
 			expectErr: errdef.ErrInvalidReference,
 		},
 		{
@@ -150,7 +150,7 @@ func TestPublishFromOCIValidation(t *testing.T) {
 				Registry:   "example.com",
 				Repository: "my-other-namespace",
 			},
-			opts:      PublishFromOCIOpts{},
+			opts:      PublishFromOCIOptions{},
 			expectErr: errors.New("source and destination repositories must have the same name"),
 		},
 	}
@@ -173,12 +173,12 @@ func TestPublishSkeleton(t *testing.T) {
 	tt := []struct {
 		name string
 		path string
-		opts PublishSkeletonOpts
+		opts PublishSkeletonOptions
 	}{
 		{
 			name: "Publish skeleton package",
 			path: "testdata/skeleton",
-			opts: PublishSkeletonOpts{
+			opts: PublishSkeletonOptions{
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
 		},
@@ -228,20 +228,20 @@ func TestPublishPackage(t *testing.T) {
 	tt := []struct {
 		name          string
 		path          string
-		opts          PublishPackageOpts
+		opts          PublishPackageOptions
 		publicKeyPath string
 	}{
 		{
 			name: "Publish package",
 			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOpts{
+			opts: PublishPackageOptions{
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
 		},
 		{
 			name: "Sign and publish package",
 			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOpts{
+			opts: PublishPackageOptions{
 				RemoteOptions:      defaultTestRemoteOptions(),
 				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
 				SigningKeyPassword: "password",
@@ -280,12 +280,12 @@ func TestPublishPackageDeterministic(t *testing.T) {
 	tt := []struct {
 		name string
 		path string
-		opts PublishPackageOpts
+		opts PublishPackageOptions
 	}{
 		{
 			name: "Publish package",
 			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOpts{
+			opts: PublishPackageOptions{
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
 		},
@@ -334,12 +334,12 @@ func TestPublishCopySHA(t *testing.T) {
 	tt := []struct {
 		name             string
 		packageToPublish string
-		opts             PublishPackageOpts
+		opts             PublishPackageOptions
 	}{
 		{
 			name:             "Publish package",
 			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOpts{
+			opts: PublishPackageOptions{
 				RemoteOptions: defaultTestRemoteOptions(),
 				Concurrency:   3,
 			},
@@ -377,7 +377,7 @@ func TestPublishCopySHA(t *testing.T) {
 			dstRef, err := registry.ParseReference(dst)
 			require.NoError(t, err)
 
-			opts := PublishFromOCIOpts{
+			opts := PublishFromOCIOptions{
 				RemoteOptions: tc.opts.RemoteOptions,
 				Architecture:  layoutExpected.Pkg.Build.Architecture,
 				Concurrency:   tc.opts.Concurrency,
@@ -405,12 +405,12 @@ func TestPublishCopyTag(t *testing.T) {
 	tt := []struct {
 		name             string
 		packageToPublish string
-		opts             PublishPackageOpts
+		opts             PublishPackageOptions
 	}{
 		{
 			name:             "Publish package",
 			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
-			opts: PublishPackageOpts{
+			opts: PublishPackageOptions{
 				RemoteOptions: defaultTestRemoteOptions(),
 				Concurrency:   3,
 			},
@@ -439,7 +439,7 @@ func TestPublishCopyTag(t *testing.T) {
 			dstRegistry, err := registry.ParseReference(dst)
 			require.NoError(t, err)
 
-			opts := PublishFromOCIOpts{
+			opts := PublishFromOCIOptions{
 				RemoteOptions: tc.opts.RemoteOptions,
 				Architecture:  layoutExpected.Pkg.Build.Architecture,
 				Concurrency:   tc.opts.Concurrency,

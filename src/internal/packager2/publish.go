@@ -23,8 +23,8 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
-// PublishFromOCIOpts declares the parameters to publish a package.
-type PublishFromOCIOpts struct {
+// PublishFromOCIOptions declares the parameters to publish a package.
+type PublishFromOCIOptions struct {
 	// Concurrency configures the amount of layers to push in parallel
 	Concurrency int
 	// Architecture is the architecture we are publishing to
@@ -33,7 +33,7 @@ type PublishFromOCIOpts struct {
 }
 
 // PublishFromOCI takes a source and destination registry reference and a PublishFromOCIOpts and copies the package from the source to the destination.
-func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Reference, opts PublishFromOCIOpts) (err error) {
+func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Reference, opts PublishFromOCIOptions) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -78,8 +78,8 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	return nil
 }
 
-// PublishPackageOpts declares the parameters to publish a package.
-type PublishPackageOpts struct {
+// PublishPackageOptions declares the parameters to publish a package.
+type PublishPackageOptions struct {
 	// Concurrency configures the amount of layers to push in parallel
 	Concurrency int
 	// SigningKeyPath points to a signing key on the local disk.
@@ -90,7 +90,7 @@ type PublishPackageOpts struct {
 }
 
 // PublishPackage takes a Path to the location of the built package, a ref to a registry, and a PublishOpts and uploads to the target OCI registry.
-func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst registry.Reference, opts PublishPackageOpts) error {
+func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst registry.Reference, opts PublishPackageOptions) error {
 	l := logger.From(ctx)
 
 	// Validate inputs
@@ -109,8 +109,8 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 	return pushToRemote(ctx, pkgLayout, dst, opts.Concurrency, opts.RemoteOptions)
 }
 
-// PublishSkeletonOpts declares the parameters to publish a skeleton package.
-type PublishSkeletonOpts struct {
+// PublishSkeletonOptions declares the parameters to publish a skeleton package.
+type PublishSkeletonOptions struct {
 	// Concurrency configures the amount of layers to push in parallel
 	Concurrency int
 	// SigningKeyPath points to a signing key on the local disk.
@@ -121,7 +121,7 @@ type PublishSkeletonOpts struct {
 }
 
 // PublishSkeleton takes a Path to the location of the build package, a ref to a registry, and a PublishOpts and uploads the skeleton package to the target OCI registry.
-func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOpts) error {
+func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) error {
 	l := logger.From(ctx)
 
 	// Validate inputs
@@ -135,7 +135,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
-	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOpts{})
+	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{})
 	if err != nil {
 		return err
 	}

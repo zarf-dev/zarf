@@ -183,7 +183,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	if err != nil {
 		return nil, err
 	}
-	loadOpts := load.DefinitionOpts{
+	loadOpts := load.DefinitionOptions{
 		Flavor:       opts.Flavor,
 		SetVariables: opts.CreateSetVariables,
 	}

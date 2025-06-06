@@ -256,7 +256,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	deployOpts := packager2.DeployOpts{
+	deployOpts := packager2.DeployOptions{
 		AdoptExistingResources: pkgConfig.DeployOpts.AdoptExistingResources,
 		Timeout:                pkgConfig.DeployOpts.Timeout,
 		Retries:                pkgConfig.PkgOpts.Retries,
@@ -285,7 +285,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	return nil
 }
 
-func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager2.DeployOpts) ([]types.DeployedComponent, error) {
+func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager2.DeployOptions) ([]types.DeployedComponent, error) {
 	err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
 	if err != nil {
 		return nil, err
@@ -608,7 +608,7 @@ func (o *packageInspectOptions) run(cmd *cobra.Command, args []string) error {
 	return definitionOpts.run(cmd, args)
 }
 
-type packageInspectValuesFilesOpts struct {
+type packageInspectValuesFilesOptions struct {
 	skipSignatureValidation bool
 	components              string
 	kubeVersion             string
@@ -616,8 +616,8 @@ type packageInspectValuesFilesOpts struct {
 	outputWriter            io.Writer
 }
 
-func newPackageInspectValuesFilesOptions() *packageInspectValuesFilesOpts {
-	return &packageInspectValuesFilesOpts{
+func newPackageInspectValuesFilesOptions() *packageInspectValuesFilesOptions {
+	return &packageInspectValuesFilesOptions{
 		outputWriter: message.OutputWriter,
 	}
 }
@@ -643,7 +643,7 @@ func newPackageInspectValuesFilesCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) (err error) {
+func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []string) (err error) {
 	src, err := choosePackage(ctx, args)
 	if err != nil {
 		return err
@@ -689,7 +689,7 @@ func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) 
 	return nil
 }
 
-type packageInspectManifestsOpts struct {
+type packageInspectManifestsOptions struct {
 	skipSignatureValidation bool
 	components              string
 	kubeVersion             string
@@ -697,8 +697,8 @@ type packageInspectManifestsOpts struct {
 	outputWriter            io.Writer
 }
 
-func newPackageInspectManifestsOptions() *packageInspectManifestsOpts {
-	return &packageInspectManifestsOpts{
+func newPackageInspectManifestsOptions() *packageInspectManifestsOptions {
+	return &packageInspectManifestsOptions{
 		outputWriter: message.OutputWriter,
 	}
 }
@@ -723,7 +723,7 @@ func newPackageInspectShowManifestsCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (err error) {
+func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string) (err error) {
 	src, err := choosePackage(ctx, args)
 	if err != nil {
 		return err
@@ -1173,7 +1173,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 
 	// Skeleton package - call PublishSkeleton
 	if helpers.IsDir(packageSource) {
-		skeletonOpts := packager2.PublishSkeletonOpts{
+		skeletonOpts := packager2.PublishSkeletonOptions{
 			Concurrency:        config.CommonOptions.OCIConcurrency,
 			SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
 			SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
@@ -1183,7 +1183,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	if helpers.IsOCIURL(packageSource) && pkgConfig.PublishOpts.SigningKeyPath == "" {
-		ociOpts := packager2.PublishFromOCIOpts{
+		ociOpts := packager2.PublishFromOCIOptions{
 			Concurrency:   config.CommonOptions.OCIConcurrency,
 			Architecture:  config.GetArch(),
 			RemoteOptions: defaultRemoteOptions(),
@@ -1245,7 +1245,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	publishPackageOpts := packager2.PublishPackageOpts{
+	publishPackageOpts := packager2.PublishPackageOptions{
 		Concurrency:        config.CommonOptions.OCIConcurrency,
 		SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
 		SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,

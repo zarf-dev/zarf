@@ -42,12 +42,12 @@ func TestAssembleLayers(t *testing.T) {
 	tt := []struct {
 		name string
 		path string
-		opts packager2.PublishPackageOpts
+		opts packager2.PublishPackageOptions
 	}{
 		{
 			name: "Assemble layers from a package",
 			path: "testdata/basic",
-			opts: packager2.PublishPackageOpts{
+			opts: packager2.PublishPackageOptions{
 				RemoteOptions: packager2.RemoteOptions{
 					PlainHTTP: true,
 				},

@@ -22,14 +22,14 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
-// DefinitionOpts are the optional parameters to load.PackageDefinition
-type DefinitionOpts struct {
+// DefinitionOptions are the optional parameters to load.PackageDefinition
+type DefinitionOptions struct {
 	Flavor       string
 	SetVariables map[string]string
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, and variables are applied.
-func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOpts) (v1alpha1.ZarfPackage, error) {
+func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.LoadPackage",

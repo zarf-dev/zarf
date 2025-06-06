@@ -368,7 +368,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
 	}
 
-	helmOpts := helm.InstallUpgradeOpts{
+	helmOpts := helm.InstallUpgradeOptions{
 		VariableConfig: template.GetZarfVariableConfig(cmd.Context()),
 		State:          newState,
 		Cluster:        c,
