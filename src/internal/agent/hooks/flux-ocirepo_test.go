@@ -16,7 +16,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -258,7 +257,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	s := &state.State{RegistryInfo: types.RegistryInfo{Address: "127.0.0.1:31999"}}
+	s := &state.State{RegistryInfo: state.RegistryInfo{Address: "127.0.0.1:31999"}}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {

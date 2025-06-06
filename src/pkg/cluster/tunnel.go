@@ -145,7 +145,7 @@ func (c *Cluster) ConnectTunnelInfo(ctx context.Context, zt TunnelInfo) (*Tunnel
 }
 
 // ConnectToZarfRegistryEndpoint determines if a registry endpoint is in cluster, and if so opens a tunnel to connect to it
-func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInfo types.RegistryInfo) (string, *Tunnel, error) {
+func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInfo state.RegistryInfo) (string, *Tunnel, error) {
 	registryEndpoint := registryInfo.Address
 
 	var err error

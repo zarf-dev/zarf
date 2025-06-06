@@ -31,12 +31,12 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
-var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, types.ZarfInClusterContainerRegistryNodePort)
+var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, state.ZarfInClusterContainerRegistryNodePort)
 
 func newDevCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -419,7 +419,7 @@ func newDevPatchGitCommand() *cobra.Command {
 	}
 
 	// TODO(soltysh): get rid of pkgConfig global
-	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", types.ZarfGitPushUser, lang.CmdDevFlagGitAccount)
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", state.ZarfGitPushUser, lang.CmdDevFlagGitAccount)
 
 	return cmd
 }

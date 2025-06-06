@@ -51,9 +51,9 @@ type DeployOptions struct {
 	// Remote Options for image pushes
 	RemoteOptions
 	// How to configure Zarf state if it's not already been configured
-	GitServer      types.GitServerInfo
-	RegistryInfo   types.RegistryInfo
-	ArtifactServer types.ArtifactServerInfo
+	GitServer      state.GitServerInfo
+	RegistryInfo   state.RegistryInfo
+	ArtifactServer state.ArtifactServerInfo
 	StorageClass   string
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy

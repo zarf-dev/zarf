@@ -20,9 +20,9 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ImagePushOptions are optional parameters to push images in a zarf package to a registry
@@ -35,7 +35,7 @@ type ImagePushOptions struct {
 }
 
 // PushImagesToRegistry pushes images in the package layout to the specified registry
-func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, registryInfo types.RegistryInfo, opts ImagePushOptions) error {
+func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, registryInfo state.RegistryInfo, opts ImagePushOptions) error {
 	if pkgLayout == nil {
 		return fmt.Errorf("package layout is required")
 	}
@@ -81,7 +81,7 @@ type RepoPushOptions struct {
 }
 
 // PushReposToRepository pushes Git repositories in the package layout to the registry
-func PushReposToRepository(ctx context.Context, pkgLayout *layout.PackageLayout, gitInfo types.GitServerInfo, opts RepoPushOptions) (err error) {
+func PushReposToRepository(ctx context.Context, pkgLayout *layout.PackageLayout, gitInfo state.GitServerInfo, opts RepoPushOptions) (err error) {
 	if pkgLayout == nil {
 		return fmt.Errorf("package layout is required")
 	}

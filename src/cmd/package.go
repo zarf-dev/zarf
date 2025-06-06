@@ -36,6 +36,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -398,8 +399,8 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 
 	// Init package variable defaults that are non-zero values
 	// NOTE: these are not in setDefaults so that zarf tools update-creds does not erroneously update values back to the default
-	v.SetDefault(VInitGitPushUser, types.ZarfGitPushUser)
-	v.SetDefault(VInitRegistryPushUser, types.ZarfRegistryPushUser)
+	v.SetDefault(VInitGitPushUser, state.ZarfGitPushUser)
+	v.SetDefault(VInitRegistryPushUser, state.ZarfRegistryPushUser)
 
 	// Always require confirm flag (no viper)
 	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageDeployFlagConfirm)

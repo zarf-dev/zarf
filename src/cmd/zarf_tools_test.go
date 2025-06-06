@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -49,19 +48,19 @@ func TestGetCreds(t *testing.T) {
 			}
 
 			s := &state.State{
-				GitServer: types.GitServerInfo{
+				GitServer: state.GitServerInfo{
 					Address:      "https://git-server.com",
 					PushUsername: "push-user",
 					PushPassword: "push-password",
 					PullPassword: "pull-password",
 					PullUsername: "pull-user",
 				},
-				ArtifactServer: types.ArtifactServerInfo{
+				ArtifactServer: state.ArtifactServerInfo{
 					Address:      "https://git-server.com",
 					PushUsername: "push-user",
 					PushToken:    "push-password",
 				},
-				RegistryInfo: types.RegistryInfo{
+				RegistryInfo: state.RegistryInfo{
 					PullUsername: "pull-user",
 					PushUsername: "push-user",
 					PullPassword: "pull-password",
