@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -36,6 +37,8 @@ type LoadOptions struct {
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
 	Output                  string
+	// [ALPHA] Namepsace override for package deployment
+	NamespaceOverride string
 	// number of layers to pull in parallel
 	OCIConcurrency int
 	// Layers to pull during OCI pull
@@ -258,7 +261,7 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 		if cluster == nil {
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
 		}
-		depPkg, err := cluster.GetDeployedPackage(ctx, src)
+		depPkg, err := cluster.GetDeployedPackage(ctx, src, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}

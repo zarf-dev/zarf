@@ -28,7 +28,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
@@ -70,7 +69,7 @@ func (p *Packager) Remove(ctx context.Context) error {
 	}
 
 	// Get or build the secret for the deployed package
-	deployedPackage := &types.DeployedPackage{}
+	deployedPackage := &state.DeployedPackage{}
 
 	if packageRequiresCluster {
 		connectCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
@@ -88,7 +87,7 @@ func (p *Packager) Remove(ctx context.Context) error {
 		deployedPackage.Name = packageName
 		deployedPackage.Data = p.cfg.Pkg
 		for _, r := range componentsToRemove {
-			deployedPackage.DeployedComponents = append(deployedPackage.DeployedComponents, types.DeployedComponent{Name: r})
+			deployedPackage.DeployedComponents = append(deployedPackage.DeployedComponents, state.DeployedComponent{Name: r})
 		}
 	}
 
@@ -106,7 +105,7 @@ func (p *Packager) Remove(ctx context.Context) error {
 	return nil
 }
 
-func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage types.DeployedPackage) error {
+func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage state.DeployedPackage) error {
 	l := logger.From(ctx)
 	// Only attempt to update the package secret if we are actually connected to a cluster
 	if p.cluster != nil {
@@ -136,7 +135,7 @@ func (p *Packager) updatePackageSecret(ctx context.Context, deployedPackage type
 	return nil
 }
 
-func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.DeployedPackage, deployedComponent types.DeployedComponent) (*types.DeployedPackage, error) {
+func (p *Packager) removeComponent(ctx context.Context, deployedPackage *state.DeployedPackage, deployedComponent state.DeployedComponent) (*state.DeployedPackage, error) {
 	l := logger.From(ctx)
 	components := deployedPackage.Data.Components
 
@@ -171,7 +170,7 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 		// NOTE: We are saving the secret as we remove charts in case a failure happens later on in the process of removing the component.
 		//       If we don't save the secrets as we remove charts, we will run into issues if we try to remove the component again as we will
 		//       be trying to remove charts that have already been removed.
-		deployedComponent.InstalledCharts = helpers.RemoveMatches(deployedComponent.InstalledCharts, func(t types.InstalledChart) bool {
+		deployedComponent.InstalledCharts = helpers.RemoveMatches(deployedComponent.InstalledCharts, func(t state.InstalledChart) bool {
 			return t.ChartName == chart.ChartName
 		})
 		err := p.updatePackageSecret(ctx, *deployedPackage)
@@ -191,7 +190,7 @@ func (p *Packager) removeComponent(ctx context.Context, deployedPackage *types.D
 	}
 
 	// Remove the component we just removed from the array
-	deployedPackage.DeployedComponents = helpers.RemoveMatches(deployedPackage.DeployedComponents, func(t types.DeployedComponent) bool {
+	deployedPackage.DeployedComponents = helpers.RemoveMatches(deployedPackage.DeployedComponents, func(t state.DeployedComponent) bool {
 		return t.Name == c.Name
 	})
 

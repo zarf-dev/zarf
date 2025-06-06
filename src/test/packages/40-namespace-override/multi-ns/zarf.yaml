@@ -1,0 +1,25 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-package-fail
+  version: 0.0.1
+  description: This test package has two components with chart/manifests targeting multiple namespaces to test failing override
+components:
+  - name: test-package-component-1
+    required: true
+    charts:
+      - name: chart
+        namespace: test
+        version: v0.1.0
+        localPath: ../chart
+    manifests:
+      - name: test-manifest-same
+        namespace: test
+        files:
+          - ../manifests/configmap1.yaml
+  - name: test-package-component-2
+    required: true
+    manifests:
+      - name: test-manifest-other
+        namespace: test-other
+        files:
+          - ../manifests/configmap2.yaml

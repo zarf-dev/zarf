@@ -95,6 +95,33 @@ func (pkg ZarfPackage) IsSBOMAble() bool {
 	return false
 }
 
+// GetUniqueNamespaceCount returns the number of unique namespaces in the package.
+func (pkg ZarfPackage) GetUniqueNamespaceCount() int {
+	uniqueNamespaces := make(map[string]struct{})
+	for _, component := range pkg.Components {
+		for _, chart := range component.Charts {
+			uniqueNamespaces[chart.Namespace] = struct{}{}
+		}
+		for _, manifest := range component.Manifests {
+			uniqueNamespaces[manifest.Namespace] = struct{}{}
+		}
+	}
+	return len(uniqueNamespaces)
+}
+
+// SetPackageNamespace updates all existing namespaces to the provided one
+func (pkg ZarfPackage) SetPackageNamespace(namespace string) {
+	for i := range pkg.Components {
+		comp := pkg.Components[i]
+		for j := range comp.Charts {
+			comp.Charts[j].Namespace = namespace
+		}
+		for k := range comp.Manifests {
+			comp.Manifests[k].Namespace = namespace
+		}
+	}
+}
+
 // Variable represents a variable that has a value set programmatically
 type Variable struct {
 	// The name to be used for the variable

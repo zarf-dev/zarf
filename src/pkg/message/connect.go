@@ -7,11 +7,11 @@ package message
 import (
 	"fmt"
 
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 // PrintConnectStringTable prints a table of connect strings.
-func PrintConnectStringTable(connectStrings types.ConnectStrings) {
+func PrintConnectStringTable(connectStrings state.ConnectStrings) {
 	if len(connectStrings) > 0 {
 		connectData := [][]string{}
 		// Loop over each connectStrings and convert to a string matrix

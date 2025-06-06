@@ -42,7 +42,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 var (
@@ -145,9 +144,9 @@ func (p *Packager) Deploy(ctx context.Context) error {
 }
 
 // deployComponents loops through a list of ZarfComponents and deploys them.
-func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedComponent, error) {
+func (p *Packager) deployComponents(ctx context.Context) ([]state.DeployedComponent, error) {
 	l := logger.From(ctx)
-	deployedComponents := []types.DeployedComponent{}
+	deployedComponents := []state.DeployedComponent{}
 
 	// Process all the components we are deploying
 	for _, component := range p.cfg.Pkg.Components {
@@ -169,9 +168,9 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 			}
 		}
 
-		deployedComponent := types.DeployedComponent{
+		deployedComponent := state.DeployedComponent{
 			Name:               component.Name,
-			Status:             types.ComponentStatusDeploying,
+			Status:             state.ComponentStatusDeploying,
 			ObservedGeneration: packageGeneration,
 		}
 
@@ -192,7 +191,7 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 			}
 		}
 		// Deploy the component
-		var charts []types.InstalledChart
+		var charts []state.InstalledChart
 		var deployErr error
 		if p.cfg.Pkg.IsInitConfig() {
 			charts, deployErr = p.deployInitComponent(ctx, component)
@@ -210,7 +209,7 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 
 		if deployErr != nil {
 			onFailure()
-			deployedComponents[idx].Status = types.ComponentStatusFailed
+			deployedComponents[idx].Status = state.ComponentStatusFailed
 			if p.isConnectedToCluster() {
 				if _, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents, packageGeneration); err != nil {
 					l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
@@ -221,7 +220,7 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 
 		// Update the package secret to indicate that we successfully deployed this component
 		deployedComponents[idx].InstalledCharts = charts
-		deployedComponents[idx].Status = types.ComponentStatusSucceeded
+		deployedComponents[idx].Status = state.ComponentStatusSucceeded
 		if p.isConnectedToCluster() {
 			if _, err := p.cluster.RecordPackageDeployment(ctx, p.cfg.Pkg, deployedComponents, packageGeneration); err != nil {
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
@@ -237,7 +236,7 @@ func (p *Packager) deployComponents(ctx context.Context) ([]types.DeployedCompon
 	return deployedComponents, nil
 }
 
-func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.ZarfComponent) ([]types.InstalledChart, error) {
+func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.ZarfComponent) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
 	hasExternalRegistry := p.cfg.InitOpts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "zarf-seed-registry"
@@ -300,7 +299,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.Z
 }
 
 // Deploy a Zarf Component.
-func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool) ([]types.InstalledChart, error) {
+func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	// Toggles for general deploy operations
@@ -369,7 +368,7 @@ func (p *Packager) deployComponent(ctx context.Context, component v1alpha1.ZarfC
 		})
 	}
 
-	charts := []types.InstalledChart{}
+	charts := []state.InstalledChart{}
 	if hasCharts || hasManifests {
 		charts, err = p.installChartAndManifests(ctx, componentPath, component)
 		if err != nil {
@@ -656,8 +655,8 @@ func (p *Packager) generateValuesOverrides(chart v1alpha1.ZarfChart, componentNa
 }
 
 // Install all Helm charts and raw k8s manifests into the k8s cluster.
-func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths *layout.ComponentPaths, component v1alpha1.ZarfComponent) ([]types.InstalledChart, error) {
-	installedCharts := []types.InstalledChart{}
+func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths *layout.ComponentPaths, component v1alpha1.ZarfComponent) ([]state.InstalledChart, error) {
+	installedCharts := []state.InstalledChart{}
 
 	for _, chart := range component.Charts {
 		// Do not wait for the chart to be ready if data injections are present.
@@ -698,7 +697,7 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 		if err != nil {
 			return nil, err
 		}
-		installedCharts = append(installedCharts, types.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
+		installedCharts = append(installedCharts, state.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
 	}
 
 	for _, manifest := range component.Manifests {
@@ -742,7 +741,7 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 		if err != nil {
 			return nil, err
 		}
-		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
+		installedCharts = append(installedCharts, state.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
 	}
 
 	return installedCharts, nil
@@ -750,12 +749,12 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 
 // TODO once deploy is refactored to load the Zarf package and cluster objects in the cmd package
 // table printing should be moved to cmd
-func (p *Packager) printTablesForDeployment(componentsToDeploy []types.DeployedComponent) error {
+func (p *Packager) printTablesForDeployment(componentsToDeploy []state.DeployedComponent) error {
 	// If not init config, print the application connection table
 	if p.cfg.Pkg.IsInitConfig() {
 		return nil
 	}
-	connectStrings := types.ConnectStrings{}
+	connectStrings := state.ConnectStrings{}
 	for _, comp := range componentsToDeploy {
 		for _, chart := range comp.InstalledCharts {
 			for k, v := range chart.ConnectStrings {

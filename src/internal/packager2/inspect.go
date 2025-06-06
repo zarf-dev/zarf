@@ -327,7 +327,9 @@ type InspectPackageDefinitionOptions struct {
 	Architecture            string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
-	OCIConcurrency          int
+	// [ALPHA] Optional namespace override
+	NamespaceOverride string
+	OCIConcurrency    int
 	RemoteOptions
 }
 
@@ -342,6 +344,7 @@ func InspectPackageDefinition(ctx context.Context, source string, opts InspectPa
 		PublicKeyPath:           opts.PublicKeyPath,
 		OCIConcurrency:          opts.OCIConcurrency,
 		RemoteOptions:           opts.RemoteOptions,
+		NamespaceOverride:       opts.NamespaceOverride,
 	}
 	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, loadOpts)
 	if err != nil {
@@ -356,7 +359,9 @@ type InspectPackageImagesOptions struct {
 	Architecture            string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
-	OCIConcurrency          int
+	// [ALPHA] Optional namespace override
+	NamespaceOverride string
+	OCIConcurrency    int
 	RemoteOptions
 }
 
@@ -372,6 +377,7 @@ func InspectPackageImages(ctx context.Context, source string, opts InspectPackag
 		LayersSelector:          zoci.MetadataLayers,
 		OCIConcurrency:          opts.OCIConcurrency,
 		RemoteOptions:           opts.RemoteOptions,
+		NamespaceOverride:       opts.NamespaceOverride,
 	}
 	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, loadOpts)
 	if err != nil {
