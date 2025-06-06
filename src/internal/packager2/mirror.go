@@ -65,6 +65,7 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		Arch:                  pkgLayout.Pkg.Build.Architecture,
 		Retries:               opts.Retries,
 		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+		Cluster:               opts.Cluster,
 	}
 	err := images.Push(ctx, pushConfig)
 	if err != nil {
