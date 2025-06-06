@@ -47,43 +47,16 @@ type Resource struct {
 
 // InspectPackageResourcesOptions are the optional parameters to InspectPackageResources
 type InspectPackageResourcesOptions struct {
-	Architecture            string
-	Components              string
-	PublicKeyPath           string
-	SkipSignatureValidation bool
-	SetVariables            map[string]string
-	KubeVersion             string
-	// number of layers to pull in parallel
-	OCIConcurrency int
-	// Only applicable to OCI + HTTP
-	RemoteOptions
+	SetVariables map[string]string
+	KubeVersion  string
 }
 
 // InspectPackageResources templates and returns the manifests, charts, and values files in the package as they would be on deploy
-func InspectPackageResources(ctx context.Context, source string, opts InspectPackageResourcesOptions) (_ []Resource, err error) {
+func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayout, opts InspectPackageResourcesOptions) (_ []Resource, err error) {
 	s, err := state.Default()
 	if err != nil {
 		return nil, err
 	}
-
-	loadOpts := LoadOptions{
-		Architecture:            opts.Architecture,
-		PublicKeyPath:           opts.PublicKeyPath,
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-		LayersSelector:          zoci.ComponentLayers,
-		Filter:                  filters.BySelectState(opts.Components),
-		OCIConcurrency:          opts.OCIConcurrency,
-		RemoteOptions:           opts.RemoteOptions,
-	}
-
-	pkgLayout, err := LoadPackage(ctx, source, loadOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		err = errors.Join(err, pkgLayout.Cleanup())
-	}()
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
 	if err != nil {

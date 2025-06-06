@@ -37,6 +37,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -649,18 +650,28 @@ func (o *packageInspectValuesFilesOpts) run(ctx context.Context, args []string) 
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
-	resourceOpts := packager2.InspectPackageResourcesOptions{
-		SkipSignatureValidation: o.skipSignatureValidation,
-		Components:              o.components,
+	loadOpts := packager2.LoadOptions{
 		Architecture:            config.GetArch(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		SetVariables:            o.setVariables,
-		KubeVersion:             o.kubeVersion,
+		SkipSignatureValidation: o.skipSignatureValidation,
+		LayersSelector:          zoci.ComponentLayers,
+		Filter:                  filters.BySelectState(o.components),
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 	}
+	pkgLayout, err := packager2.LoadPackage(ctx, src, loadOpts)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
 
-	resources, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
+	resourceOpts := packager2.InspectPackageResourcesOptions{
+		SetVariables: o.setVariables,
+		KubeVersion:  o.kubeVersion,
+	}
+	resources, err := packager2.InspectPackageResources(ctx, pkgLayout, resourceOpts)
 	if err != nil {
 		return err
 	}
@@ -719,18 +730,29 @@ func (o *packageInspectManifestsOpts) run(ctx context.Context, args []string) (e
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
-	resourceOpts := packager2.InspectPackageResourcesOptions{
-		SkipSignatureValidation: o.skipSignatureValidation,
+	loadOpts := packager2.LoadOptions{
 		Architecture:            config.GetArch(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		SetVariables:            o.setVariables,
-		KubeVersion:             o.kubeVersion,
-		Components:              o.components,
+		SkipSignatureValidation: o.skipSignatureValidation,
+		LayersSelector:          zoci.ComponentLayers,
+		Filter:                  filters.BySelectState(o.components),
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 	}
+	pkgLayout, err := packager2.LoadPackage(ctx, src, loadOpts)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
 
-	resources, err := packager2.InspectPackageResources(ctx, src, resourceOpts)
+	resourceOpts := packager2.InspectPackageResourcesOptions{
+		SetVariables: o.setVariables,
+		KubeVersion:  o.kubeVersion,
+	}
+
+	resources, err := packager2.InspectPackageResources(ctx, pkgLayout, resourceOpts)
 	if err != nil {
 		return err
 	}
