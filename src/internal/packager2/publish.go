@@ -188,7 +188,7 @@ func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registr
 		return err
 	}
 
-	arch := layout.Pkg.Build.Architecture
+	arch := layout.Pkg.Metadata.Architecture
 	// Set platform
 	p := oci.PlatformForArch(arch)
 
