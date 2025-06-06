@@ -26,7 +26,7 @@ import (
 )
 
 // UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
-func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOpts) error {
+func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) error {
 	pushUser, err := utils.GetHtpasswdString(opts.State.RegistryInfo.PushUsername, opts.State.RegistryInfo.PushPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
@@ -70,7 +70,7 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOpts) erro
 }
 
 // UpdateZarfAgentValues updates the Zarf agent deployment with the new state values
-func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOpts) error {
+func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) error {
 	l := logger.From(ctx)
 
 	deployment, err := opts.Cluster.Clientset.AppsV1().Deployments(state.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})

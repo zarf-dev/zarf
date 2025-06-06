@@ -49,7 +49,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	start := time.Now()
 	config.CommonOptions.Confirm = true
 
-	loadOpts := load.DefinitionOpts{
+	loadOpts := load.DefinitionOptions{
 		Flavor:       opts.Flavor,
 		SetVariables: opts.CreateSetVariables,
 	}
@@ -116,7 +116,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	}
 
 	// Get a list of all the components we are deploying and actually deploy them
-	deployedComponents, err := d.deployComponents(ctx, pkgLayout, DeployOpts{
+	deployedComponents, err := d.deployComponents(ctx, pkgLayout, DeployOptions{
 		SetVariables:   opts.DeploySetVariables,
 		Timeout:        opts.Timeout,
 		Retries:        opts.Retries,

@@ -40,7 +40,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		return fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
 
-	loadOpts := load.DefinitionOpts{
+	loadOpts := load.DefinitionOptions{
 		Flavor:       opts.Flavor,
 		SetVariables: opts.SetVariables,
 	}

@@ -98,7 +98,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
-	loadOpts := load.DefinitionOpts{
+	loadOpts := load.DefinitionOptions{
 		Flavor:       o.flavor,
 		SetVariables: o.setVariables,
 	}
