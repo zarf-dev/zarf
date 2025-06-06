@@ -24,6 +24,9 @@ const (
 	ComponentStatusRemoving  ComponentStatus = "Removing"
 )
 
+// IPV6Localhost is the IP of localhost in IPv6 (TODO: move to helpers next to IPV4Localhost)
+const IPV6Localhost = "::1"
+
 // Values during setup of the initial zarf state
 const (
 	ZarfGeneratedPasswordLen               = 24
@@ -67,7 +70,7 @@ func DefaultZarfState() (*ZarfState, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = state.RegistryInfo.FillInEmptyValues()
+	err = state.RegistryInfo.FillInEmptyValues("IPv4")
 	if err != nil {
 		return nil, err
 	}
@@ -219,11 +222,12 @@ type RegistryInfo struct {
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
 func (ri RegistryInfo) IsInternal() bool {
-	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
+	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort) ||
+		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.NodePort)
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
-func (ri *RegistryInfo) FillInEmptyValues() error {
+func (ri *RegistryInfo) FillInEmptyValues(preferredIPFamily string) error {
 	var err error
 	// Set default NodePort if none was provided and the registry is internal
 	if ri.NodePort == 0 && ri.Address == "" {
@@ -232,7 +236,10 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 
 	// Set default url if an external registry was not provided
 	if ri.Address == "" {
-		ri.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
+		ri.Address, err = LocalhostRegistryAddress(preferredIPFamily, ri.NodePort)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Generate a push-user password if not provided by init flag
@@ -273,4 +280,19 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 	}
 
 	return nil
+}
+
+// LocalhostRegistryAddress builds the IPv4 or IPv6 local address of the Zarf deployed registry.
+func LocalhostRegistryAddress(ipFamily string, nodePort int) (string, error) {
+	if len(ipFamily) == 0 {
+		ipFamily = "IPv4"
+	}
+	switch ipFamily {
+	case "IPv4":
+		return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, nodePort), nil
+	case "IPv6":
+		return fmt.Sprintf("[%s]:%d", IPV6Localhost, nodePort), nil
+	default:
+		return "", fmt.Errorf("invalid ipFamily: %s", ipFamily)
+	}
 }

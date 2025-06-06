@@ -276,7 +276,11 @@ func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.Z
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := p.cluster.StartInjection(ctx, p.layout.Base, p.layout.Images.Base, component.Images)
+		ipFamily, err := p.cluster.DeterminePreferredIPFamily(ctx)
+		if err != nil {
+			return nil, err
+		}
+		err = p.cluster.StartInjection(ctx, p.layout.Base, p.layout.Images.Base, component.Images, ipFamily)
 		if err != nil {
 			return nil, err
 		}
@@ -291,7 +295,7 @@ func (p *Packager) deployInitComponent(ctx context.Context, component v1alpha1.Z
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		if err := p.cluster.StopInjection(ctx); err != nil {
+		if err := p.cluster.StopInjection(ctx, p.state.PreferredIPFamily); err != nil {
 			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
 		}
 	}

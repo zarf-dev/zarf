@@ -56,7 +56,7 @@ var (
 	CLIArch string
 
 	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'
-	ZarfSeedPort string
+	ZarfSeedPort int
 
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
