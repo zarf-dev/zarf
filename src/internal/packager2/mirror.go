@@ -37,15 +37,6 @@ type MirrorOptions struct {
 	RemoteOptions
 }
 
-// MirrorImages mirrors the package images to the Zarf registry
-func MirrorImages(ctx context.Context, opts MirrorOptions) error {
-	err := pushImagesToRegistry(ctx, opts.PkgLayout, opts.RegistryInfo, opts.NoImageChecksum, opts.PlainHTTP, opts.OCIConcurrency, opts.Retries, opts.InsecureSkipTLSVerify)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // MirrorRepos mirrors the package repos to the Zarf git server
 func MirrorRepos(ctx context.Context, opts MirrorOptions) error {
 	err := pushReposToRepository(ctx, opts.Cluster, opts.PkgLayout, opts.GitInfo, opts.Retries)
@@ -55,7 +46,23 @@ func MirrorRepos(ctx context.Context, opts MirrorOptions) error {
 	return nil
 }
 
-func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, registryInfo types.RegistryInfo, noImgChecksum bool, plainHTTP bool, concurrency int, retries int, insecure bool) error {
+// ImagePushOptions are optional parameters to push images in a zarf package to a registry
+type ImagePushOptions struct {
+	Cluster         *cluster.Cluster
+	NoImageChecksum bool
+	Retries         int
+	OCIConcurrency  int
+	RemoteOptions
+}
+
+// PushImagesToRegistry pushes images in the package layout to the specified registry
+func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, registryInfo types.RegistryInfo, opts ImagePushOptions) error {
+	if pkgLayout == nil {
+		return fmt.Errorf("package layout is required")
+	}
+	if registryInfo.Address == "" {
+		return fmt.Errorf("registry address must be specified")
+	}
 	refs := []transform.Image{}
 	for _, component := range pkgLayout.Pkg.Components {
 		for _, img := range component.Images {
@@ -70,15 +77,15 @@ func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		return nil
 	}
 	pushConfig := images.PushConfig{
-		OCIConcurrency:        concurrency,
+		OCIConcurrency:        opts.OCIConcurrency,
 		SourceDirectory:       pkgLayout.GetImageDirPath(),
 		RegistryInfo:          registryInfo,
 		ImageList:             refs,
-		PlainHTTP:             plainHTTP,
-		NoChecksum:            noImgChecksum,
+		PlainHTTP:             opts.PlainHTTP,
+		NoChecksum:            opts.NoImageChecksum,
 		Arch:                  pkgLayout.Pkg.Build.Architecture,
-		Retries:               retries,
-		InsecureSkipTLSVerify: insecure,
+		Retries:               opts.Retries,
+		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 	}
 	err := images.Push(ctx, pushConfig)
 	if err != nil {

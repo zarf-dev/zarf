@@ -20,7 +20,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/packager2/actions"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
@@ -28,7 +27,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/types"
@@ -333,26 +331,14 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 
 	if hasImages {
-		refs := []transform.Image{}
-		for _, img := range component.Images {
-			ref, err := transform.ParseImageRef(img)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create ref for image %s: %w", img, err)
-			}
-			refs = append(refs, ref)
+		imagePushOpts := ImagePushOptions{
+			Cluster:         d.c,
+			NoImageChecksum: noImgChecksum,
+			OCIConcurrency:  opts.OCIConcurrency,
+			Retries:         opts.Retries,
+			RemoteOptions:   opts.RemoteOptions,
 		}
-		pushConfig := images.PushConfig{
-			OCIConcurrency:        opts.OCIConcurrency,
-			SourceDirectory:       pkgLayout.GetImageDirPath(),
-			RegistryInfo:          d.s.RegistryInfo,
-			ImageList:             refs,
-			PlainHTTP:             opts.PlainHTTP,
-			NoChecksum:            noImgChecksum,
-			Arch:                  pkgLayout.Pkg.Build.Architecture,
-			Retries:               opts.Retries,
-			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
-		}
-		err := images.Push(ctx, pushConfig)
+		err := PushImagesToRegistry(ctx, pkgLayout, d.s.RegistryInfo, imagePushOpts)
 		if err != nil {
 			return nil, fmt.Errorf("unable to push images to the registry: %w", err)
 		}

@@ -501,16 +501,13 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 			logger.From(ctx).Debug("no registry URL provided, using zarf state", "address", state.RegistryInfo.Address)
 			pkgConfig.InitOpts.RegistryInfo = state.RegistryInfo
 		}
-		mirrorOpt := packager2.MirrorOptions{
-			Cluster:         c,
-			PkgLayout:       pkgLayout,
-			RegistryInfo:    pkgConfig.InitOpts.RegistryInfo,
+		mirrorOpt := packager2.ImagePushOptions{
 			NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
 			Retries:         pkgConfig.PkgOpts.Retries,
 			OCIConcurrency:  config.CommonOptions.OCIConcurrency,
 			RemoteOptions:   defaultRemoteOptions(),
 		}
-		err = packager2.MirrorImages(ctx, mirrorOpt)
+		err = packager2.PushImagesToRegistry(ctx, pkgLayout, pkgConfig.InitOpts.RegistryInfo, mirrorOpt)
 		if err != nil {
 			return err
 		}
