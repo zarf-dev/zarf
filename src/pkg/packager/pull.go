@@ -8,7 +8,6 @@ import (
 	"context"
 
 	"github.com/zarf-dev/zarf/src/internal/packager2"
-	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 )
 
 // PullOptions declares optional configuration for a Pull operation.
@@ -19,19 +18,21 @@ type PullOptions struct {
 	SkipSignatureValidation bool
 	// Architecture is the package architecture.
 	Architecture string
-	// Filters describes a Filter strategy to include or exclude certain components from the package.
-	Filters filters.ComponentFilterStrategy
 	// PublicKeyPath validates the create-time signage of a package.
 	PublicKeyPath string
+	// OCIConcurrency is the number of layers pulled in parallel
+	OCIConcurrency int
+	packager2.RemoteOptions
 }
 
 // Pull takes a source URL and destination directory and fetches the Zarf package from the given sources.
-func Pull(ctx context.Context, source, destination string, opts PullOptions) error {
+func Pull(ctx context.Context, source, destination string, opts PullOptions) (string, error) {
 	return packager2.Pull(ctx, source, destination, packager2.PullOptions{
 		SHASum:                  opts.SHASum,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
 		Architecture:            opts.Architecture,
-		Filters:                 opts.Filters,
 		PublicKeyPath:           opts.PublicKeyPath,
+		OCIConcurrency:          opts.OCIConcurrency,
+		RemoteOptions:           opts.RemoteOptions,
 	})
 }

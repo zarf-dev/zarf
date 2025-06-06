@@ -36,44 +36,11 @@ import (
 	actions2 "github.com/zarf-dev/zarf/src/internal/packager2/actions"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
-	"github.com/zarf-dev/zarf/src/pkg/interactive"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
-
-// CreateTimestampFormat is the format used for the build data timestamp.
-// If this format is changed - zarf will need to handle mismatch between older formats and the new format.
-const CreateTimestampFormat = time.RFC1123Z
-
-// CreateOptions are the options for creating a package from a definition.
-type CreateOptions struct {
-	AssembleOptions
-	SetVariables map[string]string
-}
-
-// CreatePackage takes a zarf.yaml at the package path and returns a PackageLayout of the final package
-func CreatePackage(ctx context.Context, packagePath string, opt CreateOptions) (*PackageLayout, error) {
-	l := logger.From(ctx)
-	l.Info("creating package", "path", packagePath)
-
-	pkg, err := LoadPackageDefinition(ctx, packagePath, opt.Flavor, opt.SetVariables)
-	if err != nil {
-		return nil, err
-	}
-
-	pkgLayout, err := AssemblePackage(ctx, pkg, packagePath, opt.AssembleOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	l.Info("package created")
-
-	return pkgLayout, nil
-}
 
 // AssembleOptions are the options for creating a package from a package object
 type AssembleOptions struct {
@@ -90,15 +57,16 @@ type AssembleOptions struct {
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
-func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opt AssembleOptions) (*PackageLayout, error) {
+func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleOptions) (*PackageLayout, error) {
 	l := logger.From(ctx)
+	l.Info("assembling package", "path", packagePath)
 
-	if opt.DifferentialPackagePath != "" {
-		l.Debug("creating differential package", "differential", opt.DifferentialPackagePath)
-		layoutOpt := PackageLayoutOptions{
+	if opts.DifferentialPackagePath != "" {
+		l.Debug("creating differential package", "differential", opts.DifferentialPackagePath)
+		layoutOpts := PackageLayoutOptions{
 			SkipSignatureValidation: true,
 		}
-		diffPkgLayout, err := LoadFromTar(ctx, opt.DifferentialPackagePath, layoutOpt)
+		diffPkgLayout, err := LoadFromTar(ctx, opts.DifferentialPackagePath, layoutOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -162,12 +130,12 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			return nil, err
 		}
 		pullCfg := images.PullConfig{
-			OCIConcurrency:        opt.OCIConcurrency,
+			OCIConcurrency:        opts.OCIConcurrency,
 			DestinationDirectory:  filepath.Join(buildPath, ImagesDir),
 			ImageList:             componentImages,
 			Arch:                  pkg.Metadata.Architecture,
-			RegistryOverrides:     opt.RegistryOverrides,
-			CacheDirectory:        filepath.Join(cachePath, zoci.ImageCacheDirectory),
+			RegistryOverrides:     opts.RegistryOverrides,
+			CacheDirectory:        filepath.Join(cachePath, ImagesDir),
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
@@ -191,7 +159,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 	l.Info("composed components successfully")
 
-	if !opt.SkipSBOM && pkg.IsSBOMAble() {
+	if !opts.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
 		err := generateSBOM(ctx, pkg, buildPath, sbomImageList)
 		if err != nil {
@@ -210,7 +178,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opt.Flavor, opt.RegistryOverrides)
+	pkg = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -221,7 +189,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
-	err = signPackage(buildPath, opt.SigningKeyPath, opt.SigningKeyPassword)
+	err = signPackage(buildPath, opts.SigningKeyPath, opts.SigningKeyPassword)
 	if err != nil {
 		return nil, err
 	}
@@ -234,40 +202,36 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	return pkgLayout, nil
 }
 
-// SkeletonCreateOptions are the options for creating a skeleton package
-type SkeletonCreateOptions struct {
+// AssembleSkeletonOptions are the options for creating a skeleton package
+type AssembleSkeletonOptions struct {
 	SigningKeyPath     string
 	SigningKeyPassword string
 }
 
-// CreateSkeleton creates a skeleton package and returns the path to the created package.
-func CreateSkeleton(ctx context.Context, packagePath string, opt SkeletonCreateOptions) (string, error) {
-	pkg, err := LoadPackageDefinition(ctx, packagePath, "", nil)
-	if err != nil {
-		return "", err
-	}
-	pkg.Metadata.Architecture = zoci.SkeletonArch
+// AssembleSkeleton creates a skeleton package and returns the path to the created package.
+func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleSkeletonOptions) (*PackageLayout, error) {
+	pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	for _, component := range pkg.Components {
 		err := assembleSkeletonComponent(ctx, component, packagePath, buildPath)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
 	checksumContent, checksumSha, err := getChecksum(buildPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	checksumPath := filepath.Join(buildPath, Checksums)
 	err = os.WriteFile(checksumPath, []byte(checksumContent), helpers.ReadWriteUser)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
@@ -275,102 +239,28 @@ func CreateSkeleton(ctx context.Context, packagePath string, opt SkeletonCreateO
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	err = os.WriteFile(filepath.Join(buildPath, ZarfYAML), b, helpers.ReadWriteUser)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	err = signPackage(buildPath, opt.SigningKeyPath, opt.SigningKeyPassword)
+	err = signPackage(buildPath, opts.SigningKeyPath, opts.SigningKeyPassword)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return buildPath, nil
-}
-
-// LoadPackageDefinition returns a validated package definition after flavors, imports, and variables are applied.
-func LoadPackageDefinition(ctx context.Context, packagePath, flavor string, setVariables map[string]string) (v1alpha1.ZarfPackage, error) {
-	l := logger.From(ctx)
-	start := time.Now()
-	l.Debug("start layout.LoadPackage",
-		"path", packagePath,
-		"flavor", flavor,
-		"setVariables", setVariables)
-
-	// Load PackageConfig from disk
-	b, err := os.ReadFile(filepath.Join(packagePath, ZarfYAML))
+	layoutOpts := PackageLayoutOptions{
+		SkipSignatureValidation: true,
+		IsPartial:               false,
+	}
+	pkgLayout, err := LoadFromDir(ctx, buildPath, layoutOpts)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	pkg, err := ParseZarfPackage(ctx, b)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-	pkg, err = resolveImports(ctx, pkg, packagePath, pkg.Metadata.Architecture, flavor, []string{})
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	if setVariables != nil {
-		pkg, _, err = fillActiveTemplate(ctx, pkg, setVariables)
-		if err != nil {
-			return v1alpha1.ZarfPackage{}, err
-		}
-	}
-	err = validate(ctx, pkg, packagePath, setVariables, flavor)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
-	return pkg, nil
-}
-
-func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string) error {
-	l := logger.From(ctx)
-	start := time.Now()
-	l.Debug("start layout.Validate",
-		"pkg", pkg.Metadata.Name,
-		"packagePath", packagePath,
-		"flavor", flavor,
-		"setVariables", setVariables,
-	)
-
-	if !hasFlavoredComponent(pkg, flavor) {
-		l.Warn("flavor not used in package", "flavor", flavor)
-	}
-	if err := lint.ValidatePackage(pkg); err != nil {
-		return fmt.Errorf("package validation failed: %w", err)
-	}
-	findings, err := lint.ValidatePackageSchemaAtPath(packagePath, setVariables)
-	if err != nil {
-		return fmt.Errorf("unable to check schema: %w", err)
-	}
-	if len(findings) != 0 {
-		return &lint.LintError{
-			PackageName: pkg.Metadata.Name,
-			Findings:    findings,
-		}
+		return nil, fmt.Errorf("unable to load skeleton: %w", err)
 	}
 
-	l.Debug("done layout.Validate",
-		"pkg", pkg.Metadata.Name,
-		"path", packagePath,
-		"findings", findings,
-		"duration", time.Since(start),
-	)
-
-	return nil
-}
-
-func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
-	for _, comp := range pkg.Components {
-		if comp.Only.Flavor == flavor {
-			return true
-		}
-	}
-	return false
+	return pkgLayout, nil
 }
 
 func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
@@ -791,7 +681,7 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	pkg.Build.Version = config.CLIVersion
 
 	// Record the time of package creation.
-	pkg.Build.Timestamp = now.Format(CreateTimestampFormat)
+	pkg.Build.Timestamp = now.Format(v1alpha1.BuildTimestampFormat)
 
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
@@ -949,88 +839,6 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 
 		return nil
 	})
-}
-
-func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariables map[string]string) (v1alpha1.ZarfPackage, []string, error) {
-	templateMap := map[string]string{}
-	warnings := []string{}
-
-	promptAndSetTemplate := func(templatePrefix string, deprecated bool) error {
-		yamlTemplates, err := utils.FindYamlTemplates(&pkg, templatePrefix, "###")
-		if err != nil {
-			return err
-		}
-
-		for key := range yamlTemplates {
-			if deprecated {
-				warnings = append(warnings, fmt.Sprintf(lang.PkgValidateTemplateDeprecation, key, key, key))
-			}
-
-			_, present := setVariables[key]
-			if !present && !config.CommonOptions.Confirm {
-				setVal, err := interactive.PromptVariable(ctx, v1alpha1.InteractiveVariable{
-					Variable: v1alpha1.Variable{Name: key},
-				})
-				if err != nil {
-					return err
-				}
-				setVariables[key] = setVal
-			} else if !present {
-				return fmt.Errorf("template %q must be '--set' when using the '--confirm' flag", key)
-			}
-		}
-
-		for key, value := range setVariables {
-			templateMap[fmt.Sprintf("%s%s###", templatePrefix, key)] = value
-		}
-
-		return nil
-	}
-
-	// update the component templates on the package
-	if err := reloadComponentTemplatesInPackage(&pkg); err != nil {
-		return v1alpha1.ZarfPackage{}, nil, err
-	}
-
-	if err := promptAndSetTemplate(v1alpha1.ZarfPackageTemplatePrefix, false); err != nil {
-		return v1alpha1.ZarfPackage{}, nil, err
-	}
-	// [DEPRECATION] Set the Package Variable syntax as well for backward compatibility
-	if err := promptAndSetTemplate(v1alpha1.ZarfPackageVariablePrefix, true); err != nil {
-		return v1alpha1.ZarfPackage{}, nil, err
-	}
-
-	// Add special variable for the current package architecture
-	templateMap[v1alpha1.ZarfPackageArch] = pkg.Metadata.Architecture
-
-	if err := utils.ReloadYamlTemplate(&pkg, templateMap); err != nil {
-		return v1alpha1.ZarfPackage{}, nil, err
-	}
-
-	return pkg, warnings, nil
-}
-
-// reloadComponentTemplate appends ###ZARF_COMPONENT_NAME### for the component, assigns value, and reloads
-// Any instance of ###ZARF_COMPONENT_NAME### within a component will be replaced with that components name
-func reloadComponentTemplate(component *v1alpha1.ZarfComponent) error {
-	mappings := map[string]string{}
-	mappings[v1alpha1.ZarfComponentName] = component.Name
-	err := utils.ReloadYamlTemplate(component, mappings)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// reloadComponentTemplatesInPackage appends ###ZARF_COMPONENT_NAME###  for each component, assigns value, and reloads
-func reloadComponentTemplatesInPackage(zarfPackage *v1alpha1.ZarfPackage) error {
-	// iterate through components to and find all ###ZARF_COMPONENT_NAME, assign to component Name and value
-	for i := range zarfPackage.Components {
-		if err := reloadComponentTemplate(&zarfPackage.Components[i]); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func splitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {

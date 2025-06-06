@@ -56,6 +56,8 @@ type DeployOpts struct {
 	InsecureTLSSkipVerify bool
 	// Namespace is an optional namespace override for package deployment
 	Namespace string
+	// Remote Options for image pushes
+	RemoteOptions
 	// How to configure Zarf state if it's not already been configured
 	GitServer      types.GitServerInfo
 	RegistryInfo   types.RegistryInfo
@@ -259,7 +261,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDir(), component.Images)
+		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images)
 		if err != nil {
 			return nil, err
 		}
@@ -347,14 +349,14 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 		pushConfig := images.PushConfig{
 			OCIConcurrency:        opts.OCIConcurrency,
-			SourceDirectory:       pkgLayout.GetImageDir(),
+			SourceDirectory:       pkgLayout.GetImageDirPath(),
 			RegistryInfo:          d.s.RegistryInfo,
 			ImageList:             refs,
 			PlainHTTP:             opts.PlainHTTP,
 			NoChecksum:            noImgChecksum,
 			Arch:                  pkgLayout.Pkg.Build.Architecture,
 			Retries:               opts.Retries,
-			InsecureSkipTLSVerify: opts.InsecureTLSSkipVerify,
+			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		}
 		err := images.Push(ctx, pushConfig)
 		if err != nil {

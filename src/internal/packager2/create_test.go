@@ -9,15 +9,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 func TestPackageCreatePublishArch(t *testing.T) {
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
-	// TODO set plainHTTP as a create option
-	config.CommonOptions.PlainHTTP = true
 	ctx := testutil.TestContext(t)
 	tests := []struct {
 		name         string
@@ -36,12 +33,12 @@ func TestPackageCreatePublishArch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reg := createRegistry(ctx, t)
-			err := Create(ctx, tt.path, CreateOptions{
-				Output: fmt.Sprintf("oci://%s", reg.String()),
+			err := Create(ctx, tt.path, fmt.Sprintf("oci://%s", reg.String()), CreateOptions{
+				RemoteOptions: defaultTestRemoteOptions(),
 			})
 			require.NoError(t, err)
 			packageURL := fmt.Sprintf("%s/%s:0.0.1", reg.String(), tt.packageName)
-			layout := pullFromRemote(ctx, t, packageURL, tt.expectedArch)
+			layout := pullFromRemote(ctx, t, packageURL, tt.expectedArch, "")
 			require.Equal(t, tt.expectedArch, layout.Pkg.Metadata.Architecture)
 		})
 	}

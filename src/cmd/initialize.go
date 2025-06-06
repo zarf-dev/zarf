@@ -110,14 +110,13 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
 	loadOpt := packager2.LoadOptions{
-		Source:                  packageSource,
 		Shasum:                  pkgConfig.PkgOpts.Shasum,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
 	}
-	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
+	pkgLayout, err := packager2.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
 		return fmt.Errorf("unable to load package: %w", err)
 	}
@@ -133,10 +132,9 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		Timeout:                pkgConfig.DeployOpts.Timeout,
 		Retries:                pkgConfig.PkgOpts.Retries,
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
-		PlainHTTP:              config.CommonOptions.PlainHTTP,
-		InsecureTLSSkipVerify:  config.CommonOptions.InsecureSkipTLSVerify,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
 		StorageClass:           pkgConfig.InitOpts.StorageClass,
+		RemoteOptions:          defaultRemoteOptions(),
 	}
 	_, err = deploy(ctx, pkgLayout, opts)
 	if err != nil {
@@ -216,10 +214,11 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) error {
 		url = fmt.Sprintf("oci://%s", url)
 
 		pullOptions := packager2.PullOptions{
-			Architecture: config.GetArch(),
+			Architecture:   config.GetArch(),
+			OCIConcurrency: config.CommonOptions.OCIConcurrency,
 		}
 
-		err := packager2.Pull(ctx, url, cacheDirectory, pullOptions)
+		_, err := packager2.Pull(ctx, url, cacheDirectory, pullOptions)
 		if err != nil {
 			return fmt.Errorf("unable to download the init package: %w", err)
 		}

@@ -26,6 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -97,7 +98,11 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
-	pkg, err := layout.LoadPackageDefinition(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
+	loadOpts := load.DefinitionOpts{
+		Flavor:       o.flavor,
+		SetVariables: o.setVariables,
+	}
+	pkg, err := load.PackageDefinition(ctx, setBaseDirectory(args), loadOpts)
 	if err != nil {
 		return err
 	}
@@ -156,7 +161,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 	}
-	result, err := packager2.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
+	resources, err := packager2.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -164,13 +169,13 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	if err != nil {
 		return err
 	}
-	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
+	resources = slices.DeleteFunc(resources, func(r packager2.Resource) bool {
 		return r.ResourceType == packager2.ValuesFileResource
 	})
-	if len(result.Resources) == 0 {
+	if len(resources) == 0 {
 		return fmt.Errorf("0 manifests found")
 	}
-	for _, resource := range result.Resources {
+	for _, resource := range resources {
 		fmt.Fprintf(o.outputWriter, "#type: %s\n", resource.ResourceType)
 		// Helm charts already provide a comment on the source when templated
 		if resource.ResourceType == packager2.ManifestResource {
@@ -229,7 +234,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 	}
-	result, err := packager2.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
+	resources, err := packager2.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -237,13 +242,13 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 	if err != nil {
 		return err
 	}
-	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
+	resources = slices.DeleteFunc(resources, func(r packager2.Resource) bool {
 		return r.ResourceType != packager2.ValuesFileResource
 	})
-	if len(result.Resources) == 0 {
+	if len(resources) == 0 {
 		return fmt.Errorf("0 values files found")
 	}
-	for _, resource := range result.Resources {
+	for _, resource := range resources {
 		fmt.Fprintf(o.outputWriter, "# associated chart: %s\n", resource.Name)
 		fmt.Fprintf(o.outputWriter, "%s---\n", resource.Content)
 	}
@@ -309,6 +314,8 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		OptionalComponents: pkgConfig.PkgOpts.OptionalComponents,
 		Timeout:            pkgConfig.DeployOpts.Timeout,
 		Retries:            pkgConfig.PkgOpts.Retries,
+		OCIConcurrency:     config.CommonOptions.OCIConcurrency,
+		RemoteOptions:      defaultRemoteOptions(),
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -369,14 +376,11 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 		}
 	}
 	l.Info("generating package", "name", name, "path", generatedZarfYAMLPath)
-	opts := &packager2.GenerateOptions{
-		PackageName: name,
-		Version:     o.version,
-		URL:         o.url,
+	opts := packager2.GenerateOptions{
 		GitPath:     o.gitPath,
 		KubeVersion: o.kubeVersion,
 	}
-	pkg, err := packager2.Generate(cmd.Context(), opts)
+	pkg, err := packager2.Generate(cmd.Context(), name, o.url, o.version, opts)
 	if err != nil {
 		return err
 	}
@@ -629,7 +633,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		Why:                 pkgConfig.FindImagesOpts.Why,
 		SkipCosign:          pkgConfig.FindImagesOpts.SkipCosign,
 	}
-	results, err := packager2.FindImages(ctx, baseDir, findImagesOptions)
+	imagesScans, err := packager2.FindImages(ctx, baseDir, findImagesOptions)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -640,7 +644,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 
 	if pkgConfig.FindImagesOpts.Why != "" {
 		var foundWhyResource bool
-		for _, scan := range results.ComponentImageScans {
+		for _, scan := range imagesScans {
 			for _, whyResource := range scan.WhyResources {
 				fmt.Printf("component: %s\n%s: %s\nresource:\n\n%s\n", scan.ComponentName,
 					whyResource.ResourceType, whyResource.Name, whyResource.Content)
@@ -654,7 +658,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	componentDefinition := "\ncomponents:\n"
-	for _, finding := range results.ComponentImageScans {
+	for _, finding := range imagesScans {
 		if len(finding.Matches) > 0 {
 			componentDefinition += fmt.Sprintf("  - name: %s\n    images:\n", finding.ComponentName)
 			for _, image := range finding.Matches {

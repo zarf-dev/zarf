@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
@@ -38,29 +38,35 @@ type RemoveOptions struct {
 	// PublicKeyPath is the path to the public key to use for signature validation
 	PublicKeyPath string
 	// Namespace is the targeted namespace for a package to be removed when deployed with a namespace override
-	Namespace string
+	NamespaceOverride string
+	Architecture      string
+	Timeout           time.Duration
+	RemoteOptions
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
-func Remove(ctx context.Context, opt RemoveOptions) error {
+func Remove(ctx context.Context, source string, opts RemoveOptions) error {
 	l := logger.From(ctx)
 
-	pkg, err := GetPackageFromSourceOrCluster(ctx, opt.Cluster, opt.Source, opt.SkipSignatureValidation, opt.PublicKeyPath, zoci.AllLayers, opt.Namespace)
+	loadOpts := LoadOptions{
+		SkipSignatureValidation: opts.SkipSignatureValidation,
+		Architecture:            config.GetArch(opts.Architecture),
+		Filter:                  opts.Filter,
+		PublicKeyPath:           opts.PublicKeyPath,
+		RemoteOptions:           opts.RemoteOptions,
+		NamespaceOverride:       opts.NamespaceOverride,
+	}
+	pkg, err := GetPackageFromSourceOrCluster(ctx, opts.Cluster, source, loadOpts)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
-	}
-	// If components were provided; just remove the things we were asked to remove
-	components, err := opt.Filter.Apply(pkg)
-	if err != nil {
-		return err
 	}
 	// Check that cluster is configured if required.
 	requiresCluster := false
 	componentIdx := map[string]v1alpha1.ZarfComponent{}
-	for _, component := range components {
+	for _, component := range pkg.Components {
 		componentIdx[component.Name] = component
 		if component.RequiresCluster() {
-			if opt.Cluster == nil {
+			if opts.Cluster == nil {
 				return fmt.Errorf("component %s requires cluster access but none was configured", component.Name)
 			}
 			requiresCluster = true
@@ -70,7 +76,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 	// Get or build the secret for the deployed package
 	depPkg := &state.DeployedPackage{}
 	if requiresCluster {
-		depPkg, err = opt.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opt.Namespace))
+		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
 		if err != nil {
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %s", err.Error())
 		}
@@ -78,7 +84,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 		// If we do not need the cluster, create a deployed components object based on the info we have
 		depPkg.Name = pkg.Metadata.Name
 		depPkg.Data = pkg
-		for _, component := range components {
+		for _, component := range pkg.Components {
 			depPkg.DeployedComponents = append(depPkg.DeployedComponents, state.DeployedComponent{Name: component.Name})
 		}
 	}
@@ -105,7 +111,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 
 			reverseInstalledCharts := slices.Clone(depComp.InstalledCharts)
 			slices.Reverse(reverseInstalledCharts)
-			if opt.Cluster != nil {
+			if opts.Cluster != nil {
 				for _, chart := range reverseInstalledCharts {
 					settings := cli.New()
 					settings.SetNamespace(chart.Namespace)
@@ -118,7 +124,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 					client := action.NewUninstall(actionConfig)
 					client.KeepHistory = false
 					client.Wait = true
-					client.Timeout = config.ZarfDefaultTimeout
+					client.Timeout = opts.Timeout
 					_, err = client.Run(chart.ChartName)
 					if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
 						return fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w", chart.ChartName, chart.Namespace, err)
@@ -131,7 +137,7 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 					installedCharts := depPkg.DeployedComponents[len(depPkg.DeployedComponents)-1].InstalledCharts
 					installedCharts = installedCharts[:len(installedCharts)-1]
 					depPkg.DeployedComponents[len(depPkg.DeployedComponents)-1].InstalledCharts = installedCharts
-					err = opt.Cluster.UpdateDeployedPackage(ctx, *depPkg)
+					err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
 					if err != nil {
 						// We warn and ignore errors because we may have removed the cluster that this package was inside of
 						l.Warn("unable to update secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
@@ -149,9 +155,9 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 			}
 
 			// Pop the removed component from deploy components slice.
-			if opt.Cluster != nil {
+			if opts.Cluster != nil {
 				depPkg.DeployedComponents = depPkg.DeployedComponents[:len(depPkg.DeployedComponents)-1]
-				err = opt.Cluster.UpdateDeployedPackage(ctx, *depPkg)
+				err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
 				if err != nil {
 					// We warn and ignore errors because we may have removed the cluster that this package was inside of
 					l.Warn("unable to update secret package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
@@ -169,8 +175,8 @@ func Remove(ctx context.Context, opt RemoveOptions) error {
 	}
 
 	// All the installed components were deleted, therefore this package is no longer actually deployed
-	if opt.Cluster != nil && len(depPkg.DeployedComponents) == 0 {
-		err := opt.Cluster.DeleteDeployedPackage(ctx, *depPkg)
+	if opts.Cluster != nil && len(depPkg.DeployedComponents) == 0 {
+		err := opts.Cluster.DeleteDeployedPackage(ctx, *depPkg)
 		if err != nil {
 			l.Warn("unable to delete secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
 		}

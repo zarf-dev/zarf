@@ -21,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -46,9 +47,9 @@ func (p *PackageLayout) DirPath() string {
 }
 
 // LoadFromTar unpacks the given archive (any compress/format) and loads it.
-func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) (*PackageLayout, error) {
-	if opt.Filter == nil {
-		opt.Filter = filters.Empty()
+func LoadFromTar(ctx context.Context, tarPath string, opts PackageLayoutOptions) (*PackageLayout, error) {
+	if opts.Filter == nil {
+		opts.Filter = filters.Empty()
 	}
 	dirPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -61,23 +62,23 @@ func LoadFromTar(ctx context.Context, tarPath string, opt PackageLayoutOptions) 
 	}
 
 	// 3) Delegate to the existing LoadFromDir
-	return LoadFromDir(ctx, dirPath, opt)
+	return LoadFromDir(ctx, dirPath, opts)
 }
 
 // LoadFromDir loads and validates a package from the given directory path.
-func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) (*PackageLayout, error) {
-	if opt.Filter == nil {
-		opt.Filter = filters.Empty()
+func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions) (*PackageLayout, error) {
+	if opts.Filter == nil {
+		opts.Filter = filters.Empty()
 	}
 	b, err := os.ReadFile(filepath.Join(dirPath, ZarfYAML))
 	if err != nil {
 		return nil, err
 	}
-	pkg, err := ParseZarfPackage(ctx, b)
+	pkg, err := pkgcfg.Parse(ctx, b)
 	if err != nil {
 		return nil, err
 	}
-	pkg.Components, err = opt.Filter.Apply(pkg)
+	pkg.Components, err = opts.Filter.Apply(pkg)
 	if err != nil {
 		return nil, err
 	}
@@ -85,11 +86,11 @@ func LoadFromDir(ctx context.Context, dirPath string, opt PackageLayoutOptions) 
 		dirPath: dirPath,
 		Pkg:     pkg,
 	}
-	err = validatePackageIntegrity(pkgLayout, opt.IsPartial)
+	err = validatePackageIntegrity(pkgLayout, opts.IsPartial)
 	if err != nil {
 		return nil, err
 	}
-	err = validatePackageSignature(ctx, pkgLayout, opt.PublicKeyPath, opt.SkipSignatureValidation)
+	err = validatePackageSignature(ctx, pkgLayout, opts.PublicKeyPath, opts.SkipSignatureValidation)
 	if err != nil {
 		return nil, err
 	}
@@ -120,6 +121,11 @@ func (p *PackageLayout) ContainsSBOM() bool {
 		return false
 	}
 	return !helpers.InvalidPath(filepath.Join(p.dirPath, SBOMTar))
+}
+
+// SignPackage signs the zarf package
+func (p *PackageLayout) SignPackage(signingKeyPath, signingKeyPassword string) error {
+	return signPackage(p.dirPath, signingKeyPath, signingKeyPassword)
 }
 
 // GetSBOM outputs the SBOM data from the package to the given destination path.
@@ -175,8 +181,8 @@ func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, component
 	return outPath, nil
 }
 
-// GetImageDir returns the path to the images directory
-func (p *PackageLayout) GetImageDir() string {
+// GetImageDirPath returns the path to the images directory
+func (p *PackageLayout) GetImageDirPath() string {
 	// Use the manifest within the index.json to load the specific image we want
 	return filepath.Join(p.dirPath, ImagesDir)
 }

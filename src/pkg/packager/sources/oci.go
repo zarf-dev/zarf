@@ -41,7 +41,7 @@ func (s *OCISource) LoadPackage(ctx context.Context, dst *layout.PackagePaths, f
 		return pkg, nil, err
 	}
 
-	isSkeleton := pkg.Build.Architecture == zoci.SkeletonArch || strings.HasSuffix(s.Repo().Reference.Reference, zoci.SkeletonArch)
+	isSkeleton := pkg.Build.Architecture == v1alpha1.SkeletonArch || strings.HasSuffix(s.Repo().Reference.Reference, v1alpha1.SkeletonArch)
 
 	pkg.Components, err = filter.Apply(pkg)
 	if err != nil {
@@ -191,7 +191,7 @@ func (s *OCISource) Collect(ctx context.Context, dir string) (string, error) {
 	}
 
 	// TODO (@Noxsios) remove the suffix check at v1.0.0
-	isSkeleton := pkg.Build.Architecture == zoci.SkeletonArch || strings.HasSuffix(s.Repo().Reference.Reference, zoci.SkeletonArch)
+	isSkeleton := pkg.Build.Architecture == v1alpha1.SkeletonArch || strings.HasSuffix(s.Repo().Reference.Reference, v1alpha1.SkeletonArch)
 	name := fmt.Sprintf("%s%s", NameFromMetadata(&pkg, isSkeleton), PkgSuffix(pkg.Metadata.Uncompressed))
 
 	dstTarball := filepath.Join(dir, name)
