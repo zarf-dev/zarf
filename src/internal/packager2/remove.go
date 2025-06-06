@@ -27,7 +27,6 @@ import (
 type RemoveOptions struct {
 	Cluster *cluster.Cluster
 	Timeout time.Duration
-	RemoteOptions
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.

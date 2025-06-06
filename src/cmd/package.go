@@ -1111,9 +1111,8 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	removeOpt := packager2.RemoveOptions{
-		Cluster:       c,
-		Timeout:       config.ZarfDefaultTimeout,
-		RemoteOptions: defaultRemoteOptions(),
+		Cluster: c,
+		Timeout: config.ZarfDefaultTimeout,
 	}
 	err = packager2.Remove(ctx, pkg, removeOpt)
 	if err != nil {
