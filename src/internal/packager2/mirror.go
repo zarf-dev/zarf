@@ -25,27 +25,6 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 )
 
-// MirrorOptions are the options for Mirror.
-type MirrorOptions struct {
-	Cluster         *cluster.Cluster
-	PkgLayout       *layout.PackageLayout
-	RegistryInfo    types.RegistryInfo
-	GitInfo         types.GitServerInfo
-	NoImageChecksum bool
-	Retries         int
-	OCIConcurrency  int
-	RemoteOptions
-}
-
-// MirrorRepos mirrors the package repos to the Zarf git server
-func MirrorRepos(ctx context.Context, opts MirrorOptions) error {
-	err := pushReposToRepository(ctx, opts.Cluster, opts.PkgLayout, opts.GitInfo, opts.Retries)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // ImagePushOptions are optional parameters to push images in a zarf package to a registry
 type ImagePushOptions struct {
 	Cluster         *cluster.Cluster
@@ -94,7 +73,20 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	return nil
 }
 
-func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, gitInfo types.GitServerInfo, retries int) (err error) {
+// RepoPushOptions are optional parameters to push images in a zarf package to a registry
+type RepoPushOptions struct {
+	Cluster *cluster.Cluster
+	Retries int
+}
+
+// PushReposToRepository pushes Git repositories in the package layout to the registry
+func PushReposToRepository(ctx context.Context, pkgLayout *layout.PackageLayout, gitInfo types.GitServerInfo, opts RepoPushOptions) (err error) {
+	if pkgLayout == nil {
+		return fmt.Errorf("package layout is required")
+	}
+	if gitInfo.Address == "" {
+		return fmt.Errorf("git server address must be specified")
+	}
 	l := logger.From(ctx)
 	for _, component := range pkgLayout.Pkg.Components {
 		for _, repoURL := range component.Repos {
@@ -123,14 +115,14 @@ func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *l
 					return nil
 				}
 
-				if c == nil {
+				if opts.Cluster == nil {
 					return retry.Unrecoverable(errors.New("cannot push to internal Git server when cluster is nil"))
 				}
 				namespace, name, port, err := dns.ParseServiceURL(gitInfo.Address)
 				if err != nil {
 					return retry.Unrecoverable(err)
 				}
-				tunnel, err := c.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
+				tunnel, err := opts.Cluster.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
 				if err != nil {
 					return err
 				}
@@ -161,7 +153,7 @@ func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *l
 					}
 					return nil
 				})
-			}, retry.Context(ctx), retry.Attempts(uint(retries)), retry.Delay(500*time.Millisecond))
+			}, retry.Context(ctx), retry.Attempts(uint(opts.Retries)), retry.Delay(500*time.Millisecond))
 			if err != nil {
 				return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 			}

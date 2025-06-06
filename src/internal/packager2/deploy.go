@@ -345,7 +345,11 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 
 	if hasRepos {
-		if err := pushReposToRepository(ctx, d.c, pkgLayout, d.s.GitServer, opts.Retries); err != nil {
+		repoPushOptions := RepoPushOptions{
+			Cluster: d.c,
+			Retries: opts.Retries,
+		}
+		if err := PushReposToRepository(ctx, pkgLayout, d.s.GitServer, repoPushOptions); err != nil {
 			return nil, fmt.Errorf("unable to push the repos to the repository: %w", err)
 		}
 	}

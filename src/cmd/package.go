@@ -531,16 +531,11 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 			pkgConfig.InitOpts.GitServer = state.GitServer
 		}
 
-		mirrorOpt := packager2.MirrorOptions{
-			Cluster:         c,
-			PkgLayout:       pkgLayout,
-			GitInfo:         pkgConfig.InitOpts.GitServer,
-			NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
-			Retries:         pkgConfig.PkgOpts.Retries,
-			OCIConcurrency:  config.CommonOptions.OCIConcurrency,
-			RemoteOptions:   defaultRemoteOptions(),
+		mirrorOpt := packager2.RepoPushOptions{
+			Cluster: c,
+			Retries: pkgConfig.PkgOpts.Retries,
 		}
-		err = packager2.MirrorRepos(ctx, mirrorOpt)
+		err = packager2.PushReposToRepository(ctx, pkgLayout, pkgConfig.InitOpts.GitServer, mirrorOpt)
 		if err != nil {
 			return err
 		}
