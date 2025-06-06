@@ -15,8 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestMultiPartPackage(t *testing.T) {
@@ -46,7 +46,7 @@ func TestMultiPartPackage(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(20000000), part2FileInfo.Size())
 	// Check the package data is correct
-	pkgData := types.ZarfSplitPackageData{}
+	pkgData := split.FileData{}
 	part0File, err := os.ReadFile(parts[0])
 	require.NoError(t, err)
 	err = json.Unmarshal(part0File, &pkgData)
