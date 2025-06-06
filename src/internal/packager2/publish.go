@@ -27,10 +27,6 @@ import (
 type PublishFromOCIOpts struct {
 	// Concurrency configures the amount of layers to push in parallel
 	Concurrency int
-	// SkipSignatureValidation flags whether Publish should skip validating the signature.
-	SkipSignatureValidation bool
-	// PublicKeyPath validates the create time signage of a package.
-	PublicKeyPath string
 	// Architecture is the architecture we are publishing to
 	Architecture string
 	RemoteOptions

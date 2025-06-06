@@ -1183,11 +1183,9 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 
 	if helpers.IsOCIURL(packageSource) && pkgConfig.PublishOpts.SigningKeyPath == "" {
 		ociOpts := packager2.PublishFromOCIOpts{
-			Concurrency:             config.CommonOptions.OCIConcurrency,
-			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
-			PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-			Architecture:            config.GetArch(),
-			RemoteOptions:           defaultRemoteOptions(),
+			Concurrency:   config.CommonOptions.OCIConcurrency,
+			Architecture:  config.GetArch(),
+			RemoteOptions: defaultRemoteOptions(),
 		}
 
 		// source registry reference
