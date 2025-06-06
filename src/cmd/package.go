@@ -831,6 +831,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 }
 
 type packageInspectImagesOptions struct {
+	namespaceOverride       string
 	skipSignatureValidation bool
 }
 
@@ -849,6 +850,7 @@ func newPackageInspectImagesCommand() *cobra.Command {
 		RunE:  o.run,
 	}
 
+	cmd.Flags().StringVar(&o.namespaceOverride, "namespace", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
@@ -868,6 +870,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
+		NamespaceOverride:       o.namespaceOverride,
 	}
 
 	images, err := packager2.InspectPackageImages(ctx, src, inspectImageOpts)
@@ -881,6 +884,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 }
 
 type packageInspectDefinitionOptions struct {
+	namespaceOverride       string
 	skipSignatureValidation bool
 }
 
@@ -899,6 +903,7 @@ func newPackageInspectDefinitionCommand() *cobra.Command {
 		RunE:  o.run,
 	}
 
+	cmd.Flags().StringVar(&o.namespaceOverride, "namespace", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
@@ -918,6 +923,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
+		NamespaceOverride:       o.namespaceOverride,
 	}
 
 	pkg, err := packager2.InspectPackageDefinition(ctx, src, defOpts)

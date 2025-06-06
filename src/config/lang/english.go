@@ -288,6 +288,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 
 	CmdPackageInspectFlagSbomOut    = "Specify an output directory for the SBOMs from the inspected Zarf package"
 	CmdPackageInspectFlagListImages = "List images in the package (prints to stdout)"
+	CmdPackageInspectFlagNamespace  = "[Alpha] Override the namespace for package inspection. Requires the package to have been deployed using the namespace override."
 
 	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveLong           = "Removes a Zarf package that has been deployed already (runs offline). Remove reverses the deployment order, the last component is removed first."
