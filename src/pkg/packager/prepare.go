@@ -35,7 +35,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 var imageCheck = regexp.MustCompile(`(?mi)"image":"((([a-z0-9._-]+)/)?([a-z0-9._-]+)(:([a-z0-9._-]+))?)"`)
@@ -96,17 +95,17 @@ func (p *Packager) findImages(ctx context.Context) (map[string][]string, error) 
 	}
 
 	// Set default builtin values so they exist in case any helm charts rely on them
-	registryInfo := types.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}
+	registryInfo := state.RegistryInfo{Address: p.cfg.FindImagesOpts.RegistryURL}
 	err := registryInfo.FillInEmptyValues()
 	if err != nil {
 		return nil, err
 	}
-	gitServer := types.GitServerInfo{}
+	gitServer := state.GitServerInfo{}
 	err = gitServer.FillInEmptyValues()
 	if err != nil {
 		return nil, err
 	}
-	artifactServer := types.ArtifactServerInfo{}
+	artifactServer := state.ArtifactServerInfo{}
 	artifactServer.FillInEmptyValues()
 	p.state = &state.State{
 		RegistryInfo:   registryInfo,

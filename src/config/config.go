@@ -19,8 +19,6 @@ import (
 const (
 	GithubProject = "zarf-dev/zarf"
 
-	ZarfAgentHost = "agent-hook.zarf.svc"
-
 	ZarfCleanupScriptsPath = "/opt/zarf"
 
 	ZarfPackagePrefix = "zarf-package-"

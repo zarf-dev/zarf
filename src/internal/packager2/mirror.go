@@ -20,17 +20,17 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // MirrorOptions are the options for Mirror.
 type MirrorOptions struct {
 	Cluster         *cluster.Cluster
 	PkgLayout       *layout.PackageLayout
-	RegistryInfo    types.RegistryInfo
-	GitInfo         types.GitServerInfo
+	RegistryInfo    state.RegistryInfo
+	GitInfo         state.GitServerInfo
 	NoImageChecksum bool
 	Retries         int
 	OCIConcurrency  int
@@ -55,7 +55,7 @@ func MirrorRepos(ctx context.Context, opts MirrorOptions) error {
 	return nil
 }
 
-func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, registryInfo types.RegistryInfo, noImgChecksum bool, plainHTTP bool, concurrency int, retries int, insecure bool) error {
+func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, registryInfo state.RegistryInfo, noImgChecksum bool, plainHTTP bool, concurrency int, retries int, insecure bool) error {
 	refs := []transform.Image{}
 	for _, component := range pkgLayout.Pkg.Components {
 		for _, img := range component.Images {
@@ -87,7 +87,7 @@ func pushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	return nil
 }
 
-func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, gitInfo types.GitServerInfo, retries int) (err error) {
+func pushReposToRepository(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout, gitInfo state.GitServerInfo, retries int) (err error) {
 	l := logger.From(ctx)
 	for _, component := range pkgLayout.Pkg.Components {
 		for _, repoURL := range component.Repos {

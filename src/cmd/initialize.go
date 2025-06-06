@@ -19,9 +19,9 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/spf13/cobra"
 )
@@ -44,8 +44,8 @@ func newInitCommand() *cobra.Command {
 
 	// Init package variable defaults that are non-zero values
 	// NOTE: these are not in setDefaults so that zarf tools update-creds does not erroneously update values back to the default
-	v.SetDefault(VInitGitPushUser, types.ZarfGitPushUser)
-	v.SetDefault(VInitRegistryPushUser, types.ZarfRegistryPushUser)
+	v.SetDefault(VInitGitPushUser, state.ZarfGitPushUser)
+	v.SetDefault(VInitRegistryPushUser, state.ZarfRegistryPushUser)
 
 	// Init package set variable flags
 	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSet)
