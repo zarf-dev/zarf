@@ -503,6 +503,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 			pkgConfig.InitOpts.RegistryInfo = state.RegistryInfo
 		}
 		mirrorOpt := packager2.ImagePushOptions{
+			Cluster:         c,
 			NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
 			Retries:         pkgConfig.PkgOpts.Retries,
 			OCIConcurrency:  config.CommonOptions.OCIConcurrency,
