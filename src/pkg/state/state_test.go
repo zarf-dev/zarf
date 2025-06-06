@@ -11,7 +11,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // TODO: Change password gen method to make testing possible.
@@ -20,49 +19,49 @@ func TestMergeStateRegistry(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		initRegistry     types.RegistryInfo
-		oldRegistry      types.RegistryInfo
-		expectedRegistry types.RegistryInfo
+		initRegistry     RegistryInfo
+		oldRegistry      RegistryInfo
+		expectedRegistry RegistryInfo
 	}{
 		{
 			name: "username is unmodified",
-			oldRegistry: types.RegistryInfo{
+			oldRegistry: RegistryInfo{
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
 			},
-			expectedRegistry: types.RegistryInfo{
+			expectedRegistry: RegistryInfo{
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
 			},
 		},
 		{
 			name: "internal server auto generate",
-			oldRegistry: types.RegistryInfo{
+			oldRegistry: RegistryInfo{
 				Address:  fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
 				NodePort: 1,
 			},
-			expectedRegistry: types.RegistryInfo{
+			expectedRegistry: RegistryInfo{
 				Address:  fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
 				NodePort: 1,
 			},
 		},
 		{
 			name: "init options merged",
-			oldRegistry: types.RegistryInfo{
+			oldRegistry: RegistryInfo{
 				PushUsername: "doesn't matter",
 				PullUsername: "doesn't matter",
 				Address:      "doesn't matter",
 				NodePort:     0,
 				Secret:       "doesn't matter",
 			},
-			initRegistry: types.RegistryInfo{
+			initRegistry: RegistryInfo{
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
 				Address:      "address",
 				NodePort:     1,
 				Secret:       "secret",
 			},
-			expectedRegistry: types.RegistryInfo{
+			expectedRegistry: RegistryInfo{
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
 				Address:      "address",
@@ -72,7 +71,7 @@ func TestMergeStateRegistry(t *testing.T) {
 		},
 		{
 			name: "init options not merged",
-			expectedRegistry: types.RegistryInfo{
+			expectedRegistry: RegistryInfo{
 				PushUsername: "",
 				PullUsername: "",
 				Address:      "",
@@ -109,18 +108,18 @@ func TestMergeStateGit(t *testing.T) {
 
 	tests := []struct {
 		name              string
-		initGitServer     types.GitServerInfo
-		oldGitServer      types.GitServerInfo
-		expectedGitServer types.GitServerInfo
+		initGitServer     GitServerInfo
+		oldGitServer      GitServerInfo
+		expectedGitServer GitServerInfo
 	}{
 		{
 			name: "address and usernames are unmodified",
-			oldGitServer: types.GitServerInfo{
+			oldGitServer: GitServerInfo{
 				Address:      "address",
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
 			},
-			expectedGitServer: types.GitServerInfo{
+			expectedGitServer: GitServerInfo{
 				Address:      "address",
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
@@ -128,26 +127,26 @@ func TestMergeStateGit(t *testing.T) {
 		},
 		{
 			name: "internal server auto generate",
-			oldGitServer: types.GitServerInfo{
-				Address: types.ZarfInClusterGitServiceURL,
+			oldGitServer: GitServerInfo{
+				Address: ZarfInClusterGitServiceURL,
 			},
-			expectedGitServer: types.GitServerInfo{
-				Address: types.ZarfInClusterGitServiceURL,
+			expectedGitServer: GitServerInfo{
+				Address: ZarfInClusterGitServiceURL,
 			},
 		},
 		{
 			name: "init options merged",
-			oldGitServer: types.GitServerInfo{
+			oldGitServer: GitServerInfo{
 				Address:      "doesn't matter",
 				PushUsername: "doesn't matter",
 				PullUsername: "doesn't matter",
 			},
-			initGitServer: types.GitServerInfo{
+			initGitServer: GitServerInfo{
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
 				Address:      "address",
 			},
-			expectedGitServer: types.GitServerInfo{
+			expectedGitServer: GitServerInfo{
 				PushUsername: "push-user",
 				PullUsername: "pull-user",
 				Address:      "address",
@@ -155,7 +154,7 @@ func TestMergeStateGit(t *testing.T) {
 		},
 		{
 			name: "empty init options not merged",
-			expectedGitServer: types.GitServerInfo{
+			expectedGitServer: GitServerInfo{
 				PushUsername: "",
 				PullUsername: "",
 				Address:      "",
@@ -187,57 +186,57 @@ func TestMergeStateArtifact(t *testing.T) {
 
 	tests := []struct {
 		name                   string
-		initArtifactServer     types.ArtifactServerInfo
-		oldArtifactServer      types.ArtifactServerInfo
-		expectedArtifactServer types.ArtifactServerInfo
+		initArtifactServer     ArtifactServerInfo
+		oldArtifactServer      ArtifactServerInfo
+		expectedArtifactServer ArtifactServerInfo
 	}{
 		{
 			name: "username is unmodified",
-			oldArtifactServer: types.ArtifactServerInfo{
+			oldArtifactServer: ArtifactServerInfo{
 				PushUsername: "push-user",
 			},
-			expectedArtifactServer: types.ArtifactServerInfo{
+			expectedArtifactServer: ArtifactServerInfo{
 				PushUsername: "push-user",
 			},
 		},
 		{
 			name: "old state is internal server auto generate push token",
-			oldArtifactServer: types.ArtifactServerInfo{
+			oldArtifactServer: ArtifactServerInfo{
 				PushToken: "foobar",
-				Address:   types.ZarfInClusterArtifactServiceURL,
+				Address:   ZarfInClusterArtifactServiceURL,
 			},
-			expectedArtifactServer: types.ArtifactServerInfo{
+			expectedArtifactServer: ArtifactServerInfo{
 				PushToken: "",
-				Address:   types.ZarfInClusterArtifactServiceURL,
+				Address:   ZarfInClusterArtifactServiceURL,
 			},
 		},
 		{
 			name: "old state is not internal server auto generate push token but init options does not match",
-			initArtifactServer: types.ArtifactServerInfo{
+			initArtifactServer: ArtifactServerInfo{
 				PushToken: "hello world",
 			},
-			oldArtifactServer: types.ArtifactServerInfo{
+			oldArtifactServer: ArtifactServerInfo{
 				PushToken: "foobar",
-				Address:   types.ZarfInClusterArtifactServiceURL,
+				Address:   ZarfInClusterArtifactServiceURL,
 			},
-			expectedArtifactServer: types.ArtifactServerInfo{
+			expectedArtifactServer: ArtifactServerInfo{
 				PushToken: "hello world",
-				Address:   types.ZarfInClusterArtifactServiceURL,
+				Address:   ZarfInClusterArtifactServiceURL,
 			},
 		},
 		{
 			name: "init options merged",
-			oldArtifactServer: types.ArtifactServerInfo{
+			oldArtifactServer: ArtifactServerInfo{
 				PushUsername: "doesn't matter",
 				PushToken:    "doesn't matter",
 				Address:      "doesn't matter",
 			},
-			initArtifactServer: types.ArtifactServerInfo{
+			initArtifactServer: ArtifactServerInfo{
 				PushUsername: "user",
 				PushToken:    "token",
 				Address:      "address",
 			},
-			expectedArtifactServer: types.ArtifactServerInfo{
+			expectedArtifactServer: ArtifactServerInfo{
 				PushUsername: "user",
 				PushToken:    "token",
 				Address:      "address",
@@ -245,7 +244,7 @@ func TestMergeStateArtifact(t *testing.T) {
 		},
 		{
 			name: "empty init options not merged",
-			expectedArtifactServer: types.ArtifactServerInfo{
+			expectedArtifactServer: ArtifactServerInfo{
 				PushUsername: "",
 				PushToken:    "",
 				Address:      "",

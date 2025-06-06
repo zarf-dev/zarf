@@ -17,8 +17,8 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestGit(t *testing.T) {
@@ -77,7 +77,7 @@ func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 	// Init the state variable
 	s, err := c.LoadState(ctx)
 	require.NoError(t, err)
-	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, s.GitServer.PullPassword)
+	giteaClient, err := gitea.NewClient(gitURL, state.ZarfGitReadUser, s.GitServer.PullPassword)
 	require.NoError(t, err)
 	repoName := "zarf-public-test-2363058019"
 
@@ -112,13 +112,13 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 	// Init the state variable
 	s, err := c.LoadState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
-	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, s.GitServer.PullPassword)
+	giteaClient, err := gitea.NewClient(gitURL, state.ZarfGitReadUser, s.GitServer.PullPassword)
 	require.NoError(t, err)
 	repoName := "zarf-public-test-2363058019"
 
 	// Make sure the pushed tag exists
 	repoTag := "v0.0.1"
-	b, statusCode, err := giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s/tags/%s", types.ZarfGitPushUser, repoName, repoTag), nil)
+	b, statusCode, err := giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s/tags/%s", state.ZarfGitPushUser, repoName, repoTag), nil)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, statusCode)
 	var tagMap map[string]interface{}
@@ -128,7 +128,7 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 
 	// Get the Zarf repo commit
 	repoHash := "01a23218923f24194133b5eb11268cf8d73ff1bb"
-	b, statusCode, err = giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s/git/commits/%s", types.ZarfGitPushUser, repoName, repoHash), nil)
+	b, statusCode, err = giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s/git/commits/%s", state.ZarfGitPushUser, repoName, repoHash), nil)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, statusCode)
 	require.NoError(t, err)
@@ -154,7 +154,7 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	// Tests the URL mutation for GitRepository CRD for Flux.
 	stdOut, stdErr, err = e2e.Kubectl(t, "get", "gitrepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
 	require.NoError(t, err, stdOut, stdErr)
-	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", types.ZarfInClusterGitServiceURL, types.ZarfGitPushUser)
+	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", state.ZarfInClusterGitServiceURL, state.ZarfGitPushUser)
 	require.Equal(t, expectedMutatedRepoURL, stdOut)
 
 	// Tests the URL mutation for HelmRepository CRD for Flux.
@@ -196,7 +196,7 @@ func waitArgoDeployment(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=argocd-apps", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", types.ZarfInClusterGitServiceURL, types.ZarfGitPushUser)
+	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", state.ZarfInClusterGitServiceURL, state.ZarfGitPushUser)
 
 	// Tests the mutation of the private repository Secret for ArgoCD.
 	stdOut, stdErr, err = e2e.Kubectl(t, "get", "secret", "argocd-repo-github-podinfo", "-n", "argocd", "-o", "jsonpath={.data.url}")
