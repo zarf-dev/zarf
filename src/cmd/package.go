@@ -809,26 +809,34 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	if err != nil {
 		return err
 	}
-
-	inspectOptions := packager2.InspectPackageSbomsOptions{
-		SkipSignatureValidation: o.skipSignatureValidation,
-		OutputDir:               o.outputDir,
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+	loadOpts := packager2.LoadOptions{
 		Architecture:            config.GetArch(),
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		SkipSignatureValidation: o.skipSignatureValidation,
+		LayersSelector:          zoci.SbomLayers,
+		Filter:                  filters.Empty(),
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 	}
-
-	path, err := packager2.InspectPackageSBOM(ctx, src, inspectOptions)
+	pkgLayout, err := packager2.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to load the package: %w", err)
 	}
-	outputPath, err := filepath.Abs(path)
+
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+	outputPath := filepath.Join(o.outputDir, pkgLayout.Pkg.Metadata.Name)
+	err = pkgLayout.GetSBOM(ctx, outputPath)
+	if err != nil {
+		return fmt.Errorf("could not get SBOM: %w", err)
+	}
+	sbomPath, err := filepath.Abs(outputPath)
 	if err != nil {
 		logger.From(ctx).Warn("SBOM successfully extracted, couldn't get output path", "error", err)
 		return nil
 	}
-	logger.From(ctx).Info("SBOM successfully extracted", "path", outputPath)
+	logger.From(ctx).Info("SBOM successfully extracted", "path", sbomPath)
 	return nil
 }
 
@@ -864,18 +872,29 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	inspectImageOpts := packager2.InspectPackageImagesOptions{
-		Architecture:            config.GetArch(),
+	cluster, _ := cluster.New(ctx) //nolint: errcheck // package source may or may not be a cluster
+	loadOpts := packager2.LoadOptions{
 		SkipSignatureValidation: o.skipSignatureValidation,
+		Architecture:            config.GetArch(),
+		Filter:                  filters.Empty(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 	}
-
-	images, err := packager2.InspectPackageImages(ctx, src, inspectImageOpts)
+	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, loadOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to load the package: %w", err)
 	}
+
+	images := make([]string, 0)
+	for _, component := range pkg.Components {
+		images = append(images, component.Images...)
+	}
+	images = helpers.Unique(images)
+	if len(images) == 0 {
+		return fmt.Errorf("no images found in package")
+	}
+
 	for _, image := range images {
 		fmt.Println("-", image)
 	}
@@ -914,17 +933,18 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		return err
 	}
 
-	defOpts := packager2.InspectPackageDefinitionOptions{
-		Architecture:            config.GetArch(),
+	cluster, _ := cluster.New(ctx) //nolint: errcheck // package source may or may not be a cluster
+	loadOpts := packager2.LoadOptions{
 		SkipSignatureValidation: o.skipSignatureValidation,
+		Architecture:            config.GetArch(),
+		Filter:                  filters.Empty(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 	}
-
-	pkg, err := packager2.InspectPackageDefinition(ctx, src, defOpts)
+	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, loadOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to load the package: %w", err)
 	}
 
 	err = utils.ColorPrintYAML(pkg, nil, false)
