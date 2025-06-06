@@ -1195,17 +1195,31 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		packageSource = packagePath
 	}
 
-	publishPackageOpts := packager2.PublishPackageOpts{
-		Concurrency:             config.CommonOptions.OCIConcurrency,
-		SigningKeyPath:          pkgConfig.PublishOpts.SigningKeyPath,
-		SigningKeyPassword:      pkgConfig.PublishOpts.SigningKeyPassword,
-		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+	loadOpt := packager2.LoadOptions{
+		Shasum:                  pkgConfig.PkgOpts.Shasum,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 	}
+	pkgLayout, err := packager2.LoadPackage(ctx, packageSource, loadOpt)
+	if err != nil {
+		return fmt.Errorf("unable to load package: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
 
-	return packager2.PublishPackage(ctx, packageSource, dstRef, publishPackageOpts)
+	publishPackageOpts := packager2.PublishPackageOpts{
+		Concurrency:        config.CommonOptions.OCIConcurrency,
+		SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
+		SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
+		RemoteOptions:      defaultRemoteOptions(),
+	}
+
+	return packager2.PublishPackage(ctx, pkgLayout, dstRef, publishPackageOpts)
 }
 
 type packagePullOptions struct{}

@@ -25,7 +25,7 @@ import (
 
 // PublishFromOCIOpts declares the parameters to publish a package.
 type PublishFromOCIOpts struct {
-	// Concurrency configures the zoci push concurrency if empty defaults to 3.
+	// Concurrency configures the amount of layers to push in parallel
 	Concurrency int
 	// SkipSignatureValidation flags whether Publish should skip validating the signature.
 	SkipSignatureValidation bool
@@ -84,23 +84,17 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 
 // PublishPackageOpts declares the parameters to publish a package.
 type PublishPackageOpts struct {
-	// Concurrency configures the zoci push concurrency if empty defaults to 3.
+	// Concurrency configures the amount of layers to push in parallel
 	Concurrency int
 	// SigningKeyPath points to a signing key on the local disk.
 	SigningKeyPath string
 	// SigningKeyPassword holds a password to use the key at SigningKeyPath.
 	SigningKeyPassword string
-	// SkipSignatureValidation flags whether Publish should skip validating the signature.
-	SkipSignatureValidation bool
-	// PublicKeyPath validates the create time signage of a package.
-	PublicKeyPath string
-	// Architecture is the architecture we are publishing to
-	Architecture string
 	RemoteOptions
 }
 
 // PublishPackage takes a Path to the location of the built package, a ref to a registry, and a PublishOpts and uploads to the target OCI registry.
-func PublishPackage(ctx context.Context, path string, dst registry.Reference, opts PublishPackageOpts) error {
+func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst registry.Reference, opts PublishPackageOpts) error {
 	l := logger.From(ctx)
 
 	// Validate inputs
@@ -108,20 +102,10 @@ func PublishPackage(ctx context.Context, path string, dst registry.Reference, op
 	if err := dst.ValidateRegistry(); err != nil {
 		return fmt.Errorf("invalid registry: %w", err)
 	}
-	if path == "" {
-		return fmt.Errorf("path must be specified")
+	if pkgLayout == nil {
+		return fmt.Errorf("package layout must be specified")
 	}
 
-	// Load package layout
-	l.Info("loading package", "path", path)
-	layoutOpts := layout.PackageLayoutOptions{
-		PublicKeyPath:           opts.PublicKeyPath,
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-	}
-	pkgLayout, err := layout.LoadFromTar(ctx, path, layoutOpts)
-	if err != nil {
-		return fmt.Errorf("unable to load package: %w", err)
-	}
 	if err := pkgLayout.SignPackage(opts.SigningKeyPath, opts.SigningKeyPassword); err != nil {
 		return fmt.Errorf("unable to sign package: %w", err)
 	}
@@ -131,7 +115,7 @@ func PublishPackage(ctx context.Context, path string, dst registry.Reference, op
 
 // PublishSkeletonOpts declares the parameters to publish a skeleton package.
 type PublishSkeletonOpts struct {
-	// Concurrency configures the zoci push concurrency if empty defaults to 3.
+	// Concurrency configures the amount of layers to push in parallel
 	Concurrency int
 	// SigningKeyPath points to a signing key on the local disk.
 	SigningKeyPath string
@@ -204,7 +188,7 @@ func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registr
 		return err
 	}
 
-	arch := layout.Pkg.Metadata.Architecture
+	arch := layout.Pkg.Build.Architecture
 	// Set platform
 	p := oci.PlatformForArch(arch)
 

@@ -51,8 +51,7 @@ func TestAssembleLayers(t *testing.T) {
 				RemoteOptions: packager2.RemoteOptions{
 					PlainHTTP: true,
 				},
-				Architecture: "amd64",
-				Concurrency:  3,
+				Concurrency: 3,
 			},
 		},
 	}
@@ -70,22 +69,23 @@ func TestAssembleLayers(t *testing.T) {
 			}
 			err := packager2.Create(ctx, tc.path, tmpdir, opt)
 			require.NoError(t, err)
-			src := fmt.Sprintf("%s/%s-%s-0.0.1.tar.zst", tmpdir, "zarf-package-basic-pod", tc.opts.Architecture)
-
-			// Publish test package
-			err = packager2.PublishPackage(ctx, src, registryRef, tc.opts)
-			require.NoError(t, err)
+			src := fmt.Sprintf("%s/%s-%s-0.0.1.tar.zst", tmpdir, "zarf-package-basic-pod", "amd64")
 
 			// We want to pull the package and sure the content is the same as the local package
 			layoutExpected, err := layout.LoadFromTar(ctx, src, layout.PackageLayoutOptions{Filter: filters.Empty()})
 			require.NoError(t, err)
+
+			// Publish test package
+			err = packager2.PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			require.NoError(t, err)
+
 			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
 			defer os.Remove(layoutExpected.Pkg.Metadata.Name) //nolint:errcheck
 			// Format url and instantiate remote
 			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), layoutExpected.Pkg)
 			require.NoError(t, err)
 
-			platform := oci.PlatformForArch(tc.opts.Architecture)
+			platform := oci.PlatformForArch(layoutExpected.Pkg.Build.Architecture)
 			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.PlainHTTP))
 			require.NoError(t, err)
 
