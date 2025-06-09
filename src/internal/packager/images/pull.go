@@ -441,6 +441,7 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 			return fmt.Errorf("failed to create oci formatted directory: %w", err)
 		}
 		pullSrc = orasCache.New(repo, localCache)
+		pullSrc = NewProgressTarget(pullSrc, imageInfo.byteSize, DefaultProgressReporter())
 		desc, err := oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, dst, imageInfo.ref, copyOpts)
 		if err != nil {
 			return fmt.Errorf("failed to copy: %w", err)
