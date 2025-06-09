@@ -95,15 +95,22 @@ func (pt *ProgressTarget) startReporting() {
 		ticker := time.NewTicker(pt.reportPeriod)
 		defer ticker.Stop()
 
+		lastReported := int64(0)
 		for {
 			select {
 			case <-ticker.C:
 				current := pt.bytesRead.Load()
-				pt.reporter(current, pt.totalBytes)
+				// Only report if there's been progress since the last report
+				if current > lastReported {
+					pt.reporter(current, pt.totalBytes)
+					lastReported = current
+				}
 			case <-pt.stopReports:
 				// Report final progress before exiting
 				current := pt.bytesRead.Load()
-				pt.reporter(current, pt.totalBytes)
+				if current > lastReported {
+					pt.reporter(current, pt.totalBytes)
+				}
 				return
 			case <-pt.ctx.Done():
 				return
@@ -130,14 +137,14 @@ func (pt *ProgressTarget) Fetch(ctx context.Context, desc ocispec.Descriptor) (i
 	return prc, nil
 }
 
-// Exists overrides to ensure we have proper context cancellation
-func (pt *ProgressTarget) Exists(ctx context.Context, desc ocispec.Descriptor) (bool, error) {
-	return pt.ReadOnlyTarget.Exists(ctx, desc)
-}
-
-// Resolve overrides to ensure we have proper context cancellation
+// Resolve overrides the Resolve method from the ReadOnlyTarget interface
 func (pt *ProgressTarget) Resolve(ctx context.Context, reference string) (ocispec.Descriptor, error) {
 	return pt.ReadOnlyTarget.Resolve(ctx, reference)
+}
+
+// Exists overrides the Exists method from the ReadOnlyTarget interface
+func (pt *ProgressTarget) Exists(ctx context.Context, desc ocispec.Descriptor) (bool, error) {
+	return pt.ReadOnlyTarget.Exists(ctx, desc)
 }
 
 // StopReporting stops the reporting goroutine
@@ -146,6 +153,7 @@ func (pt *ProgressTarget) StopReporting() {
 	if pt.reportingStarted {
 		close(pt.stopReports)
 		pt.cancel()
+		pt.reportingStarted = false
 	}
 	pt.mu.Unlock()
 	pt.wg.Wait()
